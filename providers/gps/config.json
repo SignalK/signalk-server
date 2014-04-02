@@ -1,0 +1,4 @@
+{
+	"address": "/dev/tty.GNS1000-GPS",
+	"baudrate": 57600
+}

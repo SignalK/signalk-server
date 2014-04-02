@@ -1,0 +1,19 @@
+{
+	"ship": {
+		"name": "Avatar",
+		"callsign": "",
+		"length": 7.0,
+		"width": 2.5,
+		"height": 14.0,
+		"depth": 2.0,
+		"type": "sail"
+	},
+
+	"network": {
+		"ssid": "saildata",
+		"key": "saildata"
+	},
+
+	"providers": ["provider-gps"]
+
+}

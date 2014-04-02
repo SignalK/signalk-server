@@ -1,0 +1,29 @@
+{
+	"name": "saildata-server",
+	"version": "0.1.2",
+	"description": "central webserver for saildata. Multiplexes incoming data in the SignalK format, outputs a single SignalK stream over websockets. See https://github.com/fabdrol/saildata-spec for more information on the stack",
+	"main": "index.js",
+	"keywords": [
+		"signalk",
+		"kjson",
+		"nmea",
+		"seatalk",
+		"gps",
+		"sailing",
+		"boat",
+		"marine",
+		"nautic"
+	],
+	"author": "Fabian Tollenaar",
+	"license": "MIT",
+	"devDependencies": {
+		"tape": "^2.12.1"
+	},
+	"dependencies": {
+		"express": "3.x",
+		"colors": "^0.6.2",
+		"lodash": "^2.4.1",
+		"node-uuid": "^1.4.1",
+		"e-json": "0.0.4"
+	}
+}
