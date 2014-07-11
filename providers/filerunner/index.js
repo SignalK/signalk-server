@@ -23,8 +23,11 @@ if(typeof process.send !== 'function') {
 	return process.exit();
 }
 
-var Parser, fs, reader, filestream, parser, mw, colors, counter, Throttle, throttled, last;
+var Parser, fs, reader, filestream, parser, mw, colors, counter, Throttle, throttled, last, path, vessel, FILE;
 
+FILE 		= 'gofree-merrimac.log';
+path 		= require('path');
+vessel 		= require(path.normalize(__dirname + '/../../settings.json')).vessel;
 colors 		= require('colors');
 // mw 		= require('memwatch');
 fs 			= require('fs');
@@ -32,6 +35,7 @@ Parser 		= require('nmea0183-signalk').Parser;
 Throttle 	= require('stream-throttle').Throttle;
 // counter 	= Date.now();
 // last 	= Date.now();
+
 
 process.send({
 	messageType: 'identity', // in order to find out if the message contains actual data or the Provider's identity
@@ -55,10 +59,10 @@ process.send({
 });
 
 function reader() {
-	filestream = fs.createReadStream(__dirname + '/nmea.log');
+	filestream = fs.createReadStream(__dirname + '/logs/' + FILE);
 	
 	parser = new Parser({ 
-		vessel: {},
+		vessel: vessel,
 		debug: false
 	});
 

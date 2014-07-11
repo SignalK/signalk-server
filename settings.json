@@ -1,13 +1,19 @@
 {
-	"ship": {
-		"name": "Volare",
-		"callsign": "",
-		"length": 7.0,
-		"width": 2.5,
-		"height": 14.0,
-		"depth": 1.5,
-		"type": "sailboat", 
-		"mmsi": ""
+	"vessel": {
+		"name"	: "Volare",
+		"brand"	: "Friendship",
+		"type"	: "22",
+		"mmsi"	: "123456789",
+		"uuid"	: "87654321",
+		"ident"	: "mmsi",
+		
+		"dimensions": {
+			"length": 7,
+			"width": 2.5,
+			"mast": 10,
+			"depthTransducer": 0.5,
+			"keel": 1.5 
+		}
 	},
 
 	"network": {
