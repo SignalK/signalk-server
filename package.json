@@ -1,8 +1,11 @@
 {
 	"name": "saildata-server",
-	"version": "0.1.2",
-	"description": "central webserver for saildata. Multiplexes incoming data in the SignalK format, outputs a single SignalK stream over websockets. See https://github.com/fabdrol/saildata-spec for more information on the stack",
+	"version": "0.1.3",
+	"description": "Central server for boats equipped with a boat controller. Multiplexes any incoming data in the SignalK format, outputs a single SignalK stream over WebSockets.",
 	"main": "index.js",
+	"scripts": {
+		"start": "node ./index"
+	},
 	"keywords": [
 		"signalk",
 		"kjson",
@@ -24,6 +27,9 @@
 		"colors": "^0.6.2",
 		"lodash": "^2.4.1",
 		"node-uuid": "^1.4.1",
-		"e-json": "0.0.4"
+		"e-json": "0.0.4",
+		"nmea0183-signalk": "^0.1.5",
+		"stream-throttle": "^0.1.3",
+		"socket.io": "^1.0.6"
 	}
 }
