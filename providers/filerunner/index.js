@@ -26,6 +26,7 @@ if(typeof process.send !== 'function') {
 var Parser, fs, reader, filestream, parser, mw, colors, counter, Throttle, throttled, last, path, vessel, FILE;
 
 FILE 		= 'gofree-merrimac.log';
+// FILE 	= 'gps.log';
 path 		= require('path');
 vessel 		= require(path.normalize(__dirname + '/../../settings.json')).vessel;
 colors 		= require('colors');

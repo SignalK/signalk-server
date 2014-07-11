@@ -1,6 +1,6 @@
 {
 	"name": "saildata-server",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "An implementation of a [Signal K](http://signalk.github.io) central server for boats.",
 	"main": "index.js",
 	"scripts": {
@@ -27,7 +27,7 @@
 		"e-json": "0.0.4",
 		"express": "3.x",
 		"lodash": "^2.4.1",
-		"nmea0183-signalk": "^0.1.8",
+		"nmea0183-signalk": "^0.1.9",
 		"node-uuid": "^1.4.1",
 		"socket.io": "^1.0.6",
 		"stream-throttle": "^0.1.3"
