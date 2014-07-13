@@ -25,19 +25,18 @@ if(typeof process.send !== 'function') {
 
 var Parser, fs, reader, filestream, parser, mw, colors, counter, Throttle, throttled, last, path, vessel, FILE;
 
-FILE 		= 'gofree-merrimac.log';
+// FILE 	= 'gofree-merrimac.log';
 // FILE 	= 'gps.log';
+FILE 		= 'plaka.log';
+
 path 		= require('path');
 vessel 		= require(path.normalize(__dirname + '/../../settings.json')).vessel;
 colors 		= require('colors');
-// mw 		= require('memwatch');
 fs 			= require('fs');
 Parser 		= require('nmea0183-signalk').Parser;
 Throttle 	= require('stream-throttle').Throttle;
-// counter 	= Date.now();
-// last 	= Date.now();
 
-
+/* SEND IDENTITY ON FORK START */
 process.send({
 	messageType: 'identity', // in order to find out if the message contains actual data or the Provider's identity
 	payload: {
