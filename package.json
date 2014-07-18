@@ -1,6 +1,6 @@
 {
 	"name": "saildata-server",
-	"version": "0.1.8",
+	"version": "0.1.9",
 	"description": "An implementation of a [Signal K](http://signalk.github.io) central server for boats.",
 	"main": "index.js",
 	"scripts": {
@@ -21,6 +21,9 @@
 	"license": "GPLv3",
 	"devDependencies": {
 		"tape": "^2.12.1"
+	},
+	"engine": {
+		"node": "v0.10.x"
 	},
 	"dependencies": {
 		"colors": "^0.6.2",
