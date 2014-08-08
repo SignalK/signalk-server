@@ -21,6 +21,6 @@
 		"key": "saildata"
 	},
 
-	"providers": ["provider-filerunner"]
+	"providers": ["provider-execute", "provider-filerunner"]
 
 }
