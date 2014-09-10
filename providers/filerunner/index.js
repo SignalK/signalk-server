@@ -19,47 +19,20 @@
  * 
  */
 
- 
-if(typeof process.send !== 'function') {
-	return process.exit();
-}
-
 var Parser, fs, reader, filestream, parser, mw, colors, counter, Throttle, throttled, last, path, vessel, FILE;
 
 // FILE 	= 'gofree-merrimac.log';
 // FILE 	= 'gps.log';
-FILE 		= 'plaka.log';
+FILE 			= 'plaka.log';
 
-path 		= require('path');
+path 			= require('path');
 vessel 		= require(path.normalize(__dirname + '/../../settings.json')).vessel;
 colors 		= require('colors');
-fs 			= require('fs');
+fs 				= require('fs');
 Parser 		= require('nmea0183-signalk').Parser;
 Throttle 	= require('stream-throttle').Throttle;
 
-/* SEND IDENTITY ON FORK START */
-process.send({
-	messageType: 'identity', // in order to find out if the message contains actual data or the Provider's identity
-	payload: {
-		name: 'filerunner', // name of Provider
-		version: '0.0.1', // version of Provider
-		author: 'Fabian Tollenaar <fabian@starting-point.nl>', // author of Provider
-		provides: 'Loops through a log file of nmea0183 sentences', // description of what the Provider provides
-		capabilities: ['nmea0183'], // capabilities/tags
-		protocol: 'Signal K', // protocol of the actual data. Should be signal K
-		
-		device: { // device information
-			protocol: 'nmea0183', // original protocol
-			type: 'file', // device type
-			location: './nmea.log', // device location
-			manufacturer: '-', // device manufacturer
-			product: '-', // product identifier
-			serial: '-' // serial number
-		}
-	}
-});
-
-function reader() {
+function reader(send) {
 	filestream = fs.createReadStream(__dirname + '/logs/' + FILE);
 	
 	parser = new Parser({ 
@@ -75,7 +48,7 @@ function reader() {
 	throttled.pipe(parser);
 
 	parser.on('sentence', function(data) {
-		process.send(data);
+		send(data);
 	});
 
 	filestream.on('end', function() {
@@ -85,11 +58,36 @@ function reader() {
 		setTimeout(function() {
 			// console.log(((Date.now() - counter) / 1000) + "s. elapsed. Restarting reader.");
 			// counter = Date.now();
-			reader();
+			reader(send);
 		}, 200);
 	});
 }
 
-reader();
+exports.init = function(settings, send, _debug) {
+	var debug = !!_debug;
 
+	/* SEND IDENTITY ON FORK START */
+	send({
+		messageType: 'identity', // in order to find out if the message contains actual data or the Provider's identity
+		payload: {
+			name: 'filerunner', // name of Provider
+			version: '0.0.2', // version of Provider
+			author: 'Fabian Tollenaar <fabian@starting-point.nl>', // author of Provider
+			provides: 'Loops through a log file of nmea0183 sentences', // description of what the Provider provides
+			capabilities: ['nmea0183'], // capabilities/tags
+			protocol: 'Signal K', // protocol of the actual data. Should be signal K
+			
+			device: { // device information
+				protocol: 'nmea0183', // original protocol
+				type: 'file', // device type
+				location: './nmea.log', // device location
+				manufacturer: '-', // device manufacturer
+				product: '-', // product identifier
+				serial: '-' // serial number
+			}
+		}
+	});
+
+	reader(send);
+}
 

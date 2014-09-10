@@ -1,6 +1,6 @@
 {
 	"name": "saildata-server",
-	"version": "0.1.11",
+	"version": "0.1.12",
 	"description": "An implementation of a [Signal K](http://signalk.github.io) central server for boats.",
 	"main": "index.js",
 	"scripts": {
