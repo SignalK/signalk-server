@@ -1,51 +1,40 @@
 {
-  "name": "signalk-server-prototype",
-  "version": "0.1.13",
-  "description": "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
-  "main": "index.js",
-  "scripts": {
-    "start": "node ./index"
-  },
-  "keywords": [
-    "signalk",
-    "kjson",
-    "nmea",
-    "seatalk",
-    "gps",
-    "sailing",
-    "boat",
-    "marine",
-    "nautic"
-  ],
-  "license": "GPLv3",
-  "author": "Fabian Tollenaar <fabian@starting-point.nl>",
-  "contributors": [
-    { 
-      "name": "Teppo Kurki", 
-      "email": "teppo.kurki@iki.fi" 
-    }
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/SignalK/server-prototype"
-  },
-  "bugs": {
-    "url": "https://github.com/SignalK/server-prototype/issues"
-  },
-  "engine": {
-    "node": "v0.10.x"
-  },
-  "dependencies": {
-    "colors": "^0.6.2",
-    "ejson": "^1.0.1",
-    "express": "3.x",
-    "lodash": "^2.4.1",
-    "mdns": "^2.2.0",
-    "memwatch": "*",
-    "minimist": "^1.1.0",
-    "nmea0183-signalk": "^0.1.12",
-    "node-uuid": "^1.4.1",
-    "socket.io": "^1.0.6",
-    "stream-throttle": "^0.1.3"
-  }
+	"name": "saildata-server",
+	"version": "0.1.12",
+	"description": "An implementation of a [Signal K](http://signalk.github.io) central server for boats.",
+	"main": "index.js",
+	"scripts": {
+		"start": "node ./index"
+	},
+	"keywords": [
+		"signalk",
+		"kjson",
+		"nmea",
+		"seatalk",
+		"gps",
+		"sailing",
+		"boat",
+		"marine",
+		"nautic"
+	],
+	"author": "Fabian Tollenaar",
+	"license": "GPLv3",
+	"devDependencies": {
+		"tape": "^2.12.1"
+	},
+	"engine": {
+		"node": "v0.10.x"
+	},
+	"dependencies": {
+		"colors": "^0.6.2",
+		"ejson": "^1.0.1",
+		"express": "3.x",
+		"lodash": "^2.4.1",
+		"nmea0183-signalk": "^0.1.12",
+		"node-uuid": "^1.4.1",
+		"socket.io": "^1.0.6",
+		"stream-throttle": "^0.1.3",
+		"memwatch": "*",
+		"mdns": "^2.2.0"
+	}
 }
