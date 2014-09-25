@@ -10,7 +10,7 @@ try {
   var io = require('socket.io-client');
 } catch (err) {
   console.error(err.stack);
-  console.error("Have you installed socket.io-client with npm install socket.io-client");
+  console.error("Have you installed socket.io-client with npm install socket.io-client?");
   process.exit(-1);
 }
 
@@ -30,5 +30,6 @@ socket.on('disconnect', function () {
 });
 
 socket.on('signalk', function (msg) {
-  console.log(JSON.stringify(msg));
+  console.log(JSON.stringify(msg, null, 2));
+  console.log('\n\n');
 });

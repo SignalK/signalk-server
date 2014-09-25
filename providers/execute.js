@@ -19,9 +19,13 @@
  * 
  */
 
-exports.init = function(settings, send, _debug) {
-  var debug = !!_debug;
-  var spawn = require('child_process').spawn;
+exports.init = function(app, send, _debug) {
+  var command   = typeof app.argv['execute'] === 'string' ? app.argv['execute'] : false;
+  
+  if(!command) return false;
+
+  var debug     = !!_debug;
+  var spawn     = require('child_process').spawn;
 
   /* SEND IDENTITY ON FORK START */
   send({
@@ -45,10 +49,9 @@ exports.init = function(settings, send, _debug) {
     }
   });
 
-  // TODO retrieve command from settings and add a panel to settings to set the command.
-
   process.nextTick(function() {
-    var command = spawn('echo', ['{"self":"a34af45a","vessels":{"a34af45a":{"source":{"type":"NMEA0183","label":"signalk/nmea-signalk"},"timestamp":"2014-05-06T15:51:30.241Z","uuid":"a34af45a","navigation":{"courseOverGroundTrue":{"source":{"type":"NMEA0183","sentence":"RMC","device":"nmea-signalk"},"timestamp":"2014-05-03T09:14:11.000Z","value":28.17},"location":{"latitude":52.371901666666666,"longitude":4.90974,"source":{"type":"NMEA0183","sentence":"RMC","device":"nmea-signalk"},"timestamp":"2014-05-03T09:14:11.000Z"},"magneticVariaton":{"source":{"type":"NMEA0183","sentence":"RMC","device":"nmea-signalk"},"timestamp":"2014-05-03T09:14:11.000Z","value":0},"speedOverGround":{"source":{"type":"NMEA0183","sentence":"RMC","device":"nmea-signalk"},"timestamp":"2014-05-03T09:14:11.000Z","value":0.18},"gnss":{"source":{"type":"NMEA0183","sentence":"GGA","device":"nmea-signalk"},"timestamp":"2014-06-06T09:14:00.000Z","quality":1,"satellites":8,"antennaAltitude":1,"horizontalDilution":0,"geoidalSeparation":47,"differentialAge":0,"differentialReference":0},"position":{"source":{"type":"NMEA0183","sentence":"GGA","device":"nmea-signalk"},"timestamp":"2014-06-06T09:14:00.000Z","longitude":52.371903333333336,"latitude":4.909741666666667}}}},"version":"2.0","timestamp":"2014-05-06T15:51:30.123Z","source":{"type":"NMEA0183","label":"signalk/nmea-signalk"}}']);
+    command = String(command).split(' ');
+    command = spawn(command[0], command.slice(1));
 
     command.stdout.on('data', function(data) {
       try {
@@ -67,4 +70,3 @@ exports.init = function(settings, send, _debug) {
     });
   });
 }
-
