@@ -49,7 +49,7 @@ exports.init = function (theProvider, send, _debug) {
     send(chunk);
   });
 
-  createFileReader(theProvider.settings.options.filename, analyzerStream);
+  createFileReader(theProvider.app.argv.n2kfile || theProvider.settings.options.filename, analyzerStream);
 }
 
 function createFileReader(filename, analyzerStream) {
