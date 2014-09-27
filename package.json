@@ -34,7 +34,7 @@
     "minimist": "^1.1.0",
     "nmea0183-signalk": "^0.1.12",
     "n2k-signalk": "signalk/n2k-signalk",
-    "line-by-line": "0.1",
+    "line-by-line": "Osterjour/line-by-line",
     "through": ">=2.2.7 <3",
     "node-uuid": "^1.4.1",
     "socket.io": "^1.0.6",

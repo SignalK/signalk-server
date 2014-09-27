@@ -66,7 +66,7 @@ function createFileReader(filename, analyzerStream) {
 
   lr.on('end', function () {
     process.nextTick(function () {
-      createReader(analyzerStream);
+      createFileReader(filename, analyzerStream);
     })
   });
 }
