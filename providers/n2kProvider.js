@@ -20,42 +20,9 @@
  */
 
 
-n2kParser = require('n2k-signalk');
-var filename = process.env['N2KFILENAME'];
-
-var analyzerStream = new (require('./n2k/AnalyzerStream.js'))();
-var n2kToSignalKTransformer = require('n2k-signalk').toNestedTransformer({});
-
-analyzerStream.pipe(n2kToSignalKTransformer);
-
-function reader(send) {
-  var LineByLineReader = require('line-by-line');
-  console.log("filename:" + filename);
-  var lr = new LineByLineReader(filename);
-
-  lr.on('line', function (line) {
-    lr.pause();
-    analyzerStream.write(line);
-    setTimeout(function () {
-      lr.resume();
-    }, 1000);
-  });
-
-  n2kToSignalKTransformer.on('data', function(chunk) {
-    console.log(JSON.stringify(chunk));
-    send(chunk);
-  });
-
-
-}
-
-
-
-
-exports.init = function (settings, send, _debug) {
+exports.init = function (theProvider, send, _debug) {
   var debug = !!_debug;
 
-  console.log(JSON.stringify(settings));
   send({
     messageType: 'identity', // in order to find out if the message contains actual data or the Provider's identity
     payload: {
@@ -73,5 +40,33 @@ exports.init = function (settings, send, _debug) {
     }
   });
 
-  reader(send);
+
+  var analyzerStream = new (require('./n2k/AnalyzerStream.js'))();
+  var n2kToSignalKTransformer = require('n2k-signalk').toNestedTransformer({});
+  analyzerStream.pipe(n2kToSignalKTransformer);
+
+  n2kToSignalKTransformer.on('data', function (chunk) {
+    send(chunk);
+  });
+
+  createFileReader(theProvider.settings.options.filename, analyzerStream);
+}
+
+function createFileReader(filename, analyzerStream) {
+  var LineByLineReader = require('line-by-line');
+  var lr = new LineByLineReader(filename);
+
+  lr.on('line', function (line) {
+    lr.pause();
+    analyzerStream.write(line);
+    setTimeout(function () {
+      lr.resume();
+    }, 1000);
+  });
+
+  lr.on('end', function () {
+    process.nextTick(function () {
+      createReader(analyzerStream);
+    })
+  });
 }
