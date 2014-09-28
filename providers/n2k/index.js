@@ -41,7 +41,8 @@ exports.init = function (theProvider, send, _debug) {
   });
 
 
-  var analyzerStream = new (require('./n2k/AnalyzerStream.js'))();
+  var path = require('path');
+  var analyzerStream = new (require('./AnalyzerStream.js'))();
   var n2kToSignalKTransformer = require('n2k-signalk').toNestedTransformer({});
   analyzerStream.pipe(n2kToSignalKTransformer);
 
@@ -49,7 +50,8 @@ exports.init = function (theProvider, send, _debug) {
     send(chunk);
   });
 
-  createFileReader(theProvider.app.argv.n2kfile || theProvider.settings.options.filename, analyzerStream);
+  var filename = path.join(process.cwd(), (theProvider.app.argv.n2kfile || theProvider.settings.options.filename));
+  createFileReader(filename, analyzerStream);
 }
 
 function createFileReader(filename, analyzerStream) {

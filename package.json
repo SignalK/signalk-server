@@ -1,10 +1,13 @@
 {
   "name": "saildata-server",
-  "version": "0.1.13",
+  "version": "0.1.16",
   "description": "An implementation of a [Signal K](http://signalk.github.io) central server for boats.",
   "main": "index.js",
   "scripts": {
     "start": "node ./index"
+  },
+  "bin": {
+    "signalKServer": "./bin/server-prototype"
   },
   "keywords": [
     "signalk",
@@ -17,10 +20,15 @@
     "marine",
     "nautic"
   ],
-  "author": "Fabian Tollenaar",
+  "author": "Fabian Tollenaar <fabian@starting-point.nl>",
+  "contributors": [
+    {
+      "name": "Teppo Kurki",
+      "email": "teppo.kurki@iki.fi"
+    }
+  ],
   "license": "GPLv3",
   "devDependencies": {
-    "tape": "^2.12.1",
     "socket.io-client": "^1.0.6"
   },
   "engine": {
@@ -30,14 +38,14 @@
     "colors": "^0.6.2",
     "ejson": "^1.0.1",
     "express": "3.x",
+    "line-by-line": "Osterjour/line-by-line",
     "lodash": "^2.4.1",
     "minimist": "^1.1.0",
+    "n2k-signalk": "0.0.0",
     "nmea0183-signalk": "^0.1.12",
-    "n2k-signalk": "signalk/n2k-signalk",
-    "line-by-line": "Osterjour/line-by-line",
-    "through": ">=2.2.7 <3",
     "node-uuid": "^1.4.1",
     "socket.io": "^1.0.6",
-    "stream-throttle": "^0.1.3"
+    "stream-throttle": "^0.1.3",
+    "through": ">=2.2.7 <3"
   }
 }

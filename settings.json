@@ -23,11 +23,11 @@
 
   "providers": [
     {
-      "type": "execute",
+      "name": "execute",
       "options": {}
     },
     {
-      "type": "filerunner",
+      "name": "filerunner",
       "options": {}
     }
   ]
