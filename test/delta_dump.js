@@ -14,7 +14,7 @@ try {
   process.exit(-1);
 }
 
-var socket = io.connect('https://localhost:3000/signalk/stream');
+var socket = io.connect('https://localhost:3000/signalk/stream/delta');
 
 socket.on("connect_failed", function (_) {
   console.log(_)
@@ -30,5 +30,6 @@ socket.on('disconnect', function () {
 });
 
 socket.on('signalk', function (msg) {
-  console.log('now\n');
+  console.log(JSON.stringify(msg, null, 2));
+  console.log('----------------------------------------------------------------------\n');
 });
