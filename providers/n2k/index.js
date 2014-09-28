@@ -26,16 +26,19 @@ exports.init = function (theProvider, send, _debug) {
   send({
     messageType: 'identity', // in order to find out if the message contains actual data or the Provider's identity
     payload: {
-      name: 'n2k',
+      name: theProvider.name,
+      provider: theProvider.file,
       version: '0.0.0',
       provides: 'Loops through a log file of n2k sentences in actisense-serial format',
       capabilities: ['n2k'],
       protocol: 'Signal K',
 
       device: {
+        name: theProvider.name,
+        provider: theProvider.file,
         protocol: 'actisense-serial-n2k',
         type: 'file',
-        location: '???'
+        location: '-'
       }
     }
   });
