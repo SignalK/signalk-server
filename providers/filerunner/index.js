@@ -63,27 +63,26 @@ function reader(send) {
 	});
 }
 
-exports.init = function(settings, send, _debug) {
+exports.init = function(theProvider, send, _debug) {
 	var debug = !!_debug;
 
 	/* SEND IDENTITY ON FORK START */
 	send({
 		messageType: 'identity', // in order to find out if the message contains actual data or the Provider's identity
 		payload: {
-			name: 'filerunner', // name of Provider
-			version: '0.0.2', // version of Provider
+			name: theProvider.name,
+      provider: theProvider.file,
 			author: 'Fabian Tollenaar <fabian@starting-point.nl>', // author of Provider
 			provides: 'Loops through a log file of nmea0183 sentences', // description of what the Provider provides
 			capabilities: ['nmea0183'], // capabilities/tags
 			protocol: 'Signal K', // protocol of the actual data. Should be signal K
 			
 			device: { // device information
+        name: theProvider.name,
+        provider: theProvider.file,
 				protocol: 'nmea0183', // original protocol
-				type: 'file', // device type
-				location: './nmea.log', // device location
-				manufacturer: '-', // device manufacturer
-				product: '-', // product identifier
-				serial: '-' // serial number
+				type: 'file',
+				location: FILE
 			}
 		}
 	});

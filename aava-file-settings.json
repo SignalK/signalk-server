@@ -1,0 +1,17 @@
+{
+  "vessel": {
+    "name": "Aava",
+    "brand": "Arcona",
+    "type": "Arcona 34"
+  },
+
+  "providers": [
+    {
+      "name": "N2K log file repeater",
+      "provider": "n2k",
+      "options": {
+        "filename": "providers/n2k/n2k.data"
+      }
+    }
+  ]
+}

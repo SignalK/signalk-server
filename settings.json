@@ -21,6 +21,21 @@
 		"key": "saildata"
 	},
 
-	"providers": ["provider-execute", "provider-filerunner"]
+  "providers": [
+    {
+      "name": "Filerunner One",
+      "provider": "filerunner",
+      "options": {
+        "filename": "providers/filerunner/logs/n2kd-183-merrimac.log"
+      }
+    },
 
+    {
+      "name": "Filerunner Two",
+      "provider": "filerunner",
+      "options": {
+        "filename": "providers/filerunner/logs/plaka.log"
+      }
+    }
+  ]
 }

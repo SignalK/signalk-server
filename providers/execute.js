@@ -19,8 +19,8 @@
  * 
  */
 
-exports.init = function(app, send, _debug) {
-  var command   = typeof app.argv['execute'] === 'string' ? app.argv['execute'] : false;
+exports.init = function(theProvider, send, _debug) {
+  var command   = typeof theProvider.app.argv['execute'] === 'string' ? app.argv['execute'] : false;
   
   if(!command) return false;
 
@@ -31,7 +31,8 @@ exports.init = function(app, send, _debug) {
   send({
     messageType: 'identity', // in order to find out if the message contains actual data or the Provider's identity
     payload: {
-      name: 'execute', // name of Provider
+      name: theProvider.name,
+      provider: theProvider.file,
       version: '0.0.1', // version of Provider
       author: 'Fabian Tollenaar <fabian@starting-point.nl>', // author of Provider
       provides: 'Execute any (Signal K producing) command set by user.', // description of what the Provider provides
@@ -39,12 +40,11 @@ exports.init = function(app, send, _debug) {
       protocol: 'Signal K', // protocol of the actual data. Should be signal K
       
       device: { // device information
+        name: theProvider.name,
+        provider: theProvider.file,
         protocol: '-', // original protocol
         type: 'command', // device type
         location: '-', // device location
-        manufacturer: '-', // device manufacturer
-        product: '-', // product identifier
-        serial: '-' // serial number
       }
     }
   });
