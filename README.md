@@ -6,17 +6,19 @@ An implementation of a [Signal K](http://signalk.github.io) central server for v
 
 Get up and running
 ------------------
-- Clone the repo (will publish to NPM at some point, but this is too early a version).
-- Edit `settings.json`
-- Set the `ship` object to your own ship's details.
-- Add one or more providers to the `providers` array. Providers reside in the `providers` directory. Take a look at the `providers/filerunner` directory for an example. *Note: whilst providers are named `provider-<provider-name>`, the containing folder does not have the `provider-` prefix. The folder is loaded a whole, so it should have an index.js file.*
-- run `npm start` in the root of the folder to start the server. Alternatively, you could run the server using forever: `forever -e error.log start index.js`
+- Clone the repo.
+- Edit `settings.json`, or create a new settings.json file for your vessel.
+- Add your Providers + their config objects to the settings file, along with some vessel information. Take a look at some of the examples for more details (we'll add a reference when things settle down around config).
+- Run the server with `node index.js` and any arguments (see below).
 
+Arguments
+---------
+`@TODO`
 
-Some notes
-----------
-*This is a very early implementation. Basic architecture is there, and it's stable.. But, it lacks a lot of features we want to implement, and we need to write more providers.*
-
+Useful links
+------------
+- Creating Providers (`@TODO`)
+- [Creating Consumers](CONSUMERS.md)
 
 License
 -------
