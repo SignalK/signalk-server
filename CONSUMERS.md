@@ -62,3 +62,9 @@ The simplest form of a consumer is a process or web page that receives and displ
 </body>
 </html>
 ```
+
+3. Examples of working Consumers
+--------------------------------
+1. Navgauge (`almost, @todo`)
+2. [Polymeters](https://github.com/fabdrol/consumer-polymeters)
+
