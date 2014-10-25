@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <style>
+    html {
+      box-sizing: border-box;
+    }
+    
+    *, *:before, *:after {
+      box-sizing: inherit;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
+    #con {
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      background-color: black;
+      color: green;
+      line-height: 1.5;
+      padding: 2em;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <pre id="con"></pre>
+
+  <script>
+    var con = document.getElementById('console');
+    var url = 'wss://127.0.0.1:3000';
+
+    function onMessage(data) {
+      console.log(arguments);
+
+      html += JSON.stringify(data, null, 4);
+      html += "\n------------------------------------------------------------------------------------\n";
+      html += con.innerHTML;
+
+      con.innerHTML = html;
+    }
+
+    function onError(err) {
+      console.log(arguments);
+
+      html += JSON.stringify({ message: err.message, stack: err.stack }, null, 4);
+      html += "\n\n------------------------------------------------------------------------------------\n\n";
+      html += con.innerHTML;
+
+      con.innerHTML = html;
+    }
+
+    function onConnect() {
+      console.log(arguments);
+      con.innerHTML = "Connected.";
+    }
+
+    function onDisconnect() {
+      console.log(arguments);
+      html += JSON.stringify("Disconnected.");
+      html += "\n\n------------------------------------------------------------------------------------\n\n";
+      html += con.innerHTML;
+
+      con.innerHTML = html;
+    }
+
+    socket = new WebSocket(url);
+    socket.onopen = function(evt) { onConnect(evt) };
+    socket.onclose = function(evt) { onDisconnect(evt) };
+    socket.onmessage = function(evt) { onMessage(evt) };
+    socket.onerror = function(evt) { onError(evt) };
+
+  </script>
+</body>
+</html>
