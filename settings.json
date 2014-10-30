@@ -17,7 +17,6 @@
 	},
 
 	"interfaces": [
-    "udp",
     "rest",
     "ws"
   ],
