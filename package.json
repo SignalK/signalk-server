@@ -4,7 +4,7 @@
   "description": "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
   "main": "index.js",
   "scripts": {
-    "start": "node --harmony ./index",
+    "start": "node ./index",
     "test": "DEBUG=signalk*,provider* node --harmony ./index"
   },
   "bin": {
