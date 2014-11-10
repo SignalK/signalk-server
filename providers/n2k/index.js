@@ -46,7 +46,7 @@ exports.init = function (theProvider, send, _debug) {
 
   var path = require('path');
   var analyzerStream = new (require('./AnalyzerStream.js'))();
-  var n2kToSignalKTransformer = require('n2k-signalk').toNestedTransformer({});
+  var n2kToSignalKTransformer = require('n2k-signalk').toDeltaTransformer({});
   analyzerStream.pipe(n2kToSignalKTransformer);
 
   n2kToSignalKTransformer.on('data', function (chunk) {

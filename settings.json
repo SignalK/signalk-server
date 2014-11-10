@@ -16,10 +16,10 @@
 		}
 	},
 
-	"network": {
-		"ssid": "saildata",
-		"key": "saildata"
-	},
+	"interfaces": [
+    "rest",
+    "ws"
+  ],
 
   "providers": [
     {
