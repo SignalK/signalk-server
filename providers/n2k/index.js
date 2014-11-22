@@ -43,6 +43,10 @@ exports.init = function (theProvider, send, _debug) {
     }
   });
 
+  var vessel = theProvider.app.config.settings.vessel;
+  var selfId = vessel.mssi || vessel.uuid;
+
+
 
   var path = require('path');
   var analyzerStream = new (require('./AnalyzerStream.js'))();
@@ -50,6 +54,9 @@ exports.init = function (theProvider, send, _debug) {
   analyzerStream.pipe(n2kToSignalKTransformer);
 
   n2kToSignalKTransformer.on('data', function (chunk) {
+    if (typeof chunk.context === 'undefined') {
+      chunk.context = 'vessels.' + selfId;
+    }
     send(chunk);
   });
 

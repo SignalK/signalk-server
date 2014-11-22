@@ -2,7 +2,8 @@
   "vessel": {
     "name": "Aava",
     "brand": "Arcona",
-    "type": "Arcona 34"
+    "type": "Arcona 34",
+    "uuid"	: "123456789"
   },
 
   "providers": [
