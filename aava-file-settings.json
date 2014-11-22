@@ -17,6 +17,7 @@
   ],
   "interfaces": [
     "ws.js",
-    "bower.js"
+    "bower.js",
+    "rest.js"
   ]
 }
