@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /*
  * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
  * 
@@ -14,4 +16,4 @@
  * limitations under the License.
 */
 
-module.exports = require('./lib');
+require('../lib/');

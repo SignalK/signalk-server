@@ -5,10 +5,10 @@
 	"main": "index.js",
 	"scripts": {
 		"start": "node ./index",
-		"test": "DEBUG=signalk*,provider* node --harmony ./index"
+		"test": "DEBUG=signalk*,provider* node ./index"
 	},
 	"bin": {
-		"signalk-server": "./bin/server"
+		"signalk-server": "./bin/signalk-server"
 	},
 	"keywords": [
 		"signalk",
@@ -28,7 +28,7 @@
 			"email": "teppo.kurki@iki.fi"
 		}
 	],
-	"license": "GPLv3",
+	"license": "Apache 2",
 	"devDependencies": {
 		"socket.io-client": "^1.0.6"
 	},
