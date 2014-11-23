@@ -19,26 +19,21 @@
  * 
  */
 
-var Parser, fs, reader, filestream, parser, mw, colors, counter, Throttle, throttled, last, path, vessel, FILE;
+var Parser, fs, reader, filestream, parser, mw, colors, counter, Throttle, throttled, last, path, FILE;
 
 // FILE 	= 'gofree-merrimac.log';
 // FILE 	= 'gps.log';
 FILE 			= 'plaka.log';
 
 path 			= require('path');
-vessel 		= require(path.normalize(__dirname + '/../../settings.json')).vessel;
 colors 		= require('colors');
 fs 				= require('fs');
 Parser 		= require('nmea0183-signalk').Parser;
 Throttle 	= require('stream-throttle').Throttle;
 
 function reader(send) {
-	filestream = fs.createReadStream(__dirname + '/logs/' + FILE);
-	
-	parser = new Parser({ 
-		vessel: vessel,
-		debug: false
-	});
+  filestream = fs.createReadStream(__dirname + '/logs/' + FILE);
+	parser     = new Parser();
 
 	throttled = new Throttle({
 		rate: 672
@@ -56,8 +51,6 @@ function reader(send) {
 		parser = null; 
 
 		setTimeout(function() {
-			// console.log(((Date.now() - counter) / 1000) + "s. elapsed. Restarting reader.");
-			// counter = Date.now();
 			reader(send);
 		}, 200);
 	});

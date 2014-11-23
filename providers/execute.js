@@ -20,7 +20,7 @@
  */
 
 exports.init = function(theProvider, send, _debug) {
-  var command   = typeof theProvider.app.argv['execute'] === 'string' ? app.argv['execute'] : false;
+  var command = typeof theProvider.app.argv['execute'] === 'string' ? app.argv['execute'] : false;
   
   if(!command) return false;
 
