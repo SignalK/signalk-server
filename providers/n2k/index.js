@@ -73,7 +73,7 @@ function createFileReader(filename, analyzerStream) {
     analyzerStream.write(line);
     setTimeout(function () {
       lr.resume();
-    }, 1000);
+    }, 100);
   });
 
   lr.on('end', function () {
