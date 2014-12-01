@@ -56,7 +56,7 @@ function reader(send) {
 	});
 }
 
-exports.init = function(theProvider, send, _debug) {
+exports.init = function(app, send, _debug) {
 	var debug = !!_debug;
 
 	/* SEND IDENTITY ON FORK START */

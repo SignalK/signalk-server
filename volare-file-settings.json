@@ -3,9 +3,7 @@
 		"name"	: "Volare",
 		"brand"	: "Friendship",
 		"type"	: "22",
-		"mmsi"	: "123456789",
 		"uuid"	: "87654321",
-		"ident"	: "mmsi",
 		
 		"dimensions": {
 			"length": 7,
