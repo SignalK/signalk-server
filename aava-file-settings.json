@@ -15,6 +15,33 @@
       }
     }
   ],
+  "pipedProviders": [
+  {
+    "id": "n2kFromFile",
+    "pipeElements": [
+       {
+         "type": "providers/filestream",
+         "options": {
+           "filename": "providers/n2k/n2k.data"
+         }
+       },
+       {
+         "type": "providers/throttle",
+         "options": {
+            "rate": 500
+         }
+       },
+       {
+         "type": "providers/liner"
+       },
+       {
+         "type": "providers/N2KAnalyzer"
+       },
+       {
+         "type": "providers/n2k-signalk"
+       }
+    ]
+  }],
   "interfaces": [
     "ws.js",
     "bower.js",

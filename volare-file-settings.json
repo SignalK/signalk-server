@@ -1,0 +1,65 @@
+{
+	"vessel": {
+		"name"	: "Volare",
+		"brand"	: "Friendship",
+		"type"	: "22",
+		"mmsi"	: "123456789",
+		"uuid"	: "87654321",
+		"ident"	: "mmsi",
+		
+		"dimensions": {
+			"length": 7,
+			"width": 2.5,
+			"mast": 10,
+			"depthTransducer": 0.5,
+			"keel": 1.5 
+		}
+	},
+
+	"interfaces": [
+    "rest",
+    "ws"
+  ],
+
+  "providers": [
+    {
+      "name": "Filerunner One",
+      "provider": "filerunner",
+      "options": {
+        "filename": "providers/filerunner/logs/n2kd-183-merrimac.log"
+      }
+    },
+
+    {
+      "name": "Filerunner Two",
+      "provider": "filerunner",
+      "options": {
+        "filename": "providers/filerunner/logs/plaka.log"
+      }
+    }
+  ],
+  "pipedProviders": [
+  {
+    "id": "n2kFromFile",
+    "pipeElements": [
+       { 
+         "type": "providers/filestream",
+         "options": {
+           "filename": "providers/filerunner/logs/plaka.log"
+         }
+       },
+       { 
+         "type": "providers/throttle",
+         "options": {
+            "rate": 500
+         }
+       },       
+       {
+         "type": "providers/liner"
+       },
+       {
+         "type": "providers/nmea0183-signalk"
+       }               
+    ]
+  }]
+}
