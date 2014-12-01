@@ -1,37 +1,50 @@
 /*
+ * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
  *
- * prototype-server: An implementation of a Signal K server for boats.
- * Copyright (C) 2014  Fabian Tollenaar <fabian@starting-point.nl>,
- * Teppo Kurki <teppo.kurki@iki.fi> *et al*.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-var stream = require('stream');
-var util = require('util');
+var Transform = require('stream').Transform;
 
-var Transform = stream.Transform
+function N2KAnalyzer() {
+  Transform.call(this, {
+    objectMode: true
+  });
+}
 
-var AnalyzerStream = function AnalyzerStream() {
-  this.analyzerProcess = require('child_process').spawn('sh', ['-c','analyzer -json']);
-  this.analyzerProcess.stderr.on('data', function (data) { console.error(data.toString());});
-  this.analyzerProcess.on('close', function (code) { console.error('Analyzer process exited with code ' + code);});
+require('util').inherits(N2KAnalyzer, Transform);
+
+N2KAnalyzer.prototype._transform = function(chunk, encoding, done) {
+  var data = chunk.toString();
+  //    this.push(data + "\n");
+  this.analyzerProcess.stdin.write(chunk.toString() + '\n');
+  done();
+}
+
+
+
+N2KAnalyzer.prototype.start = function() {
+  this.analyzerProcess = require('child_process').spawn('sh', ['-c', 'analyzer -json']);
+  this.analyzerProcess.stderr.on('data', function(data) {
+    console.error(data.toString());
+  });
+  this.analyzerProcess.on('close', function(code) {
+    console.error('Analyzer process exited with code ' + code);
+  });
 
   this.linereader = require('readline').createInterface(this.analyzerProcess.stdout, this.analyzerProcess.stdin);
   var that = this;
-  this.linereader.on('line', function (data) {
+  this.linereader.on('line', function(data) {
     try {
       that.push(JSON.parse(data));
     } catch (ex) {
@@ -39,15 +52,17 @@ var AnalyzerStream = function AnalyzerStream() {
     }
   });
 
-  Transform.call(this);
-  this._readableState.objectMode = true;
 }
-util.inherits(AnalyzerStream, Transform);
 
-AnalyzerStream.prototype._transform = function (chunk, enc, callback) {
-  this.analyzerProcess.stdin.write(chunk.toString() + '\n');
-  callback();
-};
+//We need to override end, otherwise end may be propagated before all data
+//has been piped through analyzer process and we will try to write to 
+//piped output after EOL
+N2KAnalyzer.prototype.end = function() {}
 
-module.exports = AnalyzerStream;
+N2KAnalyzer.prototype.stop = function() {
+  _flush();
+  this.analyzerProcess.kill();
+}
 
+
+module.exports = N2KAnalyzer;
