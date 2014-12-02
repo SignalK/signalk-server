@@ -46,11 +46,4 @@ Liner.prototype._flush = function(done) {
 }
 
 
-Liner.prototype.start = function() {}
-
-Liner.prototype.stop = function() {
-  _flush();
-}
-
-
 module.exports = Liner;

@@ -16,8 +16,4 @@
 
 var Throttle = require('stream-throttle').Throttle;
 
-Throttle.prototype.start = function() {}
-
-Throttle.prototype.stop = function() {}
-
 module.exports = Throttle;
