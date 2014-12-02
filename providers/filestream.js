@@ -22,9 +22,7 @@ function EndIgnoringPassThrough() {
 
 
 require('util').inherits(EndIgnoringPassThrough, PassThrough);
-
 EndIgnoringPassThrough.prototype.end = function() {}
-
 
 
 var FileStream = function(options) {
@@ -48,7 +46,7 @@ FileStream.prototype.startStream = function() {
   }
 }
 
-FileStream.prototype.stop = function() {
+FileStream.prototype.end = function() {
   this.keepRunning = false;
   this.pipeTo.end();
   this.filestream.close();
