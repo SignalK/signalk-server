@@ -18,24 +18,6 @@
     "rest",
     "ws"
   ],
-
-  "providers": [
-    {
-      "name": "Filerunner One",
-      "provider": "filerunner",
-      "options": {
-        "filename": "providers/filerunner/logs/n2kd-183-merrimac.log"
-      }
-    },
-
-    {
-      "name": "Filerunner Two",
-      "provider": "filerunner",
-      "options": {
-        "filename": "providers/filerunner/logs/plaka.log"
-      }
-    }
-  ],
   "pipedProviders": [
   {
     "id": "n2kFromFile",
