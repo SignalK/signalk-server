@@ -14,18 +14,44 @@
  * limitations under the License.
  */
 
+var PassThrough = require('stream').PassThrough;
+
+function EndIgnoringPassThrough() {
+  PassThrough.call(this);
+}
+
+
+require('util').inherits(EndIgnoringPassThrough, PassThrough);
+
+EndIgnoringPassThrough.prototype.end = function() {}
+
+
+
 var FileStream = function(options) {
   this.options = options;
+  this.keepRunning = true;
 }
 
-FileStream.prototype.start = function() {
-  require('fs').createReadStream(this.options.filename).pipe(this.pipeDestination);
-}
 
 FileStream.prototype.pipe = function(pipeTo) {
-  this.pipeDestination = pipeTo;
+  this.pipeTo = pipeTo;
+  this.endIgnoringPassThrough = new EndIgnoringPassThrough();
+  this.endIgnoringPassThrough.pipe(pipeTo);
+  this.startStream();
 }
 
-FileStream.prototype.stop = function() {}
+FileStream.prototype.startStream = function() {
+  if (this.keepRunning) {
+    this.filestream = require('fs').createReadStream(this.options.filename);
+    this.filestream.on('end', this.startStream.bind(this));
+    this.filestream.pipe(this.endIgnoringPassThrough)
+  }
+}
+
+FileStream.prototype.stop = function() {
+  this.keepRunning = false;
+  this.pipeTo.end();
+  this.filestream.close();
+}
 
 module.exports = FileStream;
