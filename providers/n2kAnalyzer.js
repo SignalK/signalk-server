@@ -15,25 +15,13 @@
  */
 
 var Transform = require('stream').Transform;
+var debug = require('debug')('signalk:n2kAnalyzer');
 
 function N2KAnalyzer() {
   Transform.call(this, {
     objectMode: true
   });
-}
 
-require('util').inherits(N2KAnalyzer, Transform);
-
-N2KAnalyzer.prototype._transform = function(chunk, encoding, done) {
-  var data = chunk.toString();
-  //    this.push(data + "\n");
-  this.analyzerProcess.stdin.write(chunk.toString() + '\n');
-  done();
-}
-
-
-
-N2KAnalyzer.prototype.start = function() {
   this.analyzerProcess = require('child_process').spawn('sh', ['-c', 'analyzer -json']);
   this.analyzerProcess.stderr.on('data', function(data) {
     console.error(data.toString());
@@ -51,18 +39,24 @@ N2KAnalyzer.prototype.start = function() {
       console.error(ex.stack);
     }
   });
-
 }
 
-//We need to override end, otherwise end may be propagated before all data
-//has been piped through analyzer process and we will try to write to 
-//piped output after EOL
-N2KAnalyzer.prototype.end = function() {}
+require('util').inherits(N2KAnalyzer, Transform);
 
-N2KAnalyzer.prototype.stop = function() {
-  _flush();
+N2KAnalyzer.prototype._transform = function(chunk, encoding, done) {
+  var data = chunk.toString();
+  this.analyzerProcess.stdin.write(chunk.toString() + '\n');
+  done();
+}
+N2KAnalyzer.prototype.pipe = function(pipeTo) {
+  this.pipeTo = pipeTo;
+  N2KAnalyzer.super_.prototype.pipe.call(this, pipeTo);
+}
+
+N2KAnalyzer.prototype.end = function() {
+  debug('end, killing child analyzer process');
   this.analyzerProcess.kill();
+  this.pipeTo.end();
 }
-
 
 module.exports = N2KAnalyzer;
