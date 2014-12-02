@@ -25,7 +25,7 @@
        { 
          "type": "providers/filestream",
          "options": {
-           "filename": "providers/filerunner/logs/plaka.log"
+           "filename": "samples/plaka.log"
          }
        },
        { 
