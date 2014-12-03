@@ -38,7 +38,6 @@
     "ejson": "^1.0.1",
     "express": "3.x",
     "express-namespace": "^0.1.1",
-    "line-by-line": "Osterjour/line-by-line",
     "lodash": "^2.4.1",
     "minimist": "^1.1.0",
     "n2k-signalk": "signalk/n2k-signalk",
