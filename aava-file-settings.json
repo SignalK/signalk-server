@@ -6,8 +6,7 @@
     "uuid"	: "123456789"
   },
 
-  "pipedProviders": [
-  {
+  "pipedProviders": [{
     "id": "n2kFromFile",
     "pipeElements": [
        {

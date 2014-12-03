@@ -16,4 +16,7 @@
  * limitations under the License.
 */
 
-require('../lib/').start();
+var Server = require('../lib');
+var server = new Server();
+
+server.start();
