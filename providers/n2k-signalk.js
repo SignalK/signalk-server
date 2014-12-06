@@ -35,7 +35,5 @@ ToSignalK.prototype._transform = function(chunk, encoding, done) {
   done();
 }
 
-ToSignalK.prototype.start = function() {}
-ToSignalK.prototype.stop = function() {}
 
 module.exports = ToSignalK;
