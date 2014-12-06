@@ -32,6 +32,10 @@ Liner.prototype._transform = function(chunk, encoding, done) {
 
   var lines = data.split('\n')
   this._lastLineData = lines.splice(lines.length - 1, 1)[0];
+  if (this._lastLineData.length > 2048) {
+    console.error("Are you sure you are using the correct line terminator? Not going to handle lines longer than 2048 chars.");
+    this._lastLineData = '';
+  }
   lines.forEach(this.push.bind(this));
 
   done();
