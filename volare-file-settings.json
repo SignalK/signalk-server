@@ -26,7 +26,13 @@
          "type": "providers/filestream",
          "options": {
            "filename": "samples/plaka.log"
-         }
+         },
+         "cliArgumentMappings": [
+           {
+             "fromArgument": "nmeafilename",
+             "toOption": "filename"
+           }
+         ]
        },
        { 
          "type": "providers/throttle",
