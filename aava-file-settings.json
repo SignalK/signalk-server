@@ -14,9 +14,9 @@
          "options": {
            "filename": "samples/aava-n2k.data"
          },
-         "cliArgumentMappings": [
+         "optionMappings": [
            {
-             "fromArgument": "n2kfilename",
+             "fromAppProperty": "argv.n2kfilename",
              "toOption": "filename"
            }
          ]
