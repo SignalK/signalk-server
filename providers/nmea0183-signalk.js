@@ -16,17 +16,14 @@
 
 var Transform = require('stream').Transform;
 
-var toDelta = require('n2k-signalk').toDelta;
-
-var parser = new(require('nmea0183-signalk').Parser)();
-
-function ToSignalK() {
+function ToSignalK(options) {
   Transform.call(this, {
     objectMode: true
   });
 
+  this.parser = new(require('nmea0183-signalk').Parser)(options);
   var that = this;
-  parser.on('delta', function(delta) {
+  this.parser.on('delta', function(delta) {
     that.push(delta);
   });
 }
@@ -34,7 +31,7 @@ function ToSignalK() {
 require('util').inherits(ToSignalK, Transform);
 
 ToSignalK.prototype._transform = function(chunk, encoding, done) {
-  parser.write(chunk + '\n');
+  this.parser.write(chunk + '\n');
   done()
 }
 

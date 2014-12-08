@@ -44,7 +44,17 @@
          "type": "providers/liner"
        },
        {
-         "type": "providers/nmea0183-signalk"
+          "type": "providers/nmea0183-signalk",
+          "optionMappings": [
+            {
+             "fromAppProperty": "selfId",
+             "toOption": "selfId"
+            },
+            {
+             "fromAppProperty": "selfType",
+             "toOption": "selfType"
+            }
+          ]
        }               
     ]
   }]
