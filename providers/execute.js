@@ -19,54 +19,39 @@
  * 
  */
 
-exports.init = function(theProvider, send, _debug) {
-  var command = typeof theProvider.app.argv['execute'] === 'string' ? app.argv['execute'] : false;
-  
-  if(!command) return false;
+var Transform = require('stream').Transform;
+var debug = require('debug')('signalk:n2kAnalyzer');
 
-  var debug     = !!_debug;
-  var spawn     = require('child_process').spawn;
-
-  /* SEND IDENTITY ON FORK START */
-  send({
-    messageType: 'identity', // in order to find out if the message contains actual data or the Provider's identity
-    payload: {
-      name: theProvider.name,
-      provider: theProvider.file,
-      version: '0.0.1', // version of Provider
-      author: 'Fabian Tollenaar <fabian@starting-point.nl>', // author of Provider
-      provides: 'Execute any (Signal K producing) command set by user.', // description of what the Provider provides
-      capabilities: ['*'], // capabilities/tags
-      protocol: 'Signal K', // protocol of the actual data. Should be signal K
-      
-      device: { // device information
-        name: theProvider.name,
-        provider: theProvider.file,
-        protocol: '-', // original protocol
-        type: 'command', // device type
-        location: '-', // device location
-      }
-    }
+function Execute(options) {
+  Transform.call(this, {
   });
-
-  process.nextTick(function() {
-    command = String(command).split(' ');
-    command = spawn(command[0], command.slice(1));
-
-    command.stdout.on('data', function(data) {
-      try {
-        send(JSON.parse(data.toString()));
-      } catch(err) {
-        if(debug === true) console.log('[provider-execute] error', err.toString());
-      }
-    });
-
-    command.stderr.on('data', function(err) {
-      if(debug === true) console.log('[provider-execute] error', err.toString());
-    });
-
-    command.on('exit', function(code) {
-      if(debug === true) console.log('[provider-execute] exit', code);
-    });
-  });
+  this.options = options;
 }
+
+require('util').inherits(Execute, Transform);
+
+Execute.prototype._transform = function(chunk, encoding, done) {
+  var data = chunk.toString();
+  this.analyzerProcess.stdin.write(chunk.toString());
+  done();
+}
+Execute.prototype.pipe = function(pipeTo) {
+  this.pipeTo = pipeTo;
+  this.childProcess = require('child_process').spawn('sh', ['-c', this.options.command]);
+  this.childProcess.stderr.on('data', function(data) {
+    console.error(data.toString());
+  });
+  var that = this;
+  this.childProcess.stdout.on('data', function(data) {
+    that.push(data);
+  });
+  Execute.super_.prototype.pipe.call(this, pipeTo);
+}
+
+Execute.prototype.end = function() {
+  debug('end, killing child  process');
+  this.childProcess.kill();
+  this.pipeTo.end();
+}
+
+module.exports = Execute;
