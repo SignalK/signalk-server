@@ -1,7 +1,7 @@
 var Server = require('../lib');
 
 console.log('1. Instantiating instance...');
-var server = new Server();
+var server = new Server({ settings: 'volare-file-settings.json' });
 
 console.log('2. Starting server...');
 server.start();
