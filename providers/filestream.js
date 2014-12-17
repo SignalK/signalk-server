@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+var path = require('path');
 var PassThrough = require('stream').PassThrough;
 
 function EndIgnoringPassThrough() {
@@ -40,7 +41,7 @@ FileStream.prototype.pipe = function(pipeTo) {
 
 FileStream.prototype.startStream = function() {
   if (this.keepRunning) {
-    this.filestream = require('fs').createReadStream(this.options.filename);
+    this.filestream = require('fs').createReadStream(path.join(__dirname, '..', this.options.filename));
     this.filestream.on('end', this.startStream.bind(this));
     this.filestream.pipe(this.endIgnoringPassThrough)
   }
