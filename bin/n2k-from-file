@@ -1,4 +1,4 @@
 #!/bin/bash
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-$DIR/signalk-server -s aava-file-settings.json $*
+$DIR/signalk-server -s ./settings/aava-file-settings.json $*
