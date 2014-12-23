@@ -20,7 +20,7 @@
   ],
   
   "pipedProviders": [{
-    "id": "n2kFromFile",
+    "id": "nmeaFromFile",
     "pipeElements": [
        { 
          "type": "providers/filestream",
