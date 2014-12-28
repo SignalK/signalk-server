@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>Signal K consumer</title>
+
+  <style>
+    h1, h2 {
+      font-family: sans-serif;
+      font-size: 2em;
+      padding: 0;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    h2 {
+      font-size: 1.1em;
+      color: #999;
+    }
+  </style>
+  <script src="/signalk/stream/primus.js"></script>
+</head>
+<body>
+  <div id="data"/>
+</body>
+<script>
+
+  var signalKStream = Primus.connect(window.location.hostname + "/primus/signalk?stream=delta", {
+    reconnect: {
+      maxDelay: 15000,
+      minDelay: 500,
+      retries: Infinity
+    }
+  });
+
+  var dataDiv = document.getElementById('data');
+  signalKStream.on('data', function(data) {
+    dataDiv.innerHTML = JSON.stringify(data, null, 2);
+  }); 
+
+</script> 
+</html>
