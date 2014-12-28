@@ -10,61 +10,25 @@ A Consumer is any program, web application, website or device that Consumes a Si
 
 2. Getting started
 ------------------
-The simplest form of a consumer is a process or web page that receives and displays the data in some way. Below you can find an example of a very simple SOG display in the browser. 
+The simplest form of a consumer is a process or web page that receives and displays the data in some way. The server contains a very simple web page that connects to the server with a WebSocket connection and updates the display as new json messages are received from the server. If you have installed the server and started it with one of the file-based startup scripts in the bin/ directory you can access it at [http://localhost:3000/examples/consumer-example.html](http://localhost:3000/examples/consumer-example.html). The [html code of the web page](https://github.com/SignalK/signalk-server-node/blob/master/examples/consumer-example.html) is in the examples directory.
 
-**Browser**
-```html
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  
-  <title>Signal K consumer</title>
 
-  <style>
-    h1, h2 {
-      font-family: sans-serif;
-      font-size: 2em;
-      padding: 0;
-      margin: 0;
-      line-height: 1.5;
-    }
+3. Sample consumers
+--------------------------------
+There are several prototype level browser based consumers available. You can install them with `bower` and use by activating the bower interface, see [settings/aava-file-settings](https://github.com/SignalK/signalk-server-node/blob/d0c8f47b5bf58ee5d4a529bf98848fc1677cd769/settings/aava-file-settings.json#L43) for an example.
 
-    h2 {
-      font-size: 1.1em;
-      color: #999;
-    }
-  </style>
-</head>
-<body>
-  <h2>Speed over Ground</h2>
-  <h1 id="speedOverGround">0.00</h1>
-
-  <!-- ASSUMING YOUR SERVER IS RUNNING AT https://localhost:3000 -->
-  <script src="https://localhost:3000/socket.io/socket.io.js"></script>
-  <script>
-    var socket = io.connect('wss://localhost:3000/signalk/stream');
-    var gauge = document.getElementById('speedOverGround');
-
-    socket.on('signalk', function(signalk) {
-      var self = signalk.self;
-      var data = signalk.vessels[self];
-      var sog = data.navigation.speedOverGround || 0.00;
-
-      if(!isNaN(parseFloat(sog))) {
-        gauge.innerHTML = parseFloat(sog).toFixed(2);
-      } else {
-        gauge.innerHTML = 0.0;
-      }
-    });
-  </script>
-</body>
-</html>
+```
+git clone https://github.com/SignalK/signalk-server-node
+cd signalk-server-node/
+npm install
+npm install bower
+node_modules/.bin/bower install https://github.com/SignalK/instrumentpanel.git
+node_modules/.bin/bower install https://github.com/SignalK/sailgauge.git
+bin/n2k-from-file
 ```
 
-3. Examples of working Consumers
---------------------------------
-1. Navgauge (`almost, @todo`)
-2. [Polymeters](https://github.com/fabdrol/consumer-polymeters)
+After that the two installed consumers are available at http://localhost:3000/bower_components/sailgauge/ and http://localhost:3000/bower_components/instrumentpanel/ .
 
+4. Going further
+--------------------------------
+Have an idea for a great way to visualise Signal K data? Something bugging you about the sample consumers? [Learn about the message formats](http://signalk.org/dev/messageFormat.html), share your input, write some code, [join the mailing list](https://groups.google.com/forum/#!forum/signalk)!
