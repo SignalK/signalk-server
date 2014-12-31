@@ -6,7 +6,7 @@
 
   "pipedProviders": [
   {
-    "id": "n2kFromFile",
+    "id": "commandline-sample",
     "pipeElements": [
     {
       "type": "providers/execute",
