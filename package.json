@@ -53,6 +53,7 @@
     "morgan": "^1.5.0",
     "n2k-signalk": "signalk/n2k-signalk",
     "nmea0183-signalk": "^0.2.2",
+    "node-gpsd": "^0.2.1",
     "primus": "^2.4.10",
     "signalk-multiplexer": "^0.1.10",
     "stream-throttle": "^0.1.3",
