@@ -28,7 +28,7 @@ This will start the server with a sample configuration file and the server will 
 
 A simple way to connect to the WebSocket interface from the command line is to install wscat and use that:
 ```
-npm install wscat
+npm install -g wscat
 wscat --connect 'ws://localhost:3000/signalk/stream?stream=delta'
 ````
 
