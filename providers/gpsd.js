@@ -30,8 +30,7 @@ function Gpsd(options) {
       warn: console.warn,
       error: console.error
     },
-    emitraw: true,
-    parsejson: false
+    parse: false
   });
 
   this.listener.connect(function() {
