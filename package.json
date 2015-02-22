@@ -53,7 +53,7 @@
     "minimist": "^1.1.0",
     "morgan": "^1.5.0",
     "n2k-signalk": "signalk/n2k-signalk",
-    "nmea0183-signalk": "^0.2.2",
+    "nmea0183-signalk": "signalk/nmea0183-signalk",
     "node-gpsd": "^0.2.1",
     "primus": "^2.4.10",
     "signalk-multiplexer": "^0.1.10",
