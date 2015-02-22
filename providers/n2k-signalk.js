@@ -28,9 +28,13 @@ function ToSignalK() {
 
 
 ToSignalK.prototype._transform = function(chunk, encoding, done) {
-  var delta = toDelta(chunk);
-  if (delta && delta.updates[0].values.length > 0) {
-    this.push(delta);
+  try {
+    var delta = toDelta(chunk);
+    if (delta && delta.updates[0].values.length > 0) {
+      this.push(delta);
+    }
+  } catch (ex) {
+    console.error(ex);
   }
   done();
 }
