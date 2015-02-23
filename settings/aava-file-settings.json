@@ -38,9 +38,9 @@
        }
     ]
   }],
-  "interfaces": [
-    "ws.js",
-    "bower.js",
-    "rest.js"
-  ]
+  "interfaces": {
+    "bower": true,
+    "rest": true,
+    "ws": true
+  }
 }
