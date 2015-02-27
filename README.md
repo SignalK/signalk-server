@@ -11,6 +11,8 @@ Get up and running
 Prerequisites
 * node and npm installed
 
+See [these instructions](https://github.com/joyent/node/wiki/Installing-Node.js-via-package-manager#debian-and-ubuntu-based-linux-distributions) for Node installation on Raspberry Pi.
+
 Get the repo with either `git clone https://github.com/SignalK/signalk-server-node.git`
 or as a simple zip file from https://github.com/SignalK/signalk-server-node/archive/master.zip and extract it.
 
