@@ -14,11 +14,7 @@
 		}
 	},
 
-	"interfaces": [
-    "rest",
-    "bower",
-    "ws"
-  ],
+	"interfaces": {},
   
   "pipedProviders": [{
     "id": "nmeaFromFile",

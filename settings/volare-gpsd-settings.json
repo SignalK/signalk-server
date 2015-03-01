@@ -14,10 +14,7 @@
 		}
 	},
 
-	"interfaces": [
-    "rest",
-    "ws"
-  ],
+	"interfaces": {},
   
   "pipedProviders": [{
     "id": "n2kFromFile",

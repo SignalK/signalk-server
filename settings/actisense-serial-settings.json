@@ -19,7 +19,5 @@
       "type": "providers/n2k-signalk"
     }]
   }],
-  "interfaces": [
-    "ws"
-  ]
+  "interfaces": {}
 }
