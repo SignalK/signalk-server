@@ -31,8 +31,12 @@ function ToSignalK(options) {
 require('util').inherits(ToSignalK, Transform);
 
 ToSignalK.prototype._transform = function(chunk, encoding, done) {
-  this.parser.write(chunk + '\n');
-  done()
+  try {
+    this.parser.write(chunk + '\n');
+  } catch (ex) {
+    console.error(ex);
+  }
+  done();
 }
 
 
