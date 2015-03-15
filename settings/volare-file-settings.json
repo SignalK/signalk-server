@@ -14,7 +14,11 @@
 		}
 	},
 
-	"interfaces": {},
+	"interfaces": {
+    "bower": true,
+    "rest": true,
+    "ws": true
+  },
   
   "pipedProviders": [{
     "id": "nmeaFromFile",
