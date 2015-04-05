@@ -22,6 +22,8 @@ function ToSignalK(options) {
   });
 
   this.parser = new(require('nmea0183-signalk').Parser)(options);
+  this.parser.on('data', function(){});
+
   var that = this;
   this.parser.on('delta', function(delta) {
     that.push(delta);
