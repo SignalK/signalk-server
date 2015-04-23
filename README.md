@@ -42,6 +42,10 @@ For getting live data from your NGT-1 you need to figure out what device path yo
 
 If you have your own n2k data file you can use that with `bin/n2k-from-file --n2kfilename your-file-name`.
 
+The server advertises itself via Bonjour. This means that Bonjour-aware software running in the same network can discover the Signal K server and access it. For example the server shows up in Safari at Bookmarks => Bonjour => Webpages.
+
+You can disable Bonjour/mDNS by adding the entry `"mdns": false` to the config file. See `settings/volare-gpsd-settings.json` for example.
+
 Further Reading
 ---------------
 * http://signalk.org/index.html
