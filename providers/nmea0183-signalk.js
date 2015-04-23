@@ -22,6 +22,9 @@ function ToSignalK(options) {
   });
 
   this.parser = new(require('nmea0183-signalk').Parser)(options);
+
+  //We must ignore Parser Transformer output, otherwise it is buffered
+  //and will cause the stream to stop
   this.parser.on('data', function(){});
 
   var that = this;
