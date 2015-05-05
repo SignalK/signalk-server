@@ -14,7 +14,13 @@
 		}
 	},
 
-	"interfaces": {},
+  "mdns": false,
+
+	"interfaces": {
+    "bower": true,
+    "rest": true,
+    "ws": true
+  },
   
   "pipedProviders": [{
     "id": "n2kFromFile",

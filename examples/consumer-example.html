@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
   <title>Signal K consumer</title>
-  <script src="/signalk/stream/primus.js"></script>
+  <script src="/signalk/stream/v1/primus.js"></script>
 </head>
 <body>
   <pre>
@@ -14,7 +14,7 @@
 </body>
 <script>
 
-var signalKStream = Primus.connect(window.location.hostname + "/primus/signalk?stream=delta", {
+var signalKStream = Primus.connect(window.location.hostname + "/signalk/stream/v1?stream=delta", {
   reconnect: {
     maxDelay: 15000,
     minDelay: 500,

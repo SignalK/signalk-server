@@ -19,5 +19,9 @@
       "type": "providers/n2k-signalk"
     }]
   }],
-  "interfaces": {}
+  "interfaces": {
+    "bower": true,
+    "rest": true,
+    "ws": true
+  }
 }
