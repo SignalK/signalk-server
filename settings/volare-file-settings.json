@@ -14,31 +14,19 @@
 		}
 	},
 
-	"interfaces": {},
+	"interfaces": {
+    "bower": false
+  },
   
   "pipedProviders": [{
     "id": "nmeaFromFile",
     "pipeElements": [
        { 
-         "type": "providers/filestream",
+         "type": "providers/tcp",
          "options": {
-           "filename": "samples/plaka.log"
-         },
-         "optionMappings": [
-           {
-             "fromAppProperty": "argv.nmeafilename",
-             "toOption": "filename"
-           }
-         ]
-       },
-       { 
-         "type": "providers/throttle",
-         "options": {
-            "rate": 500
+           "host": "192.168.0.22",
+           "port": "1337"
          }
-       },       
-       {
-         "type": "providers/liner"
        },
        {
           "type": "providers/nmea0183-signalk",
