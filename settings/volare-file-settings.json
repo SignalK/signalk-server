@@ -1,32 +1,45 @@
-{
-	"vessel": {
-		"name"	: "Volare",
-		"brand"	: "Friendship",
-		"type"	: "22",
-		"uuid"	: "10101010",
-		
-		"dimensions": {
-			"length": 7,
-			"width": 2.5,
-			"mast": 10,
-			"depthTransducer": 0.5,
-			"keel": 1.5 
-		}
-	},
 
-	"interfaces": {
-    "bower": false
+{
+  "vessel": {
+    "name"  : "Volare",
+    "brand" : "Friendship",
+    "type"  : "22",
+    "uuid"  : "10101010",
+    
+    "dimensions": {
+      "length": 7,
+      "width": 2.5,
+      "mast": 10,
+      "depthTransducer": 0.5,
+      "keel": 1.5 
+    }
   },
+
+  "interfaces": {},
   
   "pipedProviders": [{
     "id": "nmeaFromFile",
     "pipeElements": [
        { 
-         "type": "providers/tcp",
+         "type": "providers/filestream",
          "options": {
-           "host": "192.168.0.22",
-           "port": "1337"
+           "filename": "samples/plaka.log"
+         },
+         "optionMappings": [
+           {
+             "fromAppProperty": "argv.nmeafilename",
+             "toOption": "filename"
+           }
+         ]
+       },
+       { 
+         "type": "providers/throttle",
+         "options": {
+            "rate": 500
          }
+       },       
+       {
+         "type": "providers/liner"
        },
        {
           "type": "providers/nmea0183-signalk",
