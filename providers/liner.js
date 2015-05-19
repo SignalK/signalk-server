@@ -16,6 +16,26 @@
 
 var Transform = require('stream').Transform;
 
+var winston = require('winston'),
+  path = require('path'),
+  transports = [];
+
+transports.push(new winston.transports.DailyRotateFile({
+  name: 'file',
+  datePattern: '.yyyy-MM-ddTHH',
+  filename: "/tmp/log_file.log",
+  json: false,
+  formatter: function(options) {
+    // Return string will be passed to logger.
+    return new Date().getTime() + ';' + options.message;
+  }
+
+}));
+
+var logger = new winston.Logger({
+  transports: transports
+});
+
 function Liner() {
   Transform.call(this, {
     objectMode: true
@@ -36,13 +56,18 @@ Liner.prototype._transform = function(chunk, encoding, done) {
     console.error("Are you sure you are using the correct line terminator? Not going to handle lines longer than 2048 chars.");
     this._lastLineData = '';
   }
-  lines.forEach(this.push.bind(this));
+  var that = this;
+  lines.forEach(function(line) {
+    logger.info(line);
+    that.push(line);
+  });
 
   done();
 }
 
 Liner.prototype._flush = function(done) {
   if (this._lastLineData) {
+    logger.info(line);
     this.push(this._lastLineData);
   }
   this._lastLineData = null;
