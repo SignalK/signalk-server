@@ -1,0 +1,27 @@
+{
+  "vessel": {
+    "name": "your boat name",
+    "uuid": "000000000"
+  },
+
+  "pipedProviders": [{
+    "id": "actisense",
+    "pipeElements": [{
+      "type": "providers/execute",
+      "options": {
+        "command": "bin/actisense-serial-n2kd"
+      }
+    }, {
+      "type": "providers/liner"
+    }, {
+      "type": "providers/from_json"
+    }, {
+      "type": "providers/n2k-signalk"
+    }]
+  }],
+  "interfaces": {
+    "bower": true,
+    "rest": true,
+    "ws": true
+  }
+}
