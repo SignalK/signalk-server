@@ -15,7 +15,7 @@ The simplest form of a consumer is a process or web page that receives and displ
 
 3. Sample consumers
 --------------------------------
-There are several prototype level browser based consumers available. You can install them with `bower` and use by activating the bower interface, see [settings/aava-file-settings](https://github.com/SignalK/signalk-server-node/blob/d0c8f47b5bf58ee5d4a529bf98848fc1677cd769/settings/aava-file-settings.json#L43) for an example.
+There are several prototype level browser based consumers available. You can install them with `bower` and when you access the server's root with your browser you will get a list of installed consumers.
 
 ```
 git clone https://github.com/SignalK/signalk-server-node
