@@ -42,6 +42,10 @@ For getting live data from your NGT-1 you need to figure out what device path yo
 
 If you have your own n2k data file you can use that with `bin/n2k-from-file --n2kfilename your-file-name`.
 
+Now what? Consumers!
+---------------
+
+Once you have the data streams in place you probably want to use the data or at least see it in a nice format. See [Consumers](https://github.com/SignalK/signalk-server-node/blob/master/CONSUMERS.md) for details.
 
 Bonjour support
 ---------------
