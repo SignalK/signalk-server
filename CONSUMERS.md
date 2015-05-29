@@ -17,6 +17,8 @@ The simplest form of a consumer is a process or web page that receives and displ
 --------------------------------
 There are several prototype level browser based consumers available. You can install them with `bower` and when you access the server's root with your browser you will get a list of installed consumers.
 
+[Bower](http://bower.io/) is a package manager for web page components (Javascript, html and css files). With it you can pull in HTML5 applications from the net, place them under your Signal K server's root directory and access them via http.
+
 ```
 git clone https://github.com/SignalK/signalk-server-node
 cd signalk-server-node/
