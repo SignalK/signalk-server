@@ -29,7 +29,7 @@ node_modules/.bin/bower install https://github.com/SignalK/sailgauge.git
 bin/n2k-from-file
 ```
 
-After that the two installed consumers are available at http://localhost:3000/bower_components/sailgauge/ and http://localhost:3000/bower_components/instrumentpanel/ .
+After that the two installed consumers are available at http://localhost:3000/sailgauge/ and http://localhost:3000/instrumentpanel/ .
 
 4. Going further
 --------------------------------
