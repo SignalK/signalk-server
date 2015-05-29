@@ -20,6 +20,7 @@ Go to the directory where you put the downloaded code and install dependencies w
 ````
 npm install
 ```
+[Firewall giving you trouble?](https://github.com/npm/npm/wiki/Troubleshooting#npm-only-uses-git-and-sshgit-urls-for-github-repos-breaking-proxies)
 
 Start the server with 
 ```
