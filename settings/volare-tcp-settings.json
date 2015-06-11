@@ -14,9 +14,7 @@
 		}
 	},
 
-	"interfaces": {
-    "bower": false
-  },
+	"interfaces": {},
   
   "pipedProviders": [{
     "id": "nmeaFromFile",
