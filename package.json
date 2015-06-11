@@ -50,7 +50,6 @@
     "express-namespace": "^0.1.1",
     "flatmap": "0.0.3",
     "lodash": "^2.4.1",
-    "mdns": "^2.2.8",
     "minimist": "^1.1.0",
     "morgan": "^1.5.0",
     "n2k-signalk": "signalk/n2k-signalk",
