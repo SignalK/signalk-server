@@ -16,10 +16,14 @@
 
 var Transform = require('stream').Transform;
 
-function Liner() {
+
+function Liner(options) {
   Transform.call(this, {
     objectMode: true
   });
+  if (options.rawlogging) {
+    this.logger = createLogger(options.logdir, options.discriminator);
+  }
 }
 
 require('util').inherits(Liner, Transform);
@@ -36,17 +40,55 @@ Liner.prototype._transform = function(chunk, encoding, done) {
     console.error("Are you sure you are using the correct line terminator? Not going to handle lines longer than 2048 chars.");
     this._lastLineData = '';
   }
-  lines.forEach(this.push.bind(this));
+
+  lines.forEach(outputLine.bind(this));
 
   done();
 }
 
+function outputLine(line) {
+  if (typeof this.logger != 'undefined') {
+    try {
+      this.logger.info(line);
+    } catch (ex) {
+      console.error(ex);
+    }
+  }
+  this.push(line);
+}
+
 Liner.prototype._flush = function(done) {
   if (this._lastLineData) {
-    this.push(this._lastLineData);
+    outputLine.call(this, this._lastLineData);
   }
+
   this._lastLineData = null;
   done();
+}
+
+function createLogger(logdir, discriminator) {
+  var notEmptyDiscriminator = discriminator || "";
+  var winston = require('winston'),
+    transports = [];
+
+  var logfilename = require('path').join(
+    (logdir.indexOf('/') === 0 ? '' : (__dirname + "/../") ) +
+    logdir +
+    "/signalk-rawdata.log");
+  transports.push(new winston.transports.DailyRotateFile({
+    name: 'file',
+    datePattern: '.yyyy-MM-ddTHH',
+    filename: logfilename,
+    json: false,
+    formatter: function(options) {
+      // Return string will be passed to logger.
+      return new Date().getTime() + ';' + notEmptyDiscriminator + ';' + options.message;
+    }
+  }));
+
+  return new winston.Logger({
+    transports: transports
+  });
 }
 
 

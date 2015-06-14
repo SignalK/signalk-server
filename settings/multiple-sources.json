@@ -1,0 +1,80 @@
+{
+  "vessel": {
+    "name": "Multiple Sources",
+    "brand": "",
+    "type": "",
+    "uuid": "10101011",
+
+    "dimensions": {
+      "length": 7,
+      "width": 2.5,
+      "mast": 10,
+      "depthTransducer": 0.5,
+      "keel": 1.5
+    }
+  },
+
+  "pipedProviders": [{
+    "id": "nmeaFromFile",
+    "pipeElements": [{
+      "type": "providers/filestream",
+      "options": {
+        "filename": "samples/plaka.log"
+      },
+      "optionMappings": [{
+        "fromAppProperty": "argv.nmeafilename",
+        "toOption": "filename"
+      }]
+    }, {
+      "type": "providers/throttle",
+      "options": {
+        "rate": 500
+      }
+    }, {
+      "type": "providers/liner",
+         "options": {
+           "rawlogging" : true,
+           "logdir": "logs",
+           "discriminator": "1"
+         }
+
+    }, {
+      "type": "providers/nmea0183-signalk",
+      "optionMappings": [{
+        "fromAppProperty": "selfId",
+        "toOption": "selfId"
+      }, {
+        "fromAppProperty": "selfType",
+        "toOption": "selfType"
+      }]
+    }]
+  }, {
+    "id": "n2kFromFile",
+    "pipeElements": [{
+      "type": "providers/filestream",
+      "options": {
+        "filename": "samples/aava-n2k.data"
+      },
+      "optionMappings": [{
+        "fromAppProperty": "argv.n2kfilename",
+        "toOption": "filename"
+      }]
+    }, {
+      "type": "providers/throttle",
+      "options": {
+        "rate": 500
+      }
+    }, {
+      "type": "providers/liner",
+         "options": {
+           "rawlogging" : true,
+           "logdir": "logs",
+           "discriminator": "2"
+         }      
+    }, {
+      "type": "providers/n2kAnalyzer"
+    }, {
+      "type": "providers/n2k-signalk"
+    }]
+  }]
+}
