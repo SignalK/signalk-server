@@ -27,12 +27,12 @@ Start the server with
 bin/nmea-from-file
 ```
 
-This will start the server with a sample configuration file and the server will start playing back set of [NMEA 0183](http://en.wikipedia.org/wiki/NMEA_0183) data from file. The data is available immediately via the REST interface at http://localhost:3000/api/v1/.
+This will start the server with a sample configuration file and the server will start playing back set of [NMEA 0183](http://en.wikipedia.org/wiki/NMEA_0183) data from file. The data is available immediately via the REST interface at http://localhost:3000/signalk/api/v1/.
 
 A simple way to connect to the WebSocket interface from the command line is to install wscat and use that:
 ```
 npm install -g wscat
-wscat --connect 'ws://localhost:3000/signalk/stream?stream=delta'
+wscat --connect 'ws://localhost:3000/signalk/stream/v1?stream=delta'
 ````
 
 If you want to use [NMEA2000](http://en.wikipedia.org/wiki/NMEA_2000) data you need at least [Canboat analyzer](https://github.com/canboat/canboat/wiki/analyzer) to parse NMEA 2000 data to json and [Canboat actisense-serial](https://github.com/canboat/canboat/wiki/actisense-serial) for getting live data from Actisense [NGT-1](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1). 
