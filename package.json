@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./index",
-    "test": "DEBUG=signalk*,provider* node ./index"
+    "test": "mocha"
   },
   "bin": {
     "signalk-server": "./bin/signalk-server"
