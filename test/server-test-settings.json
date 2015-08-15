@@ -24,33 +24,8 @@
     "id": "nmeaFromFile",
     "pipeElements": [
        { 
-         "type": "providers/filestream",
-         "options": {
-           "filename": "samples/plaka.log"
-         },
-         "optionMappings": [
-           {
-             "fromAppProperty": "argv.nmeafilename",
-             "toOption": "filename"
-           }
-         ]
-       },
-       {
-         "type": "providers/liner"
-       },
-       {
-          "type": "providers/nmea0183-signalk",
-          "optionMappings": [
-            {
-             "fromAppProperty": "selfId",
-             "toOption": "selfId"
-            },
-            {
-             "fromAppProperty": "selfType",
-             "toOption": "selfType"
-            }
-          ]
-       }               
+         "type": "test/httpprovider"
+       }
     ]
   }]
 }
