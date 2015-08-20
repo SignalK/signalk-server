@@ -123,11 +123,18 @@ TcpStream.prototype.end = function() {
   this.start();
 };
 
-/* TESTING *
+//* TESTING
 var s = new TcpStream({
-  host: '127.0.0.1',
-  port: 1337
+  host: '192.168.10.1',
+  port: 2947
 });
+
+s.on('data', function(c) {
+  var d = c.toString('utf8');
+  if(d.indexOf('$YX') !== -1 || d.indexOf('$VW') !== -1 || d.indexOf('$SD') !== -1) {
+    console.log(d);
+  }
+})
 //*/
 
 module.exports = TcpStream;
