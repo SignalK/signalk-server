@@ -112,7 +112,7 @@ TcpStream.prototype.start = function() {
 };
 
 TcpStream.prototype._transform = function(chunk, encoding, done) {
-  // console.log(chunk.toString('utf8'));
+  debug('Received TCP chunk: ' + chunk.toString('utf8'));
   this.__last = Date.now();
   this.push(chunk);
   done();
@@ -125,7 +125,7 @@ TcpStream.prototype.end = function() {
 
 //* TESTING
 var s = new TcpStream({
-  host: '192.168.10.1',
+  host: '192.168.1.1',
   port: 2947
 });
 

@@ -17,5 +17,7 @@
     "test",
     "tests"
   ],
-  "dependencies": {}
+  "dependencies": {
+    "instrumentpanel": "SignalK/instrumentpanel"
+  }
 }
