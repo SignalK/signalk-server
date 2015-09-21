@@ -1,7 +1,7 @@
 #!/bin/sh
 
-SP=`readlink -f $0`
-DIR=`dirname $SP`
+SP=`dirname $0`
+DIR=`cd  $SP;pwd`
 cd $DIR/..
 $DIR/signalk-server -s ./settings/volare-file-settings.json $*
 
