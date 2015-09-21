@@ -1,7 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
-SP=`readlink -f $0`
-DIR=`dirname $SP`
-cd $DIR/..
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 $DIR/signalk-server -s ./settings/aava-file-settings.json $*
-
