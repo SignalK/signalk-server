@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "description": "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
   "main": "index.js",
   "scripts": {
@@ -35,7 +35,7 @@
       "email": "teppo.kurki@iki.fi"
     }
   ],
-  "license": "Apache 2",
+  "license": "Apache-2.0",
   "engines": {
     "node": "v0.10.x"
   },
