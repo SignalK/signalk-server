@@ -28,7 +28,7 @@ FromJson.prototype._transform = function(chunk, encoding, done) {
   try {
     this.push(JSON.parse(chunk.toString()));
   } catch (ex) {
-    console.error(ex);
+    console.error("Could not parse JSON:" + chunk.toString());
   }
   done();
 }
