@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/bin/sh
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SP=`readlink -f $0`
+DIR=`dirname $SP`
+cd $DIR/..
 $DIR/signalk-server -s ./settings/volare-file-settings.json $*
+
