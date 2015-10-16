@@ -1,0 +1,4 @@
+#!/bin/sh
+
+DIR=`dirname $0`
+${DIR}/signalk-server -s ${DIR}/../settings/volare-serial-settings.json $*
