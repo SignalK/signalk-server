@@ -62,7 +62,7 @@ SerialStream.prototype.end = function() {
   this.start();
 };
 
-SerialStream.prototype._transform = function(chunk, done) {
+SerialStream.prototype._transform = function(chunk, encoding, done) {
   this.push(chunk);
   done();
 };  
