@@ -112,7 +112,7 @@ TcpStream.prototype.start = function() {
 };
 
 TcpStream.prototype._transform = function(chunk, encoding, done) {
-  debug('Received TCP chunk: ' + chunk.toString('utf8'));
+  // console.log(chunk.toString('utf8'));
   this.__last = Date.now();
   this.push(chunk);
   done();
@@ -123,7 +123,7 @@ TcpStream.prototype.end = function() {
   this.start();
 };
 
-//* TESTING
+/* TESTING
 var s = new TcpStream({
   host: '192.168.1.1',
   port: 2947
@@ -132,9 +132,13 @@ var s = new TcpStream({
 s.on('data', function(c) {
   var d = c.toString('utf8');
   if(d.indexOf('$YX') !== -1 || d.indexOf('$VW') !== -1 || d.indexOf('$SD') !== -1) {
-    console.log(d);
+    debug('RECEIVED WANTED SENTENCE: ' + d);
   }
-})
+});
+
+s.on('error', function(e) {
+  debug(e);
+});
 //*/
 
 module.exports = TcpStream;
