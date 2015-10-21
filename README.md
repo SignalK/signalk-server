@@ -41,7 +41,7 @@ If you have analyzer available on your PATH you can start the server with a samp
 
 For getting live data from your NGT-1 you need to figure out what device path your device is mounted on, edit the configuration file to match you path and start server with `bin/n2k-from-actisense`.
 
-If you have your own n2k data file you can use that with `bin/n2k-from-file --n2kfilename your-file-name`.
+If you have your own n2k data file you can use that with `bin/n2k-from-file --n2kfilename your-file-name`. Beware that the playback rate is limited in bytes per second - if your data file is from a rich N2K environment you may want to adjust the [rate parameter](https://github.com/SignalK/signalk-server-node/blob/master/settings/aava-file-settings.json#L27) in the settings file.
 
 Now what? Consumers!
 ---------------
