@@ -22,16 +22,13 @@
          ]
        },
        {
-         "type": "providers/throttle",
-         "options": {
-            "rate": 500
-         }
-       },
-       {
          "type": "providers/liner"
        },
        {
          "type": "providers/n2kAnalyzer"
+       },
+       {
+         "type": "providers/timestamp-throttle"
        },
        {
          "type": "providers/n2k-signalk"
