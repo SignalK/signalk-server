@@ -51,6 +51,7 @@
     "flatmap": "0.0.3",
     "lodash": "^2.4.1",
     "minimist": "^1.1.0",
+    "moment": "^2.10.6",
     "morgan": "^1.5.0",
     "n2k-signalk": "signalk/n2k-signalk",
     "nmea0183-signalk": "signalk/nmea0183-signalk",
