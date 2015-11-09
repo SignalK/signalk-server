@@ -12,7 +12,7 @@ var delta = {
   {
     "source": {
       "pgn": "128275",
-      "device" : "/dev/actisense",
+      "label" : "/dev/actisense",
       "timestamp": "2014-05-03T09:14:11.000Z",
       "src": "115"
     },
@@ -23,7 +23,7 @@ var delta = {
   },
   {
     "source": {
-      "device" : "/dev/actisense",
+      "label" : "/dev/actisense",
       "timestamp":"2014-05-03T09:14:11.000Z",
       "src":"115",
       "pgn":"128267"
