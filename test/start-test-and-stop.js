@@ -77,12 +77,14 @@ describe('Server', function() {
         return rp({ url: restUrl, method: 'GET'})
       }).then(function(body) {
         treeAfterOtherSourceDelta = JSON.parse(body);
+
       }).then(function() {
         treeAfterFirstDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.value', 43374);
         treeAfterFirstDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.source.src', '115');
         treeAfterSecondDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.value', 1);
         treeAfterSecondDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.source.src', '116');
-        treeAfterOtherSourceDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.source.src', '115');
+        treeAfterOtherSourceDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.source.src', '116');
+        //TODO tests for 'values' values.
         server.stop();
         done();        
       });
