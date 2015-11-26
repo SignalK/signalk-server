@@ -22,7 +22,7 @@ function N2KAnalyzer() {
     objectMode: true
   });
 
-  this.analyzerProcess = require('child_process').spawn('sh', ['-c', 'analyzer -json']);
+  this.analyzerProcess = require('child_process').spawn('sh', ['-c', 'analyzer -json -si']);
   this.analyzerProcess.stderr.on('data', function(data) {
     console.error(data.toString());
   });
