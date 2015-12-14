@@ -1,20 +1,21 @@
-{
-	"vessel": {
-		"name"	: "Volare",
-		"brand"	: "Friendship",
-		"type"	: "22",
-		"uuid"	: "10101010",
-		
-		"dimensions": {
-			"length": 7,
-			"width": 2.5,
-			"mast": 10,
-			"depthTransducer": 0.5,
-			"keel": 1.5 
-		}
-	},
 
-	"interfaces": {},
+{
+  "vessel": {
+    "name"  : "Volare",
+    "brand" : "Friendship",
+    "type"  : "22",
+    "uuid"  : "10101010",
+    
+    "dimensions": {
+      "length": 7,
+      "width": 2.5,
+      "mast": 10,
+      "depthTransducer": 0.5,
+      "keel": 1.5 
+    }
+  },
+
+  "interfaces": {},
   
   "pipedProviders": [{
     "id": "nmeaFromFile",
