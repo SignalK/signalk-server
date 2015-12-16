@@ -21,7 +21,7 @@
   ],
   
   "pipedProviders": [{
-    "id": "nmeaFromFile",
+    "id": "deltaFromHttp",
     "pipeElements": [
        { 
          "type": "test/httpprovider"
