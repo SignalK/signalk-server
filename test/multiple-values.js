@@ -80,10 +80,9 @@ describe('Server', function() {
 
       }).then(function() {
         treeAfterFirstDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.value', 43374);
-        treeAfterFirstDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.source.src', '115');
+        treeAfterFirstDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.$source', 'deltaFromHttp.115');
         treeAfterSecondDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.value', 1);
-        treeAfterSecondDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.source.src', '116');
-        treeAfterOtherSourceDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.source.src', '116');
+        treeAfterSecondDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.$source', 'deltaFromHttp.116');
         //TODO tests for 'values' values.
         server.stop();
         done();        
