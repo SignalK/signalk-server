@@ -85,7 +85,7 @@ describe('Server', function() {
         treeAfterSecondDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.$source', 'deltaFromHttp.116');
         //TODO tests for 'values' values.
         server.stop();
-        done();        
+        done();
       });
     })
   })
