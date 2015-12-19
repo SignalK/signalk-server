@@ -32,7 +32,7 @@ This will start the server with a sample configuration file and the server will 
 A simple way to connect to the WebSocket interface from the command line is to install wscat and use that:
 ```
 npm install -g wscat
-wscat --connect 'ws://localhost:3000/signalk/stream/v1?stream=delta'
+wscat --connect 'ws://localhost:3000/signalk/v1/stream?stream=delta'
 ````
 
 If you want to use [NMEA2000](http://en.wikipedia.org/wiki/NMEA_2000) data you need at least [Canboat analyzer](https://github.com/canboat/canboat/wiki/analyzer) to parse NMEA 2000 data to json and [Canboat actisense-serial](https://github.com/canboat/canboat/wiki/actisense-serial) for getting live data from Actisense [NGT-1](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1). 
