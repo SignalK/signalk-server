@@ -67,7 +67,7 @@
   },
   "devDependencies": {
     "chai": "^3.2.0",
-    "chai-things": "^0.2.0",    
+    "chai-things": "^0.2.0",
     "find-free-port": "^1.0.1",
     "mocha": "^2.1.0"
   }
