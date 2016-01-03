@@ -2,6 +2,8 @@ var chai = require("chai");
 chai.Should();
 chai.use(require('chai-things'));
 
+var schema = require('signalk-schema');
+
 var rp = require('request-promise');
 
 
@@ -84,6 +86,14 @@ describe('Server', function() {
         treeAfterSecondDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.value', 1);
         treeAfterSecondDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.$source', 'deltaFromHttp.116');
         //TODO tests for 'values' values.
+
+        var validationResult = schema.validateFull(treeAfterSecondDelta);
+        if (!validationResult.valid) {
+          console.log(JSON.stringify(treeAfterSecondDelta, null, 2));
+          validationResult.errors.forEach(function(error) {
+            console.error(error.message + "\n " + error.dataPath + "\n " + error.schemaPath);
+          });
+        }
         server.stop();
         done();
       });
