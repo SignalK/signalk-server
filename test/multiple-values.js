@@ -54,7 +54,7 @@ describe('Server', function() {
       server.start();
 
       var host = 'http://localhost:' + freePort;
-      var deltaUrl = host + '/delta';
+      var deltaUrl = host + '/signalk/v1/api/_test/delta';
       var restUrl = host + '/signalk/v1/api/';
       var treeAfterFirstDelta;
       var treeAfterSecondDelta;
