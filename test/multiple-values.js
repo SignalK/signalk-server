@@ -14,7 +14,7 @@ var delta = {
   "updates": [
   {
     "source": {
-      "pgn": "128275",
+      "pgn": 128275,
       "label" : "/dev/actisense",
       "timestamp": "2014-05-03T09:14:11.000Z",
       "src": "115"
@@ -29,7 +29,7 @@ var delta = {
       "label" : "/dev/actisense",
       "timestamp":"2014-05-03T09:14:11.000Z",
       "src":"115",
-      "pgn":"128267"
+      "pgn":128267
     },
     "values": [
     { "path": "navigation.courseOverGroundTrue", "value": 172.9 },
