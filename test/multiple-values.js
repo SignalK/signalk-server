@@ -82,12 +82,12 @@ describe('Server', function() {
         treeAfterOtherSourceDelta = JSON.parse(body);
 
       }).then(function() {
-        console.log(treeAfterFirstDelta)
         treeAfterFirstDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.value', 43374);
         treeAfterFirstDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.$source', 'deltaFromHttp.115');
         treeAfterSecondDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.value', 1);
         treeAfterSecondDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.$source', 'deltaFromHttp.116');
         //TODO tests for 'values' values.
+
 
         var validationResult = schema.validateFull(treeAfterSecondDelta);
         if (!validationResult.valid) {
