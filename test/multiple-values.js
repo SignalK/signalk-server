@@ -7,9 +7,10 @@ var schema = require('signalk-schema');
 var rp = require('request-promise');
 
 
+var uuid = 'urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d';
 
 var delta = {
-  "context": "vessels.123456789",
+  "context": "vessels[" + uuid + "]",
   "updates": [
   {
     "source": {
@@ -81,10 +82,11 @@ describe('Server', function() {
         treeAfterOtherSourceDelta = JSON.parse(body);
 
       }).then(function() {
-        treeAfterFirstDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.value', 43374);
-        treeAfterFirstDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.$source', 'deltaFromHttp.115');
-        treeAfterSecondDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.value', 1);
-        treeAfterSecondDelta.should.have.deep.property('vessels.123456789.navigation.logTrip.$source', 'deltaFromHttp.116');
+        console.log(treeAfterFirstDelta)
+        treeAfterFirstDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.value', 43374);
+        treeAfterFirstDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.$source', 'deltaFromHttp.115');
+        treeAfterSecondDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.value', 1);
+        treeAfterSecondDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.$source', 'deltaFromHttp.116');
         //TODO tests for 'values' values.
 
         var validationResult = schema.validateFull(treeAfterSecondDelta);
