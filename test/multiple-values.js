@@ -56,46 +56,39 @@ describe('Server', function() {
       var host = 'http://localhost:' + freePort;
       var deltaUrl = host + '/signalk/v1/api/_test/delta';
       var restUrl = host + '/signalk/v1/api/';
-      var treeAfterFirstDelta;
-      var treeAfterSecondDelta;
-      var treeAfterOtherSourceDelta;
 
       rp({ url: deltaUrl, method: 'POST', json: delta })
       .then(function(body) {
         return rp({ url: restUrl, method: 'GET'})
       }).then(function(body) {
-        treeAfterFirstDelta = JSON.parse(body);
-
-        delta.updates[0].values[0].value = 1;
-        delta.updates[0].source.src = '116';
-        return rp({ url: deltaUrl, method: 'POST', json: delta })
-      }).then(function(body) {
-        return rp({ url: restUrl, method: 'GET'})
-      }).then(function(body) {
-        treeAfterSecondDelta = JSON.parse(body);
-
-        delta.updates[0].src = 116
-        return rp({ url: deltaUrl, method: 'POST', json: delta })
-      }).then(function(body) {
-        return rp({ url: restUrl, method: 'GET'})
-      }).then(function(body) {
-        treeAfterOtherSourceDelta = JSON.parse(body);
-
-      }).then(function() {
+        var treeAfterFirstDelta = JSON.parse(body);
         treeAfterFirstDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.value', 43374);
         treeAfterFirstDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.$source', 'deltaFromHttp.115');
+        treeAfterFirstDelta.should.be.validSignalK;
+
+        delta.updates[0].values[0].value = 1;
+        return rp({ url: deltaUrl, method: 'POST', json: delta })
+      }).then(function(body) {
+        return rp({ url: restUrl, method: 'GET'})
+      }).then(function(body) {
+        var treeAfterSecondDelta = JSON.parse(body);
         treeAfterSecondDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.value', 1);
-        treeAfterSecondDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.$source', 'deltaFromHttp.116');
-        //TODO tests for 'values' values.
+        treeAfterSecondDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.$source', 'deltaFromHttp.115');
+        treeAfterSecondDelta.should.be.validSignalK;
 
-
-        var validationResult = schema.validateFull(treeAfterSecondDelta);
-        if (!validationResult.valid) {
-          console.log(JSON.stringify(treeAfterSecondDelta, null, 2));
-          validationResult.errors.forEach(function(error) {
-            console.error(error.message + "\n " + error.dataPath + "\n " + error.schemaPath);
-          });
-        }
+        delta.updates[0].values[0].value = 2;
+        delta.updates[0].source.src = 116
+        return rp({ url: deltaUrl, method: 'POST', json: delta })
+      }).then(function(body) {
+        return rp({ url: restUrl, method: 'GET'})
+      }).then(function(body) {
+        var treeAfterOtherSourceDelta = JSON.parse(body);
+        treeAfterOtherSourceDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.value', 2);
+        treeAfterOtherSourceDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.$source', 'deltaFromHttp.116');
+        treeAfterOtherSourceDelta.vessels[uuid].navigation.logTrip.values['deltaFromHttp.115'].value.should.equal(1);
+        treeAfterOtherSourceDelta.vessels[uuid].navigation.logTrip.values['deltaFromHttp.116'].value.should.equal(2);
+        treeAfterOtherSourceDelta.should.be.validSignalK;
+      }).finally(function() {
         server.stop();
         done();
       });
