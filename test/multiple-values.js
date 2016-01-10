@@ -1,8 +1,7 @@
 var chai = require("chai");
 chai.Should();
 chai.use(require('chai-things'));
-
-var schema = require('signalk-schema');
+chai.use(require('signalk-schema').chaiModule);
 
 var rp = require('request-promise');
 
@@ -28,7 +27,7 @@ var delta = {
     "source": {
       "label" : "/dev/actisense",
       "timestamp":"2014-05-03T09:14:11.000Z",
-      "src":"115",
+      "src": "115",
       "pgn":128267
     },
     "values": [
@@ -77,7 +76,7 @@ describe('Server', function() {
         treeAfterSecondDelta.should.be.validSignalK;
 
         delta.updates[0].values[0].value = 2;
-        delta.updates[0].source.src = 116
+        delta.updates[0].source.src = "116";
         return rp({ url: deltaUrl, method: 'POST', json: delta })
       }).then(function(body) {
         return rp({ url: restUrl, method: 'GET'})
