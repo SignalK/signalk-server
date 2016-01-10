@@ -54,7 +54,7 @@
     "minimist": "^1.1.0",
     "moment": "^2.10.6",
     "morgan": "^1.5.0",
-    "n2k-signalk": "signalk/n2k-signalk",
+    "n2k-signalk": "signalk/n2k-signalk#multiple-values-fixes",
     "nmea0183-signalk": "signalk/nmea0183-signalk",
     "node-gpsd": "^0.2.1",
     "node-uuid": "^1.4.3",
@@ -69,6 +69,7 @@
     "chai": "^3.2.0",
     "chai-things": "^0.2.0",
     "find-free-port": "^1.0.1",
-    "mocha": "^2.1.0"
+    "mocha": "^2.1.0",
+    "signalk-schema": "signalk/specification#multiple-values-take-2"
   }
 }
