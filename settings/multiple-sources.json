@@ -3,7 +3,7 @@
     "name": "Multiple Sources",
     "brand": "",
     "type": "",
-    "uuid": "10101011",
+    "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d",
 
     "dimensions": {
       "length": 7,
@@ -132,7 +132,7 @@
            "rawlogging" : true,
            "logdir": "logs",
            "discriminator": "2"
-         }      
+         }
     }, {
       "type": "providers/n2kAnalyzer"
     }, {
