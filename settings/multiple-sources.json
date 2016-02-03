@@ -3,7 +3,7 @@
     "name": "Multiple Sources",
     "brand": "",
     "type": "",
-    "uuid": "10101011",
+    "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d",
 
     "dimensions": {
       "length": 7,
@@ -15,7 +15,7 @@
   },
 
   "pipedProviders": [{
-    "id": "nmeaFromFile",
+    "id": "nmea1",
     "pipeElements": [{
       "type": "providers/filestream",
       "options": {
@@ -49,7 +49,41 @@
       }]
     }]
   }, {
-    "id": "n2kFromFile",
+    "id": "nmea2",
+    "pipeElements": [{
+      "type": "providers/filestream",
+      "options": {
+        "filename": "samples/plaka.log"
+      },
+      "optionMappings": [{
+        "fromAppProperty": "argv.nmeafilename",
+        "toOption": "filename"
+      }]
+    }, {
+      "type": "providers/throttle",
+      "options": {
+        "rate": 600
+      }
+    }, {
+      "type": "providers/liner",
+         "options": {
+           "rawlogging" : true,
+           "logdir": "logs",
+           "discriminator": "1"
+         }
+
+    }, {
+      "type": "providers/nmea0183-signalk",
+      "optionMappings": [{
+        "fromAppProperty": "selfId",
+        "toOption": "selfId"
+      }, {
+        "fromAppProperty": "selfType",
+        "toOption": "selfType"
+      }]
+    }]
+  }, {
+    "id": "n2k1",
     "pipeElements": [{
       "type": "providers/filestream",
       "options": {
@@ -70,7 +104,35 @@
            "rawlogging" : true,
            "logdir": "logs",
            "discriminator": "2"
-         }      
+         }
+    }, {
+      "type": "providers/n2kAnalyzer"
+    }, {
+      "type": "providers/n2k-signalk"
+    }]
+  }, {
+    "id": "n2k2",
+    "pipeElements": [{
+      "type": "providers/filestream",
+      "options": {
+        "filename": "samples/aava-n2k.data"
+      },
+      "optionMappings": [{
+        "fromAppProperty": "argv.n2kfilename",
+        "toOption": "filename"
+      }]
+    }, {
+      "type": "providers/throttle",
+      "options": {
+        "rate": 500
+      }
+    }, {
+      "type": "providers/liner",
+         "options": {
+           "rawlogging" : true,
+           "logdir": "logs",
+           "discriminator": "2"
+         }
     }, {
       "type": "providers/n2kAnalyzer"
     }, {
