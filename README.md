@@ -1,7 +1,7 @@
 SignalK Server in Node
 ================
 
-An implementation of a [Signal K](http://signalk.org) server for vessels. Intended to run on embedded devices (e.g. Raspberry Pi, Beaglebone or UDOO). 
+An implementation of a [Signal K](http://signalk.org) server for vessels. Intended to run on embedded devices (e.g. Raspberry Pi, Beaglebone or UDOO).
 
 The Server acts as a multiplexer/aggregator of the SignalK streams input by one or more Providers. The merged SignalK data   is available in streaming format over a WebSocket connection and via a REST interface.
 
@@ -16,13 +16,13 @@ See [these instructions](https://github.com/joyent/node/wiki/Installing-Node.js-
 Get the repo with either `git clone https://github.com/SignalK/signalk-server-node.git`
 or as a simple zip file from https://github.com/SignalK/signalk-server-node/archive/master.zip and extract it.
 
-Go to the directory where you put the downloaded code and install dependencies with 
+Go to the directory where you put the downloaded code and install dependencies with
 ````
 npm install
 ```
 [Firewall giving you trouble?](https://github.com/npm/npm/wiki/Troubleshooting#npm-only-uses-git-and-sshgit-urls-for-github-repos-breaking-proxies)
 
-Start the server with 
+Start the server with
 ```
 bin/nmea-from-file
 ```
@@ -35,9 +35,9 @@ npm install -g wscat
 wscat --connect 'ws://localhost:3000/signalk/v1/stream?stream=delta'
 ````
 
-If you want to use [NMEA2000](http://en.wikipedia.org/wiki/NMEA_2000) data you need at least [Canboat analyzer](https://github.com/canboat/canboat/wiki/analyzer) to parse NMEA 2000 data to json and [Canboat actisense-serial](https://github.com/canboat/canboat/wiki/actisense-serial) for getting live data from Actisense [NGT-1](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1). 
+If you want to use [NMEA2000](http://en.wikipedia.org/wiki/NMEA_2000) data you need at least [Canboat analyzer](https://github.com/canboat/canboat/wiki/analyzer) to parse NMEA 2000 data to json and [Canboat actisense-serial](https://github.com/canboat/canboat/wiki/actisense-serial) for getting live data from Actisense [NGT-1](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1).
 
-If you have analyzer available on your PATH you can start the server with a sample NMEA2000 data file with `bin/n2k-from-file`. 
+If you have analyzer available on your PATH you can start the server with a sample NMEA2000 data file with `bin/n2k-from-file`.
 
 For getting live data from your NGT-1 you need to figure out what device path your device is mounted on, edit the configuration file to match you path and start server with `bin/n2k-from-actisense`.
 
