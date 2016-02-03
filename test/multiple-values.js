@@ -9,7 +9,7 @@ var rp = require('request-promise');
 var uuid = 'urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d';
 
 var delta = {
-  "context": "vessels[" + uuid + "]",
+  "context": "vessels." + uuid ,
   "updates": [
   {
     "source": {
