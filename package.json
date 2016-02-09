@@ -58,6 +58,7 @@
     "nmea0183-signalk": "signalk/nmea0183-signalk",
     "node-gpsd": "^0.2.1",
     "node-uuid": "^1.4.3",
+    "pem": "^1.8.1",
     "primus": "^2.4.10",
     "signalk-schema": "signalk/specification",
     "stream-throttle": "^0.1.3",
