@@ -14,7 +14,7 @@
 </body>
 <script>
 
-var signalKStream = Primus.connect(window.location.hostname + "/signalk/stream/v1?stream=delta", {
+var signalKStream = Primus.connect(window.location.hostname + "/signalk/v1/stream?stream=delta", {
   reconnect: {
     maxDelay: 15000,
     minDelay: 500,
