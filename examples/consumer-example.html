@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-  <title>Signal K consumer</title>
+  <title>Signal K Sample Consumer</title>
   <script src="/signalk/v1/stream/primus.js"></script>
 </head>
 <body>
@@ -12,20 +12,22 @@
     <div id="data"/>
   </pre>
 </body>
-<script>
 
-var signalKStream = Primus.connect(window.location.hostname + "/signalk/v1/stream?stream=delta", {
-  reconnect: {
-    maxDelay: 15000,
-    minDelay: 500,
-    retries: Infinity
-  }
-});
+<script>
+var ws = new WebSocket("ws://" + window.location.host + "/signalk/v1/stream?stream=delta");
+
+ws.onopen = function() {
+  console.log("ws open");
+}
+
+ws.onclose = function() {
+  console.log("ws close");
+}
 
 var dataDiv = document.getElementById('data');
-signalKStream.on('data', function(data) {
-  dataDiv.innerHTML = JSON.stringify(data, null, 2);
-});
+ws.onmessage = function(event) {
+  dataDiv.innerHTML = JSON.stringify(JSON.parse(event.data), null, 2);
+}
 
 </script>
 </html>
