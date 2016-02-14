@@ -1,10 +1,9 @@
-SignalK Server in Node
+SignalK Node Server
 ================
 
-An implementation of a [Signal K](http://signalk.org) server for vessels. Intended to run on embedded devices (e.g. Raspberry Pi, Beaglebone or UDOO).
+An implementation of a [Signal K](http://signalk.org) server. Intended to run on embedded devices (e.g. Raspberry Pi, Beaglebone or UDOO).
 
-The Server acts as a multiplexer/aggregator of the SignalK streams input by one or more Providers. The merged SignalK data   is available in streaming format over a WebSocket connection and via a REST interface.
-
+The server multiplexes data from NMEA0183, NMEA 2000, Signal K and sensor inputs (eg. I2C connected sensors) and provides the data in Signal K format over HTTP and WebSocket. In addition it can provide NMEA0183 over tcp and udp.
 
 Get up and running
 ------------------
@@ -47,6 +46,10 @@ Now what? Consumers!
 ---------------
 
 Once you have the data streams in place you probably want to use the data or at least see it in a nice format. See [Consumers](https://github.com/SignalK/signalk-server-node/blob/master/CONSUMERS.md) for details.
+
+Real Inputs
+---------------
+To hook the server up to your real inputs you need to create a configuration file that connects to your input source and applies the relevant parsers / converters in the provider pipeline. Please see [example settings files](https://github.com/SignalK/signalk-server-node/tree/master/settings).
 
 Bonjour support
 ---------------
