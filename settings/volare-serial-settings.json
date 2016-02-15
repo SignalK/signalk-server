@@ -1,0 +1,55 @@
+{
+	"vessel": {
+		"name"	: "Volare",
+		"brand"	: "Friendship",
+		"type"	: "22",
+		"uuid"	: "10101010",
+		
+		"dimensions": {
+			"length": 7,
+			"width": 2.5,
+			"mast": 10,
+			"depthTransducer": 0.5,
+			"keel": 1.5 
+		}
+	},
+
+	"interfaces": {},
+  
+  "pipedProviders": [{
+    "id": "nmeaFromFile",
+    "pipeElements": [
+       { 
+         "type": "providers/serialport",
+         "options": {
+           "device": "/dev/ttyUSB0",
+           "baudrate": 4800
+         },
+         "optionMappings": [
+           {
+             "fromAppProperty": "argv.nmeadevice",
+             "toOption": "device"
+           },
+
+           {
+             "fromAppProperty": "argv.nmeabaudrate",
+             "toOption": "baudrate"
+           }
+         ]
+       },
+       {
+          "type": "providers/nmea0183-signalk",
+          "optionMappings": [
+            {
+             "fromAppProperty": "selfId",
+             "toOption": "selfId"
+            },
+            {
+             "fromAppProperty": "selfType",
+             "toOption": "selfType"
+            }
+          ]
+       }               
+    ]
+  }]
+}
