@@ -32,6 +32,9 @@
        },
        {
          "type": "providers/n2k-signalk"
+       },
+       {
+         "type": "providers/signalk-nmea0183"
        }
     ]
   }],
