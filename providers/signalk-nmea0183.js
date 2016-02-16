@@ -16,6 +16,12 @@
 
 var Transform = require('stream').Transform;
 var nmea = require('nmea');
+var Qty = require('js-quantities');
+
+var rad2deg = Qty.swiftConverter('rad', 'deg')
+var identity = function(v) {
+  return v;
+}
 
 function Signalk2Nmea() {
   Transform.call(this, {
@@ -39,23 +45,68 @@ Signalk2Nmea.prototype._transform = function(chunk, encoding, done) {
 function convert(delta) {
   var that = this;
   if (delta.updates) {
+    var nmea = new NmeaAccumulator(that.emit.bind(that));
     delta.updates.forEach(function(update) {
       if (update.values) {
         update.values.forEach(function(pathValue) {
-          if (pathValue.path === 'environment.wind.angleApparent') {
-            console.log('hep')
-            that.emit('nmea0183', nmea.encode('II', {
-              type: 'wind',
-              angle: pathValue.value,
-              reference: 'R',
-              speed: 0,
-              units: 'M',
-              status: 'A'
-            }))
-          }
+          nmea.push(pathValue);
         })
       }
     })
+    nmea.flush();
+  }
+}
+
+function NmeaAccumulator(emit) {
+  this.sentences = [new ApparentWind(emit)];
+}
+
+NmeaAccumulator.prototype.push = function(pathValue) {
+  this.sentences.forEach(function(sentence) {
+    sentence.push.call(sentence, pathValue);
+  })
+}
+
+NmeaAccumulator.prototype.flush = function() {
+  this.sentences.forEach(function(sentence) {
+    sentence.flush.call(sentence);
+  })
+}
+
+function ApparentWind(emit) {
+  this.emit = emit;
+  this.data = {
+    type: 'wind',
+    units: 'M',
+    reference: 'R',
+    status: 'A'
+  }
+  this.pathFields = {
+    'environment.wind.angleApparent': {
+      field: 'angle',
+      converter: rad2deg
+    },
+    'environment.wind.speedApparent': {
+      field: 'speed',
+      converter: identity
+    }
+  }
+}
+
+ApparentWind.prototype.push = function(pathValue) {
+  if (this.pathFields[pathValue.path]) {
+    this.data[this.pathFields[pathValue.path].field] = this.pathFields[pathValue.path].converter(pathValue.value);
+  }
+}
+
+ApparentWind.prototype.flush = function() {
+  if (this.data.angle && this.data.speed) {
+    this.emit('nmea0183', nmea.encode('II', this.data))
+  }
+  this.data = {
+    type: 'wind',
+    units: 'M',
+    stattys: 'A'
   }
 }
 

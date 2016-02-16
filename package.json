@@ -50,6 +50,7 @@
     "express": "^4.10.4",
     "express-namespace": "^0.1.1",
     "flatmap": "0.0.3",
+    "js-quantities": "^1.6.0",
     "lodash": "^3.10.1",
     "minimist": "^1.1.0",
     "moment": "^2.10.6",
