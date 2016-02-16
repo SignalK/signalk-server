@@ -49,7 +49,19 @@ Once you have the data streams in place you probably want to use the data or at 
 
 Real Inputs
 ---------------
-To hook the server up to your real inputs you need to create a configuration file that connects to your input source and applies the relevant parsers / converters in the provider pipeline. Please see [example settings files](https://github.com/SignalK/signalk-server-node/tree/master/settings).
+To hook the server up to your real inputs you need to create a configuration file that connects to your input source and applies the relevant parsers / converters in the provider pipeline.
+
+Supported inputs & formats
+- NMEA0183
+- NMEA 2000 (via NGT-1 & Canboat)
+- Signal K delta
+- File
+- Serial
+- TCP
+- UDP
+- GPSD
+
+Please see [example settings files](https://github.com/SignalK/signalk-server-node/tree/master/settings).
 
 Bonjour support
 ---------------
