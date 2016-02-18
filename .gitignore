@@ -3,3 +3,5 @@ node_modules
 *.db
 logs/*
 bower_components
+settings/ssl-key.pem
+settings/ssl-cert.pem

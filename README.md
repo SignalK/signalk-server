@@ -72,6 +72,10 @@ Once Bonjour is enabled the server advertises itself via Bonjour. This means tha
 
 You can disable Bonjour/mDNS by adding the entry `"mdns": false` to the config file. See `settings/volare-gpsd-settings.json` for example.
 
+HTTPS
+-----
+You can use a self generated certificate simply by enabling SSL with `"ssl":true` in the [settings file](./tree/master/settings/aava-ssl-file-settings.json). If no `ssl-key.pem` & `ssl-cert.pem` files are found under settings they will be created.
+
 Further Reading
 ---------------
 * http://signalk.org/index.html
