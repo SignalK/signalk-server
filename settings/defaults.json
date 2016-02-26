@@ -1,0 +1,54 @@
+{
+  "vessels": {
+    "self": {
+      "navigation": {
+        "speedOverGround": {
+          "meta": {
+            "zones": [{
+              "upper": 0
+            }, {
+              "lower": 10
+            }]
+          }
+        }
+      },
+      "propulsion": {
+        "port": {
+          "alternatorVoltage": {
+            "meta": {
+              "zones": [{
+                "upper": 10.5,
+                "state": "alarm",
+                "message": "Fault: very low voltage"
+              }, {
+                "lower": 10.5,
+                "upper": 11.5,
+                "state": "warn",
+                "message": "Low voltage, battery near empty"
+              }, {
+                "lower": 11.5,
+                "upper": 12,
+                "state": "alert",
+                "message": "Low voltage, battery charge low"
+              }, {
+                "lower": 12.8,
+                "upper": 14.5,
+                "state": "alert",
+                "message": "Charging"
+              }, {
+                "lower": 14.5,
+                "upper": 15,
+                "state": "alarm",
+                "message": "Voltage too high"
+              }, {
+                "lower": 15,
+                "state": "alarm",
+                "message": "Voltage too high, out of range"
+              }]
+            }
+          }
+        }
+      }
+    }
+  }
+}
