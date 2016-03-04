@@ -13,6 +13,11 @@ There are several prototype level browser based consumers available. You can ins
 
 [Bower](http://bower.io/) is a package manager for web page components (Javascript, html and css files). With it you can pull in HTML5 applications from the net, place them under your Signal K server's root directory and access them via http.
 
+First install Bower with
+```
+npm install -g bower
+```
+and then
 ```
 git clone https://github.com/SignalK/signalk-server-node
 cd signalk-server-node/
