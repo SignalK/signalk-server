@@ -3,7 +3,7 @@ SignalK Node Server
 
 An implementation of a [Signal K](http://signalk.org) server. Intended to run on embedded devices (e.g. Raspberry Pi, Beaglebone or UDOO).
 
-The server multiplexes data from NMEA0183, NMEA 2000, Signal K and sensor inputs (eg. I2C connected sensors) and provides the data in Signal K format over HTTP and WebSocket. In addition it can provide NMEA0183 over tcp and udp.
+The server multiplexes data from , NMEA 2000, Signal K and sensor inputs (eg. I2C connected sensors) and provides the data in Signal K format over HTTP and WebSocket. In addition it can provide NMEA0183 over tcp and udp.
 
 Get up and running
 ------------------
@@ -80,11 +80,13 @@ Further Reading
 ---------------
 * http://signalk.org/index.html
 * http://signalk.org/dev/messageFormat.html
+* NMEA0183 support: [nmea0183-signalk](https://github.com/SignalK/signalk-parser-nmea0183)
+* NMEA 2000 support: [n2k-signalk](https://github.com/SignalK/n2k-signalk) via [canboat](https://github.com/canboat/canboat)
 
 
 License
 -------
-Copyright [2015] [Fabian Tollenaar, Teppo Kurki and SignalK committers]
+Copyright [2015] [Fabian Tollenaar, Teppo Kurki and Signal K committers]
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
