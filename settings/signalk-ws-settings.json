@@ -1,0 +1,19 @@
+{
+  "vessel": {
+    "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021e"
+  },
+
+  "mdns": false,
+
+  "pipedProviders": [{
+    "id": "signalk-ws",
+    "pipeElements": [{
+      "type": "providers/mdns-ws"
+    }]
+  }],
+  "interfaces": {
+    "bower": true,
+    "rest": true,
+    "ws": true
+  }
+}
