@@ -1,7 +1,7 @@
 {
   "name": "signalk-server-node",
   "main": "index.js",
-  "version": "0.1.19",
+  "version": "0.1.21",
   "homepage": "https://github.com/SignalK/signalk-server-node",
   "authors": [
     "Fabian Tollenaar <fabian@starting-point.nl>"
