@@ -27,17 +27,27 @@ function MdnsWs(options) {
   Transform.call(this, {
     objectMode: true
   });
+  this.selfHost = options.app.config.getExternalHostname() + ".";
+  this.selfPort = options.app.config.getExternalPort();
+  this.remoteServers = {};
+  this.remoteServers[this.selfHost + ":" + this.selfPort] = {};
   this.signalkClient = new SignalK.Client();
-  this.signalkClient.on('endpoints', this.connect.bind(this));
+  this.signalkClient.on('discovery', this.connect.bind(this));
   this.signalkClient.startDiscovery();
 }
 
 require('util').inherits(MdnsWs, Transform);
 
-MdnsWs.prototype.connect = function(endpoints) {
+MdnsWs.prototype.connect = function(discovery) {
+  if (this.remoteServers[discovery.host + ":" + discovery.port]) {
+    debug("Discovered " + discovery.host + ":" + discovery.port + " already known, not connecting");
+    return;
+  }
   var signalkClient = new SignalK.Client();
-  var url = _object.values(endpoints)[0]['signalk-ws'];
+  var url = _object.values(discovery.discoveryResponse.endpoints)[0]['signalk-ws'];
+  var that = this;
   var onConnect = function(connection) {
+    that.remoteServers[discovery.host + ":" + discovery.port] = {};
     debug("Connected to " + url);
     connection.subscribeAll();
   }
