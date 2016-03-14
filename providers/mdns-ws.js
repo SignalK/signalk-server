@@ -24,14 +24,12 @@ var WebSocket = require('ws');
 var _object = require('lodash/object');
 
 function MdnsWs(options) {
-  debug("MdnsWs");
   Transform.call(this, {
     objectMode: true
   });
   this.signalkClient = new SignalK.Client();
   this.signalkClient.on('endpoints', this.connect.bind(this));
   this.signalkClient.startDiscovery();
-  debug("MdnsWs");
 }
 
 require('util').inherits(MdnsWs, Transform);
