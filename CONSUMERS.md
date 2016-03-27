@@ -9,27 +9,7 @@ A Consumer is any program, web application, website or device that Consumes a Si
 
 2. Sample consumers
 --------------------------------
-There are several prototype level browser based consumers available. You can install them with `bower` and when you access the node server's root with your browser you will get a list of installed consumers.
-
-[Bower](http://bower.io/) is a package manager for web page components (Javascript, html and css files). With it you can pull in HTML5 applications from the net, place them under your Signal K server's root directory and access them via http.
-
-First install Bower with
-```
-npm install -g bower
-```
-and then
-```
-git clone https://github.com/SignalK/signalk-server-node
-cd signalk-server-node/
-npm install
-npm install bower
-node_modules/.bin/bower install https://github.com/SignalK/instrumentpanel.git
-node_modules/.bin/bower install https://github.com/SignalK/sailgauge.git
-bin/n2k-from-file
-```
-
-After that the two installed consumers are available at http://localhost:3000/sailgauge/ and http://localhost:3000/instrumentpanel/ .
-
+There are several prototype level browser based consumers available. They are installed by default in the `bower_components` directory under node server's root and you can access them through the server's home page.
 
 3. Getting started with your own consumers
 ------------------
