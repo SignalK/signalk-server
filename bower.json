@@ -16,8 +16,5 @@
     "bower_components",
     "test",
     "tests"
-  ],
-  "dependencies": {
-    "instrumentpanel": "SignalK/instrumentpanel"
-  }
+  ]
 }

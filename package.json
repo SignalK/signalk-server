@@ -4,6 +4,7 @@
   "description": "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
   "main": "index.js",
   "scripts": {
+    "postinstall": "bower install https://github.com/SignalK/sailgauge.git & bower install https://github.com/SignalK/instrumentpanel.git & bower install https://github.com/SignalK/simplegauges.git & bower install & bower install https://github.com/SignalK/maptracker.git",
     "start": "node ./index",
     "test": "mocha"
   },
@@ -68,6 +69,7 @@
     "ws": "^0.4.32"
   },
   "devDependencies": {
+    "bower": "^1.7.7",
     "chai": "^3.2.0",
     "chai-things": "^0.2.0",
     "find-free-port": "^1.0.1",
