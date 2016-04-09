@@ -21,8 +21,10 @@ function N2KAnalyzer() {
   Transform.call(this, {
     objectMode: true
   });
-
-  this.analyzerProcess = require('child_process').spawn('sh', ['-c', 'analyzer -json -si']);
+  if (process.platform == 'win32')
+    this.analyzerProcess = require('child_process').spawn('cmd', ['/c', 'analyzer -json -si']);
+  else
+    this.analyzerProcess = require('child_process').spawn('sh', ['-c', 'analyzer -json -si']);
   this.analyzerProcess.stderr.on('data', function(data) {
     console.error(data.toString());
   });
