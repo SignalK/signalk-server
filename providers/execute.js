@@ -37,7 +37,10 @@ Execute.prototype._transform = function(chunk, encoding, done) {
 }
 Execute.prototype.pipe = function(pipeTo) {
   this.pipeTo = pipeTo;
-  this.childProcess = require('child_process').spawn('sh', ['-c', this.options.command]);
+  if (process.platform=='win32')
+    this.childProcess = require('child_process').spawn('cmd', ['/c', this.options.command]);
+  else
+    this.childProcess = require('child_process').spawn('sh', ['-c', this.options.command]);
   this.childProcess.stderr.on('data', function(data) {
     console.error(data.toString());
   });
