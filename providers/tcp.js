@@ -36,7 +36,7 @@ function TcpStream(options) {
   this.__timeout  = null;
   this.__last     = -1;
 
-  this.start();
+  this.start(true);
 
   this.on('error', function (err) {
     debug('Stream: "error". Message: ' + err.message);
@@ -59,7 +59,7 @@ TcpStream.prototype.handleTimeout = function () {
   this.__timeout = setTimeout(this.handleTimeout.bind(this), 120000);
 };
 
-TcpStream.prototype.start = function() {
+TcpStream.prototype.start = function(force) {
   if (this.socket !== null) {
     this.socket.unpipe(this);
     this.socket.removeAllListeners('error');
@@ -69,12 +69,7 @@ TcpStream.prototype.start = function() {
     this.socket = null;
   }
 
-  if (this.socket !== null) {
-    debug('Fatal: socket cannot be null at this point. Game over.')
-    return
-  }
-
-  if (this.reconnect !== true) {
+  if (force !== true && this.reconnect !== true) {
     debug('Reconnect is turned off. Game over.', this.reconnect)
     return
   }
@@ -98,7 +93,7 @@ TcpStream.prototype.start = function() {
       clearTimeout(this.__reset);
     }
 
-    debug('Connected!')
+    debug('Socket: "connect". Connected!')
   })
 
   this.socket.on('error', function (err) {
@@ -107,8 +102,6 @@ TcpStream.prototype.start = function() {
 
     if(this.retries < this.maxRetries) {
       debug('Socket: "error". Retrying... ' + this.retries + ' / ' + this.maxRetries);
-      debug('Socket: "error". Re-starting')
-
       this.start();
     } else {
       debug('Socket: "error". Out of retries, retrying in 30 seconds.\n\n');
@@ -137,8 +130,6 @@ TcpStream.prototype._transform = function(chunk, encoding, done) {
 };
 
 TcpStream.prototype.end = function() {
-  debug('Stream.end called')
-  // this.reconnect = false;
   this.start()
 };
 
