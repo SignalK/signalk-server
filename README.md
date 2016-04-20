@@ -47,6 +47,15 @@ Now what? Consumers!
 
 Once you have the data streams in place you probably want to use the data or at least see it in a nice format. See [Consumers](https://github.com/SignalK/signalk-server-node/blob/master/CONSUMERS.md) for details.
 
+Configuration
+=============
+
+Please take a look at the different settings files in the `settings` directory.
+
+You can specify the settings file via command line with `bin/signalk-server -s <path-to-your-settings-file>`.
+
+You can also configure the path to the settings file with environment parameter `SIGNALK_NODE_SETTINGS`.
+
 Real Inputs
 ---------------
 To hook the server up to your real inputs you need to create a configuration file that connects to your input source and applies the relevant parsers / converters in the provider pipeline.
@@ -62,6 +71,7 @@ Supported inputs & formats
 - GPSD
 
 Please see [example settings files](https://github.com/SignalK/signalk-server-node/tree/master/settings).
+
 
 Bonjour support
 ---------------
