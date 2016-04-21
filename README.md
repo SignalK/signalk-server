@@ -82,6 +82,8 @@ Once Bonjour is enabled the server advertises itself via Bonjour. This means tha
 
 You can disable Bonjour/mDNS by adding the entry `"mdns": false` to the config file. See `settings/volare-gpsd-settings.json` for example.
 
+The server can also automatically discover other Signal K devices and connect to them. See `settings/signalk-ws-settings.json` for an example. If the incoming data should be treated as data about `self` the identity in the settings file and in the incoming data need to match or the incoming data should not include context, as the default is `self`.
+
 HTTPS
 -----
 You can use a self generated certificate simply by enabling SSL with `"ssl":true` in the [settings file](./tree/master/settings/aava-ssl-file-settings.json). If no `ssl-key.pem` & `ssl-cert.pem` files are found under settings they will be created.
