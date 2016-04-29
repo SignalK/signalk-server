@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
+ * Copyright 2014-2015 Fabian Tollenaar <fabian@decipher.industries>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,46 +20,47 @@ var net       = require('net')
 ;
 
 function TcpStream(options) {
-  if(!(this instanceof TcpStream)) {
+  if (!(this instanceof TcpStream)) {
     return new TcpStream(options);
   }
 
   Transform.call(this, options);
 
   this.options    = options;
-  this.reconnect  = options.reconnect || true;
+  this.reconnect  = (typeof options.reconnect === 'boolean' && options.reconnect === false) ? false : true;
   this.socket     = null;
   this.retries    = 0;
-  this.maxRetries = options.maxRetries || 10;
+  this.maxRetries = (typeof options.maxRetries === 'number' && options.maxRetries > 0) ? options.maxRetries : 10;
 
   this.__reset    = null;
   this.__timeout  = null;
   this.__last     = -1;
 
-  this.start();
+  this.start(true);
 
-  this.on('error', function(err) {
-    debug('TcpStream', err);
+  this.on('error', function (err) {
+    debug('Stream: "error". Message: ' + err.message);
   });
 }
 
 require('util').inherits(TcpStream, Transform);
 
-TcpStream.prototype.handleTimeout = function() {
-  if((Date.now() - this.__last) > 90000) {
+TcpStream.prototype.handleTimeout = function () {
+  if ((Date.now() - this.__last) > 90000 && this.__reset === null) {
     debug('Connection timed out. Resetting.');
     this.start();
-  } else {
-    if(this.__timeout !== null) {
-      clearTimeout(this.__timeout);
-    }
-
-    this.__timeout = setTimeout(this.handleTimeout.bind(this), 120000);
+    return 
   }
+
+  if (this.__timeout !== null) {
+    clearTimeout(this.__timeout);
+  }
+
+  this.__timeout = setTimeout(this.handleTimeout.bind(this), 120000);
 };
 
-TcpStream.prototype.start = function() {
-  if(this.socket !== null) {
+TcpStream.prototype.start = function(force) {
+  if (this.socket !== null) {
     this.socket.unpipe(this);
     this.socket.removeAllListeners('error');
     this.socket.removeAllListeners('close');
@@ -68,47 +69,58 @@ TcpStream.prototype.start = function() {
     this.socket = null;
   }
 
-  if(this.reconnect === true && this.socket === null) {
-    if(this.__timeout !== null) {
-      clearTimeout(this.__timeout);
-    }
-
-    this.socket = net.connect(this.options);
-
-    if(this.__timeout !== null) {
-      clearTimeout(this.__timeout);
-    }
-
-    this.__timeout = setTimeout(this.handleTimeout.bind(this), 120000);
-
-    this.socket.on('close', function() {
-      if(this.__reset === null) {
-        this.start();
-      }
-    }.bind(this));
-
-    this.socket.on('error', function(err) {
-      debug(err.message);
-      this.retries++;
-
-      if(this.retries < this.maxRetries) {
-        debug('Retrying... ' + this.retries + ' / ' + this.maxRetries);
-        this.start();
-      } else {
-        debug('Out of retries. Retrying in a minute.');
-        if(this.__reset === null) {
-          this.__reset = setTimeout(function() {
-            this.__timeout = null;
-            this.maxRetries = 1;
-            this.retries = 0;
-            this.start();
-          }.bind(this), 30000);
-        }
-      }
-    }.bind(this));
-
-    this.socket.pipe(this);
+  if (force !== true && this.reconnect !== true) {
+    debug('Reconnect is turned off. Game over.', this.reconnect)
+    return
   }
+
+  if (this.__timeout !== null) {
+    clearTimeout(this.__timeout);
+  }
+
+  this.socket     = net.connect(this.options);
+  this.__timeout  = setTimeout(this.handleTimeout.bind(this), 30000);
+
+  this.socket.on('close', function () {
+    if (this.__reset === null) {
+      debug('Socket: "close". Re-starting')
+      this.start();
+    }
+  }.bind(this));
+
+  this.socket.on('connect', function () {
+    if (this.__reset !== null) {
+      clearTimeout(this.__reset);
+    }
+
+    debug('Socket: "connect". Connected!')
+  })
+
+  this.socket.on('error', function (err) {
+    debug('Socket: "error". Message: ' + err.message);
+    this.retries++;
+
+    if(this.retries < this.maxRetries) {
+      debug('Socket: "error". Retrying... ' + this.retries + ' / ' + this.maxRetries);
+      this.start();
+    } else {
+      debug('Socket: "error". Out of retries, retrying in 30 seconds.\n\n');
+      if (this.__reset === null) {
+        if (this.__timeout !== null) {
+          clearTimeout(this.__timeout);
+        }
+
+        this.__reset = setTimeout(function () {
+          this.maxRetries = 10;
+          this.retries = 0;
+          this.__reset = null;
+          this.start();
+        }.bind(this), 30000);
+      }
+    }
+  }.bind(this));
+
+  this.socket.pipe(this);
 };
 
 TcpStream.prototype._transform = function(chunk, encoding, done) {
@@ -118,8 +130,7 @@ TcpStream.prototype._transform = function(chunk, encoding, done) {
 };
 
 TcpStream.prototype.end = function() {
-  this.reconnect = false;
-  this.start();
+  this.start()
 };
 
 module.exports = TcpStream;
