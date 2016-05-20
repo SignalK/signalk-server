@@ -12,7 +12,8 @@ require('util').inherits(ToSignalK, Transform);
 
 ToSignalK.prototype._transform = function(chunk, encoding, done) {
   if ((Date.now() - this.start) > 10000) {
-    return done(new Error('TEST ERROR'))
+    throw new new Error('TEST ERROR')
+    // return done(new Error('TEST ERROR'))
   }
 
   this.push(chunk)
