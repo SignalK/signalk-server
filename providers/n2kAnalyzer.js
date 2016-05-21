@@ -35,11 +35,9 @@ function N2KAnalyzer(options) {
   this.linereader = require('readline').createInterface(this.analyzerProcess.stdout, this.analyzerProcess.stdin);
   var that = this;
   var ignoredSources = options.ignoredSources || [];
-  console.log(ignoredSources)
   this.linereader.on('line', function(data) {
     try {
       var parsed = JSON.parse(data);
-      console.log(parsed.src)
       if (ignoredSources.indexOf(parsed.src) === -1) {
         that.push(parsed);
       }
