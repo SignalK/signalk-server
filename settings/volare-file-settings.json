@@ -1,59 +1,35 @@
 
 {
   "vessel": {
-    "name"  : "Volare",
-    "brand" : "Friendship",
-    "type"  : "22",
-    "uuid"  : "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d",
-    
-    "dimensions": {
-      "length": 7,
-      "width": 2.5,
-      "mast": 10,
-      "depthTransducer": 0.5,
-      "keel": 1.5 
-    }
+    "name": "Volare",
+    "brand": "Friendship",
+    "type": "22",
+    "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d"
   },
 
-  "interfaces": {},
-  
-  "pipedProviders": [{
-    "id": "nmeaFromFile",
-    "pipeElements": [
-       { 
-         "type": "providers/filestream",
-         "options": {
-           "filename": "samples/plaka.log"
-         },
-         "optionMappings": [
-           {
-             "fromAppProperty": "argv.nmeafilename",
-             "toOption": "filename"
-           }
-         ]
-       },
-       { 
-         "type": "providers/throttle",
-         "options": {
-            "rate": 500
-         }
-       },       
-       {
-         "type": "providers/liner"
-       },
-       {
-          "type": "providers/nmea0183-signalk",
-          "optionMappings": [
-            {
-             "fromAppProperty": "selfId",
-             "toOption": "selfId"
-            },
-            {
-             "fromAppProperty": "selfType",
-             "toOption": "selfType"
-            }
-          ]
-       }               
-    ]
-  }]
+  "experimentalProviders": [
+    {
+      "name": "filestream",
+      "config": {
+        "filename": "samples/plaka.log"
+      }
+    },
+
+    {
+      "name": "throttle",
+      "config": {
+        "rate": 500
+      }
+    },
+
+    "liner",
+
+    {
+      "name": "nmea0183-signalk",
+      "config": {
+        "selfId": { "source": "app", "property": "selfId" },
+        "selfType": { "source": "app", "property": "selfType" }
+      }
+    }
+  ]
 }
