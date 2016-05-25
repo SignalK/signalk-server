@@ -41,6 +41,7 @@
     "node": "v0.10.x"
   },
   "dependencies": {
+    "baconjs": "^0.7.84",
     "body-parser": "^1.14.1",
     "colors": "^0.6.2",
     "concentrate": "^0.2.3",
@@ -53,6 +54,7 @@
     "express": "^4.10.4",
     "express-namespace": "^0.1.1",
     "flatmap": "0.0.3",
+    "js-quantities": "^1.6.1",
     "lodash": "^3.10.1",
     "minimist": "^1.1.0",
     "moment": "^2.10.6",
