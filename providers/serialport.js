@@ -53,7 +53,7 @@ SerialStream.prototype.start = function() {
     this.serial.pipe(this);
   }.bind(this));
 
-  this.serial.on('error', this.start.bind(this));
+  this.serial.on('error', function(x) {console.log(x)});
   this.serial.on('close', this.start.bind(this));
 };
 
