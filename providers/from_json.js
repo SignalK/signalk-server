@@ -25,10 +25,14 @@ function FromJson() {
 require('util').inherits(FromJson, Transform);
 
 FromJson.prototype._transform = function(chunk, encoding, done) {
+  var parsed = null;
   try {
-    this.push(JSON.parse(chunk.toString()));
+    parsed = JSON.parse(chunk.toString());
   } catch (ex) {
     console.error("Could not parse JSON:" + chunk.toString());
+  }
+  if (parsed) {
+    this.push(parsed)
   }
   done();
 }
