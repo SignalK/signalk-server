@@ -50,7 +50,7 @@ Once you have the data streams in place you probably want to use the data or at 
 Configuration
 =============
 
-Please take a look at the different settings files in the `settings` directory.
+Please take a look at the different settings files in the `settings` directory and read the [brief intro](http://blog.emilecantin.com/web/sysadmin/iot/javascript/sailing/2016/03/19/arduino-signalk-part-2.html).
 
 You can specify the settings file via command line with `bin/signalk-server -s <path-to-your-settings-file>`.
 
