@@ -58,7 +58,7 @@ You can specify the settings file via command line with `bin/signalk-server -s <
 
 You can also configure the path to the settings file with environment parameter `SIGNALK_NODE_SETTINGS`.
 
-The http port can be configured separately with environment variable PORT. You can also [run on port 80 with systemd](https://github.com/tkurki/marinepi-provisioning/blob/d3d624629799a3b96234a90fc42bc22dae4fd3a2/roles/node-app/templates/node_app_systemd_socket.j2).
+The http port can be configured separately with environment variable `PORT`. You can also [run on port 80 with systemd](https://github.com/tkurki/marinepi-provisioning/blob/d3d624629799a3b96234a90fc42bc22dae4fd3a2/roles/node-app/templates/node_app_systemd_socket.j2).
 
 Real Inputs
 ---------------
