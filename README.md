@@ -9,10 +9,12 @@ Note: the server does not yet support [subscription protocol](https://github.com
 
 Get up and running
 ------------------
+
+Instructions for [installation on Raspberry Pi manually](https://github.com/SignalK/signalk-server-node/blob/master/raspberry_pi_installation.md) or [with Ansible](https://github.com/tkurki/marinepi-provisioning).
+
 Prerequisites
 * node and npm installed
 
-See [these instructions](https://github.com/joyent/node/wiki/Installing-Node.js-via-package-manager#debian-and-ubuntu-based-linux-distributions) for Node installation on Raspberry Pi.
 
 Get the repo with either `git clone https://github.com/SignalK/signalk-server-node.git`
 or as a simple zip file from https://github.com/SignalK/signalk-server-node/archive/master.zip and extract it.
