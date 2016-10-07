@@ -5,7 +5,7 @@ An implementation of a [Signal K](http://signalk.org) server. Intended to run on
 
 The server multiplexes data from , NMEA 2000, Signal K and sensor inputs (eg. I2C connected sensors) and provides the data in Signal K format over HTTP and WebSocket. In addition it can provide NMEA0183 over tcp and udp.
 
-Note: the server does not yet support [subscription protocol](https://github.com/SignalK/signalk-server-node/issues/35).
+**Note: the server does not yet support [subscription protocol](https://github.com/SignalK/signalk-server-node/issues/35).**
 
 Get up and running
 ------------------
