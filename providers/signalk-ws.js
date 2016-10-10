@@ -29,13 +29,9 @@ function SignalKWs(options) {
   });
   this.selfHost = options.app.config.getExternalHostname() + ".";
   this.selfPort = options.app.config.getExternalPort();
-  this.remoteServers = {};
-  this.remoteServers[this.selfHost + ":" + this.selfPort] = {};
   this.signalkClient = new SignalK.Client();
   var url = "ws://" + options.host + ":" + options.port + options.path;
-  var that = this;
   var onConnect = function(connection) {
-    that.remoteServers[options.host + ":" + options.port] = {};
     debug("Connected to " + url);
     connection.subscribeAll();
   }
