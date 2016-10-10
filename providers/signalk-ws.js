@@ -19,7 +19,7 @@ var Transform = require('stream').Transform;
 
 var SignalK = require('signalk-client');
 
-var debug = require('debug')('signalk-server:providers:mdns-ws');
+var debug = require('debug')('signalk-server:providers:signalk-ws');
 
 var WebSocket = require('ws');
 var _object = require('lodash/object');
