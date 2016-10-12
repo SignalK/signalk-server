@@ -6,7 +6,7 @@
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
- 
+
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,8 +15,7 @@
  */
 
 var Transform = require('stream').Transform
-var serialport = require('serialport');
-var SerialPort = serialport.SerialPort;
+var SerialPort = require('serialport');
 
 function SerialStream(options) {
   if(!(this instanceof SerialStream)) {
@@ -45,8 +44,8 @@ SerialStream.prototype.start = function() {
   }
 
   this.serial = new SerialPort(this.options.device, {
-    baudrate: this.options.baudrate,
-    parser: serialport.parsers.readline("\n")
+    baudRate: this.options.baudrate,
+    parser: SerialPort.parsers.readline("\n")
   });
 
   this.serial.on('open', function() {
@@ -65,6 +64,6 @@ SerialStream.prototype.end = function() {
 SerialStream.prototype._transform = function(chunk, encoding, done) {
   this.push(chunk);
   done();
-};  
+};
 
 module.exports = SerialStream;
