@@ -4,7 +4,7 @@ var webpack = require('webpack');
 module.exports = {
   entry: {
     main: [
-      './src/main.js'
+      './src/main.jsx'
     ]
   },
   output: {
@@ -13,7 +13,8 @@ module.exports = {
     publicPath: '/plugins/config/'
   },
   module: {
-    loaders: [{
+    loaders: [
+      {
         test: /\.jsx?$/,
         exclude: /node_modules/,
         loader: 'babel',
@@ -28,8 +29,8 @@ module.exports = {
     ]
   },
   externals: {
-    React: "React",
-    ReactDOM: "ReactDOM"
+    react: "React",
+    "react-dom": "ReactDOM"
   },
   resolveLoader: {
     fallback: path.join(__dirname, "node_modules")
