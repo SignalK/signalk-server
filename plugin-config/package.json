@@ -1,0 +1,23 @@
+{
+  "name": "signalk-server-plugin-config",
+  "version": "0.0.1",
+  "description": "Configuration interface for Signal K Node server plugins",
+  "main": "index.js",
+  "author": "teppo.kurki@iki.fi",
+  "license": "ISC",
+  "dependencies": {
+    "babel-core": "^6.16.0",
+    "babel-loader": "^6.2.5",
+    "babel-preset-es2015": "^6.16.0",
+    "babel-preset-react": "^6.16.0",
+    "babel-preset-stage-2": "^6.16.0",
+    "json-loader": "^0.5.3",
+    "react-jsonschema-form": "^0.40.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack -p",
+    "build-debug": "webpack -p --devtool source-map",
+    "watch": "webpack -d --watch"
+  }
+}
