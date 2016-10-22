@@ -6,7 +6,9 @@ function saveData(id, data) {
     body: JSON.stringify(data),
     headers: new Headers({'Content-Type': 'application/json'})
   }).then((response) => {
-    console.log(response)
+    if (response.status != 200) {
+      console.log(response)
+    }
   })
 }
 
