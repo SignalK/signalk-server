@@ -1,5 +1,4 @@
 import ConfigurationForm from "./ConfigurationForm.jsx"
-import PluginList from "./PluginList.jsx"
 
 function saveData(id, data) {
   fetch('/plugins/' + id + "/config", {
