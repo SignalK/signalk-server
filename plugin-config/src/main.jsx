@@ -18,7 +18,7 @@ fetch(`/plugins`).then((response) => {
       ReactDOM.render(
         <div className="container">
         {plugins.map((plugin, i) => (
-          <div className="panel panel-default">
+          <div key={i} className="panel panel-default">
             <div className="panel-body">
               <ConfigurationForm plugin={plugin} onSubmit={saveData.bind(null, plugin.id)}/>
             </div>
