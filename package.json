@@ -74,6 +74,7 @@
     "chai": "^3.2.0",
     "chai-things": "^0.2.0",
     "find-free-port": "^1.0.1",
+    "freeport-promise": "^1.0.0",
     "mocha": "^2.1.0",
     "request-promise": "^0.4.3"
   }
