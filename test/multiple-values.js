@@ -63,6 +63,7 @@ describe('Server', function() {
         var treeAfterFirstDelta = JSON.parse(body);
         treeAfterFirstDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.value', 43374);
         treeAfterFirstDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.$source', 'deltaFromHttp.115');
+        console.log(JSON.stringify(treeAfterFirstDelta, null, 2))
         treeAfterFirstDelta.should.be.validSignalK;
 
         delta.updates[0].values[0].value = 1;
@@ -87,9 +88,9 @@ describe('Server', function() {
         treeAfterOtherSourceDelta.vessels[uuid].navigation.logTrip.values['deltaFromHttp.115'].value.should.equal(1);
         treeAfterOtherSourceDelta.vessels[uuid].navigation.logTrip.values['deltaFromHttp.116'].value.should.equal(2);
         treeAfterOtherSourceDelta.should.be.validSignalK;
-      }).finally(function() {
+      }).then(done)
+        .finally(function() {
         server.stop();
-        done();
       });
     })
   })
