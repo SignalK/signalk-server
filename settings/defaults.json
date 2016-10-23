@@ -5,9 +5,11 @@
         "speedOverGround": {
           "meta": {
             "zones": [{
-              "upper": 0
+              "upper": 0,
+              "state": "normal"
             }, {
-              "lower": 10
+              "lower": 2,
+              "state": "warn"
             }]
           }
         }
