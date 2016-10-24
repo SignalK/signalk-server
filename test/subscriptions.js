@@ -47,59 +47,62 @@ function getDelta(overwrite) {
 }
 
 describe('Subscriptions', _ => {
-  it('default subscription serves self data', function() {
-    var server,
-      port,
-      deltaUrl,
-      self,
-      ws,
-      nextMessageCaller = new NextMessageCaller();
+  var serverP,
+    port,
+    deltaUrl
 
-    return freeport().then(p => {
+  before(() => {
+    serverP = freeport().then(p => {
       port = p
       deltaUrl = 'http://localhost:' + port + '/signalk/v1/api/_test/delta';
-
       return startServerP(p)
-    }).then(startedServer => {
-      server = startedServer
+    })
+  })
 
-      ws = new WebSocket('ws://localhost:' + port + '/signalk/v1/stream');
-      ws.on('message', nextMessageCaller.onMessage.bind(nextMessageCaller))
-      return nextMessageCaller.nextMessagePromise()
+  function sendDelta(delta) {
+    return rp({url: deltaUrl, method: 'POST', json: delta})
+  }
+
+  it('default subscription serves self data', function() {
+    var self,
+      wsPromiser;
+
+    return serverP.then(_ => {
+      wsPromiser = new WsPromiser('ws://localhost:' + port + '/signalk/v1/stream')
+      return wsPromiser.nextMsg()
     }).then(wsHello => {
       self = JSON.parse(wsHello).self
 
-      const nextWs = nextMessageCaller.nextMessagePromise()
-      const sendDelta = rp({
-        url: deltaUrl,
-        method: 'POST',
-        json: getDelta({
+      return Promise.all([
+        wsPromiser.nextMsg(),
+        sendDelta(getDelta({
           context: 'vessels.' + self
-        })
-      })
-      return Promise.all([nextWs, sendDelta])
+        }))
+      ])
     }).then(results => {
       assert(JSON.parse(results[0]).updates[0].source.pgn === 128275)
 
-      const nextWs = nextMessageCaller.nextMessagePromise()
-      const sendDelta = rp({
-        url: deltaUrl,
-        method: 'POST',
-        json: getDelta({
-          context: 'vessels.othervessel'
-        })
-      })
-      return Promise.all([nextWs, sendDelta])
+      return Promise.all([
+        wsPromiser.nextMsg(),
+        sendDelta(getDelta({context: 'vessels.othervessel'}))
+      ])
     }).then(results => {
       assert(results[0] === "timeout")
     })
   })
 })
 
-function NextMessageCaller() {
+//Connects to the url via ws
+//and provides Promises that are either resolved within
+//timeout period as the next message from the ws or
+//the string "timeout" in case timeout fires
+function WsPromiser(url) {
+  ws = new WebSocket(url)
+  ws.on('message', this.onMessage.bind(this))
   this.callees = []
 }
-NextMessageCaller.prototype.nextMessagePromise = function() {
+
+WsPromiser.prototype.nextMsg = function() {
   const callees = this.callees
   return new Promise((resolve, reject) => {
     callees.push(resolve)
@@ -109,7 +112,7 @@ NextMessageCaller.prototype.nextMessagePromise = function() {
   })
 }
 
-NextMessageCaller.prototype.onMessage = function(message) {
+WsPromiser.prototype.onMessage = function(message) {
   const theCallees = this.callees
   this.callees = []
   theCallees.forEach(callee => callee(message))
