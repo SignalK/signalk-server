@@ -119,7 +119,6 @@ describe('Subscriptions', _ => {
     })
   })
 
-
   it('?subscribe=all subscription serves all data', function() {
     var self,
       wsPromiser;
@@ -176,6 +175,50 @@ describe('Subscriptions', _ => {
     })
   })
 
+  it('navigation.logTrip subscription serves correct data', function() {
+    var self,
+      wsPromiser;
+
+    return serverP.then(_ => {
+      wsPromiser = new WsPromiser('ws://localhost:' + port + '/signalk/v1/stream?subsribe=none')
+      return wsPromiser.nextMsg()
+    }).then(wsHello => {
+      self = JSON.parse(wsHello).self
+
+      return wsPromiser.send({
+        "context": "vessels.*",
+        "subscribe": [
+          {
+            "path": "navigation.logTrip"
+          }
+        ]
+      })
+    }).then( () => {
+      return Promise.all([
+        wsPromiser.nextMsg(),
+        sendDelta(getDelta({
+          context: 'vessels.' + self
+        }))
+      ])
+    }).then(results => {
+      const delta = JSON.parse(results[0])
+      assert(delta.updates[0].values[0].path === 'navigation.logTrip', "Receives navigation.logTrip")
+      assert(delta.updates.length === 1, "Receives just one update")
+      assert(delta.updates[0].values.length === 1, "Receives just one value")
+      assert(delta.context === 'vessels.' + self)
+
+      return Promise.all([
+        wsPromiser.nextMsg(),
+        sendDelta(getDelta({context: 'vessels.othervessel'}))
+      ])
+    }).then(results => {
+      const delta = JSON.parse(results[0])
+      assert(delta.updates.length === 1, "Receives just one update")
+      assert(delta.updates[0].values.length === 1, "Receives just one value")
+      assert(delta.updates[0].values[0].path === 'navigation.logTrip', "Receives just navigation.logTrip")
+      assert(delta.context === 'vessels.othervessel')
+    })
+  })
 
 })
 
@@ -184,8 +227,8 @@ describe('Subscriptions', _ => {
 //timeout period as the next message from the ws or
 //the string "timeout" in case timeout fires
 function WsPromiser(url) {
-  ws = new WebSocket(url)
-  ws.on('message', this.onMessage.bind(this))
+  this.ws = new WebSocket(url)
+  this.ws.on('message', this.onMessage.bind(this))
   this.callees = []
 }
 
@@ -203,6 +246,14 @@ WsPromiser.prototype.onMessage = function(message) {
   const theCallees = this.callees
   this.callees = []
   theCallees.forEach(callee => callee(message))
+}
+
+WsPromiser.prototype.send = function(message) {
+  const that = this
+  return new Promise((resolve, reject) => {
+    that.ws.send(JSON.stringify(message))
+    setTimeout(() => resolve("wait over"), 100)
+  })
 }
 
 function startServerP(port) {
