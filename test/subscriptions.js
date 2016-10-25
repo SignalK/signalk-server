@@ -63,6 +63,34 @@ describe('Subscriptions', _ => {
     return rp({url: deltaUrl, method: 'POST', json: delta})
   }
 
+  it('?subscribe=self subscription serves self data', function() {
+    var self,
+      wsPromiser;
+
+    return serverP.then(_ => {
+      wsPromiser = new WsPromiser('ws://localhost:' + port + '/signalk/v1/stream?subscribe=self')
+      return wsPromiser.nextMsg()
+    }).then(wsHello => {
+      self = JSON.parse(wsHello).self
+
+      return Promise.all([
+        wsPromiser.nextMsg(),
+        sendDelta(getDelta({
+          context: 'vessels.' + self
+        }))
+      ])
+    }).then(results => {
+      assert(JSON.parse(results[0]).updates[0].source.pgn === 128275)
+
+      return Promise.all([
+        wsPromiser.nextMsg(),
+        sendDelta(getDelta({context: 'vessels.othervessel'}))
+      ])
+    }).then(results => {
+      assert(results[0] === "timeout")
+    })
+  })
+
   it('default subscription serves self data', function() {
     var self,
       wsPromiser;
@@ -90,6 +118,65 @@ describe('Subscriptions', _ => {
       assert(results[0] === "timeout")
     })
   })
+
+
+  it('?subscribe=all subscription serves all data', function() {
+    var self,
+      wsPromiser;
+
+    return serverP.then(_ => {
+      wsPromiser = new WsPromiser('ws://localhost:' + port + '/signalk/v1/stream?subscribe=all')
+      return wsPromiser.nextMsg()
+    }).then(wsHello => {
+      self = JSON.parse(wsHello).self
+
+      return Promise.all([
+        wsPromiser.nextMsg(),
+        sendDelta(getDelta({
+          context: 'vessels.' + self
+        }))
+      ])
+    }).then(results => {
+      assert(JSON.parse(results[0]).updates[0].source.pgn === 128275)
+
+      return Promise.all([
+        wsPromiser.nextMsg(),
+        sendDelta(getDelta({context: 'vessels.othervessel'}))
+      ])
+    }).then(results => {
+      assert(JSON.parse(results[0]).context === 'vessels.othervessel', "Sends other vessel data")
+    })
+  })
+
+  it('?subscribe=none subscription serves no data', function() {
+    var self,
+      wsPromiser;
+
+    return serverP.then(_ => {
+      wsPromiser = new WsPromiser('ws://localhost:' + port + '/signalk/v1/stream?subscribe=none')
+      return wsPromiser.nextMsg()
+    }).then(wsHello => {
+      self = JSON.parse(wsHello).self
+
+      return Promise.all([
+        wsPromiser.nextMsg(),
+        sendDelta(getDelta({
+          context: 'vessels.' + self
+        }))
+      ])
+    }).then(results => {
+      assert(results[0] === "timeout")
+
+      return Promise.all([
+        wsPromiser.nextMsg(),
+        sendDelta(getDelta({context: 'vessels.othervessel'}))
+      ])
+    }).then(results => {
+      assert(results[0] === "timeout")
+    })
+  })
+
+
 })
 
 //Connects to the url via ws
@@ -108,7 +195,7 @@ WsPromiser.prototype.nextMsg = function() {
     callees.push(resolve)
     setTimeout(_ => {
       resolve("timeout")
-    }, 500)
+    }, 250)
   })
 }
 
