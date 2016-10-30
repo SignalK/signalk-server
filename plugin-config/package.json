@@ -12,6 +12,7 @@
     "babel-preset-react": "^6.16.0",
     "babel-preset-stage-2": "^6.16.0",
     "json-loader": "^0.5.3",
+    "lodash.keys": "^4.2.0",
     "react-jsonschema-form": "^0.40.0"
   },
   "scripts": {
