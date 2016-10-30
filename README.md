@@ -101,7 +101,8 @@ You can log all the input data in pre-Signal K format by adding the `log` elemen
 
 Server Plugins
 -------
-Plugin configuration interface is at [/plugins/configure](http://localhost:3000/plugins/configure/). See [Server Plugins](plugins.md) for more information.
+
+Plugin configuration interface is at [/plugins/configure](http://localhost:3000/plugins/configure/). See [Server Plugins](SERVERPLUGINS.md) for more information.
 
 Further Reading
 ---------------
