@@ -99,6 +99,9 @@ Logging
 
 You can log all the input data in pre-Signal K format by adding the `log` element to your provider pipeline. It creates hourly files with the data from all the configured providers, interleaved/multiplexed with one message per line. The multiplexed log files can be played back with `multiplexedlog` provider pipeline element.
 
+Server Plugins
+-------
+Plugin configuration interface is at [/plugins/configure](http://localhost:3000/plugins/configure/). See [Server Plugins](plugins.md) for more information.
 
 Further Reading
 ---------------
