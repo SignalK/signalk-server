@@ -19,6 +19,7 @@ fetch(`/plugins`).then((response) => {
         <div className="container">
         {plugins.map((plugin, i) => (
           <div key={i} className="panel panel-default">
+            <div className="panel-heading">{plugin.name}</div>
             <div className="panel-body">
               <ConfigurationForm plugin={plugin} onSubmit={saveData.bind(null, plugin.id)}/>
             </div>
