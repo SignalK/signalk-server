@@ -6,23 +6,25 @@ import Form from "react-jsonschema-form";
 
 export default(props) => {
   const schema = JSON.parse(JSON.stringify(props.plugin.schema))
-  const uiSchema = {
-    "ui:order": keys(schema.properties)
-  }
-  uiSchema['ui:order'].unshift('enabled')
-  schema.properties.enabled = {
-    type: "boolean",
-    title: "Active",
-    default: false
+  const topSchema = {
+    type: "object",
+    properties: {
+      enabled: {
+        type: "boolean",
+        title: "Active",
+        default: false
+      },
+      configuration: {
+        type: "object",
+        title: schema.title,
+        description: schema.description,
+        type: "object",
+        properties: schema.properties
+      }
+    }
   }
 
-  return <Form
-    schema={schema}
-    uiSchema={uiSchema}
-    formData={props.plugin.data || {}}
-    onSubmit={submitData => {
-      props.onSubmit(submitData.formData)
-    }
-    }
-  />
+  return <Form schema={topSchema} formData={props.plugin.data || {}} onSubmit={submitData => {
+    props.onSubmit(submitData.formData)
+  }}/>
 }
