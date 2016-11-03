@@ -16,7 +16,7 @@ export default(props) => {
       },
       configuration: {
         type: "object",
-        title: schema.title,
+        title: " ",
         description: schema.description,
         type: "object",
         properties: schema.properties
