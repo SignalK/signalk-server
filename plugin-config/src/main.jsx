@@ -1,3 +1,5 @@
+import React from "react"
+import ReactDOM from 'react-dom'
 import ConfigurationForm from "./ConfigurationForm.jsx"
 
 function saveData(id, data) {

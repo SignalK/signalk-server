@@ -13,6 +13,8 @@
     "babel-preset-stage-2": "^6.16.0",
     "json-loader": "^0.5.3",
     "lodash.keys": "^4.2.0",
+    "react": "^15.3.2",
+    "react-dom": "^15.3.2",
     "react-jsonschema-form": "^0.40.0",
     "webpack": "^1.13.3",
     "whatwg-fetch": "^1.0.0"

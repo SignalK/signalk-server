@@ -29,10 +29,6 @@ module.exports = {
       }
     ]
   },
-  externals: {
-    react: "React",
-    "react-dom": "ReactDOM"
-  },
   resolveLoader: {
     fallback: path.join(__dirname, "node_modules")
   },
