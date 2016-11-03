@@ -4,6 +4,7 @@ var webpack = require('webpack');
 module.exports = {
   entry: {
     main: [
+      'whatwg-fetch',
       './src/main.jsx'
     ]
   },
