@@ -1,19 +1,6 @@
 {
   "vessels": {
     "self": {
-      "navigation": {
-        "speedOverGround": {
-          "meta": {
-            "zones": [{
-              "upper": 0,
-              "state": "normal"
-            }, {
-              "lower": 2,
-              "state": "warn"
-            }]
-          }
-        }
-      },
       "propulsion": {
         "port": {
           "alternatorVoltage": {
