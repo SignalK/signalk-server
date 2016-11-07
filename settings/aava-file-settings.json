@@ -25,7 +25,10 @@
          "type": "providers/liner"
        },
        {
-         "type": "providers/n2kAnalyzer"
+         "type": "providers/n2kAnalyzer",
+         "options" : {
+           "ignoredSources": [44]
+         }
        },
        {
          "type": "providers/timestamp-throttle"
