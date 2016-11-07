@@ -52,6 +52,7 @@
     "express": "^4.10.4",
     "express-namespace": "^0.1.1",
     "flatmap": "0.0.3",
+    "httpolyglot": "^0.1.1",
     "lodash": "^3.10.1",
     "minimist": "^1.1.0",
     "moment": "^2.10.6",
