@@ -6,7 +6,7 @@
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
- 
+
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,6 +28,7 @@ function TimestampThrottle(options) {
     objectMode: true
   });
   this.lastMsgMillis = new Date().getTime();
+  this.getMilliseconds = options && options.getMilliseconds ? options.getMilliseconds : getMilliseconds;
 }
 
 require('util').inherits(TimestampThrottle, Transform);
@@ -51,7 +52,7 @@ TimestampThrottle.prototype._transform = function(msg, encoding, done) {
     }
 };
 
-function getMilliseconds(timestamp) { 
+function getMilliseconds(timestamp) {
   //2014-08-15-16:00:00.083
   return moment(timestamp, "YYYY-MM-DD-HH:mm:ss.SSS").valueOf()
 }
