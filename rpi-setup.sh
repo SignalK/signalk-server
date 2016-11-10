@@ -1,13 +1,29 @@
 #!/bin/bash
 
+echo "ARE YOU SURE YOU WANT TO DELETE ANY CONFIGURATION"
+echo "EXISTING AND SET UP A NEW STARTUP SERVICE?"
+echo ""
+echo "IF NOT, PRESS <CTRL+C> TO ABORT"
+echo ""
+
 systemd="/etc/systemd/system/signalk.service"
 dir=$(pwd)
 
 
 echo -n "Enter your vessel name and press [enter]:"
 read vesselName
-echo -n "Enter your vessel MMSI number and press [enter]:"
-read vesselMMSI
+
+UUIDFile="$dir/UUID"
+if [ -f $UUIDFile ]
+then
+  UUID=$( cat $UUIDFile)
+  echo "UUID=$UUID"
+else
+  UUID=$( cat /proc/sys/kernel/random/uuid)
+  sudo touch $UUIDFile
+  sudo echo $UUID > $UUIDFile
+  echo "UUID generated: $UUID"
+fi
 
 
 vesselBash="$dir/bin/$vesselName"
@@ -24,13 +40,14 @@ sudo touch $vesselBash
 sudo echo "#!/bin/sh" > $vesselBash
 sudo echo "" >> $vesselBash
 sudo echo "DIR=\`dirname \$0\`" >> $vesselBash
-sudo echo "\${DIR}/signalk-server -s \${DIR}/../settings/$vesselJson \$*" >> $vesselBash
+sudo echo "\${DIR}/signalk-server -s \${DIR}/../settings/$vesselName.json \$*" >> $vesselBash
+sudo chmod 775 $vesselBash
 
 sudo touch $vesselJson
 sudo echo "{" > $vesselJson
 sudo echo "  \"vessel\": {" >> $vesselJson
 sudo echo "    \"name\": \"$vesselName\"," >> $vesselJson
-sudo echo "    \"uuid\"	: \"urn:mrn:imo:mmsi:$vesselMMSI\"" >> $vesselJson
+sudo echo "    \"uuid\"	: \"urn:mrn:signalk:uuid:$UUID\"" >> $vesselJson
 sudo echo "  }," >> $vesselJson
 sudo echo "" >> $vesselJson
 sudo echo "  \"interfaces\": {}," >> $vesselJson
