@@ -36,75 +36,78 @@ echo "but settings can be changed by going to <ipaddress>:3000,"
 echo "selecting \"Server Plugins Configuration\""
 echo "and \"Vessel Setup\""
 
-sudo touch $vesselBash
-sudo echo "#!/bin/sh" > $vesselBash
-sudo echo "" >> $vesselBash
-sudo echo "DIR=\`dirname \$0\`" >> $vesselBash
-sudo echo "\${DIR}/signalk-server -s /settings/$vesselName.json \$*" >> $vesselBash
-sudo chmod 775 $vesselBash
+cat > $vesselBash <<bashScript
+#!/bin/sh
 
-sudo touch $vesselJson
-sudo echo "{" > $vesselJson
-sudo echo "  \"vessel\": {" >> $vesselJson
-sudo echo "    \"name\": \"$vesselName\"," >> $vesselJson
-sudo echo "    \"uuid\"	: \"urn:mrn:signalk:uuid:$UUID\"" >> $vesselJson
-sudo echo "  }," >> $vesselJson
-sudo echo "" >> $vesselJson
-sudo echo "  \"interfaces\": {}," >> $vesselJson
-sudo echo "" >> $vesselJson
-sudo echo "  \"pipedProviders\": [{" >> $vesselJson
-sudo echo "    \"id\": \"nmeaFromFile\"," >> $vesselJson
-sudo echo "    \"pipeElements\": [" >> $vesselJson
-sudo echo "       { " >> $vesselJson
-sudo echo "         \"type\": \"providers/filestream\"," >> $vesselJson
-sudo echo "         \"options\": {" >> $vesselJson
-sudo echo "           \"filename\": \"samples/plaka.log\"" >> $vesselJson
-sudo echo "         }," >> $vesselJson
-sudo echo "         \"optionMappings\": [" >> $vesselJson
-sudo echo "           {" >> $vesselJson
-sudo echo "             \"fromAppProperty\": \"argv.nmeafilename\"," >> $vesselJson
-sudo echo "             \"toOption\": \"filename\"" >> $vesselJson
-sudo echo "           }" >> $vesselJson
-sudo echo "         ]" >> $vesselJson
-sudo echo "       }," >> $vesselJson
-sudo echo "       { " >> $vesselJson
-sudo echo "         \"type\": \"providers/throttle\"," >> $vesselJson
-sudo echo "         \"options\": {" >> $vesselJson
-sudo echo "            \"rate\": 500" >> $vesselJson
-sudo echo "         }" >> $vesselJson
-sudo echo "       }," >> $vesselJson
-sudo echo "       {" >> $vesselJson
-sudo echo "         \"type\": \"providers/liner\"" >> $vesselJson
-sudo echo "       }," >> $vesselJson
-sudo echo "       {" >> $vesselJson
-sudo echo "          \"type\": \"providers/nmea0183-signalk\"," >> $vesselJson
-sudo echo "          \"optionMappings\": [" >> $vesselJson
-sudo echo "            {" >> $vesselJson
-sudo echo "             \"fromAppProperty\": \"selfId\"," >> $vesselJson
-sudo echo "             \"toOption\": \"selfId\"" >> $vesselJson
-sudo echo "            }," >> $vesselJson
-sudo echo "            {" >> $vesselJson
-sudo echo "             \"fromAppProperty\": \"selfType\"," >> $vesselJson
-sudo echo "             \"toOption\": \"selfType\"" >> $vesselJson
-sudo echo "            }" >> $vesselJson
-sudo echo "          ]" >> $vesselJson
-sudo echo "       }" >> $vesselJson
-sudo echo "    ]" >> $vesselJson
-sudo echo "  }]" >> $vesselJson
-sudo echo "}" >> $vesselJson
+DIR=\`dirname \$0\`
+\${DIR}/signalk-server -s /settings/$vesselName.json \$*
+bashScript
 
+sudo chmod 755 $vesselBash
 
-sudo touch $systemd
-sudo echo "[Service]" > $systemd
-sudo echo "ExecStart=$vesselBash" >>$systemd
-sudo echo "Restart=always" >> $systemd
-sudo echo "StandardOutput=syslog" >> $systemd
-sudo echo "StandardError=syslog" >> $systemd
-sudo echo "WorkingDirectory=$dir" >> $systemd
-sudo echo "[Install]" >> $systemd
-sudo echo "WantedBy=multi-user.target" >> $systemd
+cat > $vesselJson <<jsonfile
+{
+  "vessel": {
+    "name": "$vesselName",
+    "uuid"	: "urn:mrn:signalk:uuid:$UUID"
+  },
 
-sudo chmod 777 $systemd
+  "interfaces": {},
+
+  "pipedProviders": [{
+    "id": "nmeaFromFile",
+    "pipeElements": [
+       { 
+         "type": "providers/filestream",
+         "options": {
+           "filename": "samples/plaka.log"
+         },
+         "optionMappings": [
+           {
+             "fromAppProperty": "argv.nmeafilename",
+             "toOption": "filename"
+           }
+         ]
+       },
+       { 
+         "type": "providers/throttle",
+         "options": {
+            "rate": 500
+         }
+       },
+       {
+         "type": "providers/liner"
+       },
+       {
+          "type": "providers/nmea0183-signalk",
+          "optionMappings": [
+            {
+             "fromAppProperty": "selfId",
+             "toOption": "selfId"
+            },
+            {
+             "fromAppProperty": "selfType",
+             "toOption": "selfType"
+            }
+          ]
+       }
+    ]
+  }]
+}
+jsonfile
+
+cat > $systemd <<systemdfile
+[Service]
+ExecStart=$vesselBash
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+WorkingDirectory=$dir
+[Install]
+WantedBy=multi-user.target
+systemdfile
+
+sudo chmod 755 $systemd
 
 sudo systemctl daemon-reload
 sudo systemctl enable signalk.service
