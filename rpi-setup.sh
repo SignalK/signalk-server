@@ -40,7 +40,7 @@ sudo touch $vesselBash
 sudo echo "#!/bin/sh" > $vesselBash
 sudo echo "" >> $vesselBash
 sudo echo "DIR=\`dirname \$0\`" >> $vesselBash
-sudo echo "\${DIR}/signalk-server -s \${DIR}/../settings/$vesselName.json \$*" >> $vesselBash
+sudo echo "\${DIR}/signalk-server -s /settings/$vesselName.json \$*" >> $vesselBash
 sudo chmod 775 $vesselBash
 
 sudo touch $vesselJson
@@ -104,5 +104,8 @@ sudo echo "WorkingDirectory=$dir" >> $systemd
 sudo echo "[Install]" >> $systemd
 sudo echo "WantedBy=multi-user.target" >> $systemd
 
-systemctl enable signalk.service
-systemctl start signalk.service
+sudo chmod 777 $systemd
+
+sudo systemctl daemon-reload
+sudo systemctl enable signalk.service
+sudo systemctl start signalk.service
