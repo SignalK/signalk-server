@@ -94,6 +94,12 @@ HTTPS
 -----
 You can use a self generated certificate simply by enabling SSL with `"ssl":true` in the [settings file](./tree/master/settings/aava-ssl-file-settings.json). If no `ssl-key.pem` & `ssl-cert.pem` files are found under settings they will be created.
 
+Logging
+-------
+
+You can log all the input data in pre-Signal K format by adding the `log` element to your provider pipeline. It creates hourly files with the data from all the configured providers, interleaved/multiplexed with one message per line. The multiplexed log files can be played back with `multiplexedlog` provider pipeline element.
+
+
 Further Reading
 ---------------
 * http://signalk.org/index.html
