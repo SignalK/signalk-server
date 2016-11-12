@@ -22,6 +22,20 @@ const N2KJsonToSignalK = require('./n2k-signalk')
 const ActisenseSerialToJSON = require('./n2kAnalyzer')
 const Nmea01832SignalK = require('./nmea0183-signalk')
 
+/*
+
+Provider to play back logs that the log provider produces, of the format
+
+milliseconds;discriminator;data
+where discriminator can be
+N => NMEA0183
+I => Signal K delta
+A => actisense-serial format N2K data
+
+1471172400151;N;!AIVDM,1,1,,A,13KdO60034Qk?WtRHUJQ3@ol05Cd,0*55
+1471172400152;I;{"updates":[{"source":{"label":"i2c"},"values":[{"path":"electrical.batteries.house.voltage","value":13.5741469711775},{"path":"electrical.batteries.house.current","value":0.39957033121875}],"timestamp":"2016-07-16T12:00:08.825Z"}],"context":"vessels.230029970"}
+1471172400153;A;2016-07-16T12:00:00.000Z,2,130306,105,255,8,00,d1,03,c9,23,fa,ff,ff
+*/
 
 function DeMultiplexer(options) {
   Writable.call(this)
