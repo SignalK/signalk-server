@@ -43,27 +43,21 @@ describe('Server', function() {
   it('handles two deltas with signalk path', function(done) {
     var fp = require("find-free-port")
     fp(3000, function(err, freePort) {
-      var Server = require('../lib');
-
-      var server = new Server({
-        settings: './test/server-test-settings.json',
-        port: freePort
-      });
-
-      server.start();
-
       var host = 'http://localhost:' + freePort;
       var deltaUrl = host + '/signalk/v1/api/_test/delta';
       var restUrl = host + '/signalk/v1/api/';
 
-      rp({ url: deltaUrl, method: 'POST', json: delta })
-      .then(function(body) {
+      var p = startServerP(freePort)
+
+      p.then(startedServer => {
+        server = startedServer
+        return rp({ url: deltaUrl, method: 'POST', json: delta })
+      }).then(function(body) {
         return rp({ url: restUrl, method: 'GET'})
       }).then(function(body) {
         var treeAfterFirstDelta = JSON.parse(body);
         treeAfterFirstDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.value', 43374);
         treeAfterFirstDelta.vessels[uuid].should.have.deep.property('navigation.logTrip.$source', 'deltaFromHttp.115');
-        console.log(JSON.stringify(treeAfterFirstDelta, null, 2))
         treeAfterFirstDelta.should.be.validSignalK;
 
         delta.updates[0].values[0].value = 1;
@@ -88,10 +82,18 @@ describe('Server', function() {
         treeAfterOtherSourceDelta.vessels[uuid].navigation.logTrip.values['deltaFromHttp.115'].value.should.equal(1);
         treeAfterOtherSourceDelta.vessels[uuid].navigation.logTrip.values['deltaFromHttp.116'].value.should.equal(2);
         treeAfterOtherSourceDelta.should.be.validSignalK;
-      }).then(done)
-        .finally(function() {
-        server.stop();
+      }).then( _ => {
+        server.stop(done)
+      }).catch( _ => {
+        done()
       });
+
     })
   })
 });
+
+function startServerP(port) {
+  const Server = require('../lib');
+  const server = new Server({settings: './test/server-test-settings.json', port: port});
+  return server.start();
+}
