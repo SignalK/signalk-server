@@ -17,3 +17,23 @@ In essence a plugin is an npm module with `signalk-node-server-plugin` keyword i
 The module must export a single `function(app)` that must return an object with functions `start(configuration)` and `stop` and a field `schema`. The schema value should be the structure of the plugin's configuration data as [JSON Schema](http://json-schema.org/).
 
 See [MarineTraffic Reporter](https://github.com/tkurki/marinetrafficreporter) for an example.
+
+##HTTP API
+
+###`GET /plugins/`
+
+List of installed plugins with their configuration data.
+
+###`GET /plugins/<pluginid`
+
+```
+{
+	"enabled": false,
+	"id": "marinetrafficreporter",
+	"name": "Marine Traffic Reporter"
+}
+```
+
+###`POST /plugins/<pluginid/configure`
+
+Save configuration data for a plugin. Stops and starts the plugin as a side effect.
