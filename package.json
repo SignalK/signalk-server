@@ -68,6 +68,7 @@
     "set-system-time": "github:tkurki/set-system-time",
     "signalk-schema": "signalk/specification",
     "signalk-to-nmea0183": "github:signalk/signalk-to-nmea0183",
+    "signalk-zones": "signalk/signalk-zones",
     "stream-throttle": "^0.1.3",
     "through": ">=2.2.7 <3",
     "winston": "^1.0.0",
