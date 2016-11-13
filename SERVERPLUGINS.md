@@ -6,6 +6,7 @@ Plugin examples include
 - [MarineTraffic Reporter](https://github.com/tkurki/marinetrafficreporter) - reports your vessel's position and speed to http://www.marinetraffic.com/
 - [Set System Time](https://github.com/tkurki/set-system-time) - sets your system time periodically based on time data received from gps
 - [Conversion from Signal K to NMEA0183](https://github.com/SignalK/signalk-to-nmea0183)
+- [Writing Signal K data to InfluxDb](https://github.com/tkurki/signalk-to-influxdb) (a database for time series)
 
 Plugins
 - are installed separately from an npm dependency (npm supports [GitHub hosted dependencies](https://docs.npmjs.com/files/package.json#github-urls))
