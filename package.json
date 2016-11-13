@@ -72,8 +72,7 @@
     "stream-throttle": "^0.1.3",
     "through": ">=2.2.7 <3",
     "winston": "^1.0.0",
-    "ws": "^0.4.32",
-    "zonesedit": "github:tkurki/zones-edit"
+    "ws": "^0.4.32"
   },
   "devDependencies": {
     "bower": "^1.7.7",
