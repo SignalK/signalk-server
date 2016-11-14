@@ -8,10 +8,23 @@ echo ""
 
 systemd="/etc/systemd/system/signalk.service"
 dir=$(pwd)
+socket="/etc/systemd/system/signalk.socket"
 
 
 echo -n "Enter your vessel name and press [enter]:"
 read vesselName
+echo ""
+echo "Signal K default port is 3000 as per documentation"
+echo "port 80 does not require \":3000\" in browser and app interfaces"
+read -p "Do you want Signal K to change to port 80? [Y/n]" ans;
+case $ans in
+  n|N)
+    port=3000;;
+  y|Y|*)
+    port=80;;
+esac 
+
+echo "port $port selected" 
 
 UUIDFile="$dir/UUID"
 if [ -f $UUIDFile ]
@@ -31,10 +44,9 @@ vesselJson="$dir/settings/$vesselName.json"
 
 echo "A file will be created with your settings in"
 echo "$vesselJson."
-echo "This uses stored NMEA data to set up the server,"
-echo "but settings can be changed by going to <ipaddress>:3000,"
-echo "selecting \"Server Plugins Configuration\""
-echo "and \"Vessel Setup\""
+echo "This uses stored NMEA data to set up the server."
+echo "See configuration examples in same folder."
+
 
 cat > $vesselBash <<bashScript
 #!/bin/sh
@@ -109,6 +121,18 @@ systemdfile
 
 sudo chmod 755 $systemd
 
+cat > $socket <<socket
+[Socket]
+ListenStream=$port
+
+[Install]
+WantedBy=sockets.target
+socket
+
+sudo chmod 755 $socket
+
+
+
 sudo systemctl daemon-reload
 sudo systemctl enable signalk.service
-sudo systemctl start signalk.service
+sudo systemctl enable signalk.socket
