@@ -136,3 +136,5 @@ sed -i -e "s/env.PORT || [0-9]\+;/env.PORT || $port;/g" $dir/lib/config/config.j
 echo "A reboot is recommended"
 
 sudo systemctl daemon-reload
+sudo systemctl enable signalk.service
+sudo systemctl enable signalk.socket
