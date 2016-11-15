@@ -48,6 +48,13 @@ Execute.prototype.pipe = function(pipeTo) {
   this.childProcess.stdout.on('data', function(data) {
     that.push(data);
   });
+
+  const stdOutEvent = this.options.toChildProcess || "toChildProcess"
+  debug("Using event " + stdOutEvent + " for output to child process's stdin")
+  this.options.app.on(stdOutEvent, function(d) {
+    that.childProcess.stdin.write(d + '\n');
+  })
+
   Execute.super_.prototype.pipe.call(this, pipeTo);
 }
 
