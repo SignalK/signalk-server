@@ -38,7 +38,7 @@
   ],
   "license": "Apache-2.0",
   "engines": {
-    "node": "v0.10.x"
+    "node": "6"
   },
   "dependencies": {
     "baconjs": "^0.7.88",
