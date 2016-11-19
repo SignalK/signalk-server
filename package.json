@@ -38,11 +38,12 @@
   ],
   "license": "Apache-2.0",
   "engines": {
-    "node": "v0.10.x"
+    "node": "6"
   },
   "dependencies": {
     "baconjs": "^0.7.88",
     "body-parser": "^1.14.1",
+    "bower": "^1.7.7",
     "colors": "^0.6.2",
     "cors": "^2.5.2",
     "debug": "^2.1.0",
@@ -75,7 +76,6 @@
     "ws": "^0.4.32"
   },
   "devDependencies": {
-    "bower": "^1.7.7",
     "chai": "^3.2.0",
     "chai-things": "^0.2.0",
     "find-free-port": "^1.0.1",
