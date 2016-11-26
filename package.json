@@ -52,7 +52,7 @@
     "express": "^4.10.4",
     "express-namespace": "^0.1.1",
     "flatmap": "0.0.3",
-    "httpolyglot": "^0.1.1",
+    "httpolyglot": "^0.1.2",
     "lodash": "^3.10.1",
     "marinetraffic-reporter": "github:tkurki/marinetrafficreporter",
     "minimist": "^1.1.0",
