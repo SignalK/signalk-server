@@ -51,16 +51,17 @@ Now we will download three tools; curl, git and build-essential. These tools wil
 
     $ sudo apt-get install -y curl git build-essential
 
-Then we use curl followed by "apt-get" again to add Nodesource repository and install Node.js, which is the runtime environment for Signal K Node server.
+Node server requires Node version 6 or newer. For Raspberry Pi 2 and 3 follow the instructions below. If in doubt, test with 
 
-    $ curl -sL https://deb.nodesource.com/setup_0.12 | sudo -E bash -
-    $ sudo apt-get install -y nodejs
+    $ uname -m
+    
+If the result returned starts with “armv6”, you are running a Raspberry Pi based on the older ARMv6 chipset and these instructions will not work.
 
-Once this has completed you can check that Node.js is installed OK, by typing...
+Add NodeSource repository to the system so that we can install Node with `apt-get`:
 
-    $ node -v
-
-and you should see "v0.12.11" appear or whatever the latest version is.
+    $ curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+    $ sudo apt install nodejs
+    
 
 Finally we need to install a Bonjour (mDNS) service for LINUX called Avahi, which allows Apps and other network devices to Discover the Signal K server. To do this we will use "apt-get" again ...
 
