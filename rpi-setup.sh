@@ -13,6 +13,7 @@ socket="/etc/systemd/system/signalk.socket"
 
 echo -n "Enter your vessel name and press [enter]:"
 read vesselName
+vesselName=${vesselName// /_}
 echo ""
 echo "Signal K default port is 3000 as per documentation"
 echo "port 80 does not require \":3000\" in browser and app interfaces"
