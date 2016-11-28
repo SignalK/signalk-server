@@ -109,7 +109,7 @@ So that is Signal K....looks good doesn't it ? Actually this is just some JSON d
 
 To generate your own vessel settings file, starting with the same NMEA data from the demo file, type...
 
-    $ sudo sh rpi-setup.sh
+    $ sudo bash rpi-setup.sh
 and type your vessel name. This generates a UUID and a settings file in json format in settings/<yourVessel>.json. This can be edited directly by looking at the example settings. When running this script, the server is running from boot using a systemd service called signalk.service.
 
 ## Step 3 - Install Signal K Consumers
