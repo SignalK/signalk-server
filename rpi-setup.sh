@@ -109,6 +109,10 @@ cat > $vesselJson <<jsonfile
 }
 jsonfile
 
+sudo chmod 644 $vesselJson
+sudo chown pi $vesselJson
+sudo chgrp pi $vesselJson 
+
 cat > $systemd <<systemdfile
 [Service]
 ExecStart=$vesselBash
