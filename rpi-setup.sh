@@ -109,9 +109,11 @@ cat > $vesselJson <<jsonfile
 }
 jsonfile
 
+group_full=$(getent group $SUDO_GID)
+group="$( cut -d ':' -f 1 <<< "$group_full" )"
 sudo chmod 644 $vesselJson
-sudo chown pi $vesselJson
-sudo chgrp pi $vesselJson 
+sudo chown $SUDO_USER $vesselJson
+sudo chgrp $group $vesselJson 
 
 cat > $systemd <<systemdfile
 [Service]
