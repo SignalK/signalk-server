@@ -66,15 +66,17 @@ Real Inputs
 ---------------
 To hook the server up to your real inputs you need to create a configuration file that connects to your input source and applies the relevant parsers / converters in the provider pipeline.
 
-Supported inputs & formats
-- NMEA0183
-- NMEA 2000 (via NGT-1 & Canboat)
-- Signal K delta
-- File
-- Serial
-- TCP
-- UDP
-- GPSD
+### NMEA0183
+### NMEA 2000 (via NGT-1 & Canboat)
+### Signal K delta
+### File
+### Serial
+### TCP
+### UDP
+
+settings/volare-udp-settings provides an example of NMEA0183 input over UDP port 7777. If you have trouble getting this to work try setting up DEBUG environment variable with `export DEBUG=signalk-server:udp-provider` and sending manually input with netcat `echo  '$IIDBT,034.25,f,010.44,M,005.64,F*27' | nc -4u -w1 localhost 7777`. This should result in the server logging the NMEA sentence it receives.
+
+### GPSD
 
 Please see [example settings files](https://github.com/SignalK/signalk-server-node/tree/master/settings).
 
@@ -103,6 +105,7 @@ Server Plugins
 -------
 
 Plugin configuration interface is at [/plugins/configure](http://localhost:3000/plugins/configure/). See [Server Plugins](SERVERPLUGINS.md) for more information.
+
 
 Further Reading
 ---------------
