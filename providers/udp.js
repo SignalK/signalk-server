@@ -6,7 +6,7 @@
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
- 
+
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,6 +15,7 @@
  */
 
 var Transform = require('stream').Transform;
+const debug = require('debug')('signalk-server:udp-provider')
 
 function Udp(options) {
   Transform.call(this, {
@@ -31,6 +32,7 @@ Udp.prototype.pipe = function(pipeTo) {
   var socket = require('dgram').createSocket('udp4');
   var self = this;
   socket.on('message', function(message, remote) {
+    debug(message.toString())
     self.push(message);
   });
   socket.bind(this.options.port);
