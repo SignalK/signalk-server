@@ -45,7 +45,11 @@ function DeMultiplexer(options) {
     getMilliseconds: ts => ts
   })
   this.splitter = new Splitter();
-  this.toTimestamped.pipe(this.timestampThrottle).pipe(this.splitter)
+  if(options.noThrottle) {
+    this.toTimestamped.pipe(this.splitter)
+  } else {
+    this.toTimestamped.pipe(this.timestampThrottle).pipe(this.splitter)
+  }
   this.toTimestamped.on('drain', this.emit.bind(this, 'drain'))
 }
 require('util').inherits(DeMultiplexer, Writable);
