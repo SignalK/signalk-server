@@ -144,3 +144,27 @@ Now open the Epiphany browser on your Pi and type in one of the following URLs d
 If you have managed to get to the end of this guide, you will now have a good understanding of what Signal K is all about and in particular the Node Server. We have been using the server's demo NMEA file, but Node Server can also read NMEA0183 data via an [NMEA to USB adaptor cable](http://www.digitalyachtamerica.com/index.php/en/products/interfacing/nmeausb/product/67-usb-to-nmea-adaptor), a [3rd party NMEA2000 gateway](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1.html) or both NMEA0183 and NMEA2000 via the new [iKommunicate gateway](http://ikommunicate.com). 
 
 In the "/bin" folder of the Node Server are a series of scripts for different configurations "nmea-from-serial", "n2k-from-actisense", etc. and you just run the one that matches your installation.   
+
+# Updating Your Raspberry Pi and Signal K Node Server 
+
+Much as we would all like to be sailing 365 days a year, the reality is that we are down on our boats as and when we can and weeks and months can go by between using your Raspberry Pi and Signal K Node Server. Of course when you get back to the boat everything will continue to operate as it did when you left it, but Signal K (and the Raspberry Pi) are constantly evolving and if you wish to update to the latest builds, then you need to follow this process.
+
+Please bear in mind that the longer between updates the more data that will have to be downloaded and the longer the process will take. We would seriously recommend taking your Raspberry Pi home and updating it on a network with good broadband speed.
+
+The updates that need to be done can be broken down in to three key areas...
+
+1. The Raspberry Pi LINUX Distro
+1. The Signal K Node Server
+1. Any Signal K Apps
+
+## Update Raspberry Pi LINUX Distro
+
+Open the terminal window and enter the following commands...
+
+    $ sudo apt-get update
+    $ sudo apt-get dist-upgrade
+
+If you have not updated for a while, then the above commands may take a while to finish, just be patient and make sure everything completes correctly. After the two commands have completed Reboot your Raspberry Pi.
+
+## Update Signal K Node Server
+
