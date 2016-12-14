@@ -31,20 +31,30 @@ function MdnsWs(options) {
   this.selfPort = options.app.config.getExternalPort();
   this.remoteServers = {};
   this.remoteServers[this.selfHost + ":" + this.selfPort] = {};
-  this.signalkClient = new SignalK.Client();
-  this.signalkClient.on('discovery', this.connect.bind(this));
-  this.signalkClient.startDiscovery();
+  if(options.host && options.port) {
+    this.connect(options)
+  } else {
+    this.signalkClient = new SignalK.Client();
+    this.signalkClient.on('discovery', this.connect.bind(this));
+    debug("Starting discovery")
+    this.signalkClient.startDiscovery();
+  }
 }
 
 require('util').inherits(MdnsWs, Transform);
 
 MdnsWs.prototype.connect = function(discovery) {
-  if (this.remoteServers[discovery.host + ":" + discovery.port]) {
+  if(this.remoteServers[discovery.host + ":" + discovery.port]) {
     debug("Discovered " + discovery.host + ":" + discovery.port + " already known, not connecting");
     return;
   }
   var signalkClient = new SignalK.Client();
-  var url = _object.values(discovery.discoveryResponse.endpoints)[0]['signalk-ws'];
+  var url
+  if(discovery.discoveryResponse) {
+    _object.values(discovery.discoveryResponse.endpoints)[0]['signalk-ws'];
+  } else {
+    url = "ws://" + discovery.host + ":" + discovery.port + "/signalk/v1/stream?subscribe=all"
+  }
   var that = this;
   var onConnect = function(connection) {
     that.remoteServers[discovery.host + ":" + discovery.port] = {};

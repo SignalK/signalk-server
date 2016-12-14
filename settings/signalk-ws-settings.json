@@ -8,7 +8,14 @@
   "pipedProviders": [{
     "id": "signalk-ws",
     "pipeElements": [{
-      "type": "providers/mdns-ws"
+      "type": "providers/mdns-ws",
+      "optionMappings": [{
+        "fromAppProperty": "argv.host",
+        "toOption": "host"
+      }, {
+        "fromAppProperty": "argv.port",
+        "toOption": "port"
+      }]
     }]
   }],
   "interfaces": {
