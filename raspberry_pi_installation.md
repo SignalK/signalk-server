@@ -151,9 +151,10 @@ Much as we would all like to be sailing 365 days a year, the reality is that we 
 
 Please bear in mind that the longer between updates the more data that will have to be downloaded and the longer the process will take. We would seriously recommend taking your Raspberry Pi home and updating it on a network with good broadband speed.
 
-The updates that need to be done can be broken down in to three key areas...
+The updates that need to be done can be broken down in to four key areas...
 
 1. The Raspberry Pi LINUX Distro
+1. Node and NPM
 1. The Signal K Node Server
 1. Any Signal K Apps
 
@@ -166,5 +167,31 @@ Open the terminal window and enter the following commands...
 
 If you have not updated for a while, then the above commands may take a while to finish, just be patient and make sure everything completes correctly. After the two commands have completed Reboot your Raspberry Pi.
 
+## Update Node and NPM
+
+Open the terminal window and enter the following commands...
+
+    $ curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+    $ sudo apt install nodejs
+
+This will update Nodejs and NPM to the latest version (V6.9.2 at time of writing), currently Nodejs V7.x has not been fully tested so best to stick with the stable V6.x build for now.
+
 ## Update Signal K Node Server
 
+Open the terminal window and enter the following commands...
+
+    $ cd signalk-server-node
+    $ git pull
+    $ npm update
+
+Now your Signal K Node Server is updated.
+
+## Update Web Apps
+
+Open the terminal window and enter the following commands...
+
+    $ cd signalk-server-node
+    $ rm -rf bower_components
+    $ npm install
+
+Now all of your Signal K web apps included with the Node Server are updated.
