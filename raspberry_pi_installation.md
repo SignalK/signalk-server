@@ -108,11 +108,6 @@ As the file name suggests, the Signal K Node Server is now reading NMEA Data fro
 
 So that is Signal K....looks good doesn't it ? Actually this is just some JSON data that tells an App what the URL "endpoints" are so that it knows what Version of Signal K the server supports and where it can get HTTP or Websocket data from. You will not see any of the interesting stuff until you have a consumer or two installed, so lets move swiftly to step 3.
 
-To generate your own vessel settings file, starting with the same NMEA data from the demo file, type...
-
-    $ sudo bash rpi-setup.sh
-and type your vessel name. This generates a UUID and a settings file in json format in settings/<yourVessel>.json. This can be edited directly by looking at the example settings. When running this script, the server is running from boot using a systemd service called signalk.service.
-
 ## Step 3 - Install Signal K Consumers
 
 A "Consumer" of Signal K data is any web app, mobile device app or software program that can read and use Signal K data. It is hoped that the number of consumers will grow rapidly as more developers discover this open format and dream up new applications to make boating easier, more efficient or just more fun.
@@ -144,3 +139,24 @@ Now open the Epiphany browser on your Pi and type in one of the following URLs d
 If you have managed to get to the end of this guide, you will now have a good understanding of what Signal K is all about and in particular the Node Server. We have been using the server's demo NMEA file, but Node Server can also read NMEA0183 data via an [NMEA to USB adaptor cable](http://www.digitalyachtamerica.com/index.php/en/products/interfacing/nmeausb/product/67-usb-to-nmea-adaptor), a [3rd party NMEA2000 gateway](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1.html) or both NMEA0183 and NMEA2000 via the new [iKommunicate gateway](http://ikommunicate.com). 
 
 In the "/bin" folder of the Node Server are a series of scripts for different configurations "nmea-from-serial", "n2k-from-actisense", etc. and you just run the one that matches your installation.   
+
+
+## Optional Step 4 - your own setup and running automatically as daemon
+
+To generate your own vessel settings file, starting with the same NMEA data from the demo file, type...
+
+    $ sudo bash rpi-setup.sh
+and type your vessel name. This generates a UUID and a settings file in json format in settings/<yourVessel>.json. This can be edited directly by looking at the example settings. 
+
+**This script will also set up Node server to run automatically in the background as a daemon when the system boots.** You will no longer be able to launch it manually, because the automatically started instance will occupy the ports where the services are available. You should do this once you are happy with the way the server works.
+
+Stop the daemon temporarily with 
+```
+sudo systemctl stop signalk.service
+sudo systemctl stop signalk.socket
+```
+and disable the automatic start with
+```
+sudo systemctl disable signalk.service
+sudo systemctl disable signalk.socket
+```
