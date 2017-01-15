@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "postinstall": "bower install https://github.com/SignalK/sailgauge.git & bower install https://github.com/SignalK/instrumentpanel.git & bower install https://github.com/SignalK/simplegauges.git & bower install & bower install https://github.com/SignalK/maptracker.git",
+    "changelog": "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body",
     "start": "node ./index",
     "test": "mocha"
   },
@@ -81,6 +82,7 @@
     "chai-things": "^0.2.0",
     "find-free-port": "^1.0.1",
     "freeport-promise": "^1.0.0",
+    "github-changes": "^1.0.4",
     "mocha": "^2.1.0",
     "request-promise": "^0.4.3"
   }

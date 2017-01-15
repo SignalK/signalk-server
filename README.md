@@ -106,6 +106,11 @@ Server Plugins
 Plugin configuration interface is at [/plugins/configure](http://localhost:3000/plugins/configure/). See [Server Plugins](SERVERPLUGINS.md) for more information.
 
 
+Changelog
+---------
+
+See [CHANGELOG.md](CHANGELOG.md).
+
 Further Reading
 ---------------
 * http://signalk.org/index.html
