@@ -1,6 +1,8 @@
 ## Change Log
 
-### upcoming (2017/01/16 17:43 +00:00)
+### upcoming (2017/01/16 18:33 +00:00)
+- [#139](https://github.com/SignalK/signalk-server-node/pull/139) Use Bootstrap Accordion in plugin configuration list (@tkurki)
+- [#140](https://github.com/SignalK/signalk-server-node/pull/140) Build config React app with production React (@tkurki)
 - [#138](https://github.com/SignalK/signalk-server-node/pull/138) Accept deltas via WebSocket connection (@tkurki)
 - [#137](https://github.com/SignalK/signalk-server-node/pull/137) Handle error in certificate creation (@tkurki)
 - [#136](https://github.com/SignalK/signalk-server-node/pull/136) Add Update Procedure to Signal K Node Server Raspberry Pi Installation Guide (@sumps)
