@@ -59,7 +59,6 @@ SerialStream.prototype.start = function() {
   const stdOutEvent = this.options.toStdout
   if ( stdOutEvent )
     {
-      debug("Using event " + stdOutEvent + " for output to child process's stdin")
       this.options.app.on(stdOutEvent, function(d) {
           that.serial.write(d + '\n');
         })
