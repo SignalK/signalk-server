@@ -6,7 +6,7 @@
   "scripts": {
     "postinstall": "bower install https://github.com/SignalK/sailgauge.git & bower install https://github.com/SignalK/instrumentpanel.git & bower install https://github.com/SignalK/simplegauges.git & bower install & bower install https://github.com/SignalK/maptracker.git",
     "changelog": "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls",
-    "start": "node ./index",
+    "start": "node bin/signalk-server",
     "test": "mocha"
   },
   "bin": {
