@@ -14,13 +14,11 @@
 		}
 	},
 
-	"interfaces": {
-    "bower": true,
-    "rest": true,
-    "ws": true,
-    "tcp": false,
-    "nmea-tcp": false
-  },
+	"interfaces": [
+    "rest",
+    "bower",
+    "ws"
+  ],
 
   "pipedProviders": [{
     "id": "deltaFromHttp",
