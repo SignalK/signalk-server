@@ -1,6 +1,9 @@
 ## Change Log
 
-### upcoming (2017/01/16 18:33 +00:00)
+### upcoming (2017/01/23 18:34 +00:00)
+- [#145](https://github.com/SignalK/signalk-server-node/pull/145) Refuse to start with more than 400 ssl file permissions (@tkurki)
+- [#141](https://github.com/SignalK/signalk-server-node/pull/141) Update dependencies to enable Greenkeeper 🌴 (@greenkeeper[bot])
+- [#144](https://github.com/SignalK/signalk-server-node/pull/144) Add editorconfig (@tkurki)
 - [#139](https://github.com/SignalK/signalk-server-node/pull/139) Use Bootstrap Accordion in plugin configuration list (@tkurki)
 - [#140](https://github.com/SignalK/signalk-server-node/pull/140) Build config React app with production React (@tkurki)
 - [#138](https://github.com/SignalK/signalk-server-node/pull/138) Accept deltas via WebSocket connection (@tkurki)
