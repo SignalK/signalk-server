@@ -61,6 +61,13 @@ You can also configure the path to the settings file with environment variable `
 
 The http port can be configured separately with environment variable `PORT`. You can also [run on port 80 with systemd](https://github.com/tkurki/marinepi-provisioning/blob/d3d624629799a3b96234a90fc42bc22dae4fd3a2/roles/node-app/templates/node_app_systemd_socket.j2). Environment variable NMEA0183PORT sets the NMEA 0183 tcp port.
 
+Environment variables
+---------------------
+- `SIGNALK_NODE_SETTINGS` override the path to the settings file
+- `PORT` override the port for http/ws service
+- `NMEA0183PORT`  override the port for the NMEA 0183 over tcp service (default 10110)
+- `TCPSTREAMPORT` override the port for the Signal K Streaming (deltas) over TCP
+
 Real Inputs
 ---------------
 To hook the server up to your real inputs you need to create a configuration file that connects to your input source and applies the relevant parsers / converters in the provider pipeline.
