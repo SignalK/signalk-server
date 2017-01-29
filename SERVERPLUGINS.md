@@ -1,6 +1,6 @@
 # Server plugins
 
-Signal K Node server plugins are components that run within the server and add some functionality to the server.
+Signal K Node server plugins are components that run within the server and add some functionality to the server. Their configuration is done via web forms accessible from the root of the Node server.
 
 Plugin examples include
 - [MarineTraffic Reporter](https://github.com/tkurki/marinetrafficreporter) - reports your vessel's position and speed to http://www.marinetraffic.com/
