@@ -19,15 +19,27 @@ fetch(`/plugins`).then((response) => {
     response.json().then((plugins) => {
       ReactDOM.render(
         <div className="container">
-        {plugins.map((plugin, i) => (
-          <div key={i} className="panel panel-default">
-            <div className="panel-heading">{plugin.name}</div>
-            <div className="panel-body">
-              <ConfigurationForm plugin={plugin} onSubmit={saveData.bind(null, plugin.id)}/>
+          <div className="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+          {plugins.map((plugin, i) => (
+            <div key={i} className="panel panel-default">
+              <div className="panel-heading">
+                <h4 className="panel-title">
+                  <a role="button" data-toggle="collapse" data-parent="#accordion" href={'#collapse' + i}>
+                    {plugin.name}
+                  </a>
+                </h4>
+
+              </div>
+              <div id={'collapse' + i} className="panel-collapse collapse" style={{height: '0px'}}role="tabpanel">
+                <div className="panel-body">
+                  <ConfigurationForm plugin={plugin} onSubmit={saveData.bind(null, plugin.id)}/>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>, document.getElementById('main'))
+          ))}
+        </div>
+      </div>,
+      document.getElementById('main'))
     })
   } else {
     console.log(response.status)

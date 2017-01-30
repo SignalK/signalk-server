@@ -1,6 +1,6 @@
 # Server plugins
 
-Signal K Node server plugins are components that run within the server and add some functionality to the server.
+Signal K Node server plugins are components that run within the server and add some functionality to the server. Their configuration is done via web forms accessible from the root of the Node server.
 
 Plugin examples include
 - [MarineTraffic Reporter](https://github.com/tkurki/marinetrafficreporter) - reports your vessel's position and speed to http://www.marinetraffic.com/
@@ -8,6 +8,7 @@ Plugin examples include
 - [Conversion from Signal K to NMEA0183](https://github.com/SignalK/signalk-to-nmea0183)
 - [Writing Signal K data to InfluxDb](https://github.com/tkurki/signalk-to-influxdb) (a database for time series)
 - [Zones](https://github.com/SignalK/signalk-zones) - defines ranges for a data item's value and fire notifications when the value is within the range
+- [ws-provider](https://github.com/SignalK/ws-provider-plugin) - allows the server to connect to discovered or configured Signal K servers/gateways, for example the iKommunicate
 
 Plugins
 - are installed separately from an npm dependency (npm supports [GitHub hosted dependencies](https://docs.npmjs.com/files/package.json#github-urls))

@@ -5,7 +5,6 @@ An implementation of a [Signal K](http://signalk.org) server. Intended to run on
 
 The server multiplexes data from , NMEA 2000, Signal K and sensor inputs (eg. I2C connected sensors) and provides the data in Signal K format over HTTP and WebSocket. In addition it can provide NMEA0183 over tcp and udp.
 
-**Note: the server does not yet support [subscription protocol](https://github.com/SignalK/signalk-server-node/issues/35).**
 
 Get up and running
 ------------------
@@ -38,7 +37,7 @@ npm install -g wscat
 wscat --connect 'ws://localhost:3000/signalk/v1/stream?stream=delta'
 ````
 
-If you want to use [NMEA2000](http://en.wikipedia.org/wiki/NMEA_2000) data you need at least [Canboat analyzer](https://github.com/canboat/canboat/wiki/analyzer) to parse NMEA 2000 data to json and [Canboat actisense-serial](https://github.com/canboat/canboat/wiki/actisense-serial) for getting live data from Actisense [NGT-1](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1).
+If you want to use [NMEA2000](http://en.wikipedia.org/wiki/NMEA_2000) data you **must to install [Canboat](https://github.com/canboat/canboat/wiki/Building)**. Canboat allows you to use data from Actisense [NGT-1](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1) and convert NMEA2000 data to a format that Signal K Node server can digest.
 
 If you have analyzer available on your PATH you can start the server with a sample NMEA2000 data file with `bin/n2k-from-file`. An error message saying `analyzer: not found` tells that you need to [install canboat](https://github.com/canboat/canboat/wiki/Building).
 
@@ -62,19 +61,28 @@ You can also configure the path to the settings file with environment variable `
 
 The http port can be configured separately with environment variable `PORT`. You can also [run on port 80 with systemd](https://github.com/tkurki/marinepi-provisioning/blob/d3d624629799a3b96234a90fc42bc22dae4fd3a2/roles/node-app/templates/node_app_systemd_socket.j2). Environment variable NMEA0183PORT sets the NMEA 0183 tcp port.
 
+Environment variables
+---------------------
+- `SIGNALK_NODE_SETTINGS` override the path to the settings file
+- `PORT` override the port for http/ws service
+- `NMEA0183PORT`  override the port for the NMEA 0183 over tcp service (default 10110)
+- `TCPSTREAMPORT` override the port for the Signal K Streaming (deltas) over TCP
+
 Real Inputs
 ---------------
 To hook the server up to your real inputs you need to create a configuration file that connects to your input source and applies the relevant parsers / converters in the provider pipeline.
 
-Supported inputs & formats
-- NMEA0183
-- NMEA 2000 (via NGT-1 & Canboat)
-- Signal K delta
-- File
-- Serial
-- TCP
-- UDP
-- GPSD
+### NMEA0183
+### NMEA 2000 (via NGT-1 & Canboat)
+### Signal K delta
+### File
+### Serial
+### TCP
+### UDP
+
+settings/volare-udp-settings provides an example of NMEA0183 input over UDP port 7777. If you have trouble getting this to work try setting up DEBUG environment variable with `export DEBUG=signalk-server:udp-provider` and sending manually input with netcat `echo  '$IIDBT,034.25,f,010.44,M,005.64,F*27' | nc -4u -w1 localhost 7777`. This should result in the server logging the NMEA sentence it receives.
+
+### GPSD
 
 Please see [example settings files](https://github.com/SignalK/signalk-server-node/tree/master/settings).
 
@@ -103,6 +111,12 @@ Server Plugins
 -------
 
 Plugin configuration interface is at [/plugins/configure](http://localhost:3000/plugins/configure/). See [Server Plugins](SERVERPLUGINS.md) for more information.
+
+
+Changelog
+---------
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 Further Reading
 ---------------
