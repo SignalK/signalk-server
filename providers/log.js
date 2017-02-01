@@ -40,6 +40,8 @@ function createLogger(logdir, discriminator) {
   var winston = require('winston'),
     transports = [];
 
+  require('winston-daily-rotate-file')
+
   var logfilename = require('path').join(
     (logdir.indexOf('/') === 0 ? '' : (__dirname + "/../") ) +
     logdir +
