@@ -67,6 +67,7 @@ Environment variables
 - `PORT` override the port for http/ws service
 - `NMEA0183PORT`  override the port for the NMEA 0183 over tcp service (default 10110)
 - `TCPSTREAMPORT` override the port for the Signal K Streaming (deltas) over TCP
+- `DISABLEPLUGINS` disable all plugins so that they can not be enabled
 
 Real Inputs
 ---------------
