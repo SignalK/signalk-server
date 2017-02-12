@@ -68,7 +68,7 @@
     "primus": "^6.0.8",
     "serialport": "^4.0.3",
     "set-system-time": "github:tkurki/set-system-time",
-    "signalk-client": "0.0.1-1",
+    "signalk-client": "0.0.1-2",
     "signalk-schema": "0.0.1-0",
     "signalk-to-nmea0183": "github:signalk/signalk-to-nmea0183",
     "signalk-zones": "signalk/signalk-zones",
