@@ -1,6 +1,10 @@
 ## Change Log
 
-### upcoming (2017/01/23 18:34 +00:00)
+### upcoming (2017/02/05 21:36 +00:00)
+- [#150](https://github.com/SignalK/signalk-server-node/pull/150) Add DISABLEPLUGINS environment variable (@tkurki)
+- [#151](https://github.com/SignalK/signalk-server-node/pull/151) Fix: set context (vessel) prune interval to 1 hour (@tkurki)
+- [#149](https://github.com/SignalK/signalk-server-node/pull/149) Fix winston in log.js provider (@tkurki)
+- [#146](https://github.com/SignalK/signalk-server-node/pull/146) Add environment override for streaming service and document environment variables (@tkurki)
 - [#145](https://github.com/SignalK/signalk-server-node/pull/145) Refuse to start with more than 400 ssl file permissions (@tkurki)
 - [#141](https://github.com/SignalK/signalk-server-node/pull/141) Update dependencies to enable Greenkeeper 🌴 (@greenkeeper[bot])
 - [#144](https://github.com/SignalK/signalk-server-node/pull/144) Add editorconfig (@tkurki)

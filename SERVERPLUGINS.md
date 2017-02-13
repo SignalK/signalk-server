@@ -9,6 +9,9 @@ Plugin examples include
 - [Writing Signal K data to InfluxDb](https://github.com/tkurki/signalk-to-influxdb) (a database for time series)
 - [Zones](https://github.com/SignalK/signalk-zones) - defines ranges for a data item's value and fire notifications when the value is within the range
 - [ws-provider](https://github.com/SignalK/ws-provider-plugin) - allows the server to connect to discovered or configured Signal K servers/gateways, for example the iKommunicate
+- [signalk-push-notifications](https://github.com/sbender9/signalk-push-notifications) - plugin that pushes SignalK notifications to Amazon SNS
+- [signalk-to-nmea2000](https://github.com/sbender9/signalk-to-nmea2000) - convert Signal K to NMEA2000
+- [signalk-ifttt-notifications](https://github.com/sbender9/signalk-ifttt-notifications) - Trigger ifttt actions when SignalK notifications are fired
 
 Plugins
 - are installed separately from an npm dependency (npm supports [GitHub hosted dependencies](https://docs.npmjs.com/files/package.json#github-urls))
