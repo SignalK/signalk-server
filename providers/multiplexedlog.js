@@ -44,7 +44,7 @@ function DeMultiplexer(options) {
   this.timestampThrottle = new TimestampThrottle({
     getMilliseconds: ts => ts
   })
-  this.splitter = new Splitter();
+  this.splitter = new Splitter(options);
   if(options.noThrottle) {
     this.toTimestamped.pipe(this.splitter)
   } else {
@@ -61,14 +61,14 @@ DeMultiplexer.prototype.write = function(chunk, encoding, callback) {
   return this.toTimestamped.write(chunk, encoding, callback)
 }
 
-function Splitter() {
+function Splitter(options) {
   Transform.call(this, {objectMode: true})
 
   this.fromN2KJson = new N2KJsonToSignalK();
   this.fromActisenseSerial = new ActisenseSerialToJSON()
   this.fromActisenseSerial.pipe(this.fromN2KJson)
 
-  this.fromNMEA0183 = new Nmea01832SignalK()
+  this.fromNMEA0183 = new Nmea01832SignalK(options)
 }
 require('util').inherits(Splitter, Transform);
 
