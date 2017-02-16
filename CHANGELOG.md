@@ -1,6 +1,10 @@
 ## Change Log
 
-### upcoming (2017/02/05 21:36 +00:00)
+### upcoming (2017/02/15 19:19 +00:00)
+- [#155](https://github.com/SignalK/signalk-server-node/pull/155) Fix nmea0183 conversion output over tcp (@tkurki)
+- [#147](https://github.com/SignalK/signalk-server-node/pull/147) Add plugins by sbender9 to the plugin list (@sbender9)
+- [#152](https://github.com/SignalK/signalk-server-node/pull/152) Update signalk-client to the latest version 🚀 (@greenkeeper[bot])
+- [#153](https://github.com/SignalK/signalk-server-node/pull/153) fix(package): update ws to version 2.0.3 (@tkurki)
 - [#150](https://github.com/SignalK/signalk-server-node/pull/150) Add DISABLEPLUGINS environment variable (@tkurki)
 - [#151](https://github.com/SignalK/signalk-server-node/pull/151) Fix: set context (vessel) prune interval to 1 hour (@tkurki)
 - [#149](https://github.com/SignalK/signalk-server-node/pull/149) Fix winston in log.js provider (@tkurki)
