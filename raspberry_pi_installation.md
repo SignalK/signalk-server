@@ -75,7 +75,48 @@ This will search for and list all of the discoverable devices/services on your n
 
 ![Avahi-Browse](https://github.com/digitalyacht/ikommunicate/blob/master/RPi_How_To_Images/Avahi-Browse.png)
 
-## Step 2 - Install Signal K Node Server
+Another software that really makes Your handling with the RPI easier is Samba. This software makes Your RPI appear, in MS Explorer or Mac Finder, as a Windows fileserver so You can direct edit and move files from/to the RPI
+
+    $ sudo apt-get install samba samba-common-bin
+
+Edit the Samba configuration file so that You have more than "Read Only" rights.
+
+    $ sudo nano /etc/samba/smb.conf
+
+And then find the following part 
+
+    #======================= Share Definitions =======================   
+                                                                     
+    [homes]                                                              
+      comment = Home Directories                                        
+      browseable = no                                                   
+                                                                     
+    # By default, the home directories are exported read-only. Change the
+    # next parameter to 'no' if you want to be able to write to them.    
+      read only = yes                                                   
+
+so shange to 
+
+    read only = no
+
+and then save the file
+Create a Samba user, maybe pi ? and a password
+
+    $ sudo smbpasswd -a pi
+    New SMB password:
+    Retype new SMB password:
+    Added user pi.
+
+Restart the Samba service
+
+    $ sudo /etc/init.d/samba restart 
+    [ ok ] Restarting nmbd (via systemctl): nmbd.service.
+    [ ok ] Restarting smbd (via systemctl): smbd.service.
+    [ ok ] Restarting samba-ad-dc (via systemctl): samba-ad-dc.service.
+
+and now You should be up and running and the Pi folder should be shared if You logon with user Pi.
+
+## Step 2 - Install Signal K Node Server and Consumers
 
 In this "How To" guide we are going to use the Signal K Node Server, but we also have a [guide for the Java Server](https://github.com/SignalK/specification/wiki/Raspberry-Pi-Installation-(Java-Server)) which is the other popular Signal K server.
 
@@ -89,6 +130,10 @@ This will create a folder called "signalk-server-node" in the Home directory of 
 
     $ cd signalk-server-node
     $ npm install
+
+A "Consumer" of Signal K data is any web app, mobile device app or software program that can read and use Signal K data. It is hoped that the number of consumers will grow rapidly as more developers discover this open format and dream up new applications to make boating easier, more efficient or just more fun.
+
+For the purposes of this "How to" 4 open source web apps are automatically installed. They have been developed by the Signal K team to show what can be done with Signal K data. 
 
 Bonjour/mDNS discover support is not included in the Node server by default, so we need to install it manually...
 
@@ -106,30 +151,9 @@ As the file name suggests, the Signal K Node Server is now reading NMEA Data fro
 
 ![Your first view of Signal K data](https://github.com/digitalyacht/ikommunicate/blob/master/RPi_How_To_Images/SignalK_LocalAddr.png)
 
-So that is Signal K....looks good doesn't it ? Actually this is just some JSON data that tells an App what the URL "endpoints" are so that it knows what Version of Signal K the server supports and where it can get HTTP or Websocket data from. You will not see any of the interesting stuff until you have a consumer or two installed, so lets move swiftly to step 3.
+So that is Signal K....looks good doesn't it ? Actually this is just some JSON data that tells an App what the URL "endpoints" are so that it knows what Version of Signal K the server supports and where it can get HTTP or Websocket data from.
 
-## Step 3 - Install Signal K Consumers
-
-A "Consumer" of Signal K data is any web app, mobile device app or software program that can read and use Signal K data. It is hoped that the number of consumers will grow rapidly as more developers discover this open format and dream up new applications to make boating easier, more efficient or just more fun.
-
-For the purposes of this "How to" we will install some open source web apps that have been developed by the Signal K team to show what can be done with Signal K data. To install them, we must first install Bower, which is an installer (Package Manager)  for Web Apps. Similar to NPM it is optimised for "front end" web apps, while NPM is optimised for server type tools and applications. To install Bower , type in the following commands...
-
-    $ sudo npm install -g bower
-
-Once Bower has installed, we can install the web apps in the server folder...
-
-    $ cd signalk-server-node
-    $ bower install https://github.com/SignalK/instrumentpanel.git
-    $ bower install https://github.com/SignalK/sailgauge.git
-    $ bower install https://github.com/SignalK/maptracker.git
-    $ bower install https://github.com/SignalK/simplegauges.git
-
-To use the web apps, we will need to open them in a web browser, but before we do that we must start the Signal K server again as we mentioned above.
-
-    $ cd ~/signalk-server-node
-    $ bin/nmea-from-file
-
-Now open the Epiphany browser on your Pi and type in one of the following URLs depending upon which app you want to run...
+To use the web apps, we will need to open them in a web browser so open the Epiphany browser on your Pi and type in one of the following URLs depending upon which app you want to run...
 
     http://127.0.0.1:3000/instrumentpanel   
     http://127.0.0.1:3000/sailgauge   
@@ -141,11 +165,12 @@ If you have managed to get to the end of this guide, you will now have a good un
 In the "/bin" folder of the Node Server are a series of scripts for different configurations "nmea-from-serial", "n2k-from-actisense", etc. and you just run the one that matches your installation.   
 
 
-## Optional Step 4 - your own setup and running automatically as daemon
+## Optional Step 3 - your own setup and running automatically as daemon
 
 To generate your own vessel settings file, starting with the same NMEA data from the demo file, type...
 
     $ sudo bash rpi-setup.sh
+
 and type your vessel name. This generates a UUID and a settings file in json format in settings/<yourVessel>.json. This can be edited directly by looking at the example settings.
 
 **This script will also set up Node server to run automatically in the background as a daemon when the system boots.** You will no longer be able to launch it manually, because the automatically started instance will occupy the ports where the services are available. You should do this once you are happy with the way the server works.
