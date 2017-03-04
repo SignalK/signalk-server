@@ -6,7 +6,7 @@
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
- 
+
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,16 +17,14 @@
 var Transform = require('stream').Transform;
 
 
+require('util').inherits(Liner, Transform);
+
 function Liner(options) {
   Transform.call(this, {
     objectMode: true
   });
-  if (options.rawlogging) {
-    this.logger = createLogger(options.logdir, options.discriminator);
-  }
+  this.doPush = this.push.bind(this)
 }
-
-require('util').inherits(Liner, Transform);
 
 Liner.prototype._transform = function(chunk, encoding, done) {
   var data = chunk.toString()
@@ -41,20 +39,9 @@ Liner.prototype._transform = function(chunk, encoding, done) {
     this._lastLineData = '';
   }
 
-  lines.forEach(outputLine.bind(this));
+  lines.forEach(this.doPush);
 
   done();
-}
-
-function outputLine(line) {
-  if (typeof this.logger != 'undefined') {
-    try {
-      this.logger.info(line);
-    } catch (ex) {
-      console.error(ex);
-    }
-  }
-  this.push(line);
 }
 
 Liner.prototype._flush = function(done) {
@@ -65,31 +52,5 @@ Liner.prototype._flush = function(done) {
   this._lastLineData = null;
   done();
 }
-
-function createLogger(logdir, discriminator) {
-  var notEmptyDiscriminator = discriminator || "";
-  var winston = require('winston'),
-    transports = [];
-
-  var logfilename = require('path').join(
-    (logdir.indexOf('/') === 0 ? '' : (__dirname + "/../") ) +
-    logdir +
-    "/signalk-rawdata.log");
-  transports.push(new winston.transports.DailyRotateFile({
-    name: 'file',
-    datePattern: '.yyyy-MM-ddTHH',
-    filename: logfilename,
-    json: false,
-    formatter: function(options) {
-      // Return string will be passed to logger.
-      return new Date().getTime() + ';' + notEmptyDiscriminator + ';' + options.message;
-    }
-  }));
-
-  return new winston.Logger({
-    transports: transports
-  });
-}
-
 
 module.exports = Liner;
