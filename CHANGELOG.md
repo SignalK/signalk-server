@@ -1,6 +1,12 @@
 ## Change Log
 
-### upcoming (2017/02/15 19:19 +00:00)
+### upcoming (2017/03/04 14:56 +00:00)
+- [#161](https://github.com/SignalK/signalk-server-node/pull/161) Remove logging in liner (@tkurki)
+- [#158](https://github.com/SignalK/signalk-server-node/pull/158) Add enabled to pipedProvider and provider config (@sbender9)
+- [#159](https://github.com/SignalK/signalk-server-node/pull/159) Update of the installation (@MatsA)
+- [#157](https://github.com/SignalK/signalk-server-node/pull/157) Add version number to plugin REST API (@sbender9)
+- [#156](https://github.com/SignalK/signalk-server-node/pull/156) Update signalk-client to the latest version 🚀 (@greenkeeper[bot])
+- [#154](https://github.com/SignalK/signalk-server-node/pull/154) Fix nmea0183 playback via multiplexedlog (@sbender9)
 - [#155](https://github.com/SignalK/signalk-server-node/pull/155) Fix nmea0183 conversion output over tcp (@tkurki)
 - [#147](https://github.com/SignalK/signalk-server-node/pull/147) Add plugins by sbender9 to the plugin list (@sbender9)
 - [#152](https://github.com/SignalK/signalk-server-node/pull/152) Update signalk-client to the latest version 🚀 (@greenkeeper[bot])
