@@ -4,7 +4,7 @@
   "description": "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
   "main": "index.js",
   "scripts": {
-    "postinstall": "bower install https://github.com/SignalK/sailgauge.git & bower install https://github.com/SignalK/instrumentpanel.git#v0.1.2 & bower install https://github.com/SignalK/simplegauges.git & bower install & bower install https://github.com/SignalK/maptracker.git",
+    "postinstall": "bower install",
     "changelog": "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls",
     "start": "node bin/signalk-server",
     "test": "mocha"
@@ -55,6 +55,7 @@
     "express-namespace": "^0.1.1",
     "flatmap": "0.0.3",
     "httpolyglot": "^0.1.2",
+    "instrumentpanel": "github:signalk/instrumentpanel",
     "lodash": "^4.17.4",
     "marinetraffic-reporter": "github:tkurki/marinetrafficreporter",
     "minimist": "^1.1.0",
@@ -66,6 +67,7 @@
     "node-uuid": "^1.4.3",
     "pem": "^1.8.1",
     "primus": "^6.0.8",
+    "sailgauge": "github:signalk/sailgauge",
     "serialport": "^4.0.3",
     "set-system-time": "github:tkurki/set-system-time",
     "signalk-client": "0.0.1-3",
