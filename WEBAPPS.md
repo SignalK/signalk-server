@@ -7,7 +7,7 @@ A Signal K webapp is an HTML5 application that runs on a web browser and is typi
 
 2. Sample webapps
 --------------------------------
-There are several prototype level browser based consumers available. They are installed by default in the `bower_components` directory under node server's root and you can access them through the server's home page.
+There are several prototype level [browser based webapps that are installed during the server installation](http://localhost:3000/apps).
 
 3. Getting started with your own webapps
 ------------------
