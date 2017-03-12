@@ -73,21 +73,22 @@ function Splitter(options) {
 require('util').inherits(Splitter, Transform);
 
 Splitter.prototype._transform = function(msg, encoding, done) {
-  switch(msg.discriminator) {
-    case 'A':
-      return this.fromActisenseSerial.write(msg.data, encoding, done)
-      break
-    case 'N':
-      return this.fromNMEA0183.write(msg.data, encoding, done)
-      break
-    case 'I':
-      this.push(JSON.parse(msg.data))
-      done()
-      break
-    default:
-      console.log("Unrecognized discriminator")
-      done()
-
+  try {
+    switch(msg.discriminator) {
+      case 'A':
+        return this.fromActisenseSerial.write(msg.data, encoding)
+        break
+      case 'N':
+        return this.fromNMEA0183.write(msg.data, encoding)
+        break
+      case 'I':
+        this.push(JSON.parse(msg.data))
+        break
+      default:
+        console.log("Unrecognized discriminator")
+    }
+  } finally {
+    done()
   }
 }
 Splitter.prototype.pipe = function(target) {
