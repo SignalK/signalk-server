@@ -1,6 +1,8 @@
 ## Change Log
 
-### upcoming (2017/03/04 14:56 +00:00)
+### upcoming (2017/03/12 10:41 +00:00)
+- [#165](https://github.com/SignalK/signalk-server-node/pull/165) Fix multiplexed log file playback (@tkurki)
+- [#164](https://github.com/SignalK/signalk-server-node/pull/164) feature: add environment variables for hostname & port (@tkurki)
 - [#161](https://github.com/SignalK/signalk-server-node/pull/161) Remove logging in liner (@tkurki)
 - [#158](https://github.com/SignalK/signalk-server-node/pull/158) Add enabled to pipedProvider and provider config (@sbender9)
 - [#159](https://github.com/SignalK/signalk-server-node/pull/159) Update of the installation (@MatsA)
