@@ -34,7 +34,7 @@ function TimestampThrottle(options) {
 require('util').inherits(TimestampThrottle, Transform);
 
 TimestampThrottle.prototype._transform = function(msg, encoding, done) {
-    var msgMillis = getMilliseconds(msg.timestamp);
+    var msgMillis = this.getMilliseconds(msg);
     if (msgMillis < this.lastMsgMillis) {
       this.offsetMillis = new Date().getTime() - msgMillis;
     }
@@ -52,9 +52,9 @@ TimestampThrottle.prototype._transform = function(msg, encoding, done) {
     }
 };
 
-function getMilliseconds(timestamp) {
+function getMilliseconds(msg) {
   //2014-08-15-16:00:00.083
-  return moment(timestamp, "YYYY-MM-DD-HH:mm:ss.SSS").valueOf()
+  return moment(msg.timestamp, "YYYY-MM-DD-HH:mm:ss.SSS").valueOf()
 }
 
 

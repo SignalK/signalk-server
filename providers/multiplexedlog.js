@@ -42,7 +42,7 @@ function DeMultiplexer(options) {
 
   this.toTimestamped = new ToTimestamped()
   this.timestampThrottle = new TimestampThrottle({
-    getMilliseconds: ts => ts
+    getMilliseconds: msg => msg.timestamp
   })
   this.splitter = new Splitter(options);
   if(options.noThrottle) {
