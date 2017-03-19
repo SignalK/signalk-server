@@ -86,6 +86,7 @@
     "freeport-promise": "^1.0.0",
     "github-changes": "^1.0.4",
     "mocha": "^3.2.0",
+    "request": "^2.81.0",
     "request-promise": "^4.1.1"
   }
 }
