@@ -19,7 +19,8 @@
     "rest": true,
     "ws": true,
     "tcp": false,
-    "nmea-tcp": false
+    "nmea-tcp": false,
+    "plugins": false
   },
 
   "pipedProviders": [{
