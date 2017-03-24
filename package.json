@@ -4,7 +4,6 @@
   "description": "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
   "main": "index.js",
   "scripts": {
-    "postinstall": "bower install",
     "changelog": "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls",
     "start": "node bin/signalk-server",
     "test": "mocha"
@@ -44,7 +43,6 @@
   "dependencies": {
     "baconjs": "^0.7.88",
     "body-parser": "^1.14.1",
-    "bower": "^1.7.7",
     "colors": "^1.1.2",
     "cors": "^2.5.2",
     "debug": "^2.1.0",
