@@ -1,6 +1,10 @@
 ## Change Log
 
-### upcoming (2017/03/12 10:41 +00:00)
+### upcoming (2017/04/02 17:05 +00:00)
+- [#170](https://github.com/SignalK/signalk-server-node/pull/170) Update primus to the latest version 🚀 (@greenkeeper[bot])
+- [#160](https://github.com/SignalK/signalk-server-node/pull/160) feature: Add npm based webapps in favor of bower (@tkurki)
+- [#168](https://github.com/SignalK/signalk-server-node/pull/168) Update signalk-schema to the latest version 🚀 (@greenkeeper[bot])
+- [#166](https://github.com/SignalK/signalk-server-node/pull/166) feature: add check for minimum Node version (@tkurki)
 - [#165](https://github.com/SignalK/signalk-server-node/pull/165) Fix multiplexed log file playback (@tkurki)
 - [#164](https://github.com/SignalK/signalk-server-node/pull/164) feature: add environment variables for hostname & port (@tkurki)
 - [#161](https://github.com/SignalK/signalk-server-node/pull/161) Remove logging in liner (@tkurki)
