@@ -65,7 +65,7 @@
     "node-gpsd": "^0.3.0",
     "node-uuid": "^1.4.3",
     "pem": "^1.8.1",
-    "primus": "^6.0.8",
+    "primus": "^7.0.0",
     "sailgauge": "github:signalk/sailgauge",
     "serialport": "^4.0.3",
     "set-system-time": "github:tkurki/set-system-time",
