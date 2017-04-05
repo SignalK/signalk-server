@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-const EventEmitter = require('events');
+const Transform = require('stream').Transform;
 
 const deltas = [{
     "updates": [{
@@ -67,6 +67,10 @@ const deltas = [{
 ]
 
 function Simulator(options) {
+  Transform.call(this, {
+    objectMode: true
+  })
+
   const that = this
   var i = 0
   setInterval(() => {
@@ -75,6 +79,6 @@ function Simulator(options) {
   }, 200)
 }
 
-require('util').inherits(Simulator, EventEmitter)
+require('util').inherits(Simulator, Transform)
 
 module.exports = Simulator;
