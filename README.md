@@ -69,6 +69,7 @@ Environment variables
 - `EXTERNALHOST` the host used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
 - `NMEA0183PORT`  override the port for the NMEA 0183 over tcp service (default 10110)
 - `TCPSTREAMPORT` override the port for the Signal K Streaming (deltas) over TCP
+- `TCPSTREAMADDRESS` override the address the Signal K Stream (deltas) over TCP is listening on
 - `DISABLEPLUGINS` disable all plugins so that they can not be enabled
 
 Real Inputs
