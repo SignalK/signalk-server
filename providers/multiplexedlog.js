@@ -42,9 +42,9 @@ function DeMultiplexer(options) {
 
   this.toTimestamped = new ToTimestamped()
   this.timestampThrottle = new TimestampThrottle({
-    getMilliseconds: ts => ts
+    getMilliseconds: msg => msg.timestamp
   })
-  this.splitter = new Splitter(options);
+  this.splitter = new Splitter(this, options);
   if(options.noThrottle) {
     this.toTimestamped.pipe(this.splitter)
   } else {
@@ -61,33 +61,41 @@ DeMultiplexer.prototype.write = function(chunk, encoding, callback) {
   return this.toTimestamped.write(chunk, encoding, callback)
 }
 
-function Splitter(options) {
+function Splitter(deMultiplexer, options) {
   Transform.call(this, {objectMode: true})
+  this.demuxEmitData = function(msg) {
+    deMultiplexer.emit('data', msg)
+  }
 
   this.fromN2KJson = new N2KJsonToSignalK();
+  this.fromN2KJson.on('data', this.demuxEmitData)
   this.fromActisenseSerial = new ActisenseSerialToJSON()
   this.fromActisenseSerial.pipe(this.fromN2KJson)
 
   this.fromNMEA0183 = new Nmea01832SignalK(options)
+  this.fromNMEA0183.on('data', this.demuxEmitData)
 }
 require('util').inherits(Splitter, Transform);
 
 Splitter.prototype._transform = function(msg, encoding, done) {
-  switch(msg.discriminator) {
-    case 'A':
-      return this.fromActisenseSerial.write(msg.data, encoding, done)
-      break
-    case 'N':
-      return this.fromNMEA0183.write(msg.data, encoding, done)
-      break
-    case 'I':
-      this.push(JSON.parse(msg.data))
-      done()
-      break
-    default:
-      console.log("Unrecognized discriminator")
-      done()
-
+  try {
+    switch(msg.discriminator) {
+      case 'A':
+        return this.fromActisenseSerial.write(msg.data, encoding)
+        break
+      case 'N':
+        return this.fromNMEA0183.write(msg.data, encoding)
+        break
+      case 'I':
+        const parsed = JSON.parse(msg.data)
+        this.push(parsed)
+        this.demuxEmitData(parsed)
+        break
+      default:
+        console.log("Unrecognized discriminator")
+    }
+  } finally {
+    done()
   }
 }
 Splitter.prototype.pipe = function(target) {

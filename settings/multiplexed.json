@@ -1,0 +1,32 @@
+{
+  "vessel": {
+    "uuid"	: "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d"
+  },
+  "pipedProviders": [{
+    "id": "multiplexedFromFile",
+    "pipeElements": [{
+      "type": "providers/filestream",
+      "options": {
+        "keepRunning": true
+      },
+      "optionMappings": [{
+        "fromAppProperty": "argv.filename",
+        "toOption": "filename"
+      }]
+    }, {
+      "type": "providers/liner"
+    }, {
+      "type": "providers/multiplexedlog",
+      "optionMappings": [
+        {
+         "fromAppProperty": "selfId",
+         "toOption": "selfId"
+        },
+        {
+         "fromAppProperty": "selfType",
+         "toOption": "selfType"
+        }
+      ]
+    }]
+  }]
+}

@@ -43,12 +43,12 @@ If you have analyzer available on your PATH you can start the server with a samp
 
 For getting live data from your NGT-1 you need to figure out what device path your device is mounted on, edit the configuration file to match you path and start server with `bin/n2k-from-actisense`.
 
-If you have your own n2k data file you can use that with `bin/n2k-from-file --n2kfilename your-file-name`. Beware that the playback rate is limited in bytes per second - if your data file is from a rich N2K environment you may want to adjust the [rate parameter](https://github.com/SignalK/signalk-server-node/blob/master/settings/aava-file-settings.json#L27) in the settings file.
+If you have your own n2k data file from canboat you can use that with `bin/n2k-from-file --n2kfilename your-file-name`.
 
-Now what? Consumers!
----------------
+Now what?
+---------
 
-Once you have the data streams in place you probably want to use the data or at least see it in a nice format. See [Consumers](https://github.com/SignalK/signalk-server-node/blob/master/CONSUMERS.md) for details.
+Once you have the data streams in place you probably want to use the data or at least see it in a nice format. Some sample webapps are installed during the installation process. They can be accessed at http:localhost:3000/apps. See [Webapps doc](https://github.com/SignalK/signalk-server-node/blob/master/WEBAPPS.md) for more information.
 
 Configuration
 =============
@@ -65,6 +65,8 @@ Environment variables
 ---------------------
 - `SIGNALK_NODE_SETTINGS` override the path to the settings file
 - `PORT` override the port for http/ws service
+- `EXTERNALPORT` the port used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
+- `EXTERNALHOST` the host used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
 - `NMEA0183PORT`  override the port for the NMEA 0183 over tcp service (default 10110)
 - `TCPSTREAMPORT` override the port for the Signal K Streaming (deltas) over TCP
 - `DISABLEPLUGINS` disable all plugins so that they can not be enabled
