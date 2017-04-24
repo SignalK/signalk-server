@@ -38,7 +38,7 @@ function N2KAnalyzer(options) {
     try {
       parsed = JSON.parse(data)
       that.push(parsed);
-      options.app.emit("n2KAnalyzerOut", parsed)
+      options.app.emit("N2KAnalyzerOut", parsed)
     } catch (ex) {
       console.error(ex.stack);
     }
