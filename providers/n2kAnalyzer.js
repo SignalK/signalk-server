@@ -17,7 +17,7 @@
 var Transform = require('stream').Transform;
 var debug = require('debug')('signalk:n2kAnalyzer');
 
-function N2KAnalyzer() {
+function N2KAnalyzer(options) {
   Transform.call(this, {
     objectMode: true
   });
@@ -36,7 +36,9 @@ function N2KAnalyzer() {
   var that = this;
   this.linereader.on('line', function(data) {
     try {
-      that.push(JSON.parse(data));
+      parsed = JSON.parse(data)
+      that.push(parsed);
+      options.app.emit("n2KAnalyzerOut", parsed)
     } catch (ex) {
       console.error(ex.stack);
     }
