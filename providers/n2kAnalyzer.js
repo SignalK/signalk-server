@@ -64,3 +64,4 @@ N2KAnalyzer.prototype.end = function() {
 }
 
 module.exports = N2KAnalyzer;
+
