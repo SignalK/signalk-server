@@ -31,13 +31,7 @@
         "rate": 500
       }
     }, {
-      "type": "providers/liner",
-         "options": {
-           "rawlogging" : true,
-           "logdir": "logs",
-           "discriminator": "1"
-         }
-
+      "type": "providers/liner"
     }, {
       "type": "providers/nmea0183-signalk",
       "optionMappings": [{
@@ -65,13 +59,7 @@
         "rate": 600
       }
     }, {
-      "type": "providers/liner",
-         "options": {
-           "rawlogging" : true,
-           "logdir": "logs",
-           "discriminator": "1"
-         }
-
+      "type": "providers/liner"
     }, {
       "type": "providers/nmea0183-signalk",
       "optionMappings": [{
@@ -99,12 +87,7 @@
         "rate": 500
       }
     }, {
-      "type": "providers/liner",
-         "options": {
-           "rawlogging" : true,
-           "logdir": "logs",
-           "discriminator": "2"
-         }
+      "type": "providers/liner"
     }, {
       "type": "providers/n2kAnalyzer"
     }, {
@@ -127,12 +110,7 @@
         "rate": 500
       }
     }, {
-      "type": "providers/liner",
-         "options": {
-           "rawlogging" : true,
-           "logdir": "logs",
-           "discriminator": "2"
-         }
+      "type": "providers/liner"
     }, {
       "type": "providers/n2kAnalyzer"
     }, {
