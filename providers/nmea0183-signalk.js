@@ -27,7 +27,12 @@ function ToSignalK(options) {
   this.parser.on('nmea0183', function(sentence) {
     that.emit('nmea0183', sentence)
   });
-  this.parser.on('delta', function(delta) {
+  this.parser.on('delta', function (delta) {
+    if (that.timestamp) {
+      delta.updates.forEach(update => {
+        update.timestamp = that.timestamp
+      })
+    }
     that.push(delta);
   });
 }
@@ -36,7 +41,12 @@ require('util').inherits(ToSignalK, Transform);
 
 ToSignalK.prototype._transform = function(chunk, encoding, done) {
   try {
-    this.parser.write(chunk + '\n');
+    if (typeof chunk === 'object') {
+      this.timestamp = new Date(Number(chunk.timestamp))
+      this.parser.write(chunk.line + '\n')
+    } else {
+      this.parser.write(chunk + '\n');
+    }
   } catch (ex) {
     console.error(ex);
   }
