@@ -46,7 +46,7 @@ Liner.prototype._transform = function(chunk, encoding, done) {
 
 Liner.prototype._flush = function(done) {
   if (this._lastLineData) {
-    outputLine.call(this, this._lastLineData);
+    this.push(this._lastLineData)
   }
 
   this._lastLineData = null;
