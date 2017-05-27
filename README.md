@@ -74,9 +74,11 @@ Environment variables
 
 Real Inputs
 ---------------
-To hook the server up to your real inputs you need to create a configuration file that connects to your input source and applies the relevant parsers / converters in the provider pipeline.
+To hook the server up to your real inputs you need to create a configuration file that connects to your input source and applies the relevant parsers / converters in the provider pipeline.it is
 
-Inputs are configured as an array of pipedProviders, each with an id and an array pipeElements. You need to create a pipedProviders entry for each of your inputs.
+Inputs are configured as an array of pipedProviders, each with an id and an array pipeElements. You need to create a pipedProviders entry for each of your inputs. The pipedProvider starts with a name (name of the interface, e.g. NMEA0183 from AIS could be called "AIS"). The first provider is the source of the data ("providers/serialport" for a serial interface such as USB, "providers/filestream" if the data comes from a file, "providers/tcp" if the source is a TCP port etc.). You will see in the example settings that the second provider is often "providers/liner". This is a provider that splits the input into separate lines and passes one line at a time to the next provider. The final provider or group of providers is where the translation or passing to the server occurs. For NMEA0183, this is "providers/nmea0183-signalk", for N2K (NMEA2000) it is "providers/n2kAnalyzer" and then "providers/n2k-signalk".
+
+There are also special providers such as "providers/log" which logs the output of the previous provider to a file specified in the options, and "providers/throttle" which changes the playback from files to the bytes per second rate set in the options. The "providers/execute" provider lets you pass a command to the server, as set in the options.
 
 Each PipeElement is configured with `options`. Different PipeElements use different configuration parameters, like for serialport you can configure baud rate and for udp connection the port.
 
@@ -84,16 +86,36 @@ A PipeElement may require some options entry that is available already in the co
 
 You can also use optionMappings property to optionally override `options` entries with command line parameters. For example you can specify the data file for file playback from the command line as `bin/signalk-server -s settings/volare-file-settings.json --nmeafilename=samples/nais400-merrimac.log` with [this configuration](https://github.com/SignalK/signalk-server-node/blob/5134ce5f48f25b2b270176f39d3e8e530dedb825/settings/volare-file-settings.json#L28-L33).
 
+Look through the examples in the settings folder and copy pipedProviders that suit your setup. You can combine as many as you want.
+
+Make sure that the settings file you are using is valid JSON. This can be done in an online validator like `https://jsonlint.com/`
+
 ### NMEA0183
 
 There is an example settings file for using NMEA 0183 input from a serial device that you can use to start up the server: `bin/signalk-settings -s settings/volare-serial-settings.json`. You can change the port and baud rate in the [settings file](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-serial-settings.json#L23-L27).
 
 
 ### NMEA 2000 (via NGT-1 & Canboat)
+
+There is an example settings file for N2K from serial. Make sure to change the command option to match the NGT-1 port:
+`https://github.com/SignalK/signalk-server-node/blob/master/settings/actisense-serial-settings.json#L12`
+
 ### Signal K delta
+
+Signal K deltas are set up a described above: Source provider ("providers/filestream", "providers/serialport", "providers/tcp", "providers/udp" etc) -> "providers/liner" -> "providers/from_json"
+ 
 ### File
+
+An input from a file uses the "providers/filestream". The options to change are "filename" and "fromAppProperty" (see https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-file-settings.json#L23-L34 and https://github.com/SignalK/signalk-server-node/blob/master/settings/multiple-sources.json#L81-L82)
+
 ### Serial
+
+An input from a file uses the "providers/serialport". It takes the options "device" and "baudrate" (see https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-serial-settings.json#L25-L26)
+
 ### TCP
+
+An input from a file uses the "providers/tcp". It takes the options "host" and "port" (see https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-tcp-settings.json#L29-L30)
+
 ### UDP
 
 settings/volare-udp-settings provides an example of NMEA0183 input over UDP port 7777. If you have trouble getting this to work try setting up DEBUG environment variable with `export DEBUG=signalk-server:udp-provider` and sending manually input with netcat `echo  '$IIDBT,034.25,f,010.44,M,005.64,F*27' | nc -4u -w1 localhost 7777`. This should result in the server logging the NMEA sentence it receives.
