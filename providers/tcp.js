@@ -14,6 +14,21 @@
  * limitations under the License.
  */
 
+ /* Usage: This provider takes any TCP stream and passes it to the next provider.
+ * It takes the options "host" and "port" and optionally "reconnect" (default true) and "maxRetries" (default 10)
+ * Example:
+
+ {
+   "type": "providers/tcp",
+   "options": {
+     "host": 'localhost',
+     "port": 10110,
+   }
+ },
+
+ */
+
+
 var net       = require('net')
   , Transform = require('stream').Transform
   , debug     = require('debug')('signalk-provider-tcp')
@@ -49,7 +64,7 @@ TcpStream.prototype.handleTimeout = function () {
   if ((Date.now() - this.__last) > 90000 && this.__reset === null) {
     debug('Connection timed out. Resetting.');
     this.start();
-    return 
+    return
   }
 
   if (this.__timeout !== null) {
