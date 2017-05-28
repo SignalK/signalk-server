@@ -31,9 +31,9 @@ bin/nmea-from-file
 
 This will start the server with a sample configuration file and the server will start playing back set of [NMEA 0183](http://en.wikipedia.org/wiki/NMEA_0183) data from file. The data is available immediately via the REST interface at localhost:3000 both via [https](https://localhost:3000/signalk/v1/api/) and [http](http://localhost:3000/signalk/v1/api/).
 
-A simple way to connect to the WebSocket interface from the command line is to install wscat and use that:
+A simple way to connect to the WebSocket interface from the command line is to install wscat2 and use that:
 ```
-npm install -g wscat
+npm install -g wscat2
 wscat --connect 'ws://localhost:3000/signalk/v1/stream?stream=delta'
 ````
 
