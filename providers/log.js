@@ -14,6 +14,21 @@
  * limitations under the License.
  */
 
+ /* Usage: This prvider logs the output of the previous provider. If placed in the end of the pipe, it will log Signal K deltas
+ * Takes the options "logdir" and "discriiminator". The log files are named from date and hour, and a new file is created every hour
+ * Example:
+
+{
+  "type": "providers/log",
+  "options": {
+    "logdir": "logs",
+    "discriminator": "I"
+  }
+}
+
+*/
+
+
 var Transform = require('stream').Transform;
 
 function Log(options) {

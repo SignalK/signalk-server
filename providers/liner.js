@@ -14,6 +14,16 @@
  * limitations under the License.
  */
 
+ /* Usage:
+ *  This is a provider that splits the input into separate lines and passes one line at a time to the next provider.
+ * Takes no options.
+
+ {
+   "type": "providers/liner"
+ },
+
+ */
+
 var Transform = require('stream').Transform;
 
 
