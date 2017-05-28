@@ -14,6 +14,31 @@
  * limitations under the License.
  */
 
+ /* Usage: This is the first provider in a pipe for decoding data input from Serial. 
+ * It takes two options; "device" and "baudrate"
+ * Example:
+
+ {
+   "type": "providers/serialport",
+   "options": {
+     "device": "/dev/ttyUSB0",
+     "baudrate": 4800
+   },
+   "optionMappings": [
+     {
+       "fromAppProperty": "argv.nmeadevice",
+       "toOption": "device"
+     },
+
+     {
+       "fromAppProperty": "argv.nmeabaudrate",
+       "toOption": "baudrate"
+     }
+   ]
+ },
+
+ */
+
 var Transform = require('stream').Transform
 var SerialPort = require('serialport');
 
