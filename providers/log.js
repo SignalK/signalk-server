@@ -16,6 +16,7 @@
 
  /* Usage: This  pipeElement logs the output of the previous pipeElement. If placed in the end of the pipe, it will log Signal K deltas
  * Takes the options "logdir" and "discriminator". The log files are named from date and hour, and a new file is created every hour
+ * Please note the standard discriminators used for playback with providers/multiplexedlog.js
  * Example:
 
 {
