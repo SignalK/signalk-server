@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
- /* Usage: this is the provider that transforms NMEA0183 input to Signal K deltas
- * It does not take any options
+ /* Usage: this is the pipeElement that transforms NMEA0183 input to Signal K deltas
+ * It does not take any options, as selfId and selfType are fetched from app properties
  * Example:
 
  {
