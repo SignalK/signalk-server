@@ -15,7 +15,7 @@
  */
 
  /* Usage:
- * As part of a rovider pipeline in a settings file. Lets you pass gpsd to Signal K. gpsd is a service daemon that monitors one or more GPSes or AIS receivers attached to a host computer through serial or USB ports,
+ * As part of a PipedProvider in a settings file. Lets you pass gpsd to Signal K. GPSD is a service daemon that monitors one or more GPSes or AIS receivers attached to a host computer through serial or USB ports,
  * making all data on the location/course/velocity of the sensors available to be queried on TCP port 2947 of the host computer.
  * For examples of use, see https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-gpsd-settings.json
  * Takes the options "port" (default 2947) and "hostname" (default 'localhost')
