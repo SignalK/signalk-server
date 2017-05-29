@@ -15,7 +15,7 @@
  */
 
  /* Usage:
- * As part of a rovider pipeline in a settings file. Lets you pass json strings such as Signal K deltas coming from other sources such as TCP, UDP, Serial etc. Usually last in the list of providers for this pipe
+ * As part of a PipedProvider in a settings file. Lets you pass json strings such as Signal K deltas coming from other sources such as TCP, UDP, Serial etc. Usually last in the list of providers for this pipe
  * Takes no options:
 
  {
