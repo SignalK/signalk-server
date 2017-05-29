@@ -15,7 +15,7 @@
  */
 
  /* Usage:
- *  This is a provider that splits the input into separate lines and passes one line at a time to the next provider.
+ *  This is part of a PipedProvider that splits the input into separate lines and passes one line at a time to the next provider.
  * Takes no options.
 
  {
