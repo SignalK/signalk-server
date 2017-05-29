@@ -20,7 +20,9 @@
  */
 
  /* Usage:
- * As part of a PipedProvider in a settings file. Lets you pass a command to the server, as set in the options:
+ * As part of a PipedProvider in a settings file. Lets you pass a command to the server, as set in the options. 
+ * Also allows writing to stdout, for example with actisense-serial N2K data
+ * see https://github.com/tkurki/cassiopeia-settings/blob/master/signalk-server-settings.json
  * Example from https://github.com/SignalK/signalk-server-node/blob/master/settings/actisense-serial-settings.json#L12
 
   {
