@@ -19,15 +19,11 @@ Get the repo with either `git clone https://github.com/SignalK/signalk-server-no
 or as a simple zip file from https://github.com/SignalK/signalk-server-node/archive/master.zip and extract it.
 
 Go to the directory where you put the downloaded code and install dependencies with
-````
-npm install
-```
+```npm install```
 [Firewall giving you trouble?](https://github.com/npm/npm/wiki/Troubleshooting#npm-only-uses-git-and-sshgit-urls-for-github-repos-breaking-proxies)
 
 Start the server with
-```
-bin/nmea-from-file
-```
+```bin/nmea-from-file```
 
 This will start the server with a sample configuration file and the server will start playing back set of [NMEA 0183](http://en.wikipedia.org/wiki/NMEA_0183) data from file. The data is available immediately via the REST interface at localhost:3000 both via [https](https://localhost:3000/signalk/v1/api/) and [http](http://localhost:3000/signalk/v1/api/).
 
@@ -35,7 +31,7 @@ A simple way to connect to the WebSocket interface from the command line is to i
 ```
 npm install -g wscat
 wscat --connect 'ws://localhost:3000/signalk/v1/stream?stream=delta'
-````
+```
 
 If you want to use [NMEA2000](http://en.wikipedia.org/wiki/NMEA_2000) data you **must install [Canboat](https://github.com/canboat/canboat/wiki/Building)**. Canboat allows you to use data from Actisense [NGT-1](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1) and convert NMEA2000 data to a format that Signal K Node server can digest.
 
