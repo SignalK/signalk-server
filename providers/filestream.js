@@ -15,7 +15,7 @@
  */
 
 /*  Usage:
- * As part of a rovider pipeline in a settings file. Lets the server read from a file, as set in the options:
+ * As part of a PipedProvider in a settings file. Lets the server read from a file, as set in the options:
  * Example from https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-file-settings.json#L23-L34
 
 {
