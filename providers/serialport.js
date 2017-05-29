@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
- /* Usage: This is the first provider in a pipe for decoding data input from Serial. 
- * It takes two options; "device" and "baudrate"
+ /* Usage: This is the first pipeElement in a PipedProvider. Used to pass data input from Serial to the next pipeElement. 
+ * Reads data from a serial device and allows writing back to serial with the "toStdout" option 
+ * It takes two options; "device" and "baudrate". The "toStdout" option is not mandatory.
  * Example:
 
  {
