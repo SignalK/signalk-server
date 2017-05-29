@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- /* Usage: This provider takes any TCP stream and passes it to the next provider.
+ /* Usage: This pipeElement takes any TCP stream and passes it to the next pipeElement.
  * It takes the options "host" and "port" and optionally "reconnect" (default true) and "maxRetries" (default 10)
  * Example:
 
