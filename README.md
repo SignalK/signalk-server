@@ -37,7 +37,7 @@ npm install -g wscat
 wscat --connect 'ws://localhost:3000/signalk/v1/stream?stream=delta'
 ````
 
-If you want to use [NMEA2000](http://en.wikipedia.org/wiki/NMEA_2000) data you **must to install [Canboat](https://github.com/canboat/canboat/wiki/Building)**. Canboat allows you to use data from Actisense [NGT-1](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1) and convert NMEA2000 data to a format that Signal K Node server can digest.
+If you want to use [NMEA2000](http://en.wikipedia.org/wiki/NMEA_2000) data you **must install [Canboat](https://github.com/canboat/canboat/wiki/Building)**. Canboat allows you to use data from Actisense [NGT-1](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1) and convert NMEA2000 data to a format that Signal K Node server can digest.
 
 If you have analyzer available on your PATH you can start the server with a sample NMEA2000 data file with `bin/n2k-from-file`. An error message saying `analyzer: not found` tells that you need to [install canboat](https://github.com/canboat/canboat/wiki/Building).
 
