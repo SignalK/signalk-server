@@ -27,11 +27,11 @@ Start the server with
 
 This will start the server with a sample configuration file and the server will start playing back set of [NMEA 0183](http://en.wikipedia.org/wiki/NMEA_0183) data from file. The data is available immediately via the REST interface at localhost:3000 both via [https](https://localhost:3000/signalk/v1/api/) and [http](http://localhost:3000/signalk/v1/api/).
 
-A simple way to connect to the WebSocket interface from the command line is to install wscat and use that:
+A simple way to connect to the WebSocket interface from the command line is to install wscat2 and use that:
 ```
-npm install -g wscat
-wscat --connect 'ws://localhost:3000/signalk/v1/stream?stream=delta'
-```
+npm install -g wscat2
+wscat 'ws://localhost:3000/signalk/v1/stream?subscribe=all'
+````
 
 If you want to use [NMEA2000](http://en.wikipedia.org/wiki/NMEA_2000) data you **must install [Canboat](https://github.com/canboat/canboat/wiki/Building)**. Canboat allows you to use data from Actisense [NGT-1](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1) and convert NMEA2000 data to a format that Signal K Node server can digest.
 
