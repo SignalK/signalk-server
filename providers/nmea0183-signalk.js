@@ -14,6 +14,26 @@
  * limitations under the License.
  */
 
+ /* Usage: this is the pipeElement that transforms NMEA0183 input to Signal K deltas
+ * It does not take any options, as selfId and selfType are fetched from app properties
+ * Example:
+
+ {
+   "type": "providers/nmea0183-signalk",
+   "optionMappings": [
+     {
+       "fromAppProperty": "selfId",
+       "toOption": "selfId"
+     },
+     {
+       "fromAppProperty": "selfType",
+       "toOption": "selfType"
+     }
+   ]
+ }
+
+ */
+
 var Transform = require('stream').Transform;
 
 function ToSignalK(options) {

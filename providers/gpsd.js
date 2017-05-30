@@ -6,12 +6,28 @@
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
- 
+
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ */
+
+ /* Usage:
+ * As part of a PipedProvider in a settings file. Lets you pass gpsd to Signal K. GPSD is a service daemon that monitors one or more GPSes or AIS receivers attached to a host computer through serial or USB ports,
+ * making all data on the location/course/velocity of the sensors available to be queried on TCP port 2947 of the host computer.
+ * For examples of use, see https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-gpsd-settings.json
+ * Takes the options "port" (default 2947) and "hostname" (default 'localhost')
+
+ {
+  "type": "providers/gpsd",
+  "options": {
+    "port": 2947,
+    "hostname": "localhost"
+  },
+ },
+
  */
 
 var Transform = require('stream').Transform;
