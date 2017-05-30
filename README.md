@@ -95,12 +95,14 @@ There is an example settings file for using NMEA 0183 input from a serial device
 
 There is an example settings file for N2K from N2K/CANBus. Make sure to change the command option to match the NGT-1 port like in this [example](https://github.com/SignalK/signalk-server-node/blob/master/settings/actisense-serial-settings.json#L12)
 
-### Signal K delta
+### Signal K
 
-A provider that handles Signal K deltas in JSON format is set up with the following elements:
+A provider that handles Signal K deltas can be set up with the following elements:
 - a source pipeElement (`providers/filestream`, `providers/serialport`, `providers/tcp`, `providers/udp`)
 - `providers/liner`
 - `providers/from_json`
+
+Furthermore you can use data from a Signal K server with the `providers/mdns-ws` source. Without any configuration it will use the Signal K discovery process to discover any Signal K servers in the local network, such as iKommunicate, and connect to it. No other pipeElements are needed. See the [example configuration file](https://github.com/SignalK/signalk-server-node/blob/master/settings/signalk-ws-settings.json). You can also configure `mdns-ws` with `host` and `port`, which will disable the discovery process and make it connect directly to the specified server.
  
 ### File
 
