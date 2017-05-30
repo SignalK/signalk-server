@@ -88,7 +88,7 @@ Make sure that the settings file you are using is valid JSON. This can be done i
 
 ### NMEA0183
 
-There is an example settings file for using NMEA 0183 input from a serial device that you can use to start up the server: `bin/signalk-settings -s settings/volare-serial-settings.json`. You can change the port and baud rate in the [settings file](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-serial-settings.json#L23-L27).
+There is an example settings file for using NMEA 0183 input from a serial device that you can use to start up the server: `bin/signalk-settings -s settings/volare-serial-settings.json`. You can change the `port` and `baudrate` in the [settings file](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-serial-settings.json#L23-L27).
 
 
 ### NMEA 2000 (via NGT-1 & Canboat)
@@ -97,23 +97,26 @@ There is an example settings file for N2K from N2K/CANBus. Make sure to change t
 
 ### Signal K delta
 
-Signal K deltas are set up a described above: Source pipeElement ("providers/filestream", "providers/serialport", "providers/tcp", "providers/udp" etc) -> "providers/liner" -> "providers/from_json"
+A provider that handles Signal K deltas in JSON format is set up with the following elements:
+- a source pipeElement (`providers/filestream`, `providers/serialport`, `providers/tcp`, `providers/udp`)
+- `providers/liner`
+- `providers/from_json`
  
 ### File
 
-An input from a file uses the "providers/filestream". The options to change are "filename" and "fromAppProperty" ,see [NMEA0183](..blob/master/settings/volare-file-settings.json#L23-L34) and [N2K](../blob/master/settings/multiple-sources.json#L81-L82) examples
+An input from a file uses the `providers/filestream`. The options to change are `filename` and `fromAppProperty` ,see [NMEA0183](..blob/master/settings/volare-file-settings.json#L23-L34) and [N2K](../blob/master/settings/multiple-sources.json#L81-L82) examples.
 
 ### Serial
 
-An input from a serial port uses the "providers/serialport" pipeElement. It takes the options "device" and "baudrate" and optionally "toStdout"(see [example](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-serial-settings.json#L25-L26))
+An input from a serial port uses the `providers/serialport` pipeElement. It takes the options `device` and `baudrate` and optionally "toStdout"(see [example](htps://github.com/SignalK/signalk-server-node/blob/master/settings/volare-serial-settings.json#L25-L26)). `serialport` has an internal line splitter, so a **pipedProvider with serialport as the source does not need `liner` and will not work with one**.
 
 ### TCP
 
-An input from a TCP port uses the "providers/tcp". It takes the options "host" and "port" (see [example](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-tcp-settings.json#L29-L30))
+An input from a TCP port uses the `providers/tcp`. It takes the options `host` and `port` (see [example](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-tcp-settings.json#L29-L30)).
 
 ### UDP
 
-settings/volare-udp-settings provides an example of NMEA0183 input over UDP port 7777. If you have trouble getting this to work try setting up DEBUG environment variable with `export DEBUG=signalk-server:udp-provider` and sending manually input with netcat `echo  '$IIDBT,034.25,f,010.44,M,005.64,F*27' | nc -4u -w1 localhost 7777`. This should result in the server logging the NMEA sentence it receives.
+settings/volare-udp-settings provides an example of NMEA0183 input over UDP port 7777. If you have trouble getting this to work try setting up DEBUG environment variable with `export DEBUG=signalk-server:udp-provider` and sending manually input with netcat `echo  '$IIDBT,034.25,f,010.44,M,005.64,F*27' | nc -4u -w1 localhost 7777`. This should result in the server logging the NMEA sentence it receives. UDP source takes `port` option.
 
 ### GPSD
 
