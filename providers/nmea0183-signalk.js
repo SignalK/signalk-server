@@ -61,7 +61,7 @@ require('util').inherits(ToSignalK, Transform);
 
 ToSignalK.prototype._transform = function(chunk, encoding, done) {
   try {
-    if (typeof chunk === 'object') {
+    if (typeof chunk === 'object' && typeof chunk.line === 'string') {
       this.timestamp = new Date(Number(chunk.timestamp))
       this.parser.write(chunk.line + '\n')
     } else {
