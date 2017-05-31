@@ -82,17 +82,21 @@ Splitter.prototype._transform = function(msg, encoding, done) {
     switch(msg.discriminator) {
       case 'A':
         return this.fromActisenseSerial.write(msg.data, encoding)
-        break
-      case 'N':
-        return this.fromNMEA0183.write(msg.data, encoding)
-        break
-      case 'I':
-        const parsed = JSON.parse(msg.data)
-        this.push(parsed)
-        this.demuxEmitData(parsed)
+      case "C":
+      case "N":
+      case "G":
+        return this.fromNMEA0183.write({line:msg.data, timestamp: msg.timestamp}, encoding)
+      case "I":
+        try {
+          const parsed = JSON.parse(msg.data)
+          this.push(parsed)
+          this.demuxEmitData(parsed)
+        } catch (e) {
+          console.error(e)
+        }
         break
       default:
-        console.log("Unrecognized discriminator")
+        console.log("Unrecognized discriminator:" + msg.discriminator)
     }
   } finally {
     done()

@@ -14,6 +14,25 @@
  * limitations under the License.
  */
 
+ /* Usage: This pipeElement takes any TCP stream and passes it to the next pipeElement.
+ * It takes the options "host" and "port" and optionally "reconnect" (default true) and "maxRetries" (default 10)
+ * Example:
+
+ {
+   "type": "providers/udp",
+   "options": {
+     "port": 12345
+   },
+   "optionMappings": [
+     {
+       "fromAppProperty": "argv.udpport",
+       "toOption": "port"
+     }
+   ]
+ },
+
+ */
+
 var Transform = require('stream').Transform;
 const debug = require('debug')('signalk-server:udp-provider')
 

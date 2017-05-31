@@ -14,6 +14,16 @@
  * limitations under the License.
  */
 
+ /* Usage:
+ *  This is part of a PipedProvider that splits the input into separate lines and passes one line at a time to the next provider.
+ * Takes no options.
+
+ {
+   "type": "providers/liner"
+ },
+
+ */
+
 var Transform = require('stream').Transform;
 
 
@@ -46,7 +56,7 @@ Liner.prototype._transform = function(chunk, encoding, done) {
 
 Liner.prototype._flush = function(done) {
   if (this._lastLineData) {
-    outputLine.call(this, this._lastLineData);
+    this.push(this._lastLineData)
   }
 
   this._lastLineData = null;

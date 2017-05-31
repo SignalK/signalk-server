@@ -64,7 +64,6 @@
     "n2k-signalk": "0.0.1-1",
     "nmea0183-signalk": "github:signalk/nmea0183-signalk",
     "node-gpsd": "^0.3.0",
-    "node-uuid": "^1.4.3",
     "pem": "^1.8.1",
     "primus": "^7.0.0",
     "sailgauge": "github:signalk/sailgauge",
@@ -82,7 +81,7 @@
     "through": ">=2.2.7 <3",
     "winston": "^2.3.0",
     "winston-daily-rotate-file": "^1.4.4",
-    "ws": "^2.0.3"
+    "ws": "^3.0.0"
   },
   "devDependencies": {
     "chai": "^3.2.0",

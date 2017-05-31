@@ -19,6 +19,23 @@
  *
  */
 
+ /* Usage:
+ * As part of a PipedProvider in a settings file. Lets you pass a command to the server, as set in the options. 
+ * Also allows writing to stdout, for example with actisense-serial N2K data
+ * see https://github.com/tkurki/cassiopeia-settings/blob/master/signalk-server-settings.json
+ * Example from https://github.com/SignalK/signalk-server-node/blob/master/settings/actisense-serial-settings.json#L12
+
+  {
+   "type": "providers/execute",
+      "options": {
+        "command": "actisense-serial /dev/tty.usbserial-1FD34"
+      }
+  }
+  
+ *
+ * It may also be other commands such as "./aisdeco --gain 33.8 --freq-correction 60 --freq 161975000 --freq 162025000 --net 30007 --udp 5.9.207.224:5351" for starting an AID reception with a USB SRD dongle
+ */
+
 var Transform = require('stream').Transform;
 var debug = require('debug')('signalk:executor');
 
