@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [[ $EUID > 0 ]]
+  then echo "Please run as root"
+  exit
+fi
+
 echo "ARE YOU SURE YOU WANT TO DELETE ANY CONFIGURATION"
 echo "EXISTING AND SET UP A NEW STARTUP SERVICE?"
 echo ""
