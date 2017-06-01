@@ -150,6 +150,13 @@ Server Plugins
 
 Plugin configuration interface is at [/plugins/configure](http://localhost:3000/plugins/configure/). See [Server Plugins](SERVERPLUGINS.md) for more information.
 
+Freeboard-sk
+-------
+To install freeboard-sk run ```npm install https://github.com/SignalK/freeboard-sk.git``` from your node server directory.
+Add  `"charts": true` and `"webapps": true` to the `interfaces` section of your settings file.
+Get your charts and process them using the instructions at https://github.com/rob42/freeboard-installer.
+Create a directory at public/mapcache and then a directory using the id of the chart, for example, public/mapcache/12272_1.
+Then unzip the chart into that directory.
 
 Changelog
 ---------
