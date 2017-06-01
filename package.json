@@ -53,6 +53,7 @@
     "express": "^4.10.4",
     "express-namespace": "^0.1.1",
     "flatmap": "0.0.3",
+    "freeboardk": "github:signalk/freeboard-sk",
     "httpolyglot": "^0.1.2",
     "instrumentpanel": "github:signalk/instrumentpanel",
     "lodash": "^4.17.4",
