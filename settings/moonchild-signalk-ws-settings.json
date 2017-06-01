@@ -1,0 +1,48 @@
+{
+        "vessel": {
+                "name"  : "Moonchild",
+                "brand" : "Catalina",
+                "type"  : "320",
+                "uuid"  : "self",
+
+                "dimensions": {
+                        "length": 9.9,
+                        "width": 3.6,
+                        "mast": 14.5,
+                        "depthTransducer": 0.6,
+                        "keel": 1.8
+                }
+        },
+    "mdns": true,
+	"interfaces": {
+    "rest": false,
+    "ws": true,
+    "bower": false,
+    "tcp": false,
+    "nmea-tcp": false
+  },
+
+  "pipedProviders": [{
+    "id": "SignalkWs",
+    "pipeElements": [
+       {
+         "type": "providers/signalk-ws",
+         "options": {
+           "host": "localhost",
+           "port": "1923",
+           "path": "/signalk/v1/stream"
+         },
+          "optionMappings": [
+            {
+             "fromAppProperty": "selfId",
+             "toOption": "selfId"
+            },
+            {
+             "fromAppProperty": "selfType",
+             "toOption": "selfType"
+            }
+          ]
+       }
+    ]
+  }]
+}
