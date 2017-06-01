@@ -1,6 +1,16 @@
 ## Change Log
 
-### upcoming (2017/04/02 17:05 +00:00)
+### upcoming (2017/06/01 19:13 +00:00)
+- [#185](https://github.com/SignalK/signalk-server-node/pull/185) fix: handle vessels.self context properly (@tkurki)
+- [#181](https://github.com/SignalK/signalk-server-node/pull/181) fix: use host & port from request in /signalk (@tkurki)
+- [#183](https://github.com/SignalK/signalk-server-node/pull/183) Update ws to the latest version 🚀 (@greenkeeper[bot])
+- [#184](https://github.com/SignalK/signalk-server-node/pull/184) feature: support timestamped 0183 playback with Multiplexedlog (@tkurki)
+- [#175](https://github.com/SignalK/signalk-server-node/pull/175) Deltas from tcp (@tkurki)
+- [#178](https://github.com/SignalK/signalk-server-node/pull/178) Add emit to n2k analyzer (@sbender9)
+- [#176](https://github.com/SignalK/signalk-server-node/pull/176) Update signalk-schema to the latest version 🚀 (@greenkeeper[bot])
+- [#174](https://github.com/SignalK/signalk-server-node/pull/174) fix: do not set source.label if dollarsource (@tkurki)
+- [#173](https://github.com/SignalK/signalk-server-node/pull/173) fix: Simulator must be a Transform stream to support pipe() (@tkurki)
+- [#172](https://github.com/SignalK/signalk-server-node/pull/172) fix: always consume pipeElement output with .pipe(devnull) (@tkurki)
 - [#170](https://github.com/SignalK/signalk-server-node/pull/170) Update primus to the latest version 🚀 (@greenkeeper[bot])
 - [#160](https://github.com/SignalK/signalk-server-node/pull/160) feature: Add npm based webapps in favor of bower (@tkurki)
 - [#168](https://github.com/SignalK/signalk-server-node/pull/168) Update signalk-schema to the latest version 🚀 (@greenkeeper[bot])
