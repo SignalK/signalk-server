@@ -1,7 +1,8 @@
 #!/bin/bash
 
 if [[ $EUID > 0 ]]
-  then echo "Please run as root if you want this server configuration to run at every startup"
+  then echo "Please run as root if you want this server configuration to run at every startup, type:"
+  echo "\"sudo bash rpi-setup.sh\""
   echo ""
 fi
 
