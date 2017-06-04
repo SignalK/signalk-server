@@ -1,8 +1,8 @@
 #!/bin/bash
 
 if [[ $EUID > 0 ]]
-  then echo "Please run as root"
-  exit
+  then echo "Please run as root if you want this server configuration to run at every startup"
+  echo ""
 fi
 
 echo "ARE YOU SURE YOU WANT TO DELETE ANY CONFIGURATION"
@@ -39,8 +39,7 @@ then
   echo "UUID=$UUID"
 else
   UUID=$( cat /proc/sys/kernel/random/uuid)
-  sudo touch $UUIDFile
-  sudo echo $UUID > $UUIDFile
+  echo $UUID > $UUIDFile
   echo "UUID generated: $UUID"
 fi
 
