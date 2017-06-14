@@ -122,7 +122,7 @@ settings/volare-udp-settings provides an example of NMEA0183 input over UDP port
 
 ### GPSD
 
-Please see [example settings files](https://github.com/SignalK/signalk-server-node/tree/master/settings).
+Please see [example settings files](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-gpsd-settings.json).
 
 
 Bonjour support
@@ -138,7 +138,7 @@ The server can also automatically discover other Signal K devices and connect to
 
 HTTPS
 -----
-You can use a self generated certificate simply by enabling SSL with `"ssl":true` in the [settings file](https://github.com/SignalK/signalk-server-node/tree/master/settings/aava-ssl-file-settings.json). If no `ssl-key.pem` & `ssl-cert.pem` files are found under settings they will be created.
+You can use a self generated certificate simply by enabling SSL with `"ssl":true` in the [settings file](https://github.com/SignalK/signalk-server-node/blob/master/settings/aava-non-ssl-file-settings.json#L9). If no `ssl-key.pem` & `ssl-cert.pem` files are found under settings they will be created.
 
 Logging
 -------
