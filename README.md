@@ -106,7 +106,7 @@ Furthermore you can use data from a Signal K server with the `providers/mdns-ws`
  
 ### File
 
-An input from a file uses the `providers/filestream`. The options to change are `filename` and `fromAppProperty` ,see [NMEA0183](..blob/master/settings/volare-file-settings.json#L23-L34) and [N2K](../blob/master/settings/multiple-sources.json#L81-L82) examples.
+An input from a file uses the `providers/filestream`. The options to change are `filename` and `fromAppProperty` ,see [NMEA0183](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-file-settings.json#L23-L34) and [N2K](https://github.com/SignalK/signalk-server-node/blob/master/settings/multiple-sources.json#L81-L82) examples.
 
 ### Serial
 
@@ -122,7 +122,7 @@ settings/volare-udp-settings provides an example of NMEA0183 input over UDP port
 
 ### GPSD
 
-Please see [example settings files](https://github.com/SignalK/signalk-server-node/tree/master/settings).
+Please see [example settings files](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-gpsd-settings.json).
 
 
 Bonjour support
@@ -138,18 +138,25 @@ The server can also automatically discover other Signal K devices and connect to
 
 HTTPS
 -----
-You can use a self generated certificate simply by enabling SSL with `"ssl":true` in the [settings file](./tree/master/settings/aava-ssl-file-settings.json). If no `ssl-key.pem` & `ssl-cert.pem` files are found under settings they will be created.
+You can use a self generated certificate simply by enabling SSL with `"ssl":true` in the [settings file](https://github.com/SignalK/signalk-server-node/blob/master/settings/aava-non-ssl-file-settings.json#L9). If no `ssl-key.pem` & `ssl-cert.pem` files are found under settings they will be created.
 
 Logging
 -------
 
-You can log all the input data in pre-Signal K format by adding the `log` element to your pipeElement pipeline. It creates hourly files with the data from all the configured providers, interleaved/multiplexed with one message per line. The multiplexed log files can be played back with `multiplexedlog` pipeElement element. Please beware the standard discriminators in [multiplexedlog](../blob/master/providers/multiplexedlog.js). For extensive use of logging, please see [Cassiopeia](https://github.com/tkurki/cassiopeia-settings/blob/master/signalk-server-settings.json)
+You can log all the input data in pre-Signal K format by adding the `log` element to your pipeElement pipeline. It creates hourly files with the data from all the configured providers, interleaved/multiplexed with one message per line. The multiplexed log files can be played back with `multiplexedlog` pipeElement element. Please beware the standard discriminators in [multiplexedlog](https://github.com/SignalK/signalk-server-node/blob/master/providers/multiplexedlog.js). For extensive use of logging, please see [Cassiopeia](https://github.com/tkurki/cassiopeia-settings/blob/master/signalk-server-settings.json)
 
 Server Plugins
 -------
 
 Plugin configuration interface is at [/plugins/configure](http://localhost:3000/plugins/configure/). See [Server Plugins](SERVERPLUGINS.md) for more information.
 
+Freeboard-sk
+-------
+To install freeboard-sk run ```npm install https://github.com/SignalK/freeboard-sk.git``` from your node server directory.
+Add  `"charts": true` and `"webapps": true` to the `interfaces` section of your settings file.
+Get your charts and process them using the instructions at https://github.com/rob42/freeboard-installer.
+Create a directory at public/mapcache and then a directory using the id of the chart, for example, public/mapcache/12272_1.
+Then unzip the chart into that directory.
 
 Changelog
 ---------

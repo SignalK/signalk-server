@@ -8,10 +8,10 @@ function getDelta(overwrite) {
   const delta = {
     "updates": [
       {
+        "timestamp": "2014-05-03T09:14:11.000Z",
         "source": {
           "pgn": 128275,
           "label": "/dev/actisense",
-          "timestamp": "2014-05-03T09:14:11.000Z",
           "src": "115"
         },
         "values": [
@@ -24,9 +24,9 @@ function getDelta(overwrite) {
           }
         ]
       }, {
+        "timestamp": "2014-05-03T09:14:11.001Z",
         "source": {
           "label": "/dev/actisense",
-          "timestamp": "2014-05-03T09:14:11.000Z",
           "src": "115",
           "pgn": 128267
         },
@@ -80,7 +80,9 @@ describe('Subscriptions', _ => {
         }))
       ])
     }).then(results => {
-      assert(JSON.parse(results[0]).updates[0].source.pgn === 128275)
+      const deltaFromWs = JSON.parse(results[0])
+      assert(deltaFromWs.updates[0].source.pgn === 128275)
+      assert.equal(deltaFromWs.updates[0].timestamp, "2014-05-03T09:14:11.000Z")
 
       return Promise.all([
         wsPromiser.nextMsg(),
@@ -206,6 +208,7 @@ describe('Subscriptions', _ => {
       assert(delta.updates.length === 1, "Receives just one update")
       assert(delta.updates[0].values.length === 1, "Receives just one value")
       assert(delta.context === 'vessels.' + self)
+      assert(delta.updates[0].timestamp, "2014-05-03T09:14:11.001Z")
 
       return Promise.all([
         wsPromiser.nextMsg(),

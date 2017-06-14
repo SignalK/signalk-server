@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [[ $EUID > 0 ]]
+  then echo "Please run as root if you want this server configuration to run at every startup, type:"
+  echo "\"sudo bash rpi-setup.sh\""
+  echo ""
+fi
+
 echo "ARE YOU SURE YOU WANT TO DELETE ANY CONFIGURATION"
 echo "EXISTING AND SET UP A NEW STARTUP SERVICE?"
 echo ""
@@ -34,8 +40,7 @@ then
   echo "UUID=$UUID"
 else
   UUID=$( cat /proc/sys/kernel/random/uuid)
-  sudo touch $UUIDFile
-  sudo echo $UUID > $UUIDFile
+  echo $UUID > $UUIDFile
   echo "UUID generated: $UUID"
 fi
 
