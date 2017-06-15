@@ -8,8 +8,9 @@ export default(props) => {
   const schema = JSON.parse(JSON.stringify(props.plugin.schema))
   var uiSchema = {}
 
-  if ( typeof props.plugin.uiSchema !== 'undefined' )
+  if ( typeof props.plugin.uiSchema !== 'undefined' ) {
     uiSchema = JSON.parse(JSON.stringify(props.plugin.uiSchema))
+  }
   
   const topSchema = {
     type: "object",
