@@ -6,6 +6,12 @@ import Form from "react-jsonschema-form";
 
 export default(props) => {
   const schema = JSON.parse(JSON.stringify(props.plugin.schema))
+  var uiSchema = {}
+
+  if ( typeof props.plugin.uiSchema !== 'undefined' ) {
+    uiSchema['configuration'] = JSON.parse(JSON.stringify(props.plugin.uiSchema))
+  }
+  
   const topSchema = {
     type: "object",
     properties: {
@@ -24,7 +30,7 @@ export default(props) => {
     }
   }
 
-  return <Form schema={topSchema} formData={props.plugin.data || {}} onSubmit={submitData => {
+  return <Form schema={topSchema} uiSchema={uiSchema} formData={props.plugin.data || {}} onSubmit={submitData => {
     props.onSubmit(submitData.formData)
   }}/>
 }
