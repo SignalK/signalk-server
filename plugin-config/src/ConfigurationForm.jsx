@@ -9,7 +9,7 @@ export default(props) => {
   var uiSchema = {}
 
   if ( typeof props.plugin.uiSchema !== 'undefined' ) {
-    uiSchema = JSON.parse(JSON.stringify(props.plugin.uiSchema))
+    uiSchema['configuration'] = JSON.parse(JSON.stringify(props.plugin.uiSchema))
   }
   
   const topSchema = {
