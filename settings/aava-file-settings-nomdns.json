@@ -1,11 +1,4 @@
 {
-  "vessel": {
-    "name": "Aava",
-    "brand": "Arcona",
-    "type": "Arcona 34",
-    "uuid"	: "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d"
-  },
-
   "port": 3001,
 
   "pipedProviders": [{

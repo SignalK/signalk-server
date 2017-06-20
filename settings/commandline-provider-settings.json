@@ -1,9 +1,4 @@
 {
-  "vessel": {
-    "name": "Commander",
-    "uuid"	: "345678912"
-  },
-
   "pipedProviders": [
   {
     "id": "commandline-sample",
