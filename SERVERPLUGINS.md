@@ -12,6 +12,7 @@ Plugin examples include
 - [signalk-push-notifications](https://github.com/sbender9/signalk-push-notifications) - plugin that pushes SignalK notifications to Amazon SNS
 - [signalk-to-nmea2000](https://github.com/sbender9/signalk-to-nmea2000) - convert Signal K to NMEA2000
 - [signalk-ifttt-notifications](https://github.com/sbender9/signalk-ifttt-notifications) - Trigger ifttt actions when SignalK notifications are fired
+- [signalk-n2kais-to-nmea0183](https://github.com/sbender9/signalk-n2kais-to-nmea0183) - converts NMEA2000 AIS messages to NMEA0183
 
 Plugins
 - are installed separately from an npm dependency (npm supports [GitHub hosted dependencies](https://docs.npmjs.com/files/package.json#github-urls))

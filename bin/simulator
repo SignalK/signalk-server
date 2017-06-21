@@ -1,0 +1,30 @@
+#!/bin/bash
+
+mkdir -p plugin-config-data
+
+if [ ! -f node_modules/signalk-simulator ]; then
+  npm install signalk/simulatorplugin
+fi
+
+if [ ! -f plugin-config-data/simulator.json ]; then
+  cat >plugin-config-data/simulator.json <<End-of-message
+{
+  "enabled": true,
+  "configuration": {
+    "items": [
+      {
+        "path": "navigation.speedOverGround",
+        "minValue": 0,
+        "maxValue": 10,
+        "dataPeriod": 60,
+        "outputPeriod": 2
+      }
+    ]
+  }
+}
+End-of-message
+fi
+
+
+DIR=`dirname $0`
+${DIR}/signalk-server -s ${DIR}/../settings/simulator.json $*
