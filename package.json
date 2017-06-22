@@ -84,7 +84,13 @@
     "winston": "^2.3.0",
     "winston-daily-rotate-file": "^1.4.4",
     "ws": "^3.0.0",
-    "xml2js": "^0.4.17"
+    "xml2js": "^0.4.17",
+    "passport": "^0.3.2",
+    "passport-local": "^1.0.0",
+    "connect-flash": "^0.1.1",
+    "cookie-parser": "^1.4.3",
+    "express-session": "^1.15.3",
+    "passport-jwt": "^2.2.1"
   },
   "devDependencies": {
     "chai": "^3.2.0",
