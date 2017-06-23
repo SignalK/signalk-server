@@ -11,6 +11,7 @@ Here is an example:
     "rest": true,
     "ws": true,
     "jwtSecretKey": "tyPaYnCtpZLZjNXyLRKnspZHQyLGZUgkYvtwE7quwZDaZmAnqpKntRqDjTciVazV",
+    "jwtExpiration":  "1h",
     "users": [
       {
         "username": "admin",
@@ -52,6 +53,8 @@ JWT Usage
 When JWT is turned on, all requests require a valid token to be present. 
 
 JWT requires a secret key, which is the `jwtSecretKey` in the example above. This can be any string, but it's recommended to use a good password generator that can generate a long string.
+
+JWT tokens should have an expriation time, this is set using the `jwtExpiration` setting above. This defaults to 1 hour.
 
 Getting a token
 ---------------
