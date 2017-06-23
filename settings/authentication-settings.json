@@ -45,6 +45,7 @@
     "rest": true,
     "ws": true,
     "jwtSecretKey": "tyPaYnCtpZLZjNXyLRKnspZHQyLGZUgkYvtwE7quwZDaZmAnqpKntRqDjTciVazV",
+    "jwtExpiration":  "5m",
     "users": [
       {
         "username": "admin",
