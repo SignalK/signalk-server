@@ -29,11 +29,24 @@
     "marine",
     "nautic"
   ],
-  "author": "Fabian Tollenaar <fabian@starting-point.nl>",
+  "author": "Teppo Kurki <teppo.kurki@iki.fi>",
   "contributors": [
     {
-      "name": "Teppo Kurki",
-      "email": "teppo.kurki@iki.fi"
+      "name": "Fabian Tollenaar",
+      "email": "fabian@starting-point.nl"
+    },
+    {
+      "name": "Scott Bender",
+      "email": "scott@scottbender.net"
+    },
+    {
+      "name": "Joachim Bakke"
+    },
+    {
+      "name": "Tim Mathews"
+    },
+    {
+      "name": "Pavel Kalian"
     }
   ],
   "license": "Apache-2.0",
@@ -84,7 +97,8 @@
     "winston": "^2.3.0",
     "winston-daily-rotate-file": "^1.4.4",
     "ws": "^3.0.0",
-    "xml2js": "^0.4.17"
+    "xml2js": "^0.4.17",
+    "compare-versions": "^3.0.1"
   },
   "devDependencies": {
     "chai": "^3.2.0",

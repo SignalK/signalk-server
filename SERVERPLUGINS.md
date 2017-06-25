@@ -25,13 +25,13 @@ The module must export a single `function(app)` that must return an object with 
 
 See [MarineTraffic Reporter](https://github.com/tkurki/marinetrafficreporter) for an example.
 
-##HTTP API
+## HTTP API
 
-###`GET /plugins/`
+### `GET /plugins/`
 
 List of installed plugins with their configuration data.
 
-###`GET /plugins/<pluginid`
+### `GET /plugins/<pluginid`
 
 ```
 {
@@ -41,6 +41,6 @@ List of installed plugins with their configuration data.
 }
 ```
 
-###`POST /plugins/<pluginid/configure`
+### `POST /plugins/<pluginid/configure`
 
 Save configuration data for a plugin. Stops and starts the plugin as a side effect.
