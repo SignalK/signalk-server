@@ -89,7 +89,7 @@ describe('Server', function() {
       });
 
     })
-  })
+  }).timeout(4000)
 });
 
 function startServerP(port) {
