@@ -19,13 +19,23 @@
   </head>
   <body>
     <div class="container">
-      <h1>Signal K Server</h1>
+      <h1>Signal K Server Login</h1>
 
-        <ul class="list-group">
-          <li class="list-group-item"><a href="/apps">Browser Apps</a></li>
-          <li class="list-group-item"><a href="/plugins/configure">Server Plugins Configuration</a></li>
-        </ul>
-        <a href="/logout"><button type="button" class="btn-primary">Logout</button></a>
+      <form action="/login" method="post">
+        <div>
+          <label>Username:</label>
+          <input type="text" name="username"/>
+        </div>
+        <div>
+          <label>Password:</label>
+          <input type="password" name="password"/>
+        </div>
+        <div>
+          <input type="submit" value="Log In"/>
+        </div>
+      </form>
+
+      </div>
     </div>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="/jquery/dist/jquery.min.js"</script>
