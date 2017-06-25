@@ -97,7 +97,8 @@
     "winston": "^2.3.0",
     "winston-daily-rotate-file": "^1.4.4",
     "ws": "^3.0.0",
-    "xml2js": "^0.4.17"
+    "xml2js": "^0.4.17",
+    "compare-versions": "^3.0.1"
   },
   "devDependencies": {
     "chai": "^3.2.0",
