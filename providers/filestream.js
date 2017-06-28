@@ -33,42 +33,42 @@
 
  */
 
-var path = require('path');
-var PassThrough = require('stream').PassThrough;
+var path = require("path");
+var PassThrough = require("stream").PassThrough;
 
 function EndIgnoringPassThrough() {
   PassThrough.call(this);
 }
 
-
-require('util').inherits(EndIgnoringPassThrough, PassThrough);
-EndIgnoringPassThrough.prototype.end = function() {}
-
+require("util").inherits(EndIgnoringPassThrough, PassThrough);
+EndIgnoringPassThrough.prototype.end = function() {};
 
 var FileStream = function(options) {
   this.options = options;
-  this.keepRunning = typeof options.keepRunning === "undefined" ? true : options.keepRunning
-}
-
+  this.keepRunning =
+    typeof options.keepRunning === "undefined" ? true : options.keepRunning;
+};
 
 FileStream.prototype.pipe = function(pipeTo) {
   this.pipeTo = pipeTo;
   this.endIgnoringPassThrough = new EndIgnoringPassThrough();
   this.endIgnoringPassThrough.pipe(pipeTo);
   this.startStream();
-}
+};
 
 FileStream.prototype.startStream = function() {
-  this.filestream = require('fs').createReadStream(path.join(__dirname, '..', this.options.filename));
-  if(this.keepRunning) {
-    this.filestream.on('end', this.startStream.bind(this));
+  this.filestream = require("fs").createReadStream(
+    path.join(__dirname, "..", this.options.filename)
+  );
+  if (this.keepRunning) {
+    this.filestream.on("end", this.startStream.bind(this));
   }
-  this.filestream.pipe(this.endIgnoringPassThrough)
-}
+  this.filestream.pipe(this.endIgnoringPassThrough);
+};
 
 FileStream.prototype.end = function() {
   this.pipeTo.end();
   this.filestream.close();
-}
+};
 
 module.exports = FileStream;

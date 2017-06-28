@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- /* Usage: this is the pipeElement that transforms NMEA0183 input to Signal K deltas
+/* Usage: this is the pipeElement that transforms NMEA0183 input to Signal K deltas
  * It does not take any options, as selfId and selfType are fetched from app properties
  * Example:
 
@@ -34,44 +34,43 @@
 
  */
 
-var Transform = require('stream').Transform;
+var Transform = require("stream").Transform;
 
 function ToSignalK(options) {
   Transform.call(this, {
     objectMode: true
   });
 
-  this.parser = new(require('nmea0183-signalk').Parser)(options);
+  this.parser = new (require("nmea0183-signalk")).Parser(options);
 
   var that = this;
-  this.parser.on('nmea0183', function(sentence) {
-    that.emit('nmea0183', sentence)
+  this.parser.on("nmea0183", function(sentence) {
+    that.emit("nmea0183", sentence);
   });
-  this.parser.on('delta', function (delta) {
+  this.parser.on("delta", function(delta) {
     if (that.timestamp) {
       delta.updates.forEach(update => {
-        update.timestamp = that.timestamp
-      })
+        update.timestamp = that.timestamp;
+      });
     }
     that.push(delta);
   });
 }
 
-require('util').inherits(ToSignalK, Transform);
+require("util").inherits(ToSignalK, Transform);
 
 ToSignalK.prototype._transform = function(chunk, encoding, done) {
   try {
-    if (typeof chunk === 'object' && typeof chunk.line === 'string') {
-      this.timestamp = new Date(Number(chunk.timestamp))
-      this.parser.write(chunk.line + '\n')
+    if (typeof chunk === "object" && typeof chunk.line === "string") {
+      this.timestamp = new Date(Number(chunk.timestamp));
+      this.parser.write(chunk.line + "\n");
     } else {
-      this.parser.write(chunk + '\n');
+      this.parser.write(chunk + "\n");
     }
   } catch (ex) {
     console.error(ex);
   }
   done();
-}
-
+};
 
 module.exports = ToSignalK;
