@@ -23,7 +23,8 @@
          "type": "providers/serialport",
          "options": {
            "device": "/dev/ttyUSB0",
-           "baudrate": 4800
+           "baudrate": 4800,
+           "toStdout": ["nmea0183out1", "nmea0183out2"]
          },
          "optionMappings": [
            {
@@ -39,6 +40,9 @@
        },
        {
           "type": "providers/nmea0183-signalk",
+          "options":{
+            "sentenceEvent": "nmea0183in1"
+          },
           "optionMappings": [
             {
              "fromAppProperty": "selfId",
