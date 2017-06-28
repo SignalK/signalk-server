@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- /* Usage: This  pipeElement logs the output of the previous pipeElement. If placed in the end of the pipe, it will log Signal K deltas
+/* Usage: This  pipeElement logs the output of the previous pipeElement. If placed in the end of the pipe, it will log Signal K deltas
  * Takes the options "logdir" and "discriminator". The log files are named from date and hour, and a new file is created every hour
  * Please note the standard discriminators used for playback with providers/multiplexedlog.js
  * Example:
@@ -29,8 +29,7 @@
 
 */
 
-
-var Transform = require('stream').Transform;
+var Transform = require("stream").Transform;
 
 function Log(options) {
   Transform.call(this, {
@@ -39,39 +38,48 @@ function Log(options) {
   this.logger = createLogger(options.logdir, options.discriminator);
 }
 
-require('util').inherits(Log, Transform);
+require("util").inherits(Log, Transform);
 
 Log.prototype._transform = function(msg, encoding, done) {
   this.push(msg);
   try {
     this.logger.info(msg.updates ? JSON.stringify(msg) : msg.toString());
   } catch (e) {
-    console.error(e)
+    console.error(e);
   }
   done();
 };
 
 function createLogger(logdir, discriminator) {
   var notEmptyDiscriminator = discriminator || "";
-  var winston = require('winston'),
+  var winston = require("winston"),
     transports = [];
 
-  require('winston-daily-rotate-file')
+  require("winston-daily-rotate-file");
 
-  var logfilename = require('path').join(
-    (logdir.indexOf('/') === 0 ? '' : (__dirname + "/../") ) +
-    logdir +
-    "/signalk-rawdata.log");
-  transports.push(new winston.transports.DailyRotateFile({
-    name: 'file',
-    datePattern: '.yyyy-MM-ddTHH',
-    filename: logfilename,
-    json: false,
-    formatter: function(options) {
-      // Return string will be passed to logger.
-      return new Date().getTime() + ';' + notEmptyDiscriminator + ';' + options.message;
-    }
-  }));
+  var logfilename = require("path").join(
+    (logdir.indexOf("/") === 0 ? "" : __dirname + "/../") +
+      logdir +
+      "/signalk-rawdata.log"
+  );
+  transports.push(
+    new winston.transports.DailyRotateFile({
+      name: "file",
+      datePattern: ".yyyy-MM-ddTHH",
+      filename: logfilename,
+      json: false,
+      formatter: function(options) {
+        // Return string will be passed to logger.
+        return (
+          new Date().getTime() +
+          ";" +
+          notEmptyDiscriminator +
+          ";" +
+          options.message
+        );
+      }
+    })
+  );
 
   return new winston.Logger({
     transports: transports

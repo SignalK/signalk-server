@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- /* Usage: This pipeElement takes any TCP stream and passes it to the next pipeElement.
+/* Usage: This pipeElement takes any TCP stream and passes it to the next pipeElement.
  * It takes the options "host" and "port" and optionally "reconnect" (default true) and "maxRetries" (default 10)
  * Example:
 
@@ -33,8 +33,8 @@
 
  */
 
-var Transform = require('stream').Transform;
-const debug = require('debug')('signalk-server:udp-provider')
+var Transform = require("stream").Transform;
+const debug = require("debug")("signalk-server:udp-provider");
 
 function Udp(options) {
   Transform.call(this, {
@@ -43,22 +43,22 @@ function Udp(options) {
   this.options = options;
 }
 
-require('util').inherits(Udp, Transform);
+require("util").inherits(Udp, Transform);
 
 Udp.prototype.pipe = function(pipeTo) {
   Udp.super_.prototype.pipe.call(this, pipeTo);
 
-  var socket = require('dgram').createSocket('udp4');
+  var socket = require("dgram").createSocket("udp4");
   var self = this;
-  socket.on('message', function(message, remote) {
-    debug(message.toString())
+  socket.on("message", function(message, remote) {
+    debug(message.toString());
     self.push(message);
   });
   socket.bind(this.options.port);
-}
+};
 
 Udp.prototype._transform = function(chunk, encoding, done) {
   done();
-}
+};
 
 module.exports = Udp;

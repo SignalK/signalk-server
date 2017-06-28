@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- /* Usage:
+/* Usage:
  * As part of a PipedProvider in a settings file. Lets you pass json strings such as Signal K deltas coming from other sources such as TCP, UDP, Serial etc. Usually last in the list of providers for this pipe
  * Takes no options:
 
@@ -25,7 +25,7 @@
  *
  */
 
-var Transform = require('stream').Transform;
+var Transform = require("stream").Transform;
 
 function FromJson() {
   Transform.call(this, {
@@ -33,19 +33,19 @@ function FromJson() {
   });
 }
 
-require('util').inherits(FromJson, Transform);
+require("util").inherits(FromJson, Transform);
 
 FromJson.prototype._transform = function(chunk, encoding, done) {
   var parsed = null;
   try {
     parsed = JSON.parse(chunk.toString());
-  } catch (ex) {
+  } catch (ex) {
     console.error("Could not parse JSON:" + chunk.toString());
   }
   if (parsed) {
-    this.push(parsed)
+    this.push(parsed);
   }
   done();
-}
+};
 
 module.exports = FromJson;

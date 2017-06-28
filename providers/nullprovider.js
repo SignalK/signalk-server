@@ -18,15 +18,14 @@
  *
  */
 
-const Transform = require('stream').Transform;
-
+const Transform = require("stream").Transform;
 
 function NullProvider(options) {
   Transform.call(this, {
     objectMode: true
-  })
+  });
 }
 
-require('util').inherits(NullProvider, Transform)
+require("util").inherits(NullProvider, Transform);
 
 module.exports = NullProvider;

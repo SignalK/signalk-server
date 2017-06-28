@@ -14,18 +14,17 @@
  * limitations under the License.
  */
 
-var Transform = require('stream').Transform;
+var Transform = require("stream").Transform;
 
-var toDelta = require('n2k-signalk').toDelta;
+var toDelta = require("n2k-signalk").toDelta;
 
-require('util').inherits(ToSignalK, Transform);
+require("util").inherits(ToSignalK, Transform);
 
 function ToSignalK() {
   Transform.call(this, {
     objectMode: true
   });
 }
-
 
 ToSignalK.prototype._transform = function(chunk, encoding, done) {
   try {
@@ -37,7 +36,6 @@ ToSignalK.prototype._transform = function(chunk, encoding, done) {
     console.error(ex);
   }
   done();
-}
-
+};
 
 module.exports = ToSignalK;

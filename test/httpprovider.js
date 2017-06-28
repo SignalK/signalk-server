@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-var Transform = require('stream').Transform;
-var bodyParser = require('body-parser');
+var Transform = require("stream").Transform;
+var bodyParser = require("body-parser");
 
 function HttpProvider(options) {
   Transform.call(this, {
@@ -24,23 +24,23 @@ function HttpProvider(options) {
   options.app.use(bodyParser.json()); // for parsing application/json
   options.app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
-  options.app.post('/signalk/v1/api/_test/delta', handleDelta.bind(this));
+  options.app.post("/signalk/v1/api/_test/delta", handleDelta.bind(this));
 }
 
-require('util').inherits(HttpProvider, Transform);
+require("util").inherits(HttpProvider, Transform);
 
 HttpProvider.prototype._transform = function(chunk, encoding, done) {
   console.error("HttpProvider._transform is not supposed to be called");
   done();
-}
+};
 
 function outputLine(line) {
   this.push(line);
 }
 
 function handleDelta(req, res, next) {
-	res.send('ok');
-	this.push(req.body);
+  res.send("ok");
+  this.push(req.body);
 }
 
 module.exports = HttpProvider;
