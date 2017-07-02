@@ -14,16 +14,22 @@
  * limitations under the License.
  */
 
- /* Usage: This is the first pipeElement in a PipedProvider. Used to pass data input from Serial to the next pipeElement. 
+/* Usage: This is the first pipeElement in a PipedProvider. Used to pass data input from Serial
+ * to the next pipeElement.
  * Reads data from a serial device and allows writing back to serial with the "toStdout" option 
- * It takes two options; "device" and "baudrate". The "toStdout" option is not mandatory.
+ * It takes two options; "device" and "baudrate".
+ *
+ * The "toStdout" option is not mandatory. It routes events emitted on app with that name to
+ * serial output, followed by newline. toStdout can be a string or an array of strings.
+ *
  * Example:
 
  {
    "type": "providers/serialport",
    "options": {
      "device": "/dev/ttyUSB0",
-     "baudrate": 4800
+     "baudrate": 4800,
+     "toStdout": "nmea0183out1"
    },
    "optionMappings": [
      {
@@ -40,11 +46,12 @@
 
  */
 
-var Transform = require('stream').Transform
-var SerialPort = require('serialport');
+const Transform = require("stream").Transform;
+const SerialPort = require("serialport");
+const isArray = require("lodash").isArray;
 
 function SerialStream(options) {
-  if(!(this instanceof SerialStream)) {
+  if (!(this instanceof SerialStream)) {
     return new SerialStream(options);
   }
 
@@ -56,16 +63,16 @@ function SerialStream(options) {
   this.start();
 }
 
-require('util').inherits(SerialStream, Transform);
+require("util").inherits(SerialStream, Transform);
 
 SerialStream.prototype.start = function() {
-  if(this.serial !== null) {
+  if (this.serial !== null) {
     this.serial.unpipe(this);
     this.serial.removeAllListeners();
     this.serial = null;
   }
 
-  if(this.reconnect === false) {
+  if (this.reconnect === false) {
     return;
   }
 
@@ -74,19 +81,25 @@ SerialStream.prototype.start = function() {
     parser: SerialPort.parsers.readline("\n")
   });
 
-  this.serial.on('open', function() {
-    this.serial.pipe(this);
-  }.bind(this));
+  this.serial.on(
+    "open",
+    function() {
+      this.serial.pipe(this);
+    }.bind(this)
+  );
 
-  this.serial.on('error', function(x) {console.log(x)});
-  this.serial.on('close', this.start.bind(this));
+  this.serial.on("error", function(x) {
+    console.log(x);
+  });
+  this.serial.on("close", this.start.bind(this));
 
   var that = this;
-  const stdOutEvent = this.options.toStdout
-  if(stdOutEvent) {
-    this.options.app.on(stdOutEvent, function(d) {
-      that.serial.write(d + '\n');
-    })
+  const stdOutEvent = this.options.toStdout;
+  if (stdOutEvent) {
+    (isArray(stdOutEvent) ? stdOutEvent : [stdOutEvent]).forEach(event => {
+      console.log(event)
+      that.options.app.on(event, d => that.serial.write(d + "\n"));
+    });
   }
 };
 
