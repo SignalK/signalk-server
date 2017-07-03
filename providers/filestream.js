@@ -35,6 +35,7 @@
 
 var path = require('path');
 var PassThrough = require('stream').PassThrough;
+const fs = require('fs');
 
 function EndIgnoringPassThrough() {
   PassThrough.call(this);
@@ -59,7 +60,17 @@ FileStream.prototype.pipe = function(pipeTo) {
 }
 
 FileStream.prototype.startStream = function() {
-  this.filestream = require('fs').createReadStream(path.join(__dirname, '..', this.options.filename));
+  var filename
+  if ( path.isAbsolute(this.options.filename) ) {
+    filename = this.options.filename
+  } else {
+    filename = path.join(this.options.app.config.configPath, this.options.filename)
+    if( !fs.existsSync(filename) ) {
+      filename = path.join(__dirname, '..', this.options.filename)
+    }
+  }
+  
+  this.filestream = require('fs').createReadStream(filename);
   if(this.keepRunning) {
     this.filestream.on('end', this.startStream.bind(this));
   }
