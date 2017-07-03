@@ -19,7 +19,9 @@ Plugins
 - need usually configuration data delivered via a standard configuration UI
 - can be enabled / disable via configuration UI
 
-In essence a plugin is an npm module with `signalk-node-server-plugin` keyword in the `package.json`. They are installed as usual with `npm install`.
+In essence a plugin is an npm module with `signalk-node-server-plugin` keyword in the `package.json`. They are installed as usual with `npm install` or using the app store.
+
+To keep a plugin off of the app store, also add the `signalk-node-server-no-appstore` keyword to the package.
 
 The module must export a single `function(app)` that must return an object with functions `start(configuration)` and `stop` and a field `schema`. The schema value should be the structure of the plugin's configuration data as [JSON Schema](http://json-schema.org/).
 
