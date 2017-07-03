@@ -57,9 +57,21 @@ You can also configure the path to the settings file with environment variable `
 
 The http port can be configured separately with environment variable `PORT`. You can also [run on port 80 with systemd](https://github.com/tkurki/marinepi-provisioning/blob/d3d624629799a3b96234a90fc42bc22dae4fd3a2/roles/node-app/templates/node_app_systemd_socket.j2). Environment variable NMEA0183PORT sets the NMEA 0183 tcp port.
 
+Storing Configuration Outside The Server Install Directory
+==========================================================
+You can store configuration like the settings file, plugin cofiguration, defaults.js and the mapcache in a directory outside of the server install using the `-c` option (or the `SIGNALK_NODE_CONDFIG_DIR` env variable).
+
+For example, `./bin/signalk-server -c /usr/local/etc/node_server_config -s settings/my-boat.json`
+
+In this case it will find my-boat.json at `/usr/local/etc/node_server_confif/settings/my-boat.json`.
+
+You would also put the charts mapcache directory here under `public/mapcache`.
+
+
 Environment variables
 ---------------------
 - `SIGNALK_NODE_SETTINGS` override the path to the settings file
+- `SIGNALK_NODE_CONDFIG_DIR` override the path to find server configuration files
 - `PORT` override the port for http/ws service
 - `EXTERNALPORT` the port used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
 - `EXTERNALHOST` the host used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
@@ -67,6 +79,7 @@ Environment variables
 - `TCPSTREAMPORT` override the port for the Signal K Streaming (deltas) over TCP
 - `TCPSTREAMADDRESS` override the address the Signal K Stream (deltas) over TCP is listening on
 - `DISABLEPLUGINS` disable all plugins so that they can not be enabled
+
 
 Real Inputs
 ---------------
