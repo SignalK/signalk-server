@@ -16,10 +16,11 @@ Plugin examples include
 
 Plugins
 - are installed separately from an npm dependency (npm supports [GitHub hosted dependencies](https://docs.npmjs.com/files/package.json#github-urls))
+- Will not show up in the App Store until they are published on npm.
 - need usually configuration data delivered via a standard configuration UI
 - can be enabled / disable via configuration UI
 
-In essence a plugin is an npm module with `signalk-node-server-plugin` keyword in the `package.json`. They are installed as usual with `npm install`.
+In essence a plugin is an npm module with `signalk-node-server-plugin` keyword in the `package.json`. They are installed either from the server app store http:localhost:3000/appstore or from the command line with `npm install`.
 
 The module must export a single `function(app)` that must return an object with functions `start(configuration)` and `stop` and a field `schema`. The schema value should be the structure of the plugin's configuration data as [JSON Schema](http://json-schema.org/).
 
