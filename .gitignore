@@ -7,15 +7,3 @@ settings/ssl-key.pem
 settings/ssl-cert.pem
 plugin-config-data
 plugin-config/public/main.js.map
-
-*.js-e
-
-bin/kri
-
-bin/krissie
-
-bin/multiplexed
-
-lib/interfaces/charts.js
-
-lib/interfaces/charts.js
