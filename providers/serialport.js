@@ -98,7 +98,7 @@ SerialStream.prototype.start = function() {
   if (stdOutEvent) {
     (isArray(stdOutEvent) ? stdOutEvent : [stdOutEvent]).forEach(event => {
       console.log(event)
-      that.options.app.on(event, d => that.serial.write(d + "\n"));
+      that.options.app.on(event, d => that.serial.write(d + "\r\n"));
     });
   }
 };
