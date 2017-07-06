@@ -58,6 +58,7 @@
     "baconjs": "^0.7.88",
     "body-parser": "^1.14.1",
     "colors": "^1.1.2",
+    "compare-versions": "^3.0.1",
     "cors": "^2.5.2",
     "debug": "^2.1.0",
     "deep-get-set": "^1.1.0",
@@ -97,8 +98,7 @@
     "winston": "^2.3.0",
     "winston-daily-rotate-file": "^1.4.4",
     "ws": "^3.0.0",
-    "xml2js": "^0.4.17",
-    "compare-versions": "^3.0.1"
+    "xml2js": "^0.4.17"
   },
   "devDependencies": {
     "chai": "^4.0.0",
