@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "description": "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
   "main": "index.js",
   "scripts": {
