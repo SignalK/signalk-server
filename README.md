@@ -150,13 +150,20 @@ Server Plugins
 
 Plugin configuration interface is at [/plugins/configure](http://localhost:3000/plugins/configure/). See [Server Plugins](SERVERPLUGINS.md) for more information.
 
-Freeboard-sk
--------
-To install freeboard-sk run ```npm install https://github.com/SignalK/freeboard-sk.git``` from your node server directory.
-Add  `"charts": true` and `"webapps": true` to the `interfaces` section of your settings file.
+# Charts
+Signal K chart support is built on the idea that a Signal K server can provide metadata about charts, such as name, description and where the actual chart data can be accessed. Then a client app, such as [Freeboard SK](https://www.npmjs.com/package/@signalk/freeboard-sk) or [Tuktuk Plotter](https://www.npmjs.com/package/tuktuk-chart-plotter) can retrieve a list of charts and present them.
+
+SK Node server supports charts in [TMS](https://wiki.osgeo.org/wiki/Tile_Map_Service_Specification) and [MBTiles](https://github.com/mapbox/mbtiles-spec) formats.
+
+## TMS Charts
+
 Get your charts and process them using the instructions at https://github.com/rob42/freeboard-installer.
 Create a directory at public/mapcache and then a directory using the id of the chart, for example, public/mapcache/12272_1.
 Then unzip the chart into that directory.
+
+## MBTiles Charts
+
+MBTiles charts are single files that you can place in public/mapcache. The server will pick them up automatically from there.
 
 Changelog
 ---------
