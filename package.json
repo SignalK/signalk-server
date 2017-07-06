@@ -76,7 +76,7 @@
     "minimist": "^1.1.0",
     "moment": "^2.10.6",
     "morgan": "^1.5.0",
-    "n2k-signalk": "0.0.1-1",
+    "n2k-signalk": "0.0.1-2",
     "nmea0183-signalk": "github:signalk/nmea0183-signalk",
     "node-gpsd": "^0.3.0",
     "pem": "^1.8.1",
