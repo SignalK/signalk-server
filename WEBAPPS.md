@@ -8,8 +8,8 @@ A Signal K webapp is an HTML5 application that runs on a web browser and is typi
 
 There are several prototype level [browser based webapps that are installed during the server installation](http://localhost:3000/apps) such as:
 - [Instrumentpanel](https://github.com/SignalK/instrumentpanel) - Show your boat's live data with customizable gauges you can hide or move around.
-- [freeboard-sk](https://github:signalk/freeboard-sk) - Chart plotting webpage
-- [sailgauge](https://github:signalk/sailgauge) - html page to show sailing-related data on one screen.
+- [freeboard-sk](https://github.com/signalk/freeboard-sk) - Chart plotting webpage
+- [sailgauge](https://github.com/signalk/sailgauge) - html page to show sailing-related data on one screen.
 
 Other apps are published on npm, and appear in the App Store (http://localhost:3000/appstore)
 
