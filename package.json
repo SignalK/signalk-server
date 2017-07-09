@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "description": "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
   "main": "index.js",
   "scripts": {
@@ -58,6 +58,7 @@
     "baconjs": "^0.7.88",
     "body-parser": "^1.14.1",
     "colors": "^1.1.2",
+    "compare-versions": "^3.0.1",
     "cors": "^2.5.2",
     "debug": "^2.1.0",
     "deep-get-set": "^1.1.0",
@@ -76,8 +77,8 @@
     "minimist": "^1.1.0",
     "moment": "^2.10.6",
     "morgan": "^1.5.0",
-    "n2k-signalk": "0.0.1-1",
-    "nmea0183-signalk": "github:signalk/nmea0183-signalk",
+    "n2k-signalk": "0.0.1-2",
+    "nmea0183-signalk": "^0.4.0",
     "node-gpsd": "^0.3.0",
     "pem": "^1.8.1",
     "primus": "^7.0.0",
@@ -97,8 +98,7 @@
     "winston": "^2.3.0",
     "winston-daily-rotate-file": "^1.4.4",
     "ws": "^3.0.0",
-    "xml2js": "^0.4.17",
-    "compare-versions": "^3.0.1"
+    "xml2js": "^0.4.17"
   },
   "devDependencies": {
     "chai": "^4.0.0",

@@ -44,7 +44,10 @@ If you have your own n2k data file from canboat you can use that with `bin/n2k-f
 Now what?
 ---------
 
-Once you have the data streams in place you probably want to use the data or at least see it in a nice format. Some sample webapps are installed during the installation process. They can be accessed at http:localhost:3000/apps. See [Webapps doc](https://github.com/SignalK/signalk-server-node/blob/master/WEBAPPS.md) for more information.
+Once you have the data streams in place you probably want to use the data or at least see it in a nice format. Some sample plugins and apps are installed during the installation process. They can be accessed at http:localhost:3000. This is the landing page of your new Signal K server.
+- Apps or Webapps are mainly web pages for accessing the Signal K output such as instrumentpanel, gauges or maps. See [Webapps doc](https://github.com/SignalK/signalk-server-node/blob/master/WEBAPPS.md) for more information.
+- App Store shows all the Signal K Plugins and Apps that have been published via npm with the right keywords. It also shows their current status on your server and allows you to install and update these.
+- Plugins are web forms to tailor your server to your needs, change parameters or get information from various sources. See [Server Plugins](SERVERPLUGINS.md)
 
 Configuration
 =============
@@ -78,7 +81,7 @@ There are also special pipeElements such as "providers/log" (see below), and "pr
 
 Each PipeElement is configured with `options`. Different PipeElements use different configuration parameters, like for serialport you can configure baud rate and for udp connection the port.
 
-A PipeElement may require some options entry that is available already in the configuration file (`nmea0183-signalk` needs the self id). This can be accomplished with [optionMappings property](https://github.com/SignalK/signalk-server-node/blob/5134ce5f48f25b2b270176f39d3e8e530dedb825/settings/volare-udp-settings.json#L34-L43). 
+A PipeElement may require some options entry that is available already in the configuration file (`nmea0183-signalk` needs the self id). This can be accomplished with [optionMappings property](https://github.com/SignalK/signalk-server-node/blob/5134ce5f48f25b2b270176f39d3e8e530dedb825/settings/volare-udp-settings.json#L34-L43).
 
 You can also use optionMappings property to optionally override `options` entries with command line parameters. For example you can specify the data file for file playback from the command line as `bin/signalk-server -s settings/volare-file-settings.json --nmeafilename=samples/nais400-merrimac.log` with [this configuration](https://github.com/SignalK/signalk-server-node/blob/5134ce5f48f25b2b270176f39d3e8e530dedb825/settings/volare-file-settings.json#L28-L33).
 
@@ -103,7 +106,7 @@ A provider that handles Signal K deltas can be set up with the following element
 - `providers/from_json`
 
 Furthermore you can use data from a Signal K server with the `providers/mdns-ws` source. Without any configuration it will use the Signal K discovery process to discover any Signal K servers in the local network, such as iKommunicate, and connect to it. No other pipeElements are needed. See the [example configuration file](https://github.com/SignalK/signalk-server-node/blob/master/settings/signalk-ws-settings.json). You can also configure `mdns-ws` with `host` and `port`, which will disable the discovery process and make it connect directly to the specified server.
- 
+
 ### File
 
 An input from a file uses the `providers/filestream`. The options to change are `filename` and `fromAppProperty` ,see [NMEA0183](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-file-settings.json#L23-L34) and [N2K](https://github.com/SignalK/signalk-server-node/blob/master/settings/multiple-sources.json#L81-L82) examples.
@@ -150,13 +153,20 @@ Server Plugins
 
 Plugin configuration interface is at [/plugins/configure](http://localhost:3000/plugins/configure/). See [Server Plugins](SERVERPLUGINS.md) for more information.
 
-Freeboard-sk
--------
-To install freeboard-sk run ```npm install https://github.com/SignalK/freeboard-sk.git``` from your node server directory.
-Add  `"charts": true` and `"webapps": true` to the `interfaces` section of your settings file.
+# Charts
+Signal K chart support is built on the idea that a Signal K server can provide metadata about charts, such as name, description and where the actual chart data can be accessed. Then a client app, such as [Freeboard SK](https://www.npmjs.com/package/@signalk/freeboard-sk) or [Tuktuk Plotter](https://www.npmjs.com/package/tuktuk-chart-plotter) can retrieve a list of charts and present them.
+
+SK Node server supports charts in [TMS](https://wiki.osgeo.org/wiki/Tile_Map_Service_Specification) and [MBTiles](https://github.com/mapbox/mbtiles-spec) formats.
+
+## TMS Charts
+
 Get your charts and process them using the instructions at https://github.com/rob42/freeboard-installer.
 Create a directory at public/mapcache and then a directory using the id of the chart, for example, public/mapcache/12272_1.
 Then unzip the chart into that directory.
+
+## MBTiles Charts
+
+MBTiles charts are single files that you can place in public/mapcache. The server will pick them up automatically from there.
 
 Changelog
 ---------
