@@ -6,7 +6,8 @@ function saveData(id, data) {
   fetch('/plugins/' + id + "/config", {
     method: 'POST',
     body: JSON.stringify(data),
-    headers: new Headers({'Content-Type': 'application/json'})
+    headers: new Headers({'Content-Type': 'application/json'}),
+    credentials: 'same-origin'
   }).then((response) => {
     if (response.status != 200) {
       console.log(response)
@@ -14,7 +15,7 @@ function saveData(id, data) {
   })
 }
 
-fetch(`/plugins`).then((response) => {
+fetch(`/plugins`, {credentials: 'same-origin'}).then((response) => {
   if (response.status == 200) {
     response.json().then((plugins) => {
       ReactDOM.render(
