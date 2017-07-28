@@ -78,7 +78,7 @@
     "moment": "^2.10.6",
     "morgan": "^1.5.0",
     "n2k-signalk": "0.0.1",
-    "nmea0183-signalk": "^0.4.0",
+    "nmea0183-signalk": "^0.5.0",
     "node-gpsd": "^0.3.0",
     "pem": "^1.8.1",
     "primus": "^7.0.0",
