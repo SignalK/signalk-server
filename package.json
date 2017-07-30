@@ -83,7 +83,7 @@
     "pem": "^1.8.1",
     "primus": "^7.0.0",
     "sailgauge": "github:signalk/sailgauge",
-    "serialport": "^4.0.3",
+    "serialport": "^5.0.0",
     "set-system-time": "github:tkurki/set-system-time",
     "signalk-client": "0.0.1-4",
     "signalk-playground": "github:signalk/playground",
