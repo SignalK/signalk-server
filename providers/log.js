@@ -29,14 +29,38 @@
 
 */
 
+const Transform = require('stream').Transform;
+const rfs = require('rotating-file-stream');
 
-var Transform = require('stream').Transform;
+const loggers = {};
 
 function Log(options) {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   });
-  this.logger = createLogger(options.logdir, options.discriminator);
+  this.discriminator = options.discriminator || '';
+  if (!loggers[options.logdir]) {
+    const path = require('path').join(
+      (options.logdir.indexOf('/') === 0 ? '' : __dirname + '/../') +
+        options.logdir
+    );
+    const filenameGenerator = (timeParam, index) => {
+      console.log('heppp');
+      const time = timeParam || new Date();
+      const year = time.getFullYear();
+      const month = pad(time.getMonth() + 1);
+      const day = pad(time.getDate());
+      const hour = pad(time.getHours());
+      const result = `signalk-rawdata.log.${year}-${month}-${day}T${hour}`;
+      console.log(result);
+      return result;
+    };
+    loggers[options.logdir] = new rfs(filenameGenerator, {
+      path: path,
+      interval: '1h',
+    });
+  }
+  this.logger = loggers[options.logdir];
 }
 
 require('util').inherits(Log, Transform);
@@ -44,38 +68,22 @@ require('util').inherits(Log, Transform);
 Log.prototype._transform = function(msg, encoding, done) {
   this.push(msg);
   try {
-    this.logger.info(msg.updates ? JSON.stringify(msg) : msg.toString());
+    this.logger.write(
+      new Date().getTime() +
+        ';' +
+        this.discriminator +
+        ';' +
+        (msg.updates ? JSON.stringify(msg) : msg.toString()) +
+        '\n'
+    );
   } catch (e) {
-    console.error(e)
+    console.error(e);
   }
   done();
 };
 
-function createLogger(logdir, discriminator) {
-  var notEmptyDiscriminator = discriminator || "";
-  var winston = require('winston'),
-    transports = [];
-
-  require('winston-daily-rotate-file')
-
-  var logfilename = require('path').join(
-    (logdir.indexOf('/') === 0 ? '' : (__dirname + "/../") ) +
-    logdir +
-    "/signalk-rawdata.log");
-  transports.push(new winston.transports.DailyRotateFile({
-    name: 'file',
-    datePattern: '.yyyy-MM-ddTHH',
-    filename: logfilename,
-    json: false,
-    formatter: function(options) {
-      // Return string will be passed to logger.
-      return new Date().getTime() + ';' + notEmptyDiscriminator + ';' + options.message;
-    }
-  }));
-
-  return new winston.Logger({
-    transports: transports
-  });
+function pad(num) {
+  return (num > 9 ? '' : '0') + num;
 }
 
 module.exports = Log;
