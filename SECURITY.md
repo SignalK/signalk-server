@@ -45,45 +45,42 @@ To handle WebSocket security, the exported function should return an object with
 A very simple pseudo exmaple (see sk-simple-token-security for a real world example):
 
 ```
-module.exports = function(app) {
+module.exports = function (app) {
   var strategy = {}
-  
-  app.use('/', function(req, res, next) {
-      if ( user_is_authenticated(req) ) {
-        next()
-      } else {
-        res.status(401).send("user is not authenticated");
-      }
-    })
- 
-  strategy.shouldAllowWrite = function(req) {
-    if ( !user_can_write(req) ) {
-      throw new Error("User does not have write permissions")
+
+  app.use('/', function (req, res, next) {
+    if (user_is_authenticated(req)) {
+      next()
+    } else {
+      res.status(401).send('user is not authenticated')
+    }
+  })
+
+  strategy.shouldAllowWrite = function (req) {
+    if (!user_can_write(req)) {
+      throw new Error('User does not have write permissions')
     }
   }
-    
-  strategy.authorizeWS =  function(req) {
-    if ( !user_is_authenticated(req) ) {
-      throw new Error("User is not authenticated")
-    }
-  },
-    
-  strategy.verifyWS = function(req) {
-    if ( ! req.lastVerify )
-      {
-        req.lastTokenVerify = new Date()
-        return
-      }
-      //check once every minute
-      var now = new Date()
-      if ( now - req.lastTokenVerify > 60*1000 )
-      {
-        req.lastVerify = now
-        strategy.authorizeWS(req)
-      }
+
+  strategy.authorizeWS = function (req) {
+    if (!user_is_authenticated(req)) {
+      throw new Error('User is not authenticated')
     }
   }
-  
+
+  strategy.verifyWS = function (req) {
+    if (!req.lastVerify) {
+      req.lastTokenVerify = new Date()
+      return
+    }
+    // check once every minute
+    var now = new Date()
+    if (now - req.lastTokenVerify > 60 * 1000) {
+      req.lastVerify = now
+      strategy.authorizeWS(req)
+    }
+  }
+
   return strategy
 }
 ```
