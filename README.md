@@ -117,7 +117,7 @@ An input from a serial port uses the `providers/serialport` pipeElement. It take
 
 ### TCP
 
-An input from a TCP port uses the `providers/tcp`. It takes the options `host` and `port` (see [example](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-tcp-settings.json#L29-L30)).
+`providers/tcp` is a TCP client that can connect to a server and receive input from a TCP socket. It takes the options `host` and `port` (see [example](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-tcp-settings.json#L29-L30)).
 
 ### UDP
 
