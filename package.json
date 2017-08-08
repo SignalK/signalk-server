@@ -60,7 +60,7 @@
     "colors": "^1.1.2",
     "compare-versions": "^3.0.1",
     "cors": "^2.5.2",
-    "debug": "^2.1.0",
+    "debug": "^3.0.0",
     "deep-get-set": "^1.1.0",
     "dev-null-stream": "0.0.1",
     "ejson": "^2.1.2",
