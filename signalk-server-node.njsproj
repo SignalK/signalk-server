@@ -1,0 +1,180 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{5209e49f-6bbf-456a-b25a-107d0d91c3ee}</ProjectGuid>
+    <ProjectHome />
+    <ProjectView>ShowAllFiles</ProjectView>
+    <StartupFile>index.js</StartupFile>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{3AF33F2E-1136-4D97-BBB7-1795711AC8B8};{349c5851-65df-11da-9384-00065b846f21};{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}</ProjectTypeGuids>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">14.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <ItemGroup>
+    <Content Include="package.json" />
+    <Content Include="CHANGELOG.md" />
+    <Content Include="raspberry_pi_installation.md" />
+    <Content Include="README.md" />
+    <Content Include="SECURITY.md" />
+    <Content Include="SERVERPLUGINS.md" />
+    <Content Include="WEBAPPS.md" />
+    <Compile Include="index.js" />
+    <Content Include="lib\appindex.html" />
+    <Content Include="lib\index.html" />
+    <Compile Include="lib\index.js" />
+    <Compile Include="lib\mdns.js" />
+    <Compile Include="lib\modules.js" />
+    <Compile Include="lib\page.js" />
+    <Compile Include="lib\pipedproviders.js" />
+    <Compile Include="lib\streambundle.js" />
+    <Compile Include="lib\subscriptionmanager.js" />
+    <Compile Include="lib\udpbroadcaster.js" />
+    <Content Include="plugin-config\package.json" />
+    <Compile Include="plugin-config\webpack.config.js" />
+    <Compile Include="providers\execute.js" />
+    <Compile Include="providers\filestream.js" />
+    <Compile Include="providers\from_json.js" />
+    <Compile Include="providers\gpsd.js" />
+    <Compile Include="providers\liner.js" />
+    <Compile Include="providers\log.js" />
+    <Compile Include="providers\mdns-ws.js" />
+    <Compile Include="providers\multiplexedlog.js" />
+    <Compile Include="providers\n2k-signalk.js" />
+    <Compile Include="providers\n2kAnalyzer.js" />
+    <Compile Include="providers\nmea0183-signalk.js" />
+    <Compile Include="providers\nullprovider.js" />
+    <Compile Include="providers\serialport.js" />
+    <Compile Include="providers\tcp.js" />
+    <Compile Include="providers\throttle.js" />
+    <Compile Include="providers\timestamp-throttle.js" />
+    <Compile Include="providers\udp.js" />
+    <Content Include="public\favicon.ico" />
+    <Content Include="settings\aava-file-settings-nomdns.json" />
+    <Content Include="settings\aava-file-settings.json" />
+    <Content Include="settings\aava-non-ssl-file-settings.json" />
+    <Content Include="settings\actisense-serial-n2kd-settings.json" />
+    <Content Include="settings\actisense-serial-settings.json" />
+    <Content Include="settings\commandline-provider-settings.json" />
+    <Content Include="settings\multiple-sources.json" />
+    <Content Include="settings\multiplexed.json" />
+    <Content Include="settings\settings.json" />
+    <Content Include="settings\signalk-ws-settings.json" />
+    <Content Include="settings\simulator.json" />
+    <Content Include="settings\volare-file-settings.json" />
+    <Content Include="settings\volare-gpsd-settings.json" />
+    <Content Include="settings\volare-serial-settings.json" />
+    <Content Include="settings\volare-tcp-settings.json" />
+    <Content Include="settings\volare-udp-settings.json" />
+    <Content Include="test\server-test-settings.json" />
+    <Compile Include="test\httpprovider.js" />
+    <Compile Include="test\multiple-values.js" />
+    <Compile Include="test\subscriptions.js" />
+    <Compile Include="util\start-stop.js" />
+    <Compile Include="lib\config\cli.js" />
+    <Compile Include="lib\config\config.js" />
+    <Compile Include="lib\config\development.js" />
+    <Compile Include="lib\config\production.js" />
+    <Content Include="lib\interfaces\appstore.html" />
+    <Compile Include="lib\interfaces\appstore.js" />
+    <Compile Include="lib\interfaces\bower.js" />
+    <Compile Include="lib\interfaces\charts.js" />
+    <Compile Include="lib\interfaces\index.js" />
+    <Compile Include="lib\interfaces\nmea-tcp.js" />
+    <Compile Include="lib\interfaces\plugins.js" />
+    <Compile Include="lib\interfaces\rest.js" />
+    <Compile Include="lib\interfaces\tcp.js" />
+    <Compile Include="lib\interfaces\webapps.js" />
+    <Compile Include="lib\interfaces\ws.js" />
+    <Content Include="plugin-config\public\index.html" />
+    <Compile Include="plugin-config\public\main.js" />
+    <Content Include="public\examples\http-example.html" />
+    <Content Include="public\examples\index.html" />
+    <Content Include="public\jquery\LICENSE.txt" />
+    <Content Include="public\bootstrap\dist\css\bootstrap-theme.css" />
+    <Content Include="public\bootstrap\dist\css\bootstrap-theme.min.css" />
+    <Content Include="public\bootstrap\dist\css\bootstrap.css" />
+    <Content Include="public\bootstrap\dist\css\bootstrap.min.css" />
+    <Content Include="public\bootstrap\dist\fonts\glyphicons-halflings-regular.svg" />
+    <Compile Include="public\bootstrap\dist\js\bootstrap.js" />
+    <Compile Include="public\bootstrap\dist\js\bootstrap.min.js" />
+    <Compile Include="public\bootstrap\dist\js\npm.js" />
+    <Compile Include="public\jquery\dist\core.js" />
+    <Compile Include="public\jquery\dist\jquery.js" />
+    <Compile Include="public\jquery\dist\jquery.min.js" />
+    <Compile Include="public\jquery\dist\jquery.slim.js" />
+    <Compile Include="public\jquery\dist\jquery.slim.min.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="bin" />
+    <Folder Include="bin\settings\" />
+    <Folder Include="lib" />
+    <Folder Include="lib\config" />
+    <Folder Include="lib\interfaces" />
+    <Folder Include="plugin-config" />
+    <Folder Include="plugin-config\public" />
+    <Folder Include="plugin-config\src" />
+    <Folder Include="providers" />
+    <Folder Include="public" />
+    <Folder Include="public\bootstrap" />
+    <Folder Include="public\bootstrap\dist" />
+    <Folder Include="public\bootstrap\dist\css" />
+    <Folder Include="public\bootstrap\dist\fonts" />
+    <Folder Include="public\bootstrap\dist\js" />
+    <Folder Include="public\examples" />
+    <Folder Include="public\jquery" />
+    <Folder Include="public\jquery\dist" />
+    <Folder Include="public\mapcache" />
+    <Folder Include="samples" />
+    <Folder Include="settings" />
+    <Folder Include="signalk-server-node" />
+    <Folder Include="test" />
+    <Folder Include="util" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <!--Do not delete the following Import Project.  While this appears to do nothing it is a marker for setting TypeScript properties before our import that depends on them.-->
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.targets" Condition="False" />
+  <Import Project="$(VSToolsPath)\Node.js Tools\Microsoft.NodejsTools.targets" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
+        <WebProjectProperties>
+          <UseIIS>False</UseIIS>
+          <AutoAssignPort>True</AutoAssignPort>
+          <DevelopmentServerPort>0</DevelopmentServerPort>
+          <DevelopmentServerVPath>/</DevelopmentServerVPath>
+          <IISUrl>http://localhost:48022/</IISUrl>
+          <NTLMAuthentication>False</NTLMAuthentication>
+          <UseCustomServer>True</UseCustomServer>
+          <CustomServerUrl>http://localhost:1337</CustomServerUrl>
+          <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
+        </WebProjectProperties>
+      </FlavorProperties>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}" User="">
+        <WebProjectProperties>
+          <StartPageUrl>
+          </StartPageUrl>
+          <StartAction>CurrentPage</StartAction>
+          <AspNetDebugging>True</AspNetDebugging>
+          <SilverlightDebugging>False</SilverlightDebugging>
+          <NativeDebugging>False</NativeDebugging>
+          <SQLDebugging>False</SQLDebugging>
+          <ExternalProgram>
+          </ExternalProgram>
+          <StartExternalURL>
+          </StartExternalURL>
+          <StartCmdLineArguments>
+          </StartCmdLineArguments>
+          <StartWorkingDirectory>
+          </StartWorkingDirectory>
+          <EnableENC>False</EnableENC>
+          <AlwaysStartWebServerOnDebug>False</AlwaysStartWebServerOnDebug>
+        </WebProjectProperties>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>
