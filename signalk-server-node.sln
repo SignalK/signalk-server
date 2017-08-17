@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.3
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}") = "signalk-server-node", "signalk-server-node.njsproj", "{5209E49F-6BBF-456A-B25A-107D0D91C3EE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5209E49F-6BBF-456A-B25A-107D0D91C3EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5209E49F-6BBF-456A-B25A-107D0D91C3EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5209E49F-6BBF-456A-B25A-107D0D91C3EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5209E49F-6BBF-456A-B25A-107D0D91C3EE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {307791D1-97E1-4EE4-8299-534069726C8E}
+	EndGlobalSection
+EndGlobal

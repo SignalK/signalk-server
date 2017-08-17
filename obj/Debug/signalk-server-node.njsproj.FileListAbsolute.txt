@@ -1,0 +1,2 @@
+C:\Users\charlie\Documents\GitHub\signalk-server-node\obj\Debug\signalk-server-node.njsproj.CoreCompileInputs.cache
+C:\Users\charlie\Documents\GitHub\signalk-server-node\bin\Microsoft.NodejsTools.WebRole.dll
