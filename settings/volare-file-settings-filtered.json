@@ -7,11 +7,6 @@
     "uuid"  : "urn:mrn:signalk:uuid:f46d2b37-6f63-48b0-8713-8920238186ed"
   },
 
-  "excludeMatchingPaths": [
-    "navigation.courseOverGroundMagnetic",
-    "performance.velocityMadeGood"
-  ],
-
   "interfaces": {},
 
   "pipedProviders": [
@@ -54,12 +49,12 @@
          },
          {
           "type": "providers/keys-filter",
-          "optionMappings": [
-            {
-              "fromAppProperty": "config.settings.excludeMatchingPaths",
-              "toOption": "excludeMatchingPaths"
-            }
-          ]
+          "options": {
+            "excludeMatchingPaths": [
+              "navigation.courseOverGroundMagnetic",
+              "performance.velocityMadeGood"
+            ]
+          }
         }
       ]
     }
