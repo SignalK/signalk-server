@@ -18,16 +18,16 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
   let delta = null
   let string = false
 
-  try {
-    if (typeof chunk === 'object' && chunk !== null) {
-      delta = chunk
-    }
-    else if (typeof chunk === 'string') {
+  if (typeof chunk === 'object' && chunk !== null) {
+    delta = chunk
+  }
+  else if (typeof chunk === 'string') {
+    try {
       delta = JSON.parse(chunk)
       string = true
+    } catch (e) {
+      debug(`Error parsing chunk: ${e.message}`)
     }
-  } catch (e) {
-    debug(`Error parsing chunk: ${e.message}`)
   }
 
   if (Array.isArray(delta.updates)) {
@@ -43,17 +43,34 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
         })
 
         if (values.length > 0) {
-          updates.push({
+          const upd = {
             values,
-            source: update.source,
-            timestamp: update.timestamp,
-          })
+          }
+
+          if (update.hasOwnProperties('$source')) {
+            upd.$source = update.$source
+          }
+
+          if (update.hasOwnProperties('source')) {
+            upd.source = update.source
+          }
+
+          if (update.hasOwnProperties('timestamp')) {
+            upd.timestamp = update.timestamp
+          }
+
+          updates.push(upd)
         }
       }
     })
 
     if (updates.length > 0) {
       delta.updates = updates
+
+      if (string === true) {
+        delta = JSON.stringify(delta)
+      }
+
       this.push(delta)
     }
   }
