@@ -63,9 +63,9 @@ You can store configuration like the settings file, plugin cofiguration, default
 
 For example, `./bin/signalk-server -c /usr/local/etc/node_server_config -s settings/my-boat.json`
 
-In this case it will find my-boat.json at `/usr/local/etc/node_server_confif/settings/my-boat.json`.
+In this case it will find my-boat.json at `/usr/local/etc/node_server_config/settings/my-boat.json`.
 
-You would also put the charts mapcache directory here under `public/mapcache`.
+You would also put the charts mapcache directory at `/usr/local/etc/node_server_config/public/mapcache`.
 
 
 Environment variables
