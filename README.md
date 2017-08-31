@@ -61,11 +61,19 @@ Storing Configuration Outside The Server Install Directory
 ==========================================================
 You can store configuration like the settings file, plugin cofiguration, defaults.js and the mapcache in a directory outside of the server install using the `-c` option (or the `SIGNALK_NODE_CONDFIG_DIR` env variable).
 
-For example, `./bin/signalk-server -c /usr/local/etc/node_server_config -s settings/my-boat.json`
+By default, the server will look for a `settings.json` and a `defaults.json` file in the given directory. 
 
-In this case it will find my-boat.json at `/usr/local/etc/node_server_config/settings/my-boat.json`.
+For example, `./bin/signalk-server -c /usr/local/etc/node_server_config`
 
-You would also put the charts mapcache directory at `/usr/local/etc/node_server_config/public/mapcache`.
+In this case, the server would look for the settings file at `/usr/local/etc/node_server_config/settings.json`
+
+You can overwrite the default settings file name by specifying the -s argument.
+
+For example, ./bin/signalk-server -c /usr/local/etc/node_server_config -s test_settings.json`
+
+In this case, the server would look for the settings file at `/usr/local/etc/node_server_config/test_settings.json`
+
+You should also put the charts mapcache directory at `/usr/local/etc/node_server_config/public/mapcache`.
 
 
 Environment variables
