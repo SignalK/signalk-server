@@ -1,5 +1,37 @@
 ## Change Log
 
+### v0.1.30 (2017/09/01 05:46 +00:00)
+- [#271](https://github.com/SignalK/signalk-server-node/pull/271) fix(package): upgrade signalk-schema and n2k-signalk @signalk (@tkurki)
+- [#278](https://github.com/SignalK/signalk-server-node/pull/278) fix: allow absolute paths in the filestream provider configuration (@sbender9)
+- [#279](https://github.com/SignalK/signalk-server-node/pull/279) fix: use @signalk npm packages (@tkurki)
+
+### v0.1.29 (2017/08/30 15:57 +00:00)
+- [#277](https://github.com/SignalK/signalk-server-node/pull/277) Line end fix for Isailor on Android (@netAction)
+- [#276](https://github.com/SignalK/signalk-server-node/pull/276) Producer that allows users to filter out certain keys in a pipedProviders chain (@fabdrol)
+- [#273](https://github.com/SignalK/signalk-server-node/pull/273) Change server startup user (@joabakk)
+- [#264](https://github.com/SignalK/signalk-server-node/pull/264) refactor: rewrite logging provider without Winston (@tkurki)
+- [#270](https://github.com/SignalK/signalk-server-node/pull/270) Update n2k-signalk to the latest version 🚀 (@greenkeeper[bot])
+- [#269](https://github.com/SignalK/signalk-server-node/pull/269) Update debug to the latest version 🚀 (@greenkeeper[bot])
+- [#267](https://github.com/SignalK/signalk-server-node/pull/267) Update n2k-signalk to the latest version 🚀 (@greenkeeper[bot])
+- [#261](https://github.com/SignalK/signalk-server-node/pull/261) add forward slashes to correct URL in readme (@codefoster)
+- [#258](https://github.com/SignalK/signalk-server-node/pull/258) Update nmea0183-signalk to the latest version 🚀 (@greenkeeper[bot])
+- [#257](https://github.com/SignalK/signalk-server-node/pull/257) add colon (:) to tcp endpoint (@codefoster)
+- [#254](https://github.com/SignalK/signalk-server-node/pull/254) Mbtiles error handling (@tkurki)
+- [#255](https://github.com/SignalK/signalk-server-node/pull/255) feature: sort plugins by name in configuration editor (@sbender9)
+- [#250](https://github.com/SignalK/signalk-server-node/pull/250) fix: app store can display more than 20 plugins or webapps (@sbender9)
+- [#249](https://github.com/SignalK/signalk-server-node/pull/249) fix: selfId not set properly when only uuid is configured in settings (@sbender9)
+- [#247](https://github.com/SignalK/signalk-server-node/pull/247) fix: use providerId as $source (@tkurki)
+- [#243](https://github.com/SignalK/signalk-server-node/pull/243) feature: provide state storage for n2k-signalk (@sbender9)
+
+### v0.1.28 (2017/07/10 19:32 +00:00)
+- [#245](https://github.com/SignalK/signalk-server-node/pull/245) Provide additional MBTiles metadata (@vokkim)
+- [#244](https://github.com/SignalK/signalk-server-node/pull/244) Fix mbtiles: ignore non mbtiles files and fix mbtiles path (@tkurki)
+
+### v0.1.27 (2017/07/09 17:00 +00:00)
+- [#242](https://github.com/SignalK/signalk-server-node/pull/242) fix: make server.id from /signalk specify that this is the node server (@sbender9)
+- [#241](https://github.com/SignalK/signalk-server-node/pull/241) feature: provide server information in the result from /signalk (@sbender9)
+- [#238](https://github.com/SignalK/signalk-server-node/pull/238) Update documentation on apps, plugins and app store (@joabakk)
+
 ### v0.1.26 (2017/07/06 05:37 +00:00)
 - [#237](https://github.com/SignalK/signalk-server-node/pull/237) Update n2k-signalk to the latest version 🚀 (@greenkeeper[bot])
 - [#236](https://github.com/SignalK/signalk-server-node/pull/236) fix: output \r\n lineseparator in serialport (@tkurki)
