@@ -59,7 +59,8 @@ FileStream.prototype.pipe = function(pipeTo) {
 }
 
 FileStream.prototype.startStream = function() {
-  this.filestream = require('fs').createReadStream(path.join(__dirname, '..', this.options.filename));
+  var filename = path.isAbsolute(this.options.filename) ? this.options.filename : path.join(__dirname, '..', this.options.filename);
+  this.filestream = require('fs').createReadStream(filename);
   if(this.keepRunning) {
     this.filestream.on('end', this.startStream.bind(this));
   }
