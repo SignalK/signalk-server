@@ -16,7 +16,7 @@
 
 var Transform = require('stream').Transform;
 
-var toDelta = require('n2k-signalk').toDelta;
+var toDelta = require('@signalk/n2k-signalk').toDelta;
 
 require('util').inherits(ToSignalK, Transform);
 
