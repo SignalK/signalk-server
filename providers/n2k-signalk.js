@@ -16,7 +16,7 @@
 
 var Transform = require('stream').Transform;
 
-var toDelta = require('n2k-signalk').toDelta;
+var toDelta = require('@signalk/n2k-signalk').toDelta;
 
 require('util').inherits(ToSignalK, Transform);
 
@@ -24,12 +24,13 @@ function ToSignalK() {
   Transform.call(this, {
     objectMode: true
   });
+  this.state = {}
 }
 
 
 ToSignalK.prototype._transform = function(chunk, encoding, done) {
   try {
-    var delta = toDelta(chunk);
+    var delta = toDelta(chunk, this.state);
     if (delta && delta.updates[0].values.length > 0) {
       this.push(delta);
     }
@@ -41,3 +42,4 @@ ToSignalK.prototype._transform = function(chunk, encoding, done) {
 
 
 module.exports = ToSignalK;
+

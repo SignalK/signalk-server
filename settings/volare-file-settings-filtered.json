@@ -1,0 +1,62 @@
+
+{
+  "vessel": {
+    "name"  : "X-Miles",
+    "brand" : "X-Yachts",
+    "type"  : "X-99",
+    "uuid"  : "urn:mrn:signalk:uuid:f46d2b37-6f63-48b0-8713-8920238186ed"
+  },
+
+  "interfaces": {},
+
+  "pipedProviders": [
+    {
+      "id": "nmeaFromFile",
+      "pipeElements": [
+         {
+           "type": "providers/filestream",
+           "options": {
+             "filename": "samples/plaka.log"
+           },
+           "optionMappings": [
+             {
+               "fromAppProperty": "argv.nmeafilename",
+               "toOption": "filename"
+             }
+           ]
+         },
+         {
+           "type": "providers/throttle",
+           "options": {
+              "rate": 500
+           }
+         },
+         {
+           "type": "providers/liner"
+         },
+         {
+            "type": "providers/nmea0183-signalk",
+            "optionMappings": [
+              {
+               "fromAppProperty": "selfId",
+               "toOption": "selfId"
+              },
+              {
+               "fromAppProperty": "selfType",
+               "toOption": "selfType"
+              }
+            ]
+         },
+         {
+          "type": "providers/keys-filter",
+          "options": {
+            "excludeMatchingPaths": [
+              "navigation.courseOverGroundMagnetic",
+              "performance.velocityMadeGood"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

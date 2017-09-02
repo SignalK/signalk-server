@@ -6,6 +6,7 @@ if [[ $EUID > 0 ]]
   echo ""
 fi
 
+echo "YOU ARE LOGGED IN AS $SUDO_USER AND THE SERVER WILL BE STARTED AS THIS USER"
 echo "ARE YOU SURE YOU WANT TO DELETE ANY CONFIGURATION"
 echo "EXISTING AND SET UP A NEW STARTUP SERVICE?"
 echo ""
@@ -127,6 +128,7 @@ Restart=always
 StandardOutput=syslog
 StandardError=syslog
 WorkingDirectory=$dir
+User=$SUDO_USER
 [Install]
 WantedBy=multi-user.target
 systemdfile
