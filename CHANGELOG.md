@@ -1,5 +1,8 @@
 ## Change Log
 
+### upcoming (2017/09/02 07:59 +00:00)
+- [#232](https://github.com/SignalK/signalk-server-node/pull/232) feature: allow server configuration, plugin configuration and defaults to be separate from the server install (@sbender9)
+
 ### v0.1.30 (2017/09/01 05:46 +00:00)
 - [#271](https://github.com/SignalK/signalk-server-node/pull/271) fix(package): upgrade signalk-schema and n2k-signalk @signalk (@tkurki)
 - [#278](https://github.com/SignalK/signalk-server-node/pull/278) fix: allow absolute paths in the filestream provider configuration (@sbender9)
