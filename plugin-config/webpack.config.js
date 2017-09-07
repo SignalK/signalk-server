@@ -18,7 +18,7 @@ module.exports = {
       {
         test: /\.jsx?$/,
         exclude: /node_modules/,
-        loader: 'babel',
+        loader: 'babel-loader',
         query: {
           presets: ['es2015', 'react', 'stage-2']
         }
@@ -28,9 +28,6 @@ module.exports = {
         loader: 'json'
       }
     ]
-  },
-  resolveLoader: {
-    fallback: path.join(__dirname, "node_modules")
   },
   plugins: [
     new webpack.DefinePlugin({
