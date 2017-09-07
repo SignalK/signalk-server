@@ -47,15 +47,15 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
             values,
           }
 
-          if (update.hasOwnProperties('$source')) {
+          if (update.hasOwnProperty('$source')) {
             upd.$source = update.$source
           }
 
-          if (update.hasOwnProperties('source')) {
+          if (update.hasOwnProperty('source')) {
             upd.source = update.source
           }
 
-          if (update.hasOwnProperties('timestamp')) {
+          if (update.hasOwnProperty('timestamp')) {
             upd.timestamp = update.timestamp
           }
 
