@@ -30,7 +30,7 @@
 */
 
 const Transform = require('stream').Transform;
-const rfs = require('rotating-file-stream');
+const FileTimestampStream = require('file-timestamp-stream')
 
 const loggers = {};
 
@@ -44,20 +44,8 @@ function Log(options) {
       (options.logdir.indexOf('/') === 0 ? '' : __dirname + '/../') +
         options.logdir
     );
-    const filenameGenerator = (timeParam, index) => {
-      console.log('heppp');
-      const time = timeParam || new Date();
-      const year = time.getFullYear();
-      const month = pad(time.getMonth() + 1);
-      const day = pad(time.getDate());
-      const hour = pad(time.getHours());
-      const result = `signalk-rawdata.log.${year}-${month}-${day}T${hour}`;
-      console.log(result);
-      return result;
-    };
-    loggers[options.logdir] = new rfs(filenameGenerator, {
-      path: path,
-      interval: '1h',
+    loggers[options.logdir] = new FileTimestampStream({
+      path: path + 'signalk-rawdata.log.%Y-%m-%dT%H'
     });
   }
   this.logger = loggers[options.logdir];
