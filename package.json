@@ -1,12 +1,24 @@
 {
   "name": "signalk-server",
-  "version": "0.1.31",
-  "description": "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
+  "version": "0.1.32",
+  "description":
+    "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
   "main": "index.js",
   "scripts": {
-    "changelog": "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls",
+    "changelog":
+      "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls",
     "start": "node bin/signalk-server",
-    "test": "mocha"
+    "test": "mocha --exit",
+    "precommit": "lint-staged",
+    "format": "prettier-standard lib/*.js* providers/*.js* test/*.js* *.js*"
+  },
+  "lint-staged": {
+    "linters": {
+      "lib/*.js*": ["prettier-standard", "git add"],
+      "providers/*.js*": ["prettier-standard", "git add"],
+      "test/*.js*": ["prettier-standard", "git add"],
+      "*.js*": ["prettier-standard", "git add"]
+    }
   },
   "bin": {
     "signalk-server": "./bin/signalk-server"
@@ -33,7 +45,7 @@
   "contributors": [
     {
       "name": "Fabian Tollenaar",
-      "email": "fabian@starting-point.nl"
+      "email": "fabian@signalk.org"
     },
     {
       "name": "Scott Bender",
@@ -43,7 +55,8 @@
       "name": "Joachim Bakke"
     },
     {
-      "name": "Tim Mathews"
+      "name": "Tim Mathews",
+      "email": "tim@signalk.org"
     },
     {
       "name": "Pavel Kalian"
@@ -60,8 +73,9 @@
     "@signalk/freeboard-sk": "0.0.1",
     "@signalk/instrumentpanel": "^0.2.1",
     "@signalk/n2k-signalk": "0.0.3",
+    "@signalk/nmea0183-signalk": "^2.0.2",
     "@signalk/sailgauge": "^1.1.0",
-    "@signalk/signalk-schema": "0.0.1-8",
+    "@signalk/signalk-schema": "0.0.1-10",
     "@signalk/signalk-to-nmea0183": "0.0.1",
     "@signalk/simplegauges": "^1.0.1",
     "baconjs": "^0.7.88",
@@ -84,7 +98,6 @@
     "minimist": "^1.1.0",
     "moment": "^2.10.6",
     "morgan": "^1.5.0",
-    "nmea0183-signalk": "^0.5.0",
     "node-gpsd": "^0.3.0",
     "pem": "^1.11.0",
     "primus": "^7.0.0",
@@ -106,7 +119,10 @@
     "find-free-port": "^1.0.1",
     "freeport-promise": "^1.0.0",
     "github-changes": "^1.0.4",
-    "mocha": "^3.2.0",
+    "husky": "^0.14.3",
+    "lint-staged": "^4.2.3",
+    "mocha": "^4.0.0",
+    "prettier-standard": "^7.0.1",
     "request": "^2.81.0",
     "request-promise": "^4.1.1"
   }

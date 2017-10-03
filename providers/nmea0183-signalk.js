@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
+ * Copyright 2017 Signal K & Fabian Tollenaar <fabian@signalk.org>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,81 +14,81 @@
  * limitations under the License.
  */
 
-/* Usage: this is the pipeElement that transforms NMEA0183 input to Signal K deltas
- * SelfId and selfType are fetched from app properties. Emits sentence data as "nmea0183"
- * events on app.signalk by default. Furthermore you can use "sentenceEvent" option,
- * that will cause sentence data to be emitted as events on app. sentenceEvent can
- * be a string or an array of strings.
- *
- * Example:
+/**
+  * Usage: this is the pipeElement that transforms NMEA0183 input to Signal K deltas.
+  * Emits sentence data as "nmea0183" events on app.signalk by default.
+  * Furthermore you can use "sentenceEvent" option, that will cause sentence data to be
+  * emitted as events on app. sentenceEvent can be a string or an array of strings.
+  *
+  * Example:
+  * {
+  *   "type": "providers/nmea0183-signalk",
+  *   "options": {
+  *     "sentenceEvent": "nmea0183-B"
+  *   },
+  * }
+  */
 
- {
-   "type": "providers/nmea0183-signalk",
-   "options": {
-     "sentenceEvent": "nmea0183-1"
-   },
-   "optionMappings": [
-     {
-       "fromAppProperty": "selfId",
-       "toOption": "selfId"
-     },
-     {
-       "fromAppProperty": "selfType",
-       "toOption": "selfType"
-     }
-   ]
- }
+const Transform = require('stream').Transform
+const Parser = require('@signalk/nmea0183-signalk')
+const debug = require('debug')('signalk-server-node/providers/nmea0183-signalk')
 
- */
-
-const Transform = require("stream").Transform;
-const isArray = require("lodash").isArray;
-
-
-function ToSignalK(options) {
+function nmea0183ToSignalK (options) {
   Transform.call(this, {
     objectMode: true
-  });
+  })
 
-  this.parser = new (require("nmea0183-signalk")).Parser(options);
+  this.parser = new Parser()
 
-  var that = this;
-  this.parser.on("nmea0183", function(sentence) {
-    that.emit("nmea0183", sentence);
-  });
+  this.parser.on('nmea0183', sentence => {
+    this.emit('nmea0183', sentence)
+  })
 
   if (options.sentenceEvent) {
-    (isArray(options.sentenceEvent)
+    ;(Array.isArray(options.sentenceEvent)
       ? options.sentenceEvent
-      : [options.sentenceEvent]).forEach(event => {
-      that.parser.on("nmea0183", sentence => options.app.emit(event, sentence));
-    });
+      : [options.sentenceEvent]
+    ).forEach(event => {
+      this.parser.on('nmea0183', sentence => options.app.emit(event, sentence))
+    })
   }
 
-  this.parser.on("delta", function(delta) {
-    if (that.timestamp) {
+  this.parser.on('signalk:delta', delta => {
+    if (this.timestamp) {
       delta.updates.forEach(update => {
-        update.timestamp = that.timestamp;
-      });
+        update.timestamp = this.timestamp
+      })
     }
-    that.push(delta);
-  });
+
+    this.push(delta)
+  })
+
+  this.parser.on('warning', warning => {
+    debug(`[warning] ${warning.message}`)
+  })
+
+  this.parser.on('error', error => {
+    debug(`[error] ${error.message}`)
+  })
 }
 
-require("util").inherits(ToSignalK, Transform);
+require('util').inherits(nmea0183ToSignalK, Transform)
 
-ToSignalK.prototype._transform = function(chunk, encoding, done) {
-  try {
-    if (typeof chunk === "object" && typeof chunk.line === "string") {
-      this.timestamp = new Date(Number(chunk.timestamp));
-      this.parser.write(chunk.line + "\n");
-    } else {
-      this.parser.write(chunk + "\n");
-    }
-  } catch (ex) {
-    console.error(ex);
+nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
+  if (Buffer.isBuffer(chunk)) {
+    chunk = chunk.toString(encoding).trim()
   }
-  done();
-};
 
-module.exports = ToSignalK;
+  if (chunk && typeof chunk === 'object' && typeof chunk.line === 'string') {
+    this.timestamp = new Date(Number(chunk.timestamp))
+    this.parser.parse(`${chunk.line.trim()}\n`).catch(() => {})
+  }
+
+  if (chunk && typeof chunk === 'string') {
+    this.parser.parse(`${chunk.trim()}\n`).catch(() => {})
+  }
+
+  done()
+}
+
+module.exports = nmea0183ToSignalK
