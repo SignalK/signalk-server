@@ -6,7 +6,7 @@
   "scripts": {
     "changelog": "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls",
     "start": "node bin/signalk-server",
-    "test": "mocha"
+    "test": "mocha --exit"
   },
   "bin": {
     "signalk-server": "./bin/signalk-server"
@@ -106,7 +106,7 @@
     "find-free-port": "^1.0.1",
     "freeport-promise": "^1.0.0",
     "github-changes": "^1.0.4",
-    "mocha": "^3.2.0",
+    "mocha": "^4.0.0",
     "request": "^2.81.0",
     "request-promise": "^4.1.1"
   }
