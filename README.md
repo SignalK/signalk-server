@@ -6,7 +6,7 @@ An implementation of a [Signal K](http://signalk.org) server. Intended to run on
 The server multiplexes data from , NMEA 2000, Signal K and sensor inputs (eg. I2C connected sensors) and provides the data in Signal K format over HTTP and WebSocket. In addition it can provide NMEA0183 over tcp and udp.
 
 
-Get up and running
+Get up and running with a local install
 ------------------
 
 Instructions for [installation on Raspberry Pi manually](https://github.com/SignalK/signalk-server-node/blob/master/raspberry_pi_installation.md) or [with Ansible](https://github.com/tkurki/marinepi-provisioning).
@@ -40,6 +40,18 @@ If you have analyzer available on your PATH you can start the server with a samp
 For getting live data from your NGT-1 you need to figure out what device path your device is mounted on, edit the configuration file to match you path and start server with `bin/n2k-from-actisense`.
 
 If you have your own n2k data file from canboat you can use that with `bin/n2k-from-file --n2kfilename your-file-name`.
+
+Get up and running with Docker
+--------
+
+This does not require downloading the repository, just grab the Dockerfile and run:
+```
+docker build -t sk-server .
+docker run --name sk-server -d -p 3000:3000 signalk-node-server
+```
+This will build & start a Signal K server playing back an NMEA2000 log file, accessible at http://localhost:3000/
+
+*Note* that using Docker allows you to use NMEA2000 data without local install of canboat.
 
 Now what?
 ---------
