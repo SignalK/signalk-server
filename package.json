@@ -88,7 +88,7 @@
     "node-gpsd": "^0.3.0",
     "pem": "^1.11.0",
     "primus": "^7.0.0",
-    "serialport": "^4.0.3",
+    "serialport": "^5.0.0",
     "set-system-time": "github:tkurki/set-system-time",
     "signalk-playground": "github:signalk/playground",
     "signalk-to-nmea0183": "github:signalk/signalk-to-nmea0183",
