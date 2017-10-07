@@ -60,9 +60,29 @@ You can also configure the path to the settings file with environment variable `
 
 The http port can be configured separately with environment variable `PORT`. You can also [run on port 80 with systemd](https://github.com/tkurki/marinepi-provisioning/blob/d3d624629799a3b96234a90fc42bc22dae4fd3a2/roles/node-app/templates/node_app_systemd_socket.j2). Environment variable NMEA0183PORT sets the NMEA 0183 tcp port.
 
+Storing Configuration Outside The Server Install Directory
+==========================================================
+You can store configuration like the settings file, plugin cofiguration, defaults.js and the mapcache in a directory outside of the server install using the `-c` option (or the `SIGNALK_NODE_CONDFIG_DIR` env variable).
+
+By default, the server will look for a `settings.json` and a `defaults.json` file in the given directory. 
+
+For example, `./bin/signalk-server -c /usr/local/etc/node_server_config`
+
+In this case, the server would look for the settings file at `/usr/local/etc/node_server_config/settings.json`
+
+You can overwrite the default settings file name by specifying the -s argument.
+
+For example, ./bin/signalk-server -c /usr/local/etc/node_server_config -s test_settings.json`
+
+In this case, the server would look for the settings file at `/usr/local/etc/node_server_config/test_settings.json`
+
+You should also put the charts mapcache directory at `/usr/local/etc/node_server_config/public/mapcache`.
+
+
 Environment variables
 ---------------------
 - `SIGNALK_NODE_SETTINGS` override the path to the settings file
+- `SIGNALK_NODE_CONDFIG_DIR` override the path to find server configuration files
 - `PORT` override the port for http/ws service
 - `EXTERNALPORT` the port used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
 - `EXTERNALHOST` the host used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
@@ -70,6 +90,7 @@ Environment variables
 - `TCPSTREAMPORT` override the port for the Signal K Streaming (deltas) over TCP
 - `TCPSTREAMADDRESS` override the address the Signal K Stream (deltas) over TCP is listening on
 - `DISABLEPLUGINS` disable all plugins so that they can not be enabled
+
 
 Real Inputs
 ---------------
@@ -117,7 +138,7 @@ An input from a serial port uses the `providers/serialport` pipeElement. It take
 
 ### TCP
 
-An input from a TCP port uses the `providers/tcp`. It takes the options `host` and `port` (see [example](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-tcp-settings.json#L29-L30)).
+`providers/tcp` is a TCP client that can connect to a server and receive input from a TCP socket. It takes the options `host` and `port` (see [example](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-tcp-settings.json#L29-L30)).
 
 ### UDP
 
