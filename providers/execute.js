@@ -52,23 +52,50 @@ Execute.prototype._transform = function(chunk, encoding, done) {
   this.analyzerProcess.stdin.write(chunk.toString());
   done();
 }
-Execute.prototype.pipe = function(pipeTo) {
-  this.pipeTo = pipeTo;
+function start(command, that) {
+  debug(`starting '${command}'`)
   if (process.platform=='win32')
-    this.childProcess = require('child_process').spawn('cmd', ['/c', this.options.command]);
+    that.childProcess = require('child_process').spawn('cmd', ['/c', command]);
   else
-    this.childProcess = require('child_process').spawn('sh', ['-c', this.options.command]);
-  this.childProcess.stderr.on('data', function(data) {
+    that.childProcess = require('child_process').spawn('sh', ['-c', command]);
+  that.lastStartupTime = new Date().getTime()
+    
+  that.childProcess.stderr.on('data', function(data) {
     console.error(data.toString());
   });
-  var that = this;
-  this.childProcess.stdout.on('data', function(data) {
+
+  that.childProcess.stdout.on('data', function(data) {
     that.push(data);
   });
 
+  that.childProcess.on('close', (code) => {
+    debug(`process exited with ${code}`)
+    if ( typeof that.options.restartOnClose === 'undefined'
+         || that.options.restartOnClose ) {
+      var throttleTime = (that.options.restartThrottleTime || 60) * 1000;
+      
+      var sinceLast = new Date().getTime() - that.lastStartupTime
+      if (  sinceLast > throttleTime ) {
+        start(command, that);
+      } else {
+        var nextStart = throttleTime-sinceLast
+        debug(`waiting ${nextStart/1000} seconds to restart`)
+        setTimeout(function() {
+          start(command, that);
+        }, nextStart);
+      }
+    }
+  });
+}
+
+Execute.prototype.pipe = function(pipeTo) {
+  this.pipeTo = pipeTo;
+  start(this.options.command, this);
+
   const stdOutEvent = this.options.toChildProcess || "toChildProcess"
   debug("Using event " + stdOutEvent + " for output to child process's stdin")
-  this.options.app.on(stdOutEvent, function(d) {
+  var that = this;
+  that.options.app.on(stdOutEvent, function(d) {
     that.childProcess.stdin.write(d + '\n');
   })
 
