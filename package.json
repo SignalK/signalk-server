@@ -62,7 +62,7 @@
     "@signalk/n2k-signalk": "0.0.3",
     "@signalk/sailgauge": "^1.1.0",
     "@signalk/signalk-schema": "0.0.1-10",
-    "@signalk/signalk-to-nmea0183": "0.1.0",
+    "@signalk/signalk-to-nmea0183": "0.1.1",
     "@signalk/simplegauges": "^1.0.1",
     "baconjs": "^0.7.88",
     "body-parser": "^1.14.1",
