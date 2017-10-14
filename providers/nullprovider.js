@@ -18,10 +18,9 @@
  *
  */
 
-const Transform = require('stream').Transform;
+const Transform = require('stream').Transform
 
-
-function NullProvider(options) {
+function NullProvider (options) {
   Transform.call(this, {
     objectMode: true
   })
@@ -29,4 +28,4 @@ function NullProvider(options) {
 
 require('util').inherits(NullProvider, Transform)
 
-module.exports = NullProvider;
+module.exports = NullProvider

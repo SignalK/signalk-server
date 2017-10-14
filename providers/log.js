@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- /* Usage: This  pipeElement logs the output of the previous pipeElement. If placed in the end of the pipe, it will log Signal K deltas
+/* Usage: This  pipeElement logs the output of the previous pipeElement. If placed in the end of the pipe, it will log Signal K deltas
  * Takes the options "logdir" and "discriminator". The log files are named from date and hour, and a new file is created every hour
  * Please note the standard discriminators used for playback with providers/multiplexedlog.js
  * Example:
@@ -29,32 +29,32 @@
 
 */
 
-const Transform = require('stream').Transform;
+const Transform = require('stream').Transform
 const FileTimestampStream = require('file-timestamp-stream')
 
-const loggers = {};
+const loggers = {}
 
-function Log(options) {
+function Log (options) {
   Transform.call(this, {
-    objectMode: true,
-  });
-  this.discriminator = options.discriminator || '';
+    objectMode: true
+  })
+  this.discriminator = options.discriminator || ''
   if (!loggers[options.logdir]) {
     const path = require('path').join(
       (options.logdir.indexOf('/') === 0 ? '' : __dirname + '/../') +
         options.logdir
-    );
+    )
     loggers[options.logdir] = new FileTimestampStream({
       path: path + 'signalk-rawdata.log.%Y-%m-%dT%H'
-    });
+    })
   }
-  this.logger = loggers[options.logdir];
+  this.logger = loggers[options.logdir]
 }
 
-require('util').inherits(Log, Transform);
+require('util').inherits(Log, Transform)
 
-Log.prototype._transform = function(msg, encoding, done) {
-  this.push(msg);
+Log.prototype._transform = function (msg, encoding, done) {
+  this.push(msg)
   try {
     this.logger.write(
       new Date().getTime() +
@@ -63,15 +63,15 @@ Log.prototype._transform = function(msg, encoding, done) {
         ';' +
         (msg.updates ? JSON.stringify(msg) : msg.toString()) +
         '\n'
-    );
+    )
   } catch (e) {
-    console.error(e);
+    console.error(e)
   }
-  done();
-};
-
-function pad(num) {
-  return (num > 9 ? '' : '0') + num;
+  done()
 }
 
-module.exports = Log;
+function pad (num) {
+  return (num > 9 ? '' : '0') + num
+}
+
+module.exports = Log

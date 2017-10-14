@@ -23,10 +23,14 @@
     "plugins": false
   },
 
-  "pipedProviders": [{
-    "id": "deltaFromHttp",
-    "pipeElements": [{
-      "type": "test/httpprovider"
-    }]
-  }]
+  "pipedProviders": [
+    {
+      "id": "deltaFromHttp",
+      "pipeElements": [
+        {
+          "type": "test/httpprovider"
+        }
+      ]
+    }
+  ]
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- /* Usage:
+/* Usage:
  * As part of a PipedProvider in a settings file. Lets you pass gpsd to Signal K. GPSD is a service daemon that monitors one or more GPSes or AIS receivers attached to a host computer through serial or USB ports,
  * making all data on the location/course/velocity of the sensors available to be queried on TCP port 2947 of the host computer.
  * For examples of use, see https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-gpsd-settings.json
@@ -30,14 +30,14 @@
 
  */
 
-var Transform = require('stream').Transform;
-var gpsd = require('node-gpsd');
-var debug = require('debug')('signalk:provider:gpsd');
+var Transform = require('stream').Transform
+var gpsd = require('node-gpsd')
+var debug = require('debug')('signalk:provider:gpsd')
 
-function Gpsd(options) {
+function Gpsd (options) {
   Transform.call(this, {
     objectMode: true
-  });
+  })
   this.listener = new gpsd.Listener({
     port: options.port || 2947,
     hostname: options.hostname || 'localhost',
@@ -47,27 +47,27 @@ function Gpsd(options) {
       error: console.error
     },
     parse: false
-  });
+  })
 
-  this.listener.connect(function() {
-    debug('Connected');
-  });
+  this.listener.connect(function () {
+    debug('Connected')
+  })
 
-  var self = this;
-  this.listener.on('raw', function(data) {
-    self.push(data);
+  var self = this
+  this.listener.on('raw', function (data) {
+    self.push(data)
   })
 
   this.listener.watch({
     class: 'WATCH',
     nmea: true
-  });
+  })
 }
 
-require('util').inherits(Gpsd, Transform);
+require('util').inherits(Gpsd, Transform)
 
-Gpsd.prototype._transform = function(chunk, encoding, done) {
-  done();
+Gpsd.prototype._transform = function (chunk, encoding, done) {
+  done()
 }
 
-module.exports = Gpsd;
+module.exports = Gpsd

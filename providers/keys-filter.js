@@ -3,7 +3,7 @@
 const Transform = require('stream').Transform
 const debug = require('debug')('signalk-server-node/providers/keys-filter')
 
-function ToSignalK(options) {
+function ToSignalK (options) {
   Transform.call(this, {
     objectMode: true
   })
@@ -20,8 +20,7 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
 
   if (typeof chunk === 'object' && chunk !== null) {
     delta = chunk
-  }
-  else if (typeof chunk === 'string') {
+  } else if (typeof chunk === 'string') {
     try {
       delta = JSON.parse(chunk)
       string = true
@@ -44,7 +43,7 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
 
         if (values.length > 0) {
           const upd = {
-            values,
+            values
           }
 
           if (update.hasOwnProperty('$source')) {

@@ -41,54 +41,54 @@
 
  */
 
-const Transform = require("stream").Transform;
-const isArray = require("lodash").isArray;
+const Transform = require('stream').Transform
+const isArray = require('lodash').isArray
 
-
-function ToSignalK(options) {
+function ToSignalK (options) {
   Transform.call(this, {
     objectMode: true
-  });
+  })
 
-  this.parser = new (require("nmea0183-signalk")).Parser(options);
+  this.parser = new (require('nmea0183-signalk')).Parser(options)
 
-  var that = this;
-  this.parser.on("nmea0183", function(sentence) {
-    that.emit("nmea0183", sentence);
-  });
+  var that = this
+  this.parser.on('nmea0183', function (sentence) {
+    that.emit('nmea0183', sentence)
+  })
 
   if (options.sentenceEvent) {
-    (isArray(options.sentenceEvent)
+    ;(isArray(options.sentenceEvent)
       ? options.sentenceEvent
-      : [options.sentenceEvent]).forEach(event => {
-      that.parser.on("nmea0183", sentence => options.app.emit(event, sentence));
-    });
+      : [options.sentenceEvent]
+    ).forEach(event => {
+      that.parser.on('nmea0183', sentence => options.app.emit(event, sentence))
+    })
   }
 
-  this.parser.on("delta", function(delta) {
+  this.parser.on('delta', function (delta) {
     if (that.timestamp) {
       delta.updates.forEach(update => {
-        update.timestamp = that.timestamp;
-      });
+        update.timestamp = that.timestamp
+      })
     }
-    that.push(delta);
-  });
+    that.push(delta)
+  })
 }
 
-require("util").inherits(ToSignalK, Transform);
+require('util').inherits(ToSignalK, Transform)
 
-ToSignalK.prototype._transform = function(chunk, encoding, done) {
+ToSignalK.prototype._transform = function (chunk, encoding, done) {
   try {
-    if (typeof chunk === "object" && typeof chunk.line === "string") {
-      this.timestamp = new Date(Number(chunk.timestamp));
-      this.parser.write(chunk.line + "\n");
+    if (typeof chunk === 'object' && typeof chunk.line === 'string') {
+      this.timestamp = new Date(Number(chunk.timestamp))
+      this.parser.write(chunk.line + '\n')
     } else {
-      this.parser.write(chunk + "\n");
+      this.parser.write(chunk + '\n')
     }
   } catch (ex) {
-    console.error(ex);
+    console.error(ex)
   }
-  done();
-};
+  done()
+}
 
-module.exports = ToSignalK;
+module.exports = ToSignalK
