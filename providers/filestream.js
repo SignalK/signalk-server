@@ -33,53 +33,54 @@
 
  */
 
-var path = require('path');
-var PassThrough = require('stream').PassThrough;
-const fs = require('fs');
+var path = require('path')
+var PassThrough = require('stream').PassThrough
+const fs = require('fs')
 
-function EndIgnoringPassThrough() {
-  PassThrough.call(this);
+function EndIgnoringPassThrough () {
+  PassThrough.call(this)
 }
 
+require('util').inherits(EndIgnoringPassThrough, PassThrough)
+EndIgnoringPassThrough.prototype.end = function () {}
 
-require('util').inherits(EndIgnoringPassThrough, PassThrough);
-EndIgnoringPassThrough.prototype.end = function() {}
-
-
-var FileStream = function(options) {
-  this.options = options;
-  this.keepRunning = typeof options.keepRunning === "undefined" ? true : options.keepRunning
+var FileStream = function (options) {
+  this.options = options
+  this.keepRunning =
+    typeof options.keepRunning === 'undefined' ? true : options.keepRunning
 }
 
-
-FileStream.prototype.pipe = function(pipeTo) {
-  this.pipeTo = pipeTo;
-  this.endIgnoringPassThrough = new EndIgnoringPassThrough();
-  this.endIgnoringPassThrough.pipe(pipeTo);
-  this.startStream();
+FileStream.prototype.pipe = function (pipeTo) {
+  this.pipeTo = pipeTo
+  this.endIgnoringPassThrough = new EndIgnoringPassThrough()
+  this.endIgnoringPassThrough.pipe(pipeTo)
+  this.startStream()
 }
 
-FileStream.prototype.startStream = function() {
+FileStream.prototype.startStream = function () {
   var filename
-  if ( path.isAbsolute(this.options.filename) ) {
+  if (path.isAbsolute(this.options.filename)) {
     filename = this.options.filename
   } else {
-    filename = path.join(this.options.app.config.configPath, this.options.filename)
-    if( !fs.existsSync(filename) ) {
+    filename = path.join(
+      this.options.app.config.configPath,
+      this.options.filename
+    )
+    if (!fs.existsSync(filename)) {
       filename = path.join(__dirname, '..', this.options.filename)
     }
   }
-  
-  this.filestream = require('fs').createReadStream(filename);
-  if(this.keepRunning) {
-    this.filestream.on('end', this.startStream.bind(this));
+
+  this.filestream = require('fs').createReadStream(filename)
+  if (this.keepRunning) {
+    this.filestream.on('end', this.startStream.bind(this))
   }
   this.filestream.pipe(this.endIgnoringPassThrough)
 }
 
-FileStream.prototype.end = function() {
-  this.pipeTo.end();
-  this.filestream.close();
+FileStream.prototype.end = function () {
+  this.pipeTo.end()
+  this.filestream.close()
 }
 
-module.exports = FileStream;
+module.exports = FileStream

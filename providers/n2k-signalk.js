@@ -14,32 +14,29 @@
  * limitations under the License.
  */
 
-var Transform = require('stream').Transform;
+var Transform = require('stream').Transform
 
-var toDelta = require('@signalk/n2k-signalk').toDelta;
+var toDelta = require('@signalk/n2k-signalk').toDelta
 
-require('util').inherits(ToSignalK, Transform);
+require('util').inherits(ToSignalK, Transform)
 
-function ToSignalK() {
+function ToSignalK () {
   Transform.call(this, {
     objectMode: true
-  });
+  })
   this.state = {}
 }
 
-
-ToSignalK.prototype._transform = function(chunk, encoding, done) {
+ToSignalK.prototype._transform = function (chunk, encoding, done) {
   try {
-    var delta = toDelta(chunk, this.state);
+    var delta = toDelta(chunk, this.state)
     if (delta && delta.updates[0].values.length > 0) {
-      this.push(delta);
+      this.push(delta)
     }
   } catch (ex) {
-    console.error(ex);
+    console.error(ex)
   }
-  done();
+  done()
 }
 
-
-module.exports = ToSignalK;
-
+module.exports = ToSignalK

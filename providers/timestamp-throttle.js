@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-var Transform = require('stream').Transform;
+var Transform = require('stream').Transform
 var moment = require('moment')
 
 /*
@@ -23,39 +23,42 @@ so that throughput rate is real time. Aimed at canboat analyzer output
 rate control
 */
 
-function TimestampThrottle(options) {
+function TimestampThrottle (options) {
   Transform.call(this, {
     objectMode: true
-  });
-  this.lastMsgMillis = new Date().getTime();
-  this.getMilliseconds = options && options.getMilliseconds ? options.getMilliseconds : getMilliseconds;
+  })
+  this.lastMsgMillis = new Date().getTime()
+  this.getMilliseconds =
+    options && options.getMilliseconds
+      ? options.getMilliseconds
+      : getMilliseconds
 }
 
-require('util').inherits(TimestampThrottle, Transform);
+require('util').inherits(TimestampThrottle, Transform)
 
-TimestampThrottle.prototype._transform = function(msg, encoding, done) {
-    var msgMillis = this.getMilliseconds(msg);
-    if (msgMillis < this.lastMsgMillis) {
-      this.offsetMillis = new Date().getTime() - msgMillis;
-    }
-    this.lastMsgMillis = msgMillis;
-    var millisToCorrectSendTime = msgMillis - new Date().getTime() + this.offsetMillis;
-    if (millisToCorrectSendTime <= 0) {
-      this.push(msg);
-      done();
-    } else {
-      var doPush = this.push.bind(this, msg)
-      setTimeout(function() {
-        doPush()
-        done();
-      }, millisToCorrectSendTime);
-    }
-};
-
-function getMilliseconds(msg) {
-  //2014-08-15-16:00:00.083
-  return moment(msg.timestamp, "YYYY-MM-DD-HH:mm:ss.SSS").valueOf()
+TimestampThrottle.prototype._transform = function (msg, encoding, done) {
+  var msgMillis = this.getMilliseconds(msg)
+  if (msgMillis < this.lastMsgMillis) {
+    this.offsetMillis = new Date().getTime() - msgMillis
+  }
+  this.lastMsgMillis = msgMillis
+  var millisToCorrectSendTime =
+    msgMillis - new Date().getTime() + this.offsetMillis
+  if (millisToCorrectSendTime <= 0) {
+    this.push(msg)
+    done()
+  } else {
+    var doPush = this.push.bind(this, msg)
+    setTimeout(function () {
+      doPush()
+      done()
+    }, millisToCorrectSendTime)
+  }
 }
 
+function getMilliseconds (msg) {
+  // 2014-08-15-16:00:00.083
+  return moment(msg.timestamp, 'YYYY-MM-DD-HH:mm:ss.SSS').valueOf()
+}
 
-module.exports = TimestampThrottle;
+module.exports = TimestampThrottle

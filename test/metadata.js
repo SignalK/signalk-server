@@ -48,7 +48,6 @@ describe('Metadata retrieval', () => {
     })
   })
 
-
   function getUrl (url) {
     return serverP.then(_ => {
       return rp({
