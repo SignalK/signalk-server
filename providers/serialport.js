@@ -78,7 +78,7 @@ SerialStream.prototype.start = function() {
 
   this.serial = new SerialPort(this.options.device, {
     baudRate: this.options.baudrate,
-    parser: SerialPort.parsers.readline("\n")
+    parser: SerialPort.parsers.Readline
   });
 
   this.serial.on(
