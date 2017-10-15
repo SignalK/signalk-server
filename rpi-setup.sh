@@ -30,9 +30,9 @@ case $ans in
     port=3000;;
   y|Y|*)
     port=80;;
-esac 
+esac
 
-echo "port $port selected" 
+echo "port $port selected"
 
 UUIDFile="$dir/UUID"
 if [ -f $UUIDFile ]
@@ -45,8 +45,8 @@ else
   echo "UUID generated: $UUID"
 fi
 
-
 vesselBash="$dir/bin/$vesselName"
+defaultsJson="$dir/settings/defaults.json"
 vesselJson="$dir/settings/$vesselName.json"
 
 echo "A file will be created with your settings in"
@@ -64,19 +64,23 @@ bashScript
 
 sudo chmod 755 $vesselBash
 
-cat > $vesselJson <<jsonfile
+cat > $defaultsJson <<defaults
 {
   "vessel": {
     "name": "$vesselName",
     "uuid"	: "urn:mrn:signalk:uuid:$UUID"
-  },
+  }
+}
+defaults
 
+cat > $vesselJson <<jsonfile
+{
   "interfaces": {},
 
   "pipedProviders": [{
     "id": "nmeaFromFile",
     "pipeElements": [
-       { 
+       {
          "type": "providers/filestream",
          "options": {
            "filename": "samples/plaka.log"
@@ -88,7 +92,7 @@ cat > $vesselJson <<jsonfile
            }
          ]
        },
-       { 
+       {
          "type": "providers/throttle",
          "options": {
             "rate": 500
@@ -118,8 +122,11 @@ jsonfile
 group_full=$(getent group $SUDO_GID)
 group="$( cut -d ':' -f 1 <<< "$group_full" )"
 sudo chmod 644 $vesselJson
+sudo chmod 644 $defaultsJson
 sudo chown $SUDO_USER $vesselJson
-sudo chgrp $group $vesselJson 
+sudo chown $SUDO_USER $defaultsJson
+sudo chgrp $group $vesselJson
+sudo chgrp $group $defaultsJson 
 
 cat > $systemd <<systemdfile
 [Service]
