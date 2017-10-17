@@ -165,4 +165,5 @@ TcpStream.prototype.end = function () {
   this.start()
 }
 
-module.exports = TcpStr
+module.exports = TcpStream;
+
