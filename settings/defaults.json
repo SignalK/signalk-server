@@ -1,0 +1,34 @@
+{
+  "vessels": {
+    "self": {
+      "name": "Aava",
+      "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d",
+      "mmsi": "1234567",
+
+      "design": {
+        "draft": {
+          "maximum": 1.905
+        },
+        "length": {
+          "overall": 9.144
+        },
+        "beam": {
+          "value": 3.2
+        },
+        "airHeight": 13.716,
+        "aisShipType": 36
+      },
+
+      "sensors": {
+        "gps": {
+          "fromBow": {
+            "value": 7.9248
+          },
+          "fromCenter": {
+            "value": 0
+          }
+        }
+      }
+    }
+  }
+}
