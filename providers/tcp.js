@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- /* Usage: This is TCP client provider that can connect to a tcp server and pass data from there to the provider pipeline.
+/* Usage: This is TCP client provider that can connect to a tcp server and pass data from there to the provider pipeline.
  * It takes the options "host" and "port" and optionally "reconnect" (default true) and "maxRetries" (default 10)
  * Example:
 
@@ -28,60 +28,63 @@
 
  */
 
+var net = require('net'),
+  Transform = require('stream').Transform,
+  debug = require('debug')('signalk-provider-tcp')
 
-var net       = require('net')
-  , Transform = require('stream').Transform
-  , debug     = require('debug')('signalk-provider-tcp')
-;
-
-function TcpStream(options) {
+function TcpStream (options) {
   if (!(this instanceof TcpStream)) {
-    return new TcpStream(options);
+    return new TcpStream(options)
   }
 
-  Transform.call(this, options);
+  Transform.call(this, options)
 
-  this.options    = options;
-  this.reconnect  = (typeof options.reconnect === 'boolean' && options.reconnect === false) ? false : true;
-  this.socket     = null;
-  this.retries    = 0;
-  this.maxRetries = (typeof options.maxRetries === 'number' && options.maxRetries > 0) ? options.maxRetries : 10;
+  this.options = options
+  this.reconnect = !(
+    typeof options.reconnect === 'boolean' && options.reconnect === false
+  )
+  this.socket = null
+  this.retries = 0
+  this.maxRetries =
+    typeof options.maxRetries === 'number' && options.maxRetries > 0
+      ? options.maxRetries
+      : 10
 
-  this.__reset    = null;
-  this.__timeout  = null;
-  this.__last     = -1;
+  this.__reset = null
+  this.__timeout = null
+  this.__last = -1
 
-  this.start(true);
+  this.start(true)
 
   this.on('error', function (err) {
-    debug('Stream: "error". Message: ' + err.message);
-  });
+    debug('Stream: "error". Message: ' + err.message)
+  })
 }
 
-require('util').inherits(TcpStream, Transform);
+require('util').inherits(TcpStream, Transform)
 
 TcpStream.prototype.handleTimeout = function () {
-  if ((Date.now() - this.__last) > 90000 && this.__reset === null) {
-    debug('Connection timed out. Resetting.');
-    this.start();
+  if (Date.now() - this.__last > 90000 && this.__reset === null) {
+    debug('Connection timed out. Resetting.')
+    this.start()
     return
   }
 
   if (this.__timeout !== null) {
-    clearTimeout(this.__timeout);
+    clearTimeout(this.__timeout)
   }
 
-  this.__timeout = setTimeout(this.handleTimeout.bind(this), 120000);
-};
+  this.__timeout = setTimeout(this.handleTimeout.bind(this), 120000)
+}
 
-TcpStream.prototype.start = function(force) {
+TcpStream.prototype.start = function (force) {
   if (this.socket !== null) {
-    this.socket.unpipe(this);
-    this.socket.removeAllListeners('error');
-    this.socket.removeAllListeners('close');
-    this.socket.removeAllListeners('end');
-    this.socket.destroy();
-    this.socket = null;
+    this.socket.unpipe(this)
+    this.socket.removeAllListeners('error')
+    this.socket.removeAllListeners('close')
+    this.socket.removeAllListeners('end')
+    this.socket.destroy()
+    this.socket = null
   }
 
   if (force !== true && this.reconnect !== true) {
@@ -90,62 +93,77 @@ TcpStream.prototype.start = function(force) {
   }
 
   if (this.__timeout !== null) {
-    clearTimeout(this.__timeout);
+    clearTimeout(this.__timeout)
   }
 
-  this.socket     = net.connect(this.options);
-  this.__timeout  = setTimeout(this.handleTimeout.bind(this), 30000);
+  this.socket = net.connect(this.options)
+  this.__timeout = setTimeout(this.handleTimeout.bind(this), 30000)
 
-  this.socket.on('close', function () {
-    if (this.__reset === null) {
-      debug('Socket: "close". Re-starting')
-      this.start();
-    }
-  }.bind(this));
+  this.socket.on(
+    'close',
+    function () {
+      if (this.__reset === null) {
+        debug('Socket: "close". Re-starting')
+        this.start()
+      }
+    }.bind(this)
+  )
 
   this.socket.on('connect', function () {
     if (this.__reset !== null) {
-      clearTimeout(this.__reset);
+      clearTimeout(this.__reset)
     }
 
     debug('Socket: "connect". Connected!')
   })
 
-  this.socket.on('error', function (err) {
-    debug('Socket: "error". Message: ' + err.message);
-    this.retries++;
+  this.socket.on(
+    'error',
+    function (err) {
+      debug('Socket: "error". Message: ' + err.message)
+      this.retries++
 
-    if(this.retries < this.maxRetries) {
-      debug('Socket: "error". Retrying... ' + this.retries + ' / ' + this.maxRetries);
-      this.start();
-    } else {
-      debug('Socket: "error". Out of retries, retrying in 30 seconds.\n\n');
-      if (this.__reset === null) {
-        if (this.__timeout !== null) {
-          clearTimeout(this.__timeout);
+      if (this.retries < this.maxRetries) {
+        debug(
+          'Socket: "error". Retrying... ' +
+            this.retries +
+            ' / ' +
+            this.maxRetries
+        )
+        this.start()
+      } else {
+        debug('Socket: "error". Out of retries, retrying in 30 seconds.\n\n')
+        if (this.__reset === null) {
+          if (this.__timeout !== null) {
+            clearTimeout(this.__timeout)
+          }
+
+          this.__reset = setTimeout(
+            function () {
+              this.maxRetries = 10
+              this.retries = 0
+              this.__reset = null
+              this.start()
+            }.bind(this),
+            30000
+          )
         }
-
-        this.__reset = setTimeout(function () {
-          this.maxRetries = 10;
-          this.retries = 0;
-          this.__reset = null;
-          this.start();
-        }.bind(this), 30000);
       }
-    }
-  }.bind(this));
+    }.bind(this)
+  )
 
-  this.socket.pipe(this);
-};
+  this.socket.pipe(this)
+}
 
-TcpStream.prototype._transform = function(chunk, encoding, done) {
-  this.__last = Date.now();
-  this.push(chunk);
-  done();
-};
+TcpStream.prototype._transform = function (chunk, encoding, done) {
+  this.__last = Date.now()
+  this.push(chunk)
+  done()
+}
 
-TcpStream.prototype.end = function() {
+TcpStream.prototype.end = function () {
   this.start()
-};
+}
 
-module.exports = TcpStream;
+module.exports = TcpStream
+

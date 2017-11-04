@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- /* Usage: This provider is used for throttling input data from files. It takes the option "rate" which is the rate in bytes/s for the stream to come in.
+/* Usage: This provider is used for throttling input data from files. It takes the option "rate" which is the rate in bytes/s for the stream to come in.
  * Example:
 
  {
@@ -26,6 +26,6 @@
 
  */
 
-var Throttle = require('stream-throttle').Throttle;
+var Throttle = require('stream-throttle').Throttle
 
-module.exports = Throttle;
+module.exports = Throttle

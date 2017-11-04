@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+
 /**
   * Usage: this is the pipeElement that transforms NMEA0183 input to Signal K deltas.
   * Emits sentence data as "nmea0183" events on app.signalk by default.

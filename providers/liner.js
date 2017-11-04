@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- /* Usage:
+/* Usage:
  *  This is part of a PipedProvider that splits the input into separate lines and passes one line at a time to the next provider.
  * Takes no options.
 
@@ -24,43 +24,44 @@
 
  */
 
-var Transform = require('stream').Transform;
+var Transform = require('stream').Transform
 
+require('util').inherits(Liner, Transform)
 
-require('util').inherits(Liner, Transform);
-
-function Liner(options) {
+function Liner (options) {
   Transform.call(this, {
     objectMode: true
-  });
+  })
   this.doPush = this.push.bind(this)
 }
 
-Liner.prototype._transform = function(chunk, encoding, done) {
+Liner.prototype._transform = function (chunk, encoding, done) {
   var data = chunk.toString()
   if (this._lastLineData) {
-    data = this._lastLineData + data;
+    data = this._lastLineData + data
   }
 
   var lines = data.split('\n')
-  this._lastLineData = lines.splice(lines.length - 1, 1)[0];
+  this._lastLineData = lines.splice(lines.length - 1, 1)[0]
   if (this._lastLineData.length > 2048) {
-    console.error("Are you sure you are using the correct line terminator? Not going to handle lines longer than 2048 chars.");
-    this._lastLineData = '';
+    console.error(
+      'Are you sure you are using the correct line terminator? Not going to handle lines longer than 2048 chars.'
+    )
+    this._lastLineData = ''
   }
 
-  lines.forEach(this.doPush);
+  lines.forEach(this.doPush)
 
-  done();
+  done()
 }
 
-Liner.prototype._flush = function(done) {
+Liner.prototype._flush = function (done) {
   if (this._lastLineData) {
     this.push(this._lastLineData)
   }
 
-  this._lastLineData = null;
-  done();
+  this._lastLineData = null
+  done()
 }
 
-module.exports = Liner;
+module.exports = Liner

@@ -14,63 +14,79 @@
  * limitations under the License.
  */
 
-var Transform = require('stream').Transform;
+var Transform = require('stream').Transform
 
-var SignalK = require('signalk-client');
+var SignalK = require('signalk-client')
 
-var debug = require('debug')('signalk-server:providers:mdns-ws');
+var debug = require('debug')('signalk-server:providers:mdns-ws')
 
-var WebSocket = require('ws');
-var _object = require('lodash/object');
+var WebSocket = require('ws')
+var _object = require('lodash/object')
 
-function MdnsWs(options) {
+function MdnsWs (options) {
   Transform.call(this, {
     objectMode: true
-  });
-  this.selfHost = options.app.config.getExternalHostname() + ".";
-  this.selfPort = options.app.config.getExternalPort();
-  this.remoteServers = {};
-  this.remoteServers[this.selfHost + ":" + this.selfPort] = {};
-  if(options.host && options.port) {
+  })
+  this.selfHost = options.app.config.getExternalHostname() + '.'
+  this.selfPort = options.app.config.getExternalPort()
+  this.remoteServers = {}
+  this.remoteServers[this.selfHost + ':' + this.selfPort] = {}
+  if (options.host && options.port) {
     this.connect(options)
   } else {
-    this.signalkClient = new SignalK.Client();
-    this.signalkClient.on('discovery', this.connect.bind(this));
-    debug("Starting discovery")
-    this.signalkClient.startDiscovery();
+    this.signalkClient = new SignalK.Client()
+    this.signalkClient.on('discovery', this.connect.bind(this))
+    debug('Starting discovery')
+    this.signalkClient.startDiscovery()
   }
 }
 
-require('util').inherits(MdnsWs, Transform);
+require('util').inherits(MdnsWs, Transform)
 
-MdnsWs.prototype.connect = function(discovery) {
-  if(this.remoteServers[discovery.host + ":" + discovery.port]) {
-    debug("Discovered " + discovery.host + ":" + discovery.port + " already known, not connecting");
-    return;
+MdnsWs.prototype.connect = function (discovery) {
+  if (this.remoteServers[discovery.host + ':' + discovery.port]) {
+    debug(
+      'Discovered ' +
+        discovery.host +
+        ':' +
+        discovery.port +
+        ' already known, not connecting'
+    )
+    return
   }
-  var signalkClient = new SignalK.Client();
+  var signalkClient = new SignalK.Client()
   var url
-  if(discovery.discoveryResponse) {
-    _object.values(discovery.discoveryResponse.endpoints)[0]['signalk-ws'];
+  if (discovery.discoveryResponse) {
+    _object.values(discovery.discoveryResponse.endpoints)[0]['signalk-ws']
   } else {
-    url = "ws://" + discovery.host + ":" + discovery.port + "/signalk/v1/stream?subscribe=all"
+    url =
+      'ws://' +
+      discovery.host +
+      ':' +
+      discovery.port +
+      '/signalk/v1/stream?subscribe=all'
   }
-  var that = this;
-  var onConnect = function(connection) {
-    that.remoteServers[discovery.host + ":" + discovery.port] = {};
-    debug("Connected to " + url);
-    connection.subscribeAll();
+  var that = this
+  var onConnect = function (connection) {
+    that.remoteServers[discovery.host + ':' + discovery.port] = {}
+    debug('Connected to ' + url)
+    connection.subscribeAll()
   }
-  var onDisconnect = function() {
-    debug("Disconnected from " + url);
+  var onDisconnect = function () {
+    debug('Disconnected from ' + url)
   }
-  var onError = function(err) {
-    debug("Error:" + err);
+  var onError = function (err) {
+    debug('Error:' + err)
   }
-  signalkClient.connectDeltaByUrl(url, this.push.bind(this), onConnect, onDisconnect, onError);
+  signalkClient.connectDeltaByUrl(
+    url,
+    this.push.bind(this),
+    onConnect,
+    onDisconnect,
+    onError
+  )
 }
 
+MdnsWs.prototype._transform = function (chunk, encoding, done) {}
 
-MdnsWs.prototype._transform = function(chunk, encoding, done) {}
-
-module.exports = MdnsWs;
+module.exports = MdnsWs

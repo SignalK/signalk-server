@@ -1,5 +1,19 @@
 ## Change Log
 
+### v0.1.32 (2017/10/04 16:38 +00:00)
+- [#297](https://github.com/SignalK/signalk-server-node/pull/297) Update mocha to the latest version 🚀 (@greenkeeper[bot])
+- [#294](https://github.com/SignalK/signalk-server-node/pull/294) feature: make meta and units retrieval work on full paths (@tkurki)
+- [#295](https://github.com/SignalK/signalk-server-node/pull/295) Update @signalk/signalk-schema to the latest version 🚀 (@greenkeeper[bot])
+- [#293](https://github.com/SignalK/signalk-server-node/pull/293) Update @signalk/signalk-schema to the latest version 🚀 (@greenkeeper[bot])
+- [#292](https://github.com/SignalK/signalk-server-node/pull/292) fix: issue #290 ensure that security is applied for all ws connections (@sbender9)
+- [#291](https://github.com/SignalK/signalk-server-node/pull/291) feature: add StreamBundle.getSelfBus() (@tkurki)
+- [#287](https://github.com/SignalK/signalk-server-node/pull/287) fix: upgrade pem to be Alpine compatible (@tkurki)
+- [#286](https://github.com/SignalK/signalk-server-node/pull/286) fix: fix data logging (@tkurki)
+- [#285](https://github.com/SignalK/signalk-server-node/pull/285) feature:dynamic plugin schema (@sbender9)
+- [#284](https://github.com/SignalK/signalk-server-node/pull/284) feature: allow plugin+webapp combinations (@tkurki)
+- [#283](https://github.com/SignalK/signalk-server-node/pull/283) fix: update plugin ui dependencies (@tkurki)
+- [#282](https://github.com/SignalK/signalk-server-node/pull/282) Ignore ssl file permissions if on win32 (@zubenubi)
+
 ### v0.1.31 (2017/09/02 08:01 +00:00)
 - [#232](https://github.com/SignalK/signalk-server-node/pull/232) feature: allow server configuration, plugin configuration and defaults to be separate from the server install (@sbender9)
 
