@@ -1,53 +1,49 @@
-
 {
   "vessel": {
-    "name"  : "X-Miles",
-    "brand" : "X-Yachts",
-    "type"  : "X-99",
-    "uuid"  : "urn:mrn:signalk:uuid:f46d2b37-6f63-48b0-8713-8920238186ed"
+    "name": "Volare",
+    "brand": "Friendship",
+    "type": "22",
+    "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d"
   },
 
-  "interfaces": {},
+  "interfaces": {
+    "rest": true,
+    "ws": true,
+    "bower": true
+  },
 
   "pipedProviders": [
     {
       "id": "nmeaFromFile",
       "pipeElements": [
-         {
-           "type": "providers/filestream",
-           "options": {
-             "filename": "samples/plaka.log"
-           },
-           "optionMappings": [
-             {
-               "fromAppProperty": "argv.nmeafilename",
-               "toOption": "filename"
-             }
-           ]
-         },
-         {
-           "type": "providers/throttle",
-           "options": {
-              "rate": 500
-           }
-         },
-         {
-           "type": "providers/liner"
-         },
-         {
-            "type": "providers/nmea0183-signalk",
-            "optionMappings": [
-              {
-               "fromAppProperty": "selfId",
-               "toOption": "selfId"
-              },
-              {
-               "fromAppProperty": "selfType",
-               "toOption": "selfType"
-              }
-            ]
-         },
-         {
+        {
+          "type": "providers/filestream",
+          "options": {
+            "filename": "samples/plaka.log"
+          },
+          "optionMappings": [
+            {
+              "fromAppProperty": "argv.nmeafilename",
+              "toOption": "filename"
+            }
+          ]
+        },
+        {
+          "type": "providers/throttle",
+          "options": {
+            "rate": 1000
+          }
+        },
+        {
+          "type": "providers/liner"
+        },
+        {
+          "type": "providers/nmea0183-signalk",
+          "options": {
+            "sentenceEvent": "nmea0183-B"
+          }
+        },
+        {
           "type": "providers/keys-filter",
           "options": {
             "excludeMatchingPaths": [
