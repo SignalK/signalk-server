@@ -13,7 +13,7 @@
 </body>
 
 <script>
-var ws = new WebSocket("ws://" + window.location.host + "/signalk/v1/stream?subscribe=all");
+var ws = new WebSocket((window.location.protocol === 'https:' ? 'wss' : 'ws') + "://" + window.location.host + "/signalk/v1/stream?subscribe=all");
 
 ws.onopen = function() {
   var subscriptionObject = {
