@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /**
   * Usage: this is the pipeElement that transforms NMEA0183 input to Signal K deltas.
   * Emits sentence data as "nmea0183" events on app.signalk by default.
@@ -77,7 +76,7 @@ require('util').inherits(nmea0183ToSignalK, Transform)
 
 nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
   if (Buffer.isBuffer(chunk)) {
-    chunk = chunk.toString(encoding).trim()
+    chunk = chunk.toString().trim()
   }
 
   if (chunk && typeof chunk === 'object' && typeof chunk.line === 'string') {
