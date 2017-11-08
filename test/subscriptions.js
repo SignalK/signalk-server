@@ -81,7 +81,7 @@ describe('Subscriptions', _ => {
           wsPromiser.nextMsg(),
           sendDelta(
             getDelta({
-              context: 'vessels.' + self
+              context: self
             })
           )
         ])
@@ -121,7 +121,7 @@ describe('Subscriptions', _ => {
           wsPromiser.nextMsg(),
           sendDelta(
             getDelta({
-              context: 'vessels.' + self
+              context: self
             })
           )
         ])
@@ -156,7 +156,7 @@ describe('Subscriptions', _ => {
           wsPromiser.nextMsg(),
           sendDelta(
             getDelta({
-              context: 'vessels.' + self
+              context: self
             })
           )
         ])
@@ -194,7 +194,7 @@ describe('Subscriptions', _ => {
           wsPromiser.nextMsg(),
           sendDelta(
             getDelta({
-              context: 'vessels.' + self
+              context: self
             })
           )
         ])
@@ -239,7 +239,7 @@ describe('Subscriptions', _ => {
           wsPromiser.nextMsg(),
           sendDelta(
             getDelta({
-              context: 'vessels.' + self
+              context: self
             })
           )
         ])
@@ -252,7 +252,7 @@ describe('Subscriptions', _ => {
         )
         assert(delta.updates.length === 1, 'Receives just one update')
         assert(delta.updates[0].values.length === 1, 'Receives just one value')
-        assert(delta.context === 'vessels.' + self)
+        assert(delta.context === self)
         assert(delta.updates[0].timestamp, '2014-05-03T09:14:11.001Z')
 
         return Promise.all([
