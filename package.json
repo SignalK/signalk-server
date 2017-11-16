@@ -10,11 +10,11 @@
     "start": "node bin/signalk-server",
     "test": "mocha --exit",
     "precommit": "lint-staged",
-    "format": "prettier-standard lib/*.js* providers/*.js* test/*.js* *.js*"
+    "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* *.js*"
   },
   "lint-staged": {
     "linters": {
-      "lib/*.js*": ["prettier-standard", "git add"],
+      "lib/**/*.js*": ["prettier-standard", "git add"],
       "providers/*.js*": ["prettier-standard", "git add"],
       "test/*.js*": ["prettier-standard", "git add"],
       "*.js*": ["prettier-standard", "git add"]
