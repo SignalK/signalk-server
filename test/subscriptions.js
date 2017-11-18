@@ -3,6 +3,7 @@ const assert = require('assert')
 const freeport = require('freeport-promise')
 const WebSocket = require('ws')
 const rp = require('request-promise')
+const startServerP = require('./servertestutilities').startServerP
 
 function getDelta (overwrite) {
   const delta = {
@@ -58,6 +59,10 @@ describe('Subscriptions', _ => {
       deltaUrl = 'http://localhost:' + port + '/signalk/v1/api/_test/delta'
       return startServerP(p)
     })
+  })
+
+  after(() => {
+    serverP.then(server => server.stop())
   })
 
   function sendDelta (delta) {
@@ -305,13 +310,4 @@ WsPromiser.prototype.send = function (message) {
     that.ws.send(JSON.stringify(message))
     setTimeout(() => resolve('wait over'), 100)
   })
-}
-
-function startServerP (port) {
-  const Server = require('../lib')
-  const server = new Server({
-    settings: './test/server-test-settings.json',
-    port: port
-  })
-  return server.start()
 }
