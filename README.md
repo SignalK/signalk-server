@@ -96,6 +96,7 @@ Environment variables
 - `SIGNALK_NODE_SETTINGS` override the path to the settings file
 - `SIGNALK_NODE_CONDFIG_DIR` override the path to find server configuration files
 - `PORT` override the port for http/ws service
+- `SSLPORT` override the port for https/wss service. If defined activates ssl as forced, default protocol.
 - `EXTERNALPORT` the port used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
 - `EXTERNALHOST` the host used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
 - `NMEA0183PORT`  override the port for the NMEA 0183 over tcp service (default 10110)

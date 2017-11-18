@@ -92,7 +92,6 @@
     "express-namespace": "^0.1.1",
     "file-timestamp-stream": "0.0.4",
     "flatmap": "0.0.3",
-    "httpolyglot": "^0.1.2",
     "lodash": "^4.17.4",
     "maptracker": "github:signalk/maptracker",
     "minimist": "^1.1.0",
