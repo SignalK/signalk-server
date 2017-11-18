@@ -2,6 +2,8 @@ var chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
 chai.use(require('@signalk/signalk-schema').chaiModule)
+const freeport = require('freeport-promise')
+const startServerP = require('./servertestutilities').startServerP
 
 var rp = require('request-promise')
 
@@ -38,93 +40,83 @@ var delta = {
 }
 
 describe('Server', function () {
+  let server, port
+
+  before(async function () {
+    port = await freeport()
+    server = await startServerP(port)
+  })
+
+  after(async function () {
+    await server.stop()
+  })
+
   it('handles two deltas with signalk path', function (done) {
-    var fp = require('find-free-port')
-    fp(3000, function (err, freePort) {
-      var host = 'http://localhost:' + freePort
-      var deltaUrl = host + '/signalk/v1/api/_test/delta'
-      var restUrl = host + '/signalk/v1/api/'
+    var host = 'http://localhost:' + port
+    var deltaUrl = host + '/signalk/v1/api/_test/delta'
+    var restUrl = host + '/signalk/v1/api/'
 
-      var p = startServerP(freePort)
+    rp({ url: deltaUrl, method: 'POST', json: delta })
+      .then(function (body) {
+        return rp({ url: restUrl, method: 'GET' })
+      })
+      .then(function (body) {
+        var treeAfterFirstDelta = JSON.parse(body)
+        treeAfterFirstDelta.vessels[uuid].should.have.deep.property(
+          'navigation.logTrip.value',
+          43374
+        )
+        treeAfterFirstDelta.vessels[uuid].should.have.deep.property(
+          'navigation.logTrip.$source',
+          'deltaFromHttp.115'
+        )
+        treeAfterFirstDelta.should.be.validSignalK
 
-      p
-        .then(startedServer => {
-          server = startedServer
-          return rp({ url: deltaUrl, method: 'POST', json: delta })
-        })
-        .then(function (body) {
-          return rp({ url: restUrl, method: 'GET' })
-        })
-        .then(function (body) {
-          var treeAfterFirstDelta = JSON.parse(body)
-          treeAfterFirstDelta.vessels[uuid].should.have.deep.property(
-            'navigation.logTrip.value',
-            43374
-          )
-          treeAfterFirstDelta.vessels[uuid].should.have.deep.property(
-            'navigation.logTrip.$source',
-            'deltaFromHttp.115'
-          )
-          treeAfterFirstDelta.should.be.validSignalK
+        delta.updates[0].values[0].value = 1
+        return rp({ url: deltaUrl, method: 'POST', json: delta })
+      })
+      .then(function (body) {
+        return rp({ url: restUrl, method: 'GET' })
+      })
+      .then(function (body) {
+        var treeAfterSecondDelta = JSON.parse(body)
+        treeAfterSecondDelta.vessels[uuid].should.have.deep.property(
+          'navigation.logTrip.value',
+          1
+        )
+        treeAfterSecondDelta.vessels[uuid].should.have.deep.property(
+          'navigation.logTrip.$source',
+          'deltaFromHttp.115'
+        )
+        treeAfterSecondDelta.should.be.validSignalK
 
-          delta.updates[0].values[0].value = 1
-          return rp({ url: deltaUrl, method: 'POST', json: delta })
-        })
-        .then(function (body) {
-          return rp({ url: restUrl, method: 'GET' })
-        })
-        .then(function (body) {
-          var treeAfterSecondDelta = JSON.parse(body)
-          treeAfterSecondDelta.vessels[uuid].should.have.deep.property(
-            'navigation.logTrip.value',
-            1
-          )
-          treeAfterSecondDelta.vessels[uuid].should.have.deep.property(
-            'navigation.logTrip.$source',
-            'deltaFromHttp.115'
-          )
-          treeAfterSecondDelta.should.be.validSignalK
-
-          delta.updates[0].values[0].value = 2
-          delta.updates[0].source.src = '116'
-          return rp({ url: deltaUrl, method: 'POST', json: delta })
-        })
-        .then(function (body) {
-          return rp({ url: restUrl, method: 'GET' })
-        })
-        .then(function (body) {
-          var treeAfterOtherSourceDelta = JSON.parse(body)
-          treeAfterOtherSourceDelta.vessels[uuid].should.have.deep.property(
-            'navigation.logTrip.value',
-            2
-          )
-          treeAfterOtherSourceDelta.vessels[uuid].should.have.deep.property(
-            'navigation.logTrip.$source',
-            'deltaFromHttp.116'
-          )
-          treeAfterOtherSourceDelta.vessels[uuid].navigation.logTrip.values[
-            'deltaFromHttp.115'
-          ].value.should.equal(1)
-          treeAfterOtherSourceDelta.vessels[uuid].navigation.logTrip.values[
-            'deltaFromHttp.116'
-          ].value.should.equal(2)
-          treeAfterOtherSourceDelta.should.be.validSignalK
-        })
-        .then(_ => {
-          server.stop(done)
-        })
-        .catch(_ => {
-          done()
-        })
-    })
+        delta.updates[0].values[0].value = 2
+        delta.updates[0].source.src = '116'
+        return rp({ url: deltaUrl, method: 'POST', json: delta })
+      })
+      .then(function (body) {
+        return rp({ url: restUrl, method: 'GET' })
+      })
+      .then(function (body) {
+        var treeAfterOtherSourceDelta = JSON.parse(body)
+        treeAfterOtherSourceDelta.vessels[uuid].should.have.deep.property(
+          'navigation.logTrip.value',
+          2
+        )
+        treeAfterOtherSourceDelta.vessels[uuid].should.have.deep.property(
+          'navigation.logTrip.$source',
+          'deltaFromHttp.116'
+        )
+        treeAfterOtherSourceDelta.vessels[uuid].navigation.logTrip.values[
+          'deltaFromHttp.115'
+        ].value.should.equal(1)
+        treeAfterOtherSourceDelta.vessels[uuid].navigation.logTrip.values[
+          'deltaFromHttp.116'
+        ].value.should.equal(2)
+        treeAfterOtherSourceDelta.should.be.validSignalK
+      })
+      .catch(_ => {
+        done()
+      })
   }).timeout(4000)
 })
-
-function startServerP (port) {
-  const Server = require('../lib')
-  const server = new Server({
-    settings: './test/server-test-settings.json',
-    port: port
-  })
-  return server.start()
-}

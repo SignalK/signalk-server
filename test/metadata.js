@@ -3,6 +3,7 @@ const assert = require('assert')
 const freeport = require('freeport-promise')
 const WebSocket = require('ws')
 const rp = require('request-promise')
+const startServerP = require('./servertestutilities').startServerP
 
 describe('Metadata retrieval', () => {
   var serverP, port
@@ -12,6 +13,10 @@ describe('Metadata retrieval', () => {
       port = p
       return startServerP(p)
     })
+  })
+
+  after(() => {
+    serverP.then(server => server.stop())
   })
 
   it('valid .../meta works', () => {
@@ -58,12 +63,3 @@ describe('Metadata retrieval', () => {
     })
   }
 })
-
-function startServerP (port) {
-  const Server = require('../lib')
-  const server = new Server({
-    settings: './test/server-test-settings.json',
-    port: port
-  })
-  return server.start()
-}
