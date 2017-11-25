@@ -10,11 +10,11 @@
     "start": "node bin/signalk-server",
     "test": "mocha --exit",
     "precommit": "lint-staged",
-    "format": "prettier-standard lib/*.js* providers/*.js* test/*.js* *.js*"
+    "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* *.js*"
   },
   "lint-staged": {
     "linters": {
-      "lib/*.js*": ["prettier-standard", "git add"],
+      "lib/**/*.js*": ["prettier-standard", "git add"],
       "providers/*.js*": ["prettier-standard", "git add"],
       "test/*.js*": ["prettier-standard", "git add"],
       "*.js*": ["prettier-standard", "git add"]
@@ -93,7 +93,6 @@
     "file-timestamp-stream": "0.0.4",
     "flatmap": "0.0.3",
     "geolib": "^2.0.24",
-    "httpolyglot": "^0.1.2",
     "lodash": "^4.17.4",
     "maptracker": "github:signalk/maptracker",
     "minimist": "^1.1.0",
@@ -117,12 +116,12 @@
   "devDependencies": {
     "chai": "^4.0.0",
     "chai-things": "^0.2.0",
-    "find-free-port": "^1.0.1",
     "freeport-promise": "^1.0.0",
     "github-changes": "^1.0.4",
     "husky": "^0.14.3",
     "lint-staged": "^5.0.0",
     "mocha": "^4.0.0",
+    "node-fetch": "^1.7.3",
     "prettier-standard": "^7.0.1",
     "request": "^2.81.0",
     "request-promise": "^4.1.1"

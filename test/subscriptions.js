@@ -3,6 +3,7 @@ const assert = require('assert')
 const freeport = require('freeport-promise')
 const WebSocket = require('ws')
 const rp = require('request-promise')
+const startServerP = require('./servertestutilities').startServerP
 
 function getDelta (overwrite) {
   const delta = {
@@ -49,6 +50,29 @@ function getDelta (overwrite) {
   return _.assign(delta, overwrite)
 }
 
+function getNameDelta (overwrite) {
+  const delta = {
+    updates: [
+      {
+        timestamp: '2014-05-03T09:14:11.000Z',
+        source: {
+          pgn: 128275,
+          label: '/dev/actisense',
+          src: '115'
+        },
+        values: [
+          {
+            path: '',
+            value: { name: 'SomeBoat' }
+          }
+        ]
+      }
+    ]
+  }
+
+  return _.assign(delta, overwrite)
+}
+
 describe('Subscriptions', _ => {
   var serverP, port, deltaUrl
 
@@ -58,6 +82,10 @@ describe('Subscriptions', _ => {
       deltaUrl = 'http://localhost:' + port + '/signalk/v1/api/_test/delta'
       return startServerP(p)
     })
+  })
+
+  after(() => {
+    serverP.then(server => server.stop())
   })
 
   function sendDelta (delta) {
@@ -271,6 +299,72 @@ describe('Subscriptions', _ => {
         assert(delta.context === 'vessels.othervessel')
       })
   })
+
+  it('name subscription serves correct data', function () {
+    var self, wsPromiser
+
+    return serverP
+      .then(_ => {
+        wsPromiser = new WsPromiser(
+          'ws://localhost:' + port + '/signalk/v1/stream?subsribe=none'
+        )
+        return wsPromiser.nextMsg()
+      })
+      .then(wsHello => {
+        self = JSON.parse(wsHello).self
+
+        return wsPromiser.send({
+          context: 'vessels.*',
+          subscribe: [
+            {
+              path: 'name'
+            }
+          ]
+        })
+      })
+      .then(() => {
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          sendDelta(
+            getNameDelta({
+              context: 'vessels.' + self
+            })
+          )
+        ])
+      })
+      .then(results => {
+        const delta = JSON.parse(results[0])
+        assert(delta.updates[0].values[0].path === '', 'Path is empty string')
+        assert(
+          typeof delta.updates[0].values[0].value === 'object',
+          'Value is an object'
+        )
+        assert(
+          typeof delta.updates[0].values[0].value.name !== 'undefined',
+          'Value has name key'
+        )
+        assert(
+          delta.updates[0].values[0].value.name === 'SomeBoat',
+          'Name value is correct'
+        )
+        assert(delta.updates.length === 1, 'Receives just one update')
+        assert(delta.updates[0].values.length === 1, 'Receives just one value')
+        assert(delta.context === 'vessels.' + self)
+        assert(delta.updates[0].timestamp, '2014-05-03T09:14:11.001Z')
+
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          sendDelta(getNameDelta({ context: 'vessels.othervessel' }))
+        ])
+      })
+      .then(results => {
+        const delta = JSON.parse(results[0])
+        assert(delta.updates.length === 1, 'Receives just one update')
+        assert(delta.updates[0].values.length === 1, 'Receives just one value')
+        assert(delta.updates[0].values[0].path === '', 'Receives just name')
+        assert(delta.context === 'vessels.othervessel')
+      })
+  })
 })
 
 // Connects to the url via ws
@@ -305,13 +399,4 @@ WsPromiser.prototype.send = function (message) {
     that.ws.send(JSON.stringify(message))
     setTimeout(() => resolve('wait over'), 100)
   })
-}
-
-function startServerP (port) {
-  const Server = require('../lib')
-  const server = new Server({
-    settings: './test/server-test-settings.json',
-    port: port
-  })
-  return server.start()
 }
