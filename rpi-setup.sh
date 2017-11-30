@@ -34,6 +34,26 @@ esac
 
 echo "port $port selected" 
 
+read -p "Do you want to enable SSL? [Y/n]" ans;
+case $ans in
+  n|N)
+    ssl="false";;
+  y|Y|*)
+    ssl="true";;
+esac 
+
+if [ $ssl == "true" ]; then
+  if [ $port == 80 ]; then
+    primaryPort=443
+    secondaryPort=80
+  else
+    primaryPort=3443
+    secondaryPort=3000
+  fi
+else
+  primaryPort=$port
+fi
+
 UUIDFile="$dir/UUID"
 if [ -f $UUIDFile ]
 then
@@ -72,6 +92,8 @@ cat > $vesselJson <<jsonfile
   },
 
   "interfaces": {},
+
+  "ssl": $ssl,
 
   "pipedProviders": [{
     "id": "nmeaFromFile",
@@ -121,6 +143,7 @@ sudo chmod 644 $vesselJson
 sudo chown $SUDO_USER $vesselJson
 sudo chgrp $group $vesselJson 
 
+
 cat > $systemd <<systemdfile
 [Service]
 ExecStart=$vesselBash
@@ -129,23 +152,27 @@ StandardOutput=syslog
 StandardError=syslog
 WorkingDirectory=$dir
 User=$SUDO_USER
+Environment=EXTERNALPORT=$primaryPort
 [Install]
 WantedBy=multi-user.target
 systemdfile
 
 sudo chmod 755 $systemd
 
+if [ $secondaryPort != "" ]; then
+  secondListen="ListenStream=$secondaryPort"
+fi
+
 cat > $socket <<socket
 [Socket]
-ListenStream=$port
+ListenStream=$primaryPort
+$secondListen
 
 [Install]
 WantedBy=sockets.target
 socket
 
 sudo chmod 755 $socket
-
-sed -i -e "s/env.PORT || [0-9]\+;/env.PORT || $port;/g" $dir/lib/config/config.js
 
 echo "A reboot is recommended"
 
