@@ -118,7 +118,7 @@
     "freeport-promise": "^1.0.0",
     "github-changes": "^1.0.4",
     "husky": "^0.14.3",
-    "lint-staged": "^5.0.0",
+    "lint-staged": "^6.0.0",
     "mocha": "^4.0.0",
     "node-fetch": "^1.7.3",
     "prettier-standard": "^7.0.1",
