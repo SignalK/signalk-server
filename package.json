@@ -73,7 +73,7 @@
     "@signalk/freeboard-sk": "0.0.1",
     "@signalk/instrumentpanel": "^0.2.1",
     "@signalk/n2k-signalk": "0.0.6",
-    "@signalk/nmea0183-signalk": "2.1.0",
+    "@signalk/nmea0183-signalk": "2.1.1",
     "@signalk/sailgauge": "^1.1.0",
     "@signalk/signalk-schema": "0.0.1-12",
     "@signalk/signalk-to-nmea0183": "0.1.1",
