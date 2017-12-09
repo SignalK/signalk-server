@@ -1,7 +1,6 @@
-SignalK Node Server
-================
+<img width="537" alt="signalk-node" src="https://user-images.githubusercontent.com/1049678/33799103-9e461cce-dd2d-11e7-847d-da9b77bc2a84.png">
 
-An implementation of a [Signal K](http://signalk.org) server. Intended to run on embedded devices (e.g. Raspberry Pi, Beaglebone or UDOO).
+An implementation of a [Signal K](http://signalk.org) server in Node.js. Intended to run on embedded devices (e.g. Raspberry Pi, Beaglebone or UDOO).
 
 The server multiplexes data from , NMEA 2000, Signal K and sensor inputs (eg. I2C connected sensors) and provides the data in Signal K format over HTTP and WebSocket. In addition it can provide NMEA0183 over tcp and udp.
 
