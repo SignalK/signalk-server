@@ -38,6 +38,9 @@ function Log (options) {
   Transform.call(this, {
     objectMode: true
   })
+  if (!options.logdir) {
+    options.logdir = options.app.loggingDirectory || '/tmp'
+  }
   this.discriminator = options.discriminator || ''
   if (!loggers[options.logdir]) {
     const path = require('path').join(
