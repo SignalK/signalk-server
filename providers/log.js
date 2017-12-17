@@ -31,6 +31,7 @@
 
 const Transform = require('stream').Transform
 const FileTimestampStream = require('file-timestamp-stream')
+const path = require('path')
 
 const loggers = {}
 
@@ -38,20 +39,29 @@ function Log (options) {
   Transform.call(this, {
     objectMode: true
   })
-  if (!options.logdir) {
-    options.logdir = options.app.loggingDirectory || '/tmp'
+
+  var logdir = options.logdir
+
+  if (!logdir) {
+    logdir = options.app.config.settings.loggingDirectory || '/tmp'
   }
+
   this.discriminator = options.discriminator || ''
-  if (!loggers[options.logdir]) {
-    const path = require('path').join(
-      (options.logdir.indexOf('/') === 0 ? '' : __dirname + '/../') +
-        options.logdir
-    )
-    loggers[options.logdir] = new FileTimestampStream({
-      path: path + 'signalk-rawdata.log.%Y-%m-%dT%H'
+
+  const fullLogdir =
+    logdir.charAt(0) !== '/'
+      ? path.join(options.app.config.configPath, logdir)
+      : logdir
+
+  if (!loggers[fullLogdir]) {
+    const fileName = path.join(fullLogdir, 'signalk-rawdata.log.%Y-%m-%dT%H')
+
+    console.log('FILENAME: ' + fileName)
+    loggers[fullLogdir] = new FileTimestampStream({
+      path: fileName
     })
   }
-  this.logger = loggers[options.logdir]
+  this.logger = loggers[fullLogdir]
 }
 
 require('util').inherits(Log, Transform)
