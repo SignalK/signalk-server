@@ -162,8 +162,7 @@ TcpStream.prototype._transform = function (chunk, encoding, done) {
 }
 
 TcpStream.prototype.end = function () {
-  this.start()
+  this.socket.close()
 }
 
 module.exports = TcpStream
-
