@@ -24,10 +24,5 @@
         }
       ]
     }
-  ],
-  "interfaces": {
-    "bower": true,
-    "rest": true,
-    "ws": true
-  }
+  ]
 }

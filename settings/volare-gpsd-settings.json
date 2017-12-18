@@ -16,12 +16,6 @@
 
   "mdns": false,
 
-  "interfaces": {
-    "bower": true,
-    "rest": true,
-    "ws": true
-  },
-
   "pipedProviders": [
     {
       "id": "gpsdProvider",
