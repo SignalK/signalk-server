@@ -1,47 +1,49 @@
 {
-	"vessel": {
-		"name"	: "Volare",
-		"brand"	: "Friendship",
-		"type"	: "22",
-		"uuid"	: "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d",
-		
-		"dimensions": {
-			"length": 7,
-			"width": 2.5,
-			"mast": 10,
-			"depthTransducer": 0.5,
-			"keel": 1.5 
-		}
-	},
-  
-  "pipedProviders": [{
-    "id": "nmeaFromUdp",
-    "pipeElements": [
-       {
-         "type": "providers/udp",
-         "options": {
-           "port": 7777
-         },
-         "optionMappings": [
-           {
-             "fromAppProperty": "argv.udpport",
-             "toOption": "port"
-           }
-         ]         
-       },
-       {
+  "vessel": {
+    "name": "Volare",
+    "brand": "Friendship",
+    "type": "22",
+    "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d",
+
+    "dimensions": {
+      "length": 7,
+      "width": 2.5,
+      "mast": 10,
+      "depthTransducer": 0.5,
+      "keel": 1.5
+    }
+  },
+
+  "pipedProviders": [
+    {
+      "id": "nmeaFromUdp",
+      "pipeElements": [
+        {
+          "type": "providers/udp",
+          "options": {
+            "port": 7777
+          },
+          "optionMappings": [
+            {
+              "fromAppProperty": "argv.udpport",
+              "toOption": "port"
+            }
+          ]
+        },
+        {
           "type": "providers/nmea0183-signalk",
           "optionMappings": [
             {
-             "fromAppProperty": "selfId",
-             "toOption": "selfId"
+              "fromAppProperty": "selfId",
+              "toOption": "selfId"
             },
             {
-             "fromAppProperty": "selfType",
-             "toOption": "selfType"
+              "fromAppProperty": "selfType",
+              "toOption": "selfType"
             }
           ]
-       }               
-    ]
-  }]
+        }
+      ]
+    }
+  ]
 }

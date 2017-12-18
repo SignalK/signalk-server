@@ -1,32 +1,34 @@
 {
   "vessel": {
     "name": "Commander",
-    "uuid"	: "345678912"
+    "uuid": "345678912"
   },
 
   "pipedProviders": [
-  {
-    "id": "commandline-sample",
-    "pipeElements": [
     {
-      "type": "providers/execute",
-      "options": {
-        "command": "while true; do echo '{\"updates\": [{\"source\": {\"label\": \"dummy data\",\"timestamp\":\"'`date +'%Y-%m-%dT%H:%M:%S'`'\"},\"values\": [{\"path\": \"environment.airPressure\",\"value\": 1013}]}]}'; sleep 1; done"
-      }
-    },
-    {
-      "type": "providers/throttle",
-      "options": {
-        "rate": 500
-      }
-    },
-    {
-      "type": "providers/liner"
-    },
-    {
-      "type": "providers/from_json"
+      "id": "commandline-sample",
+      "pipeElements": [
+        {
+          "type": "providers/execute",
+          "options": {
+            "command":
+              "while true; do echo '{\"updates\": [{\"source\": {\"label\": \"dummy data\",\"timestamp\":\"'`date +'%Y-%m-%dT%H:%M:%S'`'\"},\"values\": [{\"path\": \"environment.airPressure\",\"value\": 1013}]}]}'; sleep 1; done"
+          }
+        },
+        {
+          "type": "providers/throttle",
+          "options": {
+            "rate": 500
+          }
+        },
+        {
+          "type": "providers/liner"
+        },
+        {
+          "type": "providers/from_json"
+        }
+      ]
     }
-    ]}
   ],
   "interfaces": {
     "bower": true,

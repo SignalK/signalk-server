@@ -1,50 +1,52 @@
 {
-	"vessel": {
-		"name"	: "Volare",
-		"brand"	: "Friendship",
-		"type"	: "22",
-		"uuid"	: "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d",
+  "vessel": {
+    "name": "Volare",
+    "brand": "Friendship",
+    "type": "22",
+    "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d",
 
-		"dimensions": {
-			"length": 7,
-			"width": 2.5,
-			"mast": 10,
-			"depthTransducer": 0.5,
-			"keel": 1.5
-		}
-	},
+    "dimensions": {
+      "length": 7,
+      "width": 2.5,
+      "mast": 10,
+      "depthTransducer": 0.5,
+      "keel": 1.5
+    }
+  },
 
   "mdns": false,
 
-	"interfaces": {
+  "interfaces": {
     "bower": true,
     "rest": true,
     "ws": true
   },
 
-  "pipedProviders": [{
-    "id": "gpsdProvider",
-    "pipeElements": [
-       {
-         "type": "providers/gpsd",
-         "options": {
-           "hostname": "127.0.0.1",
-           "port": 2947
-         }
-       },
-       {
+  "pipedProviders": [
+    {
+      "id": "gpsdProvider",
+      "pipeElements": [
+        {
+          "type": "providers/gpsd",
+          "options": {
+            "hostname": "127.0.0.1",
+            "port": 2947
+          }
+        },
+        {
           "type": "providers/nmea0183-signalk",
           "optionMappings": [
             {
-             "fromAppProperty": "selfId",
-             "toOption": "selfId"
+              "fromAppProperty": "selfId",
+              "toOption": "selfId"
             },
             {
-             "fromAppProperty": "selfType",
-             "toOption": "selfType"
+              "fromAppProperty": "selfType",
+              "toOption": "selfType"
             }
           ]
-       }
-    ]
-  }]
+        }
+      ]
+    }
+  ]
 }

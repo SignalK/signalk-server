@@ -3,38 +3,40 @@
     "name": "Aava",
     "brand": "Arcona",
     "type": "Arcona 34",
-    "uuid"	: "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d"
+    "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d"
   },
 
-  "pipedProviders": [{
-    "id": "n2kFromFile",
-    "pipeElements": [
-       {
-         "type": "providers/filestream",
-         "options": {
-           "filename": "samples/aava-n2k.data"
-         },
-         "optionMappings": [
-           {
-             "fromAppProperty": "argv.n2kfilename",
-             "toOption": "filename"
-           }
-         ]
-       },
-       {
-         "type": "providers/liner"
-       },
-       {
-         "type": "providers/n2kAnalyzer"
-       },
-       {
-         "type": "providers/timestamp-throttle"
-       },
-       {
-         "type": "providers/n2k-signalk"
-       }
-    ]
-  }],
+  "pipedProviders": [
+    {
+      "id": "n2kFromFile",
+      "pipeElements": [
+        {
+          "type": "providers/filestream",
+          "options": {
+            "filename": "samples/aava-n2k.data"
+          },
+          "optionMappings": [
+            {
+              "fromAppProperty": "argv.n2kfilename",
+              "toOption": "filename"
+            }
+          ]
+        },
+        {
+          "type": "providers/liner"
+        },
+        {
+          "type": "providers/n2kAnalyzer"
+        },
+        {
+          "type": "providers/timestamp-throttle"
+        },
+        {
+          "type": "providers/n2k-signalk"
+        }
+      ]
+    }
+  ],
   "interfaces": {
     "bower": true,
     "rest": true,
