@@ -16,8 +16,9 @@ const tcp = require('./tcp')
 const filestream = require('./filestream')
 
 function Simple (options) {
-  Transform.call(this, {})
+  Transform.call(this, { objectMode: true })
   this.options = options
+  this.pipeline = []
 
   var source = pipeStartByType[options.type]
 
@@ -38,38 +39,31 @@ function Simple (options) {
     throw new Error(`Unknown data type: ${dataType}`)
   }
 
-  this.last = dataTypeMapping[dataType](options)
-  
-  var next = this.last;
-
-  var logger
-  if ( options.logging ) {
-    logger = new log({
-      app: options.app,
-      discriminator: discriminatorByDataType[dataType]
-    });
-  }
-
-  var nliner = new liner(options);
-
   var subOptions = JSON.parse(JSON.stringify(options.subOptions))
   subOptions.app = options.app
-  this.pipeStart = source(subOptions)
 
-  this.pipeStart.pipe(nliner);
-
-  if ( logger ) {
-    nliner.pipe(logger);
-    logger.pipe(this.last[0])
-  } else {
-    nliner.pipe(this.last[0])
+  source(this.pipeline, subOptions)
+  this.pipeline.push(new liner(subOptions))
+  if ( options.logging ) {
+    this.pipeline.push(new log({
+      app: options.app,
+      discriminator: discriminatorByDataType[dataType]
+    }))
   }
+
+  dataTypeMapping[dataType](this.pipeline, subOptions)
+
+  for (var i = this.pipeline.length - 2; i >= 0; i--) {
+    this.pipeline[i].pipe(this.pipeline[i + 1])
+  }
+  this.pipeline[this.pipeline.length-1].pipe(this)
 }
 
 require('util').inherits(Simple, Transform)
 
-Simple.prototype.pipe = function (target) {
-  this.last[this.last.length-1].pipe(target)
+Simple.prototype._transform = function (msg, encoding, done) {
+  this.push(msg)
+  done()
 }
 
 Simple.prototype.end = function () {
@@ -85,42 +79,42 @@ const discriminatorByDataType = {
 }
 
 const pipeStartByType = {
-  'NMEA2000': (subOptions) => {
-    return new execute({
+  'NMEA2000': (pipeline, subOptions) => {
+    pipeline.push(new execute({
       command: `actisense-serial ${subOptions.device}`,
       toChildProcess: 'nmea2000out',
       app: subOptions.app
-    });
+    }));
   },
-  'NMEA0183': (subOptions) => {
+  'NMEA0183': (pipeline, subOptions) => {
+    var el
     if ( subOptions.type == 'tcp' ) {
-      return new tcp(subOptions);
+      el = new tcp(subOptions);
     } else if ( subOptions.type === 'udp' ) {
-      return new udp(subOptions);
+      el = new udp(subOptions);
     } else if ( subOptions.type === 'serial' ) {
-      return new serialport(subOptions);
+      el = new serialport(subOptions);
     } else {
       throw new Error(`Unknown networking tyoe: ${options.networking}`)
     }
+    pipeline.push(el)
   },
-  Execute: (subOptions) => {
-    return new execute(subOptions);
+  Execute: (pipeline, subOptions) => {
+    pipeline.push(new execute(subOptions));
   },
-  "FileStream": (subOptions) => {
-    return new filestream(subOptions);
+  "FileStream": (pipeline, subOptions) => {
+    pipeline.push(new filestream(subOptions));
   }
 }
 
 const dataTypeMapping = {
-  'SignalK': (options) => [ new from_json(options) ],
-  'NMEA0183': (options) => [ new nmea0183_signalk(options) ],
-  'NMEA2000': (options) => {
-    var toJSON = new n2kAnalyzer(options)
-    var n2k = new n2k_signalk(options)
-    toJSON.pipe(n2k)
-    return [toJSON, n2k];
+  'SignalK': (pipeline, options) => { pipeline.push(new from_json(options)) },
+  'NMEA0183': (pipeline, options) => { pipeline.push(new nmea0183_signalk(options)) },
+  'NMEA2000': (pipeline, options) => {
+    pipeline.push(new n2kAnalyzer(options))
+    pipeline.push(new n2k_signalk(options))
   },
-  'Multiplexed': (options) => [ new multiplexedlog(options) ]
+  'Multiplexed': (pipeline, options) => { pipeline.push(new multiplexedlog(options)) }
 }
 
 const dataTypeForType = {
