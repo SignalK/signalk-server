@@ -44,7 +44,6 @@ function Simple (options) {
   subOptions.app = options.app
 
   source(this.pipeline, subOptions)
-  this.pipeline.push(new liner(subOptions))
   if ( options.logging ) {
     this.pipeline.push(new log({
       app: options.app,
@@ -97,6 +96,7 @@ const pipeStartByType = {
       toChildProcess: toChildProcess,
       app: subOptions.app
     }));
+    pipeline.push(new liner(subOptions))
   },
   'NMEA0183': (pipeline, subOptions) => {
     var el
@@ -110,9 +110,11 @@ const pipeStartByType = {
       throw new Error(`Unknown networking tyoe: ${options.networking}`)
     }
     pipeline.push(el)
+    pipeline.push(new liner(subOptions))
   },
   Execute: (pipeline, subOptions) => {
     pipeline.push(new execute(subOptions));
+    pipeline.push(new liner(subOptions))
   },
   "FileStream": (pipeline, subOptions) => {
     pipeline.push(new filestream(subOptions));
@@ -122,11 +124,41 @@ const pipeStartByType = {
         app: subOptions.app
       }));
     }
+    pipeline.push(new liner(subOptions))
+  },
+  'SignalK': (pipeline, subOptions) => {
+    var el
+    var needsLiner = true
+    if ( subOptions.type === 'ws' || subOptions.type === 'wss' ) {
+      var options = { app: subOptions.app }
+      if ( !subOptions.useDiscovery ) {
+        options.host = subOptions.host
+        options.port = subOptions.port
+      }
+      options.protocol = subOptions.type
+      const mdns_ws = require('./mdns-ws')
+      el = new mdns_ws(options)
+      needsLiner = false
+    } else if ( subOptions.type === 'tcp' ) {
+      el = new tcp(subOptions)
+    } else if ( subOptions.type === 'udp' ) {
+      el = new udp(subOptions)
+    } else {
+      throw new Error(`unknown SignalK type: ${subOptions.type}`)
+    }
+    pipeline.push(el);
+    if ( needsLiner ) {
+      pipeline.push(new liner(subOptions))
+    }
   }
 }
 
 const dataTypeMapping = {
-  'SignalK': (pipeline, options) => { pipeline.push(new from_json(options)) },
+  'SignalK': (pipeline, options) => {
+    if ( options.type != 'wss' && options.type != 'ws' ) {
+      pipeline.push(new from_json(options))
+    }
+  },
   'NMEA0183': (pipeline, options) => { pipeline.push(new nmea0183_signalk(options)) },
   'NMEA2000': (pipeline, options) => {
     pipeline.push(new n2kAnalyzer(options))
@@ -136,8 +168,9 @@ const dataTypeMapping = {
 }
 
 const dataTypeForType = {
-  "NMEA2000": "NMEA2000",
-  'NMEA0183': "NMEA0183",
+  'NMEA2000': 'NMEA2000',
+  'NMEA0183': 'NMEA0183',
+  'SignalK': 'SignalK'
 }
 
                       
