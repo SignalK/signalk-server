@@ -16,7 +16,7 @@
 
 var Transform = require('stream').Transform
 
-var SignalK = require('signalk-client')
+var SignalK = require('@signalk/client')
 
 var debug = require('debug')('signalk-server:providers:mdns-ws')
 
@@ -59,8 +59,9 @@ MdnsWs.prototype.connect = function (discovery) {
   if (discovery.discoveryResponse) {
     _object.values(discovery.discoveryResponse.endpoints)[0]['signalk-ws']
   } else {
+    var protocol = discovery.protocol || 'ws'
     url =
-      'ws://' +
+      protocol + '://' +
       discovery.host +
       ':' +
       discovery.port +
@@ -78,6 +79,7 @@ MdnsWs.prototype.connect = function (discovery) {
   var onError = function (err) {
     debug('Error:' + err)
   }
+  debug(`trying url: ${url}`)
   signalkClient.connectDeltaByUrl(
     url,
     this.push.bind(this),
