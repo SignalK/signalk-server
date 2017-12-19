@@ -42,28 +42,34 @@ function Simple (options) {
   
   var next = this.last;
 
+  var logger
   if ( options.logging ) {
-    var nlog = new log({
+    logger = new log({
       app: options.app,
       discriminator: discriminatorByDataType[dataType]
     });
-    next.pipe(nlog);
-    next = nlog;
   }
 
   var nliner = new liner(options);
-  nliner.pipe(next)
-  next = nliner;
 
   var subOptions = JSON.parse(JSON.stringify(options.subOptions))
   subOptions.app = options.app
-  this.pipeStart = source(subOptions).pipe(next)
+  this.pipeStart = source(subOptions)
+
+  this.pipeStart.pipe(nliner);
+
+  if ( logger ) {
+    nliner.pipe(logger);
+    logger.pipe(this.last[0])
+  } else {
+    nliner.pipe(this.last[0])
+  }
 }
 
 require('util').inherits(Simple, Transform)
 
 Simple.prototype.pipe = function (target) {
-  this.last.pipe(target);
+  this.last[this.last.length-1].pipe(target)
 }
 
 Simple.prototype.end = function () {
@@ -106,14 +112,15 @@ const pipeStartByType = {
 }
 
 const dataTypeMapping = {
-  'SignalK': (options) => new from_json(options),
-  'NMEA0183': (options) => new nmea0183_signalk(options),
+  'SignalK': (options) => [ new from_json(options) ],
+  'NMEA0183': (options) => [ new nmea0183_signalk(options) ],
   'NMEA2000': (options) => {
     var toJSON = new n2kAnalyzer(options)
-    toJSON.pipe(new n2k_signalk(options))
-    return toJSON;
+    var n2k = new n2k_signalk(options)
+    toJSON.pipe(n2k)
+    return [toJSON, n2k];
   },
-  'Multiplexed': (options) => new multiplexedlog(options)
+  'Multiplexed': (options) => [ new multiplexedlog(options) ]
 }
 
 const dataTypeForType = {
