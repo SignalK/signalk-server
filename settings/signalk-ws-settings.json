@@ -5,22 +5,24 @@
 
   "mdns": false,
 
-  "pipedProviders": [{
-    "id": "signalk-ws",
-    "pipeElements": [{
-      "type": "providers/mdns-ws",
-      "optionMappings": [{
-        "fromAppProperty": "argv.host",
-        "toOption": "host"
-      }, {
-        "fromAppProperty": "argv.port",
-        "toOption": "port"
-      }]
-    }]
-  }],
-  "interfaces": {
-    "bower": true,
-    "rest": true,
-    "ws": true
-  }
+  "pipedProviders": [
+    {
+      "id": "signalk-ws",
+      "pipeElements": [
+        {
+          "type": "providers/mdns-ws",
+          "optionMappings": [
+            {
+              "fromAppProperty": "argv.host",
+              "toOption": "host"
+            },
+            {
+              "fromAppProperty": "argv.port",
+              "toOption": "port"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }

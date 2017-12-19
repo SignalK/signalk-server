@@ -14,107 +14,148 @@
     }
   },
 
-  "pipedProviders": [{
-    "id": "nmea1",
-    "pipeElements": [{
-      "type": "providers/filestream",
-      "options": {
-        "filename": "samples/plaka.log"
-      },
-      "optionMappings": [{
-        "fromAppProperty": "argv.nmeafilename",
-        "toOption": "filename"
-      }]
-    }, {
-      "type": "providers/throttle",
-      "options": {
-        "rate": 500
-      }
-    }, {
-      "type": "providers/liner"
-    }, {
-      "type": "providers/nmea0183-signalk",
-      "optionMappings": [{
-        "fromAppProperty": "selfId",
-        "toOption": "selfId"
-      }, {
-        "fromAppProperty": "selfType",
-        "toOption": "selfType"
-      }]
-    }]
-  }, {
-    "id": "nmea2",
-    "pipeElements": [{
-      "type": "providers/filestream",
-      "options": {
-        "filename": "samples/plaka.log"
-      },
-      "optionMappings": [{
-        "fromAppProperty": "argv.nmeafilename",
-        "toOption": "filename"
-      }]
-    }, {
-      "type": "providers/throttle",
-      "options": {
-        "rate": 600
-      }
-    }, {
-      "type": "providers/liner"
-    }, {
-      "type": "providers/nmea0183-signalk",
-      "optionMappings": [{
-        "fromAppProperty": "selfId",
-        "toOption": "selfId"
-      }, {
-        "fromAppProperty": "selfType",
-        "toOption": "selfType"
-      }]
-    }]
-  }, {
-    "id": "n2k1",
-    "pipeElements": [{
-      "type": "providers/filestream",
-      "options": {
-        "filename": "samples/aava-n2k.data"
-      },
-      "optionMappings": [{
-        "fromAppProperty": "argv.n2kfilename",
-        "toOption": "filename"
-      }]
-    }, {
-      "type": "providers/throttle",
-      "options": {
-        "rate": 500
-      }
-    }, {
-      "type": "providers/liner"
-    }, {
-      "type": "providers/n2kAnalyzer"
-    }, {
-      "type": "providers/n2k-signalk"
-    }]
-  }, {
-    "id": "n2k2",
-    "pipeElements": [{
-      "type": "providers/filestream",
-      "options": {
-        "filename": "samples/aava-n2k.data"
-      },
-      "optionMappings": [{
-        "fromAppProperty": "argv.n2kfilename",
-        "toOption": "filename"
-      }]
-    }, {
-      "type": "providers/throttle",
-      "options": {
-        "rate": 500
-      }
-    }, {
-      "type": "providers/liner"
-    }, {
-      "type": "providers/n2kAnalyzer"
-    }, {
-      "type": "providers/n2k-signalk"
-    }]
-  }]
+  "pipedProviders": [
+    {
+      "id": "nmea1",
+      "pipeElements": [
+        {
+          "type": "providers/filestream",
+          "options": {
+            "filename": "samples/plaka.log"
+          },
+          "optionMappings": [
+            {
+              "fromAppProperty": "argv.nmeafilename",
+              "toOption": "filename"
+            }
+          ]
+        },
+        {
+          "type": "providers/throttle",
+          "options": {
+            "rate": 500
+          }
+        },
+        {
+          "type": "providers/liner"
+        },
+        {
+          "type": "providers/nmea0183-signalk",
+          "optionMappings": [
+            {
+              "fromAppProperty": "selfId",
+              "toOption": "selfId"
+            },
+            {
+              "fromAppProperty": "selfType",
+              "toOption": "selfType"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nmea2",
+      "pipeElements": [
+        {
+          "type": "providers/filestream",
+          "options": {
+            "filename": "samples/plaka.log"
+          },
+          "optionMappings": [
+            {
+              "fromAppProperty": "argv.nmeafilename",
+              "toOption": "filename"
+            }
+          ]
+        },
+        {
+          "type": "providers/throttle",
+          "options": {
+            "rate": 600
+          }
+        },
+        {
+          "type": "providers/liner"
+        },
+        {
+          "type": "providers/nmea0183-signalk",
+          "optionMappings": [
+            {
+              "fromAppProperty": "selfId",
+              "toOption": "selfId"
+            },
+            {
+              "fromAppProperty": "selfType",
+              "toOption": "selfType"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "n2k1",
+      "pipeElements": [
+        {
+          "type": "providers/filestream",
+          "options": {
+            "filename": "samples/aava-n2k.data"
+          },
+          "optionMappings": [
+            {
+              "fromAppProperty": "argv.n2kfilename",
+              "toOption": "filename"
+            }
+          ]
+        },
+        {
+          "type": "providers/throttle",
+          "options": {
+            "rate": 500
+          }
+        },
+        {
+          "type": "providers/liner"
+        },
+        {
+          "type": "providers/n2kAnalyzer"
+        },
+        {
+          "type": "providers/n2k-signalk"
+        }
+      ]
+    },
+    {
+      "id": "n2k2",
+      "pipeElements": [
+        {
+          "type": "providers/filestream",
+          "options": {
+            "filename": "samples/aava-n2k.data"
+          },
+          "optionMappings": [
+            {
+              "fromAppProperty": "argv.n2kfilename",
+              "toOption": "filename"
+            }
+          ]
+        },
+        {
+          "type": "providers/throttle",
+          "options": {
+            "rate": 500
+          }
+        },
+        {
+          "type": "providers/liner"
+        },
+        {
+          "type": "providers/n2kAnalyzer"
+        },
+        {
+          "type": "providers/n2k-signalk"
+        }
+      ]
+    }
+  ]
 }
