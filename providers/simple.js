@@ -67,7 +67,7 @@ Simple.prototype._transform = function (msg, encoding, done) {
 }
 
 Simple.prototype.end = function () {
-  this.pipeStart.emd();
+  this.pipeline[0].end();
 }
 
 module.exports = Simple
@@ -80,9 +80,20 @@ const discriminatorByDataType = {
 
 const pipeStartByType = {
   'NMEA2000': (pipeline, subOptions) => {
+    var command;
+    var toChildProcess;
+    if ( subOptions.type == 'ngt-1' ) {
+      command = `actisense-serial ${subOptions.device}`,
+      toChildProcess = 'nmea2000out'
+    } else if ( subOptions.type == 'canbus' ) {
+      command = `candump ${subOptions.interface}`
+      toChildProcess = null
+    } else {
+      throw new Error(`unknown NMEA2000 type ${subOptions.type}`)
+    }
     pipeline.push(new execute({
-      command: `actisense-serial ${subOptions.device}`,
-      toChildProcess: 'nmea2000out',
+      command: command,
+      toChildProcess: toChildProcess,
       app: subOptions.app
     }));
   },
