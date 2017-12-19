@@ -14,6 +14,7 @@ const serialport = require('./serialport')
 const udp = require('./udp')
 const tcp = require('./tcp')
 const filestream = require('./filestream')
+const throttle = require('./throttle')
 
 function Simple (options) {
   Transform.call(this, { objectMode: true })
@@ -115,6 +116,12 @@ const pipeStartByType = {
   },
   "FileStream": (pipeline, subOptions) => {
     pipeline.push(new filestream(subOptions));
+    if ( subOptions.dataType != 'Multiplexed' ) {
+      pipeline.push(new throttle({
+        rate: subOptions.throttleRate || 1000,
+        app: subOptions.app
+      }));
+    }
   }
 }
 
