@@ -10,7 +10,6 @@ const n2k_signalk = require('./n2k-signalk')
 const log = require('./log')
 const liner = require('./liner')
 const execute = require('./execute')
-const serialport = require('./serialport')
 const udp = require('./udp')
 const tcp = require('./tcp')
 const filestream = require('./filestream')
@@ -127,6 +126,7 @@ function nmea0183input (subOptions) {
   } else if (subOptions.type === 'udp') {
     el = new udp(subOptions)
   } else if (subOptions.type === 'serial') {
+    const serialport = require('./serialport')
     el = new serialport(subOptions)
   } else {
     throw new Error(`Unknown networking tyoe: ${options.networking}`)
