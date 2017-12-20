@@ -160,7 +160,8 @@ function signalKInput (subOptions) {
       options.port = subOptions.port
     }
     options.protocol = subOptions.type
-    return [require('./mdns-ws')(options)]
+    const mdns_ws = require('./mdns-ws')
+    return [new mdns_ws(options)]
   } else if (subOptions.type === 'tcp') {
     return [new tcp(subOptions), new liner(suboptions)]
   } else if (subOptions.type === 'udp') {
