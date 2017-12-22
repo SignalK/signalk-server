@@ -81,6 +81,7 @@
     "baconjs": "^0.7.88",
     "body-parser": "^1.14.1",
     "colors": "^1.1.2",
+    "cookie": "^0.3.1",
     "compare-versions": "^3.0.1",
     "cors": "^2.5.2",
     "debug": "^3.0.0",
