@@ -29,7 +29,7 @@ function Simple (options) {
   if (!dataTypeMapping[dataType]) {
     throw new Error(`Unknown data type: ${dataType}`)
   }
-  if (!discriminatorByDataType[dataType]) {
+  if (dataType !== 'Multiplexed' && !discriminatorByDataType[dataType]) {
     throw new Error(`No discriminator for: ${dataType}`)
   }
 
