@@ -58,7 +58,6 @@ function Log (options) {
   if (!loggers[fullLogdir]) {
     const fileName = path.join(fullLogdir, 'signalk-rawdata.log.%Y-%m-%dT%H')
 
-    console.log('FILENAME: ' + fileName)
     loggers[fullLogdir] = new FileTimestampStream({
       path: fileName
     })
