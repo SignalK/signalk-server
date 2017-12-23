@@ -43,7 +43,9 @@ function Log (options) {
   var logdir = options.logdir
 
   if (!logdir) {
-    logdir = options.app.config.settings.loggingDirectory || '/tmp'
+    logdir =
+      options.app.config.settings.loggingDirectory ||
+      options.app.config.configPath
   }
 
   this.discriminator = options.discriminator || ''
