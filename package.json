@@ -106,7 +106,6 @@
     "serialport": "^6.0.0",
     "set-system-time": "github:tkurki/set-system-time",
     "signalk-playground": "github:signalk/playground",
-    "signalk-to-nmea0183": "github:signalk/signalk-to-nmea0183",
     "signalk-zones": "signalk/signalk-zones",
     "split": "^1.0.0",
     "stat-mode": "^0.2.2",
