@@ -16,7 +16,7 @@
 
 /* Usage: This is the first pipeElement in a PipedProvider. Used to pass data input from Serial
  * to the next pipeElement.
- * Reads data from a serial device and allows writing back to serial with the "toStdout" option 
+ * Reads data from a serial device and allows writing back to serial with the "toStdout" option
  * It takes two options; "device" and "baudrate".
  *
  * The "toStdout" option is not mandatory. It routes events emitted on app with that name to
@@ -104,8 +104,7 @@ SerialStream.prototype.start = function () {
 }
 
 SerialStream.prototype.end = function () {
-  this.reconnect = false
-  this.start()
+  this.serial.close()
 }
 
 SerialStream.prototype._transform = function (chunk, encoding, done) {
