@@ -80,7 +80,7 @@
     "@signalk/signalk-to-nmea0183": "0.1.1",
     "@signalk/simplegauges": "^1.0.1",
     "@signalk/sk-simple-token-security": "^2.0.2",
-    "baconjs": "^0.7.88",
+    "baconjs": "^1.0.1",
     "body-parser": "^1.14.1",
     "colors": "^1.1.2",
     "cookie": "^0.3.1",
