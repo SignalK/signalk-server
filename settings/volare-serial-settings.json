@@ -1,59 +1,61 @@
 {
-	"vessel": {
-		"name"	: "Volare",
-		"brand"	: "Friendship",
-		"type"	: "22",
-		"uuid"	: "10101010",
-		
-		"dimensions": {
-			"length": 7,
-			"width": 2.5,
-			"mast": 10,
-			"depthTransducer": 0.5,
-			"keel": 1.5 
-		}
-	},
+  "vessel": {
+    "name": "Volare",
+    "brand": "Friendship",
+    "type": "22",
+    "uuid": "10101010",
 
-	"interfaces": {},
-  
-  "pipedProviders": [{
-    "id": "nmeaFromFile",
-    "pipeElements": [
-       { 
-         "type": "providers/serialport",
-         "options": {
-           "device": "/dev/ttyUSB0",
-           "baudrate": 4800,
-           "toStdout": ["nmea0183out1", "nmea0183out2"]
-         },
-         "optionMappings": [
-           {
-             "fromAppProperty": "argv.nmeadevice",
-             "toOption": "device"
-           },
+    "dimensions": {
+      "length": 7,
+      "width": 2.5,
+      "mast": 10,
+      "depthTransducer": 0.5,
+      "keel": 1.5
+    }
+  },
 
-           {
-             "fromAppProperty": "argv.nmeabaudrate",
-             "toOption": "baudrate"
-           }
-         ]
-       },
-       {
+  "interfaces": {},
+
+  "pipedProviders": [
+    {
+      "id": "nmeaFromFile",
+      "pipeElements": [
+        {
+          "type": "providers/serialport",
+          "options": {
+            "device": "/dev/ttyUSB0",
+            "baudrate": 4800,
+            "toStdout": ["nmea0183out1", "nmea0183out2"]
+          },
+          "optionMappings": [
+            {
+              "fromAppProperty": "argv.nmeadevice",
+              "toOption": "device"
+            },
+
+            {
+              "fromAppProperty": "argv.nmeabaudrate",
+              "toOption": "baudrate"
+            }
+          ]
+        },
+        {
           "type": "providers/nmea0183-signalk",
-          "options":{
+          "options": {
             "sentenceEvent": "nmea0183in1"
           },
           "optionMappings": [
             {
-             "fromAppProperty": "selfId",
-             "toOption": "selfId"
+              "fromAppProperty": "selfId",
+              "toOption": "selfId"
             },
             {
-             "fromAppProperty": "selfType",
-             "toOption": "selfType"
+              "fromAppProperty": "selfType",
+              "toOption": "selfType"
             }
           ]
-       }               
-    ]
-  }]
+        }
+      ]
+    }
+  ]
 }

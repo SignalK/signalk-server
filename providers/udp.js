@@ -46,6 +46,7 @@ function Udp (options) {
 require('util').inherits(Udp, Transform)
 
 Udp.prototype.pipe = function (pipeTo) {
+  this.pipeTo = pipeTo
   Udp.super_.prototype.pipe.call(this, pipeTo)
 
   var socket = require('dgram').createSocket('udp4')
@@ -59,6 +60,11 @@ Udp.prototype.pipe = function (pipeTo) {
 
 Udp.prototype._transform = function (chunk, encoding, done) {
   done()
+}
+
+Udp.prototype.end = function () {
+  this.socket.close()
+  this.pipeTo.end()
 }
 
 module.exports = Udp

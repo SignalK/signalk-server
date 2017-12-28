@@ -232,7 +232,6 @@ Now your Signal K Node Server is updated.
 Open the terminal window and enter the following commands...
 
     $ cd signalk-server-node
-    $ rm -rf bower_components
     $ npm install
 
 Now all of your Signal K web apps included with the Node Server are updated.

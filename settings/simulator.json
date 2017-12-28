@@ -3,15 +3,17 @@
     "name": "s/y Simulator",
     "brand": "Node",
     "type": "Server 34",
-    "uuid"	: "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8441f"
+    "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8441f"
   },
 
-  "pipedProviders": [{
-    "id": "simulator",
-    "pipeElements": [
-       {
-         "type": "providers/nullprovider"
-       }
-    ]
-  }]
+  "pipedProviders": [
+    {
+      "id": "simulator",
+      "pipeElements": [
+        {
+          "type": "providers/nullprovider"
+        }
+      ]
+    }
+  ]
 }
