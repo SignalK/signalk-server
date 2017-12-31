@@ -68,7 +68,7 @@
   },
   "dependencies": {
     "@signalk/aisreporter": "0.0.3",
-    "@signalk/client": "^0.1.1",
+    "@signalk/client": "^0.2.0",
     "@signalk/freeboard-sk": "0.0.1",
     "@signalk/instrumentpanel": "^0.2.1",
     "@signalk/n2k-signalk": "0.0.7",
