@@ -71,7 +71,7 @@
     "@signalk/client": "^0.1.1",
     "@signalk/freeboard-sk": "0.0.1",
     "@signalk/instrumentpanel": "^0.2.1",
-    "@signalk/n2k-signalk": "0.0.6",
+    "@signalk/n2k-signalk": "0.0.7",
     "@signalk/nmea0183-signalk": "2.1.1",
     "@signalk/sailgauge": "^1.1.0",
     "@signalk/server-admin": "^0.0.3",
