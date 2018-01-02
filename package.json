@@ -75,7 +75,7 @@
     "@signalk/nmea0183-signalk": "2.1.2",
     "@signalk/sailgauge": "^1.1.0",
     "@signalk/server-admin": "0.0.4",
-    "@signalk/signalk-schema": "0.0.1-12",
+    "@signalk/signalk-schema": "1.0.2",
     "@signalk/signalk-to-nmea0183": "0.1.1",
     "@signalk/simplegauges": "^1.0.1",
     "@signalk/sk-simple-token-security": "2.2.0",
