@@ -126,5 +126,8 @@
     "prettier-standard": "^8.0.0",
     "request": "^2.81.0",
     "request-promise": "^4.1.1"
+  },
+  "optionalDependencies": {
+    "mdns": "^2.3.4"
   }
 }
