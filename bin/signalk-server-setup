@@ -1,22 +1,27 @@
 #!/bin/bash
 
-if [[ $EUID > 0 ]]
-  then echo "Please run as root if you want this server configuration to run at every startup, type:"
-  echo "\"sudo $0\""
-  echo ""
-  read -p "Are you sure you want to continue? [y/N] " ans;
-  case $ans in
-    y|Y)
-      ;;
-    n|N|*)
-      exit 1;;
-  esac 
+which systemctl > /dev/null 2>&1
+noSystemCtl=$?
+
+if [ $EUID -gt 0 ]; then
+  if [  $noSystemCtl == 0 ];then
+    echo "Please run as root if you want this server configuration to run at every startup, type:"
+    echo "\"sudo $0\""
+    echo ""
+    read -p "Are you sure you want to continue? [y/N] " ans;
+    case $ans in
+      y|Y)
+        ;;
+      n|N|*)
+        exit 1;;
+    esac
+    echo "YOU ARE LOGGED IN AS $SUDO_USER AND THE SERVER WILL BE STARTED AS THIS USER"
+  fi
   defaultConfigLocation="$HOME/signalk-server-config"
 else
   defaultConfigLocation="/usr/local/etc/signalk-server-config"
 fi
 
-echo "YOU ARE LOGGED IN AS $SUDO_USER AND THE SERVER WILL BE STARTED AS THIS USER"
 echo "ARE YOU SURE YOU WANT TO DELETE ANY CONFIGURATION"
 echo "EXISTING AND SET UP A NEW STARTUP SERVICE?"
 echo ""
@@ -133,7 +138,7 @@ cat > $vesselJson <<jsonfile
 }
 jsonfile
 
-if [[ $EUID == 0 ]]; then
+if [ $EUID == 0 -a $noSystemCtl == 0 ]; then
     group_full=$(getent group $SUDO_GID)
     group="$( cut -d ':' -f 1 <<< "$group_full" )"
     for f in "$vesselJson $vesselDefaults $vesselBash $configDirectory"
