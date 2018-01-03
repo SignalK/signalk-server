@@ -122,28 +122,19 @@ In this "How To" guide we are going to use the Signal K Node Server, but we also
 
 A Signal K Server is the central hub of a Signal K system; reading and converting the boat's NMEA data (or Signal K data from a gateway), which it then stores and logs, before outputting the Signal K data to web apps (consumers) on the boat or sending it off the boat to other vessels or Cloud services.
 
-To install the Node Server, we will first create a clone of all the Node Server source files that are on the GitHub repository by using the "git clone" command...
+Install the Node Server using npm
 
-    $ git clone https://github.com/SignalK/signalk-server-node.git
-
-This will create a folder called "signalk-server-node" in the Home directory of your RPi. We need to switch in to this folder with the "cd" command, and then install the Node Server's dependencies using npm which must be done in the cloned folder that contains the node server source files...
-
-    $ cd signalk-server-node
-    $ npm install
+    $ sudo npm install -g --unsafe-perm signalk-server
 
 A "Consumer" of Signal K data is any web app, mobile device app or software program that can read and use Signal K data. It is hoped that the number of consumers will grow rapidly as more developers discover this open format and dream up new applications to make boating easier, more efficient or just more fun.
 
 For the purposes of this "How to" 4 open source web apps are automatically installed. They have been developed by the Signal K team to show what can be done with Signal K data. 
 
-Bonjour/mDNS discover support is not included in the Node server by default, so we need to install it manually...
-
-    $ npm install mdns
-
 Now all you need to do to start the Node Server running is to type...
 
-    $ bin/nmea-from-file
+    $ signalk-server -s settings/volare-file-settings.json
 
-Which tells the RPi to find the executable file "nmea-from-file" in the "bin" folder and run it. You should see the terminal output "signalk-server running at 0.0.0.0:3000" as shown below...
+You should see the terminal output "signalk-server running at 0.0.0.0:3000" as shown below...
 
 ![Node Server Running](https://github.com/digitalyacht/ikommunicate/blob/master/RPi_How_To_Images/node_server_running.png)
 
@@ -162,16 +153,14 @@ To use the web apps, we will need to open them in a web browser so open the Epip
 
 If you have managed to get to the end of this guide, you will now have a good understanding of what Signal K is all about and in particular the Node Server. We have been using the server's demo NMEA file, but Node Server can also read NMEA0183 data via an [NMEA to USB adaptor cable](http://www.digitalyachtamerica.com/index.php/en/products/interfacing/nmeausb/product/67-usb-to-nmea-adaptor), a [3rd party NMEA2000 gateway](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1.html) or both NMEA0183 and NMEA2000 via the new [iKommunicate gateway](http://ikommunicate.com).
 
-In the "/bin" folder of the Node Server are a series of scripts for different configurations "nmea-from-serial", "n2k-from-actisense", etc. and you just run the one that matches your installation.   
+## Step 3 - your own setup and running automatically as daemon
+
+To generate your own vessel settings file and configure your Pi to start the server automatically , type...
+
+    $ sudo signalk-server-setup
 
 
-## Optional Step 3 - your own setup and running automatically as daemon
-
-To generate your own vessel settings file, starting with the same NMEA data from the demo file, type...
-
-    $ sudo bash rpi-setup.sh
-
-and type your vessel name. This generates a UUID and a settings file in json format in settings/<yourVessel>.json. This can be edited directly by looking at the example settings.
+and follow the prompts. This generates a settings file in json format in the configuration directory you specified called settings.json. This can be edited directly by looking at the example settings. 
 
 **This script will also set up Node server to run automatically in the background as a daemon when the system boots.** You will no longer be able to launch it manually, because the automatically started instance will occupy the ports where the services are available. You should do this once you are happy with the way the server works.
 
@@ -221,17 +210,7 @@ This will update Nodejs and NPM to the latest version (V6.9.2 at time of writing
 
 Open the terminal window and enter the following commands...
 
-    $ cd signalk-server-node
-    $ git pull
-    $ npm update
+    $ npm update --unsafe-perm -g signalk-server
 
 Now your Signal K Node Server is updated.
 
-## Update Web Apps
-
-Open the terminal window and enter the following commands...
-
-    $ cd signalk-server-node
-    $ npm install
-
-Now all of your Signal K web apps included with the Node Server are updated.
