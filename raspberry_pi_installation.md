@@ -210,7 +210,7 @@ This will update Nodejs and NPM to the latest version (V6.9.2 at time of writing
 
 Open the terminal window and enter the following commands...
 
-    $ npm update --unsafe-perm -g signalk-server
+    $ npm install --unsafe-perm -g signalk-server
 
 Now your Signal K Node Server is updated.
 
