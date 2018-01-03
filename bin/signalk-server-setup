@@ -1,0 +1,180 @@
+#!/bin/bash
+
+if [[ $EUID > 0 ]]
+  then echo "Please run as root if you want this server configuration to run at every startup, type:"
+  echo "\"sudo bash rpi-setup.sh\""
+  echo ""
+  read -p "Are you sure you want to continue? [y/N] " ans;
+  case $ans in
+    y|Y)
+      ;;
+    n|N|*)
+      exit 1;;
+  esac 
+  defaultConfigLocation="$HOME/signalk-server-config"
+else
+  defaultConfigLocation="/usr/local/etc/signalk-server-config"
+fi
+
+echo "YOU ARE LOGGED IN AS $SUDO_USER AND THE SERVER WILL BE STARTED AS THIS USER"
+echo "ARE YOU SURE YOU WANT TO DELETE ANY CONFIGURATION"
+echo "EXISTING AND SET UP A NEW STARTUP SERVICE?"
+echo ""
+echo "IF NOT, PRESS <CTRL+C> TO ABORT"
+echo ""
+
+sysddir="/etc/systemd/system"
+systemd="$sysddir/signalk.service"
+socket="$sysddir/signalk.socket"
+
+
+echo -n "Enter the location to store server configuration [$defaultConfigLocation]: "
+read configDirectory
+
+if [ "$configDirectory" == "" ]; then
+  configDirectory=$defaultConfigLocation
+fi
+
+if [ ! -d "$configDirectory" ]; then
+  mkdir -p "$configDirectory"
+fi
+
+echo -n "Enter your vessel name and press [enter]:"
+read vesselName
+vesselName=${vesselName// /_}
+echo -n "Enter your mmsi if you have one and press [enter]:"
+read vesselMMSI
+
+echo ""
+echo "Signal K default port is 3000 as per documentation"
+echo "port 80 does not require \":3000\" in browser and app interfaces"
+read -p "Do you want Signal K to change to port 80? [Y/n]" ans;
+case $ans in
+  n|N)
+    port=3000;;
+  y|Y|*)
+    port=80;;
+esac 
+
+echo "port $port selected" 
+
+read -p "Do you want to enable SSL? [Y/n]" ans;
+case $ans in
+  n|N)
+    ssl="false";;
+  y|Y|*)
+    ssl="true";;
+esac 
+
+if [ $ssl == "true" ]; then
+  if [ $port == 80 ]; then
+    primaryPort=443
+    secondaryPort=80
+  else
+    primaryPort=3443
+    secondaryPort=3000
+  fi
+else
+  primaryPort=$port
+fi
+
+if [ "$vesselMMSI" == "" ]; then
+  UUIDFile="$configDirectory/UUID"
+  if [ -f $UUIDFile ]
+  then
+    UUID=$( cat $UUIDFile)
+    echo "UUID=$UUID"
+  else
+    UUID=$( cat /proc/sys/kernel/random/uuid)
+    echo $UUID > $UUIDFile
+    echo "UUID generated: $UUID"
+  fi
+  vesselID="\"uuid\": \"urn:mrn:signalk:uuid:$UUID\""
+else
+  vesselID="\"mmsi\": \"$vesselMMSI\""
+fi
+
+
+vesselBash="$configDirectory/signalk-server"
+vesselJson="$configDirectory/settings.json"
+vesselDefaults="$configDirectory/defaults.json"
+
+echo "A file will be created with your server settings at $vesselJson"
+echo "A file will be created with your vessel settings at $vesselDefaults"
+echo "A startup script will be created at $vesselBash"
+
+
+thisDirName="$( cd "$( dirname "$0" )" && pwd )"
+cat > $vesselBash <<bashScript
+#!/bin/sh
+${thisDirName}/signalk-server -c $configDirectory \$*
+bashScript
+
+sudo chmod 755 $vesselBash
+
+cat > $vesselDefaults <<EOF
+{
+  "vessels": {
+    "self": {
+      "name": "$vesselName",
+      $vesselID
+    }
+  }
+}
+EOF
+
+cat > $vesselJson <<jsonfile
+{
+  "interfaces": {},
+
+  "ssl": $ssl,
+
+  "pipedProviders": []
+}
+jsonfile
+
+if [[ $EUID == 0 ]]; then
+    group_full=$(getent group $SUDO_GID)
+    group="$( cut -d ':' -f 1 <<< "$group_full" )"
+    for f in "$vesselJson $vesselDefaults $vesselBash $configDirectory"
+    do
+      chown $SUDO_USER $f
+      chgrp $group $f 
+    done
+
+    cat > $systemd <<systemdfile
+[Service]
+ExecStart=$vesselBash
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+WorkingDirectory=$configDirectory
+User=$SUDO_USER
+Environment=EXTERNALPORT=$primaryPort
+[Install]
+WantedBy=multi-user.target
+systemdfile
+
+    sudo chmod 755 $systemd
+
+    if [ "$secondaryPort" != "" ]; then
+        secondListen="ListenStream=$secondaryPort"
+    fi
+
+    cat > $socket <<socket
+[Socket]
+ListenStream=$primaryPort
+$secondListen
+
+[Install]
+WantedBy=sockets.target
+socket
+
+    sudo chmod 755 $socket
+
+    echo "A reboot is recommended"
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable signalk.service
+    sudo systemctl enable signalk.socket
+fi
