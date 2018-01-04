@@ -120,18 +120,16 @@ function nmea2000input (subOptions) {
 }
 
 function nmea0183input (subOptions) {
-  let el
   if (subOptions.type == 'tcp') {
-    el = new tcp(subOptions)
+    return [new tcp(subOptions), new liner(subOptions)]
   } else if (subOptions.type === 'udp') {
-    el = new udp(subOptions)
+    return [new udp(subOptions)]
   } else if (subOptions.type === 'serial') {
     const serialport = require('./serialport')
-    el = new serialport(subOptions)
+    return [new serialport(subOptions)]
   } else {
     throw new Error(`Unknown networking tyoe: ${options.networking}`)
   }
-  return [el, new liner(subOptions)]
 }
 
 function executeInput (subOptions) {
