@@ -38,9 +38,11 @@ function Simple (options) {
 
   const pipeline = [].concat(
     pipeStartByType[options.type](subOptions),
-    getLogger(options.logging, discriminatorByDataType[dataType]),
+    getLogger(options.app, options.logging, discriminatorByDataType[dataType]),
     dataTypeMapping[dataType](subOptions)
   )
+
+  console.log(`pipeline ${pipeline}`)
 
   for (var i = pipeline.length - 2; i >= 0; i--) {
     pipeline[i].pipe(pipeline[i + 1])
@@ -63,11 +65,11 @@ Simple.prototype.end = function () {
 
 module.exports = Simple
 
-const getLogger = (logging, discriminator) =>
+const getLogger = (app, logging, discriminator) =>
   logging
     ? [
       new log({
-        app: options.app,
+        app: app,
         discriminator
       })
     ]
