@@ -49,7 +49,7 @@ Raspbian the LINUX distribution for RPi is based on Debian which has a powerful 
 
 Now we will download three tools; curl, git and build-essential. These tools will allow us to download more software, clone the Signal K server and allow it to run, Install the three tools using the following command...
 
-    $ sudo apt-get install -y curl git build-essential
+    $ sudo apt-get install -y curl git build-essential dialog
 
 Node server requires Node version 6 or newer. For Raspberry Pi 2 and 3 follow the instructions below. If in doubt, test with
 
@@ -202,7 +202,7 @@ If you have not updated for a while, then the above commands may take a while to
 Open the terminal window and enter the following commands...
 
     $ curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
-    $ sudo apt install nodejs
+    $ sudo apt-get install nodejs
 
 This will update Nodejs and NPM to the latest version (V6.9.2 at time of writing), currently Nodejs V7.x has not been fully tested so best to stick with the stable V6.x build for now.
 

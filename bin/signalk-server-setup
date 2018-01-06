@@ -1,75 +1,127 @@
 #!/bin/bash
 
-which systemctl > /dev/null 2>&1
-noSystemCtl=$?
-
-if [ $EUID -gt 0 ]; then
-  if [  $noSystemCtl == 0 ];then
-    echo "Please run as root if you want this server configuration to run at every startup, type:"
-    echo "\"sudo $0\""
-    echo ""
-    read -p "Are you sure you want to continue? [y/N] " ans;
-    case $ans in
-      y|Y)
-        ;;
-      n|N|*)
-        exit 1;;
-    esac
-    echo "YOU ARE LOGGED IN AS $SUDO_USER AND THE SERVER WILL BE STARTED AS THIS USER"
-  fi
-  defaultConfigLocation="$HOME/signalk-server-config"
-else
-  defaultConfigLocation="/usr/local/etc/signalk-server-config"
-fi
-
-echo "ARE YOU SURE YOU WANT TO DELETE ANY CONFIGURATION"
-echo "EXISTING AND SET UP A NEW STARTUP SERVICE?"
-echo ""
-echo "IF NOT, PRESS <CTRL+C> TO ABORT"
-echo ""
-
 sysddir="/etc/systemd/system"
 systemd="$sysddir/signalk.service"
 socket="$sysddir/signalk.socket"
 
+which systemctl > /dev/null 2>&1
+noSystemCtl=$?
 
-echo -n "Enter the location to store server configuration [$defaultConfigLocation]: "
-read configDirectory
+which dialog > /dev/null 2>&1
+noDialog=$?
+
+backtitle="Signal K Node Server Setup"
+aspect=20
+
+tempfile=`(tempfile) 2>/dev/null` || tempfile=/tmp/test$$
+trap "rm -f $tempfile" 0 $SIG_NONE $SIG_HUP $SIG_INT $SIG_QUIT $SIG_TERM
+
+function askYesNo()
+{
+  msg=$1
+  default=$2
+  if [ $noDialog == 1 ]; then
+    if [ "$default" == 1 ]; then prompt="[Y/n]"; else prompt="[y/N]"; fi
+    echo -ne "$msg? $prompt "
+    read ans
+    echo
+    case $ans in
+      y|Y)
+        return 1;;
+      n|N)
+        return 0;;
+      *)
+        return $default
+    esac
+  else
+    defaultno=""
+    if [ $default == 0 ]; then defaultno="--defaultno"; fi
+    dialog --backtitle "$backtitle" --aspect $aspect $defaultno --yesno "$msg?" 0 0
+    if [ $? == 0 ]; then return 1; else return 0; fi
+  fi
+}
+
+function textInput()
+{
+  msg=$1
+  default=$2
+  if [ $noDialog == 1 ]; then
+    defaultstr=""
+    if [ "$default" != "" ]; then defaultstr="[$default]"; fi
+    echo -ne "$msg $defaultstr: "
+    read ans
+    if [ "$ans" == "" ]; then ans=$default; fi
+    eval "$3='$ans'"
+    echo
+    res=0
+  else
+    dialog --backtitle "$backtitle" --aspect $aspect --inputbox "$msg" 0 0 $default 2> $tempfile
+    res=$?
+    text=`cat $tempfile`
+    eval "$3='$text'"
+  fi
+  if [ $res != 0 ]; then exit 1; fi
+}
+
+function message()
+{
+  msg=$1
+  if [ $noDialog == 1 ]; then
+    echo -e "$msg\n"
+  else
+    dialog --backtitle "$backtitle" --aspect $aspect --msgbox "$msg" 0 0
+  fi
+}
+
+if [ $EUID -gt 0 ]; then
+  if [  $noSystemCtl == 0 ];then
+    askYesNo "Please run as root if you want this server configuration to run at every startup, type: \n\"sudo $0\"\n\nAre you sure you want to continue" 0
+    
+    if [ $? == 0 ]; then exit 1; fi
+ 
+  fi
+  defaultConfigLocation="$HOME/signalk-server-config"
+else
+  message "YOU ARE LOGGED IN AS $SUDO_USER AND THE SERVER WILL BE STARTED AS THIS USER"
+
+  defaultConfigLocation="/usr/local/etc/signalk-server-config"
+fi
+
+textInput "Enter the location to store server configuration" $defaultConfigLocation configDirectory
 
 if [ "$configDirectory" == "" ]; then
   configDirectory=$defaultConfigLocation
 fi
 
-if [ ! -d "$configDirectory" ]; then
-  mkdir -p "$configDirectory"
+if [ -d $configDirectory ]; then
+  askYesNo "AN EXISTING CONFIGURAION WAS FOUND\n\nARE YOU SURE YOU WANT TO DELETE THE EXISTING CONFIGURATION AND SET UP A NEW STARTUP SERVICE" 0
+  if [ $? == 0 ]; then exit 1; fi
 fi
 
-echo -n "Enter your vessel name and press [enter]:"
-read vesselName
+textInput "Enter your vessel name" "" vesselName
 vesselName=${vesselName// /_}
-echo -n "Enter your mmsi if you have one and press [enter]:"
-read vesselMMSI
+textInput "Enter your mmsi if you have one" "" vesselMMSI
 
-echo ""
-echo "Signal K default port is 3000 as per documentation"
-echo "port 80 does not require \":3000\" in browser and app interfaces"
-read -p "Do you want Signal K to change to port 80? [Y/n]" ans;
-case $ans in
-  n|N)
-    port=3000;;
-  y|Y|*)
-    port=80;;
-esac 
+if [ $EUID == 0 ]; then
+  askYesNo "Signal K default port is 3000\nPort 80 does not require \":3000\" in browser and app interfaces\n\nDo you want Signal K to change to port 80"
 
-echo "port $port selected" 
+  if [ $? == 0 ]; then
+    port=3000
+    url="http://localhost:3000"
+  else
+    port=80
+    url="http://localhost"
+  fi
+else
+  url="http://localhost:3000"
+fi
 
-read -p "Do you want to enable SSL? [Y/n]" ans;
-case $ans in
-  n|N)
-    ssl="false";;
-  y|Y|*)
-    ssl="true";;
-esac 
+askYesNo "Do you want to enable SSL" 1
+if [ $? == 0 ]; then
+  ssl="false"
+else
+    ssl="true"
+fi
 
 if [ $ssl == "true" ]; then
   if [ $port == 80 ]; then
@@ -99,14 +151,18 @@ else
   vesselID="\"mmsi\": \"$vesselMMSI\""
 fi
 
+askYesNo "You have chosen the following settings:\n\nConfiguration Directory: $configDirectory\nVessel Name: $vesselName\nMMSI: $vesselMMSI\nPort: $port\nSSL: $ssl\n\nAre you sure you want to continue" 1
+if [ $? == 0 ]; then exit 1; fi
+
+if [ ! -d "$configDirectory" ]; then
+  mkdir -p "$configDirectory"
+fi
 
 vesselBash="$configDirectory/signalk-server"
 vesselJson="$configDirectory/settings.json"
 vesselDefaults="$configDirectory/defaults.json"
 
-echo "A file will be created with your server settings at $vesselJson"
-echo "A file will be created with your vessel settings at $vesselDefaults"
-echo "A startup script will be created at $vesselBash"
+message "A file will be created with your server settings at $vesselJson\n\nA file will be created with your vessel settings at $vesselDefaults\n\nA startup script will be created at $vesselBash\n\nGo to $url in your browser see the admin interface."
 
 
 thisDirName="$( cd "$( dirname "$0" )" && pwd )"
@@ -115,7 +171,7 @@ cat > $vesselBash <<bashScript
 ${thisDirName}/signalk-server -c $configDirectory \$*
 bashScript
 
-sudo chmod 755 $vesselBash
+chmod 755 $vesselBash
 
 cat > $vesselDefaults <<EOF
 {
@@ -160,7 +216,7 @@ Environment=EXTERNALPORT=$primaryPort
 WantedBy=multi-user.target
 systemdfile
 
-    sudo chmod 755 $systemd
+    chmod 755 $systemd
 
     if [ "$secondaryPort" != "" ]; then
         secondListen="ListenStream=$secondaryPort"
@@ -175,11 +231,12 @@ $secondListen
 WantedBy=sockets.target
 socket
 
-    sudo chmod 755 $socket
+    chmod 755 $socket
 
-    echo "A reboot is recommended"
+    message "A reboot is recommended"
 
-    sudo systemctl daemon-reload
-    sudo systemctl enable signalk.service
-    sudo systemctl enable signalk.socket
+    systemctl daemon-reload
+    systemctl enable signalk.service
+    systemctl enable signalk.socket
 fi
+
