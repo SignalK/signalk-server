@@ -162,7 +162,7 @@ TcpStream.prototype._transform = function (chunk, encoding, done) {
 }
 
 TcpStream.prototype.end = function () {
-  this.socket.close()
+  console.error('tcp provider stream ended')
 }
 
 module.exports = TcpStream
