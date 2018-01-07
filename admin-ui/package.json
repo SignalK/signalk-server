@@ -1,0 +1,66 @@
+{
+  "name": "@signalk/server-admin",
+  "version": "0.0.4",
+  "description": "Signal K server admin webapp",
+  "author": "Łukasz Holeczek",
+  "contributors": [
+    {
+      "name": "Teppo Kurki"
+    },
+    {
+      "name": "Scott Bender"
+    }
+  ],
+  "license": "MIT",
+  "keywords": ["signalk-webapp"],
+  "devDependencies": {
+    "babel-core": "6.26.0",
+    "babel-loader": "7.1.2",
+    "babel-plugin-transform-object-rest-spread": "6.26.0",
+    "babel-preset-env": "1.6.1",
+    "babel-preset-react": "6.24.1",
+    "copy-webpack-plugin": "4.2.1",
+    "css-hot-loader": "1.3.3",
+    "css-loader": "0.28.7",
+    "extract-text-webpack-plugin": "3.0.2",
+    "file-loader": "1.1.5",
+    "html-loader": "0.5.1",
+    "html-webpack-plugin": "2.30.1",
+    "node-sass": "4.7.1",
+    "react-redux": "^5.0.6",
+    "redux": "^3.7.2",
+    "rimraf": "2.6.2",
+    "sass-loader": "6.0.6",
+    "source-list-map": "2.0.0",
+    "style-loader": "0.19.0",
+    "uglify-js": "3.1.10",
+    "url-loader": "0.6.2",
+    "webpack": "3.8.1",
+    "webpack-dev-server": "2.9.4",
+    "bootstrap": "4.0.0-beta.2",
+    "chart.js": "2.7.1",
+    "font-awesome": "4.7.0",
+    "history": "4.7.2",
+    "react": "16.1.1",
+    "react-chartjs-2": "2.6.4",
+    "react-dom": "16.1.1",
+    "react-router-dom": "4.2.2",
+    "react-transition-group": "2.2.1",
+    "reactstrap": "5.0.0-alpha.4",
+    "redux-thunk": "^2.2.0",
+    "simple-line-icons": "2.4.1"
+  },
+  "dependencies": {},
+  "scripts": {
+    "prepublish": "npm run clean && npm run build",
+    "dev":
+      "webpack -d --progress --watch --profile --json > compilation-stats.json --env.dev",
+    "start": "webpack-dev-server --progress --colors --inline --env.dev",
+    "build": "webpack -p --progress --env.prod",
+    "clean": "rimraf ./build"
+  },
+  "engines": {
+    "node": ">= 6.4.0",
+    "npm": ">= 5.0.0"
+  }
+}
