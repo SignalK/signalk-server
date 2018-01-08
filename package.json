@@ -10,7 +10,8 @@
     "start": "node bin/signalk-server",
     "test": "mocha --exit",
     "precommit": "lint-staged",
-    "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* *.js*"
+    "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* *.js*",
+    "prepublishOnly": "cd admin-ui && npm run build"
   },
   "lint-staged": {
     "linters": {
@@ -76,7 +77,6 @@
     "@signalk/nmea0183-signalk": "2.1.2",
     "@signalk/playground": "^1.0.0",
     "@signalk/sailgauge": "^1.1.0",
-    "@signalk/server-admin": "0.0.5",
     "@signalk/set-system-time": "1.0.0",
     "@signalk/signalk-schema": "1.0.2",
     "@signalk/signalk-to-nmea0183": "0.1.1",

@@ -1,0 +1,6 @@
+{
+  "name": "Configuration",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./Configuration.js"
+}
