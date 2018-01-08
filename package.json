@@ -11,7 +11,8 @@
     "test": "mocha --exit",
     "precommit": "lint-staged",
     "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* *.js*",
-    "prepublishOnly": "cd admin-ui && npm run build"
+    "prepublishOnly": "cd admin-ui && npm run build",
+    "postinstall": "cd admin-ui && npm install && npm run build"
   },
   "lint-staged": {
     "linters": {
