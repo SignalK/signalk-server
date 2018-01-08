@@ -106,7 +106,7 @@ function nmea2000input (subOptions) {
     command = `actisense-serial ${subOptions.device}`
     toChildProcess = 'nmea2000out'
   } else if (subOptions.type == 'canbus') {
-    command = `candump ${subOptions.interface}`
+    command = `candump ${subOptions.interface} | candump2analyzer`
     toChildProcess = null
   } else {
     throw new Error(`unknown NMEA2000 type ${subOptions.type}`)
