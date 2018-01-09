@@ -80,12 +80,12 @@ if [ $EUID -gt 0 ]; then
     if [ $? == 0 ]; then exit 1; fi
  
   fi
-  defaultConfigLocation="$HOME/signalk-server-config"
+  defaultConfigLocation="$HOME/.signalk"
 else
   message "YOU ARE LOGGED IN AS $SUDO_USER AND THE SERVER WILL BE STARTED AS THIS USER"
-
-  defaultConfigLocation="/usr/local/etc/signalk-server-config"
+  defaultConfigLocation=`eval echo ~$SUDO_USER`/.signalk
 fi
+
 
 textInput "Enter the location to store server configuration" $defaultConfigLocation configDirectory
 
@@ -162,9 +162,7 @@ vesselBash="$configDirectory/signalk-server"
 vesselJson="$configDirectory/settings.json"
 vesselDefaults="$configDirectory/defaults.json"
 
-message "A file will be created with your server settings at $vesselJson\n\nA file will be created with your vessel settings at $vesselDefaults\n\nA startup script will be created at $vesselBash\n\nGo to $url in your browser see the admin interface."
-
-
+message "Creating your server settings at $vesselJson"
 thisDirName="$( cd "$( dirname "$0" )" && pwd )"
 cat > $vesselBash <<bashScript
 #!/bin/sh
@@ -173,6 +171,7 @@ bashScript
 
 chmod 755 $vesselBash
 
+message "Creating your vessel settings at $vesselDefaults"
 cat > $vesselDefaults <<EOF
 {
   "vessels": {
@@ -183,6 +182,8 @@ cat > $vesselDefaults <<EOF
   }
 }
 EOF
+
+message "Creating startup script at $vesselBash"
 
 cat > $vesselJson <<jsonfile
 {
