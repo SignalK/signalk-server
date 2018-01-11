@@ -10625,9 +10625,9 @@ object-assign
         type: 'object',
         properties: {
           enabled: { type: 'boolean', title: 'Active', default: !1 },
-          loggingEnabled: {
+          enableLogging: {
             type: 'boolean',
-            title: 'Logging Enabled',
+            title: 'Enable Loging',
             default: !1
           },
           configuration: ((t = {

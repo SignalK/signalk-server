@@ -22,9 +22,9 @@ export default props => {
         title: 'Active',
         default: false
       },
-      loggingEnabled: {
+      enableLogging: {
         type: 'boolean',
-        title: 'Logging Enabled',
+        title: 'Enable Loging',
         default: false
       },
       configuration: {
