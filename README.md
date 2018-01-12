@@ -1,4 +1,5 @@
-<img width="537" alt="signalk-node" src="https://user-images.githubusercontent.com/1049678/33799103-9e461cce-dd2d-11e7-847d-da9b77bc2a84.png">
+![signal-k-logo-tagline](https://user-images.githubusercontent.com/1049678/34687576-d3e9af3e-f4b7-11e7-875e-80fce5a6e62b.png)
+
 
 An implementation of a [Signal K](http://signalk.org) server in Node.js. Intended to run on embedded devices (e.g. Raspberry Pi, Beaglebone or UDOO).
 
