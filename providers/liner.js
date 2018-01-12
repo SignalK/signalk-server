@@ -33,6 +33,7 @@ function Liner (options) {
     objectMode: true
   })
   this.doPush = this.push.bind(this)
+  this.lineSeparator = options.lineSeparator || '\n'
 }
 
 Liner.prototype._transform = function (chunk, encoding, done) {
@@ -41,7 +42,7 @@ Liner.prototype._transform = function (chunk, encoding, done) {
     data = this._lastLineData + data
   }
 
-  var lines = data.split('\n')
+  var lines = data.split(this.lineSeparator)
   this._lastLineData = lines.splice(lines.length - 1, 1)[0]
   if (this._lastLineData.length > 2048) {
     console.error(
