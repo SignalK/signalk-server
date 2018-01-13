@@ -1,12 +1,10 @@
 {
   "name": "signalk-server",
-  "version": "0.1.33",
-  "description":
-    "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
+  "version": "1.0.0-0",
+  "description": "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
   "main": "index.js",
   "scripts": {
-    "changelog":
-      "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls",
+    "changelog": "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls",
     "start": "node bin/signalk-server",
     "test": "mocha --exit",
     "precommit": "lint-staged",
@@ -14,11 +12,26 @@
   },
   "lint-staged": {
     "linters": {
-      "lib/**/*.js*": ["prettier-standard", "git add"],
-      "providers/*.js*": ["prettier-standard", "git add"],
-      "test/*.js*": ["prettier-standard", "git add"],
-      "index.js": ["prettier-standard", "git add"],
-      "package.jspn": ["prettier-standard", "git add"]
+      "lib/**/*.js*": [
+        "prettier-standard",
+        "git add"
+      ],
+      "providers/*.js*": [
+        "prettier-standard",
+        "git add"
+      ],
+      "test/*.js*": [
+        "prettier-standard",
+        "git add"
+      ],
+      "index.js": [
+        "prettier-standard",
+        "git add"
+      ],
+      "package.jspn": [
+        "prettier-standard",
+        "git add"
+      ]
     }
   },
   "bin": {
