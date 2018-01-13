@@ -8,7 +8,7 @@
     "start": "node bin/signalk-server",
     "test": "mocha --exit",
     "precommit": "lint-staged",
-    "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js package.json"
+    "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js"
   },
   "lint-staged": {
     "linters": {
@@ -25,10 +25,6 @@
         "git add"
       ],
       "index.js": [
-        "prettier-standard",
-        "git add"
-      ],
-      "package.jspn": [
         "prettier-standard",
         "git add"
       ]
