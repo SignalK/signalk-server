@@ -67,7 +67,7 @@ function Splitter (deMultiplexer, options) {
     deMultiplexer.emit('data', msg)
   }
 
-  this.fromN2KJson = new N2KJsonToSignalK()
+  this.fromN2KJson = new N2KJsonToSignalK(options)
   this.fromN2KJson.on('data', this.demuxEmitData)
   this.fromActisenseSerial = new ActisenseSerialToJSON(options)
   this.fromActisenseSerial.pipe(this.fromN2KJson)
