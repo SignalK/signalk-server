@@ -1,4 +1,4 @@
-FROM mhart/alpine-node:latest
+FROM mhart/alpine-node:6
 RUN apk update && apk add openssl git python build-base gcc abuild binutils
 #RUN adduser signalk -D -h /signalk
 RUN git clone https://github.com/SignalK/signalk-server-node.git &&\
