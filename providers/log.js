@@ -30,57 +30,21 @@
 */
 
 const Transform = require('stream').Transform
-const FileTimestampStream = require('file-timestamp-stream')
-const path = require('path')
-
-const loggers = {}
+const getLogger = require('../lib/logging')
 
 function Log (options) {
   Transform.call(this, {
     objectMode: true
   })
 
-  var logdir = options.logdir
-
-  if (!logdir) {
-    logdir =
-      options.app.config.settings.loggingDirectory ||
-      options.app.config.configPath
-  }
-
-  this.discriminator = options.discriminator || ''
-
-  const fullLogdir =
-    logdir.charAt(0) !== '/'
-      ? path.join(options.app.config.configPath, logdir)
-      : logdir
-
-  if (!loggers[fullLogdir]) {
-    const fileName = path.join(fullLogdir, 'signalk-rawdata.log.%Y-%m-%dT%H')
-
-    loggers[fullLogdir] = new FileTimestampStream({
-      path: fileName
-    })
-  }
-  this.logger = loggers[fullLogdir]
+  this.logger = getLogger(options.app, options.discriminator, options.logdir)
 }
 
 require('util').inherits(Log, Transform)
 
 Log.prototype._transform = function (msg, encoding, done) {
   this.push(msg)
-  try {
-    this.logger.write(
-      new Date().getTime() +
-        ';' +
-        this.discriminator +
-        ';' +
-        (msg.updates ? JSON.stringify(msg) : msg.toString()) +
-        '\n'
-    )
-  } catch (e) {
-    console.error(e)
-  }
+  this.logger(msg)
   done()
 }
 
