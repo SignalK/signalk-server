@@ -114,6 +114,7 @@ if [ $EUID == 0 ]; then
   fi
 else
   url="http://localhost:3000"
+  port=3000
 fi
 
 askYesNo "Do you want to enable SSL" 1
@@ -192,7 +193,11 @@ cat > $vesselJson <<jsonfile
 
   "ssl": $ssl,
 
-  "pipedProviders": []
+  "pipedProviders": [],
+
+  "security": {
+    "strategy": "@signalk/sk-simple-token-security"
+  }
 }
 jsonfile
 
