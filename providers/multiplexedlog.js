@@ -40,7 +40,7 @@ A => actisense-serial format N2K data
 function DeMultiplexer (options) {
   Writable.call(this)
 
-  this.toTimestamped = new ToTimestamped()
+  this.toTimestamped = new ToTimestamped(options.autoDetect || false)
   this.timestampThrottle = new TimestampThrottle({
     getMilliseconds: msg => msg.timestamp
   })
@@ -110,14 +110,27 @@ Splitter.prototype.pipe = function (target) {
   Transform.prototype.pipe.call(this, target)
 }
 
-function ToTimestamped () {
+function ToTimestamped (autoDetect) {
   Transform.call(this, { objectMode: true })
+  this.autoDetect = autoDetect
 }
 require('util').inherits(ToTimestamped, Transform)
 
 ToTimestamped.prototype._transform = function (msg, encoding, done) {
-  const parts = msg.toString().split(';')
-  this.push({ timestamp: parts[0], discriminator: parts[1], data: parts[2] })
+  if (this.autoDetect) {
+    var res = { timestamp: new Date().getTime(), data: msg }
+    if (msg.charAt(0) == '{') {
+      res.discriminator = 'I'
+    } else if (msg.charAt(0) == '$' || msg.charAt(0) == '!') {
+      res.discriminator = 'N'
+    } else {
+      res.discriminator = 'A'
+    }
+    this.push(res)
+  } else {
+    const parts = msg.toString().split(';')
+    this.push({ timestamp: parts[0], discriminator: parts[1], data: parts[2] })
+  }
   done()
 }
 
