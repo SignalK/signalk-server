@@ -74,9 +74,9 @@ The http port can be configured separately with environment variable `PORT`. You
 
 Storing Configuration Outside The Server Install Directory
 ==========================================================
-You can store configuration like the settings file, plugin cofiguration, defaults.js and the mapcache in a directory outside of the server install using the `-c` option (or the `SIGNALK_NODE_CONDFIG_DIR` env variable).
+You can store configuration like the settings file, plugin cofiguration and defaults.js in a directory outside of the server install using the `-c` option (or the `SIGNALK_NODE_CONDFIG_DIR` env variable).
 
-By default, the server will look for a `settings.json` and a `defaults.json` file in the given directory. 
+By default, the server will look for a `settings.json` and a `defaults.json` file in the given directory.
 
 For example, `./bin/signalk-server -c /usr/local/etc/node_server_config`
 
@@ -87,9 +87,6 @@ You can overwrite the default settings file name by specifying the -s argument.
 For example, ./bin/signalk-server -c /usr/local/etc/node_server_config -s test_settings.json`
 
 In this case, the server would look for the settings file at `/usr/local/etc/node_server_config/test_settings.json`
-
-You should also put the charts mapcache directory at `/usr/local/etc/node_server_config/public/mapcache`.
-
 
 Environment variables
 ---------------------
@@ -191,19 +188,10 @@ Server Plugins
 Plugin configuration interface is at [/plugins/configure](http://localhost:3000/plugins/configure/). See [Server Plugins](SERVERPLUGINS.md) for more information.
 
 # Charts
-Signal K chart support is built on the idea that a Signal K server can provide metadata about charts, such as name, description and where the actual chart data can be accessed. Then a client app, such as [Freeboard SK](https://www.npmjs.com/package/@signalk/freeboard-sk) or [Tuktuk Plotter](https://www.npmjs.com/package/tuktuk-chart-plotter) can retrieve a list of charts and present them.
 
-SK Node server supports charts in [TMS](https://wiki.osgeo.org/wiki/Tile_Map_Service_Specification) and [MBTiles](https://github.com/mapbox/mbtiles-spec) formats.
+Signal K chart support is provided by the [signalk-charts](https://www.npmjs.com/package/@signalk/) plugin.
 
-## TMS Charts
-
-Get your charts and process them using the instructions at https://github.com/rob42/freeboard-installer.
-Create a directory at public/mapcache and then a directory using the id of the chart, for example, public/mapcache/12272_1.
-Then unzip the chart into that directory.
-
-## MBTiles Charts
-
-MBTiles charts are single files that you can place in public/mapcache. The server will pick them up automatically from there.
+After installing and configuring the plugin from the admin console, use a client app such as [Freeboard SK](https://www.npmjs.com/package/@signalk/freeboard-sk) or [Tuktuk Plotter](https://www.npmjs.com/package/tuktuk-chart-plotter) to retrieve a list of charts and present them.
 
 Changelog
 ---------
