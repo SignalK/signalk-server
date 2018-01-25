@@ -121,7 +121,10 @@ ToTimestamped.prototype._transform = function (msg, encoding, done) {
     var res = { timestamp: new Date().getTime(), data: msg }
     if (msg.charAt(0) == '{') {
       res.discriminator = 'I'
-    } else if (msg.charAt(0) == '$' || msg.charAt(0) == '!') {
+    } else if (
+      (msg.charAt(0) == '$' || msg.charAt(0) == '!') &&
+      !msg.startsWith('$PCDIN') // N2K over 0183, which analyer handles
+    ) {
       res.discriminator = 'N'
     } else {
       res.discriminator = 'A'
