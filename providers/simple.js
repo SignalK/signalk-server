@@ -14,6 +14,7 @@ const udp = require('./udp')
 const tcp = require('./tcp')
 const filestream = require('./filestream')
 const throttle = require('./throttle')
+const canboatjs = require('./canboatjs')
 
 function Simple (options) {
   Transform.call(this, { objectMode: true })
@@ -35,6 +36,11 @@ function Simple (options) {
 
   const subOptions = JSON.parse(JSON.stringify(options.subOptions))
   subOptions.app = options.app
+
+  const mappingType =
+    options.type == 'NMEA2000' && options.type == 'ngt-1-canboatjs'
+      ? 'NMEA2000JS'
+      : dataType
 
   const pipeline = [].concat(
     pipeStartByType[options.type](subOptions),
@@ -88,6 +94,7 @@ const dataTypeMapping = {
       : [],
   NMEA0183: options => [new nmea0183_signalk(options)],
   NMEA2000: options => [new n2kAnalyzer(options), new n2k_signalk(options)],
+  NMEA2000JS: options => [new canboatjs(options), new n2k_signalk(options)],
   Multiplexed: options => [new multiplexedlog(options)]
 }
 
@@ -100,25 +107,32 @@ const pipeStartByType = {
 }
 
 function nmea2000input (subOptions) {
-  let command
-  let toChildProcess
-  if (subOptions.type == 'ngt-1') {
-    command = `actisense-serial ${subOptions.device}`
-    toChildProcess = 'nmea2000out'
-  } else if (subOptions.type == 'canbus') {
-    command = `candump ${subOptions.interface} | candump2analyzer`
-    toChildProcess = null
+  if (subOptions.type == 'ngt-1-canboatjs') {
+    return [
+      new require('./actisense-serial')(subOptions),
+      new liner(subOptions)
+    ]
   } else {
-    throw new Error(`unknown NMEA2000 type ${subOptions.type}`)
+    let command
+    let toChildProcess
+    if (subOptions.type == 'ngt-1') {
+      command = `actisense-serial ${subOptions.device}`
+      toChildProcess = 'nmea2000out'
+    } else if (subOptions.type == 'canbus') {
+      command = `candump ${subOptions.interface} | candump2analyzer`
+      toChildProcess = null
+    } else {
+      throw new Error(`unknown NMEA2000 type ${subOptions.type}`)
+    }
+    return [
+      new execute({
+        command: command,
+        toChildProcess: toChildProcess,
+        app: subOptions.app
+      }),
+      new liner(subOptions)
+    ]
   }
-  return [
-    new execute({
-      command: command,
-      toChildProcess: toChildProcess,
-      app: subOptions.app
-    }),
-    new liner(subOptions)
-  ]
 }
 
 function nmea0183input (subOptions) {
