@@ -1,7 +1,7 @@
 const Transform = require('stream').Transform
 const Writable = require('stream').Writable
 const _ = require('lodash')
-
+const debug = require('debug')('signalk:simple')
 const n2kAnalyzer = require('./n2kAnalyzer')
 const from_json = require('./from_json')
 const multiplexedlog = require('./multiplexedlog')
@@ -38,17 +38,17 @@ function Simple (options) {
   subOptions.app = options.app
 
   const mappingType =
-    options.type == 'NMEA2000' && options.type == 'ngt-1-canboatjs'
+    options.type == 'NMEA2000' &&
+    options.subOptions &&
+    options.subOptions.type == 'ngt-1-canboatjs'
       ? 'NMEA2000JS'
       : dataType
 
   const pipeline = [].concat(
     pipeStartByType[options.type](subOptions),
     getLogger(options.app, options.logging, discriminatorByDataType[dataType]),
-    dataTypeMapping[dataType](subOptions)
+    dataTypeMapping[mappingType](subOptions)
   )
-
-  console.log(`pipeline ${pipeline}`)
 
   for (var i = pipeline.length - 2; i >= 0; i--) {
     pipeline[i].pipe(pipeline[i + 1])
@@ -82,6 +82,7 @@ const getLogger = (app, logging, discriminator) =>
     : []
 
 const discriminatorByDataType = {
+  NMEA2000JS: 'A',
   NMEA2000: 'A',
   NMEA0183: 'N',
   SignalK: 'I'
@@ -107,10 +108,13 @@ const pipeStartByType = {
 }
 
 function nmea2000input (subOptions) {
-  if (subOptions.type == 'ngt-1-canboatjs') {
+  if (subOptions.type === 'ngt-1-canboatjs') {
     return [
-      new require('./actisense-serial')(subOptions),
-      new liner(subOptions)
+      new require('./actisense-serial')({
+        device: subOptions.device,
+        app: subOptions.app,
+        outEvent: 'nmea2000out'
+      })
     ]
   } else {
     let command
