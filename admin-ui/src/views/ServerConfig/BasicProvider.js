@@ -164,6 +164,7 @@ class DataTypeInput extends Component {
           >
             <option value='SignalK'>Signal K</option>
             <option value='NMEA2000'>NMEA 2000</option>
+            <option value='NMEA2000JS'>NMEA 2000 (native, experimental)</option>
             <option value='NMEA0183'>NMEA 0183</option>
             {this.props.value.type === 'FileStream' && (
               <option value='Multiplexed'>Multiplexed Log</option>
