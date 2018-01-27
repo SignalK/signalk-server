@@ -84,7 +84,7 @@
     "@signalk/freeboard-sk": "0.0.1",
     "@signalk/instrumentpanel": "^0.2.1",
     "@signalk/maptracker": "^1.0.0",
-    "@signalk/n2k-signalk": "1.0.1",
+    "@signalk/n2k-signalk": "1.1.0",
     "@signalk/nmea0183-signalk": "2.2.0",
     "@signalk/playground": "^1.0.0",
     "@signalk/sailgauge": "^1.1.0",
