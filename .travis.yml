@@ -1,6 +1,6 @@
 language: node_js
 node_js:
-  - "8"
+  - "lts/*"
 sudo: false
 env:
   - CXX=g++-4.8
