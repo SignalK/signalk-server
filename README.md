@@ -12,7 +12,7 @@ Get up and running with a local install
 Instructions for [installation on Raspberry Pi manually](https://github.com/SignalK/signalk-server-node/blob/master/raspberry_pi_installation.md) or [with Ansible](https://github.com/tkurki/marinepi-provisioning).
 
 Prerequisites
-* node and npm installed
+* Node.js version 8 or higher and npm installed
 
 
 Get the repo with either `git clone https://github.com/SignalK/signalk-server-node.git`

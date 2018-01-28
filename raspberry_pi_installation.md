@@ -51,7 +51,7 @@ Now we will download three tools; curl, git and build-essential. These tools wil
 
     $ sudo apt-get install -y curl git build-essential dialog
 
-Node server requires Node version 6 or newer. For Raspberry Pi 2 and 3 follow the instructions below. If in doubt, test with
+Node server requires Node version 8 or newer. For Raspberry Pi 2 and 3 follow the instructions below. If in doubt, test with
 
     $ uname -m
 
@@ -59,7 +59,7 @@ If the result returned starts with “armv6”, you are running a Raspberry Pi b
 
 Add NodeSource repository to the system so that we can install Node with `apt-get`:
 
-    $ curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+    $ curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
     $ sudo apt install nodejs
 
 
@@ -201,10 +201,10 @@ If you have not updated for a while, then the above commands may take a while to
 
 Open the terminal window and enter the following commands...
 
-    $ curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+    $ curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
     $ sudo apt-get install nodejs
 
-This will update Nodejs and NPM to the latest version (V6.9.2 at time of writing), currently Nodejs V7.x has not been fully tested so best to stick with the stable V6.x build for now.
+This will update Nodejs and NPM to the version required by the server.
 
 ## Update Signal K Node Server
 
