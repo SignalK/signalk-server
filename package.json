@@ -1,7 +1,7 @@
 {
   "name": "signalk-server",
   "version": "1.0.0-1",
-  "description": "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
+  "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
     "changelog": "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls  --tag-name=v$npm_package_version",
