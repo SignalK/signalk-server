@@ -121,7 +121,7 @@
     "stat-mode": "^0.2.2",
     "stream-throttle": "^0.1.3",
     "through": ">=2.2.7 <3",
-    "ws": "^3.0.0",
+    "ws": "^4.0.0",
     "xml2js": "^0.4.17"
   },
   "devDependencies": {
