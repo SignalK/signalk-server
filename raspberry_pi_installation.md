@@ -132,7 +132,7 @@ For the purposes of this "How to" 4 open source web apps are automatically insta
 
 Now all you need to do to start the Node Server running is to type...
 
-    $ signalk-server -s settings/volare-file-settings.json
+    $ signalk-server --sample-nmea0183-data
 
 You should see the terminal output "signalk-server running at 0.0.0.0:3000" as shown below...
 
