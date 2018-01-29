@@ -1,3 +1,3 @@
-const universal = require('./universal')
+const autodetect = require('./autodetect')
 
-module.exports = universal
+module.exports = autodetect
