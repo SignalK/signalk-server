@@ -16,6 +16,8 @@
  * limitations under the License.
 */
 
+require('please-upgrade-node')(require('../package.json'))
+
 var Server = require('../lib');
 var server = new Server();
 

@@ -116,6 +116,7 @@
     "morgan": "^1.5.0",
     "node-gpsd": "^0.3.0",
     "pem": "^1.11.0",
+    "please-upgrade-node": "^3.0.1",
     "primus": "^7.0.0",
     "serialport": "^6.0.0",
     "split": "^1.0.0",
@@ -140,5 +141,8 @@
   },
   "optionalDependencies": {
     "mdns": "^2.3.4"
+  },
+  "engines": {
+    "node": ">=8"
   }
 }
