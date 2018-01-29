@@ -29,8 +29,8 @@ const _ = require('lodash')
 
 Provider to handle any kind of supported input data.
 
-It will detect if the incoming data is in the 'multiplexedlog' format 
-(produced by the server's logging function)and if not, then it will 
+It will detect if the incoming data is in the 'multiplexedlog' format
+(produced by the server's logging function)and if not, then it will
 look at each incoming line to try to determine the type of data.
 
 A multiplexed log should have this format:
@@ -132,30 +132,38 @@ ToTimestamped.prototype._transform = function (msg, encoding, done) {
     this.multiplexedFormat =
       line.length > 16 && line.charAt(13) == ';' && line.charAt(15) == ';'
     if (this.multiplexedFormat && !this.options.noThrottle) {
-      console.log('throttle')
       this.deMultiplexer.toTimestamped
         .pipe(this.deMultiplexer.timestampThrottle)
         .pipe(this.deMultiplexer.splitter)
-    }
-  }
-
-  if (!this.multiplexedFormat) {
-    var res = { timestamp: new Date().getTime(), data: line }
-    if (line.charAt(0) == '{') {
-      res.discriminator = 'I'
-    } else if (
-      (line.charAt(0) == '$' || line.charAt(0) == '!') &&
-      !line.startsWith('$PCDIN') // N2K over 0183, which analyer handles
-    ) {
-      res.discriminator = 'N'
+      this._transform = this.handleMultiplexed
     } else {
-      res.discriminator = 'A'
+      this._transform = this.handleMixed
     }
-    this.push(res)
-  } else {
-    const parts = line.split(';')
-    this.push({ timestamp: parts[0], discriminator: parts[1], data: parts[2] })
+    this._transform(msg, encoding, done)
   }
+}
+
+ToTimestamped.prototype.handleMixed = function (msg, encoding, done) {
+  var line = msg.toString()
+  var res = { timestamp: new Date().getTime(), data: line }
+  if (line.charAt(0) == '{') {
+    res.discriminator = 'I'
+  } else if (
+    (line.charAt(0) == '$' || line.charAt(0) == '!') &&
+    !line.startsWith('$PCDIN') // N2K over 0183, which analyer handles
+  ) {
+    res.discriminator = 'N'
+  } else {
+    res.discriminator = 'A'
+  }
+  this.push(res)
+  done()
+}
+
+ToTimestamped.prototype.handleMultiplexed = function (msg, encoding, done) {
+  var line = msg.toString()
+  const parts = line.split(';')
+  this.push({ timestamp: parts[0], discriminator: parts[1], data: parts[2] })
   done()
 }
 
