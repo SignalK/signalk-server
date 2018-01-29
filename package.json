@@ -9,7 +9,8 @@
     "start": "node bin/signalk-server",
     "test": "mocha --exit",
     "precommit": "lint-staged",
-    "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js"
+    "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js",
+    "prepublishOnly": "cd admin-ui && npm install && npm run build && cd ../plugin-config && npm install && npm run build"
   },
   "lint-staged": {
     "linters": {

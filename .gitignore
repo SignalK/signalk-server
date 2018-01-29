@@ -1,12 +1,18 @@
 node_modules
 .DS_Store
+.vscode/
 *.db
 logs/*
 bower_components
 settings/ssl-key.pem
 settings/ssl-cert.pem
 plugin-config-data
-plugin-config/public/main.js.map
+plugin-config/public/
+
+
+*.tgz
+work/
+
 
 # Committing package-lock.json to repo causes problems for node-gyp-built dependencies
 # when moving between platforms.
