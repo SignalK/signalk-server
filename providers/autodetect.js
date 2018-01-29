@@ -29,7 +29,9 @@ const _ = require('lodash')
 
 Provider to handle any kind of supported input data.
 
-It will detect if the incomming data is in the 'multuplexedlog' format and if not, then it will look at each incoming line to try to detirmine the type of data.
+It will detect if the incoming data is in the 'multiplexedlog' format 
+(produced by the server's logging function)and if not, then it will 
+look at each incoming line to try to determine the type of data.
 
 A multiplexed log should have this format:
 
