@@ -90,6 +90,7 @@ Splitter.prototype._transform = function (msg, encoding, done) {
           encoding
         )
       case 'I':
+      default:
         try {
           const parsed = JSON.parse(msg.data)
           this.push(parsed)
@@ -98,8 +99,6 @@ Splitter.prototype._transform = function (msg, encoding, done) {
           console.error(e)
         }
         break
-      default:
-        console.log('Unrecognized discriminator:' + msg.discriminator)
     }
   } finally {
     done()

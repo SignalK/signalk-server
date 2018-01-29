@@ -1,28 +1,40 @@
 {
   "name": "signalk-server",
-  "version": "0.1.33",
-  "description":
-    "An implementation of a [Signal K](http://signalk.github.io) server for boats.",
+  "version": "1.0.0-1",
+  "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
-    "changelog":
-      "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls",
+    "changelog": "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls  --tag-name=v$npm_package_version",
+    "release": "git tag -d v$npm_package_version && npm run changelog && git add CHANGELOG.md && git commit -m 'chore: update changelog' && git tag v$npm_package_version && git push --tags && git push",
     "start": "node bin/signalk-server",
     "test": "mocha --exit",
     "precommit": "lint-staged",
-    "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js package.json"
+    "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js",
+    "prepublishOnly": "cd admin-ui && npm install && npm run build && cd ../plugin-config && npm install && npm run build"
   },
   "lint-staged": {
     "linters": {
-      "lib/**/*.js*": ["prettier-standard", "git add"],
-      "providers/*.js*": ["prettier-standard", "git add"],
-      "test/*.js*": ["prettier-standard", "git add"],
-      "index.js": ["prettier-standard", "git add"],
-      "package.jspn": ["prettier-standard", "git add"]
+      "lib/**/*.js*": [
+        "prettier-standard",
+        "git add"
+      ],
+      "providers/*.js*": [
+        "prettier-standard",
+        "git add"
+      ],
+      "test/*.js*": [
+        "prettier-standard",
+        "git add"
+      ],
+      "index.js": [
+        "prettier-standard",
+        "git add"
+      ]
     }
   },
   "bin": {
-    "signalk-server": "./bin/signalk-server"
+    "signalk-server": "./bin/signalk-server",
+    "signalk-server-setup": "./bin/signalk-server-setup"
   },
   "repository": {
     "type": "git",
@@ -73,8 +85,8 @@
     "@signalk/freeboard-sk": "0.0.1",
     "@signalk/instrumentpanel": "^0.2.1",
     "@signalk/maptracker": "^1.0.0",
-    "@signalk/n2k-signalk": "1.0.1",
-    "@signalk/nmea0183-signalk": "2.1.2",
+    "@signalk/n2k-signalk": "1.1.0",
+    "@signalk/nmea0183-signalk": "2.2.0",
     "@signalk/playground": "^1.0.0",
     "@signalk/sailgauge": "^1.1.0",
     "@signalk/set-system-time": "1.0.0",
@@ -110,7 +122,7 @@
     "stat-mode": "^0.2.2",
     "stream-throttle": "^0.1.3",
     "through": ">=2.2.7 <3",
-    "ws": "^3.0.0",
+    "ws": "^4.0.0",
     "xml2js": "^0.4.17"
   },
   "devDependencies": {
@@ -120,10 +132,13 @@
     "github-changes": "^1.0.4",
     "husky": "^0.14.3",
     "lint-staged": "^6.0.0",
-    "mocha": "^4.0.0",
+    "mocha": "^5.0.0",
     "node-fetch": "^1.7.3",
     "prettier-standard": "^8.0.0",
     "request": "^2.81.0",
     "request-promise": "^4.1.1"
+  },
+  "optionalDependencies": {
+    "mdns": "^2.3.4"
   }
 }

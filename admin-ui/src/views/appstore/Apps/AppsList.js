@@ -54,6 +54,7 @@ function mainIcon (app) {
 
 function installApp (name, version) {
   fetch(`/appstore/install/${name}/${version}`, {
+    method: 'POST',
     credentials: 'include'
   })
 }
