@@ -24,7 +24,7 @@ export default props => {
       },
       enableLogging: {
         type: 'boolean',
-        title: 'Enable Loging',
+        title: 'Enable Logging',
         default: false
       },
       configuration: {
