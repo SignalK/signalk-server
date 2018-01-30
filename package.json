@@ -10,7 +10,8 @@
     "test": "mocha --exit",
     "precommit": "lint-staged",
     "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js",
-    "prepublishOnly": "cd admin-ui && npm install && npm run build && cd ../plugin-config && npm install && npm run build"
+    "prepublishOnly": "cd admin-ui && npm install && npm run build && cd ../plugin-config && npm install && npm run build",
+    "heroku-postbuild": "npm run prepublishOnly"
   },
   "lint-staged": {
     "linters": {
