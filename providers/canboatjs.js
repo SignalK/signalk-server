@@ -43,6 +43,7 @@ function canboatjs (options) {
 
   this.fromPgn.on('pgn', pgn => {
     this.push(pgn)
+    options.app.emit('N2KAnalyzerOut', pgn)
   })
 
   this.fromPgn.on('warning', (pgn, warning) => {
