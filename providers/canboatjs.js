@@ -14,21 +14,6 @@
  * limitations under the License.
  */
 
-/**
- * Usage: this is the pipeElement that transforms NMEA0183 input to Signal K deltas.
- * Emits sentence data as "nmea0183" events on app.signalk by default.
- * Furthermore you can use "sentenceEvent" option, that will cause sentence data to be
- * emitted as events on app. sentenceEvent can be a string or an array of strings.
- *
- * Example:
- * {
- *   "type": "providers/nmea0183-signalk",
- *   "options": {
- *     "sentenceEvent": "nmea0183-B"
- *   },
- * }
- */
-
 const Transform = require('stream').Transform
 const FromPgn = require('canboatjs').FromPgn
 const debug = require('debug')('signalk:canbusjs')
