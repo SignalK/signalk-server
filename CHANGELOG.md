@@ -1,5 +1,19 @@
 ## Change Log
 
+### v1.0.0-2 (2018/02/02 22:14 +00:00)
+- [#419](https://github.com/SignalK/signalk-server-node/pull/419) feature: enable security by default (@sbender9)
+- [#435](https://github.com/SignalK/signalk-server-node/pull/435) Update baconjs to the latest version 🚀 (@greenkeeper[bot])
+- [#429](https://github.com/SignalK/signalk-server-node/pull/429) feature: add support for native canboatjs (@sbender9)
+- [#423](https://github.com/SignalK/signalk-server-node/pull/423) feature: new multiplexed provider that autodetects input type (@sbender9)
+- [#430](https://github.com/SignalK/signalk-server-node/pull/430)  fix: support starting up with an empty or missing settings file and using -c (@sbender9)
+- [#432](https://github.com/SignalK/signalk-server-node/pull/432) feature: use node lts version (@tkurki)
+- [#431](https://github.com/SignalK/signalk-server-node/pull/431) Build webapps on publish (@tkurki)
+- [#413](https://github.com/SignalK/signalk-server-node/pull/413) feature: add --sample-nmea0183-data argument to start the server with… (@sbender9)
+- [#386](https://github.com/SignalK/signalk-server-node/pull/386) Update ws to the latest version 🚀 (@greenkeeper[bot])
+- [#427](https://github.com/SignalK/signalk-server-node/pull/427) Update @signalk/n2k-signalk to the latest version 🚀 (@greenkeeper[bot])
+- [#428](https://github.com/SignalK/signalk-server-node/pull/428) Update @signalk/nmea0183-signalk to the latest version 🚀 (@greenkeeper[bot])
+- [#425](https://github.com/SignalK/signalk-server-node/pull/425) change: remove charts interface in favour of signalk-charts plugin (@vokkim)
+
 ### v1.0.0-1 (2018/01/25 19:26 +00:00)
 - [#426](https://github.com/SignalK/signalk-server-node/pull/426) fix: plugins getting installed into the current dir when using -s (@tkurki)
 - [#424](https://github.com/SignalK/signalk-server-node/pull/424) feature: add option to disable checksum validation for 0183 messages (@sbender9)
