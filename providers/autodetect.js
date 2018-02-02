@@ -20,6 +20,7 @@ const TimestampThrottle = require('./timestamp-throttle')
 
 const N2KJsonToSignalK = require('./n2k-signalk')
 const ActisenseSerialToJSON = require('./n2kAnalyzer')
+const canboatjs = require('./canboatjs')
 const Nmea01832SignalK = require('./nmea0183-signalk')
 const throttle = require('./throttle')
 const liner = require('./liner')
@@ -76,7 +77,12 @@ function Splitter (deMultiplexer, options) {
 
   this.fromN2KJson = new N2KJsonToSignalK()
   this.fromN2KJson.on('data', this.demuxEmitData)
-  this.fromActisenseSerial = new ActisenseSerialToJSON(options)
+
+  if (options.useCanboatjs) {
+    this.fromActisenseSerial = new canboatjs(options)
+  } else {
+    this.fromActisenseSerial = new ActisenseSerialToJSON(options)
+  }
   this.fromActisenseSerial.pipe(this.fromN2KJson)
 
   this.fromNMEA0183 = new Nmea01832SignalK(options)
