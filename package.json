@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "changelog": "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls  --tag-name=v$npm_package_version",
-    "release": "git tag -d v$npm_package_version && npm run changelog && git add CHANGELOG.md && git commit -m 'chore: update changelog' && git tag v$npm_package_version && git push --tags && git push",
+    "release": "git tag -d v$npm_package_version ; npm run changelog && git add CHANGELOG.md && git commit -m 'chore: update changelog' && git tag v$npm_package_version && git push --tags && git push",
     "start": "node bin/signalk-server",
     "test": "mocha --exit",
     "precommit": "lint-staged",
