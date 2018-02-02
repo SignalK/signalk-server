@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "1.0.0-1",
+  "version": "1.0.0-2",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
@@ -78,7 +78,7 @@
   ],
   "license": "Apache-2.0",
   "engines": {
-    "node": "6"
+    "node": ">=8"
   },
   "dependencies": {
     "@signalk/client": "^0.2.0",
@@ -143,8 +143,5 @@
   },
   "optionalDependencies": {
     "mdns": "^2.3.4"
-  },
-  "engines": {
-    "node": ">=8"
   }
 }
