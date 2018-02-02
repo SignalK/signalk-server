@@ -96,7 +96,7 @@
     "@signalk/simplegauges": "^1.0.1",
     "@signalk/sk-simple-token-security": "2.2.2",
     "@signalk/zones": "^1.0.0",
-    "baconjs": "^1.0.1",
+    "baconjs": "^2.0.0",
     "body-parser": "^1.14.1",
     "canboatjs": "0.0.3",
     "colors": "^1.1.2",
