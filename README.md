@@ -47,7 +47,7 @@ Get up and running with Docker
 This does not require downloading the repository, just grab the Dockerfile and run:
 ```
 docker build -t sk-server .
-docker run --name sk-server -d -p 3000:3000 signalk-node-server
+docker run --name sk-server -d -p 3000:3000 sk-server
 ```
 This will build & start a Signal K server playing back an NMEA2000 log file, accessible at http://localhost:3000/
 
