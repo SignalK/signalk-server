@@ -1,5 +1,8 @@
 ## Change Log
 
+### v1.0.0-3 (2018/02/03 21:36 +00:00)
+- [#436](https://github.com/SignalK/signalk-server-node/pull/436) Update @signalk/sk-simple-token-security to the latest version 🚀 (@greenkeeper[bot])
+
 ### v1.0.0-2 (2018/02/02 22:14 +00:00)
 - [#419](https://github.com/SignalK/signalk-server-node/pull/419) feature: enable security by default (@sbender9)
 - [#435](https://github.com/SignalK/signalk-server-node/pull/435) Update baconjs to the latest version 🚀 (@greenkeeper[bot])
