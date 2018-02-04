@@ -9,9 +9,17 @@ Plugins
 - can be a webapp as well: a webapp's `/public/` directory is mounted under server's root under module id http://yourserver/moduleid
 
 
-The module must export a single `function(app)` that must return an object with functions `start(configuration)` and `stop` and a field `schema`. The schema value should be the structure of the plugin's configuration data as [JSON Schema](http://json-schema.org/).
+The module must export a single `function(app)` that must return an object with functions `start(configuration, restartPlugin)` and `stop` and a property named `schema`. The schema value should be the structure of the plugin's configuration data as [JSON Schema](http://json-schema.org/). The pluging can call `restartPlugin()` to restart itself.
 
 See [Ais Reporter](https://github.com/SignalK/aisreporter/issues) for an example.
+
+## Plugin configuration files
+
+A plugin's configuration data is saved at `SIGNALK_NODE_CONDFIG_DIR/plugin-config-data/<plugin-name>.json`. You can disable a plugin by removing its configuration file.
+
+## Logging
+
+The plugin configuration form has an option for turning on logging per plugin. Enabling logging will cause any deltas sent by the plugin to be logged in the server's data log.
 
 ## SERVER API FOR PLUGINS
 
