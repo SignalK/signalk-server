@@ -41,7 +41,7 @@ Start the server with sample data:
 * NMEA0183 sample data: `bin/nmea-from-file`
 * NMEA2000 sample data: `bin/n2k-from-file-js`
 
-This will start the server with a sample configuration file and the server will start playing back data from a sample file under `samples/`. The data is available immediately via the REST interface at localhost:3000 both via [https](https://localhost:3000/signalk/v1/api/) and [http](http://localhost:3000/signalk/v1/api/).
+This will start the server with a sample configuration file and the server will start playing back data from a sample file under `samples/`. The data is available immediately via the REST interface at https://localhost:3000/signalk/v1/api/.
 
 A simple way to connect to the WebSocket interface from the command line is to install wscat2 and use that:
 ```
