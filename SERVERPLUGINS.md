@@ -60,6 +60,10 @@ Get a Bacon JS stream for self vessel's Signal K path. Stream values are objects
 
 Get a Bacon JS stream for Signal K path that will stream values from any context. Stream values are objects as in getSelfBus.
 
+### app.error(message)
+
+Report errors with a human-oriented message. Currently just logs the message, but in the future error messages hopefully will show up in the admin UI.
+
 ## PLUGIN CONFIG HTTP API
 
 ### `GET /plugins/`
