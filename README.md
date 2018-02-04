@@ -188,7 +188,7 @@ Plugin configuration interface is at [/plugins/configure](http://localhost:3000/
 
 # Charts
 
-Signal K chart support is provided by the [signalk-charts](https://www.npmjs.com/package/@signalk/) plugin.
+Signal K chart support is provided by the [@signalk/charts-plugin](https://www.npmjs.com/package/@signalk/charts-plugin) plugin.
 
 After installing and configuring the plugin from the admin console, use a client app such as [Freeboard SK](https://www.npmjs.com/package/@signalk/freeboard-sk) or [Tuktuk Plotter](https://www.npmjs.com/package/tuktuk-chart-plotter) to retrieve a list of charts and present them.
 
