@@ -9,7 +9,9 @@ Plugins
 - can be a webapp as well: a webapp's `/public/` directory is mounted under server's root under module id http://yourserver/moduleid
 
 
-The module must export a single `function(app)` that must return an object with functions `start(configuration, restartPlugin)` and `stop` and a property named `schema`. The schema value should be the structure of the plugin's configuration data as [JSON Schema](http://json-schema.org/). The pluging can call `restartPlugin()` to restart itself.
+The module must export a single `function(app)` that must return an object with functions `start(configuration, restartPlugin)` and `stop`, a property named `schema` and an optional property named `uiSchema`. The schema value should be the structure of the plugin's configuration data as [JSON Schema](http://json-schema.org/). The pluging can call `restartPlugin()` to restart itself. The uiSchema value is used by the user interface to provide information on how the configuration form should rendered. [The uiSchema object](https://github.com/mozilla-services/react-jsonschema-form#the-uischema-object)
+
+The schema and/or uiSchema values can be functions so that the values can be generated dynamically.
 
 See [Ais Reporter](https://github.com/SignalK/aisreporter/issues) for an example.
 
