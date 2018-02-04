@@ -3,62 +3,61 @@
 
 An implementation of a [Signal K](http://signalk.org) server in Node.js. Intended to run on embedded devices (e.g. Raspberry Pi, Beaglebone or UDOO).
 
-The server multiplexes data from , NMEA 2000, Signal K and sensor inputs (eg. I2C connected sensors) and provides the data in Signal K format over HTTP and WebSocket. In addition it can provide NMEA0183 over tcp and udp.
+The server multiplexes data from NMEA0183, NMEA 2000, Signal K and sensor inputs (eg. I2C connected sensors) and provides the data in Signal K format over HTTP, WebSocket and TCP. It also functions as a NMEA0183 server over TCP.
+
+The server's capabilities can be expanded with the help of plugins that provide additional features such as
+* conversion to NMEA2000
+* conversion to NMEA0183
+* read and write interfacing with cloud services such as MarineTraffic
+* logging to database such as InfluxDb
 
 
-Get up and running with a local install
-------------------
+# Installation
 
-Instructions for [installation on Raspberry Pi manually](https://github.com/SignalK/signalk-server-node/blob/master/raspberry_pi_installation.md) or [with Ansible](https://github.com/tkurki/marinepi-provisioning).
+Detailed instructions for [installation on Raspberry Pi](https://github.com/SignalK/signalk-server-node/blob/master/raspberry_pi_installation.md)
 
 Prerequisites
-* Node.js version 8 or higher and npm installed
+* Node.js version 8 or higher with npm installed
 
+## Use: Install from npm
 
-Get the repo with either `git clone https://github.com/SignalK/signalk-server-node.git`
-or as a simple zip file from https://github.com/SignalK/signalk-server-node/archive/master.zip and extract it.
+    $ sudo npm install -g --unsafe-perm signalk-server
 
-Go to the directory where you put the downloaded code and install dependencies with
-```npm install```
-[Firewall giving you trouble?](https://github.com/npm/npm/wiki/Troubleshooting#npm-only-uses-git-and-sshgit-urls-for-github-repos-breaking-proxies)
+Now you can start the server with sample data: `signalk-server --sample-nmea0183-data`.
 
-Start the server with
-```bin/nmea-from-file```
+To generate your own vessel settings file and configure your Pi to start the server automatically run
 
-This will start the server with a sample configuration file and the server will start playing back set of [NMEA 0183](http://en.wikipedia.org/wiki/NMEA_0183) data from file. The data is available immediately via the REST interface at localhost:3000 both via [https](https://localhost:3000/signalk/v1/api/) and [http](http://localhost:3000/signalk/v1/api/).
+    $ sudo signalk-server-setup
+
+## Development: Install from git
+
+```
+git clone https://github.com/SignalK/signalk-server-node.git
+cd signalk-server-node
+npm install && npm run prepublishOnly
+```
+
+Start the server with sample data:
+* NMEA0183 sample data: `bin/nmea-from-file`
+* NMEA2000 sample data: `bin/n2k-from-file-js`
+
+This will start the server with a sample configuration file and the server will start playing back data from a sample file under `samples/`. The data is available immediately via the REST interface at localhost:3000 both via [https](https://localhost:3000/signalk/v1/api/) and [http](http://localhost:3000/signalk/v1/api/).
 
 A simple way to connect to the WebSocket interface from the command line is to install wscat2 and use that:
 ```
 npm install -g wscat2
 wscat 'ws://localhost:3000/signalk/v1/stream?subscribe=all'
 ```
+## Running from Docker
 
-If you want to use [NMEA2000](http://en.wikipedia.org/wiki/NMEA_2000) data you **must install [Canboat](https://github.com/canboat/canboat/wiki/Building)**. Canboat allows you to use data from Actisense [NGT-1](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1) and convert NMEA2000 data to a format that Signal K Node server can digest.
-
-If you have analyzer available on your PATH you can start the server with a sample NMEA2000 data file with `bin/n2k-from-file`. An error message saying `analyzer: not found` tells that you need to [install canboat](https://github.com/canboat/canboat/wiki/Building).
-
-For getting live data from your NGT-1 you need to figure out what device path your device is mounted on, edit the configuration file to match you path and start server with `bin/n2k-from-actisense`.
-
-If you have your own n2k data file from canboat you can use that with `bin/n2k-from-file --n2kfilename your-file-name`.
-
-Get up and running with Docker
---------
-
-This does not require downloading the repository, just grab the Dockerfile and run:
-```
-docker build -t sk-server .
-docker run --name sk-server -d -p 3000:3000 sk-server
-```
-This will build & start a Signal K server playing back an NMEA2000 log file, accessible at http://localhost:3000/
-
-*Note* that using Docker allows you to use NMEA2000 data without local install of canboat.
+You can start a local server on port 3000  with `docker run --name signalk-server --publish 3000:3000 --entrypoint signalk-server signalk/signalk-server-node:latest --sample-nmea0183-data`. Docker is currently aimed at running a local demo server that you can test against, not for real use.
 
 Now what?
 ---------
 
-Once you have the data streams in place you probably want to use the data or at least see it in a nice format. Some sample plugins and apps are installed during the installation process. They can be accessed at http://localhost:3000. This is the landing page of your new Signal K server.
-- Apps or Webapps are mainly web pages for accessing the Signal K output such as instrumentpanel, gauges or maps. See [Webapps doc](https://github.com/SignalK/signalk-server-node/blob/master/WEBAPPS.md) for more information.
-- App Store shows all the Signal K Plugins and Apps that have been published via npm with the right keywords. It also shows their current status on your server and allows you to install and update these.
+Once you have the data streams in place you probably want to use the data or at least see it in a nice format. Some sample plugins and apps are installed during the installation process. 
+- Apps or Webapps are mainly web pages for accessing the Signal K output such as dashboards, configurable gauges or web maps. See [Webapps doc](https://github.com/SignalK/signalk-server-node/blob/master/WEBAPPS.md) for more information.
+- If you have internet connectivity for your server App Store in the admin user interfaces shows all the Signal K Plugins and Apps that have been published via npm with the right keywords. It also shows their current status on your server and allows you to install and update these.
 - Plugins are web forms to tailor your server to your needs, change parameters or get information from various sources. See [Server Plugins](SERVERPLUGINS.md)
 
 Configuration
