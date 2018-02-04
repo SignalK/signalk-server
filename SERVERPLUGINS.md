@@ -60,9 +60,18 @@ Get a Bacon JS stream for self vessel's Signal K path. Stream values are objects
 
 Get a Bacon JS stream for Signal K path that will stream values from any context. Stream values are objects as in getSelfBus.
 
+### app.streambundle.getAvailablePaths()
+
+Get a list of paths currently available in the server
+
+```
+["navigation.speedOverGround","navigation.courseOverGroundTrue","navigation.courseGreatCircle.nextPoint.position","navigation.position","navigation.gnss.antennaAltitude","navigation.gnss.satellites","navigation.gnss.horizontalDilution","navigation.gnss.positionDilution","navigation.gnss.geoidalSeparation","navigation.gnss.type","navigation.gnss.methodQuality","navigation.gnss.integrity","navigation.magneticVariation"]
+```
+
 ### app.error(message)
 
 Report errors with a human-oriented message. Currently just logs the message, but in the future error messages hopefully will show up in the admin UI.
+
 
 ## PLUGIN CONFIG HTTP API
 
