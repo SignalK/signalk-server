@@ -97,7 +97,7 @@
     "@signalk/zones": "^1.0.0",
     "baconjs": "^1.0.1",
     "body-parser": "^1.14.1",
-    "canboatjs": "0.0.3",
+    "canboatjs": "0.0.9",
     "colors": "^1.1.2",
     "compare-versions": "^3.0.1",
     "cookie": "^0.3.1",
