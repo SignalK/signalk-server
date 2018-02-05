@@ -76,7 +76,7 @@ Report errors with a human-oriented message. Currently just logs the message, bu
 
 ### app.debug(...)
 
-Log debugging messages. This is the debug method from the [debug module](https://www.npmjs.com/package/debug)] and the plugin id is used for the debug name.
+Log debug messages. This is the debug method from the [debug module](https://www.npmjs.com/package/debug). The npm module name is used for the debug name.
 
 ### app.savePluginOptions(options, callback)
 
