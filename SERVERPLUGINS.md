@@ -107,6 +107,15 @@ If the plugin needs to read plugin options from disk
   }
 ```
 
+### If you need to send an N2K message out at startup, for exmaple, to get current state from a device:
+
+```
+  app.on('nmea2000OutAvailable', () => {
+     app.emit('nmea2000out', 2017-04-15T14:57:58.468Z,2,6,126720,%s,%s,4,a3,99,01,00
+  })
+```
+
+
 ## PLUGIN CONFIG HTTP API
 
 ### `GET /plugins/`
