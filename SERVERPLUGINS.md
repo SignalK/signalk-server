@@ -74,6 +74,38 @@ Get a list of paths currently available in the server
 
 Report errors with a human-oriented message. Currently just logs the message, but in the future error messages hopefully will show up in the admin UI.
 
+### app.debug(...)
+
+Log debugging messages. This is the debug method from the [debug module](https://www.npmjs.com/package/debug)] and the plugin id is used for the debug name.
+
+### app.savePluginOptions(options, callback)
+
+If the plugin needs to make and save changes to its options
+
+### app.readPluginOptions()
+
+If the plugin needs to read plugin options from disk
+
+## SENDING NMEA MESSAGES FROM A PLUGIN
+
+### NMEA 2000
+
+#### In actisense serial format
+
+```
+  app.emit('nmea2000out', '2017-04-15T14:57:58.468Z,0,262384,0,0,14,01,0e,00,88,b6,02,00,00,00,00,00,a2,08,00')
+```
+
+#### In canboat JSON format
+
+```
+  app.emit('nmea2000JsonOut', {
+    pgn: 130306,
+    'Wind Speed': speed,
+    'Wind Angle': angle < 0 ? angle + Math.PI*2 : angle,
+    'Reference': "Apparent"
+  }
+```
 
 ## PLUGIN CONFIG HTTP API
 
