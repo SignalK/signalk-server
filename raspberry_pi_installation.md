@@ -112,8 +112,7 @@ Restart the Samba service
     $ sudo /etc/init.d/samba restart 
     [ ok ] Restarting nmbd (via systemctl): nmbd.service.
     [ ok ] Restarting smbd (via systemctl): smbd.service.
-    [ ok ] Restarting samba-ad-dc (via systemctl): samba-ad-dc.service.
-
+    
 and now You should be up and running and the Pi folder should be shared if You logon with user Pi.
 
 ## Step 2 - Install Signal K Node Server and Consumers
@@ -126,30 +125,48 @@ Install the Node Server using npm
 
     $ sudo npm install -g --unsafe-perm signalk-server
 
-A "Consumer" of Signal K data is any web app, mobile device app or software program that can read and use Signal K data. It is hoped that the number of consumers will grow rapidly as more developers discover this open format and dream up new applications to make boating easier, more efficient or just more fun.
-
-For the purposes of this "How to" 4 open source web apps are automatically installed. They have been developed by the Signal K team to show what can be done with Signal K data. 
-
-Now all you need to do to start the Node Server running is to type...
+Now you need to start the Node Server. Type...
 
     $ signalk-server --sample-nmea0183-data
 
 You should see the terminal output "signalk-server running at 0.0.0.0:3000" as shown below...
 
-![Node Server Running](https://github.com/digitalyacht/ikommunicate/blob/master/RPi_How_To_Images/node_server_running.png)
+    $ signalk-server --sample-nmea0183-data
+    Using default configuration path: /home/pi/.signalk
+    Settings file does not exist, using empty settings
+    Using sample data from /usr/lib/node_modules/signalk-server/samples/plaka.log
+    *** WARNING *** The program 'node' uses the Apple Bonjour compatibility layer of Avahi.
+    *** WARNING *** Please fix your application to use the native API of Avahi!
+    *** WARNING *** For more information see <http://0pointer.de/avahi-compat?s=libdns_sd&e=node>
+    *** WARNING *** The program 'node' called 'DNSServiceRegister()' which is not supported (or only supported partially) in the Apple Bonjour compatibility layer of Avahi.
+    *** WARNING *** Please fix your application to use the native API of Avahi!
+    *** WARNING *** For more information see <http://0pointer.de/avahi-compat?s=libdns_sd&e=node&f=DNSServiceRegister> signalk-server running at 0.0.0.0:3000
 
-As the file name suggests, the Signal K Node Server is now reading NMEA Data from a Demo File and is ready to pass that data to any device that wants it. To get your first taste of what Signal K data looks like, open the Epiphany Web browser on your RPi and type this URL in to the address bar "http://127.0.0.1:3000/signalk". This directs the browser to the Signal K server on the RPi (127.0.0.1 is your local Loopback address) and you should see the following screen...
+As the file name suggests, the Signal K Node Server is now reading NMEA Data from a Demo File and is ready to pass that data to any device that wants it. (The warnings is OK) To get your first taste of what Signal K data looks like, open the Web browser on your RPi and type this URL in to the address bar "http://127.0.0.1:3000/signalk". This directs the browser to the Signal K server on the RPi (127.0.0.1 is your local Loopback address) and you should see the following info on the screen...
 
-![Your first view of Signal K data](https://github.com/digitalyacht/ikommunicate/blob/master/RPi_How_To_Images/SignalK_LocalAddr.png)
+    {"endpoints":{"v1":{"version":"1.alpha1","signalk-http":"http://127.0.0.1:3000/signalk/v1/api/","signalk-ws":"ws://127.0.0.1:3000/signalk/v1/stream","signalk-tcp":"tcp://127.0.0.1:3858"}},"server":{"id":"signalk-server-node","version":"1.0.0-3"}}
 
 So that is Signal K....looks good doesn't it ? Actually this is just some JSON data that tells an App what the URL "endpoints" are so that it knows what Version of Signal K the server supports and where it can get HTTP or Websocket data from.
 
-To use the web apps, we will need to open them in a web browser so open the Epiphany browser on your Pi and type in one of the following URLs depending upon which app you want to run...
+If You want to see the the actual output from the NMEA data that SignalK is processing type "http://127.0.0.1:3000/signalk/v1/api/vessels/self/" in the adress bar and this info will be shown
 
-    http://127.0.0.1:3000/instrumentpanel   
-    http://127.0.0.1:3000/sailgauge   
-    http://127.0.0.1:3000/maptracker   
-    http://127.0.0.1:3000/simplegauges
+    {"name":"Plaka","mmsi":"123456789","navigation":{"speedThroughWater":{"meta":{"units":"m/s","description":"Vessel speed through the water"},"value":3.096956340117828,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.100Z","sentence":"VHW"},"courseOverGroundMagnetic":{"meta":{"units":"rad","description":"Course over ground (magnetic)"},"value":3.6030577086397786,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.100Z","sentence":"VTG"},"courseOverGroundTrue":{"meta":{"units":"rad","description":"Course over ground (true)"},"value":3.6030577086397786,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.100Z","sentence":"VTG"},"speedOverGround":{"meta":{"units":"m/s","description":"Vessel speed over ground. If converting from AIS 'HIGH' value, set to 102.2 (Ais max value) and add warning in notifications"},"value":2.9323340761912995,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.100Z","sentence":"VTG"},"position":{"meta":{"description":"The position of the vessel in 2 or 3 dimensions (WGS84 datum)"},"value":{"longitude":23.529716666666666,"latitude":60.076566666666665},"$source":"NMEA0183 Plaka.log.GP","timestamp":"2018-02-06T10:01:47.000Z","sentence":"GLL"}},"performance":{"velocityMadeGood":{"meta":{"units":"m/s","description":"The current velocity made good derived from the speed through water and appearant wind angle. A positive value is heading to upwind, negative to downwind."},"value":2.9220451846958913,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.100Z","sentence":"VPW"}},"environment":{"wind":{"speedApparent":{"meta":{"units":"m/s","description":"Apparent wind speed"},"value":7.7989797535193155,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:31.701Z","sentence":"MWV"},"angleApparent":{"meta":{"units":"rad","description":"Apparent wind angle, negative to port"},"value":-0.19198621776321237,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:31.701Z","sentence":"MWV"},"speedTrue":{"meta":{"units":"m/s","description":"Wind speed over water (as calculated from speedApparent and vessel's speed through water)"},"value":4.789478991112456,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.199Z","sentence":"MWV"},"angleTrueWater":{"meta":{"units":"rad","description":"True wind angle based on speed through water, negative to port"},"value":-0.349065850478568,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.199Z","sentence":"MWV"}},"depth":{"belowTransducer":{"meta":{"units":"m","description":"Depth below Transducer"},"value":13.29,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.300Z","sentence":"DBT"}},"current":{"meta":{"description":"Direction and strength of current affecting the vessel"},"value":{"setTrue":0,"setMagnetic":0,"drift":0},"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.000Z","sentence":"VDR"}}}
+
+A "Consumer" of Signal K data is any web app, mobile device app or software program that can read and use Signal K data. It is hoped that the number of consumers will grow rapidly as more developers discover this open format and dream up new applications to make boating easier, more efficient or just more fun.
+
+For the purposes of this "How to" some open source web apps are automatically installed. They have been developed by the Signal K team to show what can be done with Signal K data. 
+To use the web apps, we will need to open them in a web browser so open the browser on your Pi and type "http://127.0.0.1:3000/
+This will open the Dashboard and give You some info about the SignalK server.
+
+![dashboard_1](https://user-images.githubusercontent.com/16189982/35871063-96318c80-0b63-11e8-93b8-1cc2ae825470.jpeg)
+
+Click on Webapps and You will get 
+
+![dashboard_webapps](https://user-images.githubusercontent.com/16189982/35871504-b9e3d8c6-0b64-11e8-8455-801574837ca5.jpeg)
+
+Click on "Openlayers chartplotter......." and You will get a Worldmap with Your position in the south of Finland
+
+Go back and click "SignalK instrumentpanel......" and You will have instrumentpanel to play around with.
 
 If you have managed to get to the end of this guide, you will now have a good understanding of what Signal K is all about and in particular the Node Server. We have been using the server's demo NMEA file, but Node Server can also read NMEA0183 data via an [NMEA to USB adaptor cable](http://www.digitalyachtamerica.com/index.php/en/products/interfacing/nmeausb/product/67-usb-to-nmea-adaptor), a [3rd party NMEA2000 gateway](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1.html) or both NMEA0183 and NMEA2000 via the new [iKommunicate gateway](http://ikommunicate.com).
 
@@ -158,7 +175,6 @@ If you have managed to get to the end of this guide, you will now have a good un
 To generate your own vessel settings file and configure your Pi to start the server automatically , type...
 
     $ sudo signalk-server-setup
-
 
 and follow the prompts. This generates a settings file in json format in the configuration directory you specified called settings.json. This can be edited directly by looking at the example settings. 
 
@@ -210,7 +226,7 @@ This will update Nodejs and NPM to the version required by the server.
 
 Open the terminal window and enter the following commands...
 
-    $ npm install --unsafe-perm -g signalk-server
+    $ sudo npm install --unsafe-perm -g signalk-server
 
 Now your Signal K Node Server is updated.
 
