@@ -16,7 +16,10 @@ describe('SSL', () => {
         settings: {
           ssl: true,
           port,
-          sslport
+          sslport,
+          interfaces: {
+            plugins: false
+          }
         }
       }
     })

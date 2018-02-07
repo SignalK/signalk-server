@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "configuration": {
+    "testOption": "testValue"
+  }
+}

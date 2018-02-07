@@ -1,4 +1,6 @@
 node_modules
+!test/plugin-test-config/node_modules/
+
 .DS_Store
 .vscode/
 *.db
