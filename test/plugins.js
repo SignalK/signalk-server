@@ -17,11 +17,11 @@ describe('Demo plugin ', () => {
       config: { settings: { port } }
     })
     await server.start()
-    const plugins = await fetch(`http://0.0.0.0:${port}/plugins`)
-      .then(res => res.json())
-      .then(json => {
-        assert(json.find(plugin => plugin.id === 'testplugin'))
-      })
+    const plugins = await fetch(`http://0.0.0.0:${port}/plugins`).then(res =>
+      res.json()
+    )
+
+    assert(plugins.find(plugin => plugin.id === 'testplugin'))
 
     var plugin = server.app.plugins.find(plugin => plugin.id === 'testplugin')
     assert(plugin)
@@ -33,7 +33,5 @@ describe('Demo plugin ', () => {
     assert(server.app.signalk.self.some.path.value === 'someValue')
 
     await server.stop()
-
-    // assert(plugin.started === false)
   })
 })
