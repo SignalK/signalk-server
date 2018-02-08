@@ -1,5 +1,9 @@
 # Server plugins
 
+![image](https://user-images.githubusercontent.com/1049678/35973231-5d89ad56-0cdd-11e8-9d89-42313b468520.png)
+![image](https://user-images.githubusercontent.com/1049678/35973284-7e1c319c-0cdd-11e8-918f-53bad7a3b706.png)
+
+
 Signal K Node server plugins are components that run within the server and add some functionality to the server. You can configure them via the admin ui.
 
 Plugins
