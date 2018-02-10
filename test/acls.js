@@ -7,7 +7,7 @@ const securitySettings = {
   acls: [
     {
       context: 'vessels.self',
-      paths: [
+      resources: [
         {
           paths: ['navigation.*', 'name', 'design.aisShipType'],
           permissions: [
@@ -20,12 +20,28 @@ const securitySettings = {
               permission: 'write'
             }
           ]
+        },
+        {
+          sources: [
+            {
+              label: 'actisense',
+              type: 'NMEA2000',
+              pgn: 129039,
+              src: '43'
+            }
+          ],
+          permissions: [
+            {
+              subject: 'any',
+              permission: 'read'
+            }
+          ]
         }
       ]
     },
     {
       context: 'vessels.123456789',
-      paths: [
+      resources: [
         {
           paths: [
             'navigation.courseOverGroundTrue',
@@ -58,7 +74,7 @@ const securitySettings = {
     },
     {
       context: 'vessels.*',
-      paths: [
+      resources: [
         {
           paths: ['*'],
           permissions: [
@@ -92,6 +108,7 @@ describe('access control lists work', function () {
         'john.doe',
         'vessels.self',
         'navigation.position',
+        'test',
         'write'
       ) === false
     )
@@ -103,6 +120,7 @@ describe('access control lists work', function () {
         'sbender',
         'vessels.self',
         'navigation.position',
+        'test',
         'write'
       )
     )
@@ -114,6 +132,7 @@ describe('access control lists work', function () {
         'john.doe',
         'vessels.self',
         'navigation.position',
+        'test',
         'read'
       )
     )
@@ -122,6 +141,7 @@ describe('access control lists work', function () {
         'sbender',
         'vessels.self',
         'navigation.position',
+        'test',
         'read'
       )
     )
@@ -129,26 +149,64 @@ describe('access control lists work', function () {
 
   it('vessels.self name read works', () => {
     assert(
-      securityStrategy.checkACL('john.doe', 'vessels.self', 'name', 'read')
+      securityStrategy.checkACL(
+        'john.doe',
+        'vessels.self',
+        'name',
+        'test',
+        'read'
+      )
     )
-    assert(securityStrategy.checkACL('sbender', 'vessels.self', 'name', 'read'))
+    assert(
+      securityStrategy.checkACL(
+        'sbender',
+        'vessels.self',
+        'name',
+        'test',
+        'read'
+      )
+    )
   })
 
   it('vessels.123456789 name read works', () => {
     assert(
-      securityStrategy.checkACL('john.doe', 'vessels.123456789', 'name', 'read')
+      securityStrategy.checkACL(
+        'john.doe',
+        'vessels.123456789',
+        'name',
+        'test',
+        'read'
+      )
     )
     assert(
-      securityStrategy.checkACL('sbender', 'vessels.123456789', 'name', 'read')
+      securityStrategy.checkACL(
+        'sbender',
+        'vessels.123456789',
+        'name',
+        'test',
+        'read'
+      )
     )
   })
 
   it('vessels.123456789 position read works', () => {
     assert(
-      securityStrategy.checkACL('john.doe', 'vessels.123456789', 'name', 'read')
+      securityStrategy.checkACL(
+        'john.doe',
+        'vessels.123456789',
+        'name',
+        'test',
+        'read'
+      )
     )
     assert(
-      securityStrategy.checkACL('sbender', 'vessels.123456789', 'name', 'read')
+      securityStrategy.checkACL(
+        'sbender',
+        'vessels.123456789',
+        'name',
+        'test',
+        'read'
+      )
     )
   })
 
@@ -158,6 +216,7 @@ describe('access control lists work', function () {
         'john.doe',
         'vessels.123456789',
         'navigation.logTrip',
+        'test',
         'read'
       ) === false
     )
@@ -166,6 +225,7 @@ describe('access control lists work', function () {
         'sbender',
         'vessels.123456789',
         'navigation.logTrip',
+        'test',
         'read'
       )
     )
@@ -177,6 +237,7 @@ describe('access control lists work', function () {
         'john.doe',
         'vessels.123456789',
         'navigation.logTrip',
+        'test',
         'write'
       ) === false
     )
@@ -185,6 +246,7 @@ describe('access control lists work', function () {
         'sbender',
         'vessels.123456789',
         'navigation.logTrip',
+        'test',
         'write'
       )
     )
@@ -196,6 +258,7 @@ describe('access control lists work', function () {
         'john.doe',
         'vessels.987654321',
         'navigation.logTrip',
+        'test',
         'write'
       ) === false
     )
@@ -204,6 +267,7 @@ describe('access control lists work', function () {
         'john.doe',
         'vessels.987654321',
         'navigation.logTrip',
+        'test',
         'read'
       )
     )
