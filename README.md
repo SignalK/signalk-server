@@ -51,7 +51,7 @@ wscat 'ws://localhost:3000/signalk/v1/stream?subscribe=all'
 
 ## Provision: Ansible on a Raspberry Pi
 
-[Marinepi-provisioning] has useful roles and examples for provisioning Signal K and auxiliary services on a headless Raspberry Pi.
+[Marinepi-provisioning](https://github.com/tkurki/marinepi-provisioning) has useful roles and examples for provisioning Signal K and auxiliary services on a headless Raspberry Pi.
 
 
 ## Use: Run on Docker
