@@ -27,6 +27,16 @@ A plugin's configuration data is saved at `SIGNALK_NODE_CONDFIG_DIR/plugin-confi
 
 The plugin configuration form has an option for turning on logging per plugin. Enabling logging will cause any deltas sent by the plugin to be logged in the server's data log.
 
+## Getting Started with Plugin Development
+
+- Initialise a new module with `npm init`
+- Add `signalk-node-server-plugin` keyword to `package.json`
+- Run `npm link` in your plugin directory to register it for linking
+- Run `npm link <your-plugin-id>` in your SK server's configuration directory (default is $HOME/.signalk/) to link to your plugin as it were installed by the server
+- Restart the server (with environment variable DEBUG=signalk:interfaces:plugins to get debug log output about the plugin loading process)
+- Discover the stuff you need to implement from the server's error logging or read from below or use an existing plugin like [set-system-time](https://github.com/SignalK/set-system-time/blob/master/index.js) as an example
+- Enable the plugin in server's admin UI 
+
 ## SERVER API FOR PLUGINS
 
 Plugins can acces the server's delta stream and full model and provide additional data as deltas.
