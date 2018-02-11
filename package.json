@@ -133,7 +133,6 @@
   "devDependencies": {
     "chai": "^4.0.0",
     "chai-things": "^0.2.0",
-    "fetch-cookie": "^0.7.0",
     "freeport-promise": "^1.0.0",
     "github-changes": "^1.0.4",
     "husky": "^0.14.3",

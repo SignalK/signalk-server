@@ -22,14 +22,7 @@ const securitySettings = {
           ]
         },
         {
-          sources: [
-            {
-              label: 'actisense',
-              type: 'NMEA2000',
-              pgn: 129039,
-              src: '43'
-            }
-          ],
+          sources: ['source.1'],
           permissions: [
             {
               subject: 'any',
@@ -268,6 +261,36 @@ describe('access control lists work', function () {
         'vessels.987654321',
         'navigation.logTrip',
         'test',
+        'read'
+      )
+    )
+  })
+
+  it('vessels.self source acl works ', () => {
+    assert(
+      securityStrategy.checkACL(
+        'john.doe',
+        'vessels.self',
+        null,
+        'source.1',
+        'write'
+      ) === false
+    )
+    assert(
+      securityStrategy.checkACL(
+        'john.doe',
+        'vessels.self',
+        null,
+        'source.2',
+        'read'
+      ) === false
+    )
+    assert(
+      securityStrategy.checkACL(
+        'john.doe',
+        'vessels.self',
+        null,
+        'source.1',
         'read'
       )
     )
