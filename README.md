@@ -29,7 +29,7 @@ To generate your own vessel settings file and configure your Pi to start the ser
 
     $ sudo signalk-server-setup
 
-## Development: Install from git
+## Develop: Install from git
 
 ```
 git clone https://github.com/SignalK/signalk-server-node.git
@@ -48,7 +48,13 @@ A simple way to connect to the WebSocket interface from the command line is to i
 npm install -g wscat2
 wscat 'ws://localhost:3000/signalk/v1/stream?subscribe=all'
 ```
-## Running from Docker
+
+## Provision: Ansible on a Raspberry Pi
+
+[Marinepi-provisioning] has useful roles and examples for provisioning Signal K and auxiliary services on a headless Raspberry Pi.
+
+
+## Use: Run on Docker
 
 You can start a local server on port 3000  with `docker run --name signalk-server --publish 3000:3000 --entrypoint signalk-server signalk/signalk-server-node:latest --sample-nmea0183-data`. Docker is currently aimed at running a local demo server that you can test against, not for real use.
 
