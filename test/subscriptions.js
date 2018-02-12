@@ -438,7 +438,11 @@ describe('Subscriptions', _ => {
         return wsPromiser.send({
           context: {
             relativePosition: {
-              radius: 1
+              radius: 1,
+              position: {
+                longitude: -76.4639314,
+                latitude: 39.0700403
+              }
             }
           },
           subscribe: [
@@ -448,16 +452,11 @@ describe('Subscriptions', _ => {
           ]
         })
       })
-      .then(() => {
+      .then(results => {
         return Promise.all([
           wsPromiser.nextMsg(),
-          wsPromiser.send(
-            getClosePosistionDelta({ context: 'vessels.' + self })
-          )
+          sendDelta(getClosePosistionDelta())
         ])
-      })
-      .then(results => {
-        return sendDelta(getClosePosistionDelta())
       })
       .then(results => {
         return Promise.all([
