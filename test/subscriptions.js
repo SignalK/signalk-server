@@ -437,12 +437,10 @@ describe('Subscriptions', _ => {
 
         return wsPromiser.send({
           context: {
-            relativePosition: {
-              radius: 1,
-              position: {
-                longitude: -76.4639314,
-                latitude: 39.0700403
-              }
+            radius: 1,
+            position: {
+              longitude: -76.4639314,
+              latitude: 39.0700403
             }
           },
           subscribe: [
