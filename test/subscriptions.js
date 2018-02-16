@@ -73,6 +73,62 @@ function getNameDelta (overwrite) {
   return _.assign(delta, overwrite)
 }
 
+function getClosePosistionDelta (overwrite) {
+  const delta = {
+    updates: [
+      {
+        source: {
+          label: 'langford-canboatjs',
+          type: 'NMEA2000',
+          pgn: 129025,
+          src: '3'
+        },
+        timestamp: '2017-04-15T14:58:01.200Z',
+        values: [
+          {
+            path: 'navigation.position',
+            value: {
+              longitude: -76.4639314,
+              latitude: 39.0700403
+            }
+          }
+        ]
+      }
+    ],
+    context: 'vessels.closeVessel'
+  }
+
+  return _.assign(delta, overwrite)
+}
+
+function getFarPosistionDelta () {
+  const delta = {
+    updates: [
+      {
+        source: {
+          label: 'langford-canboatjs',
+          type: 'NMEA2000',
+          pgn: 129025,
+          src: '3'
+        },
+        timestamp: '2017-04-15T14:58:01.200Z',
+        values: [
+          {
+            path: 'navigation.position',
+            value: {
+              longitude: -76.4639314,
+              latitude: 39.0700503
+            }
+          }
+        ]
+      }
+    ],
+    context: 'vessels.farVessel'
+  }
+
+  return delta
+}
+
 describe('Subscriptions', _ => {
   var serverP, port, deltaUrl
 
@@ -363,6 +419,66 @@ describe('Subscriptions', _ => {
         assert(delta.updates[0].values.length === 1, 'Receives just one value')
         assert(delta.updates[0].values[0].path === '', 'Receives just name')
         assert(delta.context === 'vessels.othervessel')
+      })
+  })
+
+  it('relativePosition subscription serves correct data', function () {
+    var self, wsPromiser
+
+    return serverP
+      .then(_ => {
+        wsPromiser = new WsPromiser(
+          'ws://localhost:' + port + '/signalk/v1/stream?subsribe=none'
+        )
+        return wsPromiser.nextMsg()
+      })
+      .then(wsHello => {
+        self = JSON.parse(wsHello).self
+
+        return wsPromiser.send({
+          context: {
+            radius: 1,
+            position: {
+              longitude: -76.4639314,
+              latitude: 39.0700403
+            }
+          },
+          subscribe: [
+            {
+              path: 'navigation.position'
+            }
+          ]
+        })
+      })
+      .then(results => {
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          sendDelta(getClosePosistionDelta())
+        ])
+      })
+      .then(results => {
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          sendDelta(getClosePosistionDelta())
+        ])
+      })
+      .then(results => {
+        const delta = JSON.parse(results[0])
+
+        assert(delta.updates.length === 1, 'Receives just one update')
+        assert(delta.updates[0].values.length === 1, 'Receives just one value')
+        assert(delta.context === 'vessels.closeVessel')
+
+        return sendDelta(getFarPosistionDelta())
+      })
+      .then(results => {
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          sendDelta(getFarPosistionDelta())
+        ])
+      })
+      .then(results => {
+        assert(results[0] === 'timeout')
       })
   })
 })

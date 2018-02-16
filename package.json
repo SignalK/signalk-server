@@ -111,6 +111,7 @@
     "express-namespace": "^0.1.1",
     "file-timestamp-stream": "0.1.0",
     "flatmap": "0.0.3",
+    "geolib": "^2.0.24",
     "lodash": "^4.17.4",
     "minimist": "^1.1.0",
     "moment": "^2.10.6",
