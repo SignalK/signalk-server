@@ -2,19 +2,20 @@ const Transform = require('stream').Transform
 const Writable = require('stream').Writable
 const _ = require('lodash')
 const debug = require('debug')('signalk:simple')
-const n2kAnalyzer = require('./n2kAnalyzer')
-const from_json = require('./from_json')
-const multiplexedlog = require('./multiplexedlog')
+const N2kAnalyzer = require('./n2kAnalyzer')
+const FromJson = require('./from_json')
+const MultiplexedLog = require('./multiplexedlog')
 const nmea0183_signalk = require('./nmea0183-signalk')
-const n2k_signalk = require('./n2k-signalk')
-const log = require('./log')
-const liner = require('./liner')
+const N2kToSignalK = require('./n2k-signalk')
+const Log = require('./log')
+const Liner = require('./liner')
 const execute = require('./execute')
-const udp = require('./udp')
-const tcp = require('./tcp')
-const filestream = require('./filestream')
-const throttle = require('./throttle')
-const canboatjs = require('./canboatjs')
+const Udp = require('./udp')
+const Tcp = require('./tcp')
+const FileStream = require('./filestream')
+const Throttle = require('./throttle')
+const TimestampThrottle = require('./timestamp-throttle')
+const CanboatJs = require('./canboatjs')
 
 function Simple (options) {
   Transform.call(this, { objectMode: true })
@@ -34,8 +35,7 @@ function Simple (options) {
     throw new Error(`No discriminator for: ${dataType}`)
   }
 
-  const subOptions = JSON.parse(JSON.stringify(options.subOptions))
-  subOptions.app = options.app
+  options.subOptions.app = options.app
 
   const mappingType =
     options.type == 'NMEA2000' &&
@@ -45,9 +45,9 @@ function Simple (options) {
       : dataType
 
   const pipeline = [].concat(
-    pipeStartByType[options.type](subOptions),
+    pipeStartByType[options.type](options.subOptions),
     getLogger(options.app, options.logging, discriminatorByDataType[dataType]),
-    dataTypeMapping[mappingType](subOptions)
+    dataTypeMapping[mappingType](options)
   )
 
   for (var i = pipeline.length - 2; i >= 0; i--) {
@@ -74,7 +74,7 @@ module.exports = Simple
 const getLogger = (app, logging, discriminator) =>
   logging
     ? [
-      new log({
+      new Log({
         app: app,
         discriminator
       })
@@ -90,13 +90,31 @@ const discriminatorByDataType = {
 
 const dataTypeMapping = {
   SignalK: options =>
-    options.type != 'wss' && options.type != 'ws'
-      ? [new from_json(options)]
+    options.subOptions.type != 'wss' && options.subOptions.type != 'ws'
+      ? [new FromJson(options.subOptions)]
       : [],
-  NMEA0183: options => [new nmea0183_signalk(options)],
-  NMEA2000: options => [new n2kAnalyzer(options), new n2k_signalk(options)],
-  NMEA2000JS: options => [new canboatjs(options), new n2k_signalk(options)],
-  Multiplexed: options => [new multiplexedlog(options)]
+  NMEA0183: options => [
+    new Throttle({
+      rate: options.subOptions.throttleRate || 1000,
+      app: options.app
+    }),
+    new nmea0183_signalk(options.subOptions)
+  ],
+  NMEA2000: options => {
+    const result = [new N2kAnalyzer(options.subOptions)]
+    if (options.type === 'FileStream') {
+      result.push(new TimestampThrottle())
+    }
+    return result.concat([new N2kToSignalK(options.subOptions)])
+  },
+  NMEA2000JS: options => {
+    const result = [new CanboatJs(options.subOptions)]
+    if (options.type === 'FileStream') {
+      result.push(new TimestampThrottle())
+    }
+    return result.concat([new N2kToSignalK(options.subOptions)])
+  },
+  Multiplexed: options => [new MultiplexedLog(options.subOptions)]
 }
 
 const pipeStartByType = {
@@ -134,16 +152,16 @@ function nmea2000input (subOptions) {
         toChildProcess: toChildProcess,
         app: subOptions.app
       }),
-      new liner(subOptions)
+      new Liner(subOptions)
     ]
   }
 }
 
 function nmea0183input (subOptions) {
   if (subOptions.type == 'tcp') {
-    return [new tcp(subOptions), new liner(subOptions)]
+    return [new Tcp(subOptions), new Liner(subOptions)]
   } else if (subOptions.type === 'udp') {
-    return [new udp(subOptions)]
+    return [new Udp(subOptions)]
   } else if (subOptions.type === 'serial') {
     const serialport = require('./serialport')
     return [new serialport(subOptions)]
@@ -153,20 +171,12 @@ function nmea0183input (subOptions) {
 }
 
 function executeInput (subOptions) {
-  return [new execute(subOptions), new liner(subOptions)]
+  return [new execute(subOptions), new Liner(subOptions)]
 }
 
 function fileInput (subOptions) {
-  const result = [new filestream(subOptions)]
-  if (subOptions.dataType != 'Multiplexed') {
-    result.push(
-      new throttle({
-        rate: subOptions.throttleRate || 1000,
-        app: subOptions.app
-      })
-    )
-  }
-  result.push(new liner(subOptions))
+  const result = [new FileStream(subOptions)]
+  result.push(new Liner(subOptions))
   return result
 }
 
@@ -181,9 +191,9 @@ function signalKInput (subOptions) {
     const mdns_ws = require('./mdns-ws')
     return [new mdns_ws(options)]
   } else if (subOptions.type === 'tcp') {
-    return [new tcp(subOptions), new liner(suboptions)]
+    return [new Tcp(subOptions), new Liner(suboptions)]
   } else if (subOptions.type === 'udp') {
-    return [new udp(subOptions)]
+    return [new Udp(subOptions)]
   }
   throw new Error(`unknown SignalK type: ${subOptions.type}`)
 }
