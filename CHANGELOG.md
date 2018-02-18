@@ -1,5 +1,15 @@
 ## Change Log
 
+### v1.0.0-4 (2018/02/18 23:32 +00:00)
+- [#456](https://github.com/SignalK/signalk-server-node/pull/456) feature: set enablePluginLogging on by default (@tkurki)
+- [#454](https://github.com/SignalK/signalk-server-node/pull/454) Fix: simple provider n2k throttling (@tkurki)
+- [#446](https://github.com/SignalK/signalk-server-node/pull/446) feature: support relativePosition.radius in subscriptions and REST requests (@sbender9)
+- [#450](https://github.com/SignalK/signalk-server-node/pull/450) Doc:add plugin dev getting started instructions (@tkurki)
+- [#444](https://github.com/SignalK/signalk-server-node/pull/444) Update RPi installation guide (@MatsA)
+- [#439](https://github.com/SignalK/signalk-server-node/pull/439) Plugin api (@tkurki)
+- [#445](https://github.com/SignalK/signalk-server-node/pull/445) fix: make plugins installed in config directory preferred (@sbender9)
+- [#440](https://github.com/SignalK/signalk-server-node/pull/440) doc: update installation instructions (@tkurki)
+
 ### v1.0.0-3 (2018/02/03 21:36 +00:00)
 - [#436](https://github.com/SignalK/signalk-server-node/pull/436) Update @signalk/sk-simple-token-security to the latest version 🚀 (@greenkeeper[bot])
 
