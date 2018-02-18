@@ -16,6 +16,7 @@ import {
 import { connect } from 'react-redux'
 import { login, fetchAllData } from '../actions'
 import Dashboard from './Dashboard/'
+import EnableSecurity from './EnableSecurity'
 
 class Login extends Component {
   constructor (props) {
@@ -44,6 +45,12 @@ class Login extends Component {
   }
 
   render () {
+    if (this.props.loginStatus.status === 'notLoggedIn' &&
+        this.props.loginStatus.noUsers === true ) {
+      return (
+          <EnableSecurity />
+      )
+    } else {
     return (
       <div>
         {this.props.loginStatus.status === 'notLoggedIn' && (
@@ -110,6 +117,7 @@ class Login extends Component {
         {this.props.loginStatus.status == 'loggedIn' && <Dashboard />}
       </div>
     )
+    }
   }
 }
 

@@ -1,16 +1,17 @@
 {
   "name": "signalk-server",
-  "version": "1.0.0-1",
+  "version": "1.0.0-3",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
     "changelog": "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls  --tag-name=v$npm_package_version",
-    "release": "git tag -d v$npm_package_version && npm run changelog && git add CHANGELOG.md && git commit -m 'chore: update changelog' && git tag v$npm_package_version && git push --tags && git push",
+    "release": "git tag -d v$npm_package_version ; npm run changelog && git add CHANGELOG.md && git commit -m 'chore: update changelog' && git tag v$npm_package_version && git push --tags && git push",
     "start": "node bin/signalk-server",
     "test": "mocha --exit",
     "precommit": "lint-staged",
     "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js",
-    "prepublishOnly": "cd admin-ui && npm install && npm run build && cd ../plugin-config && npm install && npm run build"
+    "prepublishOnly": "cd admin-ui && npm install && npm run build && cd ../plugin-config && npm install && npm run build",
+    "heroku-postbuild": "npm run prepublishOnly"
   },
   "lint-staged": {
     "linters": {
@@ -77,10 +78,9 @@
   ],
   "license": "Apache-2.0",
   "engines": {
-    "node": "6"
+    "node": ">=8"
   },
   "dependencies": {
-    "@signalk/aisreporter": "0.0.3",
     "@signalk/client": "^0.2.0",
     "@signalk/freeboard-sk": "0.0.1",
     "@signalk/instrumentpanel": "^0.2.1",
@@ -93,10 +93,11 @@
     "@signalk/signalk-schema": "1.0.3",
     "@signalk/signalk-to-nmea0183": "0.1.1",
     "@signalk/simplegauges": "^1.0.1",
-    "@signalk/sk-simple-token-security": "2.2.2",
+    "@signalk/sk-simple-token-security": "2.2.3",
     "@signalk/zones": "^1.0.0",
     "baconjs": "^1.0.1",
     "body-parser": "^1.14.1",
+    "canboatjs": "0.0.9",
     "colors": "^1.1.2",
     "compare-versions": "^3.0.1",
     "cookie": "^0.3.1",
@@ -110,18 +111,21 @@
     "express-namespace": "^0.1.1",
     "file-timestamp-stream": "0.1.0",
     "flatmap": "0.0.3",
+    "geolib": "^2.0.24",
     "lodash": "^4.17.4",
     "minimist": "^1.1.0",
     "moment": "^2.10.6",
     "morgan": "^1.5.0",
     "node-gpsd": "^0.3.0",
     "pem": "^1.11.0",
+    "please-upgrade-node": "^3.0.1",
     "primus": "^7.0.0",
     "serialport": "^6.0.0",
     "split": "^1.0.0",
     "stat-mode": "^0.2.2",
     "stream-throttle": "^0.1.3",
     "through": ">=2.2.7 <3",
+    "uuid": "^3.2.1",
     "ws": "^4.0.0",
     "xml2js": "^0.4.17"
   },

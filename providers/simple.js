@@ -1,7 +1,7 @@
 const Transform = require('stream').Transform
 const Writable = require('stream').Writable
 const _ = require('lodash')
-
+const debug = require('debug')('signalk:simple')
 const n2kAnalyzer = require('./n2kAnalyzer')
 const from_json = require('./from_json')
 const multiplexedlog = require('./multiplexedlog')
@@ -14,6 +14,7 @@ const udp = require('./udp')
 const tcp = require('./tcp')
 const filestream = require('./filestream')
 const throttle = require('./throttle')
+const canboatjs = require('./canboatjs')
 
 function Simple (options) {
   Transform.call(this, { objectMode: true })
@@ -36,13 +37,18 @@ function Simple (options) {
   const subOptions = JSON.parse(JSON.stringify(options.subOptions))
   subOptions.app = options.app
 
+  const mappingType =
+    options.type == 'NMEA2000' &&
+    options.subOptions &&
+    options.subOptions.type == 'ngt-1-canboatjs'
+      ? 'NMEA2000JS'
+      : dataType
+
   const pipeline = [].concat(
     pipeStartByType[options.type](subOptions),
     getLogger(options.app, options.logging, discriminatorByDataType[dataType]),
-    dataTypeMapping[dataType](subOptions)
+    dataTypeMapping[mappingType](subOptions)
   )
-
-  console.log(`pipeline ${pipeline}`)
 
   for (var i = pipeline.length - 2; i >= 0; i--) {
     pipeline[i].pipe(pipeline[i + 1])
@@ -76,6 +82,7 @@ const getLogger = (app, logging, discriminator) =>
     : []
 
 const discriminatorByDataType = {
+  NMEA2000JS: 'A',
   NMEA2000: 'A',
   NMEA0183: 'N',
   SignalK: 'I'
@@ -88,6 +95,7 @@ const dataTypeMapping = {
       : [],
   NMEA0183: options => [new nmea0183_signalk(options)],
   NMEA2000: options => [new n2kAnalyzer(options), new n2k_signalk(options)],
+  NMEA2000JS: options => [new canboatjs(options), new n2k_signalk(options)],
   Multiplexed: options => [new multiplexedlog(options)]
 }
 
@@ -100,25 +108,35 @@ const pipeStartByType = {
 }
 
 function nmea2000input (subOptions) {
-  let command
-  let toChildProcess
-  if (subOptions.type == 'ngt-1') {
-    command = `actisense-serial ${subOptions.device}`
-    toChildProcess = 'nmea2000out'
-  } else if (subOptions.type == 'canbus') {
-    command = `candump ${subOptions.interface} | candump2analyzer`
-    toChildProcess = null
+  if (subOptions.type === 'ngt-1-canboatjs') {
+    return [
+      new require('./actisense-serial')({
+        device: subOptions.device,
+        app: subOptions.app,
+        outEvent: 'nmea2000out'
+      })
+    ]
   } else {
-    throw new Error(`unknown NMEA2000 type ${subOptions.type}`)
+    let command
+    let toChildProcess
+    if (subOptions.type == 'ngt-1') {
+      command = `actisense-serial ${subOptions.device}`
+      toChildProcess = 'nmea2000out'
+    } else if (subOptions.type == 'canbus') {
+      command = `candump ${subOptions.interface} | candump2analyzer`
+      toChildProcess = null
+    } else {
+      throw new Error(`unknown NMEA2000 type ${subOptions.type}`)
+    }
+    return [
+      new execute({
+        command: command,
+        toChildProcess: toChildProcess,
+        app: subOptions.app
+      }),
+      new liner(subOptions)
+    ]
   }
-  return [
-    new execute({
-      command: command,
-      toChildProcess: toChildProcess,
-      app: subOptions.app
-    }),
-    new liner(subOptions)
-  ]
 }
 
 function nmea0183input (subOptions) {

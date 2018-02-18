@@ -164,6 +164,7 @@ class DataTypeInput extends Component {
           >
             <option value='SignalK'>Signal K</option>
             <option value='NMEA2000'>NMEA 2000</option>
+            <option value='NMEA2000JS'>NMEA 2000 (pure js, experimental)</option>
             <option value='NMEA0183'>NMEA 0183</option>
             {this.props.value.type === 'FileStream' && (
               <option value='Multiplexed'>Multiplexed Log</option>
@@ -233,11 +234,13 @@ const NMEA2000 = props => {
           >
             <option value='none'>Select a source</option>
             <option value='ngt-1'>Actisense NTG-1</option>
+            <option value='ngt-1-canboatjs'>Actisense NTG-1 (pure js, experimental)</option>
             <option value='canbus'>Canbus</option>
+
           </Input>
         </Col>
       </FormGroup>
-      {props.value.options.type === 'ngt-1' && (
+      {(props.value.options.type === 'ngt-1' || props.value.options.type === 'ngt-1-canboatjs')  && (
         <DeviceInput value={props.value.options} onChange={props.onChange} />
       )}
       {props.value.options.type === 'canbus' && (

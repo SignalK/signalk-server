@@ -1,4 +1,4 @@
-FROM node:6
+FROM node:8
 
 RUN apt-get update && apt-get install sudo
 RUN useradd -ms /bin/bash sk &&\

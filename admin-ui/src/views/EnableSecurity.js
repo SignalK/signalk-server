@@ -16,6 +16,7 @@ import {
 import { connect } from 'react-redux'
 import { login, enableSecurity, fetchLoginStatus } from '../actions'
 import Dashboard from './Dashboard/'
+import Login from './Login'
 
 class EnableSecurity extends Component {
   constructor (props) {
@@ -51,15 +52,21 @@ class EnableSecurity extends Component {
 
   render () {
     return (
-      <div>
-        {this.props.loginStatus.authenticationRequired === false && (
+        <div>
+        {this.props.loginStatus.authenticationRequired &&
+         !this.props.loginStatus.noUsers && (
+           <Login />
+         )}
+        {(this.props.loginStatus.authenticationRequired === false ||
+         this.props.loginStatus.noUsers === true) && (
           <Container>
             <Row className='justify-content-center'>
               <Col md='8'>
                 <CardGroup>
                   <Card className='p-4'>
                     <CardBody>
-                      {this.props.loginStatus.securityWasEnabled && (
+                      {this.props.loginStatus.securityWasEnabled &&
+                       this.props.loginStatus.authenticationRequired == false && (
                         <p className='text-danger'>
                           Security has been enabled, please restart the server
                         </p>

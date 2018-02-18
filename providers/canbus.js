@@ -1,7 +1,5 @@
-#!/usr/bin/env node
-
 /*
- * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
+ * Copyright 2018 Signal K & Scott Bender <scott@scottbender.net>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-require('please-upgrade-node')(require('../package.json'))
-
-var Server = require('../lib');
-var server = new Server();
-
-server.start()
-  .catch(err => {
-    console.log(err)
-    process.exit(-1)
-  })
+module.exports = require('canboatjs').canbus

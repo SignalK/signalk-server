@@ -4,7 +4,7 @@ Security
 The server provides a simple mechanism to allow security to be implemented using a separate module.
 It is the responsibility of the specific security module to enforce its security policy.
 
-For an example implementation see https://github.com/sbender9/sk-simple-token-security and https://github.com/sbender9/sk-simple-token-security-config
+For an example implementation see https://github.com/SignalK/sk-simple-token-security
 
 To enable security, add a `security` section to your settings .json file and add any configuration that the specific security implementation requires.
 
