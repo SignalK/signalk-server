@@ -30,6 +30,7 @@ const state = {
     installing: []
   },
   loginStatus: {},
+  serverSpecification: {},
   websocketStatus: 'initial',
   webSocket: null,
   restarting: false
@@ -76,6 +77,12 @@ let store = createStore(
       return {
         ...state,
         loginStatus: action.data
+      }
+    }
+    if (action.type === 'RECEIVE_SERVER_SPEC') {
+      return {
+        ...state,
+        serverSpecification: action.data
       }
     }
     if (action.type === 'WEBSOCKET_CONNECTED') {

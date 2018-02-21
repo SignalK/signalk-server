@@ -155,11 +155,26 @@ export function fetchApps (dispatch) {
     )
 }
 
+export function fetchServerSpecification(dispatch) {
+  authFetch(`/signalk`)
+    .then(response => response.json())
+    .then(data =>
+      dispatch({
+        type: 'RECEIVE_SERVER_SPEC',
+        data
+      })
+    )
+    .catch(function (error) {
+      console.log(error)
+    })
+}
+
 export function fetchAllData (dispatch) {
   fetchPlugins(dispatch)
   fetchWebapps(dispatch)
   fetchApps(dispatch)
   fetchLoginStatus(dispatch)
+  fetchServerSpecification(dispatch)
 }
 
 export function openServerEventsConnection (dispatch) {
