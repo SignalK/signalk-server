@@ -137,10 +137,14 @@ ToTimestamped.prototype._transform = function (msg, encoding, done) {
     this.firstLine = false
     this.multiplexedFormat =
       line.length > 16 && line.charAt(13) == ';' && line.charAt(15) == ';'
-    if (this.multiplexedFormat && !this.options.noThrottle) {
-      this.deMultiplexer.toTimestamped
-        .pipe(this.deMultiplexer.timestampThrottle)
-        .pipe(this.deMultiplexer.splitter)
+    if (this.multiplexedFormat) {
+      if (this.options.noThrottle) {
+        this.deMultiplexer.toTimestamped.pipe(this.deMultiplexer.splitter)
+      } else {
+        this.deMultiplexer.toTimestamped
+          .pipe(this.deMultiplexer.timestampThrottle)
+          .pipe(this.deMultiplexer.splitter)
+      }
       this._transform = this.handleMultiplexed
     } else {
       this._transform = this.handleMixed
