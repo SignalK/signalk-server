@@ -23,7 +23,9 @@ Prerequisites
 
     $ sudo npm install -g --unsafe-perm signalk-server
 
-Now you can start the server with sample data: `signalk-server --sample-nmea0183-data`.
+Now you can start the server with sample data: 
+* NMEA0183 sample data: `signalk-server --sample-nmea0183-data`
+* NMEA2000 sample data: `signalk-server --sample-n2k-data`
 
 To generate your own vessel settings file and configure your Pi to start the server automatically run
 
