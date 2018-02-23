@@ -164,9 +164,6 @@ export function fetchServerSpecification(dispatch) {
         data
       })
     )
-    .catch(function (error) {
-      console.log(error)
-    })
 }
 
 export function fetchAllData (dispatch) {

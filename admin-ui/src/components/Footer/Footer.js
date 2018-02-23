@@ -7,6 +7,9 @@ class Footer extends Component {
     super(props)
     this.state = {
     }
+    console.log(props)
+    console.log(this.props.loginStatus.status)
+    console.log(this.props.serverSpecification.server)
   }
 
   render() {
@@ -17,7 +20,7 @@ class Footer extends Component {
             Signal K Server
           </a>      
         </span>
-        {(this.props.loginStatus.status === 'notLoggedIn' || this.props.loginStatus.status === 'loggedIn' ) && (
+        {typeof this.props.serverSpecification.server !== 'undefined' && (
           <span>
             &nbsp; version {this.props.serverSpecification.server.version} 
           </span>
