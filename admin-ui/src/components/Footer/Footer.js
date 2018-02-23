@@ -7,9 +7,6 @@ class Footer extends Component {
     super(props)
     this.state = {
     }
-    console.log(props)
-    console.log(this.props.loginStatus.status)
-    console.log(this.props.serverSpecification.server)
   }
 
   render() {
