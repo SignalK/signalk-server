@@ -93,7 +93,6 @@
     "@signalk/signalk-schema": "1.0.3",
     "@signalk/signalk-to-nmea0183": "0.1.1",
     "@signalk/simplegauges": "^1.0.1",
-    "@signalk/sk-simple-token-security": "2.2.3",
     "@signalk/zones": "^1.0.0",
     "baconjs": "^1.0.1",
     "body-parser": "^1.14.1",
@@ -101,6 +100,7 @@
     "colors": "^1.1.2",
     "compare-versions": "^3.0.1",
     "cookie": "^0.3.1",
+    "cookie-parser": "^1.4.3",
     "cors": "^2.5.2",
     "debug": "^3.0.0",
     "deep-get-set": "^1.1.0",
@@ -112,6 +112,7 @@
     "file-timestamp-stream": "0.1.0",
     "flatmap": "0.0.3",
     "geolib": "^2.0.24",
+    "jsonwebtoken": "^8.1.1",
     "lodash": "^4.17.4",
     "minimist": "^1.1.0",
     "moment": "^2.10.6",
@@ -143,6 +144,7 @@
     "request-promise": "^4.1.1"
   },
   "optionalDependencies": {
+    "bcrypt": "^1.0.3",
     "mdns": "^2.3.4"
   }
 }
