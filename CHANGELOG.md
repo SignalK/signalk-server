@@ -1,5 +1,13 @@
 ## Change Log
 
+### v1.0.0 (2018/03/03 17:39 +00:00)
+- [#448](https://github.com/SignalK/signalk-server-node/pull/448) feature: implement access control lists (@sbender9)
+- [#462](https://github.com/SignalK/signalk-server-node/pull/462) Feature: add server version to the Admin UI (@zubenubi)
+- [#459](https://github.com/SignalK/signalk-server-node/pull/459) Update lint-staged to the latest version 🚀 (@greenkeeper[bot])
+- [#461](https://github.com/SignalK/signalk-server-node/pull/461) Update canboatjs to the latest version 🚀 (@greenkeeper[bot])
+- [#460](https://github.com/SignalK/signalk-server-node/pull/460) Add --sample-n2k-data for samples/aava-n2k.data (@Krillle)
+- [#457](https://github.com/SignalK/signalk-server-node/pull/457) Fix multiplexed log input with 'noThrottle' option (@vokkim)
+
 ### v1.0.0-4 (2018/02/18 23:32 +00:00)
 - [#456](https://github.com/SignalK/signalk-server-node/pull/456) feature: set enablePluginLogging on by default (@tkurki)
 - [#454](https://github.com/SignalK/signalk-server-node/pull/454) Fix: simple provider n2k throttling (@tkurki)
