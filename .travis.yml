@@ -67,7 +67,7 @@ jobs:
         skip_cleanup: true
         package_glob: signalk-server*.deb
         on:
-          all_branches: true
+          branch: master
       - provider: packagecloud
         repository: signalk-server
         username: SignalK
@@ -77,4 +77,4 @@ jobs:
         skip_cleanup: true
         package_glob: signalk-server*.deb
         on:
-          all_branches: true
+          branch: master
