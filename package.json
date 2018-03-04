@@ -80,6 +80,22 @@
   "engines": {
     "node": ">=8"
   },
+  "node_deb": {
+    "description": "Signalk Server",
+    "entrypoints": {
+      "daemon":  "bin/signalk-server -c /etc/signalk-server"
+    },
+    "architecture": "all",
+    "user": "signalk-server",
+    "group": "signalk-server",
+    "executable_name": "signalk-server",
+    "dependencies": "build-essential,libavahi-compat-libdnssd-dev,libnss-mdns,avahi-utils",
+    "install_strategy": "auto",
+    "templates": {
+	    "postinst": "util/postinstall.sh"
+    }
+
+  },
   "dependencies": {
     "@signalk/client": "^0.2.0",
     "@signalk/freeboard-sk": "0.0.1",

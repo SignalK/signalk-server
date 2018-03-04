@@ -7,6 +7,74 @@ env:
 addons:
   apt:
     sources:
-      - ubuntu-toolchain-r-test
+    - ubuntu-toolchain-r-test
     packages:
-      - g++-4.8
+    - g++-4.8
+    - jq
+    - fakeroot
+    - dpkg
+    - libavahi-compat-libdnssd-dev
+jobs:
+  include:
+
+  - stage: test
+    script: npm test
+
+  - stage: build-deb-branch
+    before_install:
+    - npm install -g node-deb
+    before_script:
+        - "PACKAGE_VERSION=$(cat package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[\",]//g' | tr -d '[[:space:]]')"
+        - node-deb --verbose -n "signalk-server-${TRAVIS_BRANCH}" -v "${PACKAGE_VERSION}-snapshot-${TRAVIS_BUILD_NUMBER}" -- index.js `find . -maxdepth 1 -type d | grep -v .git | grep -v node_modules | egrep -v '^\.$'`
+    script: ls -lh *.deb ; dpkg-deb --info *.deb
+    deploy:
+      - provider: packagecloud
+        repository: signalk-server
+        username: SignalK 
+        token:
+          secure: 
+        dist: debian/stretch
+        skip_cleanup: true
+        package_glob: signalk-server*.deb
+        on:
+          all_branches: true
+      - provider: packagecloud
+        repository: signalk-server
+        username: SignalK
+        token:
+          secure: 
+        dist: raspbian/stretch
+        skip_cleanup: true
+        package_glob: signalk-server*.deb
+        on:
+          all_branches: true
+
+  - stage: build-deb-main
+    if: tag =~ ^v[0-9]
+    before_install:
+    - npm install -g node-deb
+    before_script:
+        - "PACKAGE_VERSION=$(cat package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[\",]//g' | tr -d '[[:space:]]')"
+        - node-deb --verbose -n "signalk-server" -v "${PACKAGE_VERSION}" -- index.js `find . -maxdepth 1 -type d | grep -v .git | grep -v node_modules | egrep -v '^\.$'`
+    script: ls -lh *.deb ; dpkg-deb --info *.deb
+    deploy:
+      - provider: packagecloud
+        repository: signalk-server
+        username: SignalK 
+        token:
+          secure: 
+        dist: debian/stretch
+        skip_cleanup: true
+        package_glob: signalk-server*.deb
+        on:
+          all_branches: true
+      - provider: packagecloud
+        repository: signalk-server
+        username: SignalK
+        token:
+          secure: 
+        dist: raspbian/stretch
+        skip_cleanup: true
+        package_glob: signalk-server*.deb
+        on:
+          all_branches: true

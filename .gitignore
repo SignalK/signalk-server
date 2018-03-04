@@ -13,3 +13,6 @@ plugin-config/public/
 
 *.tgz
 work/
+
+#debian packages
+*.deb
