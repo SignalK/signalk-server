@@ -5,19 +5,19 @@ WORKDIR /app-build
 COPY . .
 RUN npm run prepublishOnly
 
-FROM node:8
+FROM arm32v7/node:8
+COPY tmp/qemu-arm-static /usr/bin/qemu-arm-static
 
 RUN groupadd -r signalk && useradd --no-log-init -r -g signalk signalk
 WORKDIR /home/signalk
 RUN chown -R signalk /home/signalk
 USER signalk
 
-
 COPY package*.json ./
 RUN npm install --only=production
 
 RUN git clone https://github.com/canboat/canboat.git && cd canboat && make bin && make -C analyzer
-ENV PATH="/home/signalk/canboat/rel/linux-x86_64:${PATH}"
+ENV PATH="/home/signalk/canboat/rel/linux-armv7l:${PATH}"
 
 COPY . .
 COPY --from=app-builder /app-build/admin-ui/public admin-ui/public

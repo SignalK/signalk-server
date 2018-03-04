@@ -13,3 +13,5 @@ plugin-config/public/
 
 *.tgz
 work/
+
+docker-manifest.yml
