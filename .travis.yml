@@ -32,7 +32,7 @@ jobs:
         repository: signalk-server
         username: SignalK 
         token:
-          secure: 
+          secure:  "bKa9NU3sPNHxISTrYOuAOfJgZLuKXpywnHFjkOIvcrk1hu5NFqTcVGj7IGtOO93GU2rNmZqWl9WLSICYQZMZ7tL9Lfnj2AH3bU7JT9C8vbMtIc31FajKbPK81lhCDzSa5G3Y0SkyqwCGWdPfSHXeGR5sbQoWsSoTOhMOXP80hqc="
         dist: debian/stretch
         skip_cleanup: true
         package_glob: signalk-server*.deb
@@ -42,7 +42,7 @@ jobs:
         repository: signalk-server
         username: SignalK
         token:
-          secure: 
+          secure:  "bKa9NU3sPNHxISTrYOuAOfJgZLuKXpywnHFjkOIvcrk1hu5NFqTcVGj7IGtOO93GU2rNmZqWl9WLSICYQZMZ7tL9Lfnj2AH3bU7JT9C8vbMtIc31FajKbPK81lhCDzSa5G3Y0SkyqwCGWdPfSHXeGR5sbQoWsSoTOhMOXP80hqc="
         dist: raspbian/stretch
         skip_cleanup: true
         package_glob: signalk-server*.deb
@@ -62,7 +62,7 @@ jobs:
         repository: signalk-server
         username: SignalK 
         token:
-          secure: 
+          secure:  "bKa9NU3sPNHxISTrYOuAOfJgZLuKXpywnHFjkOIvcrk1hu5NFqTcVGj7IGtOO93GU2rNmZqWl9WLSICYQZMZ7tL9Lfnj2AH3bU7JT9C8vbMtIc31FajKbPK81lhCDzSa5G3Y0SkyqwCGWdPfSHXeGR5sbQoWsSoTOhMOXP80hqc="
         dist: debian/stretch
         skip_cleanup: true
         package_glob: signalk-server*.deb
@@ -72,7 +72,7 @@ jobs:
         repository: signalk-server
         username: SignalK
         token:
-          secure: 
+          secure:  "bKa9NU3sPNHxISTrYOuAOfJgZLuKXpywnHFjkOIvcrk1hu5NFqTcVGj7IGtOO93GU2rNmZqWl9WLSICYQZMZ7tL9Lfnj2AH3bU7JT9C8vbMtIc31FajKbPK81lhCDzSa5G3Y0SkyqwCGWdPfSHXeGR5sbQoWsSoTOhMOXP80hqc="
         dist: raspbian/stretch
         skip_cleanup: true
         package_glob: signalk-server*.deb
