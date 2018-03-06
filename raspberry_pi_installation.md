@@ -75,7 +75,7 @@ This will search for and list all of the discoverable devices/services on your n
 
 ![Avahi-Browse](https://github.com/digitalyacht/ikommunicate/blob/master/RPi_How_To_Images/Avahi-Browse.png)
 
-Another software that really makes Your handling with the RPI easier is Samba. This software makes Your RPI appear, in MS Explorer or Mac Finder, as a Windows fileserver so You can direct edit and move files from/to the RPI
+Another software that really makes Your handling with the RPI easier is Samba. This software makes Your RPI appear, in MS Explorer or Mac Finder, as a Windows fileserver so You can edit and move files from/to the RPI
 
     $ sudo apt-get install samba samba-common-bin
 
@@ -166,9 +166,9 @@ Click on Webapps and You will get
 
 Click on "Openlayers chartplotter......." and You will get a Worldmap with Your position in the south of Finland
 
-Go back and click "SignalK instrumentpanel......" and You will have instrumentpanel to play around with.
+Go back and click "SignalK instrumentpanel......" and You will have an instrumentpanel to play around with.
 
-If you have managed to get to the end of this guide, you will now have a good understanding of what Signal K is all about and in particular the Node Server. We have been using the server's demo NMEA file, but Node Server can also read NMEA0183 data via an [NMEA to USB adaptor cable](http://www.digitalyachtamerica.com/index.php/en/products/interfacing/nmeausb/product/67-usb-to-nmea-adaptor), a [3rd party NMEA2000 gateway](http://www.actisense.com/products/nmea-2000/ngt-1/ngt-1.html) or both NMEA0183 and NMEA2000 via the new [iKommunicate gateway](http://ikommunicate.com).
+If you have managed to get to the end of this guide, you will now have a good understanding of what Signal K is all about and in particular the Node Server. We have been using the server's demo NMEA file, but Node Server can also read NMEA0183 data via an [NMEA to USB adaptor cable](http://digitalyachtamerica.com/product/usb-nmea-adaptor/), a [3rd party NMEA2000 gateway](http://www.actisense.com/product/nmea-2000-to-pc-interface-ngt-1/) or both NMEA0183 and NMEA2000 via the [iKommunicate gateway](http://ikommunicate.com).
 
 ## Step 3 - your own setup and running automatically as daemon
 
@@ -176,20 +176,120 @@ To generate your own vessel settings file and configure your Pi to start the ser
 
     $ sudo signalk-server-setup
 
-and follow the prompts. This generates a settings file in json format in the configuration directory you specified called settings.json. This can be edited directly by looking at the example settings. 
+and follow the prompts. If You are following the defaults and are logged on as ”pi” the boat info will be stored in
 
-**This script will also set up Node server to run automatically in the background as a daemon when the system boots.** You will no longer be able to launch it manually, because the automatically started instance will occupy the ports where the services are available. You should do this once you are happy with the way the server works.
+    /home/pi/.signalk/defaults.json
 
-Stop the daemon temporarily with
-```
-sudo systemctl stop signalk.service
-sudo systemctl stop signalk.socket
-```
-and disable the automatic start with
-```
-sudo systemctl disable signalk.service
-sudo systemctl disable signalk.socket
-```
+and the settings will be stored in 
+    
+    /home/pi/.signalk/settings.json
+
+These files can be edited directly by looking at the example settings. 
+
+**This script will also set up Node server to run automatically in the background as a daemon, [systemd](https://wiki.debian.org/systemd/), when the system boots.** You will no longer be able to launch it manually, because the automatically started instance will occupy the ports where the services are available. You should do this once you are happy with the way the server works.
+
+Stop the daemon temporarily with;
+
+    $ sudo systemctl stop signalk.service
+    $ sudo systemctl stop signalk.socket
+
+Start the deamon with;
+
+    $ sudo systemctl start signalk.service
+    $ sudo systemctl start signalk.socket
+
+Disable the automatic start with;
+
+    $ sudo systemctl disable signalk.service
+    $ sudo systemctl disable signalk.socket
+
+Check status with;
+
+    $ sudo systemctl status signalk*
+
+## Real inputs
+
+NMEA2000
+
+If You have a NMEA2000 network You can use the the Actisense interface or other CAN bus interfaces to connect to the SignalK server. To configure it You have to know the the device path. One way to check it, is using the `dmesg` command direct after You plugged in the Actisense to a RPi USB port. In a Terminal window type
+
+    $ dmesg
+
+or to minimize the output
+
+    $ dmesg | grep -i 'usb'
+
+and it will show something like
+
+    (   2.141273) usb 1-1.3: new full-speed USB device number 4 using dwc_otg
+    (   2.317223) usb 1-1.3: New USB device found, idVendor=0403, idProduct=d9aa
+    (   2.319959) usb 1-1.3: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+    (   2.322745) usb 1-1.3: Product: NGT-1-A
+    (   2.325417) usb 1-1.3: Manufacturer: Actisense
+    (   2.328022) usb 1-1.3: SerialNumber: XXXX
+    (   3.817103) usbcore: registered new interface driver usbserial
+    (   3.817189) usbcore: registered new interface driver usbserial_generic
+    (   3.820223) usbserial: USB Serial support registered for generic
+    (   3.822093) usbcore: registered new interface driver brcmfmac
+    (   3.832816) usbcore: registered new interface driver ftdi_sio
+    (   3.832909) usbserial: USB Serial support registered for FTDI USB Serial Device
+    (   3.833448) ftdi_sio 1-1.3:1.0: FTDI USB Serial Device converter detected
+    (   3.833649) usb 1-1.3: Detected FT232RL
+    (   3.837121) usb 1-1.3: FTDI USB Serial Device converter now attached to ttyUSB0
+
+as seen on the last row the interface is attached to `ttyusb` so the device path will be `/dev/ttyUSB0`
+
+To set it up as input for the SignalK server go to the admin UI and ”Server => Data Providers”.
+Add a provider with settings according to the picture and click on ”Apply”
+
+![provider_nmea2000](https://user-images.githubusercontent.com/16189982/36218077-8d476314-11b3-11e8-88bc-b918b27356e4.jpeg)
+
+and then in a Terminal window restart the SignalK server with the `systemctl stop/start` comands above or just 
+
+    $ sudo reboot
+
+After the restart check the data with the Webapp Instrumentpanel in the admin UI. 
+
+NMEA0183
+
+If You have a NMEA0183 network, plug in Your NMEA0183 to USB interface and do the same procedure as for the Actisense above.
+With a configuration maybe looking like this
+
+![provider_nmea0183](https://user-images.githubusercontent.com/16189982/36218419-93f81c84-11b4-11e8-86c2-8319b9013b90.jpeg)
+
+## Sample files
+
+If You don’t have any NMEA interface hardware You could set up a provider with the sample files instead.
+
+Path to NMEA2000 file `/usr/lib/node_modules/signalk-server/samples/aava-n2k.data`
+
+Path to NMEA0183 file `/usr/lib/node_modules/signalk-server/samples/plaka.log`
+
+## NMEA0183 data on the network
+
+Many navigation or marine data applications just accept NMEA0183 data as input. SignalK have a plugin which can forward this data, to Your Tablet or Phone, and being processed in an application like iNavX, iSailor, SeaPilot and so on.
+Attach the SignalK server to a network with WiFi access, or set up the RPi as an access point(link below), and configure the signalk-to-nmea0183 plugin.
+
+In the admin UI ”Appstore => Installed” You will find the plugin
+
+![installed_apps](https://user-images.githubusercontent.com/16189982/36218769-c3a73612-11b5-11e8-9a51-e13ea6335e44.jpeg)
+
+(In this case there is an update, so just click on the "download cloud" and the update will take place. Restart SignalK.)
+
+To activate and configure the plugin go to ”Server => Plugin Config”. Select "Convert SignalK......”. Then select "Active” and  the sentences You need for Your application, click ”Submit” and restart SignalK.
+In Your tablet application, set it up to receive the NMEA0183 data from the SignalK server with the IP adress, protocol TCP, and port 10110. The picture is from iSailor
+
+![isailor_connection_s](https://user-images.githubusercontent.com/16189982/36220383-a327ab2e-11ba-11e8-85e9-f62b6c0e71ff.png)
+
+## SignalK data on the network
+
+Here You have [applications](https://signalk.org/applications_solutions.html) that will accept the json data direct from SignalK.
+
+## Additional software
+
+[Raspberry as an access point](https://www.raspberrypi.org/documentation/configuration/wireless/access-point.md)
+
+[Backup to a bootable SD card](https://pysselilivet.blogspot.com/2017/11/rpi-clone-raspberry-boot-disk.html)
 
 # Updating Your Raspberry Pi and Signal K Node Server
 
@@ -227,6 +327,11 @@ This will update Nodejs and NPM to the version required by the server.
 Open the terminal window and enter the following commands...
 
     $ sudo npm install --unsafe-perm -g signalk-server
+
+## Any Signal K Apps
+
+As You noticed the apps are updated wia the Admin UI.
+
 
 Now your Signal K Node Server is updated.
 
