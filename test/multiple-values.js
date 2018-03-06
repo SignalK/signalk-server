@@ -20,7 +20,7 @@ var delta = {
         src: '115'
       },
       values: [
-        { path: 'navigation.logTrip', value: 43374 },
+        { path: 'navigation.trip.log', value: 43374 },
         { path: 'navigation.log', value: 17404540 }
       ]
     },
@@ -51,23 +51,23 @@ describe('Server', function () {
     await server.stop()
   })
 
-  it('handles two deltas with signalk path', function (done) {
+  it('handles two deltas with signalk path', function () {
     var host = 'http://localhost:' + port
     var deltaUrl = host + '/signalk/v1/api/_test/delta'
     var restUrl = host + '/signalk/v1/api/'
 
-    rp({ url: deltaUrl, method: 'POST', json: delta })
+    return rp({ url: deltaUrl, method: 'POST', json: delta })
       .then(function (body) {
         return rp({ url: restUrl, method: 'GET' })
       })
       .then(function (body) {
         var treeAfterFirstDelta = JSON.parse(body)
-        treeAfterFirstDelta.vessels[uuid].should.have.deep.property(
-          'navigation.logTrip.value',
+        treeAfterFirstDelta.vessels[uuid].should.have.nested.property(
+          'navigation.trip.log.value',
           43374
         )
-        treeAfterFirstDelta.vessels[uuid].should.have.deep.property(
-          'navigation.logTrip.$source',
+        treeAfterFirstDelta.vessels[uuid].should.have.nested.property(
+          'navigation.trip.log.$source',
           'deltaFromHttp.115'
         )
         treeAfterFirstDelta.should.be.validSignalK
@@ -80,12 +80,12 @@ describe('Server', function () {
       })
       .then(function (body) {
         var treeAfterSecondDelta = JSON.parse(body)
-        treeAfterSecondDelta.vessels[uuid].should.have.deep.property(
-          'navigation.logTrip.value',
+        treeAfterSecondDelta.vessels[uuid].should.have.nested.property(
+          'navigation.trip.log.value',
           1
         )
-        treeAfterSecondDelta.vessels[uuid].should.have.deep.property(
-          'navigation.logTrip.$source',
+        treeAfterSecondDelta.vessels[uuid].should.have.nested.property(
+          'navigation.trip.log.$source',
           'deltaFromHttp.115'
         )
         treeAfterSecondDelta.should.be.validSignalK
@@ -99,24 +99,21 @@ describe('Server', function () {
       })
       .then(function (body) {
         var treeAfterOtherSourceDelta = JSON.parse(body)
-        treeAfterOtherSourceDelta.vessels[uuid].should.have.deep.property(
-          'navigation.logTrip.value',
+        treeAfterOtherSourceDelta.vessels[uuid].should.have.nested.property(
+          'navigation.trip.log.value',
           2
         )
-        treeAfterOtherSourceDelta.vessels[uuid].should.have.deep.property(
-          'navigation.logTrip.$source',
+        treeAfterOtherSourceDelta.vessels[uuid].should.have.nested.property(
+          'navigation.trip.log.$source',
           'deltaFromHttp.116'
         )
-        treeAfterOtherSourceDelta.vessels[uuid].navigation.logTrip.values[
+        treeAfterOtherSourceDelta.vessels[uuid].navigation.trip.log.values[
           'deltaFromHttp.115'
         ].value.should.equal(1)
-        treeAfterOtherSourceDelta.vessels[uuid].navigation.logTrip.values[
+        treeAfterOtherSourceDelta.vessels[uuid].navigation.trip.log.values[
           'deltaFromHttp.116'
         ].value.should.equal(2)
         treeAfterOtherSourceDelta.should.be.validSignalK
-      })
-      .catch(_ => {
-        done()
       })
   }).timeout(4000)
 })
