@@ -191,7 +191,7 @@ function signalKInput (subOptions) {
     const mdns_ws = require('./mdns-ws')
     return [new mdns_ws(options)]
   } else if (subOptions.type === 'tcp') {
-    return [new Tcp(subOptions), new Liner(suboptions)]
+    return [new Tcp(subOptions), new Liner(subOptions)]
   } else if (subOptions.type === 'udp') {
     return [new Udp(subOptions)]
   }
