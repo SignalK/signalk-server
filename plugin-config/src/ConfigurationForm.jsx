@@ -4,13 +4,13 @@ import keys from 'lodash.keys'
 
 import Form from 'react-jsonschema-form'
 
-export default props => {
-  const schema = JSON.parse(JSON.stringify(props.plugin.schema))
+export default ({plugin, onSubmit}) => {
+  const schema = JSON.parse(JSON.stringify(plugin.schema))
   var uiSchema = {}
 
-  if (typeof props.plugin.uiSchema !== 'undefined') {
+  if (typeof plugin.uiSchema !== 'undefined') {
     uiSchema['configuration'] = JSON.parse(
-      JSON.stringify(props.plugin.uiSchema)
+      JSON.stringify(plugin.uiSchema)
     )
   }
 
@@ -37,13 +37,17 @@ export default props => {
     }
   }
 
+  if (plugin.statusMessage) {
+    topSchema.description = `Status: ${plugin.statusMessage}`
+  }
+
   return (
     <Form
       schema={topSchema}
       uiSchema={uiSchema}
-      formData={props.plugin.data || {}}
+      formData={plugin.data || {}}
       onSubmit={submitData => {
-        props.onSubmit(submitData.formData)
+        onSubmit(submitData.formData)
       }}
     />
   )
