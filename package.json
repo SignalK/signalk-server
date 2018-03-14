@@ -95,6 +95,7 @@
     "@signalk/simplegauges": "^1.0.1",
     "@signalk/zones": "^1.0.0",
     "baconjs": "^1.0.1",
+    "bcryptjs": "^2.4.3",
     "body-parser": "^1.14.1",
     "canboatjs": "0.0.11",
     "colors": "^1.1.2",
@@ -144,7 +145,6 @@
     "request-promise": "^4.1.1"
   },
   "optionalDependencies": {
-    "bcrypt": "^1.0.3",
     "mdns": "^2.3.4"
   }
 }
