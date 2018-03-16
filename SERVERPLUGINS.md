@@ -108,22 +108,21 @@ Example:
 ```
   onStops.push(app.registerActionHandler('vessels.self',
                                         `electrical.switches.myswitch.state`,
-                                         plugin.id,
-                                         (actionId, context, path, value, callback) => {
+                                         (context, path, value, callback) => {
                                             // your code to change the value asynchronously
                                             return { state: 'PENDING' }
                                          })
 ```
 
-In the example above, the action handler returns `{ state: 'PENDING' }`, this means that the plugin has tried to change the value asynchronously. If the plugin is able to change value synchronously or there is an issue, it can return `{ state: 'SUCCESS' }` or `{ state: 'FAILURE', message: 'Some Error Message`}`
+In the example above, the action handler returns `{ state: 'PENDING' }`, this means that the plugin has tried to change the value asynchronously. If the plugin is able to change value synchronously or there is an issue, it can return `{ state: 'SUCCESS' }` or `{ state: 'FAILURE', resultStatus: 400, message: 'Some Error Message`}`
 
 If the plugin is performing the action asynchronously, it should call the `callback` function with the actionId, result and an optional error message:
 
-``callback(actionId, 'SUCCESS')``
+``callback({ state: 'SUCCESS' })``
 
 or
 
-```callback(actionId, 'FAILURE', 'Some Error Message')```
+```callback({ state:'FAILURE', message:'Some Error Message' })```
 
 
 ## SENDING NMEA MESSAGES FROM A PLUGIN
