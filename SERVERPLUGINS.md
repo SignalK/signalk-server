@@ -102,28 +102,25 @@ If the plugin needs to read plugin options from disk
 
 ### app.registerActionHandler (context, path, source, callback)
 
-If the plugin wants to respond to PUT request for specif paths. The return value is a function that should be called when the plugin stops.
+If the plugin wants to respond to actions, which are PUT requests for a specific path, it should register an action handler.
+
+The return value is a function that should be called when the plugin stops.
 
 Example:
 ```
   onStops.push(app.registerActionHandler('vessels.self',
                                         `electrical.switches.myswitch.state`,
-                                         (context, path, value, callback) => {
-                                            // your code to change the value asynchronously
-                                            return { state: 'PENDING' }
-                                         })
+                                         myActionHandler)
 ```
 
-In the example above, the action handler returns `{ state: 'PENDING' }`, this means that the plugin has tried to change the value asynchronously. If the plugin is able to change value synchronously or there is an issue, it can return `{ state: 'SUCCESS' }` or `{ state: 'FAILURE', resultStatus: 400, message: 'Some Error Message`}`
+The action handler can handle the request synchronously or asynchronously.
 
-If the plugin is performing the action asynchronously, it should call the `callback` function with the actionId, result and an optional error message:
+For synchronous actions the handler must return a value describing the result of the action: either `{ state: 'SUCCESS' }` or `{ state:'FAILURE', message:'Some Error Message' }`.
 
-``callback({ state: 'SUCCESS' })``
-
-or
-
-```callback({ state:'FAILURE', message:'Some Error Message' })```
-
+For asynchronous actions that may take considerable time and the requester should not be kept waiting for the result
+the handler must return `{ state: 'PENDING' }`. When the action is finished the handler
+ should call the `callback` function with the result with  `callback({ state: 'SUCCESS' })` or
+`callback({ state:'FAILURE', message:'Some Error Message' })`.
 
 ## SENDING NMEA MESSAGES FROM A PLUGIN
 
