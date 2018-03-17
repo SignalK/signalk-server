@@ -29,6 +29,19 @@ const securitySettings = {
               permission: 'read'
             }
           ]
+        },
+        {
+          paths: ['electrical.controls.venus-0.state'],
+          permissions: [
+            {
+              subject: 'any',
+              permission: 'read'
+            },
+            {
+              subject: 'sbender',
+              permission: 'put'
+            }
+          ]
         }
       ]
     },
@@ -292,6 +305,27 @@ describe('access control lists work', function () {
         null,
         'source.1',
         'read'
+      )
+    )
+  })
+
+  it('vessels.self put acl works ', () => {
+    assert(
+      securityStrategy.checkACL(
+        'john.doe',
+        'vessels.self',
+        'electrical.controls.venus-0.state',
+        null,
+        'put'
+      ) === false
+    )
+    assert(
+      securityStrategy.checkACL(
+        'sbender',
+        'vessels.self',
+        'electrical.controls.venus-0.state',
+        null,
+        'put'
       )
     )
   })
