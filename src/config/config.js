@@ -53,15 +53,22 @@ function load(app) {
   }
 
   setConfigDirectory(app)
+  app.config.defaultDeltas = []
   if (_.isObject(app.config.settings)) {
     debug('Using settings from constructor call, not reading defaults')
     disableWriteSettings = true
-    if (!config.defaults) {
-      config.defaults = {}
+    if (config.defaults) {
+      app.config.defaultDeltas = convertOldDefaultsToDeltas(config.defaults)
     }
   } else {
     readSettingsFile(app)
-    setFullDefaults(app)
+    if (!setDefaultDeltas(app)) {
+      let defaults = getFullDefaults(app)
+      if (defaults) {
+        app.config.defaultDeltas = convertOldDefaultsToDeltas(defaults)
+        writeDefaultDeltasFileSync(app, app.config.defaultDeltas)
+      }
+    }
   }
   setSelfSettings(app)
 
@@ -214,56 +221,229 @@ function getDefaultsPath(app) {
   return path.join(app.config.configPath, defaultsFile)
 }
 
+function getDefaultDeltasPath(app) {
+  const defaultsFile =
+    app.config.configPath !== app.config.appPath
+      ? 'defaultDeltas.json'
+      : 'settings/defaultDeltas.json'
+  return path.join(app.config.configPath, defaultsFile)
+}
+
 function readDefaultsFile(app) {
   const defaultsPath = getDefaultsPath(app)
-  // return require(defaultsPath)
   const data = fs.readFileSync(defaultsPath)
   return JSON.parse(data)
 }
 
-function setFullDefaults(app) {
+function readDefaultDeltasFile(app) {
+  const defaultsPath = getDefaultDeltasPath(app)
+  var data = fs.readFileSync(defaultsPath)
+  return JSON.parse(data)
+}
+
+function getFullDefaults(app) {
   const defaultsPath = getDefaultsPath(app)
   try {
-    app.config.defaults = readDefaultsFile(app)
+    let defaults = readDefaultsFile(app)
     debug(`Found defaults at ${defaultsPath.toString()}`)
+    return defaults
   } catch (e) {
     if (e.code && e.code === 'ENOENT') {
-      debug(`No defaults found at ${defaultsPath.toString()}`)
+      return undefined
     } else {
       console.error(`unable to parse ${defaultsPath.toString()}`)
       console.error(e)
       process.exit(1)
     }
-    app.config.defaults = { vessels: { self: {} } }
   }
+  return undefined
+}
+
+function setDefaultDeltas(app) {
+  const defaultsPath = getDefaultDeltasPath(app)
+  try {
+    let deltas = readDefaultDeltasFile(app)
+
+    if (!_.isArray(deltas)) {
+      console.error(`${defaultsPath} should contain an array of deltas`)
+      return
+    }
+
+    app.config.defaultDeltas = deltas
+    debug(`Found default deltas at ${defaultsPath.toString()}`)
+  } catch (e) {
+    if (e.code && e.code === 'ENOENT') {
+      debug(`No default deltas found at ${defaultsPath.toString()}`)
+      return
+    } else {
+      console.log(e)
+    }
+  }
+  return app.config.defaultDeltas
+}
+
+function sendDefaultDeltas(app) {
+  let copy = JSON.parse(JSON.stringify(app.config.defaultDeltas))
+  copy.forEach(delta => {
+    delta.context = app.selfContext
+    app.handleMessage('defaults', delta)
+  })
 }
 
 function writeDefaultsFile(app, defaults, cb) {
   fs.writeFile(getDefaultsPath(app), JSON.stringify(defaults, null, 2), cb)
 }
 
-function setSelfSettings(app) {
-  let name = _.get(app.config.defaults, 'vessels.self.name')
-  let mmsi = _.get(app.config.defaults, 'vessels.self.mmsi')
-  let uuid = _.get(app.config.defaults, 'vessels.self.uuid')
+function writeDefaultDeltasFile(app, deltas, cb) {
+  fs.writeFile(getDefaultDeltasPath(app), JSON.stringify(deltas, null, 2), cb)
+}
 
-  if (app.config.settings.vessel) {
-    // backwards compatibility for settings files with 'vessel'
-    if (!mmsi && !uuid) {
-      mmsi = app.config.settings.vessel.mmsi
-      uuid = app.config.settings.vessel.uuid
-      if (mmsi) {
-        app.config.defaults.vessels.self.mmsi = mmsi
+function writeDefaultDeltasFileSync(app, deltas) {
+  fs.writeFileSync(getDefaultDeltasPath(app), JSON.stringify(deltas, null, 2))
+}
+
+function getDefaultValue(app, vpath) {
+  if (vpath.indexOf('.') === -1) {
+    let rootUpdates = app.config.defaultDeltas.reduce((acc, delta) => {
+      if (delta.updates) {
+        delta.updates.forEach(update => {
+          if (update.values) {
+            let value = update.values.forEach(v => {
+              if (v.path === '') {
+                acc.push(v.value)
+              }
+            })
+          }
+        })
       }
-      if (uuid) {
-        app.config.defaults.vessels.self.uuid = uuid
+      return acc
+    }, [])
+    let keyUpdate = rootUpdates.find(update => {
+      return !_.isUndefined(update[vpath])
+    })
+    return _.isUndefined(keyUpdate) ? undefined : keyUpdate[vpath]
+  } else {
+    let deltas = app.config.defaultDeltas.reduce((acc, delta) => {
+      if (delta.updates) {
+        delta.updates.forEach(update => {
+          if (update.values) {
+            let value = update.values.forEach(v => {
+              if (v.path === vpath) {
+                acc.push(v.value)
+              }
+            })
+          }
+        })
       }
+      return acc
+    }, [])
+    return deltas.length > 0 ? deltas[deltas.length - 1] : undefined
+  }
+}
+
+function setDefaultValue(app, vpath, value) {
+  if (vpath.indexOf('.') === -1) {
+    let rootUpdates = app.config.defaultDeltas.reduce((acc, delta) => {
+      if (delta.updates) {
+        delta.updates.forEach(update => {
+          if (update.values) {
+            update.values.forEach(v => {
+              if (v.path === '') {
+                acc.push(v.value)
+              }
+            })
+          }
+        })
+      }
+      return acc
+    }, [])
+    let keyUpdate = rootUpdates.find(update => {
+      return !_.isUndefined(update[vpath])
+    })
+    if (_.isUndefined(keyUpdate)) {
+      app.config.defaultDeltas.push({
+        updates: [
+          {
+            values: [
+              {
+                path: '',
+                value: {
+                  [vpath]: value
+                }
+              }
+            ]
+          }
+        ]
+      })
+    } else {
+      keyUpdate[vpath] = value
     }
-    if (!name) {
-      name = app.config.settings.vessel.name
-      app.config.defaults.vessels.self.name = name
+  } else {
+    let values = app.config.defaultDeltas.reduce((acc, delta) => {
+      if (delta.updates) {
+        delta.updates.forEach(update => {
+          if (update.values) {
+            update.values.forEach(v => {
+              if (v.path === vpath) {
+                acc.push(v)
+              }
+            })
+          }
+        })
+      }
+      return acc
+    }, [])
+    if (values.length === 0) {
+      app.config.defaultDeltas.push({
+        updates: [
+          {
+            values: [
+              {
+                path: vpath,
+                value: value
+              }
+            ]
+          }
+        ]
+      })
+    } else {
+      values[values.length - 1].value = value
     }
   }
+}
+
+function removeDefaultValue(app, vpath) {
+  let isRoot = vpath.indexOf('.') === -1
+  app.config.defaultDeltas.forEach(delta => {
+    if (delta.updates) {
+      delta.updates.forEach(update => {
+        if (update.values) {
+          update.values.forEach(v => {
+            if (isRoot && v.path === '' && !_.isUndefined(v.value[vpath])) {
+              delete v.value[vpath]
+              if (_.keys(v.value).length === 0) {
+                _.pull(update.values, v)
+              }
+            } else if (v.path === vpath) {
+              _.pull(update.values, v)
+            }
+          })
+          if (update.values.length === 0) {
+            _.pull(delta.updates, update)
+          }
+        }
+      })
+      if (delta.updates.length === 0) {
+        _.pull(app.config.defaultDeltas, delta)
+      }
+    }
+  })
+}
+
+function setSelfSettings(app) {
+  var name = getDefaultValue(app, 'name')
+  var mmsi = getDefaultValue(app, 'mmsi')
+  var uuid = getDefaultValue(app, 'uuid')
 
   if (mmsi && !_.isString(mmsi)) {
     throw new Error(`invalid mmsi: ${mmsi}`)
@@ -275,22 +455,34 @@ function setSelfSettings(app) {
 
   if (_.isUndefined(mmsi) && _.isUndefined(uuid)) {
     uuid = 'urn:mrn:signalk:uuid:' + uuidv4()
-    _.set(app.config.defaults, 'vessels.self.uuid', uuid)
-    if (!disableWriteSettings) {
-      writeDefaultsFile(app, app.config.defaults, err => {
-        if (err) {
-          console.error(`unable to write defaults file: ${err}`)
+    app.config.defaultDeltas.push({
+      updates: [
+        {
+          values: [
+            {
+              path: '',
+              value: {
+                uuid: uuid
+              }
+            }
+          ]
         }
-      })
+      ]
+    })
+    if (!disableWriteSettings) {
+      writeDefaultDeltasFileSync(app, app.config.defaultDeltas)
     }
   }
 
+  app.config.vesselName = name
   if (mmsi) {
     app.selfType = 'mmsi'
     app.selfId = 'urn:mrn:imo:mmsi:' + mmsi
+    app.config.vesselMMSI = mmsi
   } else if (uuid) {
     app.selfType = 'uuid'
     app.selfId = uuid
+    app.config.vesselUUID = uuid
   }
   if (app.selfType) {
     debug(app.selfType.toUpperCase() + ': ' + app.selfId)
@@ -364,6 +556,75 @@ function getExternalPort(config) {
   return ''
 }
 
+function scanDefaults(vpath, item, metaValues, values) {
+  _.keys(item).forEach(key => {
+    let value = item[key]
+    if (key === 'meta') {
+      metaValues.push({
+        path: vpath,
+        value: value
+      })
+    } else if (key === 'value') {
+      values.push({
+        path: vpath,
+        value: value
+      })
+    } else if (_.isObject(value)) {
+      let childPath = vpath.length > 0 ? `${vpath}.${key}` : key
+      scanDefaults(childPath, value, metaValues, values)
+    }
+  })
+}
+
+function convertOldDefaultsToDeltas(defaults) {
+  let deltas = []
+  let self = _.get(defaults, 'vessels.self')
+  if (self) {
+    let topValues = {}
+    let metaValues = []
+    let values = []
+    _.keys(self).forEach(key => {
+      let value = self[key]
+      if (!_.isString(value)) {
+        scanDefaults(key, value, metaValues, values)
+      } else {
+        topValues[key] = value
+      }
+    })
+    deltas.push({
+      updates: [
+        {
+          values: [
+            {
+              path: '',
+              value: topValues
+            }
+          ]
+        }
+      ]
+    })
+    if (metaValues.length > 0) {
+      deltas.push({
+        updates: [
+          {
+            meta: metaValues
+          }
+        ]
+      })
+    }
+    if (values.length > 0) {
+      deltas.push({
+        updates: [
+          {
+            values: values
+          }
+        ]
+      })
+    }
+  }
+  return deltas
+}
+
 const pluginsPackageJsonTemplate = {
   name: 'signalk-server-config',
   version: '0.0.1',
@@ -377,5 +638,7 @@ module.exports = {
   getConfigDirectory,
   writeSettingsFile,
   writeDefaultsFile,
-  readDefaultsFile
+  readDefaultsFile,
+  sendDefaultDeltas,
+  removeDefaultValue
 }

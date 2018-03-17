@@ -120,7 +120,7 @@ DeltaCache.prototype.buildFullFromDeltas = function(
   const signalk = new FullSignalK(
     this.app.selfId,
     this.app.selfType,
-    JSON.parse(JSON.stringify(this.defaults))
+    this.defaults && JSON.parse(JSON.stringify(this.defaults))
   )
 
   const addDelta = signalk.addDelta.bind(signalk)
@@ -167,7 +167,13 @@ DeltaCache.prototype.getCachedDeltas = function(user, contextFilter, key) {
     }
     if (deltasToProcess) {
       // acc.push(_.reduce(deltas, ((delta, acc) => !acc ? delta : (new Date(delta.timestamp).getTime() > new Date(acc.timestamp).getTime() ? delta : acc))))
-      acc = acc.concat(_.values(deltasToProcess))
+      acc = acc.concat(
+        _.values(
+          _.pickBy(deltasToProcess, (val, akey) => {
+            return akey !== 'meta'
+          })
+        )
+      )
     }
     return acc
   }, [])

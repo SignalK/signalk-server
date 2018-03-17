@@ -54,11 +54,15 @@ describe('Server', function () {
     const deltaUrl = host + '/signalk/v1/api/_test/delta'
     const restUrl = host + '/signalk/v1/api/'
 
+    console.log('send')
     return sendDelta(delta, deltaUrl)
       .then(function () {
-        return fetch(restUrl).then(r => r.json())
+        console.log('back1')
+        return fetch(restUrl)
+          .then(r => r.json())
       })
       .then(function (treeAfterFirstDelta) {
+        console.log('back2')
         treeAfterFirstDelta.vessels[uuid].should.have.nested.property(
           'navigation.trip.log.value',
           43374

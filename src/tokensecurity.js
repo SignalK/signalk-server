@@ -598,7 +598,7 @@ module.exports = function(app, config) {
 
       delta.updates = delta.updates
         .map(update => {
-          update.values = update.values
+          let res = (update.values || update.meta)
             .map(valuePath => {
               return strategy.checkACL(
                 principal.identifier,
@@ -611,7 +611,13 @@ module.exports = function(app, config) {
                 : null
             })
             .filter(vp => vp != null)
-          return update.values.length > 0 ? update : null
+          if (update.values) {
+            update.values = res
+            return update.values.length > 0 ? update : null
+          } else {
+            update.meta = res
+            return update.meta.length > 0 ? update : null
+          }
         })
         .filter(update => update != null)
       return delta.updates.length > 0 ? delta : null
