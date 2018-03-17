@@ -139,7 +139,7 @@
     "husky": "^0.14.3",
     "lint-staged": "^7.0.0",
     "mocha": "^5.0.0",
-    "node-fetch": "^1.7.3",
+    "node-fetch": "^2.1.1",
     "prettier-standard": "^8.0.0",
     "request": "^2.81.0",
     "request-promise": "^4.1.1"
