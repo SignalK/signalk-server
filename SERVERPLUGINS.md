@@ -104,17 +104,7 @@ If the plugin needs to read plugin options from disk
 
 If the plugin wants to respond to actions, which are PUT requests for a specific path, it should register an action handler.
 
-The return value is a function that should be called when the plugin stops.
-
-Example:
-```
-  onStops.push(app.registerActionHandler('vessels.self',
-                                        `electrical.switches.myswitch.state`,
-                                         myActionHandler)
-```
-
 The action handler can handle the request synchronously or asynchronously.
-
 For synchronous actions the handler must return a value describing the result of the action: either `{ state: 'SUCCESS' }` or `{ state:'FAILURE', message:'Some Error Message' }`.
 
 For asynchronous actions that may take considerable time and the requester should not be kept waiting for the result
