@@ -40,7 +40,8 @@ function Simple (options) {
   const mappingType =
     options.type == 'NMEA2000' &&
     options.subOptions &&
-    options.subOptions.type == 'ngt-1-canboatjs'
+    (options.subOptions.type == 'ngt-1-canboatjs' ||
+      options.subOptions.type === 'canbus-canboatjs')
       ? 'NMEA2000JS'
       : dataType
 
@@ -132,6 +133,13 @@ function nmea2000input (subOptions) {
         device: subOptions.device,
         app: subOptions.app,
         outEvent: 'nmea2000out'
+      })
+    ]
+  } else if (subOptions.type === 'canbus-canboatjs') {
+    return [
+      new require('./canbus')({
+        canDevice: subOptions.device,
+        app: subOptions.app
       })
     ]
   } else {
