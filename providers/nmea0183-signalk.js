@@ -41,7 +41,7 @@ function nmea0183ToSignalK (options) {
   this.parser = new Parser(options)
 
   this.parser.on('nmea0183', sentence => {
-    this.emit('nmea0183', sentence)
+    options.app.signalk.emit('nmea0183', sentence)
   })
 
   if (options.sentenceEvent) {
