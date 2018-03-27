@@ -94,13 +94,17 @@ const dataTypeMapping = {
     options.subOptions.type != 'wss' && options.subOptions.type != 'ws'
       ? [new FromJson(options.subOptions)]
       : [],
-  NMEA0183: options => [
-    new Throttle({
-      rate: options.subOptions.throttleRate || 1000,
-      app: options.app
-    }),
-    new nmea0183_signalk(options.subOptions)
-  ],
+  NMEA0183: options => {
+    const result = [new nmea0183_signalk(options.subOptions)]
+    if (options.type === 'FileStream') {
+      result.unshift(
+        new Throttle({
+          rate: options.subOptions.throttleRate || 1000
+        })
+      )
+    }
+    return result
+  },
   NMEA2000: options => {
     const result = [new N2kAnalyzer(options.subOptions)]
     if (options.type === 'FileStream') {
