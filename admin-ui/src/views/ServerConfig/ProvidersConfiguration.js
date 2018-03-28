@@ -256,6 +256,7 @@ class ProvidersConfiguration extends Component {
                     id='json'
                     rows='20'
                     value={this.state.selectedProvider.json}
+                    readOnly='true'
                   />
                 )}
               </CardBody>
