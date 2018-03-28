@@ -167,10 +167,6 @@ class Security extends Component {
       })
   }
 
-  changePassword (userId) {
-    console.log(userId)
-  }
-
   handleSaveConfig () {
     var payload = {
       allow_readonly: this.state.allow_readonly,
