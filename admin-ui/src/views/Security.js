@@ -112,7 +112,6 @@ class Security extends Component {
       return
     }
 
-    console.log(`password: ${this.state.selectedUser.password}`)
     if (this.state.selectedUser.password) {
       if (
         this.state.selectedUser.password !=
