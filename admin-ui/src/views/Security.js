@@ -187,7 +187,7 @@ class Security extends Component {
       })
   }
 
-  userClicked (event, user, index) {
+  userClicked (user, index) {
     console.log(JSON.stringify(user))
     this.setState(
       {
@@ -296,7 +296,6 @@ class Security extends Component {
                           key={user.userId}
                           onClick={this.userClicked.bind(
                             this,
-                            event,
                             user,
                             index
                           )}
