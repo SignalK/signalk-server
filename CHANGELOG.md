@@ -1,5 +1,10 @@
 ## Change Log
 
+### v1.1.1 (2018/03/29 05:02 +00:00)
+- [#488](https://github.com/SignalK/signalk-server-node/pull/488) Fix Admin UI errors in Firefox (@tkurki)
+- [#487](https://github.com/SignalK/signalk-server-node/pull/487) fix: reorganise nmea0183 passing (@tkurki)
+- [#485](https://github.com/SignalK/signalk-server-node/pull/485) Update @signalk/freeboard-sk to the latest version 🚀 (@greenkeeper[bot])
+
 ### v1.1.0 (2018/03/20 23:30 +00:00)
 - [#463](https://github.com/SignalK/signalk-server-node/pull/463) feature: add support for put requests (@sbender9)
 - [#484](https://github.com/SignalK/signalk-server-node/pull/484) fix: issue with some acl configurations (@sbender9)
