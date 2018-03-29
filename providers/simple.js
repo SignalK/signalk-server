@@ -142,7 +142,7 @@ function nmea2000input (subOptions) {
   } else if (subOptions.type === 'canbus-canboatjs') {
     return [
       new require('./canbus')({
-        canDevice: subOptions.device,
+        canDevice: subOptions.interface,
         app: subOptions.app
       })
     ]
