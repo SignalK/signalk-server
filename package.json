@@ -97,7 +97,7 @@
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.14.1",
-    "canboatjs": "0.0.11",
+    "canboatjs": "0.0.12",
     "colors": "^1.1.2",
     "compare-versions": "^3.0.1",
     "cookie": "^0.3.1",
