@@ -109,6 +109,18 @@ If the plugin needs to make and save changes to its options
 
 If the plugin needs to read plugin options from disk
 
+### app.registerActionHandler (context, path, source, callback)
+
+If the plugin wants to respond to actions, which are PUT requests for a specific path, it should register an action handler.
+
+The action handler can handle the request synchronously or asynchronously.
+For synchronous actions the handler must return a value describing the result of the action: either `{ state: 'SUCCESS' }` or `{ state:'FAILURE', message:'Some Error Message' }`.
+
+For asynchronous actions that may take considerable time and the requester should not be kept waiting for the result
+the handler must return `{ state: 'PENDING' }`. When the action is finished the handler
+ should call the `callback` function with the result with  `callback({ state: 'SUCCESS' })` or
+`callback({ state:'FAILURE', message:'Some Error Message' })`.
+
 ## SENDING NMEA MESSAGES FROM A PLUGIN
 
 ### NMEA 2000

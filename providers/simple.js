@@ -40,7 +40,8 @@ function Simple (options) {
   const mappingType =
     options.type == 'NMEA2000' &&
     options.subOptions &&
-    options.subOptions.type == 'ngt-1-canboatjs'
+    (options.subOptions.type == 'ngt-1-canboatjs' ||
+      options.subOptions.type === 'canbus-canboatjs')
       ? 'NMEA2000JS'
       : dataType
 
@@ -93,13 +94,17 @@ const dataTypeMapping = {
     options.subOptions.type != 'wss' && options.subOptions.type != 'ws'
       ? [new FromJson(options.subOptions)]
       : [],
-  NMEA0183: options => [
-    new Throttle({
-      rate: options.subOptions.throttleRate || 1000,
-      app: options.app
-    }),
-    new nmea0183_signalk(options.subOptions)
-  ],
+  NMEA0183: options => {
+    const result = [new nmea0183_signalk(options.subOptions)]
+    if (options.type === 'FileStream') {
+      result.unshift(
+        new Throttle({
+          rate: options.subOptions.throttleRate || 1000
+        })
+      )
+    }
+    return result
+  },
   NMEA2000: options => {
     const result = [new N2kAnalyzer(options.subOptions)]
     if (options.type === 'FileStream') {
@@ -132,6 +137,13 @@ function nmea2000input (subOptions) {
         device: subOptions.device,
         app: subOptions.app,
         outEvent: 'nmea2000out'
+      })
+    ]
+  } else if (subOptions.type === 'canbus-canboatjs') {
+    return [
+      new require('./canbus')({
+        canDevice: subOptions.interface,
+        app: subOptions.app
       })
     ]
   } else {

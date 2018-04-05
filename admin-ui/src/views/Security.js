@@ -112,7 +112,6 @@ class Security extends Component {
       return
     }
 
-    console.log(`password: ${this.state.selectedUser.password}`)
     if (this.state.selectedUser.password) {
       if (
         this.state.selectedUser.password !=
@@ -168,10 +167,6 @@ class Security extends Component {
       })
   }
 
-  changePassword (userId) {
-    console.log(userId)
-  }
-
   handleSaveConfig () {
     var payload = {
       allow_readonly: this.state.allow_readonly,
@@ -192,7 +187,7 @@ class Security extends Component {
       })
   }
 
-  userClicked (event, user, index) {
+  userClicked (user, index) {
     console.log(JSON.stringify(user))
     this.setState(
       {
@@ -301,7 +296,6 @@ class Security extends Component {
                           key={user.userId}
                           onClick={this.userClicked.bind(
                             this,
-                            event,
                             user,
                             index
                           )}

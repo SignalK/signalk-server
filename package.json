@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "1.0.0",
+  "version": "1.1.2",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
@@ -82,10 +82,10 @@
   },
   "dependencies": {
     "@signalk/client": "^0.2.0",
-    "@signalk/freeboard-sk": "0.0.1",
+    "@signalk/freeboard-sk": "0.0.3",
     "@signalk/instrumentpanel": "0.2.7",
     "@signalk/maptracker": "^1.0.0",
-    "@signalk/n2k-signalk": "1.1.0",
+    "@signalk/n2k-signalk": "1.2.1",
     "@signalk/nmea0183-signalk": "2.2.0",
     "@signalk/playground": "^1.0.0",
     "@signalk/sailgauge": "^1.1.0",
@@ -97,7 +97,7 @@
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.14.1",
-    "canboatjs": "0.0.11",
+    "canboatjs": "0.0.12",
     "compare-versions": "^3.0.1",
     "cookie": "^0.3.1",
     "cookie-parser": "^1.4.3",
@@ -108,7 +108,7 @@
     "errorhandler": "^1.3.0",
     "express": "^4.10.4",
     "express-namespace": "^0.1.1",
-    "file-timestamp-stream": "0.1.0",
+    "file-timestamp-stream": "0.3.0",
     "flatmap": "0.0.3",
     "geolib": "^2.0.24",
     "jsonwebtoken": "^8.1.1",
@@ -126,8 +126,7 @@
     "stream-throttle": "^0.1.3",
     "through": ">=2.2.7 <3",
     "uuid": "^3.2.1",
-    "ws": "^4.0.0"
-
+    "ws": "^5.0.0"
   },
   "devDependencies": {
     "chai": "^4.0.0",
@@ -137,7 +136,7 @@
     "husky": "^0.14.3",
     "lint-staged": "^7.0.0",
     "mocha": "^5.0.0",
-    "node-fetch": "^1.7.3",
+    "node-fetch": "^2.1.1",
     "prettier-standard": "^8.0.0",
     "request": "^2.81.0",
     "request-promise": "^4.1.1"

@@ -1,5 +1,30 @@
 ## Change Log
 
+### v1.1.2 (2018/03/29 21:00 +00:00)
+- [#491](https://github.com/SignalK/signalk-server-node/pull/491) fix: canboatjs interface option not getting passed to provider (@sbender9)
+- [#490](https://github.com/SignalK/signalk-server-node/pull/490) Update @signalk/freeboard-sk to the latest version 🚀 (@greenkeeper[bot])
+
+### v1.1.1 (2018/03/29 05:02 +00:00)
+- [#488](https://github.com/SignalK/signalk-server-node/pull/488) Fix Admin UI errors in Firefox (@tkurki)
+- [#487](https://github.com/SignalK/signalk-server-node/pull/487) fix: reorganise nmea0183 passing (@tkurki)
+- [#485](https://github.com/SignalK/signalk-server-node/pull/485) Update @signalk/freeboard-sk to the latest version 🚀 (@greenkeeper[bot])
+
+### v1.1.0 (2018/03/20 23:30 +00:00)
+- [#463](https://github.com/SignalK/signalk-server-node/pull/463) feature: add support for put requests (@sbender9)
+- [#484](https://github.com/SignalK/signalk-server-node/pull/484) fix: issue with some acl configurations (@sbender9)
+- [#470](https://github.com/SignalK/signalk-server-node/pull/470) Update ws to the latest version 🚀 (@greenkeeper[bot])
+- [#465](https://github.com/SignalK/signalk-server-node/pull/465) Proper dockerfile with multi arch support (@tkurki)
+- [#483](https://github.com/SignalK/signalk-server-node/pull/483) chore(package): update node-fetch to version 2.1.1 (@tkurki)
+- [#482](https://github.com/SignalK/signalk-server-node/pull/482) fix(package): update file-timestamp-stream to version 0.3.0 (@tkurki)
+- [#472](https://github.com/SignalK/signalk-server-node/pull/472) feature: add support to configure a canbus N2K source with canboajs using the admin ui (@sbender9)
+- [#475](https://github.com/SignalK/signalk-server-node/pull/475) chore: replace bcrypt with bcryptjs (@tkurki)
+- [#476](https://github.com/SignalK/signalk-server-node/pull/476) feature: plugin.statusMessage() (@tkurki)
+- [#477](https://github.com/SignalK/signalk-server-node/pull/477) Update @signalk/set-system-time to the latest version 🚀 (@greenkeeper[bot])
+- [#474](https://github.com/SignalK/signalk-server-node/pull/474) Update @signalk/set-system-time to the latest version 🚀 (@greenkeeper[bot])
+- [#471](https://github.com/SignalK/signalk-server-node/pull/471) Update canboatjs to the latest version 🚀 (@greenkeeper[bot])
+- [#453](https://github.com/SignalK/signalk-server-node/pull/453) Update RPi installation guide (@MatsA)
+- [#469](https://github.com/SignalK/signalk-server-node/pull/469) Fix Tcp provider configuration from the UI (@joabakk)
+
 ### v1.0.0 (2018/03/03 17:39 +00:00)
 - [#448](https://github.com/SignalK/signalk-server-node/pull/448) feature: implement access control lists (@sbender9)
 - [#462](https://github.com/SignalK/signalk-server-node/pull/462) Feature: add server version to the Admin UI (@zubenubi)

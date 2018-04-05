@@ -163,7 +163,7 @@ class ProvidersConfiguration extends Component {
       })
   }
 
-  providerClicked (event, provider, index) {
+  providerClicked (provider, index) {
     this.setState(
       {
         selectedProvider: {
@@ -206,7 +206,6 @@ class ProvidersConfiguration extends Component {
                     <tr
                       onClick={this.providerClicked.bind(
                         this,
-                        event,
                         provider,
                         index
                       )}
@@ -257,6 +256,7 @@ class ProvidersConfiguration extends Component {
                     id='json'
                     rows='20'
                     value={this.state.selectedProvider.json}
+                    readOnly='true'
                   />
                 )}
               </CardBody>

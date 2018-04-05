@@ -1,12 +1,38 @@
 language: node_js
 node_js:
   - "lts/*"
-sudo: false
-env:
-  - CXX=g++-4.8
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - g++-4.8
+
+sudo: required
+
+services:
+  - docker
+
+jobs:
+  include:
+    - stage: test
+      script:
+        - npm test
+    - stage: build and push amd64 and arm32v7 images
+      script:
+        - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
+        - docker login -u="$DOCKER_USER" -p="$DOCKER_PASS"
+        - docker build -f Dockerfile -t signalk/signalk-server:linux-amd64-"$BRANCH" .
+        - docker push signalk/signalk-server:linux-amd64-"$BRANCH"
+    - script:
+        - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
+        - docker login -u="$DOCKER_USER" -p="$DOCKER_PASS"
+        - docker run --rm --privileged multiarch/qemu-user-static:register --reset
+        - mkdir tmp
+        - >
+          pushd tmp &&
+          curl -L -o qemu-arm-static.tar.gz https://github.com/multiarch/qemu-user-static/releases/download/v2.11.0/qemu-arm-static.tar.gz &&
+          tar xzf qemu-arm-static.tar.gz &&
+          popd
+        - docker build -f Dockerfile_arm32v7 -t signalk/signalk-server:linux-arm32v7-"$BRANCH" .
+        - docker push signalk/signalk-server:linux-arm32v7-"$BRANCH"
+    - stage: build and push multi-arch manifest
+      script:
+        - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
+        - ./make-manifest.sh
+        - docker run --rm -v `pwd`:`pwd` -w `pwd` tkurki/manifest-tool --username="$DOCKER_USER" --password="$DOCKER_PASS" push from-spec docker-manifest.yml
+
