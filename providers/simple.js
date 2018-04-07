@@ -46,7 +46,7 @@ function Simple (options) {
       : dataType
 
   const pipeline = [].concat(
-    pipeStartByType[options.type](options.subOptions),
+    pipeStartByType[options.type](options.subOptions, options.logging),
     getLogger(options.app, options.logging, discriminatorByDataType[dataType]),
     dataTypeMapping[mappingType](options)
   )
@@ -130,13 +130,14 @@ const pipeStartByType = {
   SignalK: signalKInput
 }
 
-function nmea2000input (subOptions) {
+function nmea2000input (subOptions, logging) {
   if (subOptions.type === 'ngt-1-canboatjs') {
     return [
       new require('./actisense-serial')({
         device: subOptions.device,
         app: subOptions.app,
-        outEvent: 'nmea2000out'
+        outEvent: 'nmea2000out',
+        plainText: logging
       })
     ]
   } else if (subOptions.type === 'canbus-canboatjs') {
