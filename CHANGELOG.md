@@ -1,6 +1,15 @@
 ## Change Log
 
-### v1.1.2 (2018/03/29 21:00 +00:00)
+### v1.2.0 (2018/04/07 20:06 +00:00)
+- [#502](https://github.com/SignalK/signalk-server-node/pull/502) fix: logging with canboatjs writes binary data (@sbender9)
+- [#501](https://github.com/SignalK/signalk-server-node/pull/501) feature: remove some pinned dependencies (@sbender9)
+- [#479](https://github.com/SignalK/signalk-server-node/pull/479) chore: remove unused dependencies (@tkurki)
+- [#498](https://github.com/SignalK/signalk-server-node/pull/498) feature: allow plugins to be seamlessly moved under @signalk (@sbender9)
+- [#495](https://github.com/SignalK/signalk-server-node/pull/495) fix: make app.savePluginOptions work from plugin (@tkurki)
+- [#497](https://github.com/SignalK/signalk-server-node/pull/497) fix(package): update @signalk/n2k-signalk to version 1.2.1 (@tkurki)
+- [#493](https://github.com/SignalK/signalk-server-node/pull/493) Update canboatjs to the latest version 🚀 (@greenkeeper[bot])
+
+### v1.1.2 (2018/03/29 21:01 +00:00)
 - [#491](https://github.com/SignalK/signalk-server-node/pull/491) fix: canboatjs interface option not getting passed to provider (@sbender9)
 - [#490](https://github.com/SignalK/signalk-server-node/pull/490) Update @signalk/freeboard-sk to the latest version 🚀 (@greenkeeper[bot])
 
