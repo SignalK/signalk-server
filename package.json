@@ -91,7 +91,7 @@
     "@signalk/sailgauge": "^1.1.0",
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-schema": "1.0.3",
-    "@signalk/signalk-to-nmea0183": "^0.1.1",
+    "@signalk/signalk-to-nmea0183": "^1.0.0",
     "@signalk/simplegauges": "^1.0.1",
     "@signalk/zones": "^1.0.0",
     "baconjs": "^1.0.1",
