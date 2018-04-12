@@ -60,6 +60,14 @@ const testDelta = {
   ]
 }
 
+const expectedOrder = [
+  '',
+  'navigation.speedOverGround',
+  'navigation.courseOverGroundTrue',
+  'navigation.log',
+  'navigation.trip.log'
+]
+
 describe('deltacache', () => {
   var serverP, port, deltaUrl, deltaP
 
@@ -82,7 +90,7 @@ describe('deltacache', () => {
     serverP.then(server => server.stop())
   })
 
-  it('returns valid full true', function () {
+  it('returns valid full tree', function () {
     return serverP.then(server => {
       return deltaP.then(() => {
         var fullTree = server.app.deltaCache.buildFull(null, [])
@@ -104,14 +112,15 @@ describe('deltacache', () => {
     })
   })
 
-  /*
   it('deltas ordered properly', function () {
-    return serverP
-      .then(server => {
-        return deltaP.then(() => {
-          var deltas = server.app.deltaCache.getCachedDeltas(null, delta => true)
-        })
+    return serverP.then(server => {
+      return deltaP.then(() => {
+        var deltas = server.app.deltaCache.getCachedDeltas(null, delta => true)
+        assert(deltas.length == expectedOrder.length)
+        for (var i = 0; i < expectedOrder.length; i++) {
+          deltas[i].updates[0].values[0].path.should.equal(expectedOrder[i])
+        }
       })
+    })
   })
-  */
 })
