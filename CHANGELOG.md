@@ -1,5 +1,13 @@
 ## Change Log
 
+### v1.2.1 (2018/04/13 18:49 +00:00)
+- [#508](https://github.com/SignalK/signalk-server-node/pull/508) fix: sorting of deltas from deltacache not working (@sbender9)
+- [#512](https://github.com/SignalK/signalk-server-node/pull/512) feature: use canboatjs by default in the autodetect provider (@sbender9)
+- [#505](https://github.com/SignalK/signalk-server-node/pull/505) fix: delta's with an empty path are not handled correctly (@sbender9)
+- [#503](https://github.com/SignalK/signalk-server-node/pull/503) Update @signalk/signalk-to-nmea0183 to the latest version 🚀 (@greenkeeper[bot])
+- [#506](https://github.com/SignalK/signalk-server-node/pull/506) fix: source not getting set correctly for deltas over ws (@sbender9)
+- [#507](https://github.com/SignalK/signalk-server-node/pull/507) fix: deltas sent out on initial ws connections not getting sorted correctly (@sbender9)
+
 ### v1.2.0 (2018/04/07 20:06 +00:00)
 - [#502](https://github.com/SignalK/signalk-server-node/pull/502) fix: logging with canboatjs writes binary data (@sbender9)
 - [#501](https://github.com/SignalK/signalk-server-node/pull/501) feature: remove some pinned dependencies (@sbender9)
