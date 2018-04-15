@@ -195,8 +195,8 @@ Stop the daemon temporarily with;
 
 Start the deamon with;
 
-    $ sudo systemctl start signalk.service
     $ sudo systemctl start signalk.socket
+    $ sudo systemctl start signalk.service
 
 Disable the automatic start with;
 
