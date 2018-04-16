@@ -111,60 +111,22 @@ export function restart () {
   }
 }
 
-export function fetchLoginStatus (dispatch) {
-  authFetch(`/loginStatus`)
+// Build actions that perform a basic authFetch to the backend. Pull #514.
+export const buildFetchAction = (endpoint, type) => dispatch =>
+  authFetch(endpoint)
     .then(response => response.json())
     .then(data =>
       dispatch({
-        type: 'RECEIVE_LOGIN_STATUS',
+        type,
         data
       })
     )
-}
 
-export function fetchPlugins (dispatch) {
-  authFetch(`/plugins`)
-    .then(response => response.json())
-    .then(plugins =>
-      dispatch({
-        type: 'RECEIVE_PLUGIN_LIST',
-        plugins
-      })
-    )
-}
-
-export function fetchWebapps (dispatch) {
-  authFetch(`/webapps`)
-    .then(response => response.json())
-    .then(webapps =>
-      dispatch({
-        type: 'RECEIVE_WEBAPPS_LIST',
-        webapps
-      })
-    )
-}
-
-export function fetchApps (dispatch) {
-  authFetch(`/appstore/available`)
-    .then(response => response.json())
-    .then(data =>
-      dispatch({
-        type: 'RECEIVE_APPSTORE_LIST',
-        data
-      })
-    )
-}
-
-export function fetchServerSpecification(dispatch) {
-  authFetch(`/signalk`)
-    .then(response => response.json())
-    .then(data =>
-      dispatch({
-        type: 'RECEIVE_SERVER_SPEC',
-        data
-      })
-    )
-}
+export const fetchLoginStatus = buildFetchAction('/loginStatus', 'RECEIVE_LOGIN_STATUS')
+export const fetchPlugins = buildFetchAction('/plugins', 'RECEIVE_PLUGIN_LIST')
+export const fetchWebapps = buildFetchAction('/webapps', 'RECEIVE_WEBAPPS_LIST')
+export const fetchApps = buildFetchAction('/appstore/available', 'RECEIVE_APPSTORE_LIST')
+export const fetchServerSpecification = buildFetchAction('/signalk', 'RECEIVE_SERVER_SPEC')
 
 export function fetchAllData (dispatch) {
   fetchPlugins(dispatch)

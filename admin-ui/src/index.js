@@ -42,13 +42,13 @@ let store = createStore(
     if (action.type === 'RECEIVE_PLUGIN_LIST') {
       return {
         ...state,
-        plugins: action.plugins
+        plugins: action.data
       }
     }
     if (action.type === 'RECEIVE_WEBAPPS_LIST') {
       return {
         ...state,
-        webapps: action.webapps
+        webapps: action.data
       }
     }
     if (
