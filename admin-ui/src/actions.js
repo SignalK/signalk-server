@@ -111,7 +111,7 @@ export function restart () {
   }
 }
 
-// Build actions that perform a basic authFetch to the backend
+// Build actions that perform a basic authFetch to the backend. Pull #514.
 export const buildFetchAction = (endpoint, type) => dispatch =>
   authFetch(endpoint)
     .then(response => response.json())
