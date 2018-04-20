@@ -15,7 +15,7 @@
     "lodash.keys": "^4.2.0",
     "react": "^15.3.2",
     "react-dom": "^15.3.2",
-    "react-jsonschema-form": "^0.50.1",
+    "react-jsonschema-form": "^1.0.3",
     "webpack": "^3.5.6",
     "whatwg-fetch": "^2.0.3"
   },
