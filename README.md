@@ -39,7 +39,7 @@ cd signalk-server-node
 npm install && npm run prepublishOnly
 ```
 
-`prepublishOnly` builds the admin and plugin config web apps. This is a pretty heavy process and for example on RPi will take a huge amount of time, so you may want to build them separately on a more powerful computer and just transfer the resulting artifacts in `admin-ui/public/*` and `plugin-config/public/*` over.
+`prepublishOnly` builds the admin and plugin config web apps. This is a pretty heavy process and for example on RPi will take a huge amount of time, so you may want to build them separately on a more powerful computer and just transfer the resulting artifacts in `admin-ui/public/*` over.
 
 Start the server with sample data:
 * NMEA0183 sample data: `bin/nmea-from-file`
