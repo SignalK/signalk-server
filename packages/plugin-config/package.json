@@ -23,6 +23,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack -p",
     "build-debug": "webpack -p --devtool source-map",
+    "prepublishOnly": "npm run build",
     "watch": "webpack -d --watch"
   }
 }
