@@ -23,7 +23,7 @@ Prerequisites
 
     $ sudo npm install -g --unsafe-perm signalk-server
 
-Now you can start the server with sample data: 
+Now you can start the server with sample data:
 * NMEA0183 sample data: `signalk-server --sample-nmea0183-data`
 * NMEA2000 sample data: `signalk-server --sample-n2k-data`
 
@@ -65,7 +65,7 @@ You can start a local server on port 3000  with `docker run --name signalk-serve
 Now what?
 ---------
 
-Once you have the data streams in place you probably want to use the data or at least see it in a nice format. Some sample plugins and apps are installed during the installation process. 
+Once you have the data streams in place you probably want to use the data or at least see it in a nice format. Some sample plugins and apps are installed during the installation process.
 - Apps or Webapps are mainly web pages for accessing the Signal K output such as dashboards, configurable gauges or web maps. See [Webapps doc](https://github.com/SignalK/signalk-server-node/blob/master/WEBAPPS.md) for more information.
 - If you have internet connectivity for your server App Store in the admin user interfaces shows all the Signal K Plugins and Apps that have been published via npm with the right keywords. It also shows their current status on your server and allows you to install and update these.
 - Plugins are web forms to tailor your server to your needs, change parameters or get information from various sources. See [Server Plugins](SERVERPLUGINS.md)
