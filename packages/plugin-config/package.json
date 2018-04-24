@@ -1,6 +1,6 @@
 {
   "name": "@signalk/plugin-config",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "Configuration interface for Signal K Node server plugins",
   "main": "index.js",
   "author": "teppo.kurki@iki.fi",
