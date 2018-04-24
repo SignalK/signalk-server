@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-admin",
-  "version": "0.0.4",
+  "version": "1.0.0",
   "description": "Signal K server admin webapp",
   "author": "Łukasz Holeczek",
   "contributors": [
@@ -52,7 +52,7 @@
   },
   "dependencies": {},
   "scripts": {
-    "prepublish": "npm run clean && npm run build",
+    "prepublishOnly": "npm run clean && npm run build",
     "dev":
       "webpack -d --progress --watch --profile --json > compilation-stats.json --env.dev",
     "start": "webpack-dev-server --progress --colors --inline --env.dev",
