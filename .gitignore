@@ -8,8 +8,6 @@ logs/*
 bower_components
 settings/ssl-key.pem
 settings/ssl-cert.pem
-plugin-config-data
-plugin-config/public/
 
 *.tgz
 work/

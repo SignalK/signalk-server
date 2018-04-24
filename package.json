@@ -10,7 +10,7 @@
     "test": "mocha --exit",
     "precommit": "lint-staged",
     "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js",
-    "prepublishOnly": "cd admin-ui && npm install && npm run build && cd ../plugin-config && npm install && npm run build",
+    "prepublishOnly": "cd admin-ui && npm install && npm run build",
     "heroku-postbuild": "npm run prepublishOnly"
   },
   "lint-staged": {
@@ -88,6 +88,7 @@
     "@signalk/n2k-signalk": "^1.2.1",
     "@signalk/nmea0183-signalk": "^2.2.0",
     "@signalk/playground": "^1.0.0",
+    "@signalk/plugin-config": "^0.0.2",
     "@signalk/sailgauge": "^1.1.0",
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-schema": "1.0.3",
@@ -111,6 +112,7 @@
     "file-timestamp-stream": "0.3.0",
     "flatmap": "0.0.3",
     "geolib": "^2.0.24",
+    "get-installed-path": "^4.0.8",
     "jsonwebtoken": "^8.1.1",
     "lodash": "^4.17.4",
     "minimist": "^1.1.0",

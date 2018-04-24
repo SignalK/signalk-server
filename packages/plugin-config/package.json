@@ -1,11 +1,11 @@
 {
-  "name": "signalk-server-plugin-config",
-  "version": "0.0.1",
+  "name": "@signalk/plugin-config",
+  "version": "0.0.2",
   "description": "Configuration interface for Signal K Node server plugins",
   "main": "index.js",
   "author": "teppo.kurki@iki.fi",
   "license": "ISC",
-  "dependencies": {
+  "devDependencies": {
     "babel-core": "^6.16.0",
     "babel-loader": "^7.1.2",
     "babel-preset-es2015": "^6.16.0",
@@ -23,6 +23,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack -p",
     "build-debug": "webpack -p --devtool source-map",
+    "prepublishOnly": "npm run build",
     "watch": "webpack -d --watch"
   }
 }

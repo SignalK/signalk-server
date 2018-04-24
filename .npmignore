@@ -48,9 +48,6 @@ public/*.hot-update.json
 admin-ui/*
 !admin-ui/public/
 
-plugin-config/*
-!plugin-config/public/
-
 plugin-config-data/
 
 samples/*
@@ -67,3 +64,5 @@ letsencrypt
 docker
 
 test
+
+packages
