@@ -45,9 +45,6 @@ compilation-stats.json
 public/*.hot-update.js
 public/*.hot-update.json
 
-admin-ui/*
-!admin-ui/public/
-
 plugin-config-data/
 
 samples/*
