@@ -20,7 +20,6 @@ RUN git clone https://github.com/canboat/canboat.git && cd canboat && make bin &
 ENV PATH="/home/signalk/canboat/rel/linux-armv7l:${PATH}"
 
 COPY . .
-COPY --from=app-builder /app-build/admin-ui/public admin-ui/public
 
 EXPOSE 3000
 ENTRYPOINT bin/signalk-server
