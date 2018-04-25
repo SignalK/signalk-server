@@ -79,7 +79,7 @@
     "node": ">=8"
   },
   "dependencies": {
-    "@signalk/server-admin": "^1.0.0",
+    "@signalk/server-admin-ui": "^1.0.0",
     "@signalk/client": "^0.2.0",
     "@signalk/freeboard-sk": "^0.0.3",
     "@signalk/instrumentpanel": "^0.2.7",

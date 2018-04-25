@@ -1,5 +1,5 @@
 {
-  "name": "@signalk/server-admin",
+  "name": "@signalk/server-admin-ui",
   "version": "1.0.0",
   "description": "Signal K server admin webapp",
   "author": "Łukasz Holeczek",
