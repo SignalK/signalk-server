@@ -1,10 +1,3 @@
-FROM node:8 as app-builder
-
-WORKDIR /app-build
-
-COPY . .
-RUN npm run prepublishOnly
-
 FROM node:8
 
 RUN groupadd -r signalk && useradd --no-log-init -r -g signalk signalk
