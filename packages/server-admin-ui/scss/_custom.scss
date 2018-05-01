@@ -1,1 +1,9 @@
 // Here you can add other styles
+
+.octicon-plus::after {
+    content: "+"
+}
+
+.octicon-dash::after {
+    content: "-"
+}
