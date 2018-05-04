@@ -42,8 +42,7 @@ TimestampThrottle.prototype._transform = function (msg, encoding, done) {
     this.offsetMillis = new Date().getTime() - msgMillis
   }
   this.lastMsgMillis = msgMillis
-  var millisToCorrectSendTime =
-    msgMillis - new Date().getTime() + this.offsetMillis
+  var millisToCorrectSendTime = msgMillis - Date.now() + this.offsetMillis
   if (millisToCorrectSendTime <= 0) {
     this.push(msg)
     done()
