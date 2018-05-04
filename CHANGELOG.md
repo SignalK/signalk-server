@@ -1,5 +1,14 @@
 ## Change Log
 
+### v1.2.2 (2018/05/04 06:15 +00:00)
+- [#537](https://github.com/SignalK/signalk-server-node/pull/537) fix: deltacache is building the full tree when a path that does not exist is requested (@sbender9)
+- [#536](https://github.com/SignalK/signalk-server-node/pull/536) doc: add npm version and PRs welcome badges (@tkurki)
+- [#530](https://github.com/SignalK/signalk-server-node/pull/530) chore: use s/console.log/debug in lib/modules (@webmasterkai)
+- [#521](https://github.com/SignalK/signalk-server-node/pull/521) chore: create @signalk/plugin-config package within same git project (@webmasterkai)
+- [#520](https://github.com/SignalK/signalk-server-node/pull/520) chore: add CONTRIBUTING.md (@tkurki)
+- [#514](https://github.com/SignalK/signalk-server-node/pull/514) Add buildFetchAction() to slim admin-ui actions code. (@webmasterkai)
+- [#513](https://github.com/SignalK/signalk-server-node/pull/513) SERVERPLUGINS s/pluging/plugin (@webmasterkai)
+
 ### v1.2.1 (2018/04/13 18:49 +00:00)
 - [#508](https://github.com/SignalK/signalk-server-node/pull/508) fix: sorting of deltas from deltacache not working (@sbender9)
 - [#512](https://github.com/SignalK/signalk-server-node/pull/512) feature: use canboatjs by default in the autodetect provider (@sbender9)
