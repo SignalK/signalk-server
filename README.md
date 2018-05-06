@@ -112,6 +112,7 @@ Environment variables
 - `TCPSTREAMPORT` override the port for the Signal K Streaming (deltas) over TCP
 - `TCPSTREAMADDRESS` override the address the Signal K Stream (deltas) over TCP is listening on
 - `DISABLEPLUGINS` disable all plugins so that they can not be enabled
+- `DEFAULTENABLEDPLUGINS` a comma separated list of plugin ids that are overridden to be enabled by default if no setttings exist. lower preference than `DISABLEPLUGINS`
 - `SECURITYSTRATEGY` override the security strategy module name
 
 
