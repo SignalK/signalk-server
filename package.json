@@ -9,7 +9,8 @@
     "start": "node bin/signalk-server",
     "test": "mocha --exit",
     "precommit": "lint-staged",
-    "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js"
+    "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js",
+    "heroku-postbuild": "npm install @signalk/simple-gpx"
   },
   "lint-staged": {
     "linters": {
