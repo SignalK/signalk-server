@@ -77,7 +77,7 @@
   ],
   "license": "Apache-2.0",
   "engines": {
-    "node": ">=8"
+    "node": "8"
   },
   "dependencies": {
     "@signalk/client": "^0.2.0",
