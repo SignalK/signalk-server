@@ -1,5 +1,11 @@
 ## Change Log
 
+### v1.2.3 (2018/05/16 00:32 +00:00)
+- [#542](https://github.com/SignalK/signalk-server-node/pull/542) fix: add try guard against errors in streambundle processing (@tkurki)
+- [#541](https://github.com/SignalK/signalk-server-node/pull/541) feature: add DEFAULTENABLEDPLUGINS, tweak plugin settings reading (@tkurki)
+- [#539](https://github.com/SignalK/signalk-server-node/pull/539) fix: delta cache missing very fast delta input (@sbender9)
+- [#538](https://github.com/SignalK/signalk-server-node/pull/538) refactor: prefer Date.now() (@tkurki)
+
 ### v1.2.2 (2018/05/04 06:15 +00:00)
 - [#537](https://github.com/SignalK/signalk-server-node/pull/537) fix: deltacache is building the full tree when a path that does not exist is requested (@sbender9)
 - [#536](https://github.com/SignalK/signalk-server-node/pull/536) doc: add npm version and PRs welcome badges (@tkurki)
