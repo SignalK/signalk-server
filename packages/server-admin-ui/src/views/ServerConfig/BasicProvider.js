@@ -148,6 +148,35 @@ class LoggingInput extends Component {
   }
 }
 
+class ValidateChecksumInput extends Component {
+  constructor(props) {
+    super(props)
+    this.props.value.validateChecksum = typeof this.props.value.validateChecksum === 'undefined' || this.props.value.validateChecksum
+  }
+  render () {
+    return (
+      <FormGroup row>
+        <Col xs='3' md='2'>
+          <Label>Validate Checksum</Label>
+        </Col>
+        <Col xs='2' md='3'>
+          <Label className='switch switch-text switch-primary'>
+            <Input
+              type='checkbox'
+              name='options.validateChecksum'
+              className='switch-input'
+              onChange={event => this.props.onChange(event)}
+              checked={this.props.value.validateChecksum}
+            />
+            <span className='switch-label' data-on='Yes' data-off='No' />
+            <span className='switch-handle' />
+          </Label>
+        </Col>
+      </FormGroup>
+    )
+  }
+}
+
 class DataTypeInput extends Component {
   render () {
     return (
@@ -295,6 +324,10 @@ const NMEA0183 = props => {
       {props.value.options.type === 'udp' && (
         <PortInput value={props.value.options} onChange={props.onChange} />
       )}
+      <ValidateChecksumInput
+        value={props.value.options}
+        onChange={props.onChange}
+      />
     </div>
   )
 }
