@@ -1,5 +1,14 @@
 ## Change Log
 
+### v1.3.0 (2018/06/05 19:43 +00:00)
+- [#553](https://github.com/SignalK/signalk-server-node/pull/553) feature: set validateChecksum option from Data Providers setup page (@davidsanner)
+- [#552](https://github.com/SignalK/signalk-server-node/pull/552) feature: make webapps list multiple columns, change text order (@tkurki)
+- [#551](https://github.com/SignalK/signalk-server-node/pull/551) Remove package lock (@tkurki)
+- [#550](https://github.com/SignalK/signalk-server-node/pull/550) fix: show dual plugin/webapps as one line in the App store listings (@tkurki)
+
+### v1.2.4 (2018/05/21 20:22 +00:00)
+- [#544](https://github.com/SignalK/signalk-server-node/pull/544) fix: root url shows 'bad auth token' with expired or missing token and 'allow read only' set to false (@sbender9)
+
 ### v1.2.3 (2018/05/16 00:32 +00:00)
 - [#542](https://github.com/SignalK/signalk-server-node/pull/542) fix: add try guard against errors in streambundle processing (@tkurki)
 - [#541](https://github.com/SignalK/signalk-server-node/pull/541) feature: add DEFAULTENABLEDPLUGINS, tweak plugin settings reading (@tkurki)
