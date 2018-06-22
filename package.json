@@ -34,7 +34,8 @@
   },
   "bin": {
     "signalk-server": "./bin/signalk-server",
-    "signalk-server-setup": "./bin/signalk-server-setup"
+    "signalk-server-setup": "./bin/signalk-server-setup",
+    "signalk-generate-token": "./bin/signalk-generate-token"
   },
   "repository": {
     "type": "git",
