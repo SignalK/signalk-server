@@ -121,6 +121,14 @@ the handler must return `{ state: 'PENDING' }`. When the action is finished the 
  should call the `callback` function with the result with  `callback({ state: 'SUCCESS' })` or
 `callback({ state:'FAILURE', message:'Some Error Message' })`.
 
+### app.registerDeltaInputHandler ((delta, next) => ...)
+
+If the plugin wants to intercept all delta messages before they are processed by the server. The plugin callback should call
+`next(delta)` with a modified delta if it wants to alter the incoming delta in some way or call `next` with the original delta
+to process it normally. Not calling `next` will drop the incoming delta, it will only show in delta statistics.
+Other, non delta events produced by provider pipe elements are emitted normally.
+
+
 ## SENDING NMEA MESSAGES FROM A PLUGIN
 
 ### NMEA 2000
