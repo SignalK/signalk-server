@@ -13,6 +13,7 @@ jobs:
       script:
         - npm test
     - stage: build and push amd64 and arm32v7 images
+      if: branch = master OR tag IS present
       script:
         - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
         - docker login -u="$DOCKER_USER" -p="$DOCKER_PASS"
@@ -31,6 +32,7 @@ jobs:
         - docker build -f Dockerfile_arm32v7 -t signalk/signalk-server:linux-arm32v7-"$BRANCH" .
         - docker push signalk/signalk-server:linux-arm32v7-"$BRANCH"
     - stage: build and push multi-arch manifest
+      if: branch = master OR tag IS present
       script:
         - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
         - ./make-manifest.sh
