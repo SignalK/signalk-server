@@ -1,7 +1,7 @@
 ## Change Log
 
 ### v1.4.0 (2018/06/24 16:05 +00:00)
-- [#565](https://github.com/SignalK/signalk-server-node/pull/565) [WIP] feature: add registerDeltaInputHandler plugin hook (@tkurki)
+- [#565](https://github.com/SignalK/signalk-server-node/pull/565) feature: add registerDeltaInputHandler plugin hook (@tkurki)
 - [#560](https://github.com/SignalK/signalk-server-node/pull/560) feature: allow third party apps to integrate with security (@sbender9)
 - [#563](https://github.com/SignalK/signalk-server-node/pull/563) feature: add ability to generate a security token (@sbender9)
 - [#561](https://github.com/SignalK/signalk-server-node/pull/561) fix: plugin dependencies get package-lock'd and don't update when the plugin is updated (@sbender9)
