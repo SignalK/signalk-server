@@ -1,5 +1,9 @@
 ## Change Log
 
+### v1.4.1 (2018/07/20 00:04 +00:00)
+- [#577](https://github.com/SignalK/signalk-server-node/pull/577) fix: use npmjs.io for app store searches since npmjs.org has been broken for two weeks (@sbender9)
+- [#567](https://github.com/SignalK/signalk-server-node/pull/567) feature: add per plugin config get route (@tkurki)
+
 ### v1.4.0 (2018/06/24 16:05 +00:00)
 - [#565](https://github.com/SignalK/signalk-server-node/pull/565) feature: add registerDeltaInputHandler plugin hook (@tkurki)
 - [#560](https://github.com/SignalK/signalk-server-node/pull/560) feature: allow third party apps to integrate with security (@sbender9)
