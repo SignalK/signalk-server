@@ -203,7 +203,7 @@ Check status with;
 
 In addition the setup script will enable security by default. At the admin UI You have to use ”Login” in the upper right corner and create a account, for example user pi and password, and then logon. Security information is stored in `/home/pi/.signalk/security.json`
 
-&&& bild enable sec
+![enable_security](https://user-images.githubusercontent.com/16189982/43796658-279e7c40-9a85-11e8-98d4-a90f1e9904d1.jpeg)
 
 ## Real inputs
 
@@ -240,7 +240,7 @@ as seen on the last row the interface is attached to `ttyUSB0` so the device pat
 To set it up as input for the SignalK server go to the admin UI and ”Server => Data Providers”.
 Add a provider with settings according to the picture and click on ”Apply”
 
-&&& Bild N2K provider
+![provider_nmea2000](https://user-images.githubusercontent.com/16189982/43796707-51a88a9e-9a85-11e8-8253-3fb20a9ba3a5.jpeg)
 
 The SignalK server **must be restarted** to accept the changes so click on "Restart" in the upper right corner.
 
