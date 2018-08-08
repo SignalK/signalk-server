@@ -201,7 +201,7 @@ Check status with;
 
     $ sudo systemctl status signalk*
 
-In addition the setup script will enable security by default. At the admin UI You have to use ”Login” in the upper right corner and create a account, for example user pi and password, and then logon. Security information is stored in `/home/pi/.signalk/security.json`
+**In addition the setup script will enable security by default.** At the admin UI You have to use ”Login” in the upper right corner and create a account, for example user pi and password, and then logon. Security information is stored in `/home/pi/.signalk/security.json`
 
 ![enable_security](https://user-images.githubusercontent.com/16189982/43796658-279e7c40-9a85-11e8-98d4-a90f1e9904d1.jpeg)
 
@@ -289,6 +289,8 @@ Here You have [applications](https://signalk.org/applications_solutions.html) th
 [Backup to a bootable SD card](https://pysselilivet.blogspot.com/2017/11/rpi-clone-raspberry-boot-disk.html)
 
 [Simple AIS receiver setup](https://pysselilivet.blogspot.com/2018/06/ais-reciever-for-raspberry.html)
+
+[Temperature measure using 1-wire sensor, Node Red and plugins](https://pysselilivet.blogspot.com/2018/07/signalk-measuring-temperature.html)
 
 # Updating Your Raspberry Pi and Signal K Node Server
 
