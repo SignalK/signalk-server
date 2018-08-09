@@ -1,5 +1,9 @@
 ## Change Log
 
+### v1.4.2 (2018/08/09 18:14 +00:00)
+- [#585](https://github.com/SignalK/signalk-server-node/pull/585) fix: /sources in deltaCache full build (@tkurki)
+- [#574](https://github.com/SignalK/signalk-server-node/pull/574) fix: handle serial port buffer overrun (@tkurki)
+
 ### v1.4.1 (2018/07/20 00:04 +00:00)
 - [#577](https://github.com/SignalK/signalk-server-node/pull/577) fix: use npmjs.io for app store searches since npmjs.org has been broken for two weeks (@sbender9)
 - [#567](https://github.com/SignalK/signalk-server-node/pull/567) feature: add per plugin config get route (@tkurki)
