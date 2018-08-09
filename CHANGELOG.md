@@ -1,5 +1,8 @@
 ## Change Log
 
+### v1.4.3 (2018/08/09 18:21 +00:00)
+- [#581](https://github.com/SignalK/signalk-server-node/pull/581) feat: remove reconnect on idle in tcp provider (@tkurki)
+
 ### v1.4.2 (2018/08/09 18:14 +00:00)
 - [#585](https://github.com/SignalK/signalk-server-node/pull/585) fix: /sources in deltaCache full build (@tkurki)
 - [#574](https://github.com/SignalK/signalk-server-node/pull/574) fix: handle serial port buffer overrun (@tkurki)
