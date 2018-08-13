@@ -20,6 +20,7 @@ const CanboatJs = require('./canboatjs')
 function Simple (options) {
   Transform.call(this, { objectMode: true })
 
+  options.subOptions.providerId = options.providerId
   const dataType = options.subOptions.dataType || options.type
   if (!dataType) {
     throw new Error(`Unknown data type for ${options.type}`)
@@ -137,14 +138,16 @@ function nmea2000input (subOptions, logging) {
         device: subOptions.device,
         app: subOptions.app,
         outEvent: 'nmea2000out',
-        plainText: logging
+        plainText: logging,
+        providerId: subOptions.providerId
       })
     ]
   } else if (subOptions.type === 'canbus-canboatjs') {
     return [
       new require('./canbus')({
         canDevice: subOptions.interface,
-        app: subOptions.app
+        app: subOptions.app,
+        providerId: subOptions.providerId
       })
     ]
   } else {
@@ -163,7 +166,8 @@ function nmea2000input (subOptions, logging) {
       new execute({
         command: command,
         toChildProcess: toChildProcess,
-        app: subOptions.app
+        app: subOptions.app,
+        providerId: subOptions.providerId
       }),
       new Liner(subOptions)
     ]
@@ -195,7 +199,10 @@ function fileInput (subOptions) {
 
 function signalKInput (subOptions) {
   if (subOptions.type === 'ws' || subOptions.type === 'wss') {
-    const options = { app: subOptions.app }
+    const options = {
+      app: subOptions.app,
+      providerId: subOptions.providerId
+    }
     if (!subOptions.useDiscovery) {
       options.host = subOptions.host
       options.port = subOptions.port

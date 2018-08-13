@@ -61,7 +61,9 @@ function start (command, that) {
   that.lastStartupTime = new Date().getTime()
 
   that.childProcess.stderr.on('data', function (data) {
-    console.error(data.toString())
+    const msg = data.toString()
+    that.options.app.setProviderStatus(that.options.providerId, msg)
+    console.error(msg)
   })
 
   that.childProcess.stdout.on('data', function (data) {

@@ -8,12 +8,14 @@ const Dashboard = props => {
     deltaRate,
     numberOfAvailablePaths,
     wsClients,
-    providerStatistics
+    providerStatistics,
+    providerStatus
   } = props.serverStatistics || {
     deltaRate: 0,
     numberOfAvailablePaths: 0,
     wsClients: 0,
-    providerStatistics: {}
+    providerStatistics: {},
+    providerStatus: {}
   }
   return (
     <div className='animated fadeIn'>
@@ -23,7 +25,7 @@ const Dashboard = props => {
             <CardHeader>Stats</CardHeader>
             <CardBody>
               <Row>
-                <Col xs='12' md='8'>
+                <Col xs='12' md='6'>
                   <div className='callout callout-primary'>
                     <small className='text-muted'>
                       Total server Signal K throughput (deltas/second)
@@ -46,7 +48,7 @@ const Dashboard = props => {
                     <strong className='h4'>{wsClients}</strong>
                   </div>
                 </Col>
-                <Col xs='12' md='4'>
+                <Col xs='12' md='6'>
                   <div className='text-muted'>
                     Provider activity (deltas/second)
                   </div>
@@ -57,7 +59,7 @@ const Dashboard = props => {
                         'icon-feed text-primary' +
                         (providerStats.deltaRate > 50
                           ? ' fa-pulse-fast'
-                          : providerStats.deltaRate > 0 ? ' fa-pulse' : '')
+                         : providerStats.deltaRate > 0 ? ' fa-pulse' : '')
                       return (
                         <li key={providerId}>
                           <i className={iconClass} />
@@ -88,6 +90,27 @@ const Dashboard = props => {
               </Row>
             </CardBody>
           </Card>
+
+        <Card>
+          <CardHeader>Provider & PLugin Status</CardHeader>
+          <CardBody>
+            <Row>
+              <Col xs='12' md='12'>
+              <ul className='horizontal-bars type-2'>
+                    {Object.keys(providerStatus || {}).map(providerId => {
+                      const status = providerStatus[providerId]
+                      return (
+                        <li key={providerId}>
+                          <span className='title'>{providerId}</span>
+                          <span className='value'>{status}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+              </Col>
+            </Row>
+          </CardBody>
+        </Card>
         </div>
       )}
 

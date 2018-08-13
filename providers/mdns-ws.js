@@ -27,6 +27,7 @@ function MdnsWs (options) {
   Transform.call(this, {
     objectMode: true
   })
+  this.options = options
   this.selfHost = options.app.config.getExternalHostname() + '.'
   this.selfPort = options.app.config.getExternalPort()
   this.remoteServers = {}
@@ -61,7 +62,8 @@ MdnsWs.prototype.connect = function (discovery) {
   } else {
     var protocol = discovery.protocol || 'ws'
     url =
-      protocol + '://' +
+      protocol +
+      '://' +
       discovery.host +
       ':' +
       discovery.port +
@@ -77,6 +79,7 @@ MdnsWs.prototype.connect = function (discovery) {
     debug('Disconnected from ' + url)
   }
   var onError = function (err) {
+    that.options.app.setProviderStatus(that.options.providerId, err.message)
     debug('Error:' + err)
   }
   debug(`trying url: ${url}`)

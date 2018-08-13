@@ -90,9 +90,13 @@ SerialStream.prototype.start = function () {
     }.bind(this)
   )
 
-  this.serial.on('error', function (x) {
-    console.log(x)
-  })
+  this.serial.on(
+    'error',
+    function (x) {
+      this.options.app.setProviderStatus(this.options.providerId, x.message)
+      console.log(x)
+    }.bind(this)
+  )
   this.serial.on('close', this.start.bind(this))
 
   var that = this
