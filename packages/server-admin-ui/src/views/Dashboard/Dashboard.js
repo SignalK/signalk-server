@@ -90,7 +90,7 @@ const Dashboard = props => {
           </Card>
 
         <Card>
-          <CardHeader>Provider & PLugin Status</CardHeader>
+          <CardHeader>Provider & Plugin Status</CardHeader>
           <CardBody>
             <Row>
               <Col xs='12' md='12'>
