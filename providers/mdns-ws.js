@@ -72,14 +72,22 @@ MdnsWs.prototype.connect = function (discovery) {
   var that = this
   var onConnect = function (connection) {
     that.remoteServers[discovery.host + ':' + discovery.port] = {}
-    debug('Connected to ' + url)
+    const msg = 'Connected to ' + url
+    that.options.app.setProviderStatus(that.options.providerId, msg, 'normal')
+    debug(msg)
     connection.subscribeAll()
   }
   var onDisconnect = function () {
-    debug('Disconnected from ' + url)
+    const msg = 'Disconnected from ' + url
+    that.options.app.setProviderStatus(that.options.providerId, msg, 'error')
+    debug(msg)
   }
   var onError = function (err) {
-    that.options.app.setProviderStatus(that.options.providerId, err.message)
+    that.options.app.setProviderStatus(
+      that.options.providerId,
+      err.message,
+      'error'
+    )
     debug('Error:' + err)
   }
   debug(`trying url: ${url}`)

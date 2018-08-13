@@ -1,6 +1,6 @@
 import React from 'react'
 import { connect } from 'react-redux'
-import { Card, CardBody, CardHeader, Progress, Row, Col } from 'reactstrap'
+import { Card, CardBody, CardHeader, Progress, Row, Col, Table } from 'reactstrap'
 import '../../fa-pulse.css'
 
 const Dashboard = props => {
@@ -9,13 +9,11 @@ const Dashboard = props => {
     numberOfAvailablePaths,
     wsClients,
     providerStatistics,
-    providerStatus
   } = props.serverStatistics || {
     deltaRate: 0,
     numberOfAvailablePaths: 0,
     wsClients: 0,
     providerStatistics: {},
-    providerStatus: {}
   }
   return (
     <div className='animated fadeIn'>
@@ -96,17 +94,38 @@ const Dashboard = props => {
           <CardBody>
             <Row>
               <Col xs='12' md='12'>
-              <ul className='horizontal-bars type-2'>
-                    {Object.keys(providerStatus || {}).map(providerId => {
-                      const status = providerStatus[providerId]
-                      return (
-                        <li key={providerId}>
-                          <span className='title'>{providerId}</span>
-                          <span className='value'>{status}</span>
-                        </li>
-                      )
-                    })}
-                  </ul>
+              <Table hover responsive bordered striped size='sm'>
+                <thead>
+                  <tr>
+                  <th>Id</th>
+                  <th>Last Error</th>
+                  <th>Last Error Timestamp</th>
+                  <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+               {Object.keys(props.providerStatus || {}).map(providerId => {
+               const status = props.providerStatus[providerId]
+               let statusClass
+               if ( status.type === 'normal' ) {
+                 statusClass = 'text-success'
+               } else if ( status.type === 'warning' ) {
+                 statusClass = 'text-warning'
+               } else {
+                 statusClass = 'text-danger'
+               }
+               const lastError = status.lastError != status.message ? status.lastError : ''
+               return (
+               <tr>
+                 <td>{providerId}</td>
+                 <td><p className='text-danger'>{lastError}</p></td>
+                 <td><p className='text-danger'>{status.lastErrorTimeStamp}</p></td>
+                 <td><p className={statusClass}>{status.message}</p></td>
+               </tr>
+               )
+               })}   
+                </tbody>
+              </Table>
               </Col>
             </Row>
           </CardBody>
@@ -123,7 +142,8 @@ const Dashboard = props => {
   )
 }
 
-export default connect(({ serverStatistics, websocketStatus }) => ({
+export default connect(({ serverStatistics, websocketStatus, providerStatus }) => ({
   serverStatistics,
-  websocketStatus
+  websocketStatus,
+  providerStatus
 }))(Dashboard)

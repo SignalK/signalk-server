@@ -59,10 +59,15 @@ function start (command, that) {
     that.childProcess = require('child_process').spawn('sh', ['-c', command])
   }
   that.lastStartupTime = new Date().getTime()
+  that.options.app.setProviderStatus(
+    that.options.providerId,
+    'Started',
+    'normal'
+  )
 
   that.childProcess.stderr.on('data', function (data) {
     const msg = data.toString()
-    that.options.app.setProviderStatus(that.options.providerId, msg)
+    that.options.app.setProviderStatus(that.options.providerId, msg, 'error')
     console.error(msg)
   })
 
@@ -71,7 +76,9 @@ function start (command, that) {
   })
 
   that.childProcess.on('close', code => {
-    debug(`process exited with ${code}`)
+    const msg = `Process exited with ${code}`
+    that.options.app.setProviderStatus(that.options.providerId, msg, 'error')
+    debug(msg)
     if (
       typeof that.options.restartOnClose === 'undefined' ||
       that.options.restartOnClose
@@ -83,7 +90,13 @@ function start (command, that) {
         start(command, that)
       } else {
         var nextStart = throttleTime - sinceLast
-        debug(`waiting ${nextStart / 1000} seconds to restart`)
+        const msg = `Waiting ${nextStart / 1000} seconds to restart`
+        that.options.app.setProviderStatus(
+          that.options.providerId,
+          msg,
+          'error'
+        )
+        debug(msg)
         setTimeout(function () {
           start(command, that)
         }, nextStart)

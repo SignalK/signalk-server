@@ -85,6 +85,11 @@ SerialStream.prototype.start = function () {
   this.serial.on(
     'open',
     function () {
+      this.options.app.setProviderStatus(
+        this.options.providerId,
+        'Connected',
+        'normal'
+      )
       const parser = new SerialPort.parsers.Readline()
       this.serial.pipe(parser).pipe(this)
     }.bind(this)
@@ -93,11 +98,25 @@ SerialStream.prototype.start = function () {
   this.serial.on(
     'error',
     function (x) {
-      this.options.app.setProviderStatus(this.options.providerId, x.message)
+      this.options.app.setProviderStatus(
+        this.options.providerId,
+        x.message,
+        'error'
+      )
       console.log(x)
     }.bind(this)
   )
-  this.serial.on('close', this.start.bind(this))
+  this.serial.on(
+    'close',
+    function () {
+      this.options.app.setProviderStatus(
+        this.options.providerId,
+        'Closed, reconnecting...',
+        'error'
+      )
+      this.start.bind(this)
+    }.bind(this)
+  )
 
   var that = this
   let pendingWrites = 0
