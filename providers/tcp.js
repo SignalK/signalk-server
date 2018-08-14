@@ -55,7 +55,7 @@ TcpStream.prototype.pipe = function (pipeTo) {
     .on('connect', con => {
       const msg = `Connected to ${this.options.host} ${this.options.port}`
       this.options.app.setProviderStatus(this.options.providerId, msg, 'normal')
-      debug()
+      debug(msg)
     })
     .on('reconnect', (n, delay) => {
       const msg = `Reconnect ${this.options.host} ${
@@ -65,9 +65,7 @@ TcpStream.prototype.pipe = function (pipeTo) {
       debug(msg)
     })
     .on('disconnect', err => {
-      const msg = `Disconnected ${this.options.host} ${this.options.port}`
-      this.options.app.setProviderStatus(this.options.providerId, msg, 'error')
-      debug(msg)
+      debug(`Disconnected ${this.options.host} ${this.options.port}`)
     })
     .on('error', err => {
       this.options.app.setProviderStatus(
