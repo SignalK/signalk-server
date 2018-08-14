@@ -75,13 +75,7 @@ let store = createStore(
     }
     if (action.type === 'PROVIDERSTATUS') {
       action.data.sort( (l, r) => {
-        if ( l.type === 'error' ) {
-          return -1
-        } else if ( r.type === 'error' ) {
-          return 1
-        } else {
-          return l.id > r.id
-        }
+        return l.id > r.id
       })
       return {
         ...state,

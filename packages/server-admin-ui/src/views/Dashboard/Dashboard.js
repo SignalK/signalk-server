@@ -15,6 +15,12 @@ const Dashboard = props => {
     wsClients: 0,
     providerStatistics: {},
   }
+  const providerStatus = props.providerStatus || []
+  const errorCount = providerStatus.filter(s => s.type === 'error').length
+  let errors = ''
+  if ( errorCount > 0 ) {
+    errors = `(${errorCount} errors)`
+  }
   return (
     <div className='animated fadeIn'>
       {props.websocketStatus === 'open' && (
@@ -90,7 +96,7 @@ const Dashboard = props => {
           </Card>
 
         <Card>
-          <CardHeader>Provider & Plugin Status</CardHeader>
+          <CardHeader>Provider & Plugin Status <p className='text-danger'>{errors}</p></CardHeader>
           <CardBody>
             <Row>
               <Col xs='12' md='12'>
@@ -104,7 +110,7 @@ const Dashboard = props => {
                   </tr>
                 </thead>
                 <tbody>
-               {(props.providerStatus || []).map(status => {
+               {providerStatus.map(status => {
                let statusClass
                if ( status.type === 'normal' ) {
                  statusClass = 'text-success'
