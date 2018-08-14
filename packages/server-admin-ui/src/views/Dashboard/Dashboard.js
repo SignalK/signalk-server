@@ -104,8 +104,7 @@ const Dashboard = props => {
                   </tr>
                 </thead>
                 <tbody>
-               {Object.keys(props.providerStatus || {}).map(providerId => {
-               const status = props.providerStatus[providerId]
+               {(props.providerStatus || []).map(status => {
                let statusClass
                if ( status.type === 'normal' ) {
                  statusClass = 'text-success'
@@ -116,8 +115,8 @@ const Dashboard = props => {
                }
                const lastError = status.lastError != status.message ? status.lastError : ''
                return (
-               <tr>
-                 <td>{providerId}</td>
+                 <tr key={status.id}>
+                 <td>{status.id}</td>
                  <td><p className='text-danger'>{lastError}</p></td>
                  <td><p className='text-danger'>{status.lastErrorTimeStamp}</p></td>
                  <td><p className={statusClass}>{status.message}</p></td>
