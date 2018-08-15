@@ -112,7 +112,7 @@ const Dashboard = props => {
                 <tbody>
                {providerStatus.map(status => {
                let statusClass
-               if ( status.type === 'normal' ) {
+               if ( status.type === 'status' ) {
                  statusClass = 'text-success'
                } else if ( status.type === 'warning' ) {
                  statusClass = 'text-warning'

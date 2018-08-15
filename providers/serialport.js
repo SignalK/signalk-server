@@ -98,21 +98,16 @@ SerialStream.prototype.start = function () {
   this.serial.on(
     'error',
     function (x) {
-      this.options.app.setProviderStatus(
-        this.options.providerId,
-        x.message,
-        'error'
-      )
+      this.options.app.setProviderError(this.options.providerId, x.message)
       console.log(x)
     }.bind(this)
   )
   this.serial.on(
     'close',
     function () {
-      this.options.app.setProviderStatus(
+      this.options.app.setProviderError(
         this.options.providerId,
-        'Closed, reconnecting...',
-        'error'
+        'Closed, reconnecting...'
       )
       this.start.bind(this)
     }.bind(this)

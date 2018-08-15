@@ -73,21 +73,17 @@ MdnsWs.prototype.connect = function (discovery) {
   var onConnect = function (connection) {
     that.remoteServers[discovery.host + ':' + discovery.port] = {}
     const msg = 'Connected to ' + url
-    that.options.app.setProviderStatus(that.options.providerId, msg, 'normal')
+    that.options.app.setProviderStatus(that.options.providerId, msg)
     debug(msg)
     connection.subscribeAll()
   }
   var onDisconnect = function () {
     const msg = 'Disconnected from ' + url
-    that.options.app.setProviderStatus(that.options.providerId, msg, 'error')
+    that.options.app.setProviderError(that.options.providerId, msg)
     debug(msg)
   }
   var onError = function (err) {
-    that.options.app.setProviderStatus(
-      that.options.providerId,
-      err.message,
-      'error'
-    )
+    that.options.app.setProviderError(that.options.providerId, err.message)
     debug('Error:' + err)
   }
   debug(`trying url: ${url}`)
