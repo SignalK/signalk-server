@@ -16,7 +16,7 @@ Plugins
 The module must export a single `function(app)` that must return an object with functions
 - function `start(configuration, restartPlugin)`
 - function `stop()`
-- (optional) function `statusMessage()`
+- (optional, depricated) function `statusMessage()`
 - property or function `schema`
 - (optional) property or function  `uiSchema`.
 
@@ -24,6 +24,7 @@ The schema and uiSchema values can be functions so that the values can be genera
 
 The schema value should be the structure of the plugin's configuration data as [JSON Schema](http://json-schema.org/). The plugin can call `restartPlugin()` to restart itself. The uiSchema value is used by the user interface to provide information on how the configuration form should rendered. [The uiSchema object](https://github.com/mozilla-services/react-jsonschema-form#the-uischema-object)
 
+(depricated, see setProviderStatus and setProviderError below)
 `statusMessage` should return a shortish textual message describing the current status of the plugin, to be displayed in the plugin configuration UI.
 
 See [Ais Reporter](https://github.com/SignalK/aisreporter/issues) for an example.
@@ -128,6 +129,13 @@ If the plugin wants to intercept all delta messages before they are processed by
 to process it normally. Not calling `next` will drop the incoming delta, it will only show in delta statistics.
 Other, non delta events produced by provider pipe elements are emitted normally.
 
+### app.setProviderStatus(msg)
+
+msg should be a shortish textual message describing the current status of the plugin, to be displayed in the plugin configuration UI and the Dashboard.
+
+### app.setProviderError(msg)
+
+msg should be a shortish textual message describing an error from the plugin, to be displayed in the plugin configuration UI and the Dashboard.
 
 ## SENDING NMEA MESSAGES FROM A PLUGIN
 
