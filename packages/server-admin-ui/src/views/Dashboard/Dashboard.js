@@ -105,7 +105,6 @@ const Dashboard = props => {
                   <tr>
                   <th>Id</th>
                   <th>Last Error</th>
-                  <th>Last Error Timestamp</th>
                   <th>Status</th>
                   </tr>
                 </thead>
@@ -119,12 +118,11 @@ const Dashboard = props => {
                } else {
                  statusClass = 'text-danger'
                }
-               const lastError = status.lastError != status.message ? status.lastError : ''
+               const lastError = status.lastError && status.lastError != status.message ? status.lastErrorTimeStamp + ': ' + status.lastError : ''
                return (
                  <tr key={status.id}>
                  <td>{status.id}</td>
                  <td><p className='text-danger'>{lastError}</p></td>
-                 <td><p className='text-danger'>{status.lastErrorTimeStamp}</p></td>
                  <td><p className={statusClass}>{status.message}</p></td>
                </tr>
                )
