@@ -87,8 +87,7 @@ SerialStream.prototype.start = function () {
     function () {
       this.options.app.setProviderStatus(
         this.options.providerId,
-        'Connected',
-        'normal'
+        `Connected to ${this.options.device}`
       )
       const parser = new SerialPort.parsers.Readline()
       this.serial.pipe(parser).pipe(this)
