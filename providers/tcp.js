@@ -53,19 +53,22 @@ TcpStream.prototype.pipe = function (pipeTo) {
     })
   })
     .on('connect', con => {
-      debug(`Connect ${this.options.host} ${this.options.port}`)
+      const msg = `Connected to ${this.options.host} ${this.options.port}`
+      this.options.app.setProviderStatus(this.options.providerId, msg)
+      debug(msg)
     })
     .on('reconnect', (n, delay) => {
-      debug(
-        `Reconnect ${this.options.host} ${
-          this.options.port
-        } retry ${n} delay ${delay}`
-      )
+      const msg = `Reconnect ${this.options.host} ${
+        this.options.port
+      } retry ${n} delay ${delay}`
+      this.options.app.setProviderError(this.options.providerId, msg)
+      debug(msg)
     })
     .on('disconnect', err => {
-      debug(`Disconnect ${this.options.host} ${this.options.port}`)
+      debug(`Disconnected ${this.options.host} ${this.options.port}`)
     })
     .on('error', err => {
+      this.options.app.setProviderError(this.options.providerId, err.message)
       console.error('TcpProvider:' + err.message)
     })
     .connect(this.options)

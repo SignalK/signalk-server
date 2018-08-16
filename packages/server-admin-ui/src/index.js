@@ -73,6 +73,15 @@ let store = createStore(
         serverStatistics: action.data
       }
     }
+    if (action.type === 'PROVIDERSTATUS') {
+      action.data.sort( (l, r) => {
+        return l.id > r.id
+      })
+      return {
+        ...state,
+        providerStatus: action.data
+      }
+    }
     if (action.type === 'RECEIVE_LOGIN_STATUS') {
       return {
         ...state,
