@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const spawn = require('child_process').spawn
+const spawn = require('child_process').spawnSync
 const clear = require('clear')
 const figlet = require('figlet')
 const chalk = require('chalk')
@@ -16,10 +16,10 @@ const defaultsFile = 'defaults.json'
 const startupFile = 'signalk-server'
 const packageFile = 'package.json'
 
-//FIXME
-const hasSystemctl = true //spawn('sh', ['-c', 'which systemctl'])
-const euid = 0
-const thisDirName = '/tmp/crap'
+const hasSystemctl = spawn('sh', ['-c', 'which systemctl']).status === 0
+const euid = process.geteuid()
+const thisDirName = __dirname
+const systemdLocation = '/etc/systemd/system'
 
 clear()
 console.log(
@@ -28,6 +28,8 @@ console.log(
   )
 )
 
+//console.log(JSON.stringify(process.env, null, 2))
+//console.log(hasSystemctl)
 
 if ( euid > 0 ) {
   if ( hasSystemctl ) {
@@ -52,9 +54,22 @@ if ( euid > 0 ) {
     promptForConfigDir(`${process.env.HOME}/.signalk`)
   }
 } else {
+
+  if (!process.env.SUDO_USER || !process.env.SUDO_UID || !process.env.SUDO_GID)
+  {
+    console.log('unable to determine the sudo user')
+    process.exit(1)
+  }
+  
   console.log(`\nYOU ARE LOGGED IN AS ${process.env.SUDO_USER} AND THE SERVER WILL BE STARTED AS THIS USER\n`)
-  //promptForConfigDir(`${process.env.SUDO_USER}/.signalk`)
-  promptForConfigDir(`${process.env.HOME}/.signalk`)
+
+  let res = spawn('sh', ['-c', `eval echo ~${process.env.SUDO_USER}`])
+  if ( res.status != 0  || (res.output && res.output.length < 2) ) {
+    console.log('unable to determine effecive user home directory')
+    process.exit(1)
+  } 
+  let dir = res.output[1].toString().trim()
+  promptForConfigDir(`${dir}/.signalk`)
 }
 
 function promptForConfigDir(defaultLocation) {
@@ -175,6 +190,8 @@ function promptForVesselName(configDirectory, updateExisting) {
       default: false
     })
     inquirer.prompt(questions).then(answers => {
+      let port = answers.usePort80 ? 80 : 3000
+      let enableSSL = answers.enableSSL
       
       let tasks = [
         {
@@ -196,7 +213,7 @@ function promptForVesselName(configDirectory, updateExisting) {
         {
           title: `Creating your server settings at ${settingsLocation}`,
           task: () => {
-            settings.ssl = answers.enableSSL
+            settings.ssl = enableSSL
             fs.writeFileSync(settingsLocation, JSON.stringify(settings, null, 2))
           }
         },
@@ -212,17 +229,90 @@ function promptForVesselName(configDirectory, updateExisting) {
             if ( !updateExisting || !fs.existsSync(startupLocation) ) {
               let script = `#!/bin/sh\n${thisDirName}/signalk-server -c ${configDirectory} \$*`
               fs.writeFileSync(startupLocation, script)
-              //FIXME: make executable
+              fs.chmodSync(startupLocation, '755')
             }
           }
         }
+        
       ]
 
-      if ( euid == 0 && hasSystemctl ) {
+      if ( euid == 0 ) {
         tasks.push({
-          title: `Setting up your server to start Signal K when booting up `,
-          task: () => {}
+          title: `Updating file ownership and permissions`,
+          task: () => {
+            [startupLocation,
+             packageLocation,
+             defaultsLocation,
+             settingsLocation,
+             configDirectory].forEach(file => {
+               let stat = fs.statSync(file)
+               let mode = file === startupLocation || stat.isDirectory() ? '755' : '644'
+               
+               fs.chownSync(file,
+                            Number(process.env.SUDO_UID),
+                            Number(process.env.SUDO_GID))
+               fs.chmodSync(file, mode)
+             })
+          }
         })
+        if ( hasSystemctl ) {
+          tasks.push({
+            title: `Setting up your server to start Signal K when booting up `,
+            task: () => {
+              let primaryPort, secondaryPort
+              if ( enableSSL ) {
+                if ( port == 80 ) {
+                  primaryPort = 443
+                  secondaryPort = 80
+                } else {
+                  primaryPort = 3443
+                  secondaryPort = 3000
+                }
+              } else {
+                primaryPort = port
+              }
+              
+              let serverd = `[Service]
+ExecStart=${startupLocation}
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+WorkingDirectory=${configDirectory}
+User=${process.env.SUDO_USER}
+Environment=EXTERNALPORT=${primaryPort}
+[Install]
+WantedBy=multi-user.target
+`
+              let socketd = `[Socket]
+ListenStream=${primaryPort}
+${typeof secondaryPort != 'undefined' ? 'ListenStream=' + secondaryPort :''}
+
+[Install]
+WantedBy=sockets.target`
+
+              fs.writeFileSync(path.join(systemdLocation, 'signalk.service'),
+                               serverd)
+              fs.writeFileSync(path.join(systemdLocation, 'signalk.socket'),
+                               socketd)
+            }
+          })
+          let commands = ['systemctl daemon-reload',
+                          'systemctl enable signalk.service',
+                          'systemctl enable signalk.socket',
+                          'systemctl stop signalk.service',
+                          'systemctl restart signalk.socket',
+                          'systemctl restart signalk.service']
+          commands.forEach(command => {
+             tasks.push({
+               title: `Running '${command}'`,
+               task: () => {
+                 spawn('sh', ['-c', command])
+               }
+             })
+          })
+          
+          
+        }
       }
 
       new Listr(tasks).run()
