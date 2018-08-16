@@ -1,5 +1,15 @@
 ## Change Log
 
+### v1.5.0 (2018/08/16 14:49 +00:00)
+- [#591](https://github.com/SignalK/signalk-server-node/pull/591) feature: show the status of providers and plugins on the dashboard (@sbender9)
+- [#590](https://github.com/SignalK/signalk-server-node/pull/590) fix: source does not include the username for deltas coming through ws (@sbender9)
+- [#575](https://github.com/SignalK/signalk-server-node/pull/575) refactor: don't redirect to the login page on permission denied (@sbender9)
+- [#576](https://github.com/SignalK/signalk-server-node/pull/576) feature: add support for http/2 (@sbender9)
+- [#578](https://github.com/SignalK/signalk-server-node/pull/578) Update ws to the latest version 🚀 (@greenkeeper[bot])
+- [#573](https://github.com/SignalK/signalk-server-node/pull/573) Update file-timestamp-stream to the latest version 🚀 (@greenkeeper[bot])
+- [#588](https://github.com/SignalK/signalk-server-node/pull/588) Update @signalk/instrumentpanel to the latest version 🚀 (@greenkeeper[bot])
+- [#583](https://github.com/SignalK/signalk-server-node/pull/583)  Update of raspberry_pi_installation (@MatsA)
+
 ### v1.4.3 (2018/08/09 18:21 +00:00)
 - [#581](https://github.com/SignalK/signalk-server-node/pull/581) feat: remove reconnect on idle in tcp provider (@tkurki)
 
