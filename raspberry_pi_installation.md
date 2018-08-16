@@ -178,6 +178,8 @@ To generate your own vessel settings file and configure your Pi to start the ser
 
 and follow the prompts. If You are following the defaults and are logged on as ”pi” the boat info will be stored in `/home/pi/.signalk/defaults.json` and the settings in `/home/pi/.signalk/settings.json`
 
+You can re-run this command at any time in the future to change the settings.
+
 These files can be edited via the admin UI or directly looking at the example settings. 
 
 **This script will also set up Node server to run automatically in the background as a daemon, [systemd](https://wiki.debian.org/systemd/), when the system boots.** You will no longer be able to launch it manually, because the automatically started instance will occupy the ports where the services are available. You should do this once you are happy with the way the server works.
