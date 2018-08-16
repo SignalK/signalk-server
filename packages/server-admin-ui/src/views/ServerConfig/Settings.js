@@ -100,6 +100,7 @@ class Settings extends Component {
                 encType='multipart/form-data'
                 className='form-horizontal'
               >
+              {!this.state.runFromSystemd && (
                 <FormGroup row>
                   <Col md='2'>
                     <Label htmlFor='port'>HTTP Port</Label>
@@ -119,7 +120,17 @@ class Settings extends Component {
                     </FormText>
                   </Col>
                 </FormGroup>
-                {this.state.options.ssl && (
+                )}
+                {this.state.runFromSystemd && (
+                  <FormGroup row>
+                  <Col xs='12' md={fieldColWidthMd}>
+                  <FormText>
+                    The server was started by systemd, run signalk-server-setup to change ports and ssl configuration.
+                    </FormText>
+                  </Col>
+                  </FormGroup>
+                )}
+                {this.state.options.ssl && !this.state.runFromSystemd && (
                   <FormGroup row>
                     <Col md='2'>
                       <Label htmlFor='sslport'>SSL Port</Label>
