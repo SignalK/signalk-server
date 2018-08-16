@@ -1,260 +1,232 @@
-#!/bin/bash
+#!/usr/bin/env node
 
-sysddir="/etc/systemd/system"
-systemd="$sysddir/signalk.service"
-socket="$sysddir/signalk.socket"
+const spawn = require('child_process').spawn
+const clear = require('clear')
+const figlet = require('figlet')
+const chalk = require('chalk')
+const inquirer = require('inquirer')
+const fs = require('fs')
+const path = require('path')
+const _ = require('lodash')
+const Listr = require('listr');
+const uuidv4 = require('uuid/v4')
 
-which systemctl > /dev/null 2>&1
-noSystemCtl=$?
+const settingsFile = 'settings.json'
+const defaultsFile = 'defaults.json'
+const startupFile = 'signalk-server'
+const packageFile = 'package.json'
 
-which dialog > /dev/null 2>&1
-noDialog=$?
+//FIXME
+const hasSystemctl = true //spawn('sh', ['-c', 'which systemctl'])
+const euid = 0
+const thisDirName = '/tmp/crap'
 
-backtitle="Signal K Node Server Setup"
-aspect=20
+clear()
+console.log(
+  chalk.blue(
+    figlet.textSync('Signal K', { horizontalLayout: 'full' })
+  )
+)
 
-tempfile=`(tempfile) 2>/dev/null` || tempfile=/tmp/test$$
-trap "rm -f $tempfile" 0 $SIG_NONE $SIG_HUP $SIG_INT $SIG_QUIT $SIG_TERM
 
-function askYesNo()
-{
-  msg=$1
-  default=$2
-  if [ $noDialog == 1 ]; then
-    if [ "$default" == 1 ]; then prompt="[Y/n]"; else prompt="[y/N]"; fi
-    echo -ne "$msg? $prompt "
-    read ans
-    echo
-    case $ans in
-      y|Y)
-        return 1;;
-      n|N)
-        return 0;;
-      *)
-        return $default
-    esac
-  else
-    defaultno=""
-    if [ $default == 0 ]; then defaultno="--defaultno"; fi
-    dialog --backtitle "$backtitle" --aspect $aspect $defaultno --yesno "$msg?" 0 0
-    if [ $? == 0 ]; then return 1; else return 0; fi
-  fi
+if ( euid > 0 ) {
+  if ( hasSystemctl ) {
+    console.log()
+    console.log('Please run as root if you want this server configuration to run at every startup, type: "sudo signalk-server-setup"')
+    console.log()
+
+    inquirer.prompt([
+      {
+        name: 'notAsRoot',
+        type: 'confirm',
+        message: 'Are you sure you want to continue',
+        default: false
+      }]).then(answers => {
+        if ( answers.notAsRoot == false ) {
+          process.exit(1)
+        } else {
+          promptForConfigDir(`${process.env.HOME}/.signalk`)
+        }
+      })
+  } else {
+    promptForConfigDir(`${process.env.HOME}/.signalk`)
+  }
+} else {
+  console.log(`\nYOU ARE LOGGED IN AS ${process.env.SUDO_USER} AND THE SERVER WILL BE STARTED AS THIS USER\n`)
+  //promptForConfigDir(`${process.env.SUDO_USER}/.signalk`)
+  promptForConfigDir(`${process.env.HOME}/.signalk`)
 }
 
-function textInput()
-{
-  msg=$1
-  default=$2
-  if [ $noDialog == 1 ]; then
-    defaultstr=""
-    if [ "$default" != "" ]; then defaultstr="[$default]"; fi
-    echo -ne "$msg $defaultstr: "
-    read ans
-    if [ "$ans" == "" ]; then ans=$default; fi
-    eval "$3='$ans'"
-    echo
-    res=0
-  else
-    dialog --backtitle "$backtitle" --aspect $aspect --inputbox "$msg" 0 0 $default 2> $tempfile
-    res=$?
-    text=`cat $tempfile`
-    eval "$3='$text'"
-  fi
-  if [ $res != 0 ]; then exit 1; fi
+function promptForConfigDir(defaultLocation) {
+  inquirer.prompt([
+    {
+      name: 'configDirectory',
+      type: 'input',
+      message: 'Enter the location to store server configuration:',
+      default: defaultLocation,
+      validate: (input) => {
+        if ( input.length > 0 ) {
+          return true
+        } else {
+          return 'Please enter the location to store server configuration.'
+        }
+      }
+    }
+  ]).then(answers => {
+    let configDirectory = answers.configDirectory
+    if ( fs.existsSync(path.join(configDirectory, settingsFile)) ) {
+      inquirer.prompt([
+        {
+          name: 'updateExisting',
+          type: 'list',
+          message: 'Do you want to update the existing configuration or start from scratch',
+          choices: ['Update', 'Start from scratch'],
+        }]).then(answers => {
+          promptForVesselName(configDirectory,
+                              answers.updateExisting == 'Update')
+        })
+    } else {
+      promptForVesselName(configDirectory, false)
+    }
+  })
 }
 
-function message()
-{
-  msg=$1
-  if [ $noDialog == 1 ]; then
-    echo -e "$msg\n"
-  else
-    dialog --backtitle "$backtitle" --aspect $aspect --msgbox "$msg" 0 0
-  fi
-}
+function promptForVesselName(configDirectory, updateExisting) {
 
-if [ $EUID -gt 0 ]; then
-  if [  $noSystemCtl == 0 ];then
-    askYesNo "Please run as root if you want this server configuration to run at every startup, type: \n\"sudo $0\"\n\nAre you sure you want to continue" 0
-    
-    if [ $? == 0 ]; then exit 1; fi
- 
-  fi
-  defaultConfigLocation="$HOME/.signalk"
-else
-  message "YOU ARE LOGGED IN AS $SUDO_USER AND THE SERVER WILL BE STARTED AS THIS USER"
-  defaultConfigLocation=`eval echo ~$SUDO_USER`/.signalk
-fi
-
-
-textInput "Enter the location to store server configuration" $defaultConfigLocation configDirectory
-
-if [ "$configDirectory" == "" ]; then
-  configDirectory=$defaultConfigLocation
-fi
-
-if [ -d $configDirectory ]; then
-  askYesNo "AN EXISTING CONFIGURAION WAS FOUND\n\nARE YOU SURE YOU WANT TO DELETE THE EXISTING CONFIGURATION AND SET UP A NEW STARTUP SERVICE" 0
-  if [ $? == 0 ]; then exit 1; fi
-fi
-
-textInput "Enter your vessel name" "" vesselName
-vesselName=${vesselName// /_}
-textInput "Enter your mmsi if you have one" "" vesselMMSI
-
-if [ $EUID == 0 ]; then
-  askYesNo "Signal K default port is 3000\nPort 80 does not require \":3000\" in browser and app interfaces\n\nDo you want Signal K to change to port 80"
-
-  if [ $? == 0 ]; then
-    port=3000
-    url="http://localhost:3000"
-  else
-    port=80
-    url="http://localhost"
-  fi
-else
-  url="http://localhost:3000"
-  port=3000
-fi
-
-askYesNo "Do you want to enable SSL" 1
-if [ $? == 0 ]; then
-  ssl="false"
-else
-    ssl="true"
-fi
-
-if [ $ssl == "true" ]; then
-  if [ $port == 80 ]; then
-    primaryPort=443
-    secondaryPort=80
-  else
-    primaryPort=3443
-    secondaryPort=3000
-  fi
-else
-  primaryPort=$port
-fi
-
-if [ "$vesselMMSI" == "" ]; then
-  UUIDFile="$configDirectory/UUID"
-  if [ -f $UUIDFile ]
-  then
-    UUID=$( cat $UUIDFile)
-    echo "UUID=$UUID"
-  else
-    UUID=$( cat /proc/sys/kernel/random/uuid)
-    echo $UUID > $UUIDFile
-    echo "UUID generated: $UUID"
-  fi
-  vesselID="\"uuid\": \"urn:mrn:signalk:uuid:$UUID\""
-else
-  vesselID="\"mmsi\": \"$vesselMMSI\""
-fi
-
-askYesNo "You have chosen the following settings:\n\nConfiguration Directory: $configDirectory\nVessel Name: $vesselName\nMMSI: $vesselMMSI\nPort: $port\nSSL: $ssl\n\nAre you sure you want to continue" 1
-if [ $? == 0 ]; then exit 1; fi
-
-if [ ! -d "$configDirectory" ]; then
-  mkdir -p "$configDirectory"
-fi
-
-vesselBash="$configDirectory/signalk-server"
-vesselJson="$configDirectory/settings.json"
-vesselDefaults="$configDirectory/defaults.json"
-packageJson="$configDirectory/package.json"
-
-message "Creating your server settings at $vesselJson"
-thisDirName="$( cd "$( dirname "$0" )" && pwd )"
-cat > $vesselBash <<bashScript
-#!/bin/sh
-${thisDirName}/signalk-server -c $configDirectory \$*
-bashScript
-
-chmod 755 $vesselBash
-
-message "Creating your vessel settings at $vesselDefaults"
-cat > $vesselDefaults <<EOF
-{
-  "vessels": {
-    "self": {
-      "name": "$vesselName",
-      $vesselID
+  let settingsLocation = path.join(configDirectory, settingsFile)
+  let defaultsLocation = path.join(configDirectory, defaultsFile)
+  let startupLocation = path.join(configDirectory, startupFile)
+  let packageLocation = path.join(configDirectory, packageFile)
+  let settings = {
+    "interfaces": {},
+    "ssl": false,
+    "pipedProviders": [],
+    "security": {
+      "strategy": "./tokensecurity"
     }
   }
-}
-EOF
-
-message "Creating startup script at $vesselBash"
-
-cat > $vesselJson <<jsonfile
-{
-  "interfaces": {},
-
-  "ssl": $ssl,
-
-  "pipedProviders": [],
-
-  "security": {
-    "strategy": "@signalk/sk-simple-token-security"
+  let defaults = {
+    "vessels": {
+      "self": {
+      }
+    }
   }
-}
-jsonfile
-
-cat > $packageJson <<EOF
-{
-  "name": "signalk-server-config",
-  "version": "0.0.1",
-  "description":
+  let packageJson = {
+    "name": "signalk-server-config",
+    "version": "0.0.1",
+    "description":
     "This file is here to track your plugin and webapp installs.",
-  "repository": {},
-  "license": "Apache-2.0"
+    "repository": {},
+    "license": "Apache-2.0"
+  }
+
+  if ( !fs.existsSync(configDirectory) ) {
+    fs.mkdirSync(configDirectory)
+  }
+
+  if ( updateExisting ) {
+    settings = JSON.parse(fs.readFileSync(settingsLocation))
+    if ( fs.existsSync(defaultsLocation) ) {
+      defaults = JSON.parse(fs.readFileSync(defaultsLocation))
+    }
+    if ( fs.existsSync(packageLocation) ) {
+      packageJson = JSON.parse(fs.readFileSync(packageLocation))
+    }
+  }
+
+  inquirer.prompt([
+    {
+      name: 'vesselName',
+      type: 'input',
+      message: 'Enter your vessel name:',
+      default: _.get(defaults, 'vessels.self.name'),
+      validate: (input) => {
+        if ( input.length > 0 ) {
+          return true
+        } else {
+          return 'Please enter your vessel name.'
+        }
+      }
+    },
+    {
+      name: 'mmsi',
+      type: 'input',
+      message: 'Enter your mmsi if you have one:',
+      default: _.get(defaults, 'vessels.self.mmsi')
+    }
+  ]).then(answers => {
+    let mmsi = answers.mmsi
+    let vesselName = answers.vesselName
+
+    var questions = []
+    if ( euid == 0 ) {
+      console.log("\nThe Signal K default port is 3000\nPort 80 does not require \":3000\" in the browser and app interfaces\n")
+      questions.push({
+        name: 'usePort80',
+        type: 'confirm',
+        message: 'Do you want to use port 80?',
+        default: false
+      })
+    }
+    questions.push({
+      name: 'enableSSL',
+      type: 'confirm',
+      message: 'Do you want to enable SSL?',
+      default: false
+    })
+    inquirer.prompt(questions).then(answers => {
+      
+      let tasks = [
+        {
+          title: `Creating your server defaults at ${defaultsLocation}`,
+          task: () => {
+            if ( !mmsi || mmsi.length == 0 ) {
+              if ( !defaults.vessels.self.uuid ) {
+                defaults.vessels.self.uuid = 'urn:mrn:signalk:uuid:' + uuidv4()
+              }
+              delete defaults.vessels.self.mmsi
+            } else {
+              defaults.vessels.self.mmsi = mmsi
+              delete defaults.vessels.self.uuid
+            }
+            defaults.vessels.self.name = vesselName
+            fs.writeFileSync(defaultsLocation, JSON.stringify(defaults, null, 2))
+          }
+        },
+        {
+          title: `Creating your server settings at ${settingsLocation}`,
+          task: () => {
+            settings.ssl = answers.enableSSL
+            fs.writeFileSync(settingsLocation, JSON.stringify(settings, null, 2))
+          }
+        },
+        {
+          title: 'Creating package.json',
+          task: () => {
+            fs.writeFileSync(packageLocation, JSON.stringify(packageJson, null, 2))
+          }
+        },
+        {
+          title: `Creating your server startup script at ${startupLocation}`,
+          task: () => {
+            if ( !updateExisting || !fs.existsSync(startupLocation) ) {
+              let script = `#!/bin/sh\n${thisDirName}/signalk-server -c ${configDirectory} \$*`
+              fs.writeFileSync(startupLocation, script)
+              //FIXME: make executable
+            }
+          }
+        }
+      ]
+
+      if ( euid == 0 && hasSystemctl ) {
+        tasks.push({
+          title: `Setting up your server to start Signal K when booting up `,
+          task: () => {}
+        })
+      }
+
+      new Listr(tasks).run()
+    })
+  })
+  
 }
-EOF
-
-if [ $EUID == 0 -a $noSystemCtl == 0 ]; then
-    group_full=$(getent group $SUDO_GID)
-    group="$( cut -d ':' -f 1 <<< "$group_full" )"
-    for f in "$vesselJson $vesselDefaults $vesselBash $configDirectory $packageJson"
-    do
-      chown $SUDO_USER $f
-      chgrp $group $f 
-    done
-
-    cat > $systemd <<systemdfile
-[Service]
-ExecStart=$vesselBash
-Restart=always
-StandardOutput=syslog
-StandardError=syslog
-WorkingDirectory=$configDirectory
-User=$SUDO_USER
-Environment=EXTERNALPORT=$primaryPort
-[Install]
-WantedBy=multi-user.target
-systemdfile
-
-    chmod 755 $systemd
-
-    if [ "$secondaryPort" != "" ]; then
-        secondListen="ListenStream=$secondaryPort"
-    fi
-
-    cat > $socket <<socket
-[Socket]
-ListenStream=$primaryPort
-$secondListen
-
-[Install]
-WantedBy=sockets.target
-socket
-
-    chmod 755 $socket
-
-    message "A reboot is recommended"
-
-    systemctl daemon-reload
-    systemctl enable signalk.service
-    systemctl enable signalk.socket
-fi
-
