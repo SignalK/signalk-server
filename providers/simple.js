@@ -201,7 +201,8 @@ function signalKInput (subOptions) {
   if (subOptions.type === 'ws' || subOptions.type === 'wss') {
     const options = {
       app: subOptions.app,
-      providerId: subOptions.providerId
+      providerId: subOptions.providerId,
+      ignoreServers: subOptions.ignoreServers
     }
     if (!subOptions.useDiscovery) {
       options.host = subOptions.host

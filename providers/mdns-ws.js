@@ -33,6 +33,11 @@ function MdnsWs (options) {
   this.selfPort = options.app.config.getExternalPort()
   this.remoteServers = {}
   this.remoteServers[this.selfHost + ':' + this.selfPort] = {}
+  if (options.ignoreServers) {
+    options.ignoreServers.forEach(s => {
+      this.remoteServers[s] = {}
+    })
+  }
   if (options.host && options.port) {
     this.connect(options)
   } else {
