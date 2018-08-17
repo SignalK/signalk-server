@@ -22,6 +22,7 @@ var debug = require('debug')('signalk-server:providers:mdns-ws')
 
 var WebSocket = require('ws')
 var _object = require('lodash/object')
+var _keys = require('lodash/keys')
 
 function MdnsWs (options) {
   Transform.call(this, {
@@ -37,12 +38,24 @@ function MdnsWs (options) {
   } else {
     this.signalkClient = new SignalK.Client()
     this.signalkClient.on('discovery', this.connect.bind(this))
+    this.signalkClient.on('discoveryError', info => {
+      let providerId = `${options.providerId}.${info.host}:${info.port}`
+      options.app.setProviderError(providerId, info.error.message)
+    })
     debug('Starting discovery')
     this.signalkClient.startDiscovery()
   }
 }
 
 require('util').inherits(MdnsWs, Transform)
+
+function setProviderStatus (that, providerId, message, isError) {
+  if (!isError) {
+    that.options.app.setProviderStatus(providerId, message)
+  } else {
+    that.options.app.setProviderError(providerId, message)
+  }
+}
 
 MdnsWs.prototype.connect = function (discovery) {
   if (this.remoteServers[discovery.host + ':' + discovery.port]) {
@@ -72,13 +85,28 @@ MdnsWs.prototype.connect = function (discovery) {
   var that = this
   var onError, onDisconnect, onConnect, onClose
 
+  let providerId = `${that.options.providerId}.${discovery.host}:${
+    discovery.port
+  }`
+
+  var onData = function (data) {
+    if (data && data.updates) {
+      data.updates.forEach(function (update) {
+        update['$source'] = providerId
+      })
+    }
+
+    data.overrideProvider = providerId
+    that.push(data)
+  }
+
   var start = () => {
     const msg = `Trying url: ${url}`
     debug(msg)
-    that.options.app.setProviderStatus(that.options.providerId, msg)
+    setProviderStatus(that, providerId, msg, false)
     signalkClient.connectDeltaByUrl(
       url,
-      that.push.bind(this),
+      onData,
       onConnect,
       onDisconnect,
       onError,
@@ -88,27 +116,27 @@ MdnsWs.prototype.connect = function (discovery) {
   onConnect = function (connection) {
     that.remoteServers[discovery.host + ':' + discovery.port] = {}
     const msg = 'Connected to ' + url
-    that.options.app.setProviderStatus(that.options.providerId, msg)
+    setProviderStatus(that, providerId, msg, false)
     debug(msg)
     connection.subscribeAll()
   }
   onDisconnect = function () {
     const msg = 'Disconnected from ' + url
-    that.options.app.setProviderError(that.options.providerId, msg)
+    setProviderStatus(that, providerId, msg, true)
     debug(msg)
   }
   onClose = function () {
     const msg = 'Connection closed from ' + url
-    that.options.app.setProviderError(that.options.providerId, msg)
+    setProviderStatus(that, providerId, msg, true)
     debug(msg)
-    if (!discovery.discoveryResponse) {
+    if (that.options.host && that.options.port) {
       setTimeout(start, 5000)
     } else {
       delete that.remoteServers[discovery.host + ':' + discovery.port]
     }
   }
   onError = function (err) {
-    that.options.app.setProviderError(that.options.providerId, err.message)
+    setProviderStatus(that, providerId, err.message, true)
     debug('Error:' + err)
   }
   start()
