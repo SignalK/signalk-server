@@ -70,30 +70,48 @@ MdnsWs.prototype.connect = function (discovery) {
       '/signalk/v1/stream?subscribe=all'
   }
   var that = this
-  var onConnect = function (connection) {
+  var onError, onDisconnect, onConnect, onClose
+
+  var start = () => {
+    const msg = `Trying url: ${url}`
+    debug(msg)
+    that.options.app.setProviderStatus(that.options.providerId, msg)
+    signalkClient.connectDeltaByUrl(
+      url,
+      that.push.bind(this),
+      onConnect,
+      onDisconnect,
+      onError,
+      onClose
+    )
+  }
+  onConnect = function (connection) {
     that.remoteServers[discovery.host + ':' + discovery.port] = {}
     const msg = 'Connected to ' + url
     that.options.app.setProviderStatus(that.options.providerId, msg)
     debug(msg)
     connection.subscribeAll()
   }
-  var onDisconnect = function () {
+  onDisconnect = function () {
     const msg = 'Disconnected from ' + url
     that.options.app.setProviderError(that.options.providerId, msg)
     debug(msg)
   }
-  var onError = function (err) {
+  onClose = function () {
+    const msg = 'Connection closed from ' + url
+    that.options.app.setProviderError(that.options.providerId, msg)
+    debug(msg)
+    if (!discovery.discoveryResponse) {
+      setTimeout(start, 5000)
+    } else {
+      delete that.remoteServers[discovery.host + ':' + discovery.port]
+    }
+  }
+  onError = function (err) {
     that.options.app.setProviderError(that.options.providerId, err.message)
     debug('Error:' + err)
   }
-  debug(`trying url: ${url}`)
-  signalkClient.connectDeltaByUrl(
-    url,
-    this.push.bind(this),
-    onConnect,
-    onDisconnect,
-    onError
-  )
+  start()
 }
 
 MdnsWs.prototype._transform = function (chunk, encoding, done) {}
