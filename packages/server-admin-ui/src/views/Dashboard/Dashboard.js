@@ -1,6 +1,6 @@
 import React from 'react'
 import { connect } from 'react-redux'
-import { Card, CardBody, CardHeader, Progress, Row, Col } from 'reactstrap'
+import { Card, CardBody, CardHeader, Progress, Row, Col, Table } from 'reactstrap'
 import '../../fa-pulse.css'
 
 const Dashboard = props => {
@@ -8,12 +8,18 @@ const Dashboard = props => {
     deltaRate,
     numberOfAvailablePaths,
     wsClients,
-    providerStatistics
+    providerStatistics,
   } = props.serverStatistics || {
     deltaRate: 0,
     numberOfAvailablePaths: 0,
     wsClients: 0,
-    providerStatistics: {}
+    providerStatistics: {},
+  }
+  const providerStatus = props.providerStatus || []
+  const errorCount = providerStatus.filter(s => s.type === 'error').length
+  let errors = ''
+  if ( errorCount > 0 ) {
+    errors = `(${errorCount} errors)`
   }
   return (
     <div className='animated fadeIn'>
@@ -23,7 +29,7 @@ const Dashboard = props => {
             <CardHeader>Stats</CardHeader>
             <CardBody>
               <Row>
-                <Col xs='12' md='8'>
+                <Col xs='12' md='6'>
                   <div className='callout callout-primary'>
                     <small className='text-muted'>
                       Total server Signal K throughput (deltas/second)
@@ -46,7 +52,7 @@ const Dashboard = props => {
                     <strong className='h4'>{wsClients}</strong>
                   </div>
                 </Col>
-                <Col xs='12' md='4'>
+                <Col xs='12' md='6'>
                   <div className='text-muted'>
                     Provider activity (deltas/second)
                   </div>
@@ -57,7 +63,7 @@ const Dashboard = props => {
                         'icon-feed text-primary' +
                         (providerStats.deltaRate > 50
                           ? ' fa-pulse-fast'
-                          : providerStats.deltaRate > 0 ? ' fa-pulse' : '')
+                         : providerStats.deltaRate > 0 ? ' fa-pulse' : '')
                       return (
                         <li key={providerId}>
                           <i className={iconClass} />
@@ -88,6 +94,45 @@ const Dashboard = props => {
               </Row>
             </CardBody>
           </Card>
+
+        <Card>
+          <CardHeader>Provider & Plugin Status <p className='text-danger'>{errors}</p></CardHeader>
+          <CardBody>
+            <Row>
+              <Col xs='12' md='12'>
+              <Table hover responsive bordered striped size='sm'>
+                <thead>
+                  <tr>
+                  <th>Id</th>
+                  <th>Last Error</th>
+                  <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+               {providerStatus.map(status => {
+               let statusClass
+               if ( status.type === 'status' ) {
+                 statusClass = 'text-success'
+               } else if ( status.type === 'warning' ) {
+                 statusClass = 'text-warning'
+               } else {
+                 statusClass = 'text-danger'
+               }
+               const lastError = status.lastError && status.lastError != status.message ? status.lastErrorTimeStamp + ': ' + status.lastError : ''
+               return (
+                 <tr key={status.id}>
+                 <td>{status.id}</td>
+                 <td><p className='text-danger'>{lastError}</p></td>
+                 <td><p className={statusClass}>{status.message}</p></td>
+               </tr>
+               )
+               })}   
+                </tbody>
+              </Table>
+              </Col>
+            </Row>
+          </CardBody>
+        </Card>
         </div>
       )}
 
@@ -100,7 +145,8 @@ const Dashboard = props => {
   )
 }
 
-export default connect(({ serverStatistics, websocketStatus }) => ({
+export default connect(({ serverStatistics, websocketStatus, providerStatus }) => ({
   serverStatistics,
-  websocketStatus
+  websocketStatus,
+  providerStatus
 }))(Dashboard)

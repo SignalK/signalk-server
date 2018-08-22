@@ -1,5 +1,35 @@
 ## Change Log
 
+### v1.5.0 (2018/08/16 14:49 +00:00)
+- [#591](https://github.com/SignalK/signalk-server-node/pull/591) feature: show the status of providers and plugins on the dashboard (@sbender9)
+- [#590](https://github.com/SignalK/signalk-server-node/pull/590) fix: source does not include the username for deltas coming through ws (@sbender9)
+- [#575](https://github.com/SignalK/signalk-server-node/pull/575) refactor: don't redirect to the login page on permission denied (@sbender9)
+- [#576](https://github.com/SignalK/signalk-server-node/pull/576) feature: add support for http/2 (@sbender9)
+- [#578](https://github.com/SignalK/signalk-server-node/pull/578) Update ws to the latest version 🚀 (@greenkeeper[bot])
+- [#573](https://github.com/SignalK/signalk-server-node/pull/573) Update file-timestamp-stream to the latest version 🚀 (@greenkeeper[bot])
+- [#588](https://github.com/SignalK/signalk-server-node/pull/588) Update @signalk/instrumentpanel to the latest version 🚀 (@greenkeeper[bot])
+- [#583](https://github.com/SignalK/signalk-server-node/pull/583)  Update of raspberry_pi_installation (@MatsA)
+
+### v1.4.3 (2018/08/09 18:21 +00:00)
+- [#581](https://github.com/SignalK/signalk-server-node/pull/581) feat: remove reconnect on idle in tcp provider (@tkurki)
+
+### v1.4.2 (2018/08/09 18:14 +00:00)
+- [#585](https://github.com/SignalK/signalk-server-node/pull/585) fix: /sources in deltaCache full build (@tkurki)
+- [#574](https://github.com/SignalK/signalk-server-node/pull/574) fix: handle serial port buffer overrun (@tkurki)
+
+### v1.4.1 (2018/07/20 00:04 +00:00)
+- [#577](https://github.com/SignalK/signalk-server-node/pull/577) fix: use npmjs.io for app store searches since npmjs.org has been broken for two weeks (@sbender9)
+- [#567](https://github.com/SignalK/signalk-server-node/pull/567) feature: add per plugin config get route (@tkurki)
+
+### v1.4.0 (2018/06/24 16:05 +00:00)
+- [#565](https://github.com/SignalK/signalk-server-node/pull/565) feature: add registerDeltaInputHandler plugin hook (@tkurki)
+- [#560](https://github.com/SignalK/signalk-server-node/pull/560) feature: allow third party apps to integrate with security (@sbender9)
+- [#563](https://github.com/SignalK/signalk-server-node/pull/563) feature: add ability to generate a security token (@sbender9)
+- [#561](https://github.com/SignalK/signalk-server-node/pull/561) fix: plugin dependencies get package-lock'd and don't update when the plugin is updated (@sbender9)
+- [#564](https://github.com/SignalK/signalk-server-node/pull/564) fix: use uuid v4 for uuid generation (@sbender9)
+- [#562](https://github.com/SignalK/signalk-server-node/pull/562) chore: remove package-lock.json and added .npmrc to disable it (@sbender9)
+- [#554](https://github.com/SignalK/signalk-server-node/pull/554) Update @signalk/freeboard-sk to the latest version 🚀 (@greenkeeper[bot])
+
 ### v1.3.0 (2018/06/05 19:43 +00:00)
 - [#553](https://github.com/SignalK/signalk-server-node/pull/553) feature: set validateChecksum option from Data Providers setup page (@davidsanner)
 - [#552](https://github.com/SignalK/signalk-server-node/pull/552) feature: make webapps list multiple columns, change text order (@tkurki)

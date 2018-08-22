@@ -123,4 +123,14 @@ describe('deltacache', () => {
       })
     })
   })
+
+  it('returns /sources correctly', function () {
+    return serverP.then(server => {
+      return deltaP.then(() => {
+        var fullTree = server.app.deltaCache.buildFull(null, ['sources'])
+        fullTree.should.be.validSignalK
+        fullTree.sources.should.deep.equal({ deltaFromHttp: {} })
+      })
+    })
+  })
 })

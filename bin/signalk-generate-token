@@ -1,0 +1,39 @@
+#!/usr/bin/env node
+
+const minimist = require('minimist')
+const fs = require('fs')
+const jwt = require('jsonwebtoken')
+
+var args = minimist(process.argv.slice(2))
+
+var user = args.user || args.u
+var settingsPath = args.settings || args.s
+var expiration = args.expiration || args.e
+
+if (!user || !settingsPath || !expiration) {
+  console.error(
+    'usage: signalk-generate-token -u userid -e 1y -s /path/to/security.json'
+  )
+  process.exit(1)
+}
+
+var settings = readJson(settingsPath)
+var payload = { id: user }
+
+console.log(jwt.sign(payload, settings.secretKey, { expiresIn: expiration }))
+
+function readJson(path) {
+  try {
+    const optionsAsString = fs.readFileSync(path, 'utf8')
+    try {
+      return JSON.parse(optionsAsString)
+    } catch (e) {
+      console.error('Could not parse JSON options:' + optionsAsString)
+      console.error(e)
+    }
+  } catch (e) {
+    console.error('Could not load security settings')
+    console.error(e)
+  }
+  return null
+}

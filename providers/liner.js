@@ -16,7 +16,7 @@
 
 /* Usage:
  *  This is part of a PipedProvider that splits the input into separate lines and passes one line at a time to the next provider.
- * Takes no options.
+ *  You can specify the line separator with the option lineSeparator.
 
  {
    "type": "providers/liner"

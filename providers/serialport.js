@@ -49,6 +49,7 @@
 const Transform = require('stream').Transform
 const SerialPort = require('serialport')
 const isArray = require('lodash').isArray
+const debug = require('debug')('signalk:serialport')
 
 function SerialStream (options) {
   if (!(this instanceof SerialStream)) {
@@ -60,6 +61,7 @@ function SerialStream (options) {
   this.reconnect = options.reconnect || true
   this.serial = null
   this.options = options
+  this.maxPendingWrites = options.maxPendingWrites || 5
   this.start()
 }
 
@@ -83,22 +85,54 @@ SerialStream.prototype.start = function () {
   this.serial.on(
     'open',
     function () {
+      this.options.app.setProviderStatus(
+        this.options.providerId,
+        `Connected to ${this.options.device}`
+      )
       const parser = new SerialPort.parsers.Readline()
       this.serial.pipe(parser).pipe(this)
     }.bind(this)
   )
 
-  this.serial.on('error', function (x) {
-    console.log(x)
-  })
-  this.serial.on('close', this.start.bind(this))
+  this.serial.on(
+    'error',
+    function (x) {
+      this.options.app.setProviderError(this.options.providerId, x.message)
+      console.log(x)
+    }.bind(this)
+  )
+  this.serial.on(
+    'close',
+    function () {
+      this.options.app.setProviderError(
+        this.options.providerId,
+        'Closed, reconnecting...'
+      )
+      this.start.bind(this)
+    }.bind(this)
+  )
 
   var that = this
+  let pendingWrites = 0
   const stdOutEvent = this.options.toStdout
   if (stdOutEvent) {
     ;(isArray(stdOutEvent) ? stdOutEvent : [stdOutEvent]).forEach(event => {
       console.log(event)
-      that.options.app.on(event, d => that.serial.write(d + '\r\n'))
+
+      const onDrain = () => {
+        pendingWrites--
+      }
+
+      that.options.app.on(event, d => {
+        if (pendingWrites > that.maxPendingWrites) {
+          debug('Buffer overflow, not writing:' + d)
+          return
+        }
+        debug('Writing:' + d)
+        that.serial.write(d + '\r\n')
+        pendingWrites++
+        that.serial.drain(onDrain)
+      })
     })
   }
 }
