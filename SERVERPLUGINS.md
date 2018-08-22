@@ -31,7 +31,7 @@ See [Ais Reporter](https://github.com/SignalK/aisreporter/issues) for an example
 
 ## Plugin configuration files
 
-A plugin's configuration data is saved at `SIGNALK_NODE_CONDFIG_DIR/plugin-config-data/<plugin-name>.json`. You can disable a plugin by removing its configuration file.
+A plugin's configuration data is saved at `SIGNALK_NODE_CONFIG_DIR/plugin-config-data/<plugin-name>.json`. You can disable a plugin by removing its configuration file.
 
 ## Logging
 
