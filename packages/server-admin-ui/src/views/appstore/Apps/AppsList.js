@@ -8,7 +8,7 @@ export default props => (
       <li key={app.name}>
         {mainIcon(app)}
         <div className='desc'>
-          <a href={app.npmUrl}>
+          <a href={app.npmUrl} target='_blank' title='Open package on npmjs.com'>
             <i className='icon-info' />
           </a>
           <div className='title'>
