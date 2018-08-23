@@ -46,8 +46,8 @@ export default props => (
 function mainIcon (app) {
   return (
     <span>
-      {app.isWebapp && <i className='icon-grid bg-primary' />}
-      {app.isPlugin && <i className='icon-settings bg-success' />}
+      {app.isWebapp && <i className='icon-grid bg-primary' title="webapp" />}
+      {app.isPlugin && <i className='icon-settings bg-success' title="plugin" />}
     </span>
   )
 }
