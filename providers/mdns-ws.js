@@ -101,7 +101,6 @@ MdnsWs.prototype.connect = function (discovery) {
       })
     }
 
-    data.overrideProvider = providerId
     that.push(data)
   }
 
