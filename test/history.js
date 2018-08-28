@@ -32,7 +32,6 @@ let dummyHistoryProvider = app => {
       }, 100)
     },
     stopStreaming: cookie => {},
-    addSubscription: (cookie, msg) => {},
     getHistory: (date, path, cb) => {
       testDelta.context = `vessels.${app.selfId}`
       cb([testDelta])
@@ -79,6 +78,9 @@ describe('History', _ => {
     msg.should.not.equal('timeout')
     let delta = JSON.parse(msg)
     delta.updates[0].values[0].path.should.equal('performance.velocityMadeGood')
+
+    msg = await wsPromiser.nextMsg()
+    msg.should.equal('timeout')
   })
 
   it('REST time request works', async function () {
