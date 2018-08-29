@@ -141,10 +141,8 @@ describe('Subscriptions', _ => {
   })
 
   after(done => {
-    serverP.then(server => {
-      server.stop().then(() => {
-        done()
-      })
+    serverP.then(server => server.stop()).then(() => {
+      done()
     })
   })
 
