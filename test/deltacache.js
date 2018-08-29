@@ -86,8 +86,12 @@ describe('deltacache', () => {
     })
   })
 
-  after(() => {
-    serverP.then(server => server.stop())
+  after(done => {
+    serverP.then(server => {
+      server.stop().then(() => {
+        done()
+      })
+    })
   })
 
   it('returns valid full tree', function () {
