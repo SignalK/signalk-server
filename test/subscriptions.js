@@ -140,8 +140,10 @@ describe('Subscriptions', _ => {
     })
   })
 
-  after(() => {
-    serverP.then(server => server.stop())
+  after(done => {
+    serverP.then(server => server.stop()).then(() => {
+      done()
+    })
   })
 
   function sendDelta (delta) {
