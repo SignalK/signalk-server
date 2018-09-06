@@ -25,5 +25,8 @@
     "build-debug": "webpack -p --devtool source-map",
     "prepublishOnly": "npm run build",
     "watch": "webpack -d --watch"
+  },
+  "dependencies": {
+    "react-jsonschema-form-extras": "^0.9.27"
   }
 }

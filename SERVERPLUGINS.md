@@ -29,6 +29,20 @@ The schema value should be the structure of the plugin's configuration data as [
 
 See [Ais Reporter](https://github.com/SignalK/aisreporter/issues) for an example.
 
+You can make sections of your schema collapsible.
+
+For example, to make all data in an object called 'myObject' collapsible:
+```
+uiSchema['myObject'] = {
+  'ui:field': 'collapsible',
+  collapse: {
+  field: 'ObjectField',
+  wrapClassName: 'panel-group'
+}
+```
+
+For more information, see [react-jsonschema-form-extras](https://github.com/RxNT/react-jsonschema-form-extras#collapsible-fields-collapsible)
+
 ## Plugin configuration files
 
 A plugin's configuration data is saved at `SIGNALK_NODE_CONDFIG_DIR/plugin-config-data/<plugin-name>.json`. You can disable a plugin by removing its configuration file.
