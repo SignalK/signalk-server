@@ -114,6 +114,7 @@ Environment variables
 - `DISABLEPLUGINS` disable all plugins so that they can not be enabled
 - `DEFAULTENABLEDPLUGINS` a comma separated list of plugin ids that are overridden to be enabled by default if no setttings exist. lower preference than `DISABLEPLUGINS`
 - `SECURITYSTRATEGY` override the security strategy module name
+- `WSCOMPRESSION` compress websocket messages
 
 
 Real Inputs
