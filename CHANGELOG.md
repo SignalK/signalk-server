@@ -1,6 +1,18 @@
 ## Change Log
 
-### v1.5.0 (2018/08/16 14:49 +00:00)
+### v1.6.0 (2018/09/06 18:37 +00:00)
+- [#609](https://github.com/SignalK/signalk-server-node/pull/609) fix: errors from execute provider don't show on the dashboard (@sbender9)
+- [#602](https://github.com/SignalK/signalk-server-node/pull/602) feature: add ability for plugins to make parts of their config collapsible (@sbender9)
+- [#593](https://github.com/SignalK/signalk-server-node/pull/593) feature: mdns-ws provider enhancements (@sbender9)
+- [#596](https://github.com/SignalK/signalk-server-node/pull/596) feature: provide an API to playback and retrieve historical data (@sbender9)
+- [#604](https://github.com/SignalK/signalk-server-node/pull/604) fix: make server.stop() return a promise so the tests can wait (@sbender9)
+- [#606](https://github.com/SignalK/signalk-server-node/pull/606) WEBAPPS.md: fix link to signalk spec (@mpvader)
+- [#605](https://github.com/SignalK/signalk-server-node/pull/605) fix(package): update serialport to version 7.0.2 (@tkurki)
+- [#600](https://github.com/SignalK/signalk-server-node/pull/600) feat: Open npm url in new tab. Add link title. (@tkurki)
+- [#599](https://github.com/SignalK/signalk-server-node/pull/599) doc: add admin ui readme with development instructions (@tkurki)
+- [#594](https://github.com/SignalK/signalk-server-node/pull/594) fix: plugin status shows Stopped after configuring or restarting a plugin (@sbender9)
+
+### v1.5.0 (2018/08/16 14:50 +00:00)
 - [#591](https://github.com/SignalK/signalk-server-node/pull/591) feature: show the status of providers and plugins on the dashboard (@sbender9)
 - [#590](https://github.com/SignalK/signalk-server-node/pull/590) fix: source does not include the username for deltas coming through ws (@sbender9)
 - [#575](https://github.com/SignalK/signalk-server-node/pull/575) refactor: don't redirect to the login page on permission denied (@sbender9)
