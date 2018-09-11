@@ -108,11 +108,9 @@ class ProvidersConfiguration extends Component {
     var provider = this.state.selectedProvider
     delete this.state.selectedProvider.json
 
-    var id =
-      this.state.selectedProvider.originalId ||
-      this.state.selectedProvider.originalId
+    var id = this.state.selectedProvider.originalId 
 
-    fetch(`/providers/${id}`, {
+    fetch(`/providers/${id || ''}`, {
       method: isNew ? 'POST' : 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -120,22 +118,26 @@ class ProvidersConfiguration extends Component {
       body: JSON.stringify(this.state.selectedProvider),
       credentials: 'include'
     })
-      .then(response => response.text())
       .then(response => {
-        var provider = JSON.parse(JSON.stringify(this.state.selectedProvider))
-        delete provider.isNew
-        delete this.state.selectedProvider.isNew
-        if (isNew) {
-          this.state.providers.push(provider)
-        } else {
+        if ( response.ok ) {
+          var provider = JSON.parse(JSON.stringify(this.state.selectedProvider))
+          delete provider.isNew
+          delete this.state.selectedProvider.isNew
+          if (isNew) {
+            this.state.providers.push(provider)
+          } else {
           this.state.providers[this.state.selectedIndex] = provider
+          }
+          this.setState({
+            providers: this.state.providers,
+            selectedProvider: null,
+            selectedIndex: -1
+          })
         }
-        this.setState({
-          providers: this.state.providers,
-          selectedProvider: null,
-          selectedIndex: -1
-        })
-        alert(response)
+        return response.text()
+      })
+      .then(text => {
+        alert(text)
       })
   }
 
