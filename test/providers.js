@@ -6,6 +6,8 @@ const freeport = require('freeport-promise')
 const Server = require('../lib')
 const fetch = require('node-fetch')
 
+const nullIdText = 'Please enter a provider ID'
+
 describe('Providers', _ => {
   var server, url, port
 
@@ -42,6 +44,8 @@ describe('Providers', _ => {
       body: JSON.stringify(provider)
     })
     result.status.should.equal(401)
+    var text = await result.text()
+    text.should.equal(nullIdText)
 
     delete provider.id
     var result = await fetch(`${url}/providers`, {
@@ -50,6 +54,8 @@ describe('Providers', _ => {
       body: JSON.stringify(provider)
     })
     result.status.should.equal(401)
+    var text = await result.text()
+    text.should.equal(nullIdText)
   })
 
   it('New provider works', async function () {
@@ -59,13 +65,23 @@ describe('Providers', _ => {
       body: JSON.stringify({
         id: 'testProvider',
         enabled: true,
-        type: 'simple',
         options: {
           type: 'NMEA0183'
         }
       })
     })
     result.status.should.equal(200)
+    var text = await result.text()
+    text.should.equal('Provider added')
+    let pipedProviders = server.app.config.settings.pipedProviders
+    pipedProviders.length.should.equal(1)
+    pipedProviders[0].id.should.equal('testProvider')
+    pipedProviders[0].enabled.should.equal(true)
+    pipedProviders[0].pipeElements.length.should.equal(1)
+    pipedProviders[0].pipeElements[0].type.should.equal('providers/simple')
+    pipedProviders[0].pipeElements[0].options.subOptions.type.should.equal(
+      'NMEA0183'
+    )
   })
 
   it('Update provider with empty or null id fails', async function () {
@@ -83,6 +99,10 @@ describe('Providers', _ => {
       body: JSON.stringify(provider)
     })
     result.status.should.equal(401)
+    var text = await result.text()
+    text.should.equal(nullIdText)
+    let pipedProviders = server.app.config.settings.pipedProviders
+    pipedProviders[0].id.should.equal('testProvider')
 
     delete provider.id
     var result = await fetch(`${url}/providers/testProvider`, {
@@ -91,5 +111,8 @@ describe('Providers', _ => {
       body: JSON.stringify(provider)
     })
     result.status.should.equal(401)
+    var text = await result.text()
+    text.should.equal(nullIdText)
+    pipedProviders[0].id.should.equal('testProvider')
   })
 })
