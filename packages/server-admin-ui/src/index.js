@@ -33,7 +33,8 @@ const state = {
   serverSpecification: {},
   websocketStatus: 'initial',
   webSocket: null,
-  restarting: false
+  restarting: false,
+  accessRequests: []
 }
 
 let store = createStore(
@@ -157,6 +158,12 @@ let store = createStore(
     if (action.type === 'LOGOUT_REQUESTED') {
       if (state.webSocket) {
         state.webSocket.close()
+      }
+    }
+    if ( action.type === 'ACCESS_REQUEST' ) {
+      return {
+        ...state,
+        accessRequests: action.data
       }
     }
     return state
