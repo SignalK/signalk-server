@@ -1,4 +1,4 @@
 #!/bin/sh
 
 DIR=`dirname $0`
-${DIR}/signalk-server -s ${DIR}/../settings/aava-file-settings.json $*
+${DIR}/signalk-server -s ${DIR}/../settings/n2k-from-file-settings.json $*
