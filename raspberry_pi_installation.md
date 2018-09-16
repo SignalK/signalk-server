@@ -75,46 +75,6 @@ This will search for and list all of the discoverable devices/services on your n
 
 ![Avahi-Browse](https://github.com/digitalyacht/ikommunicate/blob/master/RPi_How_To_Images/Avahi-Browse.png)
 
-Another software that really makes Your handling with the RPI easier is Samba. This software makes Your RPI appear, in MS Explorer or Mac Finder, as a Windows fileserver so You can edit and move files from/to the RPI
-
-    $ sudo apt-get install samba samba-common-bin
-
-Edit the Samba configuration file so that You have more than "Read Only" rights.
-
-    $ sudo nano /etc/samba/smb.conf
-
-And then find the following part 
-
-    #======================= Share Definitions =======================   
-                                                                     
-    [homes]                                                              
-      comment = Home Directories                                        
-      browseable = no                                                   
-                                                                     
-    # By default, the home directories are exported read-only. Change the
-    # next parameter to 'no' if you want to be able to write to them.    
-      read only = yes                                                   
-
-so shange to 
-
-    read only = no
-
-and then save the file
-Create a Samba user, maybe pi ? and a password
-
-    $ sudo smbpasswd -a pi
-    New SMB password:
-    Retype new SMB password:
-    Added user pi.
-
-Restart the Samba service
-
-    $ sudo /etc/init.d/samba restart 
-    [ ok ] Restarting nmbd (via systemctl): nmbd.service.
-    [ ok ] Restarting smbd (via systemctl): smbd.service.
-    
-and now You should be up and running and the Pi folder should be shared if You logon with user Pi.
-
 ## Step 2 - Install Signal K Node Server and Consumers
 
 In this "How To" guide we are going to use the Signal K Node Server, but we also have a [guide for the Java Server](https://github.com/SignalK/specification/wiki/Raspberry-Pi-Installation-(Java-Server)) which is the other popular Signal K server.
