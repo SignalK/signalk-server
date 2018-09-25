@@ -230,6 +230,10 @@ const mapStateToProps = state => {
           {
             name: 'Data Providers',
             url: '/serverConfiguration/providers'
+          },
+          {
+            name: 'Data log files',
+            url: '/serverConfiguration/datalogs'
           }
         ]
       }
