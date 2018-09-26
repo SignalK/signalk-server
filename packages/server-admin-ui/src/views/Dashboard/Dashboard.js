@@ -123,7 +123,7 @@ const Dashboard = props => {
                  <tr key={status.id}>
                  <td>{status.id}</td>
                  <td><p className='text-danger'>{lastError}</p></td>
-                 <td><p className={statusClass}>{status.message}</p></td>
+                 <td><p className={statusClass}>{(status.message || '').substring(0,80)}{status.message.length > 80 ? '...' : ''}</p></td>
                </tr>
                )
                })}   
