@@ -16,12 +16,6 @@
           }
         },
         {
-          "type": "providers/throttle",
-          "options": {
-            "rate": 500
-          }
-        },
-        {
           "type": "providers/liner"
         },
         {
