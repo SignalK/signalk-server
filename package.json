@@ -8,7 +8,6 @@
     "release": "git tag -d v$npm_package_version ; npm run changelog && git add CHANGELOG.md && git commit -m 'chore: update changelog' && git tag v$npm_package_version && git push --tags && git push && git tag -d latest && git push origin :refs/tags/latest && git tag latest && git push origin tag latest",
     "start": "node bin/signalk-server",
     "test": "mocha --exit",
-    "precommit": "lint-staged",
     "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js",
     "heroku-postbuild": "npm install @signalk/simple-gpx"
   },
@@ -144,7 +143,7 @@
     "chai-things": "^0.2.0",
     "freeport-promise": "^1.0.0",
     "github-changes": "^1.0.4",
-    "husky": "^0.14.3",
+    "husky": "^1.0.0",
     "lint-staged": "^7.0.0",
     "mocha": "^5.0.0",
     "node-fetch": "^2.1.1",
@@ -154,5 +153,10 @@
   },
   "optionalDependencies": {
     "mdns": "^2.3.4"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
   }
 }
