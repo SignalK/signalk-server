@@ -32,7 +32,7 @@
 const Transform = require('stream').Transform
 const getLogger = require('../lib/logging')
 
-function Log (options) {
+function Log(options) {
   Transform.call(this, {
     objectMode: true
   })
@@ -42,14 +42,10 @@ function Log (options) {
 
 require('util').inherits(Log, Transform)
 
-Log.prototype._transform = function (msg, encoding, done) {
+Log.prototype._transform = function(msg, encoding, done) {
   this.push(msg)
   this.logger(msg)
   done()
-}
-
-function pad (num) {
-  return (num > 9 ? '' : '0') + num
 }
 
 module.exports = Log
