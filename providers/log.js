@@ -30,7 +30,7 @@
 */
 
 const Transform = require('stream').Transform
-const getLogger = require('../lib/logging')
+const getLogger = require('../lib/logging').getLogger
 
 function Log (options) {
   Transform.call(this, {
