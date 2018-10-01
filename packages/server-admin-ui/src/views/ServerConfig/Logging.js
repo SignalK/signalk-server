@@ -13,13 +13,20 @@ import {
 } from 'reactstrap'
 
 function fetchLogfileList () {
-  fetch(`/logfiles/`, {
+  const okResponse = fetch(`/logfiles/`, {
     credentials: 'include'
+  }).then(response => {
+    if (!response.ok) {
+      this.setState({ authorized: false })
+      return false
+    }
+    return response
   })
-    .then(response => response.json())
-    .then(logfileslist => {
+
+  okResponse &&
+    okResponse.then(response => response.json()).then(logfileslist => {
       logfileslist.sort()
-      this.setState({ logfileslist, hasData: true })
+      this.setState({ logfileslist, hasData: true, authorized: true })
     })
 }
 
@@ -27,7 +34,8 @@ class Settings extends Component {
   constructor (props) {
     super(props)
     this.state = {
-      hasData: false
+      hasData: false,
+      authorized: true
     }
 
     this.fetchLogfileList = fetchLogfileList.bind(this)
@@ -38,6 +46,14 @@ class Settings extends Component {
   }
 
   render () {
+    if (!this.state.authorized) {
+      return (
+        <div className='animated fadeIn'>
+          Not Authorized
+        </div>
+      )
+    }
+
     return (
       this.state.hasData &&
       <div className='animated fadeIn'>
