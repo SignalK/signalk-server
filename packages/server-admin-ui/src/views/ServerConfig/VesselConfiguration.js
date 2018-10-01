@@ -109,7 +109,8 @@ class VesselConfiguration extends Component {
                     </FormText>
                   </Col>
                 </FormGroup>
-                <FormGroup row>
+                
+                  <FormGroup row>
                   <Col md='2'>
                     <Label htmlFor='uuid'>UUID</Label>
                   </Col>
@@ -122,7 +123,68 @@ class VesselConfiguration extends Component {
                     />
                     <FormText color='muted'>Ignored if MMSI is set</FormText>
                   </Col>
-                </FormGroup>
+          </FormGroup>
+          <FormGroup row>
+                  <Col md='2'>
+                    <Label htmlFor='aisShipType'>Ship Type</Label>
+                  </Col>
+                  <Col xs='12' md='4'>
+                  <Input
+                          type='select'
+                          name='aisShipType'
+                          value={this.state.aisShipType }
+                          onChange={this.handleChange}
+          >
+
+          <option value='20'>Wing In Ground</option>
+          <option value='29'>Wing In Ground (no other information)</option>
+          <option value='30'>Fishing</option>
+          <option value='31'>Towing</option>
+          <option value='32'>Towing exceeds 200m or wider than 25m</option>
+          <option value='33'>Engaged in dredging or underwater operations</option>
+          <option value='34'>Engaged in diving operations</option>
+          <option value='35'>Engaged in military operations</option>
+          <option value='36'>Sailing</option>
+          <option value='37'>Pleasure</option>
+          <option value='40'>High speed craft</option>
+          <option value='41'>High speed craft carrying dangerous goods</option>
+          <option value='42'>High speed craft hazard cat B</option>
+          <option value='43'>High speed craft hazard cat C</option>
+          <option value='44'>High speed craft hazard cat D</option>
+          <option value='49'>High speed craft (no additional information)</option>
+          <option value='50'>Pilot vessel</option>
+          <option value='51'>SAR</option>
+          <option value='52'>Tug</option>
+          <option value='53'>Port tender</option>
+          <option value='54'>Anti-pollution</option>
+          <option value='55'>Law enforcement</option>
+          <option value='56'>Spare</option>
+          <option value='57'>Spare #2</option>
+          <option value='58'>Medical</option>
+          <option value='59'>RR Resolution No.1</option>
+          <option value='60'>Passenger ship</option>
+          <option value='69'>Passenger ship (no additional information)</option>
+          <option value='70'>Cargo ship</option>
+          <option value='71'>Cargo ship carrying dangerous goods</option>
+          <option value='72'>Cargo ship hazard cat B</option>
+          <option value='73'>Cargo ship hazard cat C</option>
+          <option value='74'>Cargo ship hazard cat D</option>
+          <option value='79'>Cargo ship (no additional information)</option>
+          <option value='80'>Tanker</option>
+          <option value='81'>Tanker carrying dangerous goods</option>
+          <option value='82'>Tanker hazard cat B</option>
+          <option value='83'>Tanker hazard cat C</option>
+          <option value='84'>Tanker hazard cat D</option>
+          <option value='89'>Tanker (no additional information)</option>
+          <option value='90'>Other</option>
+          <option value='91'>Other carrying dangerous goods</option>
+          <option value='92'>Other hazard cat B</option>
+          <option value='93'>Other hazard cat C</option>
+          <option value='94'>Other hazard cat D</option>
+          <option value='99'>Other (no additional information)</option>
+                        </Input>
+                  </Col>
+                  </FormGroup>
                 <FormGroup row>
                   <Col md='2'>
                     <Label htmlFor='draft'>Draft</Label>
