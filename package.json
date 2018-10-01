@@ -89,7 +89,7 @@
     "@signalk/playground": "^1.0.0",
     "@signalk/plugin-config": "^1.0.0",
     "@signalk/sailgauge": "^1.1.0",
-    "@signalk/server-admin-ui": "1.3.x",
+    "@signalk/server-admin-ui": "1.4.x",
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-schema": "1.0.3",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
