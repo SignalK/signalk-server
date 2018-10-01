@@ -17,10 +17,6 @@ import {
   Table
 } from 'reactstrap'
 
-const shipTypes = {
-}
-
-
 function fetchVessel () {
   fetch(`/vessel`, {
     credentials: 'include'
