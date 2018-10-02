@@ -56,6 +56,10 @@ describe('Put Requests', () => {
     )
   })
 
+  after(async function () {
+    await server.stop()
+  })
+
   it('HTTP put to unhandled path fails', async function () {
     var result = await fetch(
       `${url}/signalk/v1/api/vessels/self/electrical/switches/switch1.state`,
