@@ -6,7 +6,7 @@ const Server = require('../lib')
 const fetch = require('node-fetch')
 const { registerActionHandler } = require('../lib/put')
 const WebSocket = require('ws')
-const { WsPromiser } = require('./servertestutilities')
+// const { WsPromiser } = require('./servertestutilities')
 
 const sleep = ms => new Promise(res => setTimeout(res, ms))
 
@@ -134,8 +134,7 @@ describe('Put Requests', () => {
     )
     var msg = await ws.nextMsg()
 
-    let readPromise = ws.nextMsg()
-
+    ws.clear()
     let something = await ws.send({
       context: 'vessels.self',
       put: {
@@ -144,9 +143,11 @@ describe('Put Requests', () => {
       }
     })
 
+    let readPromise = ws.nextMsg()
     msg = await readPromise
     msg.should.not.equal('timeout')
     let response = JSON.parse(msg)
+    // console.log(msg)
     response.should.have.property('result')
     response.result.should.equal(405)
   })
@@ -157,8 +158,7 @@ describe('Put Requests', () => {
     )
     var msg = await ws.nextMsg()
 
-    let readPromise = ws.nextMsg()
-
+    ws.clear()
     let something = await ws.send({
       context: 'vessels.self',
       put: {
@@ -167,42 +167,32 @@ describe('Put Requests', () => {
       }
     })
 
-    msg = await readPromise
+    msg = await ws.nextMsg()
     msg.should.not.equal('timeout')
     let response = JSON.parse(msg)
     response.should.have.property('state')
     response.state.should.equal('PENDING')
     response.should.have.property('href')
 
-    let resultPromise = ws.nextMsg()
-    let updatePromise = ws.nextMsg()
+    msg = await ws.nextMsg() // skip the update
 
-    response = await resultPromise
-    console.log(response)
-
-    let update = await updatePromise
-    console.log(`HELLO ${update}`)
-
-    /*
-    await sleep(200)
-
-    var result = await fetch(`${url}${json.href}`)
-
-    result.status.should.equal(200)
-
-    var json = await result.json()
-    json.should.have.property('state')
-    json.state.should.equal('COMPLETED')
-    */
+    msg = await ws.nextMsg()
+    msg.should.not.equal('timeout')
+    response = JSON.parse(msg)
+    response.should.have.property('state')
+    response.state.should.equal('COMPLETED')
+    response.should.have.property('result')
+    response.result.should.equal(200)
   })
-  /*
-  it('HTTP failing put', async function() {
-    var readPromiser = new WsPromiser(
+
+  it('WS failing put', async function () {
+    var ws = new WsPromiser(
       `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none`
     )
-    var msg = await readPromiser.nextMsg()
+    var msg = await ws.nextMsg()
 
-    await readPromiser.send({
+    ws.clear()
+    let something = await ws.send({
       context: 'vessels.self',
       put: {
         path: 'electrical.switches.switch2.state',
@@ -210,23 +200,59 @@ describe('Put Requests', () => {
       }
     })
 
-    var result = await fetch(`${url}/signalk/v1/api/vessels/self/electrical/switches/switch2/state`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        value: 'dummy'
-      })
-    })
-
-    result.status.should.equal(400)
-
-    var json = await result.json()
-    json.should.have.property('state')
-    json.state.should.equal('COMPLETED')
-    json.should.have.property('message')
-    json.message.should.equal('invalid value')
+    msg = await ws.nextMsg()
+    msg.should.not.equal('timeout')
+    let response = JSON.parse(msg)
+    response.should.have.property('state')
+    response.state.should.equal('COMPLETED')
+    response.should.have.property('result')
+    response.result.should.equal(400)
+    response.should.have.property('message')
+    response.message.should.equal('invalid value')
   })
-  */
 })
+
+function WsPromiser (url) {
+  this.ws = new WebSocket(url)
+  this.ws.on('message', this.onMessage.bind(this))
+  this.callees = []
+  this.messages = []
+}
+
+WsPromiser.prototype.clear = function () {
+  this.messages = []
+}
+
+WsPromiser.prototype.nextMsg = function () {
+  const callees = this.callees
+  return new Promise((resolve, reject) => {
+    if (this.messages.length > 0) {
+      const message = this.messages[0]
+      this.messages = this.messages.slice(1)
+      resolve(message)
+    } else {
+      callees.push(resolve)
+      setTimeout(_ => {
+        resolve('timeout')
+      }, 250)
+    }
+  })
+}
+
+WsPromiser.prototype.onMessage = function (message) {
+  const theCallees = this.callees
+  this.callees = []
+  if (theCallees.length > 0) {
+    theCallees.forEach(callee => callee(message))
+  } else {
+    this.messages.push(message)
+  }
+}
+
+WsPromiser.prototype.send = function (message) {
+  const that = this
+  return new Promise((resolve, reject) => {
+    that.ws.send(JSON.stringify(message))
+    setTimeout(() => resolve('wait over'), 100)
+  })
+}
