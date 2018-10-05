@@ -30,7 +30,7 @@ describe('Put Requests', () => {
 
     function switch2Handler (context, path, value, cb) {
       if (typeof value !== 'number') {
-        return { state: 'COMPLETED', result: 400, message: 'invalid value' }
+        return { state: 'COMPLETED', statusCode: 400, message: 'invalid value' }
       } else {
         setTimeout(() => {
           server.app.handleMessage('test', {
@@ -42,7 +42,7 @@ describe('Put Requests', () => {
               }
             ]
           })
-          cb({ state: 'COMPLETED', result: 200 })
+          cb({ state: 'COMPLETED', statusCode: 200 })
         }, 100)
         return { state: 'PENDING' }
       }
@@ -152,8 +152,8 @@ describe('Put Requests', () => {
     msg.should.not.equal('timeout')
     let response = JSON.parse(msg)
     // console.log(msg)
-    response.should.have.property('result')
-    response.result.should.equal(405)
+    response.should.have.property('statusCode')
+    response.statusCode.should.equal(405)
   })
 
   it('WS successfull put', async function () {
@@ -185,8 +185,8 @@ describe('Put Requests', () => {
     response = JSON.parse(msg)
     response.should.have.property('state')
     response.state.should.equal('COMPLETED')
-    response.should.have.property('result')
-    response.result.should.equal(200)
+    response.should.have.property('statusCode')
+    response.statusCode.should.equal(200)
   })
 
   it('WS failing put', async function () {
@@ -209,8 +209,8 @@ describe('Put Requests', () => {
     let response = JSON.parse(msg)
     response.should.have.property('state')
     response.state.should.equal('COMPLETED')
-    response.should.have.property('result')
-    response.result.should.equal(400)
+    response.should.have.property('statusCode')
+    response.statusCode.should.equal(400)
     response.should.have.property('message')
     response.message.should.equal('invalid value')
   })
