@@ -136,8 +136,8 @@ For synchronous actions the handler must return a value describing the response 
 
 For asynchronous actions that may take considerable time and the requester should not be kept waiting for the result
 the handler must return `{ state: 'PENDING' }`. When the action is finished the handler
- should call the `callback` function with the result with  `callback({ state: 'COMPLETED', result:200 })` or
-`callback({ state:'COMPLETD', result:400, message:'Some Error Message' })`.
+ should call the `callback` function with the result with  `callback({ state: 'COMPLETED', statusCode:200 })` or
+`callback({ state:'COMPLETED', statusCode:400, message:'Some Error Message' })`.
 
 ### app.registerDeltaInputHandler ((delta, next) => ...)
 
