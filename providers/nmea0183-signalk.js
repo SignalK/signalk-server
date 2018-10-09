@@ -40,52 +40,56 @@ function nmea0183ToSignalK (options) {
 
   this.parser = new Parser(options)
 
-  this.parser.on('nmea0183', sentence => {
-    options.app.signalk.emit('nmea0183', sentence)
-  })
+  // Object on which to send 'sentence' events
+  this.sentenceEventEmitter = options.app.signalk
 
+  // Prepare a list of events to send for each sentence received
+  this.sentenceEvents = ['nmea0183']
   if (options.sentenceEvent) {
-    ;(Array.isArray(options.sentenceEvent)
-      ? options.sentenceEvent
-      : [options.sentenceEvent]
-    ).forEach(event => {
-      this.parser.on('nmea0183', sentence => options.app.emit(event, sentence))
-    })
-  }
-
-  this.parser.on('signalk:delta', delta => {
-    if (this.timestamp) {
-      delta.updates.forEach(update => {
-        update.timestamp = this.timestamp
-      })
+    if (Array.isArray(options.sentenceEvent)) {
+      this.sentenceEvents = this.sentenceEvents.concat(options.sentenceEvent)
+    } else {
+      this.sentenceEvents.push(options.sentenceEvent)
     }
-
-    this.push(delta)
-  })
-
-  this.parser.on('warning', warning => {
-    debug(`[warning] ${warning.message}`)
-  })
-
-  this.parser.on('error', error => {
-    debug(`[error] ${error.message}`)
-  })
+  }
 }
 
 require('util').inherits(nmea0183ToSignalK, Transform)
 
 nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
-  if (Buffer.isBuffer(chunk)) {
-    chunk = chunk.toString().trim()
-  }
+  let sentence
+  let timestamp = null
 
   if (chunk && typeof chunk === 'object' && typeof chunk.line === 'string') {
-    this.timestamp = new Date(Number(chunk.timestamp))
-    this.parser.parse(`${chunk.line.trim()}\n`).catch(() => {})
+    timestamp = new Date(Number(chunk.timestamp))
+    sentence = chunk.line.trim()
+  } else if (Buffer.isBuffer(chunk)) {
+    sentence = chunk.toString().trim()
+  } else if (chunk && typeof chunk === 'string') {
+    sentence = chunk.trim()
   }
 
-  if (chunk && typeof chunk === 'string') {
-    this.parser.parse(`${chunk.trim()}\n`).catch(() => {})
+  try {
+    if (sentence !== undefined) {
+      // Send 'sentences' event to the app for each sentence
+      this.sentenceEvents.forEach(eventName => {
+        this.sentenceEventEmitter.emit(eventName, sentence)
+      })
+
+      const delta = this.parser.parse(sentence)
+
+      if (delta !== null) {
+        if (timestamp !== null) {
+          delta.updates.forEach(update => {
+            update.timestamp = timestamp
+          })
+        }
+
+        this.push(delta)
+      }
+    }
+  } catch (e) {
+    debug(`[error] ${e.message}`)
   }
 
   done()
