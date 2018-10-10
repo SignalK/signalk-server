@@ -149,9 +149,11 @@ class LoggingInput extends Component {
 }
 
 class ValidateChecksumInput extends Component {
-  constructor(props) {
+  constructor (props) {
     super(props)
-    this.props.value.validateChecksum = typeof this.props.value.validateChecksum === 'undefined' || this.props.value.validateChecksum
+    this.props.value.validateChecksum =
+      typeof this.props.value.validateChecksum === 'undefined' ||
+      this.props.value.validateChecksum
   }
   render () {
     return (
@@ -177,6 +179,20 @@ class ValidateChecksumInput extends Component {
   }
 }
 
+class SentenceEventInput extends Component {
+  render () {
+    return (
+      <TextInput
+        title='sentenceEvent'
+        name='options.sentenceEvent'
+        helpText='Example: nmea1data'
+        value={this.props.value.sentenceEvent}
+        onChange={this.props.onChange}
+      />
+    )
+  }
+}
+
 class DataTypeInput extends Component {
   render () {
     return (
@@ -192,7 +208,7 @@ class DataTypeInput extends Component {
             onChange={event => this.props.onChange(event)}
           >
             <option value='SignalK'>Signal K</option>
-        <option value='NMEA2000'>NMEA 2000 (canboat)</option>
+            <option value='NMEA2000'>NMEA 2000 (canboat)</option>
             <option value='NMEA2000JS'>NMEA 2000 (canboatjs)</option>
             <option value='NMEA0183'>NMEA 0183</option>
             {this.props.value.type === 'FileStream' && (
@@ -247,6 +263,37 @@ class HostInput extends Component {
   }
 }
 
+class Suppress0183Checkbox extends Component {
+  constructor (props) {
+    super(props)
+    this.props.value.suppress0183event =
+      typeof this.props.value.suppress0183event === 'undefined' ||
+      this.props.value.suppress0183event
+  }
+  render () {
+    return (
+      <FormGroup row>
+        <Col xs='3' md='2'>
+          <Label>Suppress nmea0183 event</Label>
+        </Col>
+        <Col xs='2' md='3'>
+          <Label className='switch switch-text switch-primary'>
+            <Input
+              type='checkbox'
+              name='options.suppress0183event'
+              className='switch-input'
+              onChange={event => this.props.onChange(event)}
+              checked={this.props.value.suppress0183event}
+            />
+            <span className='switch-label' data-on='Yes' data-off='No' />
+            <span className='switch-handle' />
+          </Label>
+        </Col>
+      </FormGroup>
+    )
+  }
+}
+
 const NMEA2000 = props => {
   return (
     <div>
@@ -269,10 +316,12 @@ const NMEA2000 = props => {
           </Input>
         </Col>
       </FormGroup>
-      {(props.value.options.type === 'ngt-1' || props.value.options.type === 'ngt-1-canboatjs')  && (
+      {(props.value.options.type === 'ngt-1' ||
+        props.value.options.type === 'ngt-1-canboatjs') && (
         <DeviceInput value={props.value.options} onChange={props.onChange} />
       )}
-      {(props.value.options.type === 'canbus' || props.value.options.type === 'canbus-canboatjs') && (
+      {(props.value.options.type === 'canbus' ||
+        props.value.options.type === 'canbus-canboatjs') && (
         <TextInput
           title='Interface'
           name='options.interface'
@@ -301,10 +350,17 @@ const NMEA0183 = props => {
           >
             <option>Select a source</option>
             <option value='serial'>Serial</option>
-            <option value='tcp'>TCP</option>
+            <option value='tcp'>TCP Client</option>
+            <option value='tcpserver'>TCP Server</option>
             <option value='udp'>UDP</option>
           </Input>
         </Col>
+        {props.value.options.type === 'tcpserver' && (
+          <Col xs='12' md='6'>
+            Make this server's NMEA 10110 server bidirectional so that input
+            from clients is converted to Signal K.
+          </Col>
+        )}
       </FormGroup>
       {props.value.options.type === 'serial' && (
         <div>
@@ -321,9 +377,21 @@ const NMEA0183 = props => {
           <PortInput value={props.value.options} onChange={props.onChange} />
         </div>
       )}
+      {props.value.options.type === 'tcpserver' && (
+        <div>
+          <Suppress0183Checkbox
+            value={props.value.options}
+            onChange={props.onChange}
+          />
+        </div>
+      )}
       {props.value.options.type === 'udp' && (
         <PortInput value={props.value.options} onChange={props.onChange} />
       )}
+      <SentenceEventInput
+        value={props.value.options}
+        onChange={props.onChange}
+      />
       <ValidateChecksumInput
         value={props.value.options}
         onChange={props.onChange}
@@ -357,41 +425,41 @@ const SignalK = props => {
       {(props.value.options.type === 'ws' ||
         props.value.options.type === 'wss' ||
         props.value.options.type === 'tcp') && (
-          <div>
-            {(props.value.options.type === 'ws' ||
+        <div>
+          {(props.value.options.type === 'ws' ||
             props.value.options.type === 'wss') && (
-                <FormGroup row>
-                  <Col xs='0' md='2'>
-                    <Label />
-                  </Col>
-                  <Col xs='12' md='3'>
-                    <div className='checkbox'>
-                      <Label check htmlFor='enabled'>
-                        <Input
-                          type='checkbox'
-                          name='options.useDiscovery'
-                          onChange={props.onChange}
-                          checked={props.value.options.useDiscovery}
-                        />Use Discovery
-                      </Label>
-                    </div>
-                  </Col>
-                </FormGroup>
-              )}
-            {!props.value.options.useDiscovery && (
-              <div>
-                <HostInput
-                  value={props.value.options}
-                  onChange={props.onChange}
-                />
-                <PortInput
-                  value={props.value.options}
-                  onChange={props.onChange}
-                />
-              </div>
-            )}
-          </div>
-        )}
+            <FormGroup row>
+              <Col xs='0' md='2'>
+                <Label />
+              </Col>
+              <Col xs='12' md='3'>
+                <div className='checkbox'>
+                  <Label check htmlFor='enabled'>
+                    <Input
+                      type='checkbox'
+                      name='options.useDiscovery'
+                      onChange={props.onChange}
+                      checked={props.value.options.useDiscovery}
+                    />Use Discovery
+                  </Label>
+                </div>
+              </Col>
+            </FormGroup>
+          )}
+          {!props.value.options.useDiscovery && (
+            <div>
+              <HostInput
+                value={props.value.options}
+                onChange={props.onChange}
+              />
+              <PortInput
+                value={props.value.options}
+                onChange={props.onChange}
+              />
+            </div>
+          )}
+        </div>
+      )}
       {props.value.options.type === 'udp' && (
         <PortInput value={props.value.options} onChange={props.onChange} />
       )}

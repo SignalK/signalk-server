@@ -44,7 +44,8 @@ function nmea0183ToSignalK (options) {
   this.sentenceEventEmitter = options.app.signalk
 
   // Prepare a list of events to send for each sentence received
-  this.sentenceEvents = ['nmea0183']
+  this.sentenceEvents = options.suppress0183event ? [] : ['nmea0183']
+
   if (options.sentenceEvent) {
     if (Array.isArray(options.sentenceEvent)) {
       this.sentenceEvents = this.sentenceEvents.concat(options.sentenceEvent)
