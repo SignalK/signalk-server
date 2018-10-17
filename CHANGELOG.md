@@ -1,5 +1,11 @@
 ## Change Log
 
+### v1.7.1 (2018/10/17 14:15 +00:00)
+- [#641](https://github.com/SignalK/signalk-server-node/pull/641) Update @signalk/freeboard-sk to the latest version 🚀 (@greenkeeper[bot])
+- [#634](https://github.com/SignalK/signalk-server-node/pull/634) chore: update to latest version of nmea0183-signalk (@sarfata)
+- [#636](https://github.com/SignalK/signalk-server-node/pull/636) chore(package): update ws to version 6.1.0 (@tkurki)
+- [#635](https://github.com/SignalK/signalk-server-node/pull/635) refactor: search for modules at npmjs.com and npms.io (@sbender9)
+
 ### v1.7.0 (2018/10/01 19:45 +00:00)
 - [#630](https://github.com/SignalK/signalk-server-node/pull/630)  feature: ensure the correct versions of the server-admin-ui and plugin-config are installed (@sbender9)
 - [#623](https://github.com/SignalK/signalk-server-node/pull/623) feature: add access to log files over http (@tkurki)
