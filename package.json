@@ -124,6 +124,7 @@
     "minimist": "^1.1.0",
     "moment": "^2.10.6",
     "morgan": "^1.5.0",
+    "node-fetch": "^2.2.0",
     "node-gpsd": "^0.3.0",
     "pem": "^1.11.0",
     "please-upgrade-node": "^3.0.1",
@@ -147,7 +148,6 @@
     "husky": "^1.0.0",
     "lint-staged": "^7.0.0",
     "mocha": "^5.0.0",
-    "node-fetch": "^2.1.1",
     "prettier-standard": "^8.0.0",
     "request": "^2.81.0",
     "request-promise": "^4.1.1"
