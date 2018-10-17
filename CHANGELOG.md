@@ -1,6 +1,6 @@
 ## Change Log
 
-### v1.7.1 (2018/10/17 14:15 +00:00)
+### latest (2018/10/17 14:15 +00:00)
 - [#641](https://github.com/SignalK/signalk-server-node/pull/641) Update @signalk/freeboard-sk to the latest version 🚀 (@greenkeeper[bot])
 - [#634](https://github.com/SignalK/signalk-server-node/pull/634) chore: update to latest version of nmea0183-signalk (@sarfata)
 - [#636](https://github.com/SignalK/signalk-server-node/pull/636) chore(package): update ws to version 6.1.0 (@tkurki)
