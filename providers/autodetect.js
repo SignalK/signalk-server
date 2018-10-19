@@ -160,7 +160,8 @@ ToTimestamped.prototype.handleMixed = function (msg, encoding, done) {
     res.discriminator = 'I'
   } else if (
     (line.charAt(0) == '$' || line.charAt(0) == '!') &&
-    !line.startsWith('$PCDIN') // N2K over 0183, which analyer handles
+    !line.startsWith('$PCDIN') && // N2K over 0183, which analyer handles
+    !line.startsWith('!PDGY') // iKonect
   ) {
     res.discriminator = 'N'
   } else {

@@ -311,13 +311,15 @@ const NMEA2000 = props => {
             <option value='none'>Select a source</option>
             <option value='ngt-1'>Actisense NTG-1 (canboat)</option>
             <option value='ngt-1-canboatjs'>Actisense NTG-1 (canboatjs)</option>
+            <option value='ikonvert-canboatjs'>iKonvert (canboatjs)</option>
             <option value='canbus'>Canbus (canboat)</option>
             <option value='canbus-canboatjs'>Canbus (canboatjs)</option>
           </Input>
         </Col>
       </FormGroup>
       {(props.value.options.type === 'ngt-1' ||
-        props.value.options.type === 'ngt-1-canboatjs') && (
+        props.value.options.type === 'ngt-1-canboatjs' ||
+        props.value.options.type === 'ikonvert-canboatjs') && (
         <DeviceInput value={props.value.options} onChange={props.onChange} />
       )}
       {(props.value.options.type === 'canbus' ||
