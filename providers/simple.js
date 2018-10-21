@@ -92,6 +92,7 @@ const getLogger = (app, logging, discriminator) =>
 
 const discriminatorByDataType = {
   NMEA2000JS: 'A',
+  NMEA2000IK: 'A',
   NMEA2000: 'A',
   NMEA0183: 'N',
   SignalK: 'I'
@@ -130,9 +131,11 @@ const dataTypeMapping = {
   NMEA2000IK: options => {
     const result = [new CanboatJs(options.subOptions)]
     if (options.type === 'FileStream') {
-      result.unshift(
-        new Throttle({
-          rate: options.subOptions.throttleRate || 1000
+      result.push(
+        new TimestampThrottle({
+          getMilliseconds: msg => {
+            return msg.timer * 1000
+          }
         })
       )
     } else {
