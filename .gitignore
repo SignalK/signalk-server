@@ -18,4 +18,5 @@ test/plugin-test-config/.npmrc
 test/plugin-test-config/plugin-config-data/
 test/plugin-test-config/ssl-cert.pem
 test/plugin-test-config/ssl-key.pem
-
+test/server-test-config/applicationData
+test/server-test-config/.npmrc
