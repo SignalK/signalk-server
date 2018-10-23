@@ -22,6 +22,11 @@ class Footer extends Component {
             &nbsp; version {this.props.serverSpecification.server.version} 
           </span>
         )}
+      {typeof this.props.appStore.serverUpdate !== 'undefined' && (
+        <span>
+          &nbsp;(version {this.props.appStore.serverUpdate} is avalable)
+        </span>
+      )}
         {this.props.loginStatus.status === 'loggedIn' && (
           <span className='ml-auto'>
             Logged in as {this.props.loginStatus.username}
@@ -32,4 +37,4 @@ class Footer extends Component {
   }
 }
 
-export default connect(({ loginStatus, serverSpecification }) => ({ loginStatus, serverSpecification }))(Footer)
+export default connect(({ loginStatus, serverSpecification, appStore }) => ({ loginStatus, serverSpecification, appStore }))(Footer)
