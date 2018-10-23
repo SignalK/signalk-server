@@ -88,6 +88,10 @@ module.exports = {
       props.config.settings.security = {
         strategy: './tokensecurity'
       }
+      props.securityConfig = {
+        ...defaultSecurityConfig,
+        ...(securityConfig || {})
+      }
     }
 
     process.env.SIGNALK_NODE_CONDFIG_DIR = require('path').join(
@@ -95,34 +99,34 @@ module.exports = {
       'server-test-config'
     )
 
-    props.securityConfig = {
-      ...defaultSecurityConfig,
-      ...(securityConfig || {})
-    }
     const server = new Server(props)
     return new Promise((resolve, reject) => {
       server.start().then(s => {
-        Promise.all([
-          promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
-            userId: LIMITED_USER_NAME,
-            type: 'read',
-            password: LIMITED_USER_PASSWORD
-          }),
-          promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
-            userId: WRITE_USER_NAME,
-            type: 'readwrite',
-            password: WRITE_USER_PASSWORD
-          }),
-          promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
-            userId: ADMIN_USER_NAME,
-            type: 'admin',
-            password: ADMIN_USER_PASSWORD
-          })
-        ])
-          .then(() => {
-            resolve(s)
-          })
-          .catch(reject)
+        if (enableSecurity) {
+          Promise.all([
+            promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
+              userId: LIMITED_USER_NAME,
+              type: 'read',
+              password: LIMITED_USER_PASSWORD
+            }),
+            promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
+              userId: WRITE_USER_NAME,
+              type: 'readwrite',
+              password: WRITE_USER_PASSWORD
+            }),
+            promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
+              userId: ADMIN_USER_NAME,
+              type: 'admin',
+              password: ADMIN_USER_PASSWORD
+            })
+          ])
+            .then(() => {
+              resolve(s)
+            })
+            .catch(reject)
+        } else {
+          resolve(s)
+        }
       })
     })
   },
