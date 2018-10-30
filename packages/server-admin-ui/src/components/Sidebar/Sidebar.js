@@ -154,6 +154,7 @@ const mapStateToProps = state => {
   var appUpdates = state.appStore.updates.length
   var updatesBadge = null
   var availableBadge = null
+  var serverUpdateBadge = null
   if (appUpdates > 0) {
     updatesBadge = {
       variant: 'danger',
@@ -166,6 +167,14 @@ const mapStateToProps = state => {
     updatesBadge = availableBadge = {
       variant: 'danger',
       text: 'OFFLINE'
+    }
+  }
+
+  if ( state.appStore.serverUpdate ) {
+    serverUpdateBadge = {
+      variant: 'danger',
+      text: state.appStore.serverUpdate,
+      color: 'danger'
     }
   }
 
@@ -234,6 +243,11 @@ const mapStateToProps = state => {
           {
             name: 'Data log files',
             url: '/serverConfiguration/datalogs'
+          },
+          {
+            name: 'Update',
+            url: '/serverConfiguration/update',
+            badge: serverUpdateBadge
           }
         ]
       }

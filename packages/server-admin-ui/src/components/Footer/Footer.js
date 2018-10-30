@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-
+import { Link } from 'react-router-dom'
 
 class Footer extends Component {
   constructor(props) {
@@ -24,7 +24,9 @@ class Footer extends Component {
         )}
       {typeof this.props.appStore.serverUpdate !== 'undefined' && (
         <span>
-          &nbsp;(version {this.props.appStore.serverUpdate} is avalable)
+          <Link to='/serverConfiguration/update'>
+          &nbsp;(version {this.props.appStore.serverUpdate} is available)
+          </Link>
         </span>
       )}
         {this.props.loginStatus.status === 'loggedIn' && (

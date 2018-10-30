@@ -19,6 +19,7 @@ import VesselConfiguration from '../../views/ServerConfig/VesselConfiguration'
 import ProvidersConfiguration from '../../views/ServerConfig/ProvidersConfiguration'
 import Settings from '../../views/ServerConfig/Settings'
 import Logging from '../../views/ServerConfig/Logging'
+import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
 
 import {
   fetchLoginStatus,
@@ -76,6 +77,10 @@ class Full extends Component {
                 <Route
                   path='/serverConfiguration/datalogs'
                   component={loginOrOriginal(Logging)}
+                />
+                <Route
+                  path='/serverConfiguration/update'
+                  component={loginOrOriginal(ServerUpdate)}
                 />
                 <Route path='/security' component={loginOrOriginal(Security)} />
                 <Route path='/login' component={Login} />
