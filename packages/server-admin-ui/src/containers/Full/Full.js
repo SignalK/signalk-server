@@ -86,7 +86,6 @@ class Full extends Component {
                   path='/serverConfiguration/update'
                   component={loginOrOriginal(ServerUpdate)}
                 />
-                <Route path='/security' component={loginOrOriginal(Security)} />
                 <Route path='/security/settings' component={loginOrOriginal(SecuritySettings)} />
                 <Route path='/security/users' component={loginOrOriginal(Users)} />
                 <Route path='/security/devices' component={loginOrOriginal(Devices)} />
