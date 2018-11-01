@@ -13,10 +13,12 @@ import {
   InputGroupAddon,
   HelpBlock
 } from 'reactstrap'
+import { Link } from 'react-router-dom'
 import { connect } from 'react-redux'
-import { login, fetchAllData } from '../actions'
-import Dashboard from './Dashboard/'
+import { login, fetchAllData } from '../../actions'
+import Dashboard from '../Dashboard/'
 import EnableSecurity from './EnableSecurity'
+import Register from './Register'
 
 class Login extends Component {
   constructor (props) {
@@ -104,7 +106,14 @@ class Login extends Component {
                         <Col xs='6' className='text-right'>
                           <p className='text-danger'>
                             {this.state.loginErrorMessage}
-                          </p>
+                         </p>
+            {!this.state.loginErrorMessage && this.props.loginStatus.allowNewUserRegistration &&
+          <div>
+          <Link to="/register">
+          <Button color="link" className="px-0">Sign up</Button>
+         </Link>
+          </div>
+         }
                         </Col>
                       </Row>
                     </CardBody>

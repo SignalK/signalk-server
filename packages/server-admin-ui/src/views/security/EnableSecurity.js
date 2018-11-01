@@ -14,8 +14,8 @@ import {
   HelpBlock
 } from 'reactstrap'
 import { connect } from 'react-redux'
-import { login, enableSecurity, fetchLoginStatus } from '../actions'
-import Dashboard from './Dashboard/'
+import { login, enableSecurity, fetchLoginStatus } from '../../actions'
+import Dashboard from '../Dashboard/'
 import Login from './Login'
 
 class EnableSecurity extends Component {
