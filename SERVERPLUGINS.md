@@ -48,7 +48,7 @@ For more information, see [react-jsonschema-form-extras](https://github.com/RxNT
 If your plugin does not require any initial configuration, you can make so that it is enabled by default. Add the following property to your package.json:
 
 ```json
-  "signalk-plugin-enabled-by-defalt": true
+  "signalk-plugin-enabled-by-default": true
 ```
 
 ## Plugin configuration files
