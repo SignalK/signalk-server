@@ -19,16 +19,6 @@ import {
 } from 'reactstrap'
 import EnableSecurity from './EnableSecurity'
 
-export function fetchSecurityConfig () {
-  fetch(`/security/config`, {
-    credentials: 'include'
-  })
-    .then(response => response.json())
-    .then(data => {
-      this.setState(data)
-    })
-}
-
 export function fetchSecurityUsers () {
   fetch(`/security/users`, {
     credentials: 'include'
@@ -39,20 +29,15 @@ export function fetchSecurityUsers () {
     })
 }
 
-class Security extends Component {
+class Users extends Component {
   constructor (props) {
     super(props)
     this.state = {
       users: [],
-      allow_readonly: false,
-      expiration: ''
     }
 
-    this.handleChange = this.handleChange.bind(this)
     this.handleAddUser = this.handleAddUser.bind(this)
-    this.handleSaveConfig = this.handleSaveConfig.bind(this)
     this.fetchSecurityUsers = fetchSecurityUsers.bind(this)
-    this.fetchSecurityConfig = fetchSecurityConfig.bind(this)
     this.handleCancel = this.handleCancel.bind(this)
     this.handleApply = this.handleApply.bind(this)
     this.handleUserChange = this.handleUserChange.bind(this)
@@ -61,17 +46,8 @@ class Security extends Component {
 
   componentDidMount () {
     if (this.props.loginStatus.authenticationRequired) {
-      this.fetchSecurityConfig()
       this.fetchSecurityUsers()
     }
-  }
-
-  handleChange (event) {
-    const value =
-      event.target.type === 'checkbox'
-        ? event.target.checked
-        : event.target.value
-    this.setState({ [event.target.name]: value })
   }
 
   handleUserChange (event) {
@@ -167,28 +143,7 @@ class Security extends Component {
       })
   }
 
-  handleSaveConfig () {
-    var payload = {
-      allow_readonly: this.state.allow_readonly,
-      expiration: this.state.expiration
-    }
-    fetch('/security/config', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload),
-      credentials: 'include'
-    })
-      .then(response => response.text())
-      .then(response => {
-        this.fetchSecurityConfig()
-        alert(response)
-      })
-  }
-
   userClicked (user, index) {
-    console.log(JSON.stringify(user))
     this.setState(
       {
         selectedUser: JSON.parse(JSON.stringify(user)),
@@ -211,72 +166,6 @@ class Security extends Component {
         )}
         {this.props.loginStatus.authenticationRequired && (
           <div>
-            <Card>
-              <CardHeader>
-                <i className='fa fa-align-justify' />Settings
-              </CardHeader>
-              <CardBody>
-                <Form
-                  action=''
-                  method='post'
-                  encType='multipart/form-data'
-                  className='form-horizontal'
-                >
-                  <FormGroup row>
-                    <Col xs='0' md='2'>
-                      <Label>Allow Readonly Access</Label>
-                    </Col>
-                    <Col md='9'>
-                      <FormGroup check>
-                        <div>
-                          <Label className='switch switch-text switch-primary'>
-                            <Input
-                              type='checkbox'
-                              name='allow_readonly'
-                              className='switch-input'
-                              onChange={this.handleChange}
-                              checked={this.state.allow_readonly}
-                            />
-                            <span
-                              className='switch-label'
-                              data-on='Yes'
-                              data-off='No'
-                            />
-                            <span className='switch-handle' />
-                          </Label>
-                        </div>
-                      </FormGroup>
-                    </Col>
-                  </FormGroup>
-                  <FormGroup row>
-                    <Col md='2'>
-                      <Label htmlFor='text-input'>Login Session Timeout</Label>
-                    </Col>
-                    <Col xs='12' md='9'>
-                      <Input
-                        type='text'
-                        name='expiration'
-                        onChange={this.handleChange}
-                        value={this.state.expiration}
-                      />
-                      <FormText color='muted'>
-                        Exmaples: 60s, 1m, 1h, 1d
-                      </FormText>
-                    </Col>
-                  </FormGroup>
-                </Form>
-              </CardBody>
-              <CardFooter>
-                <Button
-                  size='sm'
-                  color='primary'
-                  onClick={this.handleSaveConfig}
-                >
-                  <i className='fa fa-dot-circle-o' /> Save
-                </Button>
-              </CardFooter>
-            </Card>
-
             <Card>
               <CardHeader>
                 <i className='fa fa-align-justify' />Users
@@ -425,12 +314,9 @@ class Security extends Component {
   }
 }
 
-const mapStateToProps = ({ securityConfig, securityUsers }) => ({
-  securityConfig,
-  securityUsers
-})
+const mapStateToProps = ({ securityUsers }) => ({ securityUsers })
 
-export default connect(mapStateToProps)(Security)
+export default connect(mapStateToProps)(Users)
 
 function convertType (type) {
   if (type == 'readonly') {
