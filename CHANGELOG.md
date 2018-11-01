@@ -1,6 +1,14 @@
 ## Change Log
 
-### latest (2018/10/17 14:15 +00:00)
+### v1.8.0 (2018/11/01 19:43 +00:00)
+- [#646](https://github.com/SignalK/signalk-server-node/pull/646) feature: allow the server to be upgraded via the admin ui (@sbender9)
+- [#620](https://github.com/SignalK/signalk-server-node/pull/620) feature: implement device access and new security spec (@sbender9)
+- [#645](https://github.com/SignalK/signalk-server-node/pull/645) Update @signalk/signalk-schema to the latest version 🚀 (@greenkeeper[bot])
+- [#572](https://github.com/SignalK/signalk-server-node/pull/572) feature: add log2sk utility (@tkurki)
+- [#642](https://github.com/SignalK/signalk-server-node/pull/642) Update @signalk/signalk-schema to the latest version 🚀 (@greenkeeper[bot])
+- [#639](https://github.com/SignalK/signalk-server-node/pull/639) feature: 0183 TCP server duplex, sentenceEvent (@tkurki)
+
+### v1.7.1 (2018/10/17 14:39 +00:00)
 - [#641](https://github.com/SignalK/signalk-server-node/pull/641) Update @signalk/freeboard-sk to the latest version 🚀 (@greenkeeper[bot])
 - [#634](https://github.com/SignalK/signalk-server-node/pull/634) chore: update to latest version of nmea0183-signalk (@sarfata)
 - [#636](https://github.com/SignalK/signalk-server-node/pull/636) chore(package): update ws to version 6.1.0 (@tkurki)
