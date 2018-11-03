@@ -43,6 +43,14 @@ uiSchema['myObject'] = {
 
 For more information, see [react-jsonschema-form-extras](https://github.com/RxNT/react-jsonschema-form-extras#collapsible-fields-collapsible)
 
+## Making a plugin enabled by default
+
+If your plugin does not require any initial configuration, you can make so that it is enabled by default. Add the following property to your package.json:
+
+```json
+  "signalk-plugin-enabled-by-default": true
+```
+
 ## Plugin configuration files
 
 A plugin's configuration data is saved at `SIGNALK_NODE_CONDFIG_DIR/plugin-config-data/<plugin-name>.json`. You can disable a plugin by removing its configuration file.
