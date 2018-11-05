@@ -65,7 +65,7 @@ class Settings extends Component {
               </CardHeader>
               <CardBody>
                 <ListGroup>
-                  {logfilesToRows(this.state.logfileslist)}
+                  {this.logfilesToRows(this.state.logfileslist)}
                 </ListGroup>
               </CardBody>
               <CardFooter>
@@ -79,31 +79,37 @@ class Settings extends Component {
       </div>
     )
   }
+
+  logfilesToRows (logfiles) {
+  // skserver-raw_2017-03-04T14.log
+  // 012345678901234567890123456789012
+    const datesWithHours = logfiles.reduce((acc, logfile) => {
+      const date = logfile.substr(13, 10)
+      const hour = logfile.substr(24, 2)
+      if (!acc[date]) {
+        acc[date] = []
+      }
+      acc[date].push(hour)
+      return acc
+    }, {})
+
+    return Object.keys(datesWithHours).map((date, i) => {
+      return (
+        <ListGroupItem key={i}>
+          {date}
+          {datesWithHours[date].map((hour, i) => (
+            <span key={i}>
+              <a href={`/logfiles/skserver-raw_${date}T${hour}.log`}>
+                <Button className='m-2'>{hour}</Button>
+              </a>
+            </span>
+          ))
+          }
+        </ListGroupItem>
+      )
+    })
+  }
 }
-// signalk-rawdata.log.2017-03-04T14
-// 012345678901234567890123456789012
-function logfilesToRows (logfiles) {
-  const datesWithHours = logfiles.reduce((acc, logfile) => {
-    const date = logfile.substr(20, 10)
-    const hour = logfile.substr(31, 2)
-    if (!acc[date]) {
-      acc[date] = []
-    }
-    acc[date].push(hour)
-    return acc
-  }, {})
-  return Object.keys(datesWithHours).map((date, i) => {
-    return (
-      <ListGroupItem key={i}>
-        {date}
-        {datesWithHours[date].map(hour => (
-          <a href={`/logfiles/signalk-rawdata.log.${date}T${hour}`}>
-            <Button className='m-2'>{hour}</Button>
-          </a>
-        ))}
-      </ListGroupItem>
-    )
-  })
-}
+
 
 export default connect()(Settings)
