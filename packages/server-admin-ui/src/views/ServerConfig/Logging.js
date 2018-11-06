@@ -35,7 +35,8 @@ class Settings extends Component {
     super(props)
     this.state = {
       hasData: false,
-      authorized: true
+      authorized: true,
+      chartedSailsAvailable: false
     }
 
     this.fetchLogfileList = fetchLogfileList.bind(this)
@@ -43,6 +44,15 @@ class Settings extends Component {
 
   componentDidMount () {
     this.fetchLogfileList()
+    this.checkChartedsails()
+  }
+
+  checkChartedsails() {
+    fetch('http://chartedsails.com/', {mode: 'no-cors'}).then(result => {
+      this.setState({chartedSailsAvailable: true})
+    }).catch(e => {
+      this.setState({chartedSailsAvailable: false})
+    })
   }
 
   render () {
@@ -102,6 +112,13 @@ class Settings extends Component {
               <a href={`/logfiles/skserver-raw_${date}T${hour}.log`}>
                 <Button className='m-2'>{hour}</Button>
               </a>
+            {this.state.chartedSailsAvailable && (
+              <a
+                title="Open in chartedsails.com"
+                href={`http://chartedsails.com/?url=${location.origin}/logfiles/skserver-raw_${date}T${hour}.log`}>
+                <i className="icon-map"/>
+              </a>
+            )}
             </span>
           ))
           }
