@@ -21,13 +21,18 @@ const fs = require('fs')
 
 var args = minimist(process.argv.slice(2))
 
-var settingsPath = args.settings || args.s
+var settingsPath = args.settings || args.s 
+var format = args.format || args.f
 
 if ( !settingsPath ) {
   console.error(
-    'usage: list-devices -s /path/to/settings.json'
+    'usage: list-devices -s /path/to/settings.json -f [json|text]'
   )
   process.exit(1)
+}
+
+if ( !format ) {
+  format = 'json'
 }
 
 let settings = require(settingsPath)
@@ -36,7 +41,7 @@ let devices = []
 
 if ( settings.pipedProviders ) {
   settings.pipedProviders.forEach(provider => {
-    if ( provider.enabled && provider.pipeElements ) {
+    if ( !provider.enabled  && provider.pipeElements ) {
       provider.pipeElements.forEach(el => {
         if ( el.type === 'providers/simple' ) {
           if ( el.options && el.options.subOptions && el.options.subOptions.device  ) {
@@ -48,7 +53,14 @@ if ( settings.pipedProviders ) {
   })
 }
 
-console.log(JSON.stringify(devices))
+if ( format === 'json' ) {
+  console.log(JSON.stringify(devices))
+} else {
+  devices.forEach(d => {
+    process.stdout.write(d + ' ')
+  })
+  process.stdout.write('\n')
+}
 
             
 
