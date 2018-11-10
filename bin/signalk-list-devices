@@ -41,7 +41,7 @@ let devices = []
 
 if ( settings.pipedProviders ) {
   settings.pipedProviders.forEach(provider => {
-    if ( !provider.enabled  && provider.pipeElements ) {
+    if ( provider.enabled  && provider.pipeElements ) {
       provider.pipeElements.forEach(el => {
         if ( el.type === 'providers/simple' ) {
           if ( el.options && el.options.subOptions && el.options.subOptions.device  ) {
