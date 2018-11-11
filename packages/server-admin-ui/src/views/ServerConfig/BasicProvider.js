@@ -362,15 +362,7 @@ const NMEA0183 = props => {
           </Col>
         )}
       </FormGroup>
-      {props.value.options.type === 'serial' && (
-        <div>
-          <DeviceInput value={props.value.options} onChange={props.onChange} />
-          <BaudRateIntput
-            value={props.value.options}
-            onChange={props.onChange}
-          />
-        </div>
-      )}
+      {serialParams(props)}
       {props.value.options.type === 'tcp' && (
         <div>
           <HostInput value={props.value.options} onChange={props.onChange} />
@@ -480,3 +472,13 @@ const FileStream = props => {
     </div>
   )
 }
+
+const serialParams = props => (props.value.options.type === 'serial' && (
+  <div>
+    <DeviceInput value={props.value.options} onChange={props.onChange} />
+    <BaudRateIntput
+      value={props.value.options}
+      onChange={props.onChange}
+    />
+  </div>
+))
