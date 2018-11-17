@@ -82,7 +82,7 @@
   "dependencies": {
     "@signalk/client": "^0.2.0",
     "@signalk/freeboard-sk": "^1.0.0",
-    "@signalk/instrumentpanel": "^0.3.0",
+    "@signalk/instrumentpanel": "^0.4.0",
     "@signalk/maptracker": "^1.0.0",
     "@signalk/n2k-signalk": "^1.2.1",
     "@signalk/nmea0183-signalk": "^3.0.0",
