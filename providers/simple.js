@@ -218,6 +218,9 @@ function signalKInput (subOptions) {
     return [new Tcp(subOptions), new Liner(subOptions)]
   } else if (subOptions.type === 'udp') {
     return [new Udp(subOptions)]
+  } else if (subOptions.type === 'serial') {
+    const serialport = require('./serialport')
+    return [new serialport(subOptions)]
   }
   throw new Error(`unknown SignalK type: ${subOptions.type}`)
 }

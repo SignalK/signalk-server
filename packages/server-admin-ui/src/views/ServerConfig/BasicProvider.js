@@ -362,15 +362,7 @@ const NMEA0183 = props => {
           </Col>
         )}
       </FormGroup>
-      {props.value.options.type === 'serial' && (
-        <div>
-          <DeviceInput value={props.value.options} onChange={props.onChange} />
-          <BaudRateIntput
-            value={props.value.options}
-            onChange={props.onChange}
-          />
-        </div>
-      )}
+      {serialParams(props)}
       {props.value.options.type === 'tcp' && (
         <div>
           <HostInput value={props.value.options} onChange={props.onChange} />
@@ -415,6 +407,7 @@ const SignalK = props => {
             onChange={event => props.onChange(event)}
           >
             <option>Select a source</option>
+            <option value='serial'>Serial</option>
             <option value='ws'>WebSocket</option>
             <option value='wss'>WebSocket SSL</option>
             <option value='tcp'>TCP</option>
@@ -463,6 +456,7 @@ const SignalK = props => {
       {props.value.options.type === 'udp' && (
         <PortInput value={props.value.options} onChange={props.onChange} />
       )}
+      {serialParams(props)}
     </div>
   )
 }
@@ -480,3 +474,13 @@ const FileStream = props => {
     </div>
   )
 }
+
+const serialParams = props => (props.value.options.type === 'serial' && (
+  <div>
+    <DeviceInput value={props.value.options} onChange={props.onChange} />
+    <BaudRateIntput
+      value={props.value.options}
+      onChange={props.onChange}
+    />
+  </div>
+))
