@@ -211,3 +211,10 @@ List of installed plugins with their configuration data.
 ### `POST /plugins/<pluginid/configure`
 
 Save configuration data for a plugin. Stops and starts the plugin as a side effect.
+
+
+# Removing plugins
+
+If you have have installed the server from npm and have used the setup script the plugins that you have installed yourself are installed under `~/.signalk/node_modules` and listed in `~/.signalk/package.json`. If you want to remove a plugin you should remove it from `package.json` and then either run `npm prune` in `~/.signalk/` directory or wipe `~/.signalk/node_modules` and run `npm install` in `~/.signalk/`.
+
+Plugin settings are stored in `~/.signalk/plugin-config-data/` and are easily recognizable by filename. You can just delete the settings file for the plugin you are removing.
