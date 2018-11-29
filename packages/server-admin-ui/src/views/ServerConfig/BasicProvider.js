@@ -207,6 +207,7 @@ class DataTypeInput extends Component {
             name='options.dataType'
             onChange={event => this.props.onChange(event)}
           >
+            {!this.props.value.options.dataType && (<option value=''>Select data type</option>)}
             <option value='SignalK'>Signal K</option>
             <option value='NMEA2000'>NMEA 2000 (canboat)</option>
             <option value='NMEA2000JS'>NMEA 2000 (canboatjs)</option>
