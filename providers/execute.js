@@ -72,9 +72,9 @@ function start (command, that) {
   })
 
   that.childProcess.on('close', code => {
-    const msg = `Process exited with ${code}`
-    that.options.app.setProviderError(that.options.providerId, msg)
-    debug(msg)
+    const msg = `'${command} exited' with ${code}`
+    // that.options.app.setProviderError(that.options.providerId, msg)
+    console.error(msg)
     if (
       typeof that.options.restartOnClose === 'undefined' ||
       that.options.restartOnClose
@@ -87,7 +87,7 @@ function start (command, that) {
       } else {
         var nextStart = throttleTime - sinceLast
         const msg = `Waiting ${nextStart / 1000} seconds to restart`
-        that.options.app.setProviderError(that.options.providerId, msg)
+        that.options.app.setProviderStatus(that.options.providerId, msg)
         debug(msg)
         setTimeout(function () {
           start(command, that)

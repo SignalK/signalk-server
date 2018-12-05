@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-admin-ui",
-  "version": "1.2.0",
+  "version": "1.5.0",
   "description": "Signal K server admin webapp",
   "author": "Scott Bender, Teppo Kurki",
   "contributors": [
@@ -12,9 +12,6 @@
     }
   ],
   "license": "MIT",
-  "keywords": [
-    "signalk-webapp"
-  ],
   "devDependencies": {
     "babel-core": "6.26.0",
     "babel-loader": "7.1.2",
@@ -52,7 +49,9 @@
     "webpack": "^3.8.1",
     "webpack-dev-server": "2.9.4"
   },
-  "dependencies": {},
+  "dependencies": {
+    "react-markdown": "^4.0.3"
+  },
   "scripts": {
     "prepublishOnly": "npm run clean && npm run build",
     "dev": "webpack -d --progress --watch --profile --json > compilation-stats.json --env.dev",

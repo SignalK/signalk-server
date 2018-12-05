@@ -12,6 +12,7 @@ const Liner = require('./liner')
 const execute = require('./execute')
 const Udp = require('./udp')
 const Tcp = require('./tcp')
+const TcpServer = require('./tcpserver')
 const FileStream = require('./filestream')
 const Throttle = require('./throttle')
 const TimestampThrottle = require('./timestamp-throttle')
@@ -177,6 +178,8 @@ function nmea2000input (subOptions, logging) {
 function nmea0183input (subOptions) {
   if (subOptions.type == 'tcp') {
     return [new Tcp(subOptions), new Liner(subOptions)]
+  } else if (subOptions.type === 'tcpserver') {
+    return [new TcpServer(subOptions), new Liner(subOptions)]
   } else if (subOptions.type === 'udp') {
     return [new Udp(subOptions)]
   } else if (subOptions.type === 'serial') {
@@ -201,7 +204,8 @@ function signalKInput (subOptions) {
   if (subOptions.type === 'ws' || subOptions.type === 'wss') {
     const options = {
       app: subOptions.app,
-      providerId: subOptions.providerId
+      providerId: subOptions.providerId,
+      ignoreServers: subOptions.ignoreServers
     }
     if (!subOptions.useDiscovery) {
       options.host = subOptions.host
@@ -214,6 +218,9 @@ function signalKInput (subOptions) {
     return [new Tcp(subOptions), new Liner(subOptions)]
   } else if (subOptions.type === 'udp') {
     return [new Udp(subOptions)]
+  } else if (subOptions.type === 'serial') {
+    const serialport = require('./serialport')
+    return [new serialport(subOptions)]
   }
   throw new Error(`unknown SignalK type: ${subOptions.type}`)
 }

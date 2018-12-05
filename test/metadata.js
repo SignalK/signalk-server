@@ -15,8 +15,10 @@ describe('Metadata retrieval', () => {
     })
   })
 
-  after(() => {
-    serverP.then(server => server.stop())
+  after(done => {
+    serverP.then(server => server.stop()).then(() => {
+      done()
+    })
   })
 
   it('valid .../meta works', () => {

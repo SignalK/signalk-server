@@ -22,4 +22,4 @@ If you want to integrate your webapp in the main structure of http://localhost:3
 
 ### 4. Going further
 
-Have an idea for a great way to visualise Signal K data? Something bugging you about the sample consumers? [Read the documentation](signalk.org/specification/master/), share your input, write some code, [join the mailing list](https://groups.google.com/forum/#!forum/signalk) and our [Slack chat](http://slack-invite.signalk.org/)!
+Have an idea for a great way to visualise Signal K data? Something bugging you about the sample consumers? [Read the documentation](https://signalk.org/specification/master/), share your input, write some code, [join the mailing list](https://groups.google.com/forum/#!forum/signalk) and our [Slack chat](http://slack-invite.signalk.org/)!

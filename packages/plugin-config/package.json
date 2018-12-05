@@ -1,6 +1,6 @@
 {
   "name": "@signalk/plugin-config",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Configuration interface for Signal K Node server plugins",
   "main": "index.js",
   "author": "teppo.kurki@iki.fi",
@@ -25,5 +25,8 @@
     "build-debug": "webpack -p --devtool source-map",
     "prepublishOnly": "npm run build",
     "watch": "webpack -d --watch"
+  },
+  "dependencies": {
+    "react-jsonschema-form-extras": "^0.9.27"
   }
 }

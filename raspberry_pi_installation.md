@@ -1,8 +1,8 @@
 # Getting Started
 
-To coincide With the release of the Raspberry Pi 3, we thought it would be good to create a "How to" Guide for installing Signal K on a Raspberry Pi (RPi). This is being written whilst installing on a new RPi 3, but it should be applicable for earlier models.
+This is being written whilst installing on a new RPi 3, but it should be applicable for earlier models.
 
-So you have your RPi and are "chomping at the bit" to start using it. Well before we start make sure you have the following items...
+Before we start make sure you have the following items...
 
 1. A network to connect the RPi to (via Wi-Fi or wire)
 1. An HDMI monitor or TV
@@ -11,13 +11,11 @@ So you have your RPi and are "chomping at the bit" to start using it. Well befor
 1. An 8GB or larger micro SD Card
 1. A Windows PC or Mac that can read micro SD Cards via a card reader or SD slot+adaptor
 
-First you need to install a LINUX operating system on to the micro SD Card but before you do that format the card using the SD Card foundations Formatting tool, which you can download from here...
+First you need to install teh Raspbian operating system on to the micro SD Card but before you do that format the card using the SD Card foundations Formatting tool, which you can download from here...
 
 https://www.sdcard.org/downloads/formatter_4/
 
 There is a version for Windows or Mac OSX and after downloading the tool of choice, extract and run the Setup program. Once installed, run the program with the micro SD plugged in to a card reader or SD card slot on the computer. It is good practice to give the card a volume name such as "Signal_K" which will remind you what is on the card at a later date as one LINUX distribution card looks much the same as another.
-
-If you intend to use the Raspberry Pi for other things, not just Signal K, I would strongly recommend preparing one SD Card for the Signal K installation and have another SD Card with a normal Raspberry Pi installation and then you can keep things separate and clean.
 
 ![SD Card Formatter](https://github.com/digitalyacht/ikommunicate/blob/master/RPi_How_To_Images/SD.Formatter.png)
 
@@ -74,46 +72,6 @@ To check if Avahi is installed and working correctly enter the following command
 This will search for and list all of the discoverable devices/services on your network. Use ctrl+c to stop the search.
 
 ![Avahi-Browse](https://github.com/digitalyacht/ikommunicate/blob/master/RPi_How_To_Images/Avahi-Browse.png)
-
-Another software that really makes Your handling with the RPI easier is Samba. This software makes Your RPI appear, in MS Explorer or Mac Finder, as a Windows fileserver so You can edit and move files from/to the RPI
-
-    $ sudo apt-get install samba samba-common-bin
-
-Edit the Samba configuration file so that You have more than "Read Only" rights.
-
-    $ sudo nano /etc/samba/smb.conf
-
-And then find the following part 
-
-    #======================= Share Definitions =======================   
-                                                                     
-    [homes]                                                              
-      comment = Home Directories                                        
-      browseable = no                                                   
-                                                                     
-    # By default, the home directories are exported read-only. Change the
-    # next parameter to 'no' if you want to be able to write to them.    
-      read only = yes                                                   
-
-so shange to 
-
-    read only = no
-
-and then save the file
-Create a Samba user, maybe pi ? and a password
-
-    $ sudo smbpasswd -a pi
-    New SMB password:
-    Retype new SMB password:
-    Added user pi.
-
-Restart the Samba service
-
-    $ sudo /etc/init.d/samba restart 
-    [ ok ] Restarting nmbd (via systemctl): nmbd.service.
-    [ ok ] Restarting smbd (via systemctl): smbd.service.
-    
-and now You should be up and running and the Pi folder should be shared if You logon with user Pi.
 
 ## Step 2 - Install Signal K Node Server and Consumers
 
@@ -177,6 +135,8 @@ To generate your own vessel settings file and configure your Pi to start the ser
     $ sudo signalk-server-setup
 
 and follow the prompts. If You are following the defaults and are logged on as ”pi” the boat info will be stored in `/home/pi/.signalk/defaults.json` and the settings in `/home/pi/.signalk/settings.json`
+
+You can re-run this command at any time in the future to change the settings.
 
 These files can be edited via the admin UI or directly looking at the example settings. 
 

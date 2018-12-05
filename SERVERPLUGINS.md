@@ -29,6 +29,28 @@ The schema value should be the structure of the plugin's configuration data as [
 
 See [Ais Reporter](https://github.com/SignalK/aisreporter/issues) for an example.
 
+You can make sections of your schema collapsible.
+
+For example, to make all data in an object called 'myObject' collapsible:
+```
+uiSchema['myObject'] = {
+  'ui:field': 'collapsible',
+  collapse: {
+  field: 'ObjectField',
+  wrapClassName: 'panel-group'
+}
+```
+
+For more information, see [react-jsonschema-form-extras](https://github.com/RxNT/react-jsonschema-form-extras#collapsible-fields-collapsible)
+
+## Making a plugin enabled by default
+
+If your plugin does not require any initial configuration, you can make so that it is enabled by default. Add the following property to your package.json:
+
+```json
+  "signalk-plugin-enabled-by-default": true
+```
+
 ## Plugin configuration files
 
 A plugin's configuration data is saved at `SIGNALK_NODE_CONDFIG_DIR/plugin-config-data/<plugin-name>.json`. You can disable a plugin by removing its configuration file.
@@ -110,17 +132,20 @@ If the plugin needs to make and save changes to its options
 
 If the plugin needs to read plugin options from disk
 
-### app.registerActionHandler (context, path, source, callback)
+### app.registerPutHandler (context, path, source, callback)
 
-If the plugin wants to respond to actions, which are PUT requests for a specific path, it should register an action handler.
+If the plugin wants to respond to PUT requests for a specific path, it should register an action handler.
 
 The action handler can handle the request synchronously or asynchronously.
-For synchronous actions the handler must return a value describing the result of the action: either `{ state: 'SUCCESS' }` or `{ state:'FAILURE', message:'Some Error Message' }`.
+
+The passed callback should be a funtion taking the following arguments: (context, path, value, callback)
+
+For synchronous actions the handler must return a value describing the response of the request: for example `{ state: 'COMPLETED', result:200 }` or `{ state:'COMPLETED', result:400, message:'Some Error Message' }`. The result value can be any valid http response code.
 
 For asynchronous actions that may take considerable time and the requester should not be kept waiting for the result
 the handler must return `{ state: 'PENDING' }`. When the action is finished the handler
- should call the `callback` function with the result with  `callback({ state: 'SUCCESS' })` or
-`callback({ state:'FAILURE', message:'Some Error Message' })`.
+ should call the `callback` function with the result with  `callback({ state: 'COMPLETED', statusCode:200 })` or
+`callback({ state:'COMPLETED', statusCode:400, message:'Some Error Message' })`.
 
 ### app.registerDeltaInputHandler ((delta, next) => ...)
 
@@ -186,3 +211,10 @@ List of installed plugins with their configuration data.
 ### `POST /plugins/<pluginid/configure`
 
 Save configuration data for a plugin. Stops and starts the plugin as a side effect.
+
+
+# Removing plugins
+
+If you have have installed the server from npm and have used the setup script the plugins that you have installed yourself are installed under `~/.signalk/node_modules` and listed in `~/.signalk/package.json`. If you want to remove a plugin you should remove it from `package.json` and then either run `npm prune` in `~/.signalk/` directory or wipe `~/.signalk/node_modules` and run `npm install` in `~/.signalk/`.
+
+Plugin settings are stored in `~/.signalk/plugin-config-data/` and are easily recognizable by filename. You can just delete the settings file for the plugin you are removing.

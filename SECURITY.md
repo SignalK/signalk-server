@@ -11,6 +11,8 @@ To enable security, add a `security` section to your settings .json file and add
 
 Security configuration is stored in file called `security.json` which will be located in the configuration directory.
 
+**In case you accidentally lose your admin credentials you can remove `security.json` and restart.**
+
 ACLs
 ====
 

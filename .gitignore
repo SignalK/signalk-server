@@ -13,3 +13,9 @@ settings/ssl-cert.pem
 work/
 
 docker-manifest.yml
+
+test/plugin-test-config/.npmrc
+test/plugin-test-config/plugin-config-data/
+test/plugin-test-config/ssl-cert.pem
+test/plugin-test-config/ssl-key.pem
+
