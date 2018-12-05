@@ -9,7 +9,6 @@
     "start": "node bin/signalk-server",
     "test": "mocha --exit",
     "test-lib": "mocha $(find lib -name '*test.js')",
-    "precommit": "lint-staged",
     "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js",
     "heroku-postbuild": "npm install @signalk/simple-gpx"
   },
