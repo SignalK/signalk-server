@@ -1,4 +1,4 @@
-CONFIG_DIR![signal-k-logo-tagline](https://user-images.githubusercontent.com/1049678/34687576-d3e9af3e-f4b7-11e7-875e-80fce5a6e62b.png)
+![signal-k-logo-tagline](https://user-images.githubusercontent.com/1049678/34687576-d3e9af3e-f4b7-11e7-875e-80fce5a6e62b.png)
 
 [![npm version](https://badge.fury.io/js/signalk-server.svg)](https://badge.fury.io/js/signalk-server)
 [![npm license](https://img.shields.io/npm/l/signalk-server.svg)](https://www.npmjs.com/package/signalk-server)
