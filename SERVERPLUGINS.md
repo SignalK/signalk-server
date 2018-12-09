@@ -7,7 +7,7 @@
 Signal K Node server plugins are components that run within the server and add some functionality to the server. You can configure them via the admin ui.
 
 Plugins
-- are npm modules published in the npm repository with the `signalk-node-server-plugin` keyword 
+- are npm modules published in the npm repository with the `signalk-node-server-plugin` keyword
 - are installed, activated/disabled and configured from the server admin UI
 - start in disabled state - you need to enable them after install
 - can be a webapp as well: a webapp's `/public/` directory is mounted under server's root under module id http://yourserver/moduleid
@@ -53,7 +53,7 @@ If your plugin does not require any initial configuration, you can make so that 
 
 ## Plugin configuration files
 
-A plugin's configuration data is saved at `SIGNALK_NODE_CONDFIG_DIR/plugin-config-data/<plugin-name>.json`. You can disable a plugin by removing its configuration file.
+A plugin's configuration data is saved at `SIGNALK_NODE_CONFIG_DIR/plugin-config-data/<plugin-name>.json`. You can disable a plugin by removing its configuration file.
 
 ## Logging
 
@@ -67,7 +67,7 @@ The plugin configuration form has an option for turning on logging per plugin. E
 - Run `npm link <your-plugin-id>` in your SK server's configuration directory (default is $HOME/.signalk/) to link to your plugin as it were installed by the server
 - Restart the server (with environment variable DEBUG=signalk:interfaces:plugins to get debug log output about the plugin loading process)
 - Discover the stuff you need to implement from the server's error logging or read from below or use an existing plugin like [set-system-time](https://github.com/SignalK/set-system-time/blob/master/index.js) as an example
-- Enable the plugin in server's admin UI 
+- Enable the plugin in server's admin UI
 
 ## SERVER API FOR PLUGINS
 
