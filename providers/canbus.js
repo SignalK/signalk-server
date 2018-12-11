@@ -14,4 +14,4 @@
  * limitations under the License.
  */
 
-module.exports = require('canboatjs').canbus
+module.exports = require('@canboat/canboatjs').canbus

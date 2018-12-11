@@ -1,1 +1,1 @@
-module.exports = require('canboatjs').serial
+module.exports = require('@canboat/canboatjs').serial

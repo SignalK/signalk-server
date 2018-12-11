@@ -17,7 +17,7 @@ const FileStream = require('./filestream')
 const Throttle = require('./throttle')
 const TimestampThrottle = require('./timestamp-throttle')
 const CanboatJs = require('./canboatjs')
-const iKonvert = require('canboatjs').iKonvert
+const iKonvert = require('@canboat/canboatjs').iKonvert
 
 function Simple (options) {
   Transform.call(this, { objectMode: true })
@@ -138,7 +138,8 @@ const dataTypeMapping = {
           }
         })
       )
-    } else {
+    } // else
+    {
       result.unshift(new iKonvert(options.subOptions))
     }
     return result.concat([new N2kToSignalK(options.subOptions)])
