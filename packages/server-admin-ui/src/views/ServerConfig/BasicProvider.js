@@ -241,7 +241,7 @@ class DataTypeInput extends Component {
             {!this.props.value.options.dataType && (<option value=''>Select data type</option>)}
             <option value='SignalK'>Signal K</option>
             <option value='NMEA2000JS'>Actisense NMEA 2000 (canboatjs)</option>
-            <option value='NMEA2000IK'>iKonnect NMEA 2000 (canboatjs)</option>
+            <option value='NMEA2000IK'>iKonvert NMEA 2000 (canboatjs)</option>
             <option value='NMEA2000'>NMEA 2000 (canboat)</option>
             <option value='NMEA0183'>NMEA 0183</option>
             {this.props.value.type === 'FileStream' && (
@@ -360,8 +360,8 @@ const NMEA2000 = props => {
             onChange={event => props.onChange(event)}
           >
             <option value='none'>Select a source</option>
-            <option value='ngt-1-canboatjs'>Actisense NTG-1 (canboatjs)</option>
-            <option value='ngt-1'>Actisense NTG-1 (canboat)</option>
+            <option value='ngt-1-canboatjs'>Actisense NGT-1 (canboatjs)</option>
+            <option value='ngt-1'>Actisense NGT-1 (canboat)</option>
             <option value='ikonvert-canboatjs'>iKonvert (canboatjs)</option>
             <option value='canbus-canboatjs'>Canbus (canboatjs)</option>
             <option value='canbus'>Canbus (canboat)</option>
