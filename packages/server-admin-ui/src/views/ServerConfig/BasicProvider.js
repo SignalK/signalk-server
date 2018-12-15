@@ -267,6 +267,24 @@ class BaudRateIntput extends Component {
   }
 }
 
+class BaudRateIntputCanboat extends Component {
+  constructor (props) {
+    super(props)
+    this.props.value.baudrate = this.props.value.baudrate || 115200
+  }
+	
+  render () {
+    return (
+      <TextInput
+        title='Baud Rate'
+        name='options.baudrate'
+        value={this.props.value.baudrate}
+        onChange={event => this.props.onChange(event, 'number')}
+      />
+    )
+  }
+}
+
 class PortInput extends Component {
   render () {
     return (
@@ -350,7 +368,10 @@ const NMEA2000 = props => {
       </FormGroup>
       {(props.value.options.type === 'ngt-1' ||
         props.value.options.type === 'ngt-1-canboatjs') && (
-        <DeviceInput value={props.value.options} onChange={props.onChange} />
+         <div>
+             <DeviceInput value={props.value.options} onChange={props.onChange} />
+             <BaudRateIntputCanboat value={props.value.options} onChange={props.onChange} />
+         </div>
       )}
       {(props.value.options.type === 'canbus' ||
         props.value.options.type === 'canbus-canboatjs') && (

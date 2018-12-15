@@ -137,6 +137,7 @@ function nmea2000input (subOptions, logging) {
     return [
       new require('./actisense-serial')({
         device: subOptions.device,
+        baudrate: subOptions.baudrate,
         app: subOptions.app,
         outEvent: 'nmea2000out',
         plainText: logging,
@@ -155,7 +156,7 @@ function nmea2000input (subOptions, logging) {
     let command
     let toChildProcess
     if (subOptions.type == 'ngt-1') {
-      command = `actisense-serial ${subOptions.device}`
+      command = `actisense-serial -s ${(subOptions.baudrate || 115200)} ${subOptions.device}`
       toChildProcess = 'nmea2000out'
     } else if (subOptions.type == 'canbus') {
       command = `candump ${subOptions.interface} | candump2analyzer`
