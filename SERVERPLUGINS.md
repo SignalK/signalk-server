@@ -7,7 +7,7 @@
 Signal K Node server plugins are components that run within the server and add some functionality to the server. You can configure them via the admin ui.
 
 Plugins
-- are npm modules published in the npm repository with the `signalk-node-server-plugin` keyword 
+- are npm modules published in the npm repository with the `signalk-node-server-plugin` keyword
 - are installed, activated/disabled and configured from the server admin UI
 - start in disabled state - you need to enable them after install
 - can be a webapp as well: a webapp's `/public/` directory is mounted under server's root under module id http://yourserver/moduleid
@@ -43,9 +43,17 @@ uiSchema['myObject'] = {
 
 For more information, see [react-jsonschema-form-extras](https://github.com/RxNT/react-jsonschema-form-extras#collapsible-fields-collapsible)
 
+## Making a plugin enabled by default
+
+If your plugin does not require any initial configuration, you can make so that it is enabled by default. Add the following property to your package.json:
+
+```json
+  "signalk-plugin-enabled-by-default": true
+```
+
 ## Plugin configuration files
 
-A plugin's configuration data is saved at `SIGNALK_NODE_CONDFIG_DIR/plugin-config-data/<plugin-name>.json`. You can disable a plugin by removing its configuration file.
+A plugin's configuration data is saved at `SIGNALK_NODE_CONFIG_DIR/plugin-config-data/<plugin-name>.json`. You can disable a plugin by removing its configuration file.
 
 ## Logging
 
@@ -59,7 +67,7 @@ The plugin configuration form has an option for turning on logging per plugin. E
 - Run `npm link <your-plugin-id>` in your SK server's configuration directory (default is $HOME/.signalk/) to link to your plugin as it were installed by the server
 - Restart the server (with environment variable DEBUG=signalk:interfaces:plugins to get debug log output about the plugin loading process)
 - Discover the stuff you need to implement from the server's error logging or read from below or use an existing plugin like [set-system-time](https://github.com/SignalK/set-system-time/blob/master/index.js) as an example
-- Enable the plugin in server's admin UI 
+- Enable the plugin in server's admin UI
 
 ## SERVER API FOR PLUGINS
 
@@ -124,17 +132,20 @@ If the plugin needs to make and save changes to its options
 
 If the plugin needs to read plugin options from disk
 
-### app.registerActionHandler (context, path, source, callback)
+### app.registerPutHandler (context, path, source, callback)
 
-If the plugin wants to respond to actions, which are PUT requests for a specific path, it should register an action handler.
+If the plugin wants to respond to PUT requests for a specific path, it should register an action handler.
 
 The action handler can handle the request synchronously or asynchronously.
-For synchronous actions the handler must return a value describing the result of the action: either `{ state: 'SUCCESS' }` or `{ state:'FAILURE', message:'Some Error Message' }`.
+
+The passed callback should be a funtion taking the following arguments: (context, path, value, callback)
+
+For synchronous actions the handler must return a value describing the response of the request: for example `{ state: 'COMPLETED', result:200 }` or `{ state:'COMPLETED', result:400, message:'Some Error Message' }`. The result value can be any valid http response code.
 
 For asynchronous actions that may take considerable time and the requester should not be kept waiting for the result
 the handler must return `{ state: 'PENDING' }`. When the action is finished the handler
- should call the `callback` function with the result with  `callback({ state: 'SUCCESS' })` or
-`callback({ state:'FAILURE', message:'Some Error Message' })`.
+ should call the `callback` function with the result with  `callback({ state: 'COMPLETED', statusCode:200 })` or
+`callback({ state:'COMPLETED', statusCode:400, message:'Some Error Message' })`.
 
 ### app.registerDeltaInputHandler ((delta, next) => ...)
 
@@ -200,3 +211,10 @@ List of installed plugins with their configuration data.
 ### `POST /plugins/<pluginid/configure`
 
 Save configuration data for a plugin. Stops and starts the plugin as a side effect.
+
+
+# Removing plugins
+
+If you have have installed the server from npm and have used the setup script the plugins that you have installed yourself are installed under `~/.signalk/node_modules` and listed in `~/.signalk/package.json`. If you want to remove a plugin you should remove it from `package.json` and then either run `npm prune` in `~/.signalk/` directory or wipe `~/.signalk/node_modules` and run `npm install` in `~/.signalk/`.
+
+Plugin settings are stored in `~/.signalk/plugin-config-data/` and are easily recognizable by filename. You can just delete the settings file for the plugin you are removing.

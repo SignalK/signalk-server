@@ -9,7 +9,7 @@ const path = require('path')
 
 describe('Demo plugin ', () => {
   it('works', async () => {
-    process.env.SIGNALK_NODE_CONDFIG_DIR = require('path').join(
+    process.env.SIGNALK_NODE_CONFIG_DIR = require('path').join(
       __dirname,
       'plugin-test-config'
     )

@@ -154,6 +154,9 @@ const mapStateToProps = state => {
   var appUpdates = state.appStore.updates.length
   var updatesBadge = null
   var availableBadge = null
+  var serverUpdateBadge = null
+  var accessRequestsBadge = null
+
   if (appUpdates > 0) {
     updatesBadge = {
       variant: 'danger',
@@ -162,10 +165,26 @@ const mapStateToProps = state => {
     }
   }
 
+  if ( state.accessRequests.length > 0 ) {
+    accessRequestsBadge = {
+      variant: 'danger',
+      text: `${state.accessRequests.length}`,
+      color: 'danger'
+    }
+  }
+
   if (!state.appStore.storeAvailable) {
     updatesBadge = availableBadge = {
       variant: 'danger',
       text: 'OFFLINE'
+    }
+  }
+
+  if ( state.appStore.serverUpdate ) {
+    serverUpdateBadge = {
+      variant: 'danger',
+      text: state.appStore.serverUpdate,
+      color: 'danger'
     }
   }
 
@@ -234,6 +253,11 @@ const mapStateToProps = state => {
           {
             name: 'Data log files',
             url: '/serverConfiguration/datalogs'
+          },
+          {
+            name: 'Update',
+            url: '/serverConfiguration/update',
+            badge: serverUpdateBadge
           }
         ]
       }
@@ -244,11 +268,39 @@ const mapStateToProps = state => {
     state.loginStatus.authenticationRequired === false ||
     state.loginStatus.userLevel == 'admin'
   ) {
-    result.items.push({
+    var security =  {
       name: 'Security',
       url: '/security',
-      icon: 'icon-settings'
-    })
+      icon: 'icon-settings',
+      badge: accessRequestsBadge,
+      children: [
+        {
+          name: 'Settings',
+          url: '/security/settings'
+        },
+        {
+          name: 'Users',
+          url: '/security/users'
+        }
+      ]
+    }
+    if ( state.loginStatus.allowDeviceAccessRequests ) {
+      security.children.push({
+        name: 'Devices',
+        url: '/security/devices',
+      })
+    }
+    if (
+      state.loginStatus.allowNewUserRegistration ||
+        state.loginStatus.allowDeviceAccessRequests ) {
+      security.children.push({
+        name: 'Access Requests',
+        url: '/security/access/requests',
+        badge: accessRequestsBadge,
+      })
+
+    }
+    result.items.push(security)
   }
 
   return result

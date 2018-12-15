@@ -108,17 +108,48 @@ class TextInput extends Component {
 }
 
 class DeviceInput extends Component {
+  constructor(props) {
+    super()
+    this.state = {
+      devices: [props.value.device]
+    }
+  }
+
+  componentDidMount() {
+    fetch(`/serialports`, {
+      credentials: 'include'
+    })
+      .then(response => response.json())
+      .then(data => {
+        //make sure that the configured device is
+        //an option to be the selected on in the select,
+        //as it may be unplugged or unavailable
+        if (data.indexOf(this.props.value.device) == -1) {
+          data.push(this.props.value.device)
+        }
+        this.setState({ devices: data })
+      })
+  }
+
   render () {
     return (
-      <div>
-        <TextInput
-          title='Device'
-          name='options.device'
-          helpText='Example: /dev/ttyUSB0'
-          value={this.props.value.device}
-          onChange={this.props.onChange}
-        />
-      </div>
+      <FormGroup row>
+        <Col md='2'>
+          <Label htmlFor="serialportselect">Serial port</Label>
+        </Col>
+        <Col xs='12' md='3'>
+          <Input
+            type="select"
+            name="options.device"
+            id="serialportselect"
+            onChange={this.props.onChange}
+            value={this.props.value.device}>
+              {this.state.devices.map((device, i) => (
+                <option key={i}>{device}</option>
+              ))}
+          </Input>
+        </Col>
+      </FormGroup>
     )
   }
 }
@@ -207,6 +238,7 @@ class DataTypeInput extends Component {
             name='options.dataType'
             onChange={event => this.props.onChange(event)}
           >
+            {!this.props.value.options.dataType && (<option value=''>Select data type</option>)}
             <option value='SignalK'>Signal K</option>
             <option value='NMEA2000JS'>Actisense NMEA 2000 (canboatjs)</option>
             <option value='NMEA2000IK'>iKonnect NMEA 2000 (canboatjs)</option>
@@ -229,6 +261,24 @@ class BaudRateIntput extends Component {
         title='Baud Rate'
         name='options.baudrate'
         helpText='Example: 4800'
+        value={this.props.value.baudrate}
+        onChange={event => this.props.onChange(event, 'number')}
+      />
+    )
+  }
+}
+
+class BaudRateIntputCanboat extends Component {
+  constructor (props) {
+    super(props)
+    this.props.value.baudrate = this.props.value.baudrate || 115200
+  }
+	
+  render () {
+    return (
+      <TextInput
+        title='Baud Rate'
+        name='options.baudrate'
         value={this.props.value.baudrate}
         onChange={event => this.props.onChange(event, 'number')}
       />
@@ -321,7 +371,10 @@ const NMEA2000 = props => {
       {(props.value.options.type === 'ngt-1' ||
         props.value.options.type === 'ngt-1-canboatjs' ||
         props.value.options.type === 'ikonvert-canboatjs') && (
-        <DeviceInput value={props.value.options} onChange={props.onChange} />
+         <div>
+             <DeviceInput value={props.value.options} onChange={props.onChange} />
+             <BaudRateIntputCanboat value={props.value.options} onChange={props.onChange} />
+         </div>
       )}
       {(props.value.options.type === 'canbus' ||
         props.value.options.type === 'canbus-canboatjs') && (
@@ -365,15 +418,7 @@ const NMEA0183 = props => {
           </Col>
         )}
       </FormGroup>
-      {props.value.options.type === 'serial' && (
-        <div>
-          <DeviceInput value={props.value.options} onChange={props.onChange} />
-          <BaudRateIntput
-            value={props.value.options}
-            onChange={props.onChange}
-          />
-        </div>
-      )}
+      {serialParams(props)}
       {props.value.options.type === 'tcp' && (
         <div>
           <HostInput value={props.value.options} onChange={props.onChange} />
@@ -418,6 +463,7 @@ const SignalK = props => {
             onChange={event => props.onChange(event)}
           >
             <option>Select a source</option>
+            <option value='serial'>Serial</option>
             <option value='ws'>WebSocket</option>
             <option value='wss'>WebSocket SSL</option>
             <option value='tcp'>TCP</option>
@@ -466,6 +512,7 @@ const SignalK = props => {
       {props.value.options.type === 'udp' && (
         <PortInput value={props.value.options} onChange={props.onChange} />
       )}
+      {serialParams(props)}
     </div>
   )
 }
@@ -483,3 +530,13 @@ const FileStream = props => {
     </div>
   )
 }
+
+const serialParams = props => (props.value.options.type === 'serial' && (
+  <div>
+    <DeviceInput value={props.value.options} onChange={props.onChange} />
+    <BaudRateIntput
+      value={props.value.options}
+      onChange={props.onChange}
+    />
+  </div>
+))

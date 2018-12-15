@@ -86,7 +86,7 @@ The http port can be configured separately with environment variable `PORT`. You
 
 Storing Configuration Outside The Server Install Directory
 ==========================================================
-You can store configuration like the settings file, plugin cofiguration and defaults.js in a directory outside of the server install using the `-c` option (or the `SIGNALK_NODE_CONDFIG_DIR` env variable).
+You can store configuration like the settings file, plugin cofiguration and defaults.js in a directory outside of the server install using the `-c` option (or the `SIGNALK_NODE_CONFIG_DIR` env variable).
 
 By default, the server will look for a `settings.json` and a `defaults.json` file in the given directory.
 
@@ -103,7 +103,7 @@ In this case, the server would look for the settings file at `/usr/local/etc/nod
 Environment variables
 ---------------------
 - `SIGNALK_NODE_SETTINGS` override the path to the settings file
-- `SIGNALK_NODE_CONDFIG_DIR` override the path to find server configuration files
+- `SIGNALK_NODE_CONFIG_DIR` override the path to find server configuration files
 - `PORT` override the port for http/ws service
 - `SSLPORT` override the port for https/wss service. If defined activates ssl as forced, default protocol.
 - `EXTERNALPORT` the port used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
