@@ -22,6 +22,17 @@
  * The "toStdout" option is not mandatory. It routes events emitted on app with that name to
  * serial output, followed by newline. toStdout can be a string or an array of strings.
  *
+ * You can run arbitrary shell command that get the configured serial port as the parameter
+ * by setting the environment variable PRESERIALCOMMAND. The command is invoked once per each
+ * configured serial port.
+ *
+ * For example running the server having run
+ *
+ * export PRESERIALCOMMAND="echo >>/tmp/serialports"
+ *
+ * will append all configured serial port devices to the file /tmp/serialports
+ * every time the server is started.
+ *
  * Example:
 
  {
@@ -47,6 +58,8 @@
  */
 
 const Transform = require('stream').Transform
+const child_process = require('child_process')
+const shellescape = require('any-shell-escape')
 const SerialPort = require('serialport')
 const isArray = require('lodash').isArray
 const debug = require('debug')('signalk:serialport')
@@ -76,6 +89,12 @@ SerialStream.prototype.start = function () {
 
   if (this.reconnect === false) {
     return
+  }
+
+  if (process.env.PRESERIALCOMMAND) {
+    child_process.execSync(
+      `${process.env.PRESERIALCOMMAND} ${shellescape(this.options.device)}`
+    )
   }
 
   this.serial = new SerialPort(this.options.device, {
