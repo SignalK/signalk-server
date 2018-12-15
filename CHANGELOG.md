@@ -1,5 +1,8 @@
 ## Change Log
 
+### v1.9.1 (2018/12/15 16:03 +00:00)
+- [#682](https://github.com/SignalK/signalk-server-node/pull/682) fix: StreamBundle.getSelfStream (@tkurki)
+
 ### v1.9.0 (2018/12/15 14:43 +00:00)
 - [#677](https://github.com/SignalK/signalk-server-node/pull/677) add baudrate to actisense2 (@e-sailing)
 - [#666](https://github.com/SignalK/signalk-server-node/pull/666) feature: command to run before opening serial ports (@tkurki)
@@ -20,7 +23,7 @@
 - [#653](https://github.com/SignalK/signalk-server-node/pull/653) Chartedsails data log links (@tkurki)
 - [#656](https://github.com/SignalK/signalk-server-node/pull/656) chore(package): update lint-staged to version 8.0.4 (@tkurki)
 - [#652](https://github.com/SignalK/signalk-server-node/pull/652) feature: change data log filename format (@tkurki)
-- [#650](https://github.com/SignalK/signalk-server-node/pull/650)  feature: allow plugins to be enabled by default (@sbender9)
+- [#650](https://github.com/SignalK/signalk-server-node/pull/650) feature: allow plugins to be enabled by default (@sbender9)
 - [#651](https://github.com/SignalK/signalk-server-node/pull/651) fix: REST api to GET a value not working (@sbender9)
 
 ### v1.8.0 (2018/11/01 19:43 +00:00)
