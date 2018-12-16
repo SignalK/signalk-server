@@ -17,6 +17,7 @@ const FileStream = require('./filestream')
 const Throttle = require('./throttle')
 const TimestampThrottle = require('./timestamp-throttle')
 const CanboatJs = require('./canboatjs')
+const iKonvert = require('@canboat/canboatjs').iKonvert
 
 function Simple (options) {
   Transform.call(this, { objectMode: true })
@@ -39,13 +40,18 @@ function Simple (options) {
 
   options.subOptions.app = options.app
 
-  const mappingType =
-    options.type == 'NMEA2000' &&
-    options.subOptions &&
-    (options.subOptions.type == 'ngt-1-canboatjs' ||
-      options.subOptions.type === 'canbus-canboatjs')
-      ? 'NMEA2000JS'
-      : dataType
+  let mappingType = dataType
+
+  if (options.type == 'NMEA2000' && options.subOptions) {
+    if (
+      options.subOptions.type === 'ngt-1-canboatjs' ||
+      options.subOptions.type === 'canbus-canboatjs'
+    ) {
+      mappingType = 'NMEA2000JS'
+    } else if (options.subOptions.type === 'ikonvert-canboatjs') {
+      mappingType = 'NMEA2000IK'
+    }
+  }
 
   const pipeline = [].concat(
     pipeStartByType[options.type](options.subOptions, options.logging),
@@ -86,6 +92,7 @@ const getLogger = (app, logging, discriminator) =>
 
 const discriminatorByDataType = {
   NMEA2000JS: 'A',
+  NMEA2000IK: 'A',
   NMEA2000: 'A',
   NMEA0183: 'N',
   SignalK: 'I'
@@ -121,6 +128,22 @@ const dataTypeMapping = {
     }
     return result.concat([new N2kToSignalK(options.subOptions)])
   },
+  NMEA2000IK: options => {
+    const result = [new CanboatJs(options.subOptions)]
+    if (options.type === 'FileStream') {
+      result.push(
+        new TimestampThrottle({
+          getMilliseconds: msg => {
+            return msg.timer * 1000
+          }
+        })
+      )
+    } // else
+    {
+      result.unshift(new iKonvert(options.subOptions))
+    }
+    return result.concat([new N2kToSignalK(options.subOptions)])
+  },
   Multiplexed: options => [new MultiplexedLog(options.subOptions)]
 }
 
@@ -150,6 +173,15 @@ function nmea2000input (subOptions, logging) {
         canDevice: subOptions.interface,
         app: subOptions.app,
         providerId: subOptions.providerId
+      })
+    ]
+  } else if (subOptions.type === 'ikonvert-canboatjs') {
+    const serialport = require('./serialport')
+    return [
+      new serialport({
+        ...subOptions,
+        baudrate: 230400,
+        toStdout: 'ikonvertOut'
       })
     ]
   } else {

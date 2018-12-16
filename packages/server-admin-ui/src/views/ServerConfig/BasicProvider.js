@@ -231,7 +231,7 @@ class DataTypeInput extends Component {
         <Col md='2'>
           <Label htmlFor='dataType'>Data Type</Label>
         </Col>
-        <Col xs='12' md='3'>
+        <Col xs='12' md='4'>
           <Input
             type='select'
             value={this.props.value.options.dataType}
@@ -240,8 +240,9 @@ class DataTypeInput extends Component {
           >
             {!this.props.value.options.dataType && (<option value=''>Select data type</option>)}
             <option value='SignalK'>Signal K</option>
+            <option value='NMEA2000JS'>Actisense NMEA 2000 (canboatjs)</option>
+            <option value='NMEA2000IK'>iKonvert NMEA 2000 (canboatjs)</option>
             <option value='NMEA2000'>NMEA 2000 (canboat)</option>
-            <option value='NMEA2000JS'>NMEA 2000 (canboatjs)</option>
             <option value='NMEA0183'>NMEA 0183</option>
             {this.props.value.type === 'FileStream' && (
               <option value='Multiplexed'>Multiplexed Log</option>
@@ -359,15 +360,17 @@ const NMEA2000 = props => {
             onChange={event => props.onChange(event)}
           >
             <option value='none'>Select a source</option>
-            <option value='ngt-1'>Actisense NTG-1 (canboat)</option>
-            <option value='ngt-1-canboatjs'>Actisense NTG-1 (canboatjs)</option>
-            <option value='canbus'>Canbus (canboat)</option>
+            <option value='ngt-1-canboatjs'>Actisense NGT-1 (canboatjs)</option>
+            <option value='ngt-1'>Actisense NGT-1 (canboat)</option>
+            <option value='ikonvert-canboatjs'>iKonvert (canboatjs)</option>
             <option value='canbus-canboatjs'>Canbus (canboatjs)</option>
+            <option value='canbus'>Canbus (canboat)</option>
           </Input>
         </Col>
       </FormGroup>
       {(props.value.options.type === 'ngt-1' ||
-        props.value.options.type === 'ngt-1-canboatjs') && (
+        props.value.options.type === 'ngt-1-canboatjs' ||
+        props.value.options.type === 'ikonvert-canboatjs') && (
          <div>
              <DeviceInput value={props.value.options} onChange={props.onChange} />
              <BaudRateIntputCanboat value={props.value.options} onChange={props.onChange} />
