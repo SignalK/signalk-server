@@ -1,5 +1,9 @@
 ## Change Log
 
+### v1.10.0 (2018/12/16 21:23 +00:00)
+- [#683](https://github.com/SignalK/signalk-server-node/pull/683) Revert streambundle changes in #682 and #648 (@tkurki)
+- [#644](https://github.com/SignalK/signalk-server-node/pull/644) feature: add support for Digital Yacht’s iKonvert (@sbender9)
+
 ### v1.9.1 (2018/12/15 16:03 +00:00)
 - [#682](https://github.com/SignalK/signalk-server-node/pull/682) fix: StreamBundle.getSelfStream (@tkurki)
 
