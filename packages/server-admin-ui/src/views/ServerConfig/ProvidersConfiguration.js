@@ -250,7 +250,6 @@ class ProvidersConfiguration extends Component {
                   <BasicProvider
                     value={this.state.selectedProvider}
                     onChange={this.handleProviderChange}
-                    key={Date.now()}
                   />
                 ) : (
                   <Input
