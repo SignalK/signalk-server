@@ -1,5 +1,10 @@
 ## Change Log
 
+### v1.10.1 (2018/12/17 22:42 +00:00)
+- [#688](https://github.com/SignalK/signalk-server-node/pull/688) feature: provide text box for device path entry in provider config (@sbender9)
+- [#686](https://github.com/SignalK/signalk-server-node/pull/686) fix: provider fields losing focus (@tkurki)
+- [#685](https://github.com/SignalK/signalk-server-node/pull/685) chore: default ikonvert baudrate should be 230400 (@sbender9)
+
 ### v1.10.0 (2018/12/16 21:23 +00:00)
 - [#683](https://github.com/SignalK/signalk-server-node/pull/683) Revert streambundle changes in #682 and #648 (@tkurki)
 - [#644](https://github.com/SignalK/signalk-server-node/pull/644) feature: add support for Digital Yacht’s iKonvert (@sbender9)
