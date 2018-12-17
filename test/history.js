@@ -73,7 +73,7 @@ describe('History', _ => {
 
   it('startTime subscription works', async function () {
     var wsPromiser = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=self&startTime=2018-08-09T14:07:29.695Z`
+      `ws://0.0.0.0:${port}/signalk/v1/playback?subscribe=self&startTime=2018-08-09T14:07:29.695Z`
     )
     var msg = await wsPromiser.nextMsg()
     msg.should.not.equal('timeout')
