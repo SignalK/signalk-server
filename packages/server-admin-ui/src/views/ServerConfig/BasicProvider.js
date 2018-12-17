@@ -271,7 +271,7 @@ class BaudRateIntput extends Component {
 class BaudRateIntputCanboat extends Component {
   constructor (props) {
     super(props)
-    this.props.value.baudrate = this.props.value.baudrate || 115200
+    this.props.value.baudrate = this.props.value.baudrate || (this.props.value.type === 'ikonvert-canboatjs' ? 230400 : 115200)
   }
 	
   render () {
