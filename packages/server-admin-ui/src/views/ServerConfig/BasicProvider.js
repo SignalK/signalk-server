@@ -149,6 +149,14 @@ class DeviceInput extends Component {
               ))}
           </Input>
         </Col>
+        <Col xs='12' md='3'>
+          <Input
+              type='text'
+              name='options.device'
+              value={this.props.value.device}
+              onChange={event => this.props.onChange(event)}
+            />
+        </Col>
       </FormGroup>
     )
   }
