@@ -90,7 +90,7 @@
     "cookie": "^0.4.0",
     "cookie-parser": "^1.4.3",
     "cors": "^2.5.2",
-    "debug": "^4.1.0",
+    "debug": "^4.1.1",
     "deep-get-set": "^1.1.0",
     "dev-null-stream": "0.0.1",
     "dnssd2": "1.0.0",
