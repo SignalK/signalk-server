@@ -1,5 +1,8 @@
 ## Change Log
 
+### v1.10.2 (2018/12/24 19:16 +00:00)
+- [#694](https://github.com/SignalK/signalk-server-node/pull/694) fix: plugin/webapp load logic (@tkurki)
+
 ### v1.10.1 (2018/12/17 22:42 +00:00)
 - [#688](https://github.com/SignalK/signalk-server-node/pull/688) feature: provide text box for device path entry in provider config (@sbender9)
 - [#686](https://github.com/SignalK/signalk-server-node/pull/686) fix: provider fields losing focus (@tkurki)
