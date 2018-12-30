@@ -72,6 +72,7 @@ function SerialStream (options) {
   Transform.call(this, options)
 
   this.reconnect = options.reconnect || true
+  this.reconnectDelay = 1000
   this.serial = null
   this.options = options
   this.maxPendingWrites = options.maxPendingWrites || 5
@@ -104,10 +105,12 @@ SerialStream.prototype.start = function () {
   this.serial.on(
     'open',
     function () {
+      this.reconnectDelay = 1000
       this.options.app.setProviderStatus(
         this.options.providerId,
         `Connected to ${this.options.device}`
       )
+      this.options.app.setProviderError(this.options.providerId, '')
       const parser = new SerialPort.parsers.Readline()
       this.serial.pipe(parser).pipe(this)
     }.bind(this)
@@ -117,7 +120,8 @@ SerialStream.prototype.start = function () {
     'error',
     function (x) {
       this.options.app.setProviderError(this.options.providerId, x.message)
-      console.log(x)
+      console.log(x.message)
+      this.scheduleReconnect()
     }.bind(this)
   )
   this.serial.on(
@@ -127,7 +131,7 @@ SerialStream.prototype.start = function () {
         this.options.providerId,
         'Closed, reconnecting...'
       )
-      this.start.bind(this)
+      this.scheduleReconnect()
     }.bind(this)
   )
 
@@ -163,6 +167,16 @@ SerialStream.prototype.end = function () {
 SerialStream.prototype._transform = function (chunk, encoding, done) {
   this.push(chunk)
   done()
+}
+
+SerialStream.prototype.scheduleReconnect = function () {
+  this.reconnectDelay *= this.reconnectDelay < 60 * 1000 ? 1.5 : 1
+  const msg = `Not connected (retry delay ${(
+    this.reconnectDelay / 1000
+  ).toFixed(0)} s)`
+  debug(msg)
+  this.options.app.setProviderStatus(this.options.providerId, msg)
+  setTimeout(this.start.bind(this), this.reconnectDelay)
 }
 
 module.exports = SerialStream
