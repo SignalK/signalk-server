@@ -61,5 +61,6 @@ letsencrypt
 docker
 
 test
+lib/**/*.test.js*
 
 packages
