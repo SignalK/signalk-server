@@ -12,8 +12,6 @@ settings/ssl-cert.pem
 *.tgz
 work/
 
-docker-manifest.yml
-
 test/plugin-test-config/.npmrc
 test/plugin-test-config/plugin-config-data/
 test/plugin-test-config/ssl-cert.pem
