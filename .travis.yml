@@ -1,14 +1,38 @@
 language: node_js
 node_js:
-  - "lts/*"
-
+- lts/*
 sudo: required
-
 services:
-  - docker
-
+- docker
 jobs:
   include:
-    - stage: test
-      script:
-        - npm test
+  - stage: test
+  - stage: build
+    if: (type != pull_request) AND (branch = master OR branch = latest OR branch =~ ^v[0-9]+\.[0-9]+\.[0-9]+.*$ )
+    install: true
+    script:
+    - 'echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin'
+    - docker build -f Dockerfile -t $REPO_BASE/signalk-server:linux-amd64-"$TRAVIS_BRANCH" .
+    - docker push $REPO_BASE/signalk-server:linux-amd64-"$TRAVIS_BRANCH"
+  - stage: build
+    if: (type != pull_request) AND (branch = master OR branch = latest OR branch =~ ^v[0-9]+\.[0-9]+\.[0-9]+.*$ )
+    install: true
+    script:
+    - 'echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin'
+    - docker run --rm --privileged multiarch/qemu-user-static:register --reset
+    - mkdir tmp
+    - "pushd tmp && curl -L -o qemu-arm-static.tar.gz https://github.com/multiarch/qemu-user-static/releases/download/v2.11.0/qemu-arm-static.tar.gz
+      && tar xzf qemu-arm-static.tar.gz && popd        \n"
+    - docker build -f Dockerfile -t $REPO_BASE/signalk-server:linux-armhf-"$TRAVIS_BRANCH" --build-arg
+      IMAGE_BASE=arm32v7/node .
+    - docker push $REPO_BASE/signalk-server:linux-armhf-"$TRAVIS_BRANCH"
+  - stage: push
+    if: (type != pull_request) AND (branch = master OR branch = latest OR branch =~ ^v[0-9]+\.[0-9]+\.[0-9]+.*$ )
+    install: true
+    script:
+    - docker run --rm docker:18.09 sh -c "mkdir /root/.docker && echo '{\"experimental\":\"enabled\"}' >/root/.docker/config.json && docker manifest create $REPO_BASE/signalk-server:$TRAVIS_BRANCH $REPO_BASE/signalk-server:linux-armhf-$TRAVIS_BRANCH $REPO_BASE/signalk-server:linux-amd64-$TRAVIS_BRANCH && (echo $DOCKER_PASSWORD |  docker login -u $DOCKER_USERNAME --password-stdin) && docker manifest push $REPO_BASE/signalk-server:$TRAVIS_BRANCH"
+env:
+  global:
+    REPO_BASE=signalk
+  matrix:
+    secure: KnNCtnJYEvECkp5OBPHjr85yfcPjT5/aEOzHmF9b+wSUqA9rSMTvdRnKc5yQklES5suCMuV5HehoMgwME5gE45KcGvzwkOz0cjRz+tXI3DAWFd2VyGj6YrLddBu+l4E2/YY9AhKj+2wUhg7tyrJEuT9AimBv5CxTedZxumtnTfNRN4xXNlm9zWaoBeWW7snY2eJ8DWEqy+z2USBaTHw1eO2d9X3hcjadulxVxl2cC46qc6X0k+yx2aVN7zKeb5a75ZKltyHanuXWL/dQkiPf3iuuH06JqIzg38y4ea0V5dMWoLoXI26zvQmVPGdyUb9Frb+6Fht+KAdLkttLsWEdcrD5rpXFrwYC6JghoCSvqjQQE9m8B6/pwArPyKpDQF77GoXblqWRQ3JggSbFomZ4CigamlFbbYcXcWcUHBsgT9wc8pbEKn+7T3vGbVQkzf3kLg4ghsK83ZJDOxI/T4UBuZhknCM6X3NT9gY8eQu6E1mEzdOxtUDtAoWA8sQqXUjZXuAqQngc871u06vLbSgm3Zxh1t02pnac5SoocPmVIJGTQONuVu3G819dQbgJ7wZDbbNLD77QTHhmy63vQG/JK3oXIP7fglyr3F1bgDsXGaVaLC4MJ9L7VsPKUgrO1YuiSax+k0UHhcgPy/zMHLMMczXiS8MWMk2i5n++4bJ8WnQ=

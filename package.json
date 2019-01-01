@@ -80,6 +80,7 @@
     "node": "8"
   },
   "dependencies": {
+    "@canboat/canboatjs": "^1.2.x",
     "@signalk/client": "^0.2.0",
     "@signalk/freeboard-sk": "^1.0.0",
     "@signalk/instrumentpanel": "0.x",
@@ -99,7 +100,6 @@
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.14.1",
-    "@canboat/canboatjs": "^1.2.x",
     "chalk": "^2.4.1",
     "clear": "^0.1.0",
     "compare-versions": "^3.0.1",
