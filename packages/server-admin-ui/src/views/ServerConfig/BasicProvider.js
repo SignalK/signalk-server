@@ -3,6 +3,23 @@ import { connect } from 'react-redux'
 import { Input, FormGroup, FormText, Col, Label } from 'reactstrap'
 
 class BasicProvider extends Component {
+  constructor(props) {
+    super()
+    this.state = {
+      hasAnalyzer: false
+    }
+  }
+
+  componentDidMount() {
+    fetch(`${window.serverRoutesPrefix}/hasAnalyzer`, {
+      credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(value => {
+      this.setState({ hasAnalyzer: value })
+    })
+  }
+
   render () {
     const lookup = {
       NMEA2000: NMEA2000,
@@ -76,6 +93,7 @@ class BasicProvider extends Component {
         <TypeComponent
           value={this.props.value}
           onChange={this.props.onChange}
+          hasAnalyzer={this.state.hasAnalyzer}
         />
       </div>
     )
@@ -250,7 +268,7 @@ class DataTypeInput extends Component {
             <option value='SignalK'>Signal K</option>
             <option value='NMEA2000JS'>Actisense NMEA 2000 (canboatjs)</option>
             <option value='NMEA2000IK'>iKonvert NMEA 2000 (canboatjs)</option>
-            <option value='NMEA2000'>NMEA 2000 (canboat)</option>
+            <option value='NMEA2000' disabled={!this.props.hasAnalyzer}>NMEA 2000 (canboat)</option>
             <option value='NMEA0183'>NMEA 0183</option>
             {this.props.value.type === 'FileStream' && (
               <option value='Multiplexed'>Multiplexed Log</option>
@@ -369,10 +387,10 @@ const NMEA2000 = props => {
           >
             <option value='none'>Select a source</option>
             <option value='ngt-1-canboatjs'>Actisense NGT-1 (canboatjs)</option>
-            <option value='ngt-1'>Actisense NGT-1 (canboat)</option>
+            <option value='ngt-1' disabled={!props.hasAnalyzer}>Actisense NGT-1 (canboat)</option>
             <option value='ikonvert-canboatjs'>iKonvert (canboatjs)</option>
             <option value='canbus-canboatjs'>Canbus (canboatjs)</option>
-            <option value='canbus'>Canbus (canboat)</option>
+            <option value='canbus' disabled={!props.hasAnalyzer}>Canbus (canboat)</option>
           </Input>
         </Col>
       </FormGroup>
@@ -528,7 +546,7 @@ const SignalK = props => {
 const FileStream = props => {
   return (
     <div>
-      <DataTypeInput value={props.value} onChange={props.onChange} />
+      <DataTypeInput hasAnalyzer={props.hasAnalyzer} value={props.value} onChange={props.onChange} />
       <TextInput
         title='File Name'
         name='options.filename'
