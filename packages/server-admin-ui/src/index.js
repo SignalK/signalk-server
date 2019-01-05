@@ -183,6 +183,8 @@ function nameCollator (left, right) {
   }
 }
 
+window.serverRoutesPrefix = '/skServer'
+
 ReactDOM.render(
   <HashRouter>
     <Switch>
