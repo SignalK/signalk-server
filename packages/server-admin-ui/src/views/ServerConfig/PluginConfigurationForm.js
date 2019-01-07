@@ -2,10 +2,7 @@ import React, { Component } from 'react'
 import { render } from 'react-dom'
 import keys from 'lodash.keys'
 
-import Form from 'react-jsonschema-form'
-//import fields from "react-jsonschema-form-extras";
-
-import CollapsibleField from "react-jsonschema-form-extras/lib/CollapsibleField"
+import Form from 'react-jsonschema-form-bs4'
 
 
 export default ({plugin, onSubmit}) => {
@@ -47,7 +44,6 @@ export default ({plugin, onSubmit}) => {
 
   return (
     <Form
-      fields={{collapsible:CollapsibleField}}
       schema={topSchema}
       uiSchema={uiSchema}
       formData={plugin.data || {}}
