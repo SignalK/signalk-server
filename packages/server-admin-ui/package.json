@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-admin-ui",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "description": "Signal K server admin webapp",
   "author": "Scott Bender, Teppo Kurki",
   "contributors": [
@@ -13,6 +13,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@fortawesome/fontawesome-free": "^5.6.3",
     "babel-core": "6.26.0",
     "babel-loader": "7.1.2",
     "babel-plugin-transform-object-rest-spread": "6.26.0",
@@ -33,10 +34,11 @@
     "react": "16.1.1",
     "react-chartjs-2": "2.6.4",
     "react-dom": "16.1.1",
+    "react-jsonschema-form-bs4": "^1.0.6",
     "react-redux": "^5.0.6",
     "react-router-dom": "4.2.2",
     "react-transition-group": "2.2.1",
-    "reactstrap": "5.0.0-alpha.4",
+    "reactstrap": "^5.0.0",
     "redux": "^3.7.2",
     "redux-thunk": "^2.2.0",
     "rimraf": "2.6.2",

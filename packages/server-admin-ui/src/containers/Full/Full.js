@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { Link, Switch, Route, Redirect, withRouter } from 'react-router-dom'
+import { Switch, Route, Redirect, withRouter, History } from 'react-router-dom'
 import { Container } from 'reactstrap'
 import { connect } from 'react-redux'
 
@@ -63,7 +63,7 @@ class Full extends Component {
                   component={loginOrOriginal(Apps)}
                 />
                 <Route
-                  path='/serverConfiguration/plugins'
+                  path='/serverConfiguration/plugins/:pluginid'
                   component={loginOrOriginal(Configuration)}
                 />
                 <Route
