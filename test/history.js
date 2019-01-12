@@ -73,7 +73,7 @@ describe('History', _ => {
 
   it('startTime subscription works', async function () {
     var wsPromiser = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=self&startTime=2018-08-09T14:07:29.695Z`
+      `ws://0.0.0.0:${port}/signalk/v1/playback?subscribe=self&startTime=2018-08-09T14:07:29.695Z`
     )
     var msg = await wsPromiser.nextMsg()
     msg.should.not.equal('timeout')
@@ -90,7 +90,7 @@ describe('History', _ => {
 
   it('REST time request works', async function () {
     var result = await fetch(
-      `${url}/signalk/v1/api/vessels/self?time=2018-08-09T14:07:29.695Z`
+      `${url}/signalk/v1/api/snapshot/vessels/self?time=2018-08-09T14:07:29.695Z`
     )
     result.status.should.equal(200)
     var json = await result.json()
@@ -99,7 +99,7 @@ describe('History', _ => {
 
   it('REST time request with no data  works', async function () {
     var result = await fetch(
-      `${url}/signalk/v1/api/vessels/self?time=2018-08-09T14:07:29.694Z`
+      `${url}/signalk/v1/api/snapshot/vessels/self?time=2018-08-09T14:07:29.694Z`
     )
     result.status.should.equal(404)
   })
