@@ -115,6 +115,7 @@ Environment variables
 - `DEFAULTENABLEDPLUGINS` a comma separated list of plugin ids that are overridden to be enabled by default if no setttings exist. lower preference than `DISABLEPLUGINS`
 - `SECURITYSTRATEGY` override the security strategy module name
 - `WSCOMPRESSION` compress websocket messages
+- `MAXSENDBUFFERSIZE` the maximum number of bytes allowed in the server's send buffer of a WebSocket connection. The connection will be terminated if this is exceeded. Guards against slow or dysfunctional clients that can not cope with the message volume. Default is 512 * 1024 bytes.
 
 
 Real Inputs
