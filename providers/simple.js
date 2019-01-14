@@ -83,11 +83,11 @@ module.exports = Simple
 const getLogger = (app, logging, discriminator) =>
   logging
     ? [
-      new Log({
-        app: app,
-        discriminator
-      })
-    ]
+        new Log({
+          app: app,
+          discriminator
+        })
+      ]
     : []
 
 const discriminatorByDataType = {
@@ -188,7 +188,9 @@ function nmea2000input (subOptions, logging) {
     let command
     let toChildProcess
     if (subOptions.type == 'ngt-1') {
-      command = `actisense-serial -s ${(subOptions.baudrate || 115200)} ${subOptions.device}`
+      command = `actisense-serial -s ${subOptions.baudrate || 115200} ${
+        subOptions.device
+      }`
       toChildProcess = 'nmea2000out'
     } else if (subOptions.type == 'canbus') {
       command = `candump ${subOptions.interface} | candump2analyzer`
