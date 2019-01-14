@@ -88,7 +88,6 @@ MdnsWs.prototype.connect = function (discovery) {
       '/signalk/v1/stream?subscribe=all'
   }
   var that = this
-  var onError, onDisconnect, onConnect, onClose
 
   const providerId = `${that.options.providerId}.${discovery.host}:${
     discovery.port
@@ -111,10 +110,18 @@ MdnsWs.prototype.connect = function (discovery) {
     signalkClient.connectDeltaByUrl(
       url,
       onData,
-      onConnect,
-      onDisconnect,
-      onError,
-      onClose
+      () => {
+        console.log('ws connection connected')
+      },
+      () => {
+        console.log('ws connection disconnected')
+      },
+      err => {
+        console.error(err)
+      },
+      () => {
+        console.log('ws connection closed')
+      }
     )
   }
   onConnect = function (connection) {
