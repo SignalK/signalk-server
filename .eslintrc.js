@@ -41,7 +41,7 @@ module.exports = {
     "no-restricted-globals": ["error"].concat(restrictedGlobals),
     "no-useless-computed-key": "error",
     "unicode-bom": "error",
-    // curly: "error",
+    curly: "error",
     // // eqeqeq: [
     // //   "error",
     // //   "always",
