@@ -19,7 +19,7 @@ const FromPgn = require('@canboat/canboatjs').FromPgn
 const debug = require('debug')('signalk:canbusjs')
 const _ = require('lodash')
 
-function canboatjs (options) {
+function CanboatJs (options) {
   Transform.call(this, {
     objectMode: true
   })
@@ -40,11 +40,11 @@ function canboatjs (options) {
   })
 }
 
-require('util').inherits(canboatjs, Transform)
+require('util').inherits(CanboatJs, Transform)
 
-canboatjs.prototype._transform = function (chunk, encoding, done) {
+CanboatJs.prototype._transform = function (chunk, encoding, done) {
   this.fromPgn.parse(chunk)
   done()
 }
 
-module.exports = canboatjs
+module.exports = CanboatJs
