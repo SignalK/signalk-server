@@ -30,9 +30,9 @@
 
  */
 
-var Transform = require('stream').Transform
-var gpsd = require('node-gpsd')
-var debug = require('debug')('signalk:provider:gpsd')
+const Transform = require('stream').Transform
+const gpsd = require('node-gpsd')
+const debug = require('debug')('signalk:provider:gpsd')
 
 function Gpsd (options) {
   Transform.call(this, {
@@ -53,7 +53,7 @@ function Gpsd (options) {
     debug('Connected')
   })
 
-  var self = this
+  const self = this
   this.listener.on('raw', function (data) {
     self.push(data)
   })

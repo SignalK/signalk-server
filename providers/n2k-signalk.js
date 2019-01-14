@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-var Transform = require('stream').Transform
+const Transform = require('stream').Transform
 
-var toDelta = require('@signalk/n2k-signalk').toDelta
+const toDelta = require('@signalk/n2k-signalk').toDelta
 
 require('util').inherits(ToSignalK, Transform)
 
@@ -29,7 +29,7 @@ function ToSignalK () {
 
 ToSignalK.prototype._transform = function (chunk, encoding, done) {
   try {
-    var delta = toDelta(chunk, this.state)
+    const delta = toDelta(chunk, this.state)
     if (delta && delta.updates[0].values.length > 0) {
       this.push(delta)
     }

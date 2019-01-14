@@ -135,7 +135,7 @@ SerialStream.prototype.start = function () {
     }.bind(this)
   )
 
-  var that = this
+  const that = this
   let pendingWrites = 0
   const stdOutEvent = this.options.toStdout
   if (stdOutEvent) {

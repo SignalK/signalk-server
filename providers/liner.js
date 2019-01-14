@@ -24,7 +24,7 @@
 
  */
 
-var Transform = require('stream').Transform
+const Transform = require('stream').Transform
 
 require('util').inherits(Liner, Transform)
 
@@ -37,12 +37,12 @@ function Liner (options) {
 }
 
 Liner.prototype._transform = function (chunk, encoding, done) {
-  var data = chunk.toString()
+  let data = chunk.toString()
   if (this._lastLineData) {
     data = this._lastLineData + data
   }
 
-  var lines = data.split(this.lineSeparator)
+  const lines = data.split(this.lineSeparator)
   this._lastLineData = lines.splice(lines.length - 1, 1)[0]
   if (this._lastLineData.length > 2048) {
     console.error(

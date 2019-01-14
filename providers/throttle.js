@@ -26,6 +26,6 @@
 
  */
 
-var Throttle = require('stream-throttle').Throttle
+const Throttle = require('stream-throttle').Throttle
 
 module.exports = Throttle

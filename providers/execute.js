@@ -36,8 +36,8 @@
  * It may also be other commands such as "./aisdeco --gain 33.8 --freq-correction 60 --freq 161975000 --freq 162025000 --net 30007 --udp 5.9.207.224:5351" for starting an AID reception with a USB SRD dongle
  */
 
-var Transform = require('stream').Transform
-var debug = require('debug')('signalk:executor')
+const Transform = require('stream').Transform
+const debug = require('debug')('signalk:executor')
 
 function Execute (options) {
   Transform.call(this, {})
@@ -47,7 +47,7 @@ function Execute (options) {
 require('util').inherits(Execute, Transform)
 
 Execute.prototype._transform = function (chunk, encoding, done) {
-  var data = chunk.toString()
+  const data = chunk.toString()
   this.analyzerProcess.stdin.write(chunk.toString())
   done()
 }
@@ -79,13 +79,13 @@ function start (command, that) {
       typeof that.options.restartOnClose === 'undefined' ||
       that.options.restartOnClose
     ) {
-      var throttleTime = (that.options.restartThrottleTime || 60) * 1000
+      const throttleTime = (that.options.restartThrottleTime || 60) * 1000
 
-      var sinceLast = new Date().getTime() - that.lastStartupTime
+      const sinceLast = new Date().getTime() - that.lastStartupTime
       if (sinceLast > throttleTime) {
         start(command, that)
       } else {
-        var nextStart = throttleTime - sinceLast
+        const nextStart = throttleTime - sinceLast
         const msg = `Waiting ${nextStart / 1000} seconds to restart`
         that.options.app.setProviderStatus(that.options.providerId, msg)
         debug(msg)
@@ -103,7 +103,7 @@ Execute.prototype.pipe = function (pipeTo) {
 
   const stdOutEvent = this.options.toChildProcess || 'toChildProcess'
   debug('Using event ' + stdOutEvent + " for output to child process's stdin")
-  var that = this
+  const that = this
   that.options.app.on(stdOutEvent, function (d) {
     try {
       that.childProcess.stdin.write(d + '\n')

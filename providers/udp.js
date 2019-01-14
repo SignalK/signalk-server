@@ -33,7 +33,7 @@
 
  */
 
-var Transform = require('stream').Transform
+const Transform = require('stream').Transform
 const debug = require('debug')('signalk-server:udp-provider')
 
 function Udp (options) {
@@ -49,8 +49,8 @@ Udp.prototype.pipe = function (pipeTo) {
   this.pipeTo = pipeTo
   Udp.super_.prototype.pipe.call(this, pipeTo)
 
-  var socket = require('dgram').createSocket('udp4')
-  var self = this
+  const socket = require('dgram').createSocket('udp4')
+  const self = this
   socket.on('message', function (message, remote) {
     debug(message.toString())
     self.push(message)

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-var Transform = require('stream').Transform
-var moment = require('moment')
+const Transform = require('stream').Transform
+const moment = require('moment')
 
 /*
 This Transformer throttles the stream based on the stream's timestamp properties
@@ -37,17 +37,17 @@ function TimestampThrottle (options) {
 require('util').inherits(TimestampThrottle, Transform)
 
 TimestampThrottle.prototype._transform = function (msg, encoding, done) {
-  var msgMillis = this.getMilliseconds(msg)
+  const msgMillis = this.getMilliseconds(msg)
   if (msgMillis < this.lastMsgMillis) {
     this.offsetMillis = new Date().getTime() - msgMillis
   }
   this.lastMsgMillis = msgMillis
-  var millisToCorrectSendTime = msgMillis - Date.now() + this.offsetMillis
+  const millisToCorrectSendTime = msgMillis - Date.now() + this.offsetMillis
   if (millisToCorrectSendTime <= 0) {
     this.push(msg)
     done()
   } else {
-    var doPush = this.push.bind(this, msg)
+    const doPush = this.push.bind(this, msg)
     setTimeout(function () {
       doPush()
       done()
