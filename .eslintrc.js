@@ -52,7 +52,7 @@ module.exports = {
     // "object-curly-spacing": ["error", "never"],
     "prefer-const": "error",
     "no-var": "error",
-    // "no-invalid-this": "error",
+    "no-invalid-this": "error",
     // "no-path-concat": "error",
   },
 }

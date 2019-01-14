@@ -33,7 +33,7 @@ const Transform = require('stream').Transform
 const Parser = require('@signalk/nmea0183-signalk')
 const debug = require('debug')('signalk-server-node/providers/nmea0183-signalk')
 
-function nmea0183ToSignalK (options) {
+function Nmea0183ToSignalK (options) {
   Transform.call(this, {
     objectMode: true
   })
@@ -55,9 +55,9 @@ function nmea0183ToSignalK (options) {
   }
 }
 
-require('util').inherits(nmea0183ToSignalK, Transform)
+require('util').inherits(Nmea0183ToSignalK, Transform)
 
-nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
+Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
   let sentence
   let timestamp = null
 
@@ -96,4 +96,4 @@ nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
   done()
 }
 
-module.exports = nmea0183ToSignalK
+module.exports = Nmea0183ToSignalK
