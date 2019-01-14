@@ -44,7 +44,7 @@ function MdnsWs (options) {
     this.signalkClient = new SignalK.Client()
     this.signalkClient.on('discovery', this.connect.bind(this))
     this.signalkClient.on('discoveryError', info => {
-      let providerId = `${options.providerId}.${info.host}:${info.port}`
+      const providerId = `${options.providerId}.${info.host}:${info.port}`
       options.app.setProviderError(providerId, info.error.message)
     })
     debug('Starting discovery')
@@ -90,7 +90,7 @@ MdnsWs.prototype.connect = function (discovery) {
   var that = this
   var onError, onDisconnect, onConnect, onClose
 
-  let providerId = `${that.options.providerId}.${discovery.host}:${
+  const providerId = `${that.options.providerId}.${discovery.host}:${
     discovery.port
   }`
 

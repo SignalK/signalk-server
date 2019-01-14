@@ -50,7 +50,7 @@ module.exports = {
     // //   },
     // // ],
     // "object-curly-spacing": ["error", "never"],
-    // "prefer-const": "off",
+    "prefer-const": "error",
     // "no-var": "error",
     // "no-invalid-this": "error",
     // "no-path-concat": "error",
