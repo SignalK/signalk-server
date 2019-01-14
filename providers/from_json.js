@@ -25,7 +25,7 @@
  *
  */
 
-var Transform = require('stream').Transform
+const Transform = require('stream').Transform
 
 function FromJson () {
   Transform.call(this, {
@@ -36,7 +36,7 @@ function FromJson () {
 require('util').inherits(FromJson, Transform)
 
 FromJson.prototype._transform = function (chunk, encoding, done) {
-  var parsed = null
+  let parsed = null
   try {
     parsed = JSON.parse(chunk.toString())
   } catch (ex) {

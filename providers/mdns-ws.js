@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-var Transform = require('stream').Transform
+const Transform = require('stream').Transform
 
-var SignalK = require('@signalk/client')
+const SignalK = require('@signalk/client')
 
-var debug = require('debug')('signalk-server:providers:mdns-ws')
+const debug = require('debug')('signalk-server:providers:mdns-ws')
 
-var WebSocket = require('ws')
-var _object = require('lodash/object')
-var _keys = require('lodash/keys')
+const WebSocket = require('ws')
+const _object = require('lodash/object')
+const _keys = require('lodash/keys')
 
 function MdnsWs (options) {
   Transform.call(this, {
@@ -73,12 +73,12 @@ MdnsWs.prototype.connect = function (discovery) {
     )
     return
   }
-  var signalkClient = new SignalK.Client()
-  var url
+  const signalkClient = new SignalK.Client()
+  let url
   if (discovery.discoveryResponse) {
     _object.values(discovery.discoveryResponse.endpoints)[0]['signalk-ws']
   } else {
-    var protocol = discovery.protocol || 'ws'
+    const protocol = discovery.protocol || 'ws'
     url =
       protocol +
       '://' +
@@ -87,13 +87,13 @@ MdnsWs.prototype.connect = function (discovery) {
       discovery.port +
       '/signalk/v1/stream?subscribe=all'
   }
-  var that = this
+  const that = this
 
   const providerId = `${that.options.providerId}.${discovery.host}:${
     discovery.port
   }`
 
-  var onData = function (data) {
+  const onData = function (data) {
     if (data && data.updates) {
       data.updates.forEach(function (update) {
         update['$source'] = providerId
@@ -103,7 +103,7 @@ MdnsWs.prototype.connect = function (discovery) {
     that.push(data)
   }
 
-  var start = () => {
+  const start = () => {
     const msg = `Trying url: ${url}`
     debug(msg)
     setProviderStatus(that, providerId, msg, false)

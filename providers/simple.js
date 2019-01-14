@@ -59,7 +59,7 @@ function Simple (options) {
     dataTypeMapping[mappingType](options)
   )
 
-  for (var i = pipeline.length - 2; i >= 0; i--) {
+  for (let i = pipeline.length - 2; i >= 0; i--) {
     pipeline[i].pipe(pipeline[i + 1])
   }
   pipeline[pipeline.length - 1].pipe(this)

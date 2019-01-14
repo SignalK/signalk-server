@@ -132,7 +132,7 @@ function ToTimestamped (deMultiplexer, options) {
 require('util').inherits(ToTimestamped, Transform)
 
 ToTimestamped.prototype._transform = function (msg, encoding, done) {
-  var line = msg.toString()
+  const line = msg.toString()
   if (this.firstLine) {
     this.firstLine = false
     this.multiplexedFormat =
@@ -154,8 +154,8 @@ ToTimestamped.prototype._transform = function (msg, encoding, done) {
 }
 
 ToTimestamped.prototype.handleMixed = function (msg, encoding, done) {
-  var line = msg.toString()
-  var res = { timestamp: new Date().getTime(), data: line }
+  const line = msg.toString()
+  const res = { timestamp: new Date().getTime(), data: line }
   if (line.charAt(0) == '{') {
     res.discriminator = 'I'
   } else if (
@@ -172,7 +172,7 @@ ToTimestamped.prototype.handleMixed = function (msg, encoding, done) {
 }
 
 ToTimestamped.prototype.handleMultiplexed = function (msg, encoding, done) {
-  var line = msg.toString()
+  const line = msg.toString()
   const parts = line.split(';')
   this.push({ timestamp: parts[0], discriminator: parts[1], data: parts[2] })
   done()

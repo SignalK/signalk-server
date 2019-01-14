@@ -33,8 +33,8 @@
 
  */
 
-var path = require('path')
-var PassThrough = require('stream').PassThrough
+const path = require('path')
+const PassThrough = require('stream').PassThrough
 const fs = require('fs')
 
 function EndIgnoringPassThrough () {
@@ -44,7 +44,7 @@ function EndIgnoringPassThrough () {
 require('util').inherits(EndIgnoringPassThrough, PassThrough)
 EndIgnoringPassThrough.prototype.end = function () {}
 
-var FileStream = function (options) {
+const FileStream = function (options) {
   this.options = options
   this.keepRunning =
     typeof options.keepRunning === 'undefined' ? true : options.keepRunning
@@ -58,7 +58,7 @@ FileStream.prototype.pipe = function (pipeTo) {
 }
 
 FileStream.prototype.startStream = function () {
-  var filename
+  let filename
   if (path.isAbsolute(this.options.filename)) {
     filename = this.options.filename
   } else {

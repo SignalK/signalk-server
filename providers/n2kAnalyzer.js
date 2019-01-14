@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-var Transform = require('stream').Transform
-var debug = require('debug')('signalk:n2kAnalyzer')
+const Transform = require('stream').Transform
+const debug = require('debug')('signalk:n2kAnalyzer')
 
 function N2KAnalyzer (options) {
   Transform.call(this, {
@@ -43,7 +43,7 @@ function N2KAnalyzer (options) {
     this.analyzerProcess.stdout,
     this.analyzerProcess.stdin
   )
-  var that = this
+  const that = this
   this.linereader.on('line', function (data) {
     try {
       parsed = JSON.parse(data)
