@@ -1,6 +1,18 @@
 ## Change Log
 
-### v1.10.2 (2018/12/24 19:16 +00:00)
+### v1.11.0 (2019/01/17 17:20 +00:00)
+- [#695](https://github.com/SignalK/signalk-server-node/pull/695) feature: server as include (checkPackageVersion, test) (@tkurki)
+- [#684](https://github.com/SignalK/signalk-server-node/pull/684) Spec compliant history paths (@tkurki)
+- [#700](https://github.com/SignalK/signalk-server-node/pull/700) feature: detect canboat availability (@tkurki)
+- [#703](https://github.com/SignalK/signalk-server-node/pull/703) feature: add multi-arch docker build (@tkurki)
+- [#697](https://github.com/SignalK/signalk-server-node/pull/697) feature: serial port retry logic (@tkurki)
+- [#701](https://github.com/SignalK/signalk-server-node/pull/701) fix: /plugins/<id> enabled with signalk-plugin-enabled-by-default (@tkurki)
+- [#706](https://github.com/SignalK/signalk-server-node/pull/706) fix: keep working with data logging errors (@tkurki)
+- [#704](https://github.com/SignalK/signalk-server-node/pull/704) chore: include plugin config in the admin ui (@tkurki)
+- [#696](https://github.com/SignalK/signalk-server-node/pull/696) fix: -s settings configpath (@tkurki)
+- [#687](https://github.com/SignalK/signalk-server-node/pull/687) refactor: Establish config dir with getConfigDirectory. Logic tested (@webmasterkai)
+
+### v1.10.2 (2018/12/24 19:17 +00:00)
 - [#694](https://github.com/SignalK/signalk-server-node/pull/694) fix: plugin/webapp load logic (@tkurki)
 
 ### v1.10.1 (2018/12/17 22:42 +00:00)
