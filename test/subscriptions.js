@@ -130,7 +130,7 @@ function getFarPosistionDelta () {
 }
 
 describe('Subscriptions', _ => {
-  var serverP, port, deltaUrl
+  let serverP, port, deltaUrl
 
   before(() => {
     serverP = freeport().then(p => {
@@ -151,7 +151,7 @@ describe('Subscriptions', _ => {
   }
 
   it('?subscribe=self subscription serves self data', function () {
-    var self, wsPromiser
+    let self, wsPromiser
 
     return serverP
       .then(_ => {
@@ -191,7 +191,7 @@ describe('Subscriptions', _ => {
   })
 
   it('default subscription serves self data', function () {
-    var self, wsPromiser
+    let self, wsPromiser
 
     return serverP
       .then(_ => {
@@ -226,7 +226,7 @@ describe('Subscriptions', _ => {
   })
 
   it('?subscribe=all subscription serves all data', function () {
-    var self, wsPromiser
+    let self, wsPromiser
 
     return serverP
       .then(_ => {
@@ -264,7 +264,7 @@ describe('Subscriptions', _ => {
   })
 
   it('?subscribe=none subscription serves no data', function () {
-    var self, wsPromiser
+    let self, wsPromiser
 
     return serverP
       .then(_ => {
@@ -298,19 +298,22 @@ describe('Subscriptions', _ => {
       })
   })
 
-  it('navigation.logTrip subscription serves correct data', function () {
-    var self, wsPromiser
+  it('unsubscribe all plus navigation.logTrip subscription serves correct data', function () {
+    let self, wsPromiser
 
     return serverP
       .then(_ => {
         wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?subsribe=none'
+          'ws://localhost:' + port + '/signalk/v1/stream'
         )
         return wsPromiser.nextMsg()
       })
       .then(wsHello => {
         self = JSON.parse(wsHello).self
 
+        return wsPromiser.send({ context: '*', unsubscribe: [{ path: '*' }] })
+      })
+      .then(() => {
         return wsPromiser.send({
           context: 'vessels.*',
           subscribe: [
@@ -359,7 +362,7 @@ describe('Subscriptions', _ => {
   })
 
   it('name subscription serves correct data', function () {
-    var self, wsPromiser
+    let self, wsPromiser
 
     return serverP
       .then(_ => {
@@ -425,7 +428,7 @@ describe('Subscriptions', _ => {
   })
 
   it('relativePosition subscription serves correct data', function () {
-    var self, wsPromiser
+    let self, wsPromiser
 
     return serverP
       .then(_ => {
