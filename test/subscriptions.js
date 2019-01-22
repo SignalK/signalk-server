@@ -486,4 +486,51 @@ describe('Subscriptions', _ => {
         assert(results[0] === 'timeout')
       })
   })
+
+  it('inconsistent subscription works', function () {
+    let self, wsPromiser
+
+    return serverP
+      .then(_ => {
+        wsPromiser = new WsPromiser(
+          'ws://localhost:' + port + '/signalk/v1/stream?subscribe=none'
+        )
+        return wsPromiser.nextMsg()
+      })
+      .then(wsHello => {
+        self = JSON.parse(wsHello).self
+
+        //SubscriptionManager does nothing unless we have some matching
+        //data, so send some first
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          sendDelta(
+            getDelta({
+              context: self
+            })
+          )
+        ])
+      })
+      .then(() => {
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          wsPromiser.send({
+            context: '*',
+            subscribe: [
+              {
+                path: 'navigation.courseOverGroundTrue',
+                policy: 'ideal',
+                minPeriod: 500
+              }
+            ]
+          })
+        ])
+      })
+      .then(([response]) => {
+        assert.equal(
+          '"minPeriod assumes policy \'instant\', ignoring policy ideal"',
+          response
+        )
+      })
+  })
 })
