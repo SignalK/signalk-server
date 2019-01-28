@@ -299,6 +299,10 @@ Click on that row and You will open next window
 
 Click on update and the installation will start
 
+If below version 1.8.0 use this command instead
+
+    $ sudo npm install --unsafe-perm -g signalk-server
+    
 ![server_during_update](https://user-images.githubusercontent.com/16189982/51401178-71a9e400-1b4a-11e9-86b9-1148442ba59c.png)
 
 After the installation restart the server.
