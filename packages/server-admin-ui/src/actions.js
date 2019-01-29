@@ -10,7 +10,7 @@ export function logout () {
     dispatch({
       type: 'LOGOUT_REQUESTED'
     })
-    authFetch('/logout', {
+    authFetch('/signalk/v1/auth/logout', {
       method: 'PUT'
     })
       .then(response => {
