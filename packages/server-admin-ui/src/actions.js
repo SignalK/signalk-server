@@ -41,7 +41,7 @@ export function login (dispatch, username, password, callback) {
     username: username,
     password: password
   }
-  authFetch('/login', {
+  authFetch('/signalk/v1/auth/login', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

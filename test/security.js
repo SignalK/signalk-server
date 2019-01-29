@@ -136,7 +136,7 @@ describe('Security', () => {
   })
 
   async function login (username, password) {
-    const result = await fetch(`${url}/login`, {
+    const result = await fetch(`${url}/signalk/v1/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -160,7 +160,7 @@ describe('Security', () => {
   })
 
   it('login with bad password fails', async function () {
-    const result = await fetch(`${url}/login`, {
+    const result = await fetch(`${url}/signalk/v1/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -241,7 +241,7 @@ describe('Security', () => {
   })
 
   it('logout works', async function () {
-    const result = await fetch(`${url}/logout`, {
+    const result = await fetch(`${url}/signalk/v1/auth/logout`, {
       method: 'PUT',
       credentials: 'include'
     })
