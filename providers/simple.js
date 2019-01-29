@@ -42,7 +42,7 @@ function Simple (options) {
 
   let mappingType = dataType
 
-  if (options.type == 'NMEA2000' && options.subOptions) {
+  if (options.type === 'NMEA2000' && options.subOptions) {
     if (
       options.subOptions.type === 'ngt-1-canboatjs' ||
       options.subOptions.type === 'canbus-canboatjs'
@@ -100,7 +100,7 @@ const discriminatorByDataType = {
 
 const dataTypeMapping = {
   SignalK: options =>
-    options.subOptions.type != 'wss' && options.subOptions.type != 'ws'
+    options.subOptions.type !== 'wss' && options.subOptions.type !== 'ws'
       ? [new FromJson(options.subOptions)]
       : [],
   NMEA0183: options => {
@@ -187,12 +187,12 @@ function nmea2000input (subOptions, logging) {
   } else {
     let command
     let toChildProcess
-    if (subOptions.type == 'ngt-1') {
+    if (subOptions.type === 'ngt-1') {
       command = `actisense-serial -s ${subOptions.baudrate || 115200} ${
         subOptions.device
       }`
       toChildProcess = 'nmea2000out'
-    } else if (subOptions.type == 'canbus') {
+    } else if (subOptions.type === 'canbus') {
       command = `candump ${subOptions.interface} | candump2analyzer`
       toChildProcess = null
     } else {
@@ -211,7 +211,7 @@ function nmea2000input (subOptions, logging) {
 }
 
 function nmea0183input (subOptions) {
-  if (subOptions.type == 'tcp') {
+  if (subOptions.type === 'tcp') {
     return [new Tcp(subOptions), new Liner(subOptions)]
   } else if (subOptions.type === 'tcpserver') {
     return [new TcpServer(subOptions), new Liner(subOptions)]

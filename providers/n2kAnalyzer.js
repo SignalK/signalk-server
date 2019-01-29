@@ -21,7 +21,7 @@ function N2KAnalyzer (options) {
   Transform.call(this, {
     objectMode: true
   })
-  if (process.platform == 'win32') {
+  if (process.platform === 'win32') {
     this.analyzerProcess = require('child_process').spawn('cmd', [
       '/c',
       'analyzer -json -si'
