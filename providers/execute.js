@@ -53,7 +53,7 @@ Execute.prototype._transform = function (chunk, encoding, done) {
 }
 function start (command, that) {
   debug(`starting '${command}'`)
-  if (process.platform == 'win32') {
+  if (process.platform === 'win32') {
     that.childProcess = require('child_process').spawn('cmd', ['/c', command])
   } else {
     that.childProcess = require('child_process').spawn('sh', ['-c', command])

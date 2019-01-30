@@ -42,13 +42,13 @@ module.exports = {
     "no-useless-computed-key": "error",
     "unicode-bom": "error",
     curly: "error",
-    // // eqeqeq: [
-    // //   "error",
-    // //   "always",
-    // //   {
-    // //     null: "ignore",
-    // //   },
-    // // ],
+    eqeqeq: [
+      "error",
+      "always",
+      {
+        null: "ignore",
+      },
+    ],
     // "object-curly-spacing": ["error", "never"],
     "prefer-const": "error",
     "no-var": "error",

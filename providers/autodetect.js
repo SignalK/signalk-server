@@ -136,7 +136,7 @@ ToTimestamped.prototype._transform = function (msg, encoding, done) {
   if (this.firstLine) {
     this.firstLine = false
     this.multiplexedFormat =
-      line.length > 16 && line.charAt(13) == ';' && line.charAt(15) == ';'
+      line.length > 16 && line.charAt(13) === ';' && line.charAt(15) === ';'
     if (this.multiplexedFormat) {
       if (this.options.noThrottle) {
         this.deMultiplexer.toTimestamped.pipe(this.deMultiplexer.splitter)
@@ -156,10 +156,10 @@ ToTimestamped.prototype._transform = function (msg, encoding, done) {
 ToTimestamped.prototype.handleMixed = function (msg, encoding, done) {
   const line = msg.toString()
   const res = { timestamp: new Date().getTime(), data: line }
-  if (line.charAt(0) == '{') {
+  if (line.charAt(0) === '{') {
     res.discriminator = 'I'
   } else if (
-    (line.charAt(0) == '$' || line.charAt(0) == '!') &&
+    (line.charAt(0) === '$' || line.charAt(0) === '!') &&
     !line.startsWith('$PCDIN') && // N2K over 0183, which analyer handles
     !line.startsWith('!PDGY') // iKonect
   ) {
