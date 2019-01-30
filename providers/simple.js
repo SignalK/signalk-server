@@ -9,6 +9,7 @@ const nmea0183_signalk = require('./nmea0183-signalk')
 const N2kToSignalK = require('./n2k-signalk')
 const Log = require('./log')
 const Liner = require('./liner')
+const SplittingLiner = require('./splitting-liner')
 const execute = require('./execute')
 const Udp = require('./udp')
 const Tcp = require('./tcp')
@@ -216,7 +217,7 @@ function nmea0183input (subOptions) {
   } else if (subOptions.type === 'tcpserver') {
     return [new TcpServer(subOptions), new Liner(subOptions)]
   } else if (subOptions.type === 'udp') {
-    return [new Udp(subOptions)]
+    return [new Udp(subOptions), new SplittingLiner(subOptions)]
   } else if (subOptions.type === 'serial') {
     const serialport = require('./serialport')
     return [new serialport(subOptions)]
