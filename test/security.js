@@ -51,10 +51,10 @@ const ADMIN_USER_NAME = 'adminuser'
 const ADMIN_USER_PASSWORD = 'adminpass'
 
 describe('Security', () => {
-  var server, url, port, readToken, writeToken, adminToken
+  let server, url, port, readToken, writeToken, adminToken
 
   before(async function () {
-    var securityConfig = {
+    const securityConfig = {
       allow_readonly: false,
       expiration: '1d',
       allowNewUserRegistration: true,
@@ -146,7 +146,7 @@ describe('Security', () => {
         password
       })
     })
-    if (result.status != 200) {
+    if (result.status !== 200) {
       throw new Error('Login returned ' + result.status)
     }
     return result.json().then(json => {
@@ -155,12 +155,12 @@ describe('Security', () => {
   }
 
   it('unathorized request fails', async function () {
-    var result = await fetch(`${url}/signalk/v1/api/vessels/self`)
+    const result = await fetch(`${url}/signalk/v1/api/vessels/self`)
     result.status.should.equal(401)
   })
 
   it('login with bad password fails', async function () {
-    var result = await fetch(`${url}/login`, {
+    const result = await fetch(`${url}/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -184,7 +184,7 @@ describe('Security', () => {
   })
 
   it('authorized read works', async function () {
-    var result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
+    const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
       headers: {
         Cookie: `JAUTHENTICATION=${writeToken}`
       }
@@ -193,34 +193,34 @@ describe('Security', () => {
   })
 
   it('admin request fails', async function () {
-    var result = await fetch(`${url}/plugins`)
+    const result = await fetch(`${url}/plugins`)
     result.status.should.equal(401)
   })
 
   it('websockets acls work', async function () {
-    var readPromiser = new WsPromiser(
+    const readPromiser = new WsPromiser(
       `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=all&token=${readToken}`
     )
-    var msg = await readPromiser.nextMsg()
+    let msg = await readPromiser.nextMsg()
     JSON.parse(msg)
 
-    var writePromiser = new WsPromiser(
+    const writePromiser = new WsPromiser(
       `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none&token=${writeToken}`
     )
     msg = await writePromiser.nextMsg()
     JSON.parse(msg)
 
-    let failingReadPromise = readPromiser.nextMsg()
+    const failingReadPromise = readPromiser.nextMsg()
     await writePromiser.send(limitedSteeringDelta)
-    let failingResult = await failingReadPromise
+    const failingResult = await failingReadPromise
     failingResult.should.equal('timeout')
 
-    let succeedingReadPromise = readPromiser.nextMsg()
+    const succeedingReadPromise = readPromiser.nextMsg()
     await writePromiser.send(openNavigationDelta)
-    let succeedingResult = await succeedingReadPromise
+    const succeedingResult = await succeedingReadPromise
     succeedingResult.should.not.equal('timeout')
 
-    var d = JSON.parse(succeedingResult)
+    const d = JSON.parse(succeedingResult)
     d.updates.length.should.equal(1)
     d.updates[0].values.length.should.equal(1)
     d.updates[0].values[0].path.should.equal(
@@ -229,19 +229,19 @@ describe('Security', () => {
   })
 
   it('REST acls work', async function () {
-    var result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
+    const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
       headers: {
         Cookie: `JAUTHENTICATION=${readToken}`
       }
     })
     result.status.should.equal(200)
-    var json = await result.json()
+    const json = await result.json()
     json.should.not.have.nested.property('steering.rudderAngle')
     json.should.have.nested.property('navigation.rateOfTurn')
   })
 
   it('logout works', async function () {
-    var result = await fetch(`${url}/logout`, {
+    const result = await fetch(`${url}/logout`, {
       method: 'PUT',
       credentials: 'include'
     })
@@ -251,12 +251,12 @@ describe('Security', () => {
   })
 
   it('request after logout fails', async function () {
-    var result = await fetch(`${url}/signalk/v1/api/vessels/self`, {})
+    const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {})
     result.status.should.equal(401)
   })
 
   it('Device access request and approval works', async function () {
-    var result = await fetch(`${url}/signalk/v1/access/requests`, {
+    let result = await fetch(`${url}/signalk/v1/access/requests`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -268,18 +268,18 @@ describe('Security', () => {
       })
     })
     result.status.should.equal(202)
-    var requestJson = await result.json()
+    const requestJson = await result.json()
     requestJson.should.have.property('requestId')
     requestJson.should.have.property('href')
 
-    var result = await fetch(`${url}${requestJson.href}`)
+    result = await fetch(`${url}${requestJson.href}`)
     result.status.should.equal(200)
-    var json = await result.json()
+    let json = await result.json()
     json.should.have.property('state')
     json.state.should.equal('PENDING')
     json.should.have.property('requestId')
 
-    var result = await fetch(
+    result = await fetch(
       `${url}/security/access/requests/1235-45653-343453/approved`,
       {
         method: 'PUT',
@@ -295,9 +295,9 @@ describe('Security', () => {
     )
     result.status.should.equal(200)
 
-    var result = await fetch(`${url}${requestJson.href}`)
+    result = await fetch(`${url}${requestJson.href}`)
     result.status.should.equal(200)
-    var json = await result.json()
+    json = await result.json()
     json.should.have.property('state')
     json.state.should.equal('COMPLETED')
     json.should.have.property('accessRequest')
@@ -305,13 +305,13 @@ describe('Security', () => {
     json.accessRequest.permission.should.equal('APPROVED')
     json.accessRequest.should.have.property('token')
 
-    var result = await fetch(`${url}/security/devices`, {
+    result = await fetch(`${url}/security/devices`, {
       headers: {
         Cookie: `JAUTHENTICATION=${adminToken}`
       }
     })
     result.status.should.equal(200)
-    var json = await result.json()
+    json = await result.json()
     json.length.should.equal(1)
     json[0].should.have.property('clientId')
     json[0].clientId.should.equal('1235-45653-343453')
@@ -320,7 +320,7 @@ describe('Security', () => {
   })
 
   it('Device access request and denial works', async function () {
-    var result = await fetch(`${url}/signalk/v1/access/requests`, {
+    let result = await fetch(`${url}/signalk/v1/access/requests`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -332,17 +332,17 @@ describe('Security', () => {
       })
     })
     result.status.should.equal(202)
-    var requestJson = await result.json()
+    const requestJson = await result.json()
     requestJson.should.have.property('requestId')
     requestJson.should.have.property('href')
 
-    var result = await fetch(`${url}${requestJson.href}`)
+    result = await fetch(`${url}${requestJson.href}`)
     result.status.should.equal(200)
-    var json = await result.json()
+    let json = await result.json()
     json.should.have.property('state')
     json.state.should.equal('PENDING')
 
-    var result = await fetch(
+    result = await fetch(
       `${url}/security/access/requests/1235-45653-343455/denied`,
       {
         method: 'PUT',
@@ -358,20 +358,20 @@ describe('Security', () => {
     )
     result.status.should.equal(200)
 
-    var result = await fetch(`${url}${requestJson.href}`)
-    var json = await result.json()
+    result = await fetch(`${url}${requestJson.href}`)
+    json = await result.json()
     json.should.have.property('state')
     json.state.should.equal('COMPLETED')
     json.should.have.property('accessRequest')
     json.accessRequest.should.have.property('permission')
     json.accessRequest.permission.should.equal('DENIED')
 
-    var result = await fetch(`${url}/security/devices`, {
+    result = await fetch(`${url}/security/devices`, {
       headers: {
         Cookie: `JAUTHENTICATION=${adminToken}`
       }
     })
-    var json = await result.json()
+    json = await result.json()
     json.length.should.equal(1)
   })
 })

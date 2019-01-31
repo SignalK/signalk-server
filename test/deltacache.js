@@ -121,8 +121,11 @@ describe('deltacache', () => {
   it('deltas ordered properly', function () {
     return serverP.then(server => {
       return deltaP.then(() => {
-        const deltas = server.app.deltaCache.getCachedDeltas(null, delta => true)
-        assert(deltas.length == expectedOrder.length)
+        const deltas = server.app.deltaCache.getCachedDeltas(
+          null,
+          delta => true
+        )
+        assert(deltas.length === expectedOrder.length)
         for (let i = 0; i < expectedOrder.length; i++) {
           deltas[i].updates[0].values[0].path.should.equal(expectedOrder[i])
         }

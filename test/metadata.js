@@ -6,7 +6,7 @@ const rp = require('request-promise')
 const startServerP = require('./servertestutilities').startServerP
 
 describe('Metadata retrieval', () => {
-  var serverP, port
+  let serverP, port
 
   before(() => {
     serverP = freeport().then(p => {

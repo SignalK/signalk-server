@@ -34,11 +34,11 @@ describe('Demo plugin ', () => {
 
     assert(plugins.find(plugin => plugin.id === 'testplugin'))
 
-    var plugin = server.app.plugins.find(plugin => plugin.id === 'testplugin')
+    const plugin = server.app.plugins.find(plugin => plugin.id === 'testplugin')
     assert(plugin)
     assert(plugin.started)
 
-    var optionsTest = plugin.app.readPluginOptions()
+    const optionsTest = plugin.app.readPluginOptions()
     assert(optionsTest.configuration.testOption === 'testValue')
 
     assert(server.app.signalk.self.some.path.value === 'someValue')
@@ -99,7 +99,9 @@ function mkDirSync (dirPath) {
   try {
     fs.mkdirSync(dirPath)
   } catch (err) {
-    if (err.code !== 'EEXIST') throw err
+    if (err.code !== 'EEXIST') {
+      throw err
+    }
   }
 }
 

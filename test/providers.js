@@ -9,7 +9,7 @@ const fetch = require('node-fetch')
 const nullIdText = 'Please enter a provider ID'
 
 describe('Providers', _ => {
-  var server, url, port
+  let server, url, port
 
   before(async function () {
     port = await freeport()
@@ -56,28 +56,28 @@ describe('Providers', _ => {
       enabled: true,
       type: 'simple'
     }
-    var result = await fetch(`${url}/providers`, {
+    let result = await fetch(`${url}/providers`, {
       method: 'post',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(provider)
     })
     result.status.should.equal(401)
-    var text = await result.text()
+    let text = await result.text()
     text.should.equal(nullIdText)
 
     delete provider.id
-    var result = await fetch(`${url}/providers`, {
+    result = await fetch(`${url}/providers`, {
       method: 'post',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(provider)
     })
     result.status.should.equal(401)
-    var text = await result.text()
+    text = await result.text()
     text.should.equal(nullIdText)
   })
 
   it('New provider works', async function () {
-    var result = await fetch(`${url}/providers`, {
+    const result = await fetch(`${url}/providers`, {
       method: 'post',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -89,9 +89,9 @@ describe('Providers', _ => {
       })
     })
     result.status.should.equal(200)
-    var text = await result.text()
+    const text = await result.text()
     text.should.equal('Provider added')
-    let pipedProviders = server.app.config.settings.pipedProviders
+    const pipedProviders = server.app.config.settings.pipedProviders
     pipedProviders.length.should.equal(2)
     checkExistingProvider(pipedProviders[0])
     pipedProviders[1].id.should.equal('testProvider')
@@ -112,25 +112,25 @@ describe('Providers', _ => {
         type: 'NMEA0183'
       }
     }
-    var result = await fetch(`${url}/providers/testProvider`, {
+    let result = await fetch(`${url}/providers/testProvider`, {
       method: 'put',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(provider)
     })
     result.status.should.equal(401)
-    var text = await result.text()
+    let text = await result.text()
     text.should.equal(nullIdText)
-    let pipedProviders = server.app.config.settings.pipedProviders
+    const pipedProviders = server.app.config.settings.pipedProviders
     pipedProviders[1].id.should.equal('testProvider')
 
     delete provider.id
-    var result = await fetch(`${url}/providers/testProvider`, {
+    result = await fetch(`${url}/providers/testProvider`, {
       method: 'put',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(provider)
     })
     result.status.should.equal(401)
-    var text = await result.text()
+    text = await result.text()
     text.should.equal(nullIdText)
     pipedProviders[1].id.should.equal('testProvider')
   })
@@ -145,15 +145,15 @@ describe('Providers', _ => {
         device: '/dev/usb0'
       }
     }
-    var result = await fetch(`${url}/providers/testProvider`, {
+    const result = await fetch(`${url}/providers/testProvider`, {
       method: 'put',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(provider)
     })
     result.status.should.equal(200)
-    var text = await result.text()
+    const text = await result.text()
     text.should.equal('Provider updated')
-    let pipedProviders = server.app.config.settings.pipedProviders
+    const pipedProviders = server.app.config.settings.pipedProviders
     pipedProviders.length.should.equal(2)
     checkExistingProvider(pipedProviders[0])
     pipedProviders[1].id.should.equal('testProvider')
