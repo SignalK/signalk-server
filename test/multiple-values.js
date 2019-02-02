@@ -1,15 +1,15 @@
-var chai = require('chai')
+const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
 chai.use(require('@signalk/signalk-schema').chaiModule)
 const freeport = require('freeport-promise')
 const startServerP = require('./servertestutilities').startServerP
 
-var rp = require('request-promise')
+const rp = require('request-promise')
 
-var uuid = 'urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d'
+const uuid = 'urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d'
 
-var delta = {
+const delta = {
   context: 'vessels.' + uuid,
   updates: [
     {
@@ -52,16 +52,16 @@ describe('Server', function () {
   })
 
   it('handles two deltas with signalk path', function () {
-    var host = 'http://localhost:' + port
-    var deltaUrl = host + '/signalk/v1/api/_test/delta'
-    var restUrl = host + '/signalk/v1/api/'
+    const host = 'http://localhost:' + port
+    const deltaUrl = host + '/signalk/v1/api/_test/delta'
+    const restUrl = host + '/signalk/v1/api/'
 
     return rp({ url: deltaUrl, method: 'POST', json: delta })
       .then(function (body) {
         return rp({ url: restUrl, method: 'GET' })
       })
       .then(function (body) {
-        var treeAfterFirstDelta = JSON.parse(body)
+        const treeAfterFirstDelta = JSON.parse(body)
         treeAfterFirstDelta.vessels[uuid].should.have.nested.property(
           'navigation.trip.log.value',
           43374
@@ -79,7 +79,7 @@ describe('Server', function () {
         return rp({ url: restUrl, method: 'GET' })
       })
       .then(function (body) {
-        var treeAfterSecondDelta = JSON.parse(body)
+        const treeAfterSecondDelta = JSON.parse(body)
         treeAfterSecondDelta.vessels[uuid].should.have.nested.property(
           'navigation.trip.log.value',
           1
@@ -98,7 +98,7 @@ describe('Server', function () {
         return rp({ url: restUrl, method: 'GET' })
       })
       .then(function (body) {
-        var treeAfterOtherSourceDelta = JSON.parse(body)
+        const treeAfterOtherSourceDelta = JSON.parse(body)
         treeAfterOtherSourceDelta.vessels[uuid].should.have.nested.property(
           'navigation.trip.log.value',
           2

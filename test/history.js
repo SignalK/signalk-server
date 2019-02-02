@@ -24,7 +24,7 @@ const testDelta = {
   ]
 }
 
-let dummyHistoryProvider = app => {
+const dummyHistoryProvider = app => {
   return {
     streamHistory: (cookie, options, onDelta) => {
       setTimeout(() => {
@@ -35,20 +35,20 @@ let dummyHistoryProvider = app => {
     },
     getHistory: (date, path, cb) => {
       testDelta.context = `vessels.${app.selfId}`
-      if (date.getTime() == testDeltaDate.getTime()) {
+      if (date.getTime() === testDeltaDate.getTime()) {
         cb([testDelta])
       } else {
         cb([])
       }
     },
     hasAnyData: (options, cb) => {
-      cb(options.startTime.getTime() == testDeltaDate.getTime())
+      cb(options.startTime.getTime() === testDeltaDate.getTime())
     }
   }
 }
 
 describe('History', _ => {
-  var server, url, port
+  let server, url, port
 
   before(async function () {
     port = await freeport()
@@ -72,16 +72,16 @@ describe('History', _ => {
   })
 
   it('startTime subscription works', async function () {
-    var wsPromiser = new WsPromiser(
+    const wsPromiser = new WsPromiser(
       `ws://0.0.0.0:${port}/signalk/v1/playback?subscribe=self&startTime=2018-08-09T14:07:29.695Z`
     )
-    var msg = await wsPromiser.nextMsg()
+    let msg = await wsPromiser.nextMsg()
     msg.should.not.equal('timeout')
     JSON.parse(msg)
 
     msg = await wsPromiser.nextMsg()
     msg.should.not.equal('timeout')
-    let delta = JSON.parse(msg)
+    const delta = JSON.parse(msg)
     delta.updates[0].values[0].path.should.equal('performance.velocityMadeGood')
 
     msg = await wsPromiser.nextMsg()
@@ -89,16 +89,16 @@ describe('History', _ => {
   })
 
   it('REST time request works', async function () {
-    var result = await fetch(
+    const result = await fetch(
       `${url}/signalk/v1/api/snapshot/vessels/self?time=2018-08-09T14:07:29.695Z`
     )
     result.status.should.equal(200)
-    var json = await result.json()
+    const json = await result.json()
     json.should.have.nested.property('performance.velocityMadeGood')
   })
 
   it('REST time request with no data  works', async function () {
-    var result = await fetch(
+    const result = await fetch(
       `${url}/signalk/v1/api/snapshot/vessels/self?time=2018-08-09T14:07:29.694Z`
     )
     result.status.should.equal(404)

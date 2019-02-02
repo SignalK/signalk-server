@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-var Transform = require('stream').Transform
-var bodyParser = require('body-parser')
+const Transform = require('stream').Transform
+const bodyParser = require('body-parser')
 
 function HttpProvider (options) {
   Transform.call(this, {
@@ -34,12 +34,9 @@ HttpProvider.prototype._transform = function (chunk, encoding, done) {
   done()
 }
 
-function outputLine (line) {
-  this.push(line)
-}
-
 function handleDelta (req, res, next) {
   res.send('ok')
+  // eslint-disable-next-line no-invalid-this
   this.push(req.body)
 }
 

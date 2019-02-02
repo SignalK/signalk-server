@@ -10,7 +10,7 @@
     "test": "mocha --exit ./test/**/*.js ./lib/**/*.test.js && npm run lint",
     "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js",
     "heroku-postbuild": "npm install @signalk/simple-gpx",
-    "lint": "eslint lib/ providers/ --fix"
+    "lint": "eslint lib/ providers/ test/ --fix"
   },
   "lint-staged": {
     "linters": {

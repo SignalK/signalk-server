@@ -11,7 +11,7 @@ const WebSocket = require('ws')
 const sleep = ms => new Promise(res => setTimeout(res, ms))
 
 describe('Put Requests', () => {
-  var server, url, port
+  let server, url, port
 
   before(async function () {
     port = await freeport()
@@ -61,7 +61,7 @@ describe('Put Requests', () => {
   })
 
   it('HTTP put to unhandled path fails', async function () {
-    var result = await fetch(
+    const result = await fetch(
       `${url}/signalk/v1/api/vessels/self/electrical/switches/switch1.state`,
       {
         method: 'PUT',
@@ -78,7 +78,7 @@ describe('Put Requests', () => {
   })
 
   it('HTTP successfull put', async function () {
-    var result = await fetch(
+    let result = await fetch(
       `${url}/signalk/v1/api/vessels/self/electrical/switches/switch2.state`,
       {
         method: 'PUT',
@@ -93,24 +93,24 @@ describe('Put Requests', () => {
 
     result.status.should.equal(202)
 
-    var json = await result.json()
+    let json = await result.json()
     json.should.have.property('state')
     json.state.should.equal('PENDING')
     json.should.have.property('href')
 
     await sleep(200)
 
-    var result = await fetch(`${url}${json.href}`)
+    result = await fetch(`${url}${json.href}`)
 
     result.status.should.equal(200)
 
-    var json = await result.json()
+    json = await result.json()
     json.should.have.property('state')
     json.state.should.equal('COMPLETED')
   })
 
   it('HTTP failing put', async function () {
-    var result = await fetch(
+    const result = await fetch(
       `${url}/signalk/v1/api/vessels/self/electrical/switches/switch2/state`,
       {
         method: 'PUT',
@@ -125,7 +125,7 @@ describe('Put Requests', () => {
 
     result.status.should.equal(400)
 
-    var json = await result.json()
+    const json = await result.json()
     json.should.have.property('state')
     json.state.should.equal('COMPLETED')
     json.should.have.property('message')
@@ -133,13 +133,13 @@ describe('Put Requests', () => {
   })
 
   it('WS put to unhandled path fails', async function () {
-    var ws = new WsPromiser(
+    const ws = new WsPromiser(
       `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none`
     )
-    var msg = await ws.nextMsg()
+    let msg = await ws.nextMsg()
 
     ws.clear()
-    let something = await ws.send({
+    const something = await ws.send({
       context: 'vessels.self',
       put: {
         path: 'electrical.switches.switch1.state',
@@ -147,23 +147,23 @@ describe('Put Requests', () => {
       }
     })
 
-    let readPromise = ws.nextMsg()
+    const readPromise = ws.nextMsg()
     msg = await readPromise
     msg.should.not.equal('timeout')
-    let response = JSON.parse(msg)
+    const response = JSON.parse(msg)
     // console.log(msg)
     response.should.have.property('statusCode')
     response.statusCode.should.equal(405)
   })
 
   it('WS successfull put', async function () {
-    var ws = new WsPromiser(
+    const ws = new WsPromiser(
       `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none`
     )
-    var msg = await ws.nextMsg()
+    let msg = await ws.nextMsg()
 
     ws.clear()
-    let something = await ws.send({
+    const something = await ws.send({
       context: 'vessels.self',
       put: {
         path: 'electrical.switches.switch2.state',
@@ -190,13 +190,13 @@ describe('Put Requests', () => {
   })
 
   it('WS failing put', async function () {
-    var ws = new WsPromiser(
+    const ws = new WsPromiser(
       `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none`
     )
-    var msg = await ws.nextMsg()
+    let msg = await ws.nextMsg()
 
     ws.clear()
-    let something = await ws.send({
+    const something = await ws.send({
       context: 'vessels.self',
       put: {
         path: 'electrical.switches.switch2.state',
@@ -206,7 +206,7 @@ describe('Put Requests', () => {
 
     msg = await ws.nextMsg()
     msg.should.not.equal('timeout')
-    let response = JSON.parse(msg)
+    const response = JSON.parse(msg)
     response.should.have.property('state')
     response.state.should.equal('COMPLETED')
     response.should.have.property('statusCode')
