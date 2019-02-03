@@ -132,6 +132,10 @@ If the plugin needs to make and save changes to its options
 
 If the plugin needs to read plugin options from disk
 
+### app.getDataDirPath()
+
+Provides the full path to a plugin specific directory where the plugin can persist its internal data, like data files. Use for example like `require('path').join(app.getDataDirPath(), 'yourfilename.ext')`.
+
 ### app.registerPutHandler (context, path, source, callback)
 
 If the plugin wants to respond to PUT requests for a specific path, it should register an action handler.
