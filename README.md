@@ -108,6 +108,7 @@ Environment variables
 - `SSLPORT` override the port for https/wss service. If defined activates ssl as forced, default protocol.
 - `EXTERNALPORT` the port used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
 - `EXTERNALHOST` the host used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
+- `FILEUPLOADSIZELIMIT` override the file upload size limit (default is '10mb')
 - `NMEA0183PORT`  override the port for the NMEA 0183 over tcp service (default 10110)
 - `TCPSTREAMPORT` override the port for the Signal K Streaming (deltas) over TCP
 - `TCPSTREAMADDRESS` override the address the Signal K Stream (deltas) over TCP is listening on
