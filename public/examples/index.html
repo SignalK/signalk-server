@@ -15,18 +15,6 @@
 <script>
 var ws = new WebSocket((window.location.protocol === 'https:' ? 'wss' : 'ws') + "://" + window.location.host + "/signalk/v1/stream?subscribe=all");
 
-ws.onopen = function() {
-  var subscriptionObject = {
-    "context": "vessels.self",
-    "subscribe": [{
-      "path": "*"
-    }]
-  };
-  var subscriptionMessage = JSON.stringify(subscriptionObject);
-  console.log("Sending subscription:" + subscriptionMessage)
-  ws.send(subscriptionMessage);
-}
-
 ws.onclose = function() {
   console.log("ws close");
 }
