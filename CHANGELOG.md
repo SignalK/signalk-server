@@ -1,5 +1,20 @@
 ## Change Log
 
+### v1.12.0 (2019/02/15 20:58 +00:00)
+- [#734](https://github.com/SignalK/signalk-server-node/pull/734) fix: PayloadTooLargeError: request entity too large (@tonybentley)
+- [#731](https://github.com/SignalK/signalk-server-node/pull/731) feature: add getDataDirPath() to plugin API (@tkurki)
+- [#721](https://github.com/SignalK/signalk-server-node/pull/721) fix: path to logout is not spec complient (@sbender9)
+- [#728](https://github.com/SignalK/signalk-server-node/pull/728) fix: exclude deprecated modules (@tkurki)
+- [#727](https://github.com/SignalK/signalk-server-node/pull/727) style: eslint also test/ (@tkurki)
+- [#725](https://github.com/SignalK/signalk-server-node/pull/725) fix: statusCode is not in the response over ws when a put request is pending (@sbender9)
+- [#720](https://github.com/SignalK/signalk-server-node/pull/720) fix: statusCode is not in the response over ws when an access request is pending (@sbender9)
+- [#726](https://github.com/SignalK/signalk-server-node/pull/726) fix: nmea 0183 udp data with multiple lines per datagram fails (@sbender9)
+- [#719](https://github.com/SignalK/signalk-server-node/pull/719)  style: eslint eqeqeq rule (@tkurki)
+- [#713](https://github.com/SignalK/signalk-server-node/pull/713) fix: WebSocket related errors (@tkurki)
+- [#711](https://github.com/SignalK/signalk-server-node/pull/711) fix: handle delta paths with the word path (@tkurki)
+- [#698](https://github.com/SignalK/signalk-server-node/pull/698) feature: add MAXSENDBUFFERSIZE guard against slow/dysfunctional clients (@tkurki)
+- [#708](https://github.com/SignalK/signalk-server-node/pull/708) chore: add eslint and fix style & minor errors (@tkurki)
+
 ### v1.11.0 (2019/01/17 17:20 +00:00)
 - [#695](https://github.com/SignalK/signalk-server-node/pull/695) feature: server as include (checkPackageVersion, test) (@tkurki)
 - [#684](https://github.com/SignalK/signalk-server-node/pull/684) Spec compliant history paths (@tkurki)
