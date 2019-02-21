@@ -89,14 +89,22 @@ function Splitter (deMultiplexer, options) {
 }
 require('util').inherits(Splitter, Transform)
 
-Splitter.prototype._transform = function (msg, encoding, done) {
+Splitter.prototype._transform = function (msg, encoding, _done) {
+  let done = _done
   try {
     switch (msg.discriminator) {
-      case 'A':
-        return this.fromActisenseSerial.write(msg.data, encoding)
+      case 'A': {
+        const result = this.fromActisenseSerial.write(msg.data, encoding)
+        if (!result) {
+          this.fromActisenseSerial.once('drain', _done)
+          done = () => {}
+        }
+        return result
+      }
       case 'C':
       case 'N':
       case 'G':
+      case 'M':
         return this.fromNMEA0183.write(
           { line: msg.data, timestamp: msg.timestamp },
           encoding
