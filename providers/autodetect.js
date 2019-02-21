@@ -57,7 +57,6 @@ function DeMultiplexer (options) {
   this.splitter = new Splitter(this, options)
   this.options = options
 
-  this.toTimestamped.pipe(this.splitter)
   this.toTimestamped.on('drain', this.emit.bind(this, 'drain'))
 }
 require('util').inherits(DeMultiplexer, Writable)
