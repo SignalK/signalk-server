@@ -99,16 +99,17 @@ Splitter.prototype._transform = function (msg, encoding, _done) {
           this.fromActisenseSerial.once('drain', _done)
           done = () => {}
         }
-        return result
+        break
       }
       case 'C':
       case 'N':
       case 'G':
       case 'M':
-        return this.fromNMEA0183.write(
+        this.fromNMEA0183.write(
           { line: msg.data, timestamp: msg.timestamp },
           encoding
         )
+        break
       case 'I':
       default:
         try {
