@@ -284,9 +284,8 @@ If you have not updated for a while, then the above commands may take a while to
 
 Open the terminal window and enter the following commands...
 
-    $ curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
-    $ sudo apt-get install nodejs
-    $ sudo npm i -g npm
+    $ sudo apt-get upgrade nodejs
+    $ sudo npm install npm@latest -g
     
 This will update Nodejs and NPM to the version required by the server.
 
