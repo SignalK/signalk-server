@@ -57,7 +57,6 @@ function DeMultiplexer (options) {
   this.splitter = new Splitter(this, options)
   this.options = options
 
-  this.toTimestamped.pipe(this.splitter)
   this.toTimestamped.on('drain', this.emit.bind(this, 'drain'))
 }
 require('util').inherits(DeMultiplexer, Writable)
@@ -90,18 +89,27 @@ function Splitter (deMultiplexer, options) {
 }
 require('util').inherits(Splitter, Transform)
 
-Splitter.prototype._transform = function (msg, encoding, done) {
+Splitter.prototype._transform = function (msg, encoding, _done) {
+  let done = _done
   try {
     switch (msg.discriminator) {
-      case 'A':
-        return this.fromActisenseSerial.write(msg.data, encoding)
+      case 'A': {
+        const result = this.fromActisenseSerial.write(msg.data, encoding)
+        if (!result) {
+          this.fromActisenseSerial.once('drain', _done)
+          done = () => {}
+        }
+        break
+      }
       case 'C':
       case 'N':
       case 'G':
-        return this.fromNMEA0183.write(
+      case 'M':
+        this.fromNMEA0183.write(
           { line: msg.data, timestamp: msg.timestamp },
           encoding
         )
+        break
       case 'I':
       default:
         try {
@@ -125,7 +133,6 @@ Splitter.prototype.pipe = function (target) {
 
 function ToTimestamped (deMultiplexer, options) {
   Transform.call(this, { objectMode: true })
-  this.firstLine = true
   this.deMultiplexer = deMultiplexer
   this.options = options
 }
@@ -133,24 +140,21 @@ require('util').inherits(ToTimestamped, Transform)
 
 ToTimestamped.prototype._transform = function (msg, encoding, done) {
   const line = msg.toString()
-  if (this.firstLine) {
-    this.firstLine = false
-    this.multiplexedFormat =
-      line.length > 16 && line.charAt(13) === ';' && line.charAt(15) === ';'
-    if (this.multiplexedFormat) {
-      if (this.options.noThrottle) {
-        this.deMultiplexer.toTimestamped.pipe(this.deMultiplexer.splitter)
-      } else {
-        this.deMultiplexer.toTimestamped
-          .pipe(this.deMultiplexer.timestampThrottle)
-          .pipe(this.deMultiplexer.splitter)
-      }
-      this._transform = this.handleMultiplexed
+  this.multiplexedFormat =
+    line.length > 16 && line.charAt(13) === ';' && line.charAt(15) === ';'
+  if (this.multiplexedFormat) {
+    if (this.options.noThrottle) {
+      this.deMultiplexer.toTimestamped.pipe(this.deMultiplexer.splitter)
     } else {
-      this._transform = this.handleMixed
+      this.deMultiplexer.toTimestamped
+        .pipe(this.deMultiplexer.timestampThrottle)
+        .pipe(this.deMultiplexer.splitter)
     }
-    this._transform(msg, encoding, done)
+    this._transform = this.handleMultiplexed
+  } else {
+    this._transform = this.handleMixed
   }
+  this._transform(msg, encoding, done)
 }
 
 ToTimestamped.prototype.handleMixed = function (msg, encoding, done) {
