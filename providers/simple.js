@@ -19,6 +19,7 @@ const Throttle = require('./throttle')
 const TimestampThrottle = require('./timestamp-throttle')
 const CanboatJs = require('./canboatjs')
 const iKonvert = require('@canboat/canboatjs').iKonvert
+const Ydwg02 = require('@canboat/canboatjs').Ydwg02
 
 function Simple (options) {
   Transform.call(this, { objectMode: true })
@@ -51,6 +52,8 @@ function Simple (options) {
       mappingType = 'NMEA2000JS'
     } else if (options.subOptions.type === 'ikonvert-canboatjs') {
       mappingType = 'NMEA2000IK'
+    } else if (options.subOptions.type === 'ydwg02-canboatjs') {
+      mappingType = 'NMEA2000YD'
     }
   }
 
@@ -94,6 +97,7 @@ const getLogger = (app, logging, discriminator) =>
 const discriminatorByDataType = {
   NMEA2000JS: 'A',
   NMEA2000IK: 'A',
+  NMEA2000YD: 'A',
   NMEA2000: 'A',
   NMEA0183: 'N',
   SignalK: 'I'
@@ -145,6 +149,13 @@ const dataTypeMapping = {
     }
     return result.concat([new N2kToSignalK(options.subOptions)])
   },
+  NMEA2000YD: options => {
+    const result = [new Ydwg02(options.subOptions)]
+    if (options.type === 'FileStream') {
+      result.push(new TimestampThrottle())
+    }
+    return result.concat([new N2kToSignalK(options.subOptions)])
+  },
   Multiplexed: options => [new MultiplexedLog(options.subOptions)]
 }
 
@@ -185,6 +196,8 @@ function nmea2000input (subOptions, logging) {
         toStdout: 'ikonvertOut'
       })
     ]
+  } else if (subOptions.type === 'ydwg02-canboatjs') {
+    return [new Tcp(subOptions), new Liner(subOptions)]
   } else {
     let command
     let toChildProcess
