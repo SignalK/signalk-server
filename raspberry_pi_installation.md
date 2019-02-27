@@ -229,9 +229,9 @@ Attach the SignalK server to a network with WiFi access, or set up the RPi as an
 
 In the admin UI ”Appstore => Installed” You will find the plugin
 
-![installed_apps](https://user-images.githubusercontent.com/16189982/36218769-c3a73612-11b5-11e8-9a51-e13ea6335e44.jpeg)
+![appstore_installed](https://user-images.githubusercontent.com/16189982/51399380-18d84c80-1b46-11e9-99f6-04bf86eaf769.png)
 
-(In this case there is an update, so just click on the "download cloud" and the update will take place. Restart SignalK.)
+(Handling updates, indicated by the red numbers at the ”Update” rows, is discussed below.)
 
 To activate and configure the plugin go to ”Server => Plugin Config”. Select "Convert SignalK......”. Then select "Active” and  the sentences You need for Your application, click ”Submit” and restart SignalK.
 In Your tablet application, set it up to receive the NMEA0183 data from the SignalK server with the IP adress, protocol TCP, and port 10110. The picture is from iSailor
@@ -241,6 +241,12 @@ In Your tablet application, set it up to receive the NMEA0183 data from the Sign
 ## SignalK data on the network
 
 Here You have [applications](https://signalk.org/applications_solutions.html) that will accept the json data direct from SignalK.
+
+## Apps
+
+As noticed, some apps are installed together with the server and others, not installed, can be downloaded in the ”Appstore => Available”. The app configuration is done in ”Server => Plugin Config”
+
+Additional information and how to uninstall apps is found [here](https://github.com/SignalK/signalk-server-node/blob/master/SERVERPLUGINS.md)
 
 ## Additional software
 
@@ -278,20 +284,31 @@ If you have not updated for a while, then the above commands may take a while to
 
 Open the terminal window and enter the following commands...
 
-    $ curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
-    $ sudo apt-get install nodejs
-
+    $ sudo apt-get upgrade nodejs
+    $ sudo npm install npm@latest -g
+    
 This will update Nodejs and NPM to the version required by the server.
 
 ## Update Signal K Node Server
 
-Open the terminal window and enter the following commands...
+As seen in the picture above there was an update available at ”Server => Update”
+Click on that row and You will open next window
+
+![server_update](https://user-images.githubusercontent.com/16189982/51401114-4c1cda80-1b4a-11e9-8f1e-d12a9db542af.png)
+
+Click on update and the installation will start
+
+If below version 1.8.0 use this command instead
 
     $ sudo npm install --unsafe-perm -g signalk-server
+    
+![server_during_update](https://user-images.githubusercontent.com/16189982/51401178-71a9e400-1b4a-11e9-86b9-1148442ba59c.png)
+
+After the installation restart the server.
 
 ## Any Signal K Apps
 
-As You noticed the apps are updated wia the Admin UI.
+The apps are updated via the Admin UI ”Appstore => Updates” clicking on the ”download cloud” . After installation do a server restart.
 
 
 Now your Signal K Node Server is updated.
