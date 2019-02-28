@@ -64,3 +64,5 @@ test
 lib/**/*.test.js*
 
 packages
+
+signalk-server-*.tgz
