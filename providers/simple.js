@@ -19,6 +19,8 @@ const Throttle = require('./throttle')
 const TimestampThrottle = require('./timestamp-throttle')
 const CanboatJs = require('./canboatjs')
 const iKonvert = require('@canboat/canboatjs').iKonvert
+const getCanboatJSSources = require('@canboat/canboatjs').getSources
+const getCanboatJSSourceForType = require('@canboat/canboatjs').getSourceForType
 
 function Simple (options) {
   Transform.call(this, { objectMode: true })
@@ -157,6 +159,45 @@ const pipeStartByType = {
 }
 
 function nmea2000input (subOptions, logging) {
+  if (subOptions.type === 'ngt-1' || subOptions.type === 'canbus') {
+    let command
+    let toChildProcess
+    if (subOptions.type === 'ngt-1') {
+      command = `actisense-serial -s ${subOptions.baudrate || 115200} ${
+        subOptions.device
+      }`
+      toChildProcess = 'nmea2000out'
+    } else if (subOptions.type === 'canbus') {
+      command = `candump ${subOptions.interface} | candump2analyzer`
+      toChildProcess = null
+    }
+    return [
+      new execute({
+        command: command,
+        toChildProcess: toChildProcess,
+        app: subOptions.app,
+        providerId: subOptions.providerId
+      }),
+      new Liner(subOptions)
+    ]
+  } else {
+    const sourceInfo = getCanboatJSSourceForType(subOptions.type)
+
+    if (!sourceInfo) {
+      throw new Error(`unknown NMEA2000 type ${subOptions.type}`)
+    }
+
+    return sourceInfo.inputModules.map((module, index) => {
+      const Input = require(module)
+      return new Input({
+        ...sourceInfo[index],
+        ...subOptions,
+        plainText: logging
+      })
+    })
+  }
+
+  /*
   if (subOptions.type === 'ngt-1-canboatjs') {
     return [
       new require('./actisense-serial')({
@@ -209,6 +250,7 @@ function nmea2000input (subOptions, logging) {
       new Liner(subOptions)
     ]
   }
+  */
 }
 
 function nmea0183input (subOptions) {
