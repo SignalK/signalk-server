@@ -136,7 +136,7 @@
     "serialport": "^7.0.2",
     "spdy": "^4.0.0",
     "split": "^1.0.0",
-    "stat-mode": "^0.2.2",
+    "stat-mode": "^0.3.0",
     "stream-throttle": "^0.1.3",
     "through": ">=2.2.7 <3",
     "uuid": "^3.2.1",
