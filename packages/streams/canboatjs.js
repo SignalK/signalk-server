@@ -26,24 +26,41 @@ function CanboatJs (options) {
 
   this.fromPgn = new FromPgn(options)
 
-  this.fromPgn.on('pgn', pgn => {
-    this.push(pgn)
-    options.app.emit('N2KAnalyzerOut', pgn)
-  })
-
   this.fromPgn.on('warning', (pgn, warning) => {
     debug(`[warning] ${pgn.pgn} ${warning}`)
   })
 
-  this.fromPgn.on('error', (pgn, error) => {
-    debug(`[error] ${pgn.pgn} ${error}`)
-  })
+  // error events need a handler, but are really handled in the callback
+  this.fromPgn.on('error', () => {})
+
+  this.app = options.app
+
+  this.handlePgnData = (err, pgnData) => {
+    if (err) {
+      console.error(err)
+    } else {
+      this.push(pgnData)
+      this.app.emit('N2KAnalyzerOut', pgnData)
+    }
+  }
 }
 
 require('util').inherits(CanboatJs, Transform)
 
 CanboatJs.prototype._transform = function (chunk, encoding, done) {
-  this.fromPgn.parse(chunk)
+  if (typeof chunk === 'object') {
+    this.fromPgn.parse(chunk.data, (err, pgnData) => {
+      if (err) {
+        console.error(err)
+      } else {
+        pgnData.timestamp = new Date(Number(chunk.timestamp)).toISOString()
+        this.push(pgnData)
+        this.app.emit('N2KAnalyzerOut', pgnData)
+      }
+    })
+  } else {
+    this.fromPgn.parse(chunk, this.handlePgnData)
+  }
   done()
 }
 
