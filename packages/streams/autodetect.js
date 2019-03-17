@@ -62,7 +62,7 @@ function DeMultiplexer (options) {
 require('util').inherits(DeMultiplexer, Writable)
 
 DeMultiplexer.prototype.pipe = function (target) {
-  this.splitter.pipe(target)
+  return this.splitter.pipe(target)
 }
 DeMultiplexer.prototype.write = function (chunk, encoding, callback) {
   return this.toTimestamped.write(chunk, encoding, callback)
@@ -128,7 +128,7 @@ Splitter.prototype._transform = function (msg, encoding, _done) {
 Splitter.prototype.pipe = function (target) {
   this.fromN2KJson.pipe(target)
   this.fromNMEA0183.pipe(target)
-  Transform.prototype.pipe.call(this, target)
+  return Transform.prototype.pipe.call(this, target)
 }
 
 function ToTimestamped (deMultiplexer, options) {
