@@ -10,7 +10,7 @@
     "test": "mocha --exit ./test/**/*.js ./lib/**/*.test.js && npm run lint",
     "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js",
     "heroku-postbuild": "npm install @signalk/simple-gpx",
-    "lint": "eslint lib/ providers/ test/ --fix"
+    "lint": "eslint lib/ test/ --fix"
   },
   "lint-staged": {
     "linters": {
@@ -81,13 +81,9 @@
     "node": "8"
   },
   "dependencies": {
-    "@canboat/canboatjs": "^1.3.x",
-    "@signalk/client": "^0.2.0",
     "@signalk/freeboard-sk": "^1.0.0",
     "@signalk/instrumentpanel": "0.x",
     "@signalk/maptracker": "^1.0.0",
-    "@signalk/n2k-signalk": "^1.2.1",
-    "@signalk/nmea0183-signalk": "^3.0.0",
     "@signalk/playground": "^1.0.0",
     "@signalk/sailgauge": "^1.1.0",
     "@signalk/server-admin-ui": "1.11.x",
@@ -95,8 +91,8 @@
     "@signalk/signalk-schema": "1.1.1",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
     "@signalk/simplegauges": "^1.0.1",
+    "@signalk/streams": "^1.0.0",
     "@signalk/zones": "^1.0.0",
-    "any-shell-escape": "^0.1.1",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.14.1",
@@ -131,14 +127,10 @@
     "pem": "^1.11.0",
     "please-upgrade-node": "^3.0.1",
     "primus": "^7.0.0",
-    "reconnect-core": "^1.3.0",
     "semver": "^5.5.1",
-    "serialport": "^7.0.2",
     "spdy": "^4.0.0",
     "split": "^1.0.0",
     "stat-mode": "^0.2.2",
-    "stream-throttle": "^0.1.3",
-    "through": ">=2.2.7 <3",
     "uuid": "^3.2.1",
     "ws": "^6.1.1"
   },
