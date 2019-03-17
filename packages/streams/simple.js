@@ -197,7 +197,10 @@ function nmea2000input (subOptions, logging) {
       })
     ]
   } else if (subOptions.type === 'ydwg02-canboatjs') {
-    return [new Tcp(subOptions), new Liner(subOptions)]
+    return [new Tcp({
+      ...subOptions,
+      outEvent: 'ydwg02-out'
+    }), new Liner(subOptions)]
   } else {
     let command
     let toChildProcess
