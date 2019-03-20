@@ -75,6 +75,7 @@ TcpStream.prototype.pipe = function (pipeTo) {
       debug(msg)
     })
     .on('disconnect', err => {
+      delete this.tcpStream
       debug(`Disconnected ${this.options.host} ${this.options.port}`)
     })
     .on('error', err => {
