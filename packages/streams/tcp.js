@@ -42,6 +42,15 @@ function TcpStream (options) {
 require('util').inherits(TcpStream, Transform)
 
 TcpStream.prototype.pipe = function (pipeTo) {
+  if ( this.options.outEvent ) {
+    const that = this
+    that.options.app.on(that.options.outEvent, function (d) {
+      if ( that.tcpStream ) {
+        that.tcpStream.write(d)
+      }
+    })
+  }
+  
   const re = require('reconnect-core')(function () {
     return net.connect.apply(null, arguments)
   })({ maxDelay: 5 * 1000 }, tcpStream => {
@@ -53,6 +62,7 @@ TcpStream.prototype.pipe = function (pipeTo) {
     })
   })
     .on('connect', con => {
+      this.tcpStream = tcpStream
       const msg = `Connected to ${this.options.host} ${this.options.port}`
       this.options.app.setProviderStatus(this.options.providerId, msg)
       debug(msg)
@@ -65,6 +75,7 @@ TcpStream.prototype.pipe = function (pipeTo) {
       debug(msg)
     })
     .on('disconnect', err => {
+      delete this.tcpStream
       debug(`Disconnected ${this.options.host} ${this.options.port}`)
     })
     .on('error', err => {
