@@ -94,7 +94,7 @@ Splitter.prototype._transform = function (msg, encoding, _done) {
   try {
     switch (msg.discriminator) {
       case 'A': {
-        const result = this.fromActisenseSerial.write(msg.data, encoding)
+        const result = this.fromActisenseSerial.write(msg, encoding)
         if (!result) {
           this.fromActisenseSerial.once('drain', _done)
           done = () => {}
