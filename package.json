@@ -91,7 +91,7 @@
     "@signalk/signalk-schema": "1.1.1",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
     "@signalk/simplegauges": "^1.0.1",
-    "@signalk/streams": "^1.0.0",
+    "@signalk/streams": "^1.2.0",
     "@signalk/zones": "^1.0.0",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
