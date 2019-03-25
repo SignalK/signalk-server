@@ -72,6 +72,10 @@ FileStream.prototype.startStream = function () {
   }
 
   this.filestream = require('fs').createReadStream(filename)
+  this.filestream.on('error', err => {
+    console.error(err.message)
+    this.keepRunning = false
+  })
   if (this.keepRunning) {
     this.filestream.on('end', this.startStream.bind(this))
   }
