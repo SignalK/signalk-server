@@ -46,6 +46,7 @@ TcpStream.prototype.pipe = function (pipeTo) {
     const that = this
     that.options.app.on(that.options.outEvent, function (d) {
       if ( that.tcpStream ) {
+        debug('sending %s', d)
         that.tcpStream.write(d)
       }
     })
@@ -62,7 +63,7 @@ TcpStream.prototype.pipe = function (pipeTo) {
     })
   })
     .on('connect', con => {
-      this.tcpStream = tcpStream
+      this.tcpStream = con
       const msg = `Connected to ${this.options.host} ${this.options.port}`
       this.options.app.setProviderStatus(this.options.providerId, msg)
       debug(msg)
