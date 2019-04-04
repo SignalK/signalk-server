@@ -48,7 +48,7 @@ function CanboatJs (options) {
 require('util').inherits(CanboatJs, Transform)
 
 CanboatJs.prototype._transform = function (chunk, encoding, done) {
-  if (!_.isBuffer(chunk)) {
+  if (_.isObject(chunk) && chunk.fromFile) {
     this.fromPgn.parse(chunk.data, (err, pgnData) => {
       if (err) {
         console.error(err)
