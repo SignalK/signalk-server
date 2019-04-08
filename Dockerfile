@@ -1,18 +1,17 @@
-ARG IMAGE_BASE=node
-FROM $IMAGE_BASE:8
+FROM resin/raspberrypi3-alpine-node:8-slim
 
-#COPY requires one valid argument, second can be nonexistent
-COPY empty_file tmp/qemu-arm-stati[c] /usr/bin/
+# Install deps
+RUN apk add --no-cache make gcc g++ python linux-headers udev
 
-RUN groupadd -r signalk && useradd --no-log-init -r -g signalk signalk
-WORKDIR /home/signalk
-RUN chown -R signalk /home/signalk
-USER signalk
+WORKDIR /usr/src/signalk-server
 
-COPY package*.json ./
-RUN npm install --only=production
+COPY package.json ./
+RUN JOBS=MAX npm install --production --unsafe-perm --build-from-source=serialport && npm cache verify && rm -rf /tmp/*
 
-COPY . .
+COPY . ./
+
+ENV INITSYSTEM on
+ENV SIGNALK_NODE_CONFIG_DIR=/data
 
 EXPOSE 3000
-ENTRYPOINT bin/signalk-server
+CMD ["node", "/usr/src/signalk-server/bin/signalk-server"]
