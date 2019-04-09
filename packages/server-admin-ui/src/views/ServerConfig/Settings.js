@@ -234,6 +234,24 @@ class Settings extends Component {
                       files in Multiplexed format in this directory
                     </FormText>
                   </Col>
+              </FormGroup>
+              <FormGroup row>
+                  <Col md='2'>
+                    <Label htmlFor='pruneContextsMinutes'>
+                      Remove Lost AIS Targets
+                    </Label>
+                  </Col>
+                  <Col xs='12' md={fieldColWidthMd}>
+                    <Input
+                      type='text'
+                      name='pruneContextsMinutes'
+                      onChange={this.handleChange}
+                      value={this.state.pruneContextsMinutes}
+                    />
+                      <FormText color='muted'>
+                      AIS targets that have not reported in after this many minutes will be removed
+                    </FormText>
+                  </Col>
                 </FormGroup>
               </Form>
             </CardBody>
