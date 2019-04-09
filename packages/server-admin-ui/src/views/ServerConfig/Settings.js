@@ -238,7 +238,7 @@ class Settings extends Component {
               <FormGroup row>
                   <Col md='2'>
                     <Label htmlFor='pruneContextsMinutes'>
-                      Remove Lost AIS Targets
+                    Maximum age of inactive vessels' data
                     </Label>
                   </Col>
                   <Col xs='12' md={fieldColWidthMd}>
@@ -248,8 +248,9 @@ class Settings extends Component {
                       onChange={this.handleChange}
                       value={this.state.pruneContextsMinutes}
                     />
-                      <FormText color='muted'>
-                      AIS targets that have not reported in after this many minutes will be removed
+                     <FormText color='muted'>
+                      
+                      Vessels that have not been updated after this many minutes will be removed
                     </FormText>
                   </Col>
                 </FormGroup>
