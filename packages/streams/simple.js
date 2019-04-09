@@ -20,6 +20,8 @@ const TimestampThrottle = require('./timestamp-throttle')
 const CanboatJs = require('./canboatjs')
 const iKonvert = require('@canboat/canboatjs').iKonvert
 const Ydwg02 = require('@canboat/canboatjs').Ydwg02
+const Venus = require('@canboat/canboatjs').Venus
+const VenusMQTT = require('@canboat/canboatjs').VenusMQTT
 
 function Simple (options) {
   Transform.call(this, { objectMode: true })
@@ -54,6 +56,8 @@ function Simple (options) {
       mappingType = 'NMEA2000IK'
     } else if (options.subOptions.type === 'ydwg02-canboatjs') {
       mappingType = 'NMEA2000YD'
+    } else if (options.subOptions.type === 'venus-canboatjs') {
+      mappingType = 'NMEA2000V'
     }
   }
 
@@ -156,6 +160,13 @@ const dataTypeMapping = {
     }
     return result.concat([new N2kToSignalK(options.subOptions)])
   },
+  NMEA2000V: options => {
+    const result = [new Venus(options.subOptions)]
+    if (options.type === 'FileStream') {
+      result.push(new TimestampThrottle())
+    }
+    return result.concat([new N2kToSignalK(options.subOptions)])
+  },
   Multiplexed: options => [new MultiplexedLog(options.subOptions)]
 }
 
@@ -201,6 +212,11 @@ function nmea2000input (subOptions, logging) {
       ...subOptions,
       outEvent: 'ydwg02-out'
     }), new Liner(subOptions)]
+  } else if (subOptions.type === 'venus-canboatjs') {
+    return [new VenusMQTT({
+      ...subOptions,
+      outEvent: 'venus-out'
+    })]
   } else {
     let command
     let toChildProcess
