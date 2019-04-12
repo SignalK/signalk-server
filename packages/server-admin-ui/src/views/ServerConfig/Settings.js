@@ -234,6 +234,25 @@ class Settings extends Component {
                       files in Multiplexed format in this directory
                     </FormText>
                   </Col>
+              </FormGroup>
+              <FormGroup row>
+                  <Col md='2'>
+                    <Label htmlFor='pruneContextsMinutes'>
+                    Maximum age of inactive vessels' data
+                    </Label>
+                  </Col>
+                  <Col xs='12' md={fieldColWidthMd}>
+                    <Input
+                      type='text'
+                      name='pruneContextsMinutes'
+                      onChange={this.handleChange}
+                      value={this.state.pruneContextsMinutes}
+                    />
+                     <FormText color='muted'>
+                      
+                      Vessels that have not been updated after this many minutes will be removed
+                    </FormText>
+                  </Col>
                 </FormGroup>
               </Form>
             </CardBody>
