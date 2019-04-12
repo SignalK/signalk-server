@@ -54,7 +54,7 @@ module.exports = {
               id: 'deltaFromHttp',
               pipeElements: [
                 {
-                  type: 'test/httpprovider'
+                  type: '../test/httpprovider'
                 }
               ]
             }
