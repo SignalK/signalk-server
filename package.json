@@ -7,7 +7,7 @@
     "changelog": "github-changes -o signalk -r signalk-server-node -a --only-pulls --use-commit-body --data=pulls  --tag-name=v$npm_package_version",
     "release": "git tag -d v$npm_package_version ; npm run changelog && git add CHANGELOG.md && git commit -m 'chore: update changelog' && git tag v$npm_package_version && git push --tags && git push && git tag -d latest && git push origin :refs/tags/latest && git tag latest && git push origin tag latest",
     "start": "node bin/signalk-server",
-    "test": "mocha --exit ./test/**/*.js ./lib/**/*.test.js && npm run lint",
+    "test": "mocha --timeout 10000 --exit ./test/**/*.js ./lib/**/*.test.js && npm run lint",
     "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js",
     "heroku-postbuild": "npm install @signalk/simple-gpx",
     "lint": "eslint lib/ test/ --fix"
