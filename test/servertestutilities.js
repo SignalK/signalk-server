@@ -1,3 +1,4 @@
+const _ = require('lodash')
 const WebSocket = require('ws')
 
 // Connects to the url via ws
@@ -36,9 +37,9 @@ WsPromiser.prototype.send = function (message) {
 
 module.exports = {
   WsPromiser: WsPromiser,
-  startServerP: function startServerP (port) {
+  startServerP: function startServerP (port, defaultsDotJson) {
     const Server = require('../lib')
-    const server = new Server({
+    const skConfig = {
       config: {
         defaults: {
           vessels: {
@@ -64,7 +65,11 @@ module.exports = {
           }
         }
       }
-    })
+    }
+    if (typeof defaultsDotJson !== 'undefined') {
+      _.merge(skConfig.config.defaults, defaultsDotJson)
+    }
+    const server = new Server(skConfig)
     return server.start()
   }
 }
