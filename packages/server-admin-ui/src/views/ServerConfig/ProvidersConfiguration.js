@@ -37,6 +37,20 @@ function fetchProviders () {
     })
 }
 
+function fetchDiscovered () {
+  fetch(`/discoveredProviders`, {
+    credentials: 'include'
+  })
+    .then(response => response.json())
+    .then(data => {
+      data.forEach(provider => {
+        provider.isNew = true,
+        provider.wasDiscovered = true
+      })
+      this.setState({ discoveredProviders: data })
+    })
+}
+
 function onRowSelect (row, isSelected, e) {
   // if column index is 2, will not trigger selection
   if (e.target.cellIndex === 2) return false
@@ -51,6 +65,7 @@ class ProvidersConfiguration extends Component {
     }
 
     this.fetchProviders = fetchProviders.bind(this)
+    this.fetchDiscovered = fetchDiscovered.bind(this)
     this.handleProviderChange = this.handleProviderChange.bind(this)
     this.handleAddProvider = this.handleAddProvider.bind(this)
     this.handleCancel = this.handleCancel.bind(this)
@@ -62,6 +77,7 @@ class ProvidersConfiguration extends Component {
 
   componentDidMount () {
     this.fetchProviders()
+    //this.fetchDiscovered()
   }
 
   handleProviderChange (event, type) {
@@ -104,13 +120,14 @@ class ProvidersConfiguration extends Component {
 
   handleApply (event) {
     var isNew = this.state.selectedProvider.isNew
+    var wasDiscovered = this.state.selectedProvider.wasDiscovered
 
     var provider = this.state.selectedProvider
     delete this.state.selectedProvider.json
 
     var id = this.state.selectedProvider.originalId 
 
-    fetch(`/providers/${id || ''}`, {
+    fetch(`/providers/${id && !isNew ? id : ''}`, {
       method: isNew ? 'POST' : 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -122,14 +139,19 @@ class ProvidersConfiguration extends Component {
         if ( response.ok ) {
           var provider = JSON.parse(JSON.stringify(this.state.selectedProvider))
           delete provider.isNew
+          delete provider.wasDiscovered
           delete this.state.selectedProvider.isNew
           if (isNew) {
             this.state.providers.push(provider)
           } else {
-          this.state.providers[this.state.selectedIndex] = provider
+            this.state.providers[this.state.selectedIndex] = provider
+          }
+          if ( wasDiscovered ) {
+            this.props.discoveredProviders.splice(this.state.selectedIndex, 1)
           }
           this.setState({
             providers: this.state.providers,
+            //discoveredProviders: this.state.discoveredProviders,
             selectedProvider: null,
             selectedIndex: -1
           })
@@ -190,8 +212,57 @@ class ProvidersConfiguration extends Component {
 
   render () {
     return (
-      <div className='animated fadeIn'>
+        <div className='animated fadeIn'>
+        {this.props.discoveredProviders && this.props.discoveredProviders.length > 0 && (
         <Card>
+        <CardHeader>Discovered Connections</CardHeader>
+          <CardBody>
+            <Table hover responsive bordered striped size='sm'>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Input Type</th>
+                  <th>Enabled</th>
+                  <th>Logging</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(this.props.discoveredProviders || []).map((provider, index) => {
+                  return (
+                    <tr
+                      onClick={this.providerClicked.bind(
+                        this,
+                        provider,
+                        index
+                      )}
+                      key={provider.id}
+                    >
+                      <td>{provider.id}</td>
+                      <td>
+                        <ProviderType provider={provider} />
+                      </td>
+                      <td>
+                        <ApplicableStatus
+                          applicable={provider.editable}
+                          toggle={provider.enabled}
+                        />
+                      </td>
+                      <td>
+                        <ApplicableStatus
+                          applicable={provider.editable}
+                          toggle={provider.logging}
+                        />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </Table>
+          </CardBody>
+        </Card>
+        )}
+        <Card>
+        <CardHeader>Connections</CardHeader>
           <CardBody>
             <Table hover responsive bordered striped size='sm'>
               <thead>
@@ -327,5 +398,6 @@ const ProviderType = props => (
       : ''}
   </div>
 )
+const mapStateToProps = ({ discoveredProviders  }) => ({ discoveredProviders })
 
-export default connect()(ProvidersConfiguration)
+export default connect(mapStateToProps)(ProvidersConfiguration)

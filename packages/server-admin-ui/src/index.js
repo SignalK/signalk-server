@@ -35,7 +35,8 @@ const state = {
   websocketStatus: 'initial',
   webSocket: null,
   restarting: false,
-  accessRequests: []
+  accessRequests: [],
+  discoveredProviders: []
 }
 
 let store = createStore(
@@ -165,6 +166,12 @@ let store = createStore(
       return {
         ...state,
         accessRequests: action.data
+      }
+    }
+    if ( action.type === 'DISCOVERY_CHANGED' ) {
+      return {
+        ...state,
+        discoveredProviders: action.data
       }
     }
     return state
