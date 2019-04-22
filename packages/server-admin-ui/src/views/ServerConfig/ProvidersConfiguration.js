@@ -37,18 +37,11 @@ function fetchProviders () {
     })
 }
 
-function fetchDiscovered () {
-  fetch(`/discoveredProviders`, {
+function runDiscovery () {
+  fetch(`/runDiscovery`, {
+    method: 'PUT',
     credentials: 'include'
   })
-    .then(response => response.json())
-    .then(data => {
-      data.forEach(provider => {
-        provider.isNew = true,
-        provider.wasDiscovered = true
-      })
-      this.setState({ discoveredProviders: data })
-    })
 }
 
 function onRowSelect (row, isSelected, e) {
@@ -65,7 +58,7 @@ class ProvidersConfiguration extends Component {
     }
 
     this.fetchProviders = fetchProviders.bind(this)
-    this.fetchDiscovered = fetchDiscovered.bind(this)
+    this.runDiscovery = runDiscovery.bind(this)
     this.handleProviderChange = this.handleProviderChange.bind(this)
     this.handleAddProvider = this.handleAddProvider.bind(this)
     this.handleCancel = this.handleCancel.bind(this)
@@ -77,7 +70,7 @@ class ProvidersConfiguration extends Component {
 
   componentDidMount () {
     this.fetchProviders()
-    //this.fetchDiscovered()
+    this.runDiscovery()
   }
 
   handleProviderChange (event, type) {
