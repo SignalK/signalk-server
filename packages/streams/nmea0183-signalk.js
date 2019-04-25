@@ -32,6 +32,8 @@
 const Transform = require('stream').Transform
 const Parser = require('@signalk/nmea0183-signalk')
 const debug = require('debug')('signalk-server-node/providers/nmea0183-signalk')
+const n2kToDelta = require('@signalk/n2k-signalk').toDelta
+const FromPgn = require('@canboat/canboatjs').FromPgn
 
 function Nmea0183ToSignalK (options) {
   Transform.call(this, {
@@ -39,6 +41,8 @@ function Nmea0183ToSignalK (options) {
   })
 
   this.parser = new Parser(options)
+  this.n2kParser = new FromPgn(options)
+  this.n2kState = {}
 
   // Object on which to send 'sentence' events
   this.sentenceEventEmitter = options.app.signalk
@@ -77,7 +81,15 @@ Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
         this.sentenceEventEmitter.emit(eventName, sentence)
       })
 
-      const delta = this.parser.parse(sentence)
+      let delta = null
+      if ( this.n2kParser.isN2KOver0183(sentence) ) {
+        const pgn = this.n2kParser.parseN2KOver0183(sentence)
+        if ( pgn ) {
+          delta = n2kToDelta(pgn, this.state)
+        }
+      } else {
+        delta = this.parser.parse(sentence)
+      }
 
       if (delta !== null) {
         if (timestamp !== null) {
