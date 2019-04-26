@@ -52,9 +52,10 @@ function Simple (options) {
       mappingType = 'NMEA2000JS'
     } else if (options.subOptions.type === 'ikonvert-canboatjs') {
       mappingType = 'NMEA2000IK'
-    } else if (options.subOptions.type === 'ydwg02-canboatjs') {
+    } else if (options.subOptions.type === 'ydwg02-canboatjs' ||
+              options.subOptions.type === 'ydwg02-udp-canboatjs' ) {
       mappingType = 'NMEA2000YD'
-    }
+    } 
   }
 
   const pipeline = [].concat(
@@ -201,6 +202,8 @@ function nmea2000input (subOptions, logging) {
       ...subOptions,
       outEvent: 'ydwg02-out'
     }), new Liner(subOptions)]
+  } else if (subOptions.type === 'ydwg02-udp-canboatjs') {
+    return [new Udp(subOptions), new Liner(subOptions)]
   } else {
     let command
     let toChildProcess

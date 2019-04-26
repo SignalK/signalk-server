@@ -247,7 +247,7 @@ const mapStateToProps = state => {
             url: '/serverConfiguration/plugins/-'
           },
           {
-            name: 'Data Providers',
+            name: 'Connections',
             url: '/serverConfiguration/providers'
           },
           {
