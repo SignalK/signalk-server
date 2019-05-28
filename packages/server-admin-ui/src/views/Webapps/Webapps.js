@@ -8,19 +8,21 @@ class Webapps extends Component {
   render () {
     return (
       <div className='row animated fadeIn'>
-        {this.props.webapps.map(webappInfo => {
-          return (
-            <Col xs='12' md='12' lg='6' xl='4'>
-            <Webapp
-              key={webappInfo.name}
-              header={webappInfo.name}
-              mainText={webappInfo.description}
-              url={`/${webappInfo.name}`}
-              icon='fa fa-external-link'
-              color='primary'
-            />
-            </Col>
-          )
+        {this.props.webapps
+          .filter(webAppInfo => webAppInfo.name !== '@signalk/server-admin-ui')
+          .map(webappInfo => {
+            return (
+              <Col xs='12' md='12' lg='6' xl='4'>
+              <Webapp
+                key={webappInfo.name}
+                header={webappInfo.name}
+                mainText={webappInfo.description}
+                url={`/${webappInfo.name}`}
+                icon='fa fa-external-link'
+                color='primary'
+              />
+              </Col>
+            )
         })}
       </div>
     )

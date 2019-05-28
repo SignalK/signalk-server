@@ -268,7 +268,7 @@ class DataTypeInput extends Component {
             <option value='SignalK'>Signal K</option>
             <option value='NMEA2000JS'>Actisense NMEA 2000 (canboatjs)</option>
             <option value='NMEA2000IK'>iKonvert NMEA 2000 (canboatjs)</option>
-            <option value='NMEA2000YD'>Yacht Devices YDWG-02 NMEA 2000 (canboatjs)</option>
+            <option value='NMEA2000YD'>Yacht Devices YDGW-02 NMEA 2000 (canboatjs)</option>
             <option value='NMEA2000' disabled={!this.props.hasAnalyzer}>NMEA 2000 (canboat)</option>
             <option value='NMEA0183'>NMEA 0183</option>
             {this.props.value.type === 'FileStream' && (
@@ -390,7 +390,8 @@ const NMEA2000 = props => {
             <option value='ngt-1-canboatjs'>Actisense NGT-1 (canboatjs)</option>
             <option value='ngt-1' disabled={!props.hasAnalyzer}>Actisense NGT-1 (canboat)</option>
             <option value='ikonvert-canboatjs'>iKonvert (canboatjs)</option>
-            <option value='ydwg02-canboatjs'>Yacht Devices YDWG-02 (canboatjs)</option>
+            <option value='ydwg02-canboatjs'>Yacht Devices YDWG-02 TCP (canboatjs)</option>
+            <option value='ydwg02-udp-canboatjs'>Yacht Devices YDWG-02 UDP (canboatjs)</option>
             <option value='canbus-canboatjs'>Canbus (canboatjs)</option>
             <option value='canbus' disabled={!props.hasAnalyzer}>Canbus (canboat)</option>
           </Input>
@@ -407,6 +408,11 @@ const NMEA2000 = props => {
       {(props.value.options.type === 'ydwg02-canboatjs') && (
         <div>
           <HostInput value={props.value.options} onChange={props.onChange} />
+          <PortInput value={props.value.options} onChange={props.onChange} />
+        </div>
+      )}
+      {(props.value.options.type === 'ydwg02-udp-canboatjs') && (
+        <div>
           <PortInput value={props.value.options} onChange={props.onChange} />
         </div>
       )}

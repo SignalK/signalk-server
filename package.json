@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
@@ -86,7 +86,7 @@
     "@signalk/maptracker": "^1.0.0",
     "@signalk/playground": "^1.0.0",
     "@signalk/sailgauge": "^1.1.0",
-    "@signalk/server-admin-ui": "1.11.x",
+    "@signalk/server-admin-ui": "1.12.x",
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-schema": "1.1.1",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
@@ -101,7 +101,7 @@
     "command-exists": "^1.2.8",
     "compare-versions": "^3.0.1",
     "compression": "^1.7.3",
-    "cookie": "^0.3.1",
+    "cookie": "^0.4.0",
     "cookie-parser": "^1.4.3",
     "cors": "^2.5.2",
     "debug": "^4.1.0",
@@ -113,7 +113,7 @@
     "figlet": "^1.2.0",
     "file-timestamp-stream": "^2.1.2",
     "flatmap": "0.0.3",
-    "geolib": "^2.0.24",
+    "geolib": "2.0.24",
     "get-installed-path": "^4.0.8",
     "inquirer": "^6.1.0",
     "jsonwebtoken": "^8.1.1",
@@ -132,14 +132,14 @@
     "split": "^1.0.0",
     "stat-mode": "^0.3.0",
     "uuid": "^3.2.1",
-    "ws": "^6.1.1"
+    "ws": "^7.0.0"
   },
   "devDependencies": {
     "chai": "^4.0.0",
     "chai-things": "^0.2.0",
     "eslint": "^5.6.0",
     "eslint-plugin-node": "^8.0.1",
-    "eslint-plugin-prettier": "^2.6.2",
+    "eslint-plugin-prettier": "^3.1.0",
     "eslint-restricted-globals": "^0.1.1",
     "freeport-promise": "^1.0.0",
     "@signalk/github-create-release": "^1.0.0",
