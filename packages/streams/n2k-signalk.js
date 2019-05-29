@@ -20,17 +20,58 @@ const toDelta = require('@signalk/n2k-signalk').toDelta
 
 require('util').inherits(ToSignalK, Transform)
 
-function ToSignalK () {
+function ToSignalK (options) {
   Transform.call(this, {
     objectMode: true
   })
   this.state = {}
+  this.notifications = {}
+  this.options = options
+  this.app = options.app
 }
 
 ToSignalK.prototype._transform = function (chunk, encoding, done) {
   try {
     const delta = toDelta(chunk, this.state)
     if (delta && delta.updates[0].values.length > 0) {
+
+      delta.updates.forEach(update => {
+          update.values.forEach(kv => {
+            if ( kv.path.startsWith('notifications.') ) {
+              if ( kv.value.state === 'normal' && this.notifications[kv.path]) {
+                clearInterval(this.notifications[kv.path].interval)
+                delete this.notifications[kv.path]
+              } else if ( kv.value.state !== 'normal' ) {
+                if ( !this.notifications[kv.path] ) {
+                  const interval = setInterval(() => {
+                    if (Date.now() - this.notifications[kv.path].lastTime > 10000) {
+                      const copy = JSON.parse(JSON.stringify(kv))
+                      copy.value.state = 'normal'
+                      const normalDelta = {
+                        context: delta.context,
+                        updates: [
+                          {
+                            values: [ copy ]
+                          }
+                        ]
+                      }
+                      delete this.notifications[kv.path]
+                      clearInterval(interval)
+                      this.app.handleMessage(this.options.providerId, normalDelta)
+                    }
+                  }, 5000)
+                  this.notifications[kv.path] = {
+                    lastTime: Date.now(),
+                    interval: interval
+                  }
+                } else {
+                  this.notifications[kv.path].lastTime = Date.now()
+                }
+              }
+            }
+          })
+      })
+
       this.push(delta)
     }
   } catch (ex) {
