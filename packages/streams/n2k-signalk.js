@@ -18,13 +18,17 @@ const Transform = require('stream').Transform
 
 const toDelta = require('@signalk/n2k-signalk').toDelta
 
+
+//these PGNs contain details about the devices in the network, so let them pass through so they get into /sources
+const passthroughPGNs = [ 126996, 126998, 60928 ]
+
 require('util').inherits(ToSignalK, Transform)
 
 function ToSignalK (options) {
   Transform.call(this, {
     objectMode: true
   })
-  this.state = {}
+  this.state = { app: options.app }
   this.notifications = {}
   this.options = options
   this.app = options.app
@@ -33,11 +37,11 @@ function ToSignalK (options) {
 ToSignalK.prototype._transform = function (chunk, encoding, done) {
   try {
     const delta = toDelta(chunk, this.state)
-    if (delta && delta.updates[0].values.length > 0) {
 
+    if (delta && delta.updates[0].values.length > 0) {
       delta.updates.forEach(update => {
           update.values.forEach(kv => {
-            if ( kv.path.startsWith('notifications.') ) {
+            if ( kv.path && kv.path.startsWith('notifications.') ) {
               if ( kv.value.state === 'normal' && this.notifications[kv.path]) {
                 clearInterval(this.notifications[kv.path].interval)
                 delete this.notifications[kv.path]
@@ -71,7 +75,9 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
             }
           })
       })
-
+      this.push(delta)
+    } else if ( delta &&
+                passthroughPGNs.find(pgn => { return pgn == delta.updates[0].source.pgn}) ) {
       this.push(delta)
     }
   } catch (ex) {
