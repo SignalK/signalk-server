@@ -54,7 +54,7 @@ const Dashboard = props => {
                 </Col>
                 <Col xs='12' md='6'>
                   <div className='text-muted'>
-                    Provider activity (deltas/second)
+                    Connection activity (deltas/second)
                   </div>
                   <ul className='horizontal-bars type-2'>
                     {Object.keys(providerStatistics || {}).map(providerId => {
@@ -96,7 +96,7 @@ const Dashboard = props => {
           </Card>
 
         <Card>
-          <CardHeader>Provider & Plugin Status <p className='text-danger'>{errors}</p></CardHeader>
+          <CardHeader>Connection & Plugin Status <p className='text-danger'>{errors}</p></CardHeader>
           <CardBody>
             <Row>
               <Col xs='12' md='12'>
