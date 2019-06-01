@@ -121,7 +121,9 @@ const Dashboard = props => {
                const lastError = status.lastError && status.lastError != status.message ? status.lastErrorTimeStamp + ': ' + status.lastError : ''
                return (
                  <tr key={status.id}>
-                 <td>{status.id}</td>
+                 <td>
+                 {status.statusType === 'plugin' ?  pluginNameLink(status.id): status.id}
+                 </td>
                  <td><p className='text-danger'>{lastError}</p></td>
                  <td><p className={statusClass}>{(status.message || '').substring(0,80)}{status.message.length > 80 ? '...' : ''}</p></td>
                </tr>
@@ -143,6 +145,10 @@ const Dashboard = props => {
       )}
     </div>
   )
+}
+
+function pluginNameLink (id) {
+  return (<a href={'#/serverConfiguration/plugins/' + id}>{id}</a>)
 }
 
 export default connect(({ serverStatistics, websocketStatus, providerStatus }) => ({
