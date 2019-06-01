@@ -16,11 +16,7 @@
 
 const Transform = require('stream').Transform
 
-const toDelta = require('@signalk/n2k-signalk').toDelta
-
-
-//these PGNs contain details about the devices in the network, so let them pass through so they get into /sources
-const passthroughPGNs = [ 126996, 126998, 60928 ]
+const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
 
 require('util').inherits(ToSignalK, Transform)
 
@@ -28,15 +24,60 @@ function ToSignalK (options) {
   Transform.call(this, {
     objectMode: true
   })
-  this.state = { app: options.app }
+  this.sourceMeta = {}
   this.notifications = {}
   this.options = options
   this.app = options.app
+
+
+  this.n2kMapper = new N2kMapper(options)
+
+  this.n2kMapper.on('n2kOut', (pgn) => this.app.emit('nmea2000JsonOut', pgn))
+
+  this.n2kMapper.on('n2kSourceMetadata', (n2k, meta) => {
+    console.log(`got meta ${JSON.stringify(n2k)}`)
+    const existing = this.sourceMeta[n2k.src] || {}
+    this.sourceMeta[n2k.src] = {
+      ...existing,
+      ...meta
+    }
+    const delta = {
+      context: this.app.selfContext,
+      updates: [
+        {
+          source: {
+            ...this.sourceMeta[n2k.src],
+            label: this.options.providerId,
+            type: 'NMEA2000',
+            pgn: Number(n2k.pgn),
+            src: n2k.src.toString()
+          },
+          timestamp:
+            n2k.timestamp.substring(0, 10) +
+            'T' +
+            n2k.timestamp.substring(11, n2k.timestamp.length),
+          values: []
+        }
+      ]
+    }
+    this.app.deltaCache.setSourceDelta(`${this.options.providerId}.${n2k.src}`, delta)
+  })
+
+  setTimeout(() => {
+    this.n2kMapper.emit('n2kRequestMetadata', 255)
+  }, 5000)
 }
 
 ToSignalK.prototype._transform = function (chunk, encoding, done) {
   try {
-    const delta = toDelta(chunk, this.state)
+
+    const src = Number(chunk.src)
+    if ( !this.sourceMeta[src] ) {
+      this.sourceMeta[src] = {}
+      this.n2kMapper.emit('n2kRequestMetadata', src)
+    }
+    
+    const delta = this.n2kMapper.toDelta(chunk)
 
     if (delta && delta.updates[0].values.length > 0) {
       delta.updates.forEach(update => {
@@ -75,9 +116,6 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
             }
           })
       })
-      this.push(delta)
-    } else if ( delta &&
-                passthroughPGNs.find(pgn => { return pgn == delta.updates[0].source.pgn}) ) {
       this.push(delta)
     }
   } catch (ex) {

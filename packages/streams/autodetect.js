@@ -74,7 +74,7 @@ function Splitter (deMultiplexer, options) {
     deMultiplexer.emit('data', msg)
   }
 
-  this.fromN2KJson = new N2KJsonToSignalK()
+  this.fromN2KJson = new N2KJsonToSignalK(options)
   this.fromN2KJson.on('data', this.demuxEmitData)
 
   if (_.isUndefined(options.useCanboatjs) || options.useCanboatjs) {
