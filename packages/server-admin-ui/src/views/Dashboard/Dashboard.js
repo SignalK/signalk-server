@@ -67,7 +67,7 @@ const Dashboard = props => {
                       return (
                         <li key={providerId}>
                           <i className={iconClass} />
-                          <span className='title'>{providerId}</span>
+                          <span className='title'>{providerIdLink(providerId)}</span>
                           <span className='value'>
                             {' '}
                             {providerStats.deltaRate}{' '}
@@ -122,7 +122,7 @@ const Dashboard = props => {
                return (
                  <tr key={status.id}>
                  <td>
-                 {status.statusType === 'plugin' ?  pluginNameLink(status.id): status.id}
+                 {status.statusType === 'plugin' ?  pluginNameLink(status.id): providerIdLink(status.id)}
                  </td>
                  <td><p className='text-danger'>{lastError}</p></td>
                  <td><p className={statusClass}>{(status.message || '').substring(0,80)}{status.message.length > 80 ? '...' : ''}</p></td>
@@ -149,6 +149,10 @@ const Dashboard = props => {
 
 function pluginNameLink (id) {
   return (<a href={'#/serverConfiguration/plugins/' + id}>{id}</a>)
+}
+
+function providerIdLink (id) {
+  return (<a href={'#/serverConfiguration/providers/' + id}>{id}</a>)
 }
 
 export default connect(({ serverStatistics, websocketStatus, providerStatus }) => ({
