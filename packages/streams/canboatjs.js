@@ -62,7 +62,7 @@ CanboatJs.prototype._transform = function (chunk, encoding, done) {
     } else {
       this.fromPgn.parse(chunk, this.handlePgnData)
     }
-  } catch ( error ) {
+  } catch ( err ) {
     console.error(err)
   }
   done()
