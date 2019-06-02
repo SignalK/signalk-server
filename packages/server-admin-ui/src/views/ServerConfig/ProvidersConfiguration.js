@@ -159,7 +159,7 @@ class ProvidersConfiguration extends Component {
             selectedProvider: null,
             selectedIndex: -1
           }, () => {
-            this.props.history.push('/serverConfiguration/providers/-')
+            this.props.history.push('/serverConfiguration/connections/-')
           })
         }
         return response.text()
@@ -183,7 +183,7 @@ class ProvidersConfiguration extends Component {
     })
       .then(response => response.text())
       .then(response => {
-        this.state.providers.splice(this.state.selectedIndex, 1)
+        this.state.connections.splice(this.state.selectedIndex, 1)
         this.setState({
           providers: this.state.providers,
           selectedProvider: null,
@@ -194,7 +194,7 @@ class ProvidersConfiguration extends Component {
   }
 
   providerClicked (provider, index) {
-    this.props.history.push('/serverConfiguration/providers/' + provider.id)
+    this.props.history.push('/serverConfiguration/connections/' + provider.id)
   }
 
   toggle (tab) {

@@ -152,7 +152,7 @@ function pluginNameLink (id) {
 }
 
 function providerIdLink (id) {
-  return (<a href={'#/serverConfiguration/providers/' + id}>{id}</a>)
+  return (<a href={'#/serverConfiguration/connections/' + id}>{id}</a>)
 }
 
 export default connect(({ serverStatistics, websocketStatus, providerStatus }) => ({
