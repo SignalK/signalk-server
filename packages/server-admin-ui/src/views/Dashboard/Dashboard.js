@@ -65,7 +65,7 @@ const Dashboard = props => {
                           ? ' fa-pulse-fast'
                          : providerStats.deltaRate > 0 ? ' fa-pulse' : '')
                       return (
-                        <li key={providerId}>
+                        <li key={providerId} onClick={() => props.history.push(`/serverConfiguration/connections/${providerId}`)}>
                           <i className={iconClass} />
                           <span className='title'>{providerIdLink(providerId)}</span>
                           <span className='value'>
