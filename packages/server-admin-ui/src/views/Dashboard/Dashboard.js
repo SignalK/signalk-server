@@ -120,7 +120,11 @@ const Dashboard = props => {
                }
                const lastError = status.lastError && status.lastError != status.message ? status.lastErrorTimeStamp + ': ' + status.lastError : ''
                return (
-                 <tr key={status.id}>
+                 <tr key={status.id} onClick={() => {props.history.push(
+                   '/serverConfiguration/' +
+                   (status.statusType === 'plugin' ? 'plugins/' : 'connections/') +
+                   status.id
+                   )}}>
                  <td>
                  {status.statusType === 'plugin' ?  pluginNameLink(status.id): providerIdLink(status.id)}
                  </td>
