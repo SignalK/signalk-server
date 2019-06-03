@@ -35,7 +35,6 @@ function ToSignalK (options) {
   this.n2kMapper.on('n2kOut', (pgn) => this.app.emit('nmea2000JsonOut', pgn))
 
   this.n2kMapper.on('n2kSourceMetadata', (n2k, meta) => {
-    console.log(`got meta ${JSON.stringify(n2k)}`)
     const existing = this.sourceMeta[n2k.src] || {}
     this.sourceMeta[n2k.src] = {
       ...existing,
