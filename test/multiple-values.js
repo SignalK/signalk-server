@@ -16,7 +16,6 @@ const delta = {
       source: {
         pgn: 128275,
         label: '/dev/actisense',
-        timestamp: '2014-05-03T09:14:11.000Z',
         src: '115'
       },
       values: [
@@ -27,7 +26,6 @@ const delta = {
     {
       source: {
         label: '/dev/actisense',
-        timestamp: '2014-05-03T09:14:11.000Z',
         src: '115',
         pgn: 128267
       },
