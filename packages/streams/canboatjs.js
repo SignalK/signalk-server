@@ -48,18 +48,22 @@ function CanboatJs (options) {
 require('util').inherits(CanboatJs, Transform)
 
 CanboatJs.prototype._transform = function (chunk, encoding, done) {
-  if (_.isObject(chunk) && chunk.fromFile) {
-    this.fromPgn.parse(chunk.data, (err, pgnData) => {
-      if (err) {
-        console.error(err)
-      } else {
-        pgnData.timestamp = new Date(Number(chunk.timestamp)).toISOString()
-        this.push(pgnData)
-        this.app.emit('N2KAnalyzerOut', pgnData)
+  try {
+    if (_.isObject(chunk) && chunk.fromFile) {
+      this.fromPgn.parse(chunk.data, (err, pgnData) => {
+        if (err) {
+          console.error(err)
+        } else {
+          pgnData.timestamp = new Date(Number(chunk.timestamp)).toISOString()
+          this.push(pgnData)
+          this.app.emit('N2KAnalyzerOut', pgnData)
       }
-    })
-  } else {
-    this.fromPgn.parse(chunk, this.handlePgnData)
+      })
+    } else {
+      this.fromPgn.parse(chunk, this.handlePgnData)
+    }
+  } catch ( err ) {
+    console.error(err)
   }
   done()
 }
