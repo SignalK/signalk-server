@@ -60,19 +60,6 @@ Add NodeSource repository to the system so that we can install Node with `apt-ge
     $ curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
     $ sudo apt install nodejs
 
-
-Finally we need to install a Bonjour (mDNS) service for LINUX called Avahi, which allows Apps and other network devices to Discover the Signal K server. To do this we will use "apt-get" again ...
-
-    $ sudo apt-get install libnss-mdns avahi-utils libavahi-compat-libdnssd-dev
-
-To check if Avahi is installed and working correctly enter the following command...
-
-    $ avahi-browse -a
-
-This will search for and list all of the discoverable devices/services on your network. Use ctrl+c to stop the search.
-
-![Avahi-Browse](https://github.com/digitalyacht/ikommunicate/blob/master/RPi_How_To_Images/Avahi-Browse.png)
-
 ## Step 2 - Install Signal K Node Server and Consumers
 
 In this "How To" guide we are going to use the Signal K Node Server, but we also have a [guide for the Java Server](https://github.com/SignalK/specification/wiki/Raspberry-Pi-Installation-(Java-Server)) which is the other popular Signal K server.
