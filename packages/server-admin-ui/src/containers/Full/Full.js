@@ -25,11 +25,17 @@ import Settings from '../../views/ServerConfig/Settings'
 import Logging from '../../views/ServerConfig/Logging'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
 
+import { merge, keys } from 'lodash'
+
 import {
   fetchLoginStatus,
   fetchAllData,
   openServerEventsConnection
 } from '../../actions'
+
+(function() {
+  window.GReact = React
+}())
 
 class Full extends Component {
   componentDidMount () {
@@ -38,7 +44,43 @@ class Full extends Component {
     openServerEventsConnection(dispatch)
   }
 
+  loadDynamicComponent (url, path) {
+    console.log(`loadDynamicComponent: ${path}`)
+    const that = this
+    window.onComponentLoad = function() {
+      console.log('window.onComponentLoad')
+      that.setState({dirty: new Date()})
+    }.bind(that)
+    const script = document.createElement("script")
+    script.setAttribute('type','text/javascript')
+    script.setAttribute('onload','onComponentLoad()')
+    script.setAttribute('src', path)
+    document.body.appendChild(script)
+    return window[url]
+  }
+
+  renderExtention(url) {
+    console.log(`renderExtention: ${url}`)
+    return React.createElement(window[url])
+  }
+  
   render () {
+    let extentionMappings = {}
+    if ( this.props.uiExtentions && this.props.uiExtentions.length > 0 ) {
+
+      if ( !this.loadedExtentions ) {
+        this.loadedExtentions = true
+        this.props.uiExtentions.forEach(extention => {
+          keys(extention.mappings).forEach(key => {
+            this.loadDynamicComponent(key, extention.mappings[key])
+          })
+        })
+      }
+      
+      this.props.uiExtentions.forEach(extention => {
+        merge(extentionMappings, extention.mappings)
+      })
+    }
     return (
       <div className='app'>
         <Header />
@@ -91,6 +133,9 @@ class Full extends Component {
                 <Route path='/security/devices' component={loginOrOriginal(Devices)} />
                 <Route path='/security/access/requests' component={loginOrOriginal(AccessRequests)} />
                 <Route path='/login' component={Login} />
+                {keys(extentionMappings).map(key => {
+                    <Route path={key} component={this.renderExtention.bind(this, key)} />
+                })}
                 <Route path='/register' component={Register} />
                 <Redirect from='/' to='/dashboard' />
               </Switch>
@@ -104,7 +149,7 @@ class Full extends Component {
   }
 }
 
-export default connect()(Full)
+export default connect(({ uiExtentions }) => ({ uiExtentions }))(Full)
 
 const loginOrOriginal = (BaseComponent, componentSupportsReadOnly) => {
   class Restricted extends Component {

@@ -302,6 +302,10 @@ const mapStateToProps = state => {
     }
     result.items.push(security)
   }
+  
+  if ( state.uiExtentions ) {
+    result.items = result.items.concat(state.uiExtentions.map(uiExtention => uiExtention.menuItem))
+  }
 
   return result
 }

@@ -128,14 +128,16 @@ export const fetchWebapps = buildFetchAction('/webapps', 'RECEIVE_WEBAPPS_LIST')
 export const fetchApps = buildFetchAction('/appstore/available', 'RECEIVE_APPSTORE_LIST')
 export const fetchAccessRequests = buildFetchAction('/security/access/requests', 'ACCESS_REQUEST')
 export const fetchServerSpecification = buildFetchAction('/signalk', 'RECEIVE_SERVER_SPEC')
+export const fetchUIExtensions = buildFetchAction('/plugins/uiExtentions', 'RECEIVE_UI_EXTENTIONS')
 
 export function fetchAllData (dispatch) {
   fetchPlugins(dispatch)
   fetchWebapps(dispatch)
   fetchApps(dispatch)
   fetchLoginStatus(dispatch)
-  fetchServerSpecification(dispatch),
+  fetchServerSpecification(dispatch)
   fetchAccessRequests(dispatch)
+  fetchUIExtensions(dispatch)
 }
 
 export function openServerEventsConnection (dispatch) {

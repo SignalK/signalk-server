@@ -36,7 +36,8 @@ const state = {
   webSocket: null,
   restarting: false,
   accessRequests: [],
-  discoveredProviders: []
+  discoveredProviders: [],
+  uiExtentions: [],
 }
 
 let store = createStore(
@@ -172,6 +173,12 @@ let store = createStore(
       return {
         ...state,
         discoveredProviders: action.data
+      }
+    }
+    if (action.type === 'RECEIVE_UI_EXTENTIONS') {
+      return {
+        ...state,
+        uiExtentions: action.data
       }
     }
     return state
