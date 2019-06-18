@@ -81,6 +81,7 @@ class Full extends Component {
         merge(extentionMappings, extention.mappings)
       })
     }
+    console.log('extentionMappings: ' + JSON.stringify(extentionMappings))
     return (
       <div className='app'>
         <Header />
@@ -133,10 +134,11 @@ class Full extends Component {
                 <Route path='/security/devices' component={loginOrOriginal(Devices)} />
                 <Route path='/security/access/requests' component={loginOrOriginal(AccessRequests)} />
                 <Route path='/login' component={Login} />
-                {keys(extentionMappings).map(key => {
-                    <Route path={key} component={this.renderExtention.bind(this, key)} />
-                })}
+
                 <Route path='/register' component={Register} />
+                {(extentionMappings && keys(extentionMappings).map(key => (
+                   <Route key={key} path={key} component={this.renderExtention.bind(this, key)} />
+                 )))}
                 <Redirect from='/' to='/dashboard' />
               </Switch>
             </Container>
