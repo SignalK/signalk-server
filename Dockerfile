@@ -9,7 +9,7 @@ USER node
 RUN mkdir -p /home/node/signalk
 WORKDIR /home/node/signalk
 
-COPY package*.json ./
+COPY . .
 RUN npm install --only=production
 
 COPY . .
