@@ -14,4 +14,4 @@ RUN npm install --only=production
 RUN mkdir -p /home/node/.signalk
 
 EXPOSE 3000
-ENTRYPOINT /home/node/signalk/bin/signalk-server
+ENTRYPOINT /home/node/signalk/bin/signalk-server --securityenabled
