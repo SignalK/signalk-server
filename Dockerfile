@@ -11,8 +11,7 @@ WORKDIR /home/node/signalk
 
 COPY . .
 RUN npm install --only=production
-
-COPY . .
+RUN mkdir -p /home/node/.signalk
 
 EXPOSE 3000
 ENTRYPOINT /home/node/signalk/bin/signalk-server
