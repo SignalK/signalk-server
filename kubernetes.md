@@ -41,7 +41,7 @@ After that we can push the image to the registry:
 $ docker push gcr.io/wouterdebie-personal/signalk
 ```
 
-Edit `kubernetes/signalk-deployment.yaml` and set the correct image that is supposed to be used.
+Edit `kubernetes/signalk-deployment.yaml` and set the correct image that is supposed to be used. (Default is `signalk/signalk-server:master`)
 
 Once the image is pushed, we can deploy the application (this assumes kubernetes is properly setup):
 
