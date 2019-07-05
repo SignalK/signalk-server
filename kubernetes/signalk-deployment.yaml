@@ -64,7 +64,7 @@ spec:
         app: signalk
     spec:
       containers:
-      - image: gcr.io/wouterdebie-personal/signalk
+      - image: signalk/signalk-server:master
         imagePullPolicy: Always
         name: signalk
         resources: {}
