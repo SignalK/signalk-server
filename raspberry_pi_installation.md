@@ -15,11 +15,11 @@ First you need to install teh Raspbian operating system on to the micro SD Card 
 
 https://www.sdcard.org/downloads/formatter_4/
 
-There is a version for Windows or Mac OSX and after downloading the tool of choice, extract and run the Setup program. Once installed, run the program with the micro SD plugged in to a card reader or SD card slot on the computer. It is good practice to give the card a volume name such as "Signal_K" which will remind you what is on the card at a later date as one LINUX distribution card looks much the same as another.
+There is a version for Windows or Mac OSX and after downloading the tool of choice, extract and run the Setup program. Once installed, run the program with the micro SD plugged in to a card reader or SD card slot on the computer. It is good practice to give the card a volume name such as "Signal_K" which will remind you what is on the card at a later date as one Linux distribution card looks much the same as another.
 
-![SD Card Formatter](https://github.com/digitalyacht/ikommunicate/blob/master/RPi_How_To_Images/SD.Formatter.png)
+![SD Card Formatter](https://github.com/digitalyacht/ikommunicate/raw/master/RPi_How_To_Images/SD.Formatter.png)
 
-Once your SD Card is properly formatted, we need to copy a LINUX Operating System on to it. To make things easy the nice people at RaspberryPi.org have created a "NOOBs" distribution which can be downloaded from here....
+Once your SD Card is properly formatted, we need to copy a Linux Operating System on to it. To make things easy the nice people at RaspberryPi.org have created a "NOOBs" distribution which can be downloaded from here....
 
 [https://www.raspberrypi.org/downloads/noobs/](https://www.raspberrypi.org/downloads/noobs/)
 
@@ -27,9 +27,9 @@ Select the NOOBs option on the left hand side (not the NOOBs Lite) and click on 
 
 Once downloaded open the ZIP file and extract all files/folders to your blank and freshly formatted micro SD Card. Once the copy operation is complete, insert the micro SD Card in to the RPi with the unit powered down. With all of the cables and peripherals plugged in, power up your Raspberry Pi and follow the instructions that appear on the screen. With the latest "Jessie" release the amount of options you need to select are significantly reduced and the whole operation should only take 10-15mins.
 
-After everything has been configured you should be presented with the RPi Desktop and your LINUX operating system is installed and running, just waiting for you to install Signal K.
+After everything has been configured you should be presented with the RPi Desktop and your Linux operating system is installed and running, just waiting for you to install Signal K.
 
-![Raspberry Pi Desktop](https://github.com/digitalyacht/ikommunicate/blob/master/RPi_How_To_Images/RPi_Desktop.png)
+![Raspberry Pi Desktop](https://github.com/digitalyacht/ikommunicate/raw/master/RPi_How_To_Images/RPi_Desktop.png)
 
 # Installing Signal K
 
@@ -41,29 +41,21 @@ The RPi installation of Signal K can be broken down in to three distinct steps;
 
 ## Step 1 - Install the Dependencies
 
-Raspbian the LINUX distribution for RPi is based on Debian which has a powerful installation tool called "apt-get", which we will use to install some of the dependencies and tools required. Before you use "apt-get" it is always recommended to update its index of repositories (websites that store LINUX software) and to do that use the following command...
+Raspbian the Linux distribution for RPi is based on Debian which has a powerful installation tool called "apt", which we will use to install some of the dependencies and tools required. Before you use "apt" it is always recommended to update its index of repositories (websites that store Linux software) and to do that use the following command...
 
-    $ sudo apt-get update
+    $ sudo apt update
 
-Now we will download three tools; curl, git and build-essential. These tools will allow us to download more software, clone the Signal K server and allow it to run, Install the three tools using the following command...
+Now, install node and npm
 
-    $ sudo apt-get install -y curl git build-essential dialog
+    $ sudo apt install nodejs npm
 
-Node server requires Node version 8 or newer. For Raspberry Pi 2 and 3 follow the instructions below. If in doubt, test with
+We want to make sure that we're using the latest version of npm:
 
-    $ uname -m
+    $ sudo npm install -g npm@latest
 
-If the result returned starts with “armv6”, you are running a Raspberry Pi based on the older ARMv6 chipset and these instructions will not work.
+Finally we need to install a Bonjour (mDNS) service for Linux called Avahi, which allows Apps and other network devices to Discover the Signal K server. To do this we will use "apt" again ...
 
-Add NodeSource repository to the system so that we can install Node with `apt-get`:
-
-    $ curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
-    $ sudo apt install nodejs
-
-
-Finally we need to install a Bonjour (mDNS) service for LINUX called Avahi, which allows Apps and other network devices to Discover the Signal K server. To do this we will use "apt-get" again ...
-
-    $ sudo apt-get install libnss-mdns avahi-utils libavahi-compat-libdnssd-dev
+    $ sudo apt install libnss-mdns avahi-utils libavahi-compat-libdnssd-dev
 
 To check if Avahi is installed and working correctly enter the following command...
 
@@ -71,7 +63,7 @@ To check if Avahi is installed and working correctly enter the following command
 
 This will search for and list all of the discoverable devices/services on your network. Use ctrl+c to stop the search.
 
-![Avahi-Browse](https://github.com/digitalyacht/ikommunicate/blob/master/RPi_How_To_Images/Avahi-Browse.png)
+![Avahi-Browse](https://github.com/digitalyacht/ikommunicate/raw/master/RPi_How_To_Images/Avahi-Browse.png)
 
 ## Step 2 - Install Signal K Node Server and Consumers
 
@@ -112,13 +104,13 @@ If You want to see the the actual output from the NMEA data that SignalK is proc
 
 A "Consumer" of Signal K data is any web app, mobile device app or software program that can read and use Signal K data. It is hoped that the number of consumers will grow rapidly as more developers discover this open format and dream up new applications to make boating easier, more efficient or just more fun.
 
-For the purposes of this "How to" some open source web apps are automatically installed. They have been developed by the Signal K team to show what can be done with Signal K data. 
+For the purposes of this "How to" some open source web apps are automatically installed. They have been developed by the Signal K team to show what can be done with Signal K data.
 To use the web apps, we will need to open them in a web browser so open the browser on your Pi and type "http://127.0.0.1:3000/
 This will open the Dashboard and give You some info about the SignalK server.
 
 ![dashboard_1](https://user-images.githubusercontent.com/16189982/35871063-96318c80-0b63-11e8-93b8-1cc2ae825470.jpeg)
 
-Click on Webapps and You will get 
+Click on Webapps and You will get
 
 ![dashboard_webapps](https://user-images.githubusercontent.com/16189982/35871504-b9e3d8c6-0b64-11e8-8455-801574837ca5.jpeg)
 
@@ -138,7 +130,7 @@ and follow the prompts. If You are following the defaults and are logged on as �
 
 You can re-run this command at any time in the future to change the settings.
 
-These files can be edited via the admin UI or directly looking at the example settings. 
+These files can be edited via the admin UI or directly looking at the example settings.
 
 **This script will also set up Node server to run automatically in the background as a daemon, [systemd](https://wiki.debian.org/systemd/), when the system boots.** You will no longer be able to launch it manually, because the automatically started instance will occupy the ports where the services are available. You should do this once you are happy with the way the server works.
 
@@ -205,7 +197,7 @@ Add a provider with settings according to the picture and click on ”Apply”
 The SignalK server **must be restarted** to accept the changes so click on "Restart" in the upper right corner.
 
 
-After the restart check the data with the Webapp Instrumentpanel in the admin UI. 
+After the restart check the data with the Webapp Instrumentpanel in the admin UI.
 
 NMEA0183
 
@@ -266,17 +258,17 @@ Please bear in mind that the longer between updates the more data that will have
 
 The updates that need to be done can be broken down in to four key areas...
 
-1. The Raspberry Pi LINUX Distro
+1. The Raspberry Pi Linux Distro
 1. Node and NPM
 1. The Signal K Node Server
 1. Any Signal K Apps
 
-## Update Raspberry Pi LINUX Distro
+## Update Raspberry Pi Linux Distro
 
 Open the terminal window and enter the following commands...
 
-    $ sudo apt-get update
-    $ sudo apt-get dist-upgrade
+    $ sudo apt update
+    $ sudo apt dist-upgrade
 
 If you have not updated for a while, then the above commands may take a while to finish, just be patient and make sure everything completes correctly. After the two commands have completed Reboot your Raspberry Pi.
 
@@ -284,9 +276,9 @@ If you have not updated for a while, then the above commands may take a while to
 
 Open the terminal window and enter the following commands...
 
-    $ sudo apt-get upgrade nodejs
+    $ sudo apt upgrade nodejs
     $ sudo npm install npm@latest -g
-    
+
 This will update Nodejs and NPM to the version required by the server.
 
 ## Update Signal K Node Server
@@ -301,7 +293,7 @@ Click on update and the installation will start
 If below version 1.8.0 use this command instead
 
     $ sudo npm install --unsafe-perm -g signalk-server
-    
+
 ![server_during_update](https://user-images.githubusercontent.com/16189982/51401178-71a9e400-1b4a-11e9-86b9-1148442ba59c.png)
 
 After the installation restart the server.

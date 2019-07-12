@@ -22,7 +22,7 @@ The server's capabilities can be expanded with the help of plugins that provide 
 Detailed instructions for [installation on Raspberry Pi](https://github.com/SignalK/signalk-server-node/blob/master/raspberry_pi_installation.md)
 
 Prerequisites
-* Node.js version 8 or higher with npm installed
+* Node.js version 10 or higher with npm installed
 
 ## Use: Install from npm
 
