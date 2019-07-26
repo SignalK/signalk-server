@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { Switch, Route, Redirect, withRouter, History } from 'react-router-dom'
-import { Container } from 'reactstrap'
+import Reactstrap, { Container } from 'reactstrap'
 import { connect } from 'react-redux'
 
 import Header from '../../components/Header/'
@@ -35,6 +35,7 @@ import {
 
 (function() {
   window.GReact = React
+  window.GReactstrap = Reactstrap
 }())
 
 class Full extends Component {
@@ -45,10 +46,8 @@ class Full extends Component {
   }
 
   loadDynamicComponent (url, path) {
-    console.log(`loadDynamicComponent: ${path}`)
     const that = this
     window.onComponentLoad = function() {
-      console.log('window.onComponentLoad')
       that.setState({dirty: new Date()})
     }.bind(that)
     const script = document.createElement("script")
@@ -60,7 +59,6 @@ class Full extends Component {
   }
 
   renderExtention(url) {
-    console.log(`renderExtention: ${url}`)
     return React.createElement(window[url])
   }
   
@@ -81,7 +79,6 @@ class Full extends Component {
         merge(extentionMappings, extention.mappings)
       })
     }
-    console.log('extentionMappings: ' + JSON.stringify(extentionMappings))
     return (
       <div className='app'>
         <Header />
