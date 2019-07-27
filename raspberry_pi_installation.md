@@ -53,18 +53,6 @@ We want to make sure that we're using the latest version of npm:
 
     $ sudo npm install -g npm@latest
 
-Finally we need to install a Bonjour (mDNS) service for Linux called Avahi, which allows Apps and other network devices to Discover the Signal K server. To do this we will use "apt" again ...
-
-    $ sudo apt install libnss-mdns avahi-utils libavahi-compat-libdnssd-dev
-
-To check if Avahi is installed and working correctly enter the following command...
-
-    $ avahi-browse -a
-
-This will search for and list all of the discoverable devices/services on your network. Use ctrl+c to stop the search.
-
-![Avahi-Browse](https://github.com/digitalyacht/ikommunicate/raw/master/RPi_How_To_Images/Avahi-Browse.png)
-
 ## Step 2 - Install Signal K Node Server and Consumers
 
 In this "How To" guide we are going to use the Signal K Node Server, but we also have a [guide for the Java Server](https://github.com/SignalK/specification/wiki/Raspberry-Pi-Installation-(Java-Server)) which is the other popular Signal K server.
