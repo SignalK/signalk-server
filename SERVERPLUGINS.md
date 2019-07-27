@@ -574,24 +574,104 @@ var myFile = require('path').join(app.getDataDirPath(), 'somefile.ext')
 
 ### `app.registerPutHandler(context, path, source, callback)`
 
-If a plugin wants to respond to `PUT` requests for a specific path, it can register an action handler.
+If a plugin wants to respond to [`PUT`](http://signalk.org/specification/1.3.0/doc/put.html) requests for a specific path, it can register an action handler.
 
 The action handler can handle the request synchronously or asynchronously.
 
 The passed callback should be a function taking the following arguments: `(context, path, value, callback)`
 
-For synchronous actions the handler must return a value describing the response of the request: for example `{ state: 'COMPLETED', result:200 }` or `{ state:'COMPLETED', result:400, message:'Some Error Message' }`. The result value can be any valid HTTP response code.
+For synchronous actions the handler must return a value describing the response of the request: for example
 
-For asynchronous actions that may take considerable time and where the requester should not be kept waiting for the result the handler must return `{ state: 'PENDING' }`. When the action is finished the handler should call the `callback` function with the result with  `callback({ state: 'COMPLETED', statusCode:200 })` or `callback({ state:'COMPLETED', statusCode:400, message:'Some Error Message' })`.
+```javascript
+{
+  state: 'COMPLETED',
+  statusCode: 200
+}
+```
 
-*TODO: Insert example*
+ or
+
+ ```javascript
+{
+  state:'COMPLETED',
+  statusCode: 400,
+  message:'Some Error Message'
+}
+ ```
+
+ The `statusCode` value can be any valid HTTP response code.
+
+For asynchronous actions that may take considerable time and where the requester should not be kept waiting for the result the handler must return
+
+```javascript
+{ state: 'PENDING' }
+```
+
+When the action is finished the handler should call the `callback` function with the result with
+
+```javascript
+callback({ state: 'COMPLETED', statusCode: 200 })
+```
+or
+
+```javascript
+callback({
+  state:'COMPLETED',
+  statusCode: 400,
+  message:'Some Error Message'
+})
+```
+
+Synchronous example:
+```javascript
+function myActionHandler(context, path, value, callback) {
+  if(doSomething(context, path, value)){
+    return { state: 'COMPLETED', statusCode: 200 };
+  } else {
+    return { state: 'COMPLETED', statusCode: 400 };
+  }
+}
+
+plugin.start = function(options) {
+  app.registerPutHandler('vessels.self', 'some.path', myActionHandler);
+}
+```
+
+Asynchronous example:
+```javascript
+function myActionHandler(context, path, value, callback) {
+  doSomethingAsync(context, path, value, (result) =>{
+    if(result) {
+      callback({ state: 'COMPLETED', result: 200 })
+    } else {
+      callback({ state: 'COMPLETED', result: 400 })
+    }
+  });
+  return { state: 'PENDING' };
+}
+
+plugin.start = function(options) {
+  app.registerPutHandler('vessels.self', 'some.path', myActionHandler);
+}
+```
 
 ### `app.registerDeltaInputHandler ((delta, next) => ...)`
 
 Register a function to intercept all delta messages *before* they are processed by the server. The plugin callback should call `next(delta)` with a modified delta if it wants to alter the incoming delta or call `next` with the original delta to process it normally. Not calling `next` will drop the incoming delta and will only show in delta statistics.
 Other, non-delta messages produced by provider pipe elements are emitted normally.
 
-*TODO: Insert example*
+```javascript
+app.registerDeltaInputHandler((delta, next) => {
+  delta.updates.forEach(update => {
+    update.values.forEach(pathValue => {
+      if(pathValue.startsWith("foo")) {
+        pathValue.path = "bar"
+      }
+    })
+  })
+  next(delta)
+})
+```
 
 ### `app.setProviderStatus(msg)`
 
