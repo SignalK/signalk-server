@@ -78,7 +78,7 @@
   ],
   "license": "Apache-2.0",
   "engines": {
-    "node": "8"
+    "node": "10"
   },
   "dependencies": {
     "@signalk/freeboard-sk": "^1.0.0",
