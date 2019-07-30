@@ -436,7 +436,8 @@ let baseStations = app.getPath('shore.basestations');
 
 ### `app.streambundle.getSelfBus(path)`
 
-Get a [Bacon JS](https://baconjs.github.io/) stream for `vessels.self`'s Signal K path. Stream values are objects with structure
+Get a [Bacon JS](https://baconjs.github.io/) stream for `vessels.self`'s Signal K path. `path` argument is optional. If it is not provided the returned stream
+produces values for all paths. Stream values are objects with structure
 
 ```javascript
   {
@@ -490,7 +491,8 @@ Outputs:
 
 ### `app.streambundle.getSelfStream(path)`
 
-Get a [Bacon JS](https://baconjs.github.io/) stream for `vessels.self`'s Signal K path. This is similar to `app.streambundle.getSelfBus(path)`, but the stream values are the `value` properties from incoming deltas.
+Get a [Bacon JS](https://baconjs.github.io/) stream for `vessels.self`'s Signal K path. `path` argument is optional. If it is not provided the returned stream
+produces values for all paths. This is similar to `app.streambundle.getSelfBus(path)`, but the stream values are the `value` properties from incoming deltas.
 
 ```javascript
 app.streambundle
@@ -508,7 +510,8 @@ Outputs:
 
 ### `app.streambundle.getBus(path)`
 
-Get a [Bacon JS](https://baconjs.github.io/) stream for a Signal K path that will stream values from any context. Stream values are objects as in `app.streambundle.getSelfBus(path)`.
+Get a [Bacon JS](https://baconjs.github.io/) stream for a Signal K path that will stream values from any context. `path` argument is optional. If it is not provided the returned stream
+produces values for all paths. Stream values are objects as in `app.streambundle.getSelfBus(path)`.
 
 ### `app.streambundle.getAvailablePaths()`
 
