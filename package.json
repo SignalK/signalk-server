@@ -138,7 +138,7 @@
   "devDependencies": {
     "chai": "^4.0.0",
     "chai-things": "^0.2.0",
-    "eslint": "^5.6.0",
+    "eslint": "^6.1.0",
     "eslint-plugin-node": "^9.1.0",
     "eslint-plugin-prettier": "^3.1.0",
     "eslint-restricted-globals": "^0.1.1",
