@@ -126,7 +126,6 @@
     "node-fetch": "^2.2.0",
     "node-gpsd": "^0.3.0",
     "pem": "^1.11.0",
-    "please-upgrade-node": "^3.0.1",
     "primus": "^7.0.0",
     "semver": "^6.0.0",
     "spdy": "^4.0.0",
