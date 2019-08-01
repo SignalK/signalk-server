@@ -30,7 +30,7 @@ jobs:
     if: (type != pull_request) AND (branch = master OR branch = latest OR branch =~ ^v[0-9]+\.[0-9]+\.[0-9]+.*$ )
     install: true
     script:
-    - docker run --rm docker:18.09 sh -c "mkdir /root/.docker && echo '{\"experimental\":\"enabled\"}' >/root/.docker/config.json && docker manifest create $REPO_BASE/signalk-server:$TRAVIS_BRANCH $REPO_BASE/signalk-server:linux-armhf-$TRAVIS_BRANCH $REPO_BASE/signalk-server:linux-amd64-$TRAVIS_BRANCH && (echo $DOCKER_PASSWORD |  docker login -u $DOCKER_USERNAME --password-stdin) && docker manifest push $REPO_BASE/signalk-server:$TRAVIS_BRANCH"
+    - docker run --rm docker:18.09.6 sh -c "mkdir /root/.docker && echo '{\"experimental\":\"enabled\"}' >/root/.docker/config.json && docker manifest create $REPO_BASE/signalk-server:$TRAVIS_BRANCH $REPO_BASE/signalk-server:linux-armhf-$TRAVIS_BRANCH $REPO_BASE/signalk-server:linux-amd64-$TRAVIS_BRANCH && (echo $DOCKER_PASSWORD |  docker login -u $DOCKER_USERNAME --password-stdin) && docker manifest push $REPO_BASE/signalk-server:$TRAVIS_BRANCH"
 env:
   global:
     REPO_BASE=signalk
