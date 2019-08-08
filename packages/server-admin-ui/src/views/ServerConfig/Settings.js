@@ -230,7 +230,7 @@ class Settings extends Component {
                       value={this.state.loggingDirectory}
                     />
                     <FormText color='muted'>
-                      Providers that have logging enabled create hourly log
+                      Connections that have logging enabled create hourly log
                       files in Multiplexed format in this directory
                     </FormText>
                   </Col>

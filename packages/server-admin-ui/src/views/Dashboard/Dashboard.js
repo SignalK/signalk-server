@@ -54,7 +54,7 @@ const Dashboard = props => {
                 </Col>
                 <Col xs='12' md='6'>
                   <div className='text-muted'>
-                    Provider activity (deltas/second)
+                    Connection activity (deltas/second)
                   </div>
                   <ul className='horizontal-bars type-2'>
                     {Object.keys(providerStatistics || {}).map(providerId => {
@@ -65,9 +65,9 @@ const Dashboard = props => {
                           ? ' fa-pulse-fast'
                          : providerStats.deltaRate > 0 ? ' fa-pulse' : '')
                       return (
-                        <li key={providerId}>
+                        <li key={providerId} onClick={() => props.history.push(`/serverConfiguration/connections/${providerId}`)}>
                           <i className={iconClass} />
-                          <span className='title'>{providerId}</span>
+                          <span className='title'>{providerIdLink(providerId)}</span>
                           <span className='value'>
                             {' '}
                             {providerStats.deltaRate}{' '}
@@ -96,7 +96,7 @@ const Dashboard = props => {
           </Card>
 
         <Card>
-          <CardHeader>Provider & Plugin Status <p className='text-danger'>{errors}</p></CardHeader>
+          <CardHeader>Connection & Plugin Status <p className='text-danger'>{errors}</p></CardHeader>
           <CardBody>
             <Row>
               <Col xs='12' md='12'>
@@ -120,8 +120,14 @@ const Dashboard = props => {
                }
                const lastError = status.lastError && status.lastError != status.message ? status.lastErrorTimeStamp + ': ' + status.lastError : ''
                return (
-                 <tr key={status.id}>
-                 <td>{status.id}</td>
+                 <tr key={status.id} onClick={() => {props.history.push(
+                   '/serverConfiguration/' +
+                   (status.statusType === 'plugin' ? 'plugins/' : 'connections/') +
+                   status.id
+                   )}}>
+                 <td>
+                 {status.statusType === 'plugin' ?  pluginNameLink(status.id): providerIdLink(status.id)}
+                 </td>
                  <td><p className='text-danger'>{lastError}</p></td>
                  <td><p className={statusClass}>{(status.message || '').substring(0,80)}{status.message.length > 80 ? '...' : ''}</p></td>
                </tr>
@@ -143,6 +149,14 @@ const Dashboard = props => {
       )}
     </div>
   )
+}
+
+function pluginNameLink (id) {
+  return (<a href={'#/serverConfiguration/plugins/' + id}>{id}</a>)
+}
+
+function providerIdLink (id) {
+  return (<a href={'#/serverConfiguration/connections/' + id}>{id}</a>)
 }
 
 export default connect(({ serverStatistics, websocketStatus, providerStatus }) => ({

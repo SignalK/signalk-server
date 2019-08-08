@@ -75,7 +75,7 @@ class Full extends Component {
                   component={loginOrOriginal(VesselConfiguration)}
                 />
                 <Route
-                  path='/serverConfiguration/providers'
+                  path='/serverConfiguration/connections/:providerId'
                   component={loginOrOriginal(ProvidersConfiguration)}
                 />
                 <Route

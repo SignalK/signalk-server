@@ -33,7 +33,20 @@ function fetchProviders () {
   })
     .then(response => response.json())
     .then(data => {
-      this.setState({ providers: data })
+      let selectedProvider = undefined
+      let selectedIndex = undefined
+      if (this.state.selectedProviderId) {
+        selectedProvider = data.find(provider => provider.id === this.state.selectedProviderId)
+        selectedIndex = data.findIndex(provider => provider.id === this.state.selectedProviderId)
+      }
+      if (selectedProvider) {
+        selectedProvider.originalId = selectedProvider.id
+      }
+      this.setState({
+        providers: data,
+        selectedProvider: selectedProvider ? JSON.parse(JSON.stringify(selectedProvider)) : undefined,
+        selectedIndex: selectedIndex
+       })
     })
 }
 
@@ -54,7 +67,8 @@ class ProvidersConfiguration extends Component {
     super(props)
     this.state = {
       activeTab: '1',
-      providers: []
+      providers: [],
+      selectedProviderId: this.props.match.params.providerId
     }
 
     this.fetchProviders = fetchProviders.bind(this)
@@ -74,9 +88,6 @@ class ProvidersConfiguration extends Component {
   }
 
   handleProviderChange (event, type) {
-    console.log(
-      `handleProviderChange: ${event.target.type} ${event.target.checked}`
-    )
     var value =
       event.target.type === 'checkbox'
         ? event.target.checked
@@ -147,6 +158,8 @@ class ProvidersConfiguration extends Component {
             //discoveredProviders: this.state.discoveredProviders,
             selectedProvider: null,
             selectedIndex: -1
+          }, () => {
+            this.props.history.push('/serverConfiguration/connections/-')
           })
         }
         return response.text()
@@ -170,7 +183,7 @@ class ProvidersConfiguration extends Component {
     })
       .then(response => response.text())
       .then(response => {
-        this.state.providers.splice(this.state.selectedIndex, 1)
+        this.state.connections.splice(this.state.selectedIndex, 1)
         this.setState({
           providers: this.state.providers,
           selectedProvider: null,
@@ -181,18 +194,7 @@ class ProvidersConfiguration extends Component {
   }
 
   providerClicked (provider, index) {
-    this.setState(
-      {
-        selectedProvider: {
-          ...JSON.parse(JSON.stringify(provider)),
-          originalId: provider.id
-        },
-        selectedIndex: index
-      },
-      () => {
-        this.refs['selectedProvider'].scrollIntoView()
-      }
-    )
+    this.props.history.push('/serverConfiguration/connections/' + provider.id)
   }
 
   toggle (tab) {
