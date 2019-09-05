@@ -13,24 +13,22 @@
     "lint": "eslint lib/ test/ --fix"
   },
   "lint-staged": {
-    "linters": {
-      "lib/**/*.js*": [
-        "prettier-standard",
-        "git add"
-      ],
-      "providers/*.js*": [
-        "prettier-standard",
-        "git add"
-      ],
-      "test/*.js*": [
-        "prettier-standard",
-        "git add"
-      ],
-      "index.js": [
-        "prettier-standard",
-        "git add"
-      ]
-    }
+    "lib/**/*.js*": [
+      "prettier-standard",
+      "git add"
+    ],
+    "providers/*.js*": [
+      "prettier-standard",
+      "git add"
+    ],
+    "test/*.js*": [
+      "prettier-standard",
+      "git add"
+    ],
+    "index.js": [
+      "prettier-standard",
+      "git add"
+    ]
   },
   "bin": {
     "signalk-server": "./bin/signalk-server",
