@@ -257,9 +257,9 @@ Here we loop though all the unsubscribe functions for our subscriptions and call
 
 Now restart the server and you should see deltas being output in your console.
 
-## Sending deltas from a plugin
+## Sending NMEA 2000 data from a plugin
 
-A SignalK plugin can not only read deltas, but can also send them. The following examples show how you can emit NMEA 2000 deltas.
+A SignalK plugin can not only read deltas, but can also send data. The following examples show how you can emit NMEA 2000 data.
 
 ### Actisense serial format
 
@@ -272,7 +272,7 @@ To send a message in the Actisense serial format, simply use `app.emit()` in the
 
 ### Canboat JSON format
 
-To send a delta in a `canboat` JSON format, use `app.emit()` in the following way:
+To send data in  `canboat` JSON format, use `app.emit()` in the following way:
 
 ```javascript
   app.emit('nmea2000JsonOut', {
@@ -283,7 +283,7 @@ To send a delta in a `canboat` JSON format, use `app.emit()` in the following wa
   });
 ```
 
-### Sending a message on startup
+### Sending a message on NMEA2000 startup
 
 If you need to send an N2K message out at startup, e.g to get current state from a device:
 
