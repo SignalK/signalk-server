@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --prof
 
 /*
  * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
@@ -16,8 +16,8 @@
  * limitations under the License.
 */
 
-var Server = require('../lib');
-var server = new Server();
+const Server = require('../lib');
+const server = new Server();
 
 server.start()
   .catch(err => {
