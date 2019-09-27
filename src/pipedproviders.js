@@ -95,15 +95,6 @@ module.exports = function(app) {
     }
   }
 
-  function restartProviders() {
-    /*
-    app.providers.forEach(function (providerHolder) {
-      providerHolder.pipeElements[0].end()
-    })
-    app.providers = startProviders()
-    */
-  }
-
   return {
     start: startProviders,
     createPipedProvider: createPipedProvider

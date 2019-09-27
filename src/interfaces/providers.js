@@ -90,13 +90,6 @@ module.exports = function(app) {
         console.error(err)
         res.status(500).send('Unable to save to settings file')
       } else {
-        try {
-          restartProviders()
-        } catch (err) {
-          console.error(err)
-          res.status(500).send('Unable to restart providers')
-          return
-        }
         res.send('Provider deleted')
       }
     })
@@ -154,13 +147,6 @@ module.exports = function(app) {
           console.error(err)
           res.status(500).send('Unable to save to settings file')
         } else {
-          try {
-            restartProviders()
-          } catch (err) {
-            console.error(err)
-            res.status(500).send('Unable to restart providers')
-            return
-          }
           res.send('Provider ' + (isNew ? 'added' : 'updated'))
         }
       })
@@ -189,5 +175,3 @@ function applyProviderSettings(target, source, res) {
 
   return true
 }
-
-function restartProviders() {}
