@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-
 import Debug from 'debug'
 import { Request, Response } from 'express'
 const debug = Debug('signalk:interfaces:plugins')
@@ -23,13 +22,17 @@ import express from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
-import { modulesWithKeyword } from '../modules'
-import put from '../put'
 
+// tslint:disable-next-line:no-var-requires
+const modulesWithKeyword = require('../modules').modulesWithKeyword
+// tslint:disable-next-line:no-var-requires
+const put = require('../put')
 // tslint:disable-next-line
 const _putPath = put.putPath
-import { getModulePublic } from '../config/get'
-import { queryRequest } from '../requestResponse'
+// tslint:disable-next-line:no-var-requires
+const getModulePublic = require('../config/get').getModulePublic
+// tslint:disable-next-line:no-var-requires
+const queryRequest = require('../requestResponse').queryRequest
 
 // #521 Returns path to load plugin-config assets.
 const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')
@@ -38,14 +41,19 @@ const DEFAULT_ENABLED_PLUGINS = process.env.DEFAULTENABLEDPLUGINS
   ? process.env.DEFAULTENABLEDPLUGINS.split(',')
   : []
 
-interface PluginInfo {
+export type PluginFactory = (serverApi: ServerAPI) => Plugin
+
+export interface Plugin {
+  start: (config: any, restart: (newConfiguration: any) => void) => any
+  stop: () => any
+}
+
+interface PluginInfo extends Plugin {
   enableLogging: any
   packageName: any
   packageLocation: string
   registerWithRouter: any
   signalKApiRoutes: any
-  start: (config: any, restart: (newConfiguration: any) => void) => any
-  stop: () => any
   name: string
   id: string
   schema: () => void | object
@@ -57,7 +65,7 @@ interface PluginInfo {
   statusMessage: () => string | void
 }
 
-interface ServerAPI {
+export interface ServerAPI {
   getSelfPath: (path: string) => void
   getPath: (path: string) => void
   putSelfPath: (path: string) => void
