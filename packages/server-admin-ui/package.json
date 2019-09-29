@@ -35,6 +35,7 @@
     "react-chartjs-2": "2.6.4",
     "react-dom": "16.1.1",
     "react-jsonschema-form-bs4": "^1.0.6",
+    "react-markdown": "^4.0.3",
     "react-redux": "^5.0.6",
     "react-router-dom": "4.2.2",
     "react-transition-group": "2.2.1",
@@ -50,9 +51,6 @@
     "url-loader": "0.6.2",
     "webpack": "^3.8.1",
     "webpack-dev-server": "2.9.4"
-  },
-  "dependencies": {
-    "react-markdown": "^4.0.3"
   },
   "scripts": {
     "prepublishOnly": "npm run clean && npm run build",
