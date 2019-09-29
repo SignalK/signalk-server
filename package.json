@@ -114,7 +114,7 @@
     "flatmap": "0.0.3",
     "geolib": "2.0.24",
     "get-installed-path": "^4.0.8",
-    "inquirer": "^6.1.0",
+    "inquirer": "^7.0.0",
     "jsonwebtoken": "^8.1.1",
     "listr": "^0.14.1",
     "lodash": "^4.17.4",
