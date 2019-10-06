@@ -14,6 +14,7 @@
     "start": "node bin/signalk-server",
     "test-only": "mocha --timeout 10000 --exit ./test/**/*.js ./lib/**/*.test.js",
     "test": "npm run build && npm run test-only && npm run lint",
+    "typedoc": "typedoc",
     "heroku-postbuild": "npm install @signalk/simple-gpx"
   },
   "bin": {
@@ -138,6 +139,7 @@
     "tslint": "^5.20.0",
     "tslint-config-prettier": "^1.18.0",
     "tslint-plugin-prettier": "^2.0.1",
+    "typedoc": "^0.15.0",
     "typescript": "^3.6.3"
   },
   "husky": {
