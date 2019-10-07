@@ -61,7 +61,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   })
 
   app.get('/loginStatus', (req, res, next) => {
-    result = app.securityStrategy.getLoginStatus(req)
+    const result = app.securityStrategy.getLoginStatus(req)
     result.securityWasEnabled = !_.isUndefined(securityWasEnabled)
 
     res.header('Cache-Control', 'no-cache, no-store, must-revalidate')
