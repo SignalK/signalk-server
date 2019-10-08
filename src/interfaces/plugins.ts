@@ -44,7 +44,7 @@ const DEFAULT_ENABLED_PLUGINS = process.env.DEFAULTENABLEDPLUGINS
 export type PluginFactory = (serverApi: ServerAPI) => Plugin
 
 export interface Plugin {
-  start: (config: any, restart: (newConfiguration: any) => void) => any
+  start: (config: object, restart: (newConfiguration: object) => void) => any
   stop: () => any
 }
 
@@ -68,16 +68,25 @@ interface PluginInfo extends Plugin {
 export interface ServerAPI {
   getSelfPath: (path: string) => void
   getPath: (path: string) => void
-  putSelfPath: (path: string) => void
-  // putPath,
-  // queryRequest,
+  putSelfPath: (aPath: string, value: any, updateCb: () => void) => Promise<any>
+  putPath: (
+    aPath: string,
+    value: number | string | object | boolean,
+    updateCb: (err?: Error) => void
+  ) => Promise<any>
+  queryRequest: (requestId: string) => Promise<any>
   error: (msg: string) => void
   debug: (msg: string) => void
-  registerDeltaInputHandler: (handler: any) => void
+  registerDeltaInputHandler: (
+    handler: (delta: object, next: (delta: object) => void) => void
+  ) => void
   setProviderStatus: (msg: string) => void
   handleMessage: (id: string, msg: any) => void
   setProviderError: (msg: string) => void
-  savePluginOptions: (configuration: any, cb: any) => void
+  savePluginOptions: (
+    configuration: object,
+    cb: (err: NodeJS.ErrnoException | null) => void
+  ) => void
   readPluginOptions: () => object
   getDataDirPath: () => string
   registerPutHandler: (
@@ -90,7 +99,19 @@ export interface ServerAPI {
     path: string,
     callback: () => void
   ) => void
-  registerHistoryProvider: (provider: any) => void
+  registerHistoryProvider: (provider: {
+    hasAnydata: (options: object, cb: (hasResults: boolean) => void) => void
+    getHistory: (
+      date: Date,
+      path: string,
+      cb: (deltas: object[]) => void
+    ) => void
+    streamHistory: (
+      spark: any,
+      options: object,
+      onDelta: (delta: object) => void
+    ) => void
+  }) => void
 }
 
 interface ModuleMetadata {
@@ -185,7 +206,7 @@ module.exports = (theApp: any) => {
 
   function savePluginOptions(
     pluginId: string,
-    data: any,
+    data: object,
     callback: (err: NodeJS.ErrnoException | null) => void
   ) {
     const config = JSON.parse(JSON.stringify(data))
