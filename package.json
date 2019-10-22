@@ -4,31 +4,19 @@
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
+    "build": "tsc",
+    "build-declaration": "tsc --declaration --allowJs false",
+    "watch": "npm run build -- -w",
+    "lint": "tslint --config tslint.js --project tsconfig.json --fix",
+    "prepublishOnly": "npm run lint && npm run build && npm run build-declaration",
     "create-release": "github-create-release --owner signalk --repository signalk-server-node --npm-base-url https://www.npmjs.com/package/signalk-server",
     "release": "git tag -d v$npm_package_version ;git tag v$npm_package_version && git push --tags && git push && git tag -d latest && git push origin :refs/tags/latest && git tag latest && git push origin tag latest && npm run create-release",
     "start": "node bin/signalk-server",
-    "test": "mocha --timeout 10000 --exit ./test/**/*.js ./lib/**/*.test.js && npm run lint",
-    "format": "prettier-standard lib/**/*.js* providers/*.js* test/*.js* index.js",
-    "heroku-postbuild": "npm install @signalk/simple-gpx",
-    "lint": "eslint lib/ test/ --fix"
-  },
-  "lint-staged": {
-    "lib/**/*.js*": [
-      "prettier-standard",
-      "git add"
-    ],
-    "providers/*.js*": [
-      "prettier-standard",
-      "git add"
-    ],
-    "test/*.js*": [
-      "prettier-standard",
-      "git add"
-    ],
-    "index.js": [
-      "prettier-standard",
-      "git add"
-    ]
+    "test-only": "mocha --timeout 10000 --exit ./test/**/*.js ./lib/**/*.test.js",
+    "test": "npm run build && npm run test-only && npm run lint",
+    "typedoc": "typedoc",
+    "postinstall": "tsc",
+    "heroku-postbuild": "npm install @signalk/simple-gpx"
   },
   "bin": {
     "signalk-server": "./bin/signalk-server",
@@ -91,6 +79,7 @@
     "@signalk/simplegauges": "^1.0.1",
     "@signalk/streams": "~1.4.0",
     "@signalk/zones": "^1.0.0",
+    "@types/debug": "^4.1.5",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.14.1",
@@ -134,6 +123,8 @@
   },
   "devDependencies": {
     "@signalk/github-create-release": "^1.0.0",
+    "@types/express": "^4.17.1",
+    "@types/lodash": "^4.14.139",
     "chai": "^4.0.0",
     "chai-things": "^0.2.0",
     "eslint": "^6.1.0",
@@ -141,12 +132,16 @@
     "eslint-plugin-prettier": "^3.1.0",
     "eslint-restricted-globals": "^0.1.1",
     "freeport-promise": "^1.0.0",
-    "husky": "^2.3.0",
     "lint-staged": "^9.2.1",
     "mocha": "^6.0.2",
-    "prettier-standard": "^14.0.3",
+    "prettier": "^1.18.2",
     "request": "^2.81.0",
-    "request-promise": "^4.1.1"
+    "request-promise": "^4.1.1",
+    "tslint": "^5.20.0",
+    "tslint-config-prettier": "^1.18.0",
+    "tslint-plugin-prettier": "^2.0.1",
+    "typedoc": "^0.15.0",
+    "typescript": "^3.6.3"
   },
   "husky": {
     "hooks": {
