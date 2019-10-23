@@ -11,8 +11,8 @@ USER node
 RUN mkdir -p /home/node/signalk
 WORKDIR /home/node/signalk
 
-COPY . .
-RUN npm install --only=production
+COPY --chown=node:node . .
+RUN npm install
 RUN mkdir -p /home/node/.signalk
 
 EXPOSE 3000
