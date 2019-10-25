@@ -78,7 +78,7 @@ module.exports = function(app) {
       app.get('/appstore/available/', (req, res) => {
         findPluginsAndWebapps()
           .then(([plugins, webapps]) => {
-            getLatestServerVersion().then(serverVersion => {
+            getLatestServerVersion(app.config.version).then(serverVersion => {
               const result = getAllModuleInfo(plugins, webapps, serverVersion)
               res.send(JSON.stringify(result))
             })
