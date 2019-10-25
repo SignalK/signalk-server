@@ -21,6 +21,7 @@ const fetch = require('node-fetch')
 const path = require('path')
 const _ = require('lodash')
 const semver = require('semver')
+const compareVersions = require('compare-versions')
 
 function findModulesInDir(dir, keyword) {
   // If no directory by name return empty array.
@@ -144,7 +145,7 @@ function findModulesWithKeyword(keyword) {
       ),
       fetch(
         'http://registry.npmjs.org/-/v1/search?size=250&text=keywords:' +
-          keyword
+        keyword
       )
     ])
       .then(([npmsioResults, npmjsResults]) => {
@@ -171,30 +172,50 @@ function findModulesWithKeyword(keyword) {
   })
 }
 
-function getLatestServerVersion() {
+function doFetchDistTags() {
+  return fetch('http://registry.npmjs.org/-/package/signalk-server/dist-tags')
+}
+
+function getLatestServerVersion(currentVersion, distTags = doFetchDistTags) {
   return new Promise((resolve, reject) => {
-    Promise.all([
-      fetch('https://api.npms.io/v2/package/signalk-server'),
-      fetch('http://registry.npmjs.org/-/package/signalk-server/dist-tags')
-    ])
-      .then(([npmsioResults, npmjsResults]) => {
-        return Promise.all([npmsioResults.json(), npmjsResults.json()])
-      })
-      .then(([npmsioParsed, npmjsParsed]) => {
-        const npmsioVersion = npmsioParsed.collected.metadata.version
-        const npmjsVersion = npmjsParsed.latest
-        const version = semver.gt(npmsioVersion, npmjsVersion)
-          ? npmsioVersion
-          : npmjsVersion
-        resolve(version)
+    distTags()
+      .then(npmjsResults => npmjsResults.json())
+      .then(npmjsParsed => {
+        const prereleaseData = semver.prerelease(currentVersion)
+        if (prereleaseData) {
+          if (semver.satisfies(npmjsParsed.latest, `>${currentVersion}`)) {
+            resolve(npmjsParsed.latest)
+          } else {
+            resolve(npmjsParsed[prereleaseData[0]])
+          }
+        } else {
+          resolve(npmjsParsed.latest)
+        }
       })
       .catch(reject)
   })
+}
+
+function checkForNewServerVersion(
+  currentVersion,
+  serverUpgradeIsAvailable,
+  getLatestServerVersionP = getLatestServerVersion
+) {
+  getLatestServerVersionP(currentVersion)
+    .then(version => {
+      if (semver.satisfies(version, `>${currentVersion}`)) {
+        serverUpgradeIsAvailable(undefined, version)
+      }
+    })
+    .catch(err => {
+      serverUpgradeIsAvailable(`unable to check for new server version: ${err}`)
+    })
 }
 
 module.exports = {
   modulesWithKeyword: modulesWithKeyword,
   installModule: installModule,
   findModulesWithKeyword: findModulesWithKeyword,
-  getLatestServerVersion: getLatestServerVersion
+  getLatestServerVersion: getLatestServerVersion,
+  checkForNewServerVersion
 }

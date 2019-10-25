@@ -36,7 +36,7 @@ const getPrimaryPort = ports.getPrimaryPort
 const getSecondaryPort = ports.getSecondaryPort
 const getExternalPort = ports.getExternalPort
 const DeltaChain = require('./deltachain')
-const compareVersions = require('compare-versions')
+import { checkForNewServerVersion } from './modules'
 
 const { StreamBundle } = require('./streambundle')
 const {
@@ -46,7 +46,6 @@ const {
   saveSecurityConfig
 } = require('./security.js')
 const { startDeltaStatistics, incDeltaStatistics } = require('./deltastats')
-const { getLatestServerVersion } = require('./modules')
 
 function Server(opts) {
   const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
@@ -232,36 +231,38 @@ Server.prototype.start = function() {
     }, 5 * 1000)
   )
 
-  function checkForNewServerVersion() {
-    getLatestServerVersion()
-      .then(version => {
-        if (compareVersions(version, app.config.version) > 0) {
-          const msg = `A new version (${version}) of the server is available`
-          console.log(msg)
-          app.handleMessage(app.config.name, {
-            updates: [
-              {
-                values: [
-                  {
-                    path: 'notifications.server.newVersion',
-                    value: {
-                      state: 'alert',
-                      method: [],
-                      message: msg
-                    }
-                  }
-                ]
+  function serverUpgradeIsAvailable(err, newVersion) {
+    if (err) {
+      console.error(err)
+      return
+    }
+    const msg = `A new version (${newVersion}) of the server is available`
+    console.log(msg)
+    app.handleMessage(app.config.name, {
+      updates: [
+        {
+          values: [
+            {
+              path: 'notifications.server.newVersion',
+              value: {
+                state: 'alert',
+                method: [],
+                message: msg
               }
-            ]
-          })
+            }
+          ]
         }
-      })
-      .catch(err => {
-        console.error(`unable to check for new server version: ${err}`)
-      })
+      ]
+    })
   }
-  checkForNewServerVersion()
-  app.intervals.push(setInterval(checkForNewServerVersion, 60 * 1000 * 60 * 24))
+  checkForNewServerVersion(app.config.version, serverUpgradeIsAvailable)
+  app.intervals.push(
+    setInterval(
+      () =>
+        checkForNewServerVersion(app.config.version, serverUpgradeIsAvailable),
+      60 * 1000 * 60 * 24
+    )
+  )
 
   this.app.providers = []
 
