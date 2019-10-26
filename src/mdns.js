@@ -18,7 +18,7 @@
 
 const _ = require('lodash')
 const debug = require('debug')('signalk-server:interfaces:mdns')
-const dnssd = require('dnssd')
+const dnssd = require('dnssd2')
 const ports = require('./ports')
 
 module.exports = function mdnsResponder(app) {
