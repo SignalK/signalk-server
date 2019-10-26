@@ -364,7 +364,7 @@ function startMdns(app) {
     try {
       app.interfaces.mdns = require('./mdns')(app)
     } catch (ex) {
-      debug('Could not start mDNS:' + ex)
+      console.error('Could not start mDNS:' + ex)
     }
   } else {
     debug(`Interface 'mDNS' was disabled in configuration`)
