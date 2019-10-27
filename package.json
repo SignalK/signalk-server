@@ -139,6 +139,13 @@
     "typedoc": "^0.15.0",
     "typescript": "^3.6.3"
   },
+  "lint-staged": {
+    "src/**/*.{ts,js}": [
+      "tslint --project tsconfig.json -c tslint.commit.json --fix",
+      "prettier --write",
+      "git add"
+    ]
+  },
   "husky": {
     "hooks": {
       "pre-commit": "lint-staged"
