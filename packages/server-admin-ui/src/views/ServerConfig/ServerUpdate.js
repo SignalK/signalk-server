@@ -80,7 +80,7 @@ class ServerUpdate extends Component {
         <Card>
           <CardHeader>Server Update</CardHeader>
           <CardBody>
-          The update has been installed, please reboot
+          The update has been installed, please restart the Signal K server.
           </CardBody>
          </Card>
       )}
