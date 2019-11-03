@@ -14,16 +14,40 @@
  * limitations under the License.
 */
 
-const fs = require('fs')
-const spawn = require('child_process').spawn
-const debug = require('debug')('signalk:modules')
-const fetch = require('node-fetch')
-const path = require('path')
-const _ = require('lodash')
-const semver = require('semver')
-const compareVersions = require('compare-versions')
+import { spawn } from 'child_process'
+import Debug from 'debug'
+import fs from 'fs'
+const debug = Debug('signalk:modules')
+import _ from 'lodash'
+import path from 'path'
+import semver, { SemVer } from 'semver'
 
-function findModulesInDir(dir, keyword) {
+interface ModuleData {
+  module: string
+  metadata: object
+  location: string
+}
+
+interface NpmPackageData {
+  name: string
+  version: string
+}
+
+interface NpmModuleData {
+  package: NpmPackageData
+}
+
+interface Config {
+  name: string
+  appPath: string
+  configPath: string
+}
+
+interface App {
+  config: Config
+}
+
+function findModulesInDir(dir: string, keyword: string): ModuleData[] {
   // If no directory by name return empty array.
   if (!fs.existsSync(dir)) {
     return []
@@ -32,7 +56,7 @@ function findModulesInDir(dir, keyword) {
   return fs
     .readdirSync(dir)
     .filter(name => name !== '.bin')
-    .reduce((result, filename) => {
+    .reduce<ModuleData[]>((result, filename) => {
       if (filename.indexOf('@') === 0) {
         return result.concat(
           findModulesInDir(dir + filename + '/', keyword).map(entry => {
@@ -57,7 +81,7 @@ function findModulesInDir(dir, keyword) {
         ) {
           result.push({
             module: metadata.name,
-            metadata: metadata,
+            metadata,
             location: dir
           })
         }
@@ -67,7 +91,7 @@ function findModulesInDir(dir, keyword) {
 }
 
 // Extract unique directory paths from app object.
-function getModulePaths(app) {
+function getModulePaths(app: App) {
   // appPath is the app working directory.
   const { appPath, configPath } = app.config
   return (appPath === configPath ? [appPath] : [configPath, appPath]).map(
@@ -75,14 +99,15 @@ function getModulePaths(app) {
   )
 }
 
-const getModuleSortName = x => (x.module || '').replace('@signalk', ' ')
+const getModuleSortName = (x: ModuleData) =>
+  (x.module || '').replace('@signalk', ' ')
 
 // Sort handler that puts strings with '@signalk' first.
-const priorityPrefix = (a, b) =>
+const priorityPrefix = (a: ModuleData, b: ModuleData) =>
   getModuleSortName(a).localeCompare(getModuleSortName(b))
 
 // Searches for installed modules that contain `keyword`.
-function modulesWithKeyword(app, keyword) {
+function modulesWithKeyword(app: App, keyword: string) {
   return _.uniqBy(
     // _.flatten since values are inside an array. [[modules...], [modules...]]
     _.flatten(
@@ -94,11 +119,18 @@ function modulesWithKeyword(app, keyword) {
   ).sort(priorityPrefix)
 }
 
-function installModule(app, name, version, onData, onErr, onClose) {
+function installModule(
+  app: App,
+  name: string,
+  version: string,
+  onData: () => any,
+  onErr: (err: Error) => any,
+  onClose: (code: number) => any
+) {
   debug('installing: ' + name + ' ' + version)
   let npm
 
-  const opts = {}
+  const opts: { cwd?: string } = {}
 
   if (name === app.config.name) {
     if (process.platform === 'win32') {
@@ -131,13 +163,13 @@ function installModule(app, name, version, onData, onErr, onClose) {
   npm.stdout.on('data', onData)
   npm.stderr.on('data', onErr)
   npm.on('close', onClose)
-  npm.on('error', err => {
+  npm.on('error', (err: Error) => {
     onErr(err)
     onClose(-1)
   })
 }
 
-function findModulesWithKeyword(keyword) {
+function findModulesWithKeyword(keyword: string) {
   return new Promise((resolve, reject) => {
     Promise.all([
       fetch(
@@ -145,27 +177,33 @@ function findModulesWithKeyword(keyword) {
       ),
       fetch(
         'http://registry.npmjs.org/-/v1/search?size=250&text=keywords:' +
-        keyword
+          keyword
       )
     ])
       .then(([npmsioResults, npmjsResults]) => {
         return Promise.all([npmsioResults.json(), npmjsResults.json()])
       })
       .then(([npmsioParsed, npmjsParsed]) => {
-        const merged = npmsioParsed.results.reduce((acc, module) => {
-          acc[module.package.name] = module
-          return acc
-        }, {})
-        npmjsParsed.objects.reduce((acc, module) => {
-          const name = module.package.name
-          if (
-            !acc[name] ||
-            semver.gt(module.package.version, acc[name].package.version)
-          ) {
-            acc[name] = module
-          }
-          return acc
-        }, merged)
+        const merged = npmsioParsed.results.reduce(
+          (acc: { [x: string]: NpmModuleData }, module: NpmModuleData) => {
+            acc[module.package.name] = module
+            return acc
+          },
+          {}
+        )
+        npmjsParsed.objects.reduce(
+          (acc: { [x: string]: NpmModuleData }, module: NpmModuleData) => {
+            const name = module.package.name
+            if (
+              !acc[name] ||
+              semver.gt(module.package.version, acc[name].package.version)
+            ) {
+              acc[name] = module
+            }
+            return acc
+          },
+          merged
+        )
         resolve(_.values(merged))
       })
       .catch(reject)
@@ -176,7 +214,10 @@ function doFetchDistTags() {
   return fetch('http://registry.npmjs.org/-/package/signalk-server/dist-tags')
 }
 
-function getLatestServerVersion(currentVersion, distTags = doFetchDistTags) {
+function getLatestServerVersion(
+  currentVersion: string,
+  distTags = doFetchDistTags
+): Promise<string> {
   return new Promise((resolve, reject) => {
     distTags()
       .then(npmjsResults => npmjsResults.json())
@@ -197,25 +238,28 @@ function getLatestServerVersion(currentVersion, distTags = doFetchDistTags) {
 }
 
 function checkForNewServerVersion(
-  currentVersion,
-  serverUpgradeIsAvailable,
-  getLatestServerVersionP = getLatestServerVersion
+  currentVersion: string,
+  serverUpgradeIsAvailable: (
+    errMessage: string | void,
+    version?: string
+  ) => any,
+  getLatestServerVersionP: (version: string) => Promise<string> = getLatestServerVersion
 ) {
   getLatestServerVersionP(currentVersion)
-    .then(version => {
-      if (semver.satisfies(version, `>${currentVersion}`)) {
+    .then((version:string) => {
+      if (semver.satisfies(new SemVer(version), `>${currentVersion}`)) {
         serverUpgradeIsAvailable(undefined, version)
       }
     })
-    .catch(err => {
+    .catch((err: any) => {
       serverUpgradeIsAvailable(`unable to check for new server version: ${err}`)
     })
 }
 
 module.exports = {
-  modulesWithKeyword: modulesWithKeyword,
-  installModule: installModule,
-  findModulesWithKeyword: findModulesWithKeyword,
-  getLatestServerVersion: getLatestServerVersion,
+  modulesWithKeyword,
+  installModule,
+  findModulesWithKeyword,
+  getLatestServerVersion,
   checkForNewServerVersion
 }
