@@ -78,10 +78,17 @@ module.exports = function(app) {
       app.get('/appstore/available/', (req, res) => {
         findPluginsAndWebapps()
           .then(([plugins, webapps]) => {
-            getLatestServerVersion(app.config.version).then(serverVersion => {
-              const result = getAllModuleInfo(plugins, webapps, serverVersion)
-              res.send(JSON.stringify(result))
-            })
+            getLatestServerVersion(app.config.version)
+              .then(serverVersion => {
+                const result = getAllModuleInfo(plugins, webapps, serverVersion)
+                res.send(JSON.stringify(result))
+              })
+              .catch(err => {
+                //could be that npmjs is down, so we can not get
+                //server version, but we have app store data
+                const result = getAllModuleInfo(plugins, webapps, '0.0.0')
+                res.send(JSON.stringify(result))
+              })
           })
           .catch(error => {
             if (error.code === 'ENOTFOUND') {
