@@ -142,14 +142,18 @@ module.exports = (theApp: any) => {
               return plugin.name
             }
           ]).map((plugin: PluginInfo) => {
-            let data = null
+            let data: { enabled: boolean } | null = null
             try {
               data = getPluginOptions(plugin.id)
             } catch (e) {
               console.log(e.code + ' ' + e.path)
             }
 
-            if (_.isUndefined(data.enabled) && plugin.enabledByDefault) {
+            if (
+              data &&
+              _.isUndefined(data.enabled) &&
+              plugin.enabledByDefault
+            ) {
               data.enabled = true
             }
 
