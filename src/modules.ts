@@ -17,6 +17,8 @@
 import { spawn } from 'child_process'
 import Debug from 'debug'
 import fs from 'fs'
+import fetch from 'node-fetch'
+import { Response } from 'node-fetch'
 const debug = Debug('signalk:modules')
 import _ from 'lodash'
 import path from 'path'
@@ -171,7 +173,46 @@ function installModule(
 
 function findModulesWithKeyword(keyword: string) {
   return new Promise((resolve, reject) => {
-    Promise.all([
+    let errorCount = 0
+    let resultCount = 0
+    const result = {}
+    const handleResultWithTimeout = (fetchResult: Promise<Response>): void => {
+      fetchResult
+        .then(r => r.json())
+        .then(parsed => {
+          const data = parsed.results || parsed.objects
+          data.reduce(
+            (
+              acc: { [packageName: string]: NpmModuleData },
+              module: NpmModuleData
+            ) => {
+              const name = module.package.name
+              if (
+                !acc[name] ||
+                semver.gt(module.package.version, acc[name].package.version)
+              ) {
+                acc[name] = module
+              }
+              return acc
+            },
+            result
+          )
+          if (resultCount++ || errorCount) {
+            resolve(_.values(result))
+          } else {
+            setTimeout(
+              () => resolve(_.values(result)),
+              Number(process.env.NPMREGISTRYTIMEOUT) || 5 * 1000
+            )
+          }
+        })
+        .catch(e => {
+          if (errorCount++) {
+            reject(e)
+          }
+        })
+    }
+    ;[
       fetch(
         `https://api.npms.io/v2/search?size=250&q=keywords:${keyword}+not:deprecated`
       ),
@@ -179,34 +220,7 @@ function findModulesWithKeyword(keyword: string) {
         'http://registry.npmjs.org/-/v1/search?size=250&text=keywords:' +
           keyword
       )
-    ])
-      .then(([npmsioResults, npmjsResults]) => {
-        return Promise.all([npmsioResults.json(), npmjsResults.json()])
-      })
-      .then(([npmsioParsed, npmjsParsed]) => {
-        const merged = npmsioParsed.results.reduce(
-          (acc: { [x: string]: NpmModuleData }, module: NpmModuleData) => {
-            acc[module.package.name] = module
-            return acc
-          },
-          {}
-        )
-        npmjsParsed.objects.reduce(
-          (acc: { [x: string]: NpmModuleData }, module: NpmModuleData) => {
-            const name = module.package.name
-            if (
-              !acc[name] ||
-              semver.gt(module.package.version, acc[name].package.version)
-            ) {
-              acc[name] = module
-            }
-            return acc
-          },
-          merged
-        )
-        resolve(_.values(merged))
-      })
-      .catch(reject)
+    ].forEach(handleResultWithTimeout)
   })
 }
 
