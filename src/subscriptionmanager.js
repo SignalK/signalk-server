@@ -217,7 +217,11 @@ function checkPosition(app, context, normalizedDeltaData) {
     subsPosition.latitude &&
     subsPosition.longitude
   ) {
-    return geolib.isPointInCircle(position.value, subsPosition, context.radius)
+    return geolib.isPointWithinRadius(
+      position.value,
+      subsPosition,
+      context.radius
+    )
   }
 
   return false
