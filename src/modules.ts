@@ -257,10 +257,12 @@ function checkForNewServerVersion(
     errMessage: string | void,
     version?: string
   ) => any,
-  getLatestServerVersionP: (version: string) => Promise<string> = getLatestServerVersion
+  getLatestServerVersionP: (
+    version: string
+  ) => Promise<string> = getLatestServerVersion
 ) {
   getLatestServerVersionP(currentVersion)
-    .then((version:string) => {
+    .then((version: string) => {
       if (semver.satisfies(new SemVer(version), `>${currentVersion}`)) {
         serverUpgradeIsAvailable(undefined, version)
       }
