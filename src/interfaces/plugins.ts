@@ -22,6 +22,7 @@ import express from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
+import compareVersions from 'compare-versions'
 
 // tslint:disable-next-line:no-var-requires
 const modulesWithKeyword = require('../modules').modulesWithKeyword
@@ -63,6 +64,14 @@ interface PluginInfo extends Plugin {
   state: string
   enabledByDefault: boolean
   statusMessage: () => string | void
+  updateConfiguration: (startupOptions: StartupOptions, compareVersions: object) => StartupOptions
+}
+
+interface StartupOptions {
+  enabled: boolean
+  enableLogging: boolean
+  version: string
+  configuration: object
 }
 
 export interface ServerAPI {
@@ -383,6 +392,45 @@ module.exports = (theApp: any) => {
     }
   }
 
+  function doPluginUpdateConfiguration (
+    app: any,
+    plugin: PluginInfo,
+    startupOptions: StartupOptions
+  ) : StartupOptions {
+    debug('Check configuration update for plugin %s', plugin.name)
+    let configurationChanged = false
+    let newStartupOptions = {...startupOptions}
+    try {
+      if (typeof plugin.updateConfiguration === 'function') {
+        debug('plugin %s supports configuration update by version', plugin.name)
+        newStartupOptions.version = newStartupOptions.version || '0.0.0'
+        newStartupOptions = plugin.updateConfiguration(newStartupOptions, compareVersions)
+        if ((typeof newStartupOptions !== 'undefined') && (startupOptions.version !== newStartupOptions.version)) {
+          debug('Configuration updated to version %s for plugin %s', newStartupOptions.version, plugin.name)
+          debug(JSON.stringify(newStartupOptions, null, 2))
+          configurationChanged = true
+        }
+      } else {
+          debug('plugin %s does not supports configuration update by version', plugin.name)
+       }
+
+      if (configurationChanged) {
+        savePluginOptions(plugin.id, newStartupOptions, err => {
+          if (err) {
+            console.error(err.toString())
+            app.setProviderError(plugin.name, err.toString())
+          }
+        })
+        debug('New configuration saved for plugin %s', plugin.name)
+      }
+    } catch (e) {
+      console.error('error updating configuration plugin: ' + e)
+      console.error(e.stack)
+      app.setProviderError(plugin.name, `Failed to update configuration: ${e.message}`)
+    }
+    return newStartupOptions
+  }
+
   function doRegisterPlugin(
     app: any,
     packageName: string,
@@ -415,6 +463,9 @@ module.exports = (theApp: any) => {
         app: ServerAPI
       ) => PluginInfo = require(path.join(location, packageName))
       plugin = pluginConstructor(appCopy)
+      plugin.version = metadata.version
+      plugin.packageName = metadata.name
+      plugin.packageLocation = location
     } catch (e) {
       console.error(`${packageName} failed to start: ${e.message}`)
       console.error(e)
@@ -457,7 +508,12 @@ module.exports = (theApp: any) => {
       })
     }
 
-    const startupOptions = getPluginOptions(plugin.id)
+    const startupOptions = doPluginUpdateConfiguration(
+      app,
+      plugin,
+      getPluginOptions(plugin.id)
+    )
+
     const restart = (newConfiguration: any) => {
       const pluginOptions = getPluginOptions(plugin.id)
       pluginOptions.configuration = newConfiguration
@@ -489,10 +545,6 @@ module.exports = (theApp: any) => {
     plugin.enableLogging = startupOptions.enableLogging
     app.plugins.push(plugin)
     app.pluginsMap[plugin.id] = plugin
-
-    plugin.version = metadata.version
-    plugin.packageName = metadata.name
-    plugin.packageLocation = location
 
     const router = express.Router()
     router.get('/', (req: Request, res: Response) => {

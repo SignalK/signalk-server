@@ -95,6 +95,21 @@ module.exports = function (app) {
     app.debug('Plugin stopped');
   };
 
+  // plugin.updateConfiguration: It's an optional function,
+  // it allows you to update the configuration of the plugin saved on the server
+  // when you want to modify the schema from one version to another and thus avoid incompatibilities that will block the start of the plugin
+  plugin.updateConfiguration = function (startupOptions, compareVersions) {
+    // Here you receive:
+    // - startupOptions: An object that contains the entire plugin configuration
+    // - startupOptions.version: contains the current version of the configuration file or '0.0.0.0' if your plugin has never managed a configuration version.
+    // - compareVersions: A function to compare versions https://www.npmjs.com/package/compare-versions
+
+    // In return you must respond with the new configuration
+    // If the new version is different from the current version,
+    // it will automatically be saved on the server instead of the old one.
+    return startupOptions
+  }
+
   plugin.schema = {
     // The plugin schema
   };
