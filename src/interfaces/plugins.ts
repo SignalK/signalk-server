@@ -18,11 +18,11 @@ import { Request, Response } from 'express'
 const debug = Debug('signalk:interfaces:plugins')
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
+import compareVersions from 'compare-versions'
 import express from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
-import compareVersions from 'compare-versions'
 
 // tslint:disable-next-line:no-var-requires
 const modulesWithKeyword = require('../modules').modulesWithKeyword
@@ -64,10 +64,14 @@ interface PluginInfo extends Plugin {
   state: string
   enabledByDefault: boolean
   statusMessage: () => string | void
-  updateConfiguration: (startupOptions: StartupOptions, compareVersions: object) => StartupOptions
+  updateConfiguration: (
+    startupOptions: PluginOptions,
+    pluginVersion: string,
+    compareVersions: object
+  ) => PluginOptions
 }
 
-interface StartupOptions {
+interface PluginOptions {
   enabled: boolean
   enableLogging: boolean
   version: string
@@ -392,45 +396,6 @@ module.exports = (theApp: any) => {
     }
   }
 
-  function doPluginUpdateConfiguration (
-    app: any,
-    plugin: PluginInfo,
-    startupOptions: StartupOptions
-  ) : StartupOptions {
-    debug('Check configuration update for plugin %s', plugin.name)
-    let configurationChanged = false
-    let newStartupOptions = {...startupOptions}
-    try {
-      if (typeof plugin.updateConfiguration === 'function') {
-        debug('plugin %s supports configuration update by version', plugin.name)
-        newStartupOptions.version = newStartupOptions.version || '0.0.0'
-        newStartupOptions = plugin.updateConfiguration(newStartupOptions, compareVersions)
-        if ((typeof newStartupOptions !== 'undefined') && (startupOptions.version !== newStartupOptions.version)) {
-          debug('Configuration updated to version %s for plugin %s', newStartupOptions.version, plugin.name)
-          debug(JSON.stringify(newStartupOptions, null, 2))
-          configurationChanged = true
-        }
-      } else {
-          debug('plugin %s does not supports configuration update by version', plugin.name)
-       }
-
-      if (configurationChanged) {
-        savePluginOptions(plugin.id, newStartupOptions, err => {
-          if (err) {
-            console.error(err.toString())
-            app.setProviderError(plugin.name, err.toString())
-          }
-        })
-        debug('New configuration saved for plugin %s', plugin.name)
-      }
-    } catch (e) {
-      console.error('error updating configuration plugin: ' + e)
-      console.error(e.stack)
-      app.setProviderError(plugin.name, `Failed to update configuration: ${e.message}`)
-    }
-    return newStartupOptions
-  }
-
   function doRegisterPlugin(
     app: any,
     packageName: string,
@@ -476,7 +441,9 @@ module.exports = (theApp: any) => {
 
     if (app.pluginsMap[plugin.id]) {
       console.log(
-        `WARNING: found multiple copies of plugin with id ${plugin.id} at ${location} and ${app.pluginsMap[plugin.id].packageLocation}`
+        `WARNING: found multiple copies of plugin with id ${
+          plugin.id
+        } at ${location} and ${app.pluginsMap[plugin.id].packageLocation}`
       )
       return
     }
@@ -508,11 +475,7 @@ module.exports = (theApp: any) => {
       })
     }
 
-    const startupOptions = doPluginUpdateConfiguration(
-      app,
-      plugin,
-      getPluginOptions(plugin.id)
-    )
+    let startupOptions = getPluginOptions(plugin.id)
 
     const restart = (newConfiguration: any) => {
       const pluginOptions = getPluginOptions(plugin.id)
@@ -533,15 +496,102 @@ module.exports = (theApp: any) => {
       plugin.enabledByDefault = true
     }
 
-    if (startupOptions && startupOptions.enabled) {
-      doPluginStart(
-        app,
-        plugin,
-        location,
-        startupOptions.configuration,
-        restart
-      )
-    }
+    const handlePluginConfiguration = new Promise<any>(resolve => {
+      debug('Check configuration update for plugin %s', plugin.name)
+      try {
+        if (typeof plugin.updateConfiguration === 'function') {
+          startupOptions.version = startupOptions.version || '0.0.0'
+          debug(
+            'plugin %s[%s] supports configuration update by version',
+            plugin.name,
+            plugin.version
+          )
+          debug(
+            'plugin %s config file is in version %s',
+            plugin.name,
+            startupOptions.version
+          )
+          if (startupOptions.version !== plugin.version) {
+            debug(
+              'plugin %s running update config file to version %s',
+              plugin.name,
+              plugin.version
+            )
+            startupOptions = plugin.updateConfiguration(
+              startupOptions,
+              plugin.version,
+              compareVersions
+            )
+            if (startupOptions.version === plugin.version) {
+              savePluginOptions(plugin.id, startupOptions, err => {
+                if (err) {
+                  app.setProviderError(plugin.name, err.toString())
+                  console.error(
+                    'plugin',
+                    plugin.name,
+                    'savePluginOptions:',
+                    err.toString()
+                  )
+                } else {
+                  debug('plugin %s new configuration saved', plugin.name)
+                  resolve()
+                }
+              })
+            } else {
+              debug(
+                'plugin %s wrong new configuration version %s',
+                plugin.name,
+                startupOptions.version
+              )
+              app.setProviderError(
+                plugin.name,
+                'update plugin configuration return a wrong version'
+              )
+            }
+          } else {
+            debug(
+              'plugin %s with config file in version %s does not need update',
+              plugin.name,
+              startupOptions.version
+            )
+            resolve()
+          }
+        } else {
+          debug(
+            'plugin %s does not supports configuration update by version',
+            plugin.name
+          )
+          resolve()
+        }
+      } catch (e) {
+        console.error('error updating configuration plugin: ' + e)
+        console.error(e.stack)
+        app.setProviderError(
+          plugin.name,
+          `Failed to update configuration: ${e.message}`
+        )
+        debug(
+          'plugin %s will not start due to failed to update configuration',
+          plugin.name
+        )
+        // resolve not intentionally called to avoid start plugin with wrong config
+      }
+    })
+
+    handlePluginConfiguration
+      .then(() => {
+        if (startupOptions && startupOptions.enabled) {
+          doPluginStart(
+            app,
+            plugin,
+            location,
+            startupOptions.configuration,
+            restart
+          )
+        }
+      })
+      .catch(() => 'obligatory catch')
+
     plugin.enableLogging = startupOptions.enableLogging
     app.plugins.push(plugin)
     app.pluginsMap[plugin.id] = plugin
