@@ -202,7 +202,7 @@ function findModulesWithKeyword(keyword: string) {
           } else {
             setTimeout(
               () => resolve(_.values(result)),
-              Number(process.env.NPMREGISTRYTIMEOUT) || 5 * 1000
+              Number(process.env.NPMREGISTRYTIMEOUT) || 20 * 1000
             )
           }
         })
