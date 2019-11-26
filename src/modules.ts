@@ -180,7 +180,7 @@ function findModulesWithKeyword(keyword: string) {
       fetchResult
         .then(r => r.json())
         .then(parsed => {
-          const data = parsed.results || parsed.objects
+          const data = parsed.results || parsed.objects || []
           data.reduce(
             (
               acc: { [packageName: string]: NpmModuleData },
