@@ -496,7 +496,7 @@ module.exports = (theApp: any) => {
       plugin.enabledByDefault = true
     }
 
-    const handlePluginConfiguration = new Promise<any>(resolve => {
+    const handlePluginConfiguration = new Promise((resolve, reject) => {
       debug('Check configuration update for plugin %s', plugin.name)
       try {
         if (typeof plugin.updateConfiguration === 'function') {
@@ -525,15 +525,13 @@ module.exports = (theApp: any) => {
             if (startupOptions.version === plugin.version) {
               savePluginOptions(plugin.id, startupOptions, err => {
                 if (err) {
-                  app.setProviderError(plugin.name, err.toString())
-                  console.error(
-                    'plugin',
-                    plugin.name,
-                    'savePluginOptions:',
-                    err.toString()
-                  )
+                  reject(err)
                 } else {
-                  debug('plugin %s new configuration saved', plugin.name)
+                  debug(
+                    'plugin %s new configuration saved in version %s',
+                    plugin.name,
+                    startupOptions.version
+                  )
                   resolve()
                 }
               })
@@ -543,9 +541,8 @@ module.exports = (theApp: any) => {
                 plugin.name,
                 startupOptions.version
               )
-              app.setProviderError(
-                plugin.name,
-                'update plugin configuration return a wrong version'
+              reject(
+                new Error('update plugin configuration return a wrong version')
               )
             }
           } else {
@@ -564,17 +561,7 @@ module.exports = (theApp: any) => {
           resolve()
         }
       } catch (e) {
-        console.error('error updating configuration plugin: ' + e)
-        console.error(e.stack)
-        app.setProviderError(
-          plugin.name,
-          `Failed to update configuration: ${e.message}`
-        )
-        debug(
-          'plugin %s will not start due to failed to update configuration',
-          plugin.name
-        )
-        // resolve not intentionally called to avoid start plugin with wrong config
+        reject(e)
       }
     })
 
@@ -590,7 +577,17 @@ module.exports = (theApp: any) => {
           )
         }
       })
-      .catch(() => 'obligatory catch')
+      .catch(e => {
+        console.error(e.stack)
+        debug(
+          'plugin %s will not start due to failed to update configuration',
+          plugin.name
+        )
+        app.setProviderError(
+          plugin.name,
+          `Failed to update configuration: ${e.message}`
+        )
+      })
 
     plugin.enableLogging = startupOptions.enableLogging
     app.plugins.push(plugin)
