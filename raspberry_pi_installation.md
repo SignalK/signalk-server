@@ -70,17 +70,10 @@ Now you need to start the Node Server. Type...
 You should see the terminal output "signalk-server running at 0.0.0.0:3000" as shown below...
 
     $ signalk-server --sample-nmea0183-data
-    Using default configuration path: /home/pi/.signalk
-    Settings file does not exist, using empty settings
     Using sample data from /usr/lib/node_modules/signalk-server/samples/plaka.log
-    *** WARNING *** The program 'node' uses the Apple Bonjour compatibility layer of Avahi.
-    *** WARNING *** Please fix your application to use the native API of Avahi!
-    *** WARNING *** For more information see <http://0pointer.de/avahi-compat?s=libdns_sd&e=node>
-    *** WARNING *** The program 'node' called 'DNSServiceRegister()' which is not supported (or only supported partially) in the Apple Bonjour compatibility layer of Avahi.
-    *** WARNING *** Please fix your application to use the native API of Avahi!
-    *** WARNING *** For more information see <http://0pointer.de/avahi-compat?s=libdns_sd&e=node&f=DNSServiceRegister> signalk-server running at 0.0.0.0:3000
-
-As the file name suggests, the Signal K Node Server is now reading NMEA Data from a Demo File and is ready to pass that data to any device that wants it. (The warnings is OK) To get your first taste of what Signal K data looks like, open the Web browser on your RPi and type this URL in to the address bar "http://127.0.0.1:3000/signalk". This directs the browser to the Signal K server on the RPi (127.0.0.1 is your local Loopback address) and you should see the following info on the screen...
+    signalk-server running at 0.0.0.0:3000
+    
+As the file name suggests, the Signal K Node Server is now reading NMEA Data from a Demo File and is ready to pass that data to any device that wants it. To get your first taste of what Signal K data looks like, open the Web browser on your RPi and type this URL in to the address bar "http://127.0.0.1:3000/signalk". This directs the browser to the Signal K server on the RPi (127.0.0.1 is your local Loopback address) and you should see the following info on the screen...
 
     {"endpoints":{"v1":{"version":"1.alpha1","signalk-http":"http://127.0.0.1:3000/signalk/v1/api/","signalk-ws":"ws://127.0.0.1:3000/signalk/v1/stream","signalk-tcp":"tcp://127.0.0.1:3858"}},"server":{"id":"signalk-server-node","version":"1.0.0-3"}}
 
@@ -100,11 +93,11 @@ This will open the Dashboard and give You some info about the SignalK server.
 
 Click on Webapps and You will get
 
-![dashboard_webapps](https://user-images.githubusercontent.com/16189982/35871504-b9e3d8c6-0b64-11e8-8455-801574837ca5.jpeg)
+![web_apps](https://user-images.githubusercontent.com/16189982/69761715-7840b900-1168-11ea-9052-eba7dfc2804c.png)
 
-Click on "Openlayers chartplotter......." and You will get a Worldmap with Your position in the south of Finland
+Click on "@Signalk/Freeboard-Sk" and You will get a Worldmap with Your position in the south of Finland
 
-Go back and click "SignalK instrumentpanel......" and You will have an instrumentpanel to play around with.
+Go back and click "@Signalk/Instrumentpanel" and You will have an instrumentpanel to play around with.
 
 If you have managed to get to the end of this guide, you will now have a good understanding of what Signal K is all about and in particular the Node Server. We have been using the server's demo NMEA file, but Node Server can also read NMEA0183 data via an [NMEA to USB adaptor cable](http://digitalyachtamerica.com/product/usb-nmea-adaptor/), a [3rd party NMEA2000 gateway](http://www.actisense.com/product/nmea-2000-to-pc-interface-ngt-1/) or both NMEA0183 and NMEA2000 via the [iKommunicate gateway](http://ikommunicate.com).
 
@@ -177,13 +170,12 @@ and it will show something like
 
 as seen on the last row the interface is attached to `ttyUSB0` so the device path will be `/dev/ttyUSB0`
 
-To set it up as input for the SignalK server go to the admin UI and ”Server => Data Providers”.
+To set it up as input for the SignalK server go to the admin UI and ”Server => Connections”.
 Add a provider with settings according to the picture and click on ”Apply”
 
-![provider_nmea2000](https://user-images.githubusercontent.com/16189982/43796707-51a88a9e-9a85-11e8-8253-3fb20a9ba3a5.jpeg)
+![SK_N2](https://user-images.githubusercontent.com/16189982/69761979-3d8b5080-1169-11ea-83a2-b688fd1178b3.png)
 
 The SignalK server **must be restarted** to accept the changes so click on "Restart" in the upper right corner.
-
 
 After the restart check the data with the Webapp Instrumentpanel in the admin UI.
 
@@ -192,15 +184,21 @@ NMEA0183
 If You have a NMEA0183 network, plug in Your NMEA0183 to USB interface and do the same procedure as for the Actisense above.
 With a configuration maybe looking like this
 
-![provider_nmea0183](https://user-images.githubusercontent.com/16189982/36218419-93f81c84-11b4-11e8-86c2-8319b9013b90.jpeg)
+![SK_N1](https://user-images.githubusercontent.com/16189982/69761986-44b25e80-1169-11ea-9401-2c06ace9eb3b.png)
 
 ## Sample files
 
-If You don’t have any NMEA interface hardware You could set up a provider with the sample files instead.
+If You don’t have any NMEA interface hardware You could set up a "File Stream" connection with the sample files instead.
 
-Path to NMEA2000 file `samples/aava-n2k.data`
+Find the path to NMEA2000 file
 
-Path to NMEA0183 file `samples/plaka.log`
+    cd /
+    sudo find -name "aava-n2k.data"
+
+Or the path to NMEA0183 file 
+
+    cd /
+    sudo find -name "plaka.log"
 
 ## NMEA0183 data on the network
 
