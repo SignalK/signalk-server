@@ -92,13 +92,7 @@ module.exports = function(app) {
           })
           .catch(error => {
             if (error.code === 'ENOTFOUND') {
-              res.send({
-                available: [],
-                installed: [],
-                updates: [],
-                installing: [],
-                storeAvailable: false
-              })
+              res.send(emptyAppStoreInfo())
             }
             console.log(error)
             console.error(error.message)
@@ -126,21 +120,26 @@ module.exports = function(app) {
     return app.webapps.find(webapp => webapp.name === id)
   }
 
-  function getAllModuleInfo(plugins, webapps, serverVersion) {
-    const all = {
+  function emptyAppStoreInfo() {
+    return {
       available: [],
       installed: [],
       updates: [],
       installing: [],
-      storeAvailable: true
+      storeAvailable: true,
+      isInDocker: process.env.IS_IN_DOCKER === 'true'
     }
+  }
+
+  function getAllModuleInfo(plugins, webapps, serverVersion) {
+    const all = emptyAppStoreInfo()
 
     if (
       process.argv.length > 1 &&
       npmServerInstallLocations.includes(process.argv[1]) &&
       !process.env.SIGNALK_DISABLE_SERVER_UPDATES
     ) {
-      all.canUpdateServer = true
+      all.canUpdateServer = !all.isInDocker && true
       if (compareVersions(serverVersion, app.config.version) > 0) {
         all.serverUpdate = serverVersion
 

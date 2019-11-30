@@ -54,7 +54,15 @@ class ServerUpdate extends Component {
           <Card className='border-warning'>
             <CardHeader>Server Update</CardHeader>
             <CardBody>
-            This installation is not updatable.
+            This installation is not updatable from the admin user interface.
+            </CardBody>
+          </Card>
+        )}
+        {this.props.appStore.isInDocker && (
+          <Card className='border-warning'>
+            <CardHeader>Running as a Docker container</CardHeader>
+            <CardBody>
+              The server is running as a Docker container. You need to pull a new server version from <a href="https://hub.docker.com/r/signalk/signalk-server/tags">Docker Hub</a> to update.
             </CardBody>
           </Card>
         )}
