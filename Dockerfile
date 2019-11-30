@@ -17,4 +17,5 @@ RUN npm run build
 RUN mkdir -p /home/node/.signalk
 
 EXPOSE 3000
+ENV IS_IN_DOCKER true
 ENTRYPOINT /home/node/signalk/bin/signalk-server --securityenabled
