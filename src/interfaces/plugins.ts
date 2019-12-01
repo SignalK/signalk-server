@@ -65,6 +65,27 @@ interface PluginInfo extends Plugin {
   statusMessage: () => string | void
 }
 
+interface ConfigurationHandler {
+  handleConfiguration: (
+    configuration: any,
+    version: string
+  ) => Promise<ConfigurationResult>
+}
+
+function isConfigurationHandler(plugin: any): plugin is ConfigurationHandler {
+  return (plugin as ConfigurationHandler).handleConfiguration !== undefined
+}
+
+interface VersionedConfiguration {
+  configuration: any
+  version: string
+}
+
+interface ConfigurationResult {
+  result: VersionedConfiguration
+  isUpdated: boolean
+}
+
 export interface ServerAPI {
   getSelfPath: (path: string) => void
   getPath: (path: string) => void
@@ -117,6 +138,11 @@ export interface ServerAPI {
 interface ModuleMetadata {
   version: string
   name: string
+}
+
+interface PluginOptions extends VersionedConfiguration {
+  enabled: boolean
+  enableLogging: boolean
 }
 
 module.exports = (theApp: any) => {
@@ -221,7 +247,7 @@ module.exports = (theApp: any) => {
     )
   }
 
-  function getPluginOptions(id: string) {
+  function getPluginOptions(id: string): PluginOptions {
     let optionsAsString = '{}'
     try {
       optionsAsString = fs.readFileSync(pathForPluginId(id), 'utf8')
@@ -248,7 +274,12 @@ module.exports = (theApp: any) => {
       console.error(
         'Could not parse JSON options:' + e.message + ' ' + optionsAsString
       )
-      return {}
+      return {
+        enabled: false,
+        enableLogging: false,
+        version: '?.?.?',
+        configuration: {}
+      }
     }
   }
 
@@ -363,24 +394,70 @@ module.exports = (theApp: any) => {
     }
   }
 
+  function handleConfiguration(
+    plugin: PluginInfo,
+    options: PluginOptions
+  ): Promise<PluginOptions> {
+    const pluginAsAny = plugin as any
+    if (isConfigurationHandler(pluginAsAny)) {
+      debug(`${plugin.id}.handleConfiguration`)
+      return pluginAsAny
+        .handleConfiguration(options.configuration, options.version)
+        .then((result: ConfigurationResult) => {
+          debug(
+            `isUpdated:${result.isUpdated} version:${result.result.version}`
+          )
+          if (!result.isUpdated) {
+            const newOptions = {
+              ...options,
+              ...result.result
+            }
+            return new Promise<PluginOptions>(resolve => {
+              savePluginOptions(plugin.id, newOptions, err => {
+                if (err) {
+                  console.error(
+                    `Failed to save configuration for plugin ${plugin.id}: ${err.message}`
+                  )
+                  resolve(options)
+                } else {
+                  resolve(newOptions)
+                }
+              })
+            })
+          } else {
+            return Promise.resolve(options)
+          }
+        })
+        .catch(() => {
+          return Promise.resolve(options)
+        })
+    }
+    return Promise.resolve(options)
+  }
+
   function doPluginStart(
     app: any,
     plugin: PluginInfo,
     location: string,
-    configuration: any,
+    options: PluginOptions,
     restart: (newConfiguration: any) => void
   ) {
-    debug('Starting plugin %s from %s', plugin.name, location)
-    try {
-      app.setProviderStatus(plugin.name, null)
-      plugin.start(configuration, restart)
-      debug('Started plugin ' + plugin.name)
-      setPluginStartedMessage(plugin)
-    } catch (e) {
-      console.error('error starting plugin: ' + e)
-      console.error(e.stack)
-      app.setProviderError(plugin.name, `Failed to start: ${e.message}`)
-    }
+    handleConfiguration(plugin, options)
+      .then(result => {
+        try {
+          debug(`Starting plugin ${plugin.id} from ${location}`)
+          app.setProviderStatus(plugin.name, null)
+          plugin.start(result.configuration, restart)
+          debug('Started plugin ' + plugin.id)
+          setPluginStartedMessage(plugin)
+        } catch (e) {
+          console.error(`Error starting plugin ${plugin.id} ${e.message}`)
+          app.setProviderError(plugin.id, `Failed to start: ${e.message}`)
+        }
+      })
+      .catch(err => {
+        console.error(err)
+      })
   }
 
   function doRegisterPlugin(
@@ -425,7 +502,9 @@ module.exports = (theApp: any) => {
 
     if (app.pluginsMap[plugin.id]) {
       console.log(
-        `WARNING: found multiple copies of plugin with id ${plugin.id} at ${location} and ${app.pluginsMap[plugin.id].packageLocation}`
+        `WARNING: found multiple copies of plugin with id ${
+          plugin.id
+        } at ${location} and ${app.pluginsMap[plugin.id].packageLocation}`
       )
       return
     }
@@ -458,15 +537,18 @@ module.exports = (theApp: any) => {
     }
 
     const startupOptions = getPluginOptions(plugin.id)
-    const restart = (newConfiguration: any) => {
+    const restart = (newConfiguration: any, version?: string) => {
       const pluginOptions = getPluginOptions(plugin.id)
       pluginOptions.configuration = newConfiguration
+      if (version) {
+        pluginOptions.version = version
+      }
       savePluginOptions(plugin.id, pluginOptions, err => {
         if (err) {
           console.error(err)
         } else {
           stopPlugin(plugin)
-          doPluginStart(app, plugin, location, newConfiguration, restart)
+          doPluginStart(app, plugin, location, pluginOptions, restart)
         }
       })
     }
@@ -478,13 +560,7 @@ module.exports = (theApp: any) => {
     }
 
     if (startupOptions && startupOptions.enabled) {
-      doPluginStart(
-        app,
-        plugin,
-        location,
-        startupOptions.configuration,
-        restart
-      )
+      doPluginStart(app, plugin, location, startupOptions, restart)
     }
     plugin.enableLogging = startupOptions.enableLogging
     app.plugins.push(plugin)
