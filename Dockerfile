@@ -13,6 +13,7 @@ WORKDIR /home/node/signalk
 
 COPY --chown=node:node . .
 RUN npm install
+RUN npm run build
 RUN mkdir -p /home/node/.signalk
 
 EXPOSE 3000
