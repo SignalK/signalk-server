@@ -64,7 +64,18 @@ wscat 'ws://localhost:3000/signalk/v1/stream?subscribe=all'
 
 ## Use: Run on Docker
 
-You can start a local server on port 3000  with `docker run --name signalk-server --publish 3000:3000 --entrypoint signalk-server signalk/signalk-server-node:latest --sample-nmea0183-data`. Docker is currently aimed at running a local demo server that you can test against, not for real use.
+You can start a local server on port 3000  with demo data with
+
+```
+docker run --name signalk-server --publish 3000:3000 --entrypoint signalk-server signalk/signalk-server-node:latest --sample-nmea0183-data
+```
+
+For real use the easiest way is mount HOME/.signalk from the host and run priviledged so that the container has access to host's /dev under /dev/hostdev:
+
+```
+docker run --name signalk-server --publish 3000:3000 -v --privileged -v $HOME/.signalk:/home/node/.signalk -v /dev:/dev/hostdev signalk/signalk-server-node
+```
+
 
 Now what?
 ---------
