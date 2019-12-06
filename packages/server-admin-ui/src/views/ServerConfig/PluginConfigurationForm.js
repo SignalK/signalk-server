@@ -1,7 +1,4 @@
 import React, { Component } from 'react'
-import { render } from 'react-dom'
-import keys from 'lodash.keys'
-
 import Form from 'react-jsonschema-form-bs4'
 
 
