@@ -79,7 +79,7 @@
     "@signalk/streams": "~1.4.0",
     "@signalk/zones": "^1.0.0",
     "@types/debug": "^4.1.5",
-    "baconjs": "^1.0.1",
+    "baconjs": "^3.0.12",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.14.1",
     "chalk": "^3.0.0",
