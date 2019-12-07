@@ -12,7 +12,7 @@ class Webapps extends Component {
           .filter(webAppInfo => webAppInfo.name !== '@signalk/server-admin-ui')
           .map(webappInfo => {
             return (
-              <Col xs='12' md='12' lg='6' xl='4'>
+              <Col xs='12' md='12' lg='6' xl='4' key={webappInfo.name}>
               <Webapp
                 key={webappInfo.name}
                 header={webappInfo.name}
