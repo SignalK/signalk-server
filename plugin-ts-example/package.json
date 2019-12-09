@@ -1,0 +1,16 @@
+{
+  "name": "plugin-ts-example",
+  "version": "1.0.0",
+  "description": "Example plugin in TypeScript",
+  "keywords": [
+    "signalk-node-server-plugin"
+  ],
+  "main": "src/index.js",
+  "author": "Teppo Kurki <teppo.kurki@iki.fi> (https://github.com/tkurki)",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "typescript": "^3.7.3",
+    "signalk-server": "1.18.0"
+  },
+  "private": true
+}

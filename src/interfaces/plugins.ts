@@ -44,8 +44,12 @@ const DEFAULT_ENABLED_PLUGINS = process.env.DEFAULTENABLEDPLUGINS
 export type PluginFactory = (serverApi: ServerAPI) => Plugin
 
 export interface Plugin {
+  name: string
+  id: string
   start: (config: object, restart: (newConfiguration: object) => void) => any
-  stop: () => any
+  stop: () => void
+  schema: () => object | object
+  uiSchema?: () => object| object
 }
 
 interface PluginInfo extends Plugin {
@@ -54,10 +58,6 @@ interface PluginInfo extends Plugin {
   packageLocation: string
   registerWithRouter: any
   signalKApiRoutes: any
-  name: string
-  id: string
-  schema: () => void | object
-  uiSchema: () => void | object
   version: string
   description: string
   state: string
