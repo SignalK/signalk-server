@@ -14,7 +14,7 @@
  * limitations under the License.
 */
 import Debug from 'debug'
-import { Application, Request, Response } from 'express'
+import { Application, Request, Response, IRouter } from 'express'
 const debug = Debug('signalk:interfaces:plugins')
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
@@ -51,10 +51,10 @@ export interface Plugin {
   stop: () => void
   schema: () => object | object
   uiSchema?: () => object | object
-  registerWithRouter?: any
-  signalKApiRoutes?: any
+  registerWithRouter?: (router: IRouter) => void
+  signalKApiRoutes?: (router: IRouter) => IRouter
   enabledByDefault?: boolean
-  statusMessage?: () => string | void
+  statusMessage?: () => string
 }
 
 interface ManagedPlugin extends Plugin {
