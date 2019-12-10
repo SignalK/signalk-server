@@ -60,7 +60,6 @@ interface PluginInfo extends Plugin {
   signalKApiRoutes: any
   version: string
   description: string
-  state: string
   enabledByDefault: boolean
   statusMessage: () => string | void
 }
@@ -175,7 +174,6 @@ module.exports = (theApp: any) => {
               schema,
               statusMessage,
               uiSchema,
-              state: plugin.state,
               data
             }
           })
