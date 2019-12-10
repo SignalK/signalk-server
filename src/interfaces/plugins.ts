@@ -14,7 +14,7 @@
  * limitations under the License.
 */
 import Debug from 'debug'
-import { Request, Response } from 'express'
+import { Application, Request, Response } from 'express'
 const debug = Debug('signalk:interfaces:plugins')
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
@@ -45,26 +45,30 @@ export type PluginFactory = (serverApi: ServerAPI) => Plugin
 
 export interface Plugin {
   name: string
+  description: string
   id: string
   start: (config: object, restart: (newConfiguration: object) => void) => any
   stop: () => void
   schema: () => object | object
-  uiSchema?: () => object| object
+  uiSchema?: () => object | object
+  registerWithRouter?: any
+  signalKApiRoutes?: any
+  enabledByDefault?: boolean
+  statusMessage?: () => string | void
 }
 
-interface PluginInfo extends Plugin {
+interface ManagedPlugin extends Plugin {
+  version: string
   enableLogging: any
   packageName: any
   packageLocation: string
-  registerWithRouter: any
-  signalKApiRoutes: any
-  version: string
-  description: string
-  enabledByDefault: boolean
-  statusMessage: () => string | void
 }
 
-export interface ServerAPI {
+export interface ServerAPI
+  extends DeltaManager,
+    ProviderStatusLogger,
+    ActionManager,
+    HistoryManager {
   getSelfPath: (path: string) => void
   getPath: (path: string) => void
   putSelfPath: (aPath: string, value: any, updateCb: () => void) => Promise<any>
@@ -76,12 +80,7 @@ export interface ServerAPI {
   queryRequest: (requestId: string) => Promise<any>
   error: (msg: string) => void
   debug: (msg: string) => void
-  registerDeltaInputHandler: (
-    handler: (delta: object, next: (delta: object) => void) => void
-  ) => void
-  setProviderStatus: (msg: string) => void
   handleMessage: (id: string, msg: any) => void
-  setProviderError: (msg: string) => void
   savePluginOptions: (
     configuration: object,
     cb: (err: NodeJS.ErrnoException | null) => void
@@ -93,24 +92,6 @@ export interface ServerAPI {
     path: string,
     callback: () => void
   ) => void
-  registerActionHandler: (
-    context: string,
-    path: string,
-    callback: () => void
-  ) => void
-  registerHistoryProvider: (provider: {
-    hasAnydata: (options: object, cb: (hasResults: boolean) => void) => void
-    getHistory: (
-      date: Date,
-      path: string,
-      cb: (deltas: object[]) => void
-    ) => void
-    streamHistory: (
-      spark: any,
-      options: object,
-      onDelta: (delta: object) => void
-    ) => void
-  }) => void
 }
 
 interface ModuleMetadata {
@@ -118,7 +99,66 @@ interface ModuleMetadata {
   name: string
 }
 
-module.exports = (theApp: any) => {
+interface FullSignalKHolder {
+  signalk: { self: string; retrieve: () => object }
+}
+
+interface ConfigHolder {
+  config: any
+}
+
+interface DeltaManager {
+  registerDeltaInputHandler: (
+    handler: (delta: object, next: (delta: object) => void) => void
+  ) => void
+}
+
+interface ProviderStatusLogger {
+  setProviderStatus: (providerId: string, status: string) => void
+  setProviderError: (providerId: string, status: string) => void
+}
+interface ProviderManager extends ProviderStatusLogger {
+  getProviderStatus: () => [{ id: string; message: string }]
+  providerStatus: { [providerId: string]: string }
+}
+
+interface ActionManager {
+  registerActionHandler: (
+    context: string,
+    path: string,
+    id: string,
+    callback: () => void
+  ) => void
+}
+
+interface HistoryProvider {
+  hasAnydata: (options: object, cb: (hasResults: boolean) => void) => void
+  getHistory: (date: Date, path: string, cb: (deltas: object[]) => void) => void
+  streamHistory: (
+    spark: any,
+    options: object,
+    onDelta: (delta: object) => void
+  ) => void
+}
+
+interface HistoryManager {
+  registerHistoryProvider: (provider: HistoryProvider) => void
+  unregisterHistoryProvider: (provider: HistoryProvider) => void
+}
+
+interface PluginManager
+  extends ConfigHolder,
+    ProviderManager,
+    FullSignalKHolder,
+    DeltaManager,
+    ActionManager,
+    HistoryManager,
+    Application {
+  plugins: [ManagedPlugin]
+  pluginsMap: { [id: string]: ManagedPlugin }
+}
+
+module.exports = (theApp: PluginManager) => {
   const onStopHandlers: any = {}
   return {
     start() {
@@ -137,10 +177,10 @@ module.exports = (theApp: any) => {
         const providerStatus = theApp.getProviderStatus()
         res.json(
           _.sortBy(theApp.plugins, [
-            (plugin: PluginInfo) => {
+            (plugin: ManagedPlugin) => {
               return plugin.name
             }
-          ]).map((plugin: PluginInfo) => {
+          ]).map((plugin: ManagedPlugin) => {
             let data: { enabled: boolean } | null = null
             try {
               data = getPluginOptions(plugin.id)
@@ -332,7 +372,7 @@ module.exports = (theApp: any) => {
     }
   }
 
-  function stopPlugin(plugin: PluginInfo) {
+  function stopPlugin(plugin: Plugin) {
     debug('Stopping plugin ' + plugin.name)
     onStopHandlers[plugin.id].forEach((f: () => void) => {
       try {
@@ -347,7 +387,7 @@ module.exports = (theApp: any) => {
     debug('Stopped plugin ' + plugin.name)
   }
 
-  function setPluginStartedMessage(plugin: PluginInfo) {
+  function setPluginStartedMessage(plugin: Plugin) {
     const statusMessage =
       typeof plugin.statusMessage === 'function'
         ? plugin.statusMessage()
@@ -363,7 +403,7 @@ module.exports = (theApp: any) => {
 
   function doPluginStart(
     app: any,
-    plugin: PluginInfo,
+    plugin: Plugin,
     location: string,
     configuration: any,
     restart: (newConfiguration: any) => void
@@ -382,13 +422,13 @@ module.exports = (theApp: any) => {
   }
 
   function doRegisterPlugin(
-    app: any,
+    app: PluginManager,
     packageName: string,
     metadata: ModuleMetadata,
     location: string
   ) {
-    let plugin: PluginInfo
-    const appCopy: ServerAPI = _.assign({}, app, {
+    let plugin: Plugin
+    const appProto: any = _.assign({}, app, {
       getSelfPath,
       getPath,
       putSelfPath,
@@ -398,7 +438,7 @@ module.exports = (theApp: any) => {
         console.error(`${packageName}:${msg}`)
       },
       debug: require('debug')(packageName),
-      registerDeltaInputHandler: (handler: any) => {
+      registerDeltaInputHandler: (handler: (d: object, n: any) => void) => {
         onStopHandlers[plugin.id].push(app.registerDeltaInputHandler(handler))
       },
       setProviderStatus: (msg: string) => {
@@ -409,10 +449,11 @@ module.exports = (theApp: any) => {
       }
     })
     try {
-      const pluginConstructor: (
-        app: ServerAPI
-      ) => PluginInfo = require(path.join(location, packageName))
-      plugin = pluginConstructor(appCopy)
+      const pluginConstructor: (app: ServerAPI) => Plugin = require(path.join(
+        location,
+        packageName
+      ))
+      plugin = pluginConstructor(appProto)
     } catch (e) {
       console.error(`${packageName} failed to start: ${e.message}`)
       console.error(e)
@@ -423,10 +464,14 @@ module.exports = (theApp: any) => {
 
     if (app.pluginsMap[plugin.id]) {
       console.log(
-        `WARNING: found multiple copies of plugin with id ${plugin.id} at ${location} and ${app.pluginsMap[plugin.id].packageLocation}`
+        `WARNING: found multiple copies of plugin with id ${
+          plugin.id
+        } at ${location} and ${app.pluginsMap[plugin.id].packageLocation}`
       )
       return
     }
+
+    const appCopy: ServerAPI = appProto as ServerAPI
 
     appCopy.handleMessage = handleMessageWrapper(app, plugin.id)
     appCopy.savePluginOptions = (configuration, cb) => {
@@ -446,7 +491,6 @@ module.exports = (theApp: any) => {
         app.registerActionHandler(context, aPath, plugin.id, callback)
       )
     }
-    appCopy.registerActionHandler = appCopy.registerPutHandler
 
     appCopy.registerHistoryProvider = provider => {
       app.registerHistoryProvider(provider)
@@ -484,13 +528,14 @@ module.exports = (theApp: any) => {
         restart
       )
     }
-    plugin.enableLogging = startupOptions.enableLogging
-    app.plugins.push(plugin)
-    app.pluginsMap[plugin.id] = plugin
+    const managedPlugin = plugin as ManagedPlugin
+    managedPlugin.enableLogging = startupOptions.enableLogging
+    app.plugins.push(managedPlugin)
+    app.pluginsMap[plugin.id] = managedPlugin
 
-    plugin.version = metadata.version
-    plugin.packageName = metadata.name
-    plugin.packageLocation = location
+    managedPlugin.version = metadata.version
+    managedPlugin.packageName = metadata.name
+    managedPlugin.packageLocation = location
 
     const router = express.Router()
     router.get('/', (req: Request, res: Response) => {
@@ -502,9 +547,9 @@ module.exports = (theApp: any) => {
       res.json({
         enabled: enabledByDefault || currentOptions.enabled,
         enabledByDefault,
-        id: plugin.id,
-        name: plugin.name,
-        version: plugin.version
+        id: managedPlugin.id,
+        name: managedPlugin.name,
+        version: managedPlugin.version
       })
     })
 
@@ -519,7 +564,7 @@ module.exports = (theApp: any) => {
         res.send('Saved configuration for plugin ' + plugin.id)
         stopPlugin(plugin)
         const options = getPluginOptions(plugin.id)
-        plugin.enableLogging = options.enableLogging
+        managedPlugin.enableLogging = options.enableLogging
         if (options.enabled) {
           doPluginStart(app, plugin, location, options.configuration, restart)
         }
