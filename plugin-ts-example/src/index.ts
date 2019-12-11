@@ -8,6 +8,7 @@ module.exports= (server: ServerAPI): Plugin=> {
     let plugin: Plugin= { 
         id: 'my-plugin-id',
         name: 'My plugin (this is the name that appears in Plugin Config screen.)',
+        description: 'My plugin description',
         schema: ()=> ({
             properties: {
                 myAttribute: {
