@@ -1,16 +1,25 @@
 {
-  "name": "plugin-ts-example",
-  "version": "1.0.0",
-  "description": "Example plugin in TypeScript",
-  "keywords": [
-    "signalk-node-server-plugin"
-  ],
-  "main": "src/index.js",
-  "author": "Teppo Kurki <teppo.kurki@iki.fi> (https://github.com/tkurki)",
-  "license": "Apache-2.0",
-  "devDependencies": {
-    "typescript": "^3.7.3",
-    "signalk-server": "1.18.0"
-  },
-  "private": true
+    "name": "tsplugin",
+    "version": "1.0.0",
+    "description": "Test Typescript Signal K plugin",
+    "main": "plugin/index.js",
+    "signalk-plugin-enabled-by-default": true,
+    "keywords": [
+        "signalk-node-server-plugin",
+        "signalk"
+    ],  
+    "author": "",
+    "license": "Apache-20",
+    "scripts": {
+        "build": "tsc",
+        "build-declaration": "tsc --declaration --allowJs false",
+        "watch": "npm run build -- -w",
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start": "npm run build -- -w",
+        "prepare": "tsc"
+    },
+    "devDependencies": {
+        "@types/node-fetch": "^2.5.4",
+        "typescript": "^3.7.3"
+    }
 }
