@@ -8,7 +8,7 @@ module.exports= (server: ServerAPI): Plugin=> {
     let plugin: Plugin= { 
         id: 'my-plugin-id',
         name: 'My plugin (this is the name that appears in Plugin Config screen.)',
-        schema: {
+        schema: ()=> ({
             properties: {
                 myAttribute: {
                     type: "string",
@@ -16,7 +16,7 @@ module.exports= (server: ServerAPI): Plugin=> {
                     default: "No value has been entered."
                 }                
             }
-        },
+        }),
 
         start: function(options: any) {
             config= options;
