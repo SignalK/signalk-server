@@ -91,8 +91,19 @@ export interface ServerAPI
   registerPutHandler: (
     context: string,
     path: string,
-    callback: () => void
+    callback: (
+      context: string,
+      path: string,
+      value: any,
+      actionResultCallback: (actionResult: ActionResult) => void
+    ) => ActionResult
   ) => void
+}
+
+interface ActionResult {
+  state: string
+  statusCode: number
+  message: string
 }
 
 interface ModuleMetadata {
@@ -135,7 +146,12 @@ interface ActionManager {
     context: string,
     path: string,
     id: string,
-    callback: () => void
+    callback: (
+      context: string,
+      path: string,
+      value: any,
+      actionResultCallback: (actionResult: ActionResult) => void
+    ) => ActionResult
   ) => void
 }
 
