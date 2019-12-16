@@ -14,7 +14,7 @@
  * limitations under the License.
 */
 import Debug from 'debug'
-import { Application, Request, Response, IRouter } from 'express'
+import { Application, IRouter, Request, Response } from 'express'
 const debug = Debug('signalk:interfaces:plugins')
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
@@ -68,7 +68,8 @@ export interface ServerAPI
   extends DeltaManager,
     ProviderStatusLogger,
     ActionManager,
-    HistoryManager {
+    HistoryManager,
+    StreamManager {
   getSelfPath: (path: string) => void
   getPath: (path: string) => void
   putSelfPath: (aPath: string, value: any, updateCb: () => void) => Promise<any>
@@ -113,6 +114,13 @@ interface DeltaManager {
   ) => void
 }
 
+interface StreamManager {
+  getBus: (path: string | void) => any
+  getSelfBus: (path: string | void) => any
+  getSelfStream: (path: string | void) => any
+  getAvailablePaths: () => string[]
+}
+
 interface ProviderStatusLogger {
   setProviderStatus: (providerId: string, status: string) => void
   setProviderError: (providerId: string, status: string) => void
@@ -146,6 +154,10 @@ interface HistoryManager {
   unregisterHistoryProvider: (provider: HistoryProvider) => void
 }
 
+interface StreamManagerHolder {
+  streambundle: StreamManager
+}
+
 interface PluginManager
   extends ConfigHolder,
     ProviderManager,
@@ -153,6 +165,7 @@ interface PluginManager
     DeltaManager,
     ActionManager,
     HistoryManager,
+    StreamManagerHolder,
     Application {
   plugins: [ManagedPlugin]
   pluginsMap: { [id: string]: ManagedPlugin }
@@ -446,7 +459,13 @@ module.exports = (theApp: PluginManager) => {
       },
       setProviderError: (msg: string) => {
         app.setProviderError(plugin.name, msg)
-      }
+      },
+      getBus: (skPath: string | void) => theApp.streambundle.getBus(skPath),
+      getSelfBus: (skPath: string | void) =>
+        theApp.streambundle.getSelfBus(skPath),
+      getSelfStream: (skPath: string | void) =>
+        theApp.streambundle.getSelfStream(skPath),
+      getAvailablePaths: () => theApp.streambundle.getAvailablePaths()
     })
     try {
       const pluginConstructor: (app: ServerAPI) => Plugin = require(path.join(
