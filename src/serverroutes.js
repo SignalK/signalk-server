@@ -15,6 +15,7 @@
 */
 
 const fs = require('fs')
+const { readdir } = require('fs').promises
 const page = require('./page')
 const debug = require('debug')('signalk-server:serverroutes')
 const path = require('path')
@@ -536,13 +537,38 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   })
 
   app.get('/serialports', (req, res, next) => {
-    serialBingings
-      .list()
-      .then(ports => {
-        res.json(ports.map(port => port.comName))
-      })
-      .catch(next)
+    Promise.all([
+      listSafeSerialPortsDevSerialById(),
+      listSafeSerialPortsOpenPlotter(),
+      listSerialPorts()
+    ])
+    .then(([a, b, c]) => res.json(a.concat(b).concat(c)))
+    .catch(next)
   })
+
+  function listSerialPorts() {
+    return serialBingings.list().then(ports => {
+      return ports.map(port => port.comName)
+    })
+  }
+
+  function listSafeSerialPortsDevSerialById() {
+    return readdir('/dev/serial/by-id')
+      .catch(err => [])
+      .then(filenames =>
+        filenames.map(filename => `/dev/serial/by-id/${filename}`)
+      )
+  }
+
+  function listSafeSerialPortsOpenPlotter() {
+    return readdir('/dev/')
+      .catch(err => [])
+      .then(filenames =>
+        filenames
+          .filter(filename => filename.startsWith('ttyOP_'))
+          .map(filename => `/dev/${filename}`)
+      )
+  }
 
   app.get(`${serverRoutesPrefix}/hasAnalyzer`, (req, res) => {
     commandExists('analyzer')
