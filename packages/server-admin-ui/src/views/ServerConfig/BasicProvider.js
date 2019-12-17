@@ -129,7 +129,7 @@ class DeviceInput extends Component {
   constructor(props) {
     super()
     this.state = {
-      devices: [props.value.device]
+      devices: []
     }
   }
 
@@ -139,17 +139,20 @@ class DeviceInput extends Component {
     })
       .then(response => response.json())
       .then(data => {
-        //make sure that the configured device is
-        //an option to be the selected on in the select,
-        //as it may be unplugged or unavailable
-        if (data.indexOf(this.props.value.device) == -1) {
-          data.push(this.props.value.device)
-        }
-        this.setState({ devices: data })
+        this.setState({
+          devices: data
+        })
       })
   }
 
   render () {
+    const isManualEntry = !this.state.devices.includes(this.props.value.device)
+    let manualEntryValue = isManualEntry
+      ? this.props.value.device === 'Enter manually'
+        ? ''
+        : this.props.value.device
+      : ''
+    const fixedEntries = ['Enter manually', '-']
     return (
       <FormGroup row>
         <Col md='2'>
@@ -161,9 +164,9 @@ class DeviceInput extends Component {
             name="options.device"
             id="serialportselect"
             onChange={this.props.onChange}
-            value={this.props.value.device}>
-              {this.state.devices.map((device, i) => (
-                <option key={i}>{device}</option>
+            value={isManualEntry ? 'Enter manually' : this.props.value.device}>
+              {fixedEntries.concat(this.state.devices).map((device, i) => (
+                <option disabled={device === '-'}key={i}>{device}</option>
               ))}
           </Input>
         </Col>
@@ -171,7 +174,8 @@ class DeviceInput extends Component {
           <Input
               type='text'
               name='options.device'
-              value={this.props.value.device}
+              disabled={!isManualEntry}
+              value={manualEntryValue}
               onChange={event => this.props.onChange(event)}
             />
         </Col>
