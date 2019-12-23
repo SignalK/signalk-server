@@ -129,7 +129,7 @@ class DeviceInput extends Component {
   constructor(props) {
     super()
     this.state = {
-      devices: []
+      devices: {}
     }
   }
 
@@ -146,13 +146,12 @@ class DeviceInput extends Component {
   }
 
   render () {
-    const isManualEntry = !this.state.devices.includes(this.props.value.device)
+    const isManualEntry = !isListedDevice(this.props.value.device, this.state.devices)
     let manualEntryValue = isManualEntry
       ? this.props.value.device === 'Enter manually'
         ? ''
         : this.props.value.device
       : ''
-    const fixedEntries = ['Enter manually', '-']
     return (
       <FormGroup row>
         <Col md='2'>
@@ -164,24 +163,47 @@ class DeviceInput extends Component {
             name="options.device"
             id="serialportselect"
             onChange={this.props.onChange}
-            value={isManualEntry ? 'Enter manually' : this.props.value.device}>
-              {fixedEntries.concat(this.state.devices).map((device, i) => (
-                <option disabled={device === '-'}key={i}>{device}</option>
-              ))}
+            value={isManualEntry ? 'Enter manually' : this.props.value.device}
+          >
+            <option key="enterManually">Enter manually</option>
+            {serialportListOptions(
+              ['byOpenPlotter', 'byId', 'byPath', 'serialports'],
+              ['OpenPlotter managed:', 'by-id:', 'by-path:', 'Listed:'],
+              this.state.devices
+            )}
           </Input>
         </Col>
         <Col xs='12' md='3'>
           <Input
-              type='text'
-              name='options.device'
-              disabled={!isManualEntry}
-              value={manualEntryValue}
-              onChange={event => this.props.onChange(event)}
-            />
+            type="text"
+            name="options.device"
+            disabled={!isManualEntry}
+            value={manualEntryValue || ''}
+            onChange={event => this.props.onChange(event)}
+          />
         </Col>
       </FormGroup>
     )
   }
+}
+
+const isListedDevice = (device, deviceListMap) => {
+  const list = Object.keys(deviceListMap).reduce((acc, key) => {
+    return acc.concat(deviceListMap[key])
+  }, [])
+  return list.includes(device)
+}
+
+const serialportListOptions = (keys, labels, deviceListMap) => {
+  return keys.reduce((acc, key, j) => {
+    if (deviceListMap[key] && deviceListMap[key].length > 0) {
+      acc.push(<option disabled="true" key={key}>{labels[j]}</option>)
+      deviceListMap[key].forEach((device, i) => {
+        acc.push(<option key={`${key}${i}`}>{device}</option>)
+      })
+    }
+    return acc
+  },[])
 }
 
 class LoggingInput extends Component {

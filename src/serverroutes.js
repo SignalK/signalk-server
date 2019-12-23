@@ -539,11 +539,14 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   app.get('/serialports', (req, res, next) => {
     Promise.all([
       listSafeSerialPortsDevSerialById(),
+      listSafeSerialPortsDevSerialByPath(),
       listSafeSerialPortsOpenPlotter(),
       listSerialPorts()
     ])
-    .then(([a, b, c]) => res.json(a.concat(b).concat(c)))
-    .catch(next)
+      .then(([byId, byPath, byOpenPlotter, serialports]) =>
+        res.json({ byId, byPath, byOpenPlotter, serialports })
+      )
+      .catch(next)
   })
 
   function listSerialPorts() {
@@ -557,6 +560,14 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       .catch(err => [])
       .then(filenames =>
         filenames.map(filename => `/dev/serial/by-id/${filename}`)
+      )
+  }
+
+  function listSafeSerialPortsDevSerialByPath() {
+    return readdir('/dev/serial/by-path')
+      .catch(err => [])
+      .then(filenames =>
+        filenames.map(filename => `/dev/serial/by-path/${filename}`)
       )
   }
 
