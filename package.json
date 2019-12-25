@@ -151,5 +151,10 @@
     "hooks": {
       "pre-commit": "lint-staged"
     }
+  },
+  "greenkeeper": {
+    "ignore": [
+      "baconjs"
+    ]
   }
 }
