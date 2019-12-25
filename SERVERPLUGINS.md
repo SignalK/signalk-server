@@ -138,11 +138,15 @@ $ DEBUG=my-signalk-plugin signalk-server --sample-n2k-data
 
 ### Deltas
 
-Most of the time your plugin wants to either process data that the server gathers (e.g. data that is coming from a NMEA 2000 bus or another source) or generate data for the server to consume (e.g. data you capture from a device or the internet). In both cases you'll often work with *deltas*; data structures that describe a change in SignalK's internal data model. The proper term is *denormalized deltas*, since the [Signal K Delta Specification](http://signalk.org/specification/1.3.0/doc/data_model.html#delta-format) looks somewhat different. However, for the the purpose of this document, we'll just call them *deltas*.
+Most of the time your plugin wants to either process data that the server gathers (e.g. data that is coming from a NMEA 2000 bus or another source) or generate data for the server to consume (e.g. data you capture from a device or the internet). In both cases you'll often work with *deltas*; data structures that describe a change in Signal K's internal data model. 
+
+The [Signal K Delta Specification](http://signalk.org/specification/1.3.0/doc/data_model.html#delta-format) defines deltas that are used to send updates to clients. The delta format describes messages that may contain 1 or more updates - it is an envelope format and you can stuff more than one thing in a message.
+
+However most of the time a data consumer like a plugin is interested in updates to just a few particular data items. This is why the server's plugin API uses *denormalized deltas* to allow handling data items independently. When you handle the individual items separately you do not need to go through the delta's envelope format to find the item that you have interest in.
 
 Note that deltas contain absolute values and not a change in the value itself, but denote a change in the data model.
 
-Deltas typically look like this:
+Denormalized deltas have the following structure:
 ```javascript
   {
     path: ...,
@@ -154,7 +158,7 @@ Deltas typically look like this:
   }
 ```
 
-The following delta shows a change in `navigation.postion` and contains the updated `longitude` and `latitude` for this specific vessel:
+The following delta shows a change in `navigation.position` and contains the updated `longitude` and `latitude` for this specific vessel:
 ```javascript
 {
   path: 'navigation.position',
@@ -257,9 +261,9 @@ Here we loop though all the unsubscribe functions for our subscriptions and call
 
 Now restart the server and you should see deltas being output in your console.
 
-## Sending deltas from a plugin
+## Sending NMEA 2000 data from a plugin
 
-A SignalK plugin can not only read deltas, but can also send them. The following examples show how you can emit NMEA 2000 deltas.
+A SignalK plugin can not only read deltas, but can also send data. The following examples show how you can emit NMEA 2000 data.
 
 ### Actisense serial format
 
@@ -272,7 +276,7 @@ To send a message in the Actisense serial format, simply use `app.emit()` in the
 
 ### Canboat JSON format
 
-To send a delta in a `canboat` JSON format, use `app.emit()` in the following way:
+To send data in  `canboat` JSON format, use `app.emit()` in the following way:
 
 ```javascript
   app.emit('nmea2000JsonOut', {
@@ -283,7 +287,7 @@ To send a delta in a `canboat` JSON format, use `app.emit()` in the following wa
   });
 ```
 
-### Sending a message on startup
+### Sending a message on NMEA2000 startup
 
 If you need to send an N2K message out at startup, e.g to get current state from a device:
 
