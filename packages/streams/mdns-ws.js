@@ -21,8 +21,6 @@ const SignalK = require('@signalk/client')
 const debug = require('debug')('signalk-server:providers:mdns-ws')
 
 const WebSocket = require('ws')
-const _object = require('lodash/object')
-const _keys = require('lodash/keys')
 
 function MdnsWs (options) {
   Transform.call(this, {

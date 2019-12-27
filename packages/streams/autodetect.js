@@ -22,8 +22,6 @@ const N2KJsonToSignalK = require('./n2k-signalk')
 const ActisenseSerialToJSON = require('./n2kAnalyzer')
 const canboatjs = require('./canboatjs')
 const Nmea01832SignalK = require('./nmea0183-signalk')
-const throttle = require('./throttle')
-const liner = require('./liner')
 const _ = require('lodash')
 
 /*
