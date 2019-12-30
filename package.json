@@ -100,7 +100,7 @@
     "figlet": "^1.2.0",
     "file-timestamp-stream": "^2.1.2",
     "flatmap": "0.0.3",
-    "geolib": "3.2.0",
+    "geolib": "3.2.1",
     "get-installed-path": "^4.0.8",
     "inquirer": "^7.0.0",
     "jsonwebtoken": "^8.1.1",
