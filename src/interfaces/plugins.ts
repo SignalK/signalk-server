@@ -425,7 +425,9 @@ module.exports = (theApp: any) => {
 
     if (app.pluginsMap[plugin.id]) {
       console.log(
-        `WARNING: found multiple copies of plugin with id ${plugin.id} at ${location} and ${app.pluginsMap[plugin.id].packageLocation}`
+        `WARNING: found multiple copies of plugin with id ${
+          plugin.id
+        } at ${location} and ${app.pluginsMap[plugin.id].packageLocation}`
       )
       return
     }
