@@ -27,7 +27,6 @@ interface SocketWithId extends Socket {
 
 module.exports = (app: SignalKServer) => {
   'use strict'
-  const openSockets: { [socketId: number]: SocketWithId } = {}
   let idSequence = 0
   let server: Server | null
   const port = Number(process.env.TCPSTREAMPORT) || 8375
@@ -40,11 +39,9 @@ module.exports = (app: SignalKServer) => {
       socket.id = idSequence++
       socket.on('error', err => {
         debug('Error:' + err + ' ' + socket.id + ' ' + socket.name)
-        delete openSockets[socket.id || 0]
       })
       socket.on('close', hadError => {
         debug('Close:' + hadError + ' ' + socket.id + ' ' + socket.name)
-        delete openSockets[socket.id || 0]
       })
       socket
         .pipe(
@@ -62,22 +59,20 @@ module.exports = (app: SignalKServer) => {
         })
       socket.name = socket.remoteAddress + ':' + socket.remotePort
       debug('Connected:' + socket.id + ' ' + socket.name)
-      openSockets[socket.id] = socket
       socket.write(JSON.stringify(app.getHello()) + '\r\n')
-      socket.on('end', () => {
-        // client disconnects
-        debug('Ended:' + socket.id + ' ' + socket.name)
-        delete openSockets[socket.id || 0]
-      })
-    })
-    app.signalk.on('delta', (data: any) => {
-      const jsonData = JSON.stringify(data)
-      values(openSockets).forEach(socket => {
+      const deltaListener = (data: any) => {
+        const jsonData = JSON.stringify(data)
         try {
           socket.write(jsonData + '\r\n')
         } catch (e) {
           console.error(e + ' ' + socket)
         }
+      }
+      app.signalk.on('delta', deltaListener)
+      socket.on('end', () => {
+        app.signalk.removeListener('delta', deltaListener)
+        // client disconnects
+        debug('Ended:' + socket.id + ' ' + socket.name)
       })
     })
 
