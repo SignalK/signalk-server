@@ -13,3 +13,15 @@ export interface SignalKServer {
   getHello: () => HelloMessage
   signalk: EventEmitter
 }
+
+export class Interface {
+  start?: () => void
+  stop?: () => void
+  mdns?: MdnsAdvertisement
+}
+
+export interface MdnsAdvertisement {
+  name: string
+  type: string
+  port: number
+}

@@ -18,19 +18,7 @@ import { values } from 'lodash'
 import { createServer, Server, Socket } from 'net'
 import split from 'split'
 const debug = Debug('signalk-server:interfaces:tcpstream')
-import { SignalKServer } from '../types'
-
-class Interface {
-  start?: () => void
-  stop?: () => void
-  mdns?: MdnsAdvertisement
-}
-
-interface MdnsAdvertisement {
-  name: string
-  type: string
-  port: number
-}
+import { Interface, SignalKServer } from '../types'
 
 interface SocketWithId extends Socket {
   id?: number
