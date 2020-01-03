@@ -536,11 +536,8 @@ function wrapWithverifyWS(securityStrategy, spark, theFunction) {
 
 function sendHello(app, helloProps, spark) {
   spark.write({
-    ...helloProps,
-    name: app.config.name,
-    version: app.config.version,
-    self: `vessels.${app.selfId}`,
-    roles: ['master', 'main']
+    ...app.getHello(),
+    ...helloProps
   })
 }
 
@@ -571,7 +568,7 @@ function handlePlaybackConnection(app, spark, onChange) {
 }
 
 function handleRealtimeConnection(app, spark, onChange) {
-  sendHello(app, { timestamp: new Date() }, spark)
+  sendHello(app, {}, spark)
 
   app.signalk.on('delta', onChange)
   spark.onDisconnects.push(() => {

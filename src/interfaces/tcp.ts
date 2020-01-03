@@ -18,6 +18,7 @@ import { values } from 'lodash'
 import { createServer, Server, Socket } from 'net'
 import split from 'split'
 const debug = Debug('signalk-server:interfaces:tcpstream')
+import { SignalKServer } from '../types'
 
 class Interface {
   start?: () => void
@@ -36,7 +37,7 @@ interface SocketWithId extends Socket {
   name?: string
 }
 
-module.exports = (app: any) => {
+module.exports = (app: SignalKServer) => {
   'use strict'
   const openSockets: { [socketId: number]: SocketWithId } = {}
   let idSequence = 0
@@ -74,7 +75,7 @@ module.exports = (app: any) => {
       socket.name = socket.remoteAddress + ':' + socket.remotePort
       debug('Connected:' + socket.id + ' ' + socket.name)
       openSockets[socket.id] = socket
-      socket.write(getHello() + '\r\n')
+      socket.write(JSON.stringify(app.getHello()) + '\r\n')
       socket.on('end', () => {
         // client disconnects
         debug('Ended:' + socket.id + ' ' + socket.name)
@@ -122,14 +123,6 @@ module.exports = (app: any) => {
     name: '_signalk-tcp',
     type: 'tcp',
     port
-  }
-
-  function getHello() {
-    return JSON.stringify({
-      self: app.selfId,
-      timestamp: new Date().toISOString(),
-      version: app.version
-    })
   }
 
   return api
