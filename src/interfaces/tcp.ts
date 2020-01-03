@@ -13,59 +13,77 @@
  * limitations under the License.
  */
 
-const _ = require('lodash')
-const split = require('split')
-const debug = require('debug')('signalk-server:interfaces:tcpstream')
+import Debug from 'debug'
+import { values } from 'lodash'
+import { createServer, Server, Socket } from 'net'
+import split from 'split'
+const debug = Debug('signalk-server:interfaces:tcpstream')
 
-module.exports = function(app) {
+class Interface {
+  start?: () => void
+  stop?: () => void
+  mdns?: MdnsAdvertisement
+}
+
+interface MdnsAdvertisement {
+  name: string
+  type: string
+  port: number
+}
+
+interface SocketWithId extends Socket {
+  id?: number
+  name?: string
+}
+
+module.exports = (app: any) => {
   'use strict'
-  const net = require('net')
-  const openSockets = {}
+  const openSockets: { [socketId: number]: SocketWithId } = {}
   let idSequence = 0
-  let server = null
-  const port = process.env.TCPSTREAMPORT || 8375
-  const api = {}
+  let server: Server | null
+  const port = Number(process.env.TCPSTREAMPORT) || 8375
+  const api = new Interface()
 
-  api.start = function() {
+  api.start = () => {
     debug('Starting tcp interface')
 
-    server = net.createServer(function(socket) {
+    server = createServer((socket: SocketWithId) => {
       socket.id = idSequence++
-      socket.on('error', function(err) {
+      socket.on('error', err => {
         debug('Error:' + err + ' ' + socket.id + ' ' + socket.name)
-        delete openSockets[socket.id]
+        delete openSockets[socket.id || 0]
       })
-      socket.on('close', function(hadError) {
+      socket.on('close', hadError => {
         debug('Close:' + hadError + ' ' + socket.id + ' ' + socket.name)
-        delete openSockets[socket.id]
+        delete openSockets[socket.id || 0]
       })
       socket
         .pipe(
-          split(s => {
+          split((s: string) => {
             if (s.length > 0) {
               return JSON.parse(s)
             }
           })
         )
-        .on('data', function(msg) {
+        .on('data', msg => {
           app.handleMessage('tcp', msg)
         })
-        .on('error', function(err) {
+        .on('error', err => {
           console.error(err)
         })
       socket.name = socket.remoteAddress + ':' + socket.remotePort
       debug('Connected:' + socket.id + ' ' + socket.name)
       openSockets[socket.id] = socket
       socket.write(getHello() + '\r\n')
-      socket.on('end', function() {
+      socket.on('end', () => {
         // client disconnects
         debug('Ended:' + socket.id + ' ' + socket.name)
-        delete openSockets[socket.id]
+        delete openSockets[socket.id || 0]
       })
     })
-    app.signalk.on('delta', function(data) {
+    app.signalk.on('delta', (data: any) => {
       const jsonData = JSON.stringify(data)
-      _.values(openSockets).forEach(function(socket) {
+      values(openSockets).forEach(socket => {
         try {
           socket.write(jsonData + '\r\n')
         } catch (e) {
@@ -89,11 +107,11 @@ module.exports = function(app) {
     }
     debug('Tcp delta server listening on ' + port)
     return {
-      port: port
+      port
     }
   }
 
-  api.stop = function() {
+  api.stop = () => {
     if (server) {
       server.close()
       server = null
@@ -103,7 +121,7 @@ module.exports = function(app) {
   api.mdns = {
     name: '_signalk-tcp',
     type: 'tcp',
-    port: port
+    port
   }
 
   function getHello() {
