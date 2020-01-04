@@ -26,7 +26,7 @@ const Primus = require('primus')
 
 const supportedQuerySubscribeValues = ['self', 'all']
 
-module.exports = function(app) {
+module.exports = function (app) {
   'use strict'
 
   const api = {}
@@ -39,7 +39,7 @@ module.exports = function(app) {
     port: ports.getExternalPort(app)
   }
 
-  api.numClients = function() {
+  api.numClients = function () {
     let count = 0
     primuses.forEach(primus =>
       primus.forEach((spark, id, connections) => {
@@ -49,12 +49,12 @@ module.exports = function(app) {
     return count
   }
 
-  api.canHandlePut = function(path, source) {
+  api.canHandlePut = function (path, source) {
     const sources = pathSources[path]
     return sources && (!source || sources[source])
   }
 
-  api.handlePut = function(requestId, context, path, source, value) {
+  api.handlePut = function (requestId, context, path, source, value) {
     return new Promise((resolve, reject) => {
       const sources = pathSources[path]
       if (sources) {
@@ -116,7 +116,7 @@ module.exports = function(app) {
     })
   }
 
-  api.start = function() {
+  api.start = function () {
     debug('Starting Primus/WS interface')
 
     let baseOptions = {
@@ -157,10 +157,10 @@ module.exports = function(app) {
         )
       }
 
-      primus.on('connection', function(spark) {
+      primus.on('connection', function (spark) {
         debug(
           `${spark.id} connected ${JSON.stringify(spark.query)} ${
-            primusOptions.isPlayback
+          primusOptions.isPlayback
           }`
         )
 
@@ -183,7 +183,7 @@ module.exports = function(app) {
             spark.end('Playback does not support ws upstream messages')
           })
         } else {
-          spark.on('data', function(msg) {
+          spark.on('data', function (msg) {
             debug('<' + JSON.stringify(msg))
 
             try {
@@ -206,7 +206,7 @@ module.exports = function(app) {
               }
 
               if (msg.unsubscribe) {
-                processUnsubscribe(app, unsubscribes, msg, onChange)
+                processUnsubscribe(app, unsubscribes, msg, onChange, spark)
               }
 
               if (msg.accessRequest) {
@@ -226,7 +226,7 @@ module.exports = function(app) {
           })
         }
 
-        spark.on('end', function() {
+        spark.on('end', function () {
           unsubscribes.forEach(unsubscribe => unsubscribe())
 
           _.keys(pathSources).forEach(path => {
@@ -241,7 +241,7 @@ module.exports = function(app) {
 
         if (isSelfSubscription(spark.query)) {
           const realOnChange = onChange
-          onChange = function(msg) {
+          onChange = function (msg) {
             if (!msg.context || msg.context === app.selfContext) {
               realOnChange(msg)
             }
@@ -269,7 +269,7 @@ module.exports = function(app) {
         }
       })
 
-      primus.on('disconnection', function(spark) {
+      primus.on('disconnection', function (spark) {
         spark.onDisconnects.forEach(f => f())
         debug(spark.id + ' disconnected')
       })
@@ -278,7 +278,7 @@ module.exports = function(app) {
     })
   }
 
-  api.stop = function() {
+  api.stop = function () {
     debug('Destroying primuses...')
     primuses.forEach(primus =>
       primus.destroy({
@@ -324,7 +324,7 @@ module.exports = function(app) {
         app,
         msg,
         spark.request.headers['x-forwarded-for'] ||
-          spark.request.connection.remoteAddress,
+        spark.request.connection.remoteAddress,
         res => {
           if (res.state === 'COMPLETED') {
             spark.skPendingAccessRequest = false
@@ -389,7 +389,7 @@ module.exports = function(app) {
 }
 
 function normalizeDelta(delta) {
-  return flatMap(delta.updates, normalizeUpdate).map(function(update) {
+  return flatMap(delta.updates, normalizeUpdate).map(function (update) {
     return {
       context: delta.context,
       updates: [update]
@@ -398,7 +398,7 @@ function normalizeDelta(delta) {
 }
 
 function normalizeUpdate(update) {
-  return update.values.map(function(value) {
+  return update.values.map(function (value) {
     return {
       source: update.source,
       values: [value]
@@ -407,7 +407,7 @@ function normalizeUpdate(update) {
 }
 
 function createPrimusAuthorize(authorizeWS) {
-  return function(req, authorized) {
+  return function (req, authorized) {
     try {
       // can't do primus.use for cookies because it will come after authorized
       if (req.headers.cookie) {
@@ -499,15 +499,14 @@ function processSubscribe(app, unsubscribes, spark, assertBufferSize, msg) {
   )
 }
 
-function processUnsubscribe(app, unsubscribes, msg, onChange) {
-  if (
-    msg.unsubscribe &&
-    msg.context === '*' &&
-    msg.unsubscribe[0].path === '*'
-  ) {
-    debug('Unsubscribe all')
-    unsubscribes.forEach(unsubscribe => unsubscribe())
+function processUnsubscribe(app, unsubscribes, msg, onChange, spark) {
+  try {
+    app.subscriptionmanager.unsubscribe(msg, unsubscribes)
     app.signalk.removeListener('delta', onChange)
+  } catch (e) {
+    console.log(e.message)
+    spark.write(e.message)
+    spark.end()
   }
 }
 

@@ -18,7 +18,7 @@ import { values } from 'lodash'
 import { createServer, Server, Socket } from 'net'
 import split from 'split'
 const debug = Debug('signalk-server:interfaces:tcpstream')
-import { Interface, SignalKServer } from '../types'
+import { Interface, SignalKServer, Unsubscribes } from '../types'
 
 interface SocketWithId extends Socket {
   id?: number
@@ -37,43 +37,39 @@ module.exports = (app: SignalKServer) => {
 
     server = createServer((socket: SocketWithId) => {
       socket.id = idSequence++
+      socket.name = socket.remoteAddress + ':' + socket.remotePort
+      debug('Connected:' + socket.id + ' ' + socket.name)
+
       socket.on('error', err => {
         debug('Error:' + err + ' ' + socket.id + ' ' + socket.name)
       })
       socket.on('close', hadError => {
         debug('Close:' + hadError + ' ' + socket.id + ' ' + socket.name)
       })
+
+      const unsubscibes: Unsubscribes = []
       socket
         .pipe(
           split((s: string) => {
             if (s.length > 0) {
-              return JSON.parse(s)
+              try {
+                return JSON.parse(s)
+              } catch (e) {
+                console.log(e.message)
+              }
             }
           })
         )
-        .on('data', msg => {
-          app.handleMessage('tcp', msg)
-        })
+        .on('data', socketMessageHandler(app, socket, unsubscibes))
         .on('error', err => {
           console.error(err)
         })
-      socket.name = socket.remoteAddress + ':' + socket.remotePort
-      debug('Connected:' + socket.id + ' ' + socket.name)
-      socket.write(JSON.stringify(app.getHello()) + '\r\n')
-      const deltaListener = (data: any) => {
-        const jsonData = JSON.stringify(data)
-        try {
-          socket.write(jsonData + '\r\n')
-        } catch (e) {
-          console.error(e + ' ' + socket)
-        }
-      }
-      app.signalk.on('delta', deltaListener)
       socket.on('end', () => {
-        app.signalk.removeListener('delta', deltaListener)
-        // client disconnects
+        unsubscibes.forEach(f => f())
         debug('Ended:' + socket.id + ' ' + socket.name)
       })
+
+      socket.write(JSON.stringify(app.getHello()) + '\r\n')
     })
 
     server.on('listening', () =>
@@ -89,7 +85,7 @@ module.exports = (app: SignalKServer) => {
     } else {
       server.listen(port)
     }
-    debug('Tcp delta server listening on ' + port)
+
     return {
       port
     }
@@ -109,4 +105,37 @@ module.exports = (app: SignalKServer) => {
   }
 
   return api
+}
+
+function socketMessageHandler(
+  app: SignalKServer,
+  socket: SocketWithId,
+  unsubscribes: Unsubscribes
+) {
+  return (msg: any) => {
+    if (msg.update) {
+      app.handleMessage('tcp', msg)
+    } else if (msg.subscribe) {
+      debug.enabled && debug(`subscribe:${JSON.stringify(msg)}`)
+      app.subscriptionmanager.subscribe(
+        msg,
+        unsubscribes,
+        (err: any) => {
+          console.error(`Subscribe  failed:${err}`)
+        },
+        (aMsg: any) => socket.write(`${JSON.stringify(aMsg)}\r\n`)
+      )
+    } else if (msg.unsubscribe) {
+      debug.enabled && debug(`unsubscribe:${JSON.stringify(msg)}`)
+      try {
+        app.subscriptionmanager.unsubscribe(msg, unsubscribes)
+      } catch (e) {
+        console.error(e.message)
+        socket.write(JSON.stringify(e.message))
+        socket.end(() => {
+          console.error(`Closed ${socket.name}`)
+        })
+      }
+    }
+  }
 }

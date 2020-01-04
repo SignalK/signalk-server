@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events'
+import SubscriptionManager from './subscriptionmanager'
 
 export interface HelloMessage {
   name: string
@@ -12,6 +13,7 @@ export interface SignalKServer {
   handleMessage: (providerId: string, message: any) => void
   getHello: () => HelloMessage
   signalk: EventEmitter
+  subscriptionmanager: SubscriptionManager
 }
 
 export class Interface {
@@ -25,3 +27,7 @@ export interface MdnsAdvertisement {
   type: string
   port: number
 }
+
+//move to subscriptionmanage.ts when all SubscriptionManager use is in ts
+export interface Unsubscribes extends Array<() => void> {}
+

@@ -20,14 +20,13 @@ import { isPointWithinRadius } from 'geolib'
 import _, { forOwn, get, isString } from 'lodash'
 const debug = Debug('signalk-server:subscriptionmanager')
 import { toDelta } from './streambundle'
+import { Unsubscribes } from './types'
 
 interface BusesMap {
   [key: string]: any
 }
 
 type ContextMatcher = (context: string) => boolean
-
-interface Unsubscribes extends Array<() => void> {}
 
 class SubscriptionManager {
   streambundle: any
@@ -43,7 +42,7 @@ class SubscriptionManager {
     command: any,
     unsubscribes: Unsubscribes,
     errorCallback: (err: any) => void,
-    callback: () => void,
+    callback: (msg: any) => void,
     user?: string
   ) => {
     const contextFilter = contextMatcher(
@@ -80,6 +79,27 @@ class SubscriptionManager {
             user
           )
         })
+      )
+    }
+  }
+
+  unsubscribe(msg: any, unsubscribes: Unsubscribes) {
+    if (
+      msg.unsubscribe &&
+      msg.context === '*' &&
+      msg.unsubscribe &&
+      msg.unsubscribe.length === 1 &&
+      msg.unsubscribe[0].path === '*'
+    ) {
+      debug('Unsubscribe all')
+      unsubscribes.forEach(unsubscribe => unsubscribe())
+      // clear unsubscribes
+      unsubscribes.length = 0
+    } else {
+      throw new Error(
+        `Only '{"context":"*","unsubscribe":[{"path":"*"}]}' supported, received ${JSON.stringify(
+          msg
+        )}`
       )
     }
   }
@@ -241,4 +261,4 @@ function checkPosition(app: any, context: any, normalizedDeltaData: any) {
   return false
 }
 
-module.exports = SubscriptionManager
+export = SubscriptionManager
