@@ -9,11 +9,17 @@ export interface HelloMessage {
   timestamp: Date
 }
 
+export interface SecurityStrategy {
+  isDummy: () => boolean
+  allowReadOnly: () => boolean
+}
+
 export interface SignalKServer {
   handleMessage: (providerId: string, message: any) => void
   getHello: () => HelloMessage
   signalk: EventEmitter
   subscriptionmanager: SubscriptionManager
+  securityStrategy: SecurityStrategy
 }
 
 export class Interface {
@@ -28,6 +34,5 @@ export interface MdnsAdvertisement {
   port: number
 }
 
-//move to subscriptionmanage.ts when all SubscriptionManager use is in ts
+// move to subscriptionmanage.ts when all SubscriptionManager use is in ts
 export interface Unsubscribes extends Array<() => void> {}
-

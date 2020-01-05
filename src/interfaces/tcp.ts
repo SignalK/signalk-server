@@ -33,6 +33,10 @@ module.exports = (app: SignalKServer) => {
   const api = new Interface()
 
   api.start = () => {
+    if (!app.securityStrategy.allowReadOnly()) {
+      debug('Not starting tcp interface because readOnly is false')
+      return
+    }
     debug('Starting tcp interface')
 
     server = createServer((socket: SocketWithId) => {
@@ -112,9 +116,17 @@ function socketMessageHandler(
   socket: SocketWithId,
   unsubscribes: Unsubscribes
 ) {
+  let lastUpdateErrorLogged = 0
   return (msg: any) => {
-    if (msg.update) {
-      app.handleMessage('tcp', msg)
+    if (msg.updates) {
+      if (app.securityStrategy.isDummy()) {
+        app.handleMessage('tcp', msg)
+      } else {
+        if (Date.now() - lastUpdateErrorLogged > 60 * 1000) {
+          console.error(`Security is enabled, deltas over tcp ignored`)
+          lastUpdateErrorLogged = Date.now()
+        }
+      }
     } else if (msg.subscribe) {
       debug.enabled && debug(`subscribe:${JSON.stringify(msg)}`)
       app.subscriptionmanager.subscribe(

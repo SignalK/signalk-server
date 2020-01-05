@@ -5,7 +5,6 @@
     "type": "Arcona 34",
     "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d"
   },
-
   "pipedProviders": [
     {
       "id": "n2kFromFile",
@@ -13,7 +12,8 @@
         {
           "type": "providers/filestream",
           "options": {
-            "filename": "samples/aava-n2k.data"
+            "filename": "samples/aava-n2k.data",
+            "providerId": "n2kFromFile"
           },
           "optionMappings": [
             {
@@ -36,5 +36,9 @@
         }
       ]
     }
-  ]
+  ],
+  "interfaces": {},
+  "security": {
+    "strategy": "./tokensecurity"
+  }
 }
