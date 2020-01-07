@@ -556,7 +556,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   }
 
   function listSafeSerialPortsDevSerialById() {
-    return readdir('/tmp/serial/by-id')
+    return readdir('/dev/serial/by-id')
       .catch(err => [])
       .then(filenames =>
         filenames.map(filename => `/dev/serial/by-id/${filename}`)
