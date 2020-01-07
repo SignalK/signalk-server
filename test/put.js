@@ -134,7 +134,7 @@ describe('Put Requests', () => {
 
   it('WS put to unhandled path fails', async function () {
     const ws = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none`
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
     )
     let msg = await ws.nextMsg()
 
@@ -158,7 +158,7 @@ describe('Put Requests', () => {
 
   it('WS successfull put', async function () {
     const ws = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none`
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
     )
     let msg = await ws.nextMsg()
 
@@ -178,8 +178,6 @@ describe('Put Requests', () => {
     response.state.should.equal('PENDING')
     response.should.have.property('href')
 
-    msg = await ws.nextMsg() // skip the update
-
     msg = await ws.nextMsg()
     msg.should.not.equal('timeout')
     response = JSON.parse(msg)
@@ -191,7 +189,7 @@ describe('Put Requests', () => {
 
   it('WS failing put', async function () {
     const ws = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none`
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
     )
     let msg = await ws.nextMsg()
 
