@@ -206,7 +206,7 @@ module.exports = function(app) {
               }
 
               if (msg.unsubscribe) {
-                processUnsubscribe(app, unsubscribes, msg, onChange)
+                processUnsubscribe(app, unsubscribes, msg, onChange, spark)
               }
 
               if (msg.accessRequest) {
@@ -499,15 +499,14 @@ function processSubscribe(app, unsubscribes, spark, assertBufferSize, msg) {
   )
 }
 
-function processUnsubscribe(app, unsubscribes, msg, onChange) {
-  if (
-    msg.unsubscribe &&
-    msg.context === '*' &&
-    msg.unsubscribe[0].path === '*'
-  ) {
-    debug('Unsubscribe all')
-    unsubscribes.forEach(unsubscribe => unsubscribe())
+function processUnsubscribe(app, unsubscribes, msg, onChange, spark) {
+  try {
+    app.subscriptionmanager.unsubscribe(msg, unsubscribes)
     app.signalk.removeListener('delta', onChange)
+  } catch (e) {
+    console.log(e.message)
+    spark.write(e.message)
+    spark.end()
   }
 }
 
@@ -536,11 +535,8 @@ function wrapWithverifyWS(securityStrategy, spark, theFunction) {
 
 function sendHello(app, helloProps, spark) {
   spark.write({
-    ...helloProps,
-    name: app.config.name,
-    version: app.config.version,
-    self: `vessels.${app.selfId}`,
-    roles: ['master', 'main']
+    ...app.getHello(),
+    ...helloProps
   })
 }
 
@@ -571,7 +567,7 @@ function handlePlaybackConnection(app, spark, onChange) {
 }
 
 function handleRealtimeConnection(app, spark, onChange) {
-  sendHello(app, { timestamp: new Date() }, spark)
+  sendHello(app, {}, spark)
 
   app.signalk.on('delta', onChange)
   spark.onDisconnects.push(() => {

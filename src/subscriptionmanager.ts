@@ -14,73 +14,106 @@
  * limitations under the License.
  */
 
-const _ = require('lodash')
-const Bacon = require('baconjs')
-const geolib = require('geolib')
-const debug = require('debug')('signalk-server:subscriptionmanager')
-const { toDelta } = require('./streambundle')
+import Bacon from 'baconjs'
+import Debug from 'debug'
+import { isPointWithinRadius } from 'geolib'
+import _, { forOwn, get, isString } from 'lodash'
+const debug = Debug('signalk-server:subscriptionmanager')
+import { toDelta } from './streambundle'
+import { Unsubscribes } from './types'
 
-function SubscriptionManager(app) {
-  this.streambundle = app.streambundle
-  this.selfContext = app.selfContext
-  this.app = app
+interface BusesMap {
+  [key: string]: any
 }
 
-SubscriptionManager.prototype.subscribe = function(
-  command,
-  unsubscribes,
-  errorCallback,
-  callback,
-  user
-) {
-  const contextFilter = contextMatcher(
-    this.selfContext,
-    this.app,
-    command,
-    errorCallback,
-    user
-  )
-  if (Array.isArray(command.subscribe)) {
-    handleSubscribeRows(
+type ContextMatcher = (context: string) => boolean
+
+class SubscriptionManager {
+  streambundle: any
+  selfContext: string
+  app: any
+  constructor(app: any) {
+    this.streambundle = app.streambundle
+    this.selfContext = app.selfContext
+    this.app = app
+  }
+
+  subscribe = (
+    command: any,
+    unsubscribes: Unsubscribes,
+    errorCallback: (err: any) => void,
+    callback: (msg: any) => void,
+    user?: string
+  ) => {
+    const contextFilter = contextMatcher(
+      this.selfContext,
       this.app,
-      command.subscribe,
-      unsubscribes,
-      this.streambundle.buses,
-      contextFilter,
-      callback,
-      errorCallback,
-      user
+      command,
+      errorCallback
     )
-    // listen to new keys and then use the same logic to check if we
-    // want to subscribe, passing in a map with just that single bus
-    unsubscribes.push(
-      this.streambundle.keys.onValue(key => {
-        const buses = {}
-        buses[key] = this.streambundle.getBus(key)
-        handleSubscribeRows(
-          this.app,
-          command.subscribe,
-          unsubscribes,
-          buses,
-          contextFilter,
-          callback,
-          errorCallback,
-          user
-        )
-      })
-    )
+    if (Array.isArray(command.subscribe)) {
+      handleSubscribeRows(
+        this.app,
+        command.subscribe,
+        unsubscribes,
+        this.streambundle.buses,
+        contextFilter,
+        callback,
+        errorCallback,
+        user
+      )
+      // listen to new keys and then use the same logic to check if we
+      // want to subscribe, passing in a map with just that single bus
+      unsubscribes.push(
+        this.streambundle.keys.onValue((key: string) => {
+          const buses: BusesMap = {}
+          buses[key] = this.streambundle.getBus(key)
+          handleSubscribeRows(
+            this.app,
+            command.subscribe,
+            unsubscribes,
+            buses,
+            contextFilter,
+            callback,
+            errorCallback,
+            user
+          )
+        })
+      )
+    }
+  }
+
+  unsubscribe(msg: any, unsubscribes: Unsubscribes) {
+    if (
+      msg.unsubscribe &&
+      msg.context === '*' &&
+      msg.unsubscribe &&
+      msg.unsubscribe.length === 1 &&
+      msg.unsubscribe[0].path === '*'
+    ) {
+      debug('Unsubscribe all')
+      unsubscribes.forEach(unsubscribe => unsubscribe())
+      // clear unsubscribes
+      unsubscribes.length = 0
+    } else {
+      throw new Error(
+        `Only '{"context":"*","unsubscribe":[{"path":"*"}]}' supported, received ${JSON.stringify(
+          msg
+        )}`
+      )
+    }
   }
 }
 
 function handleSubscribeRows(
-  app,
-  rows,
-  unsubscribes,
-  buses,
-  filter,
-  callback,
-  errorCallback,
-  user
+  app: any,
+  rows: any[],
+  unsubscribes: Unsubscribes,
+  buses: BusesMap,
+  filter: ContextMatcher,
+  callback: any,
+  errorCallback: any,
+  user?: string
 ) {
   rows.reduce((acc, subscribeRow) => {
     if (subscribeRow.path) {
@@ -100,18 +133,18 @@ function handleSubscribeRows(
 }
 
 function handleSubscribeRow(
-  app,
-  subscribeRow,
-  unsubscribes,
-  buses,
-  filter,
-  callback,
-  errorCallback,
-  user
+  app: any,
+  subscribeRow: any,
+  unsubscribes: Unsubscribes,
+  buses: BusesMap,
+  filter: ContextMatcher,
+  callback: any,
+  errorCallback: any,
+  user?: string
 ) {
   const matcher = pathMatcher(subscribeRow.path)
   // iterate over all the buses, checking if we want to subscribe to its values
-  _.forOwn(buses, (bus, key) => {
+  forOwn(buses, (bus, key) => {
     if (matcher(key)) {
       debug('Subscribing to key ' + key)
       let filteredBus = bus.filter(filter)
@@ -135,7 +168,7 @@ function handleSubscribeRow(
           const interval = subscribeRow.period || 1000
           filteredBus = filteredBus
             .bufferWithTime(interval)
-            .flatMapLatest(bufferedValues => {
+            .flatMapLatest((bufferedValues: any) => {
               const uniqueValues = _(bufferedValues)
                 .reverse()
                 .uniqBy(
@@ -168,30 +201,35 @@ function handleSubscribeRow(
   })
 }
 
-function pathMatcher(path) {
+function pathMatcher(path: string) {
   const pattern = path.replace('.', '\\.').replace('*', '.*')
   const matcher = new RegExp('^' + pattern + '$')
-  return aPath => matcher.test(aPath)
+  return (aPath: string) => matcher.test(aPath)
 }
 
-function contextMatcher(selfContext, app, subscribeCommand, errorCallback) {
+function contextMatcher(
+  selfContext: string,
+  app: any,
+  subscribeCommand: any,
+  errorCallback: any
+): ContextMatcher {
   debug('subscribeCommand:' + JSON.stringify(subscribeCommand))
   if (subscribeCommand.context) {
-    if (_.isString(subscribeCommand.context)) {
+    if (isString(subscribeCommand.context)) {
       const pattern = subscribeCommand.context
         .replace('.', '\\.')
         .replace('*', '.*')
       const matcher = new RegExp('^' + pattern + '$')
-      return normalizedDeltaData =>
+      return (normalizedDeltaData: any) =>
         matcher.test(normalizedDeltaData.context) ||
         ((subscribeCommand.context === 'vessels.self' ||
           subscribeCommand.context === 'self') &&
           normalizedDeltaData.context === selfContext)
-    } else if (_.get(subscribeCommand.context, 'radius')) {
+    } else if (get(subscribeCommand.context, 'radius')) {
       if (
-        !_.get(subscribeCommand.context, 'radius') ||
-        !_.get(subscribeCommand.context, 'position.latitude') ||
-        !_.get(subscribeCommand.context, 'position.longitude')
+        !get(subscribeCommand.context, 'radius') ||
+        !get(subscribeCommand.context, 'position.latitude') ||
+        !get(subscribeCommand.context, 'position.longitude')
       ) {
         errorCallback(
           'Please specify a radius and position for relativePosition'
@@ -206,25 +244,21 @@ function contextMatcher(selfContext, app, subscribeCommand, errorCallback) {
   return x => true
 }
 
-function checkPosition(app, context, normalizedDeltaData) {
-  const vessel = _.get(app.signalk.root, normalizedDeltaData.context)
-  const position = _.get(vessel, 'navigation.position')
+function checkPosition(app: any, context: any, normalizedDeltaData: any) {
+  const vessel = get(app.signalk.root, normalizedDeltaData.context)
+  const position = get(vessel, 'navigation.position')
 
-  const subsPosition = _.get(context, 'position')
+  const subsPosition = get(context, 'position')
   if (
     position &&
     subsPosition &&
     subsPosition.latitude &&
     subsPosition.longitude
   ) {
-    return geolib.isPointWithinRadius(
-      position.value,
-      subsPosition,
-      context.radius
-    )
+    return isPointWithinRadius(position.value, subsPosition, context.radius)
   }
 
   return false
 }
 
-module.exports = SubscriptionManager
+export = SubscriptionManager

@@ -190,6 +190,14 @@ function Server(opts) {
   app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
   app.subscriptionmanager = new SubscriptionManager(app)
   app.deltaCache = new DeltaCache(app, app.streambundle)
+
+  app.getHello = () => ({
+    name: app.config.name,
+    version: app.config.version,
+    self: `vessels.${app.selfId}`,
+    roles: ['master', 'main'],
+    timestamp: new Date()
+  })
 }
 
 module.exports = Server

@@ -96,9 +96,10 @@ function findModulesInDir(dir: string, keyword: string): ModuleData[] {
 function getModulePaths(app: App) {
   // appPath is the app working directory.
   const { appPath, configPath } = app.config
-  return (appPath === configPath ? [appPath] : [configPath, appPath]).map(
-    pathOption => path.join(pathOption, 'node_modules/')
-  )
+  return (appPath === configPath
+    ? [appPath]
+    : [configPath, appPath]
+  ).map(pathOption => path.join(pathOption, 'node_modules/'))
 }
 
 const getModuleSortName = (x: ModuleData) =>

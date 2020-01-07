@@ -126,6 +126,7 @@
     "@types/lodash": "^4.14.139",
     "@types/node-fetch": "^2.5.3",
     "@types/semver": "^6.2.0",
+    "@types/split": "^1.0.0",
     "chai": "^4.0.0",
     "chai-things": "^0.2.0",
     "freeport-promise": "^1.0.0",
