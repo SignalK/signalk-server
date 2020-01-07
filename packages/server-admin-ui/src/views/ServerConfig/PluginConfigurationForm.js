@@ -1,6 +1,5 @@
 import React, { Suspense } from 'react'
 const Form = React.lazy(() => import('react-jsonschema-form-bs4'))
-const Foobar = React.lazy(() => import('./Foo'))
 
 
 export default ({plugin, onSubmit}) => {
@@ -50,7 +49,6 @@ export default ({plugin, onSubmit}) => {
         onSubmit(submitData.formData)
       }}
     />
-    <Foobar/>
     </Suspense>
   )
 }
