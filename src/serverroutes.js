@@ -15,7 +15,7 @@
 */
 
 const fs = require('fs')
-const { readdir } = require('fs').promises
+const readdir = require('util').promisify(fs.readdir)
 const page = require('./page')
 const debug = require('debug')('signalk-server:serverroutes')
 const path = require('path')
@@ -556,7 +556,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   }
 
   function listSafeSerialPortsDevSerialById() {
-    return readdir('/dev/serial/by-id')
+    return readdir('/tmp/serial/by-id')
       .catch(err => [])
       .then(filenames =>
         filenames.map(filename => `/dev/serial/by-id/${filename}`)
