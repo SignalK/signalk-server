@@ -58,8 +58,6 @@ module.exports = function(app) {
           const metaPath = path.slice(0, path.length - 1).join('.')
           let meta = getMetadata(metaPath)
 
-          console.log(JSON.stringify(meta))
-
           if (path[1] === app.selfId) {
             const defaultsPath = 'vessels.self.' + path.slice(2).join('.')
             let fromDefaults = _.get(app.deltaCache.defaults, defaultsPath)
