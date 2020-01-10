@@ -53,21 +53,10 @@ module.exports = function(app) {
           path.length > 4 &&
           path[path.length - 1] === 'meta'
         ) {
-          const metaPath = path.slice(0, path.length - 1).join('.')
-          let meta = getMetadata(metaPath)
-
-          const defaultsPath = path.join('.')
-          let fromDefaults = _.get(app.deltaCache.defaults, defaultsPath)
-          if (fromDefaults) {
-            if (meta) {
-              meta = JSON.parse(JSON.stringify(meta))
-              _.merge(meta, fromDefaults)
-            } else {
-              meta = fromDefaults
-            }
-          }
-          if (meta) {
-            res.json(meta)
+          let meta = getMetadata(path.slice(0, path.length - 1).join('.'))
+          let fromDefaults = _.get(app.deltaCache.defaults, path.join('.'))
+          if (meta || fromDefaults) {
+            res.json({...meta, ...fromDefaults})
             return
           }
         }
@@ -76,8 +65,7 @@ module.exports = function(app) {
           path[path.length - 1] === 'units' &&
           path[path.length - 2] === 'meta'
         ) {
-          const defaultsPath = path.join('.')
-          let units = _.get(app.deltaCache.defaults, defaultsPath)
+          let units = _.get(app.deltaCache.defaults, path.join('.'))
           if (!units) {
             units = getUnits(path.slice(0, path.length - 2).join('.'))
           }
