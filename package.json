@@ -66,8 +66,10 @@
     "node": "10"
   },
   "dependencies": {
+    "@serialport/bindings": "^8.0.6",
     "@signalk/server-admin-ui": "~1.15.0",
     "@signalk/signalk-schema": "1.3.1",
+    "@signalk/streams": "^1.4.0",
     "@types/debug": "^4.1.5",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
@@ -119,7 +121,6 @@
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
     "@signalk/simplegauges": "^1.0.1",
-    "@signalk/streams": "~1.4.0",
     "@signalk/zones": "^1.0.0"
   },
   "devDependencies": {
