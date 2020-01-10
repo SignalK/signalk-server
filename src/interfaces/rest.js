@@ -42,37 +42,32 @@ module.exports = function(app) {
           return res.json(`vessels.${app.selfId}`)
         }
 
-        path =
-          path.length > 0
-            ? path
-                .replace(/\/$/, '')
-                .replace(/self/, app.selfId)
-                .split('/')
-            : []
+        path = path.length > 0 ? path.replace(/\/$/, '').split('/') : []
 
-        if (
-          path.length > 4 &&
-          path[path.length - 1] === 'meta' &&
-          path[0] === 'vessels'
-        ) {
-          const meta = getMetadata(path.slice(0, path.length - 1).join('.'))
-          if (meta) {
-            res.json(meta)
+        if (path.length > 4 && path[path.length - 1] === 'meta') {
+          let meta = getMetadata(path.slice(0, path.length - 1).join('.'))
+          let fromDefaults = _.get(app.deltaCache.defaults, path.join('.'))
+          if (meta || fromDefaults) {
+            res.json({ ...meta, ...fromDefaults })
             return
           }
         }
         if (
           path.length > 5 &&
           path[path.length - 1] === 'units' &&
-          path[path.length - 2] === 'meta' &&
-          path[0] === 'vessels'
+          path[path.length - 2] === 'meta'
         ) {
-          const units = getUnits(path.slice(0, path.length - 2).join('.'))
+          let units = _.get(app.deltaCache.defaults, path.join('.'))
+          if (!units) {
+            units = getUnits(path.slice(0, path.length - 2).join('.'))
+          }
           if (units) {
             res.json(units)
             return
           }
         }
+
+        path = path.map(p => (p === 'self' ? app.selfId : p))
 
         function sendResult(last, aPath) {
           if (last) {
