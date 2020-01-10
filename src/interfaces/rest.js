@@ -46,28 +46,24 @@ module.exports = function(app) {
           path.length > 0
             ? path
                 .replace(/\/$/, '')
-                .replace(/self/, app.selfId)
                 .split('/')
             : []
 
         if (
           path.length > 4 &&
-          path[path.length - 1] === 'meta' &&
-          path[0] === 'vessels'
+          path[path.length - 1] === 'meta'
         ) {
           const metaPath = path.slice(0, path.length - 1).join('.')
           let meta = getMetadata(metaPath)
 
-          if (path[1] === app.selfId) {
-            const defaultsPath = 'vessels.self.' + path.slice(2).join('.')
-            let fromDefaults = _.get(app.deltaCache.defaults, defaultsPath)
-            if (fromDefaults) {
-              if (meta) {
-                meta = JSON.parse(JSON.stringify(meta))
-                _.merge(meta, fromDefaults)
-              } else {
-                meta = fromDefaults
-              }
+          const defaultsPath = path.join('.')
+          let fromDefaults = _.get(app.deltaCache.defaults, defaultsPath)
+          if (fromDefaults) {
+            if (meta) {
+              meta = JSON.parse(JSON.stringify(meta))
+              _.merge(meta, fromDefaults)
+            } else {
+              meta = fromDefaults
             }
           }
           if (meta) {
@@ -78,10 +74,9 @@ module.exports = function(app) {
         if (
           path.length > 5 &&
           path[path.length - 1] === 'units' &&
-          path[path.length - 2] === 'meta' &&
-          path[0] === 'vessels'
+          path[path.length - 2] === 'meta'
         ) {
-          const defaultsPath = 'vessels.self.' + path.slice(2).join('.')
+          const defaultsPath = path.join('.')
           let units = _.get(app.deltaCache.defaults, defaultsPath)
           if (!units) {
             units = getUnits(path.slice(0, path.length - 2).join('.'))
@@ -92,6 +87,10 @@ module.exports = function(app) {
           }
         }
 
+        if ( path[0] === 'vessels' && path[1] === 'self' ) {
+          path[1] = app.selfId
+        }
+             
         function sendResult(last, aPath) {
           if (last) {
             // tslint:disable-next-line: forin
