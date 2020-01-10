@@ -42,21 +42,13 @@ module.exports = function(app) {
           return res.json(`vessels.${app.selfId}`)
         }
 
-        path =
-          path.length > 0
-            ? path
-                .replace(/\/$/, '')
-                .split('/')
-            : []
+        path = path.length > 0 ? path.replace(/\/$/, '').split('/') : []
 
-        if (
-          path.length > 4 &&
-          path[path.length - 1] === 'meta'
-        ) {
+        if (path.length > 4 && path[path.length - 1] === 'meta') {
           let meta = getMetadata(path.slice(0, path.length - 1).join('.'))
           let fromDefaults = _.get(app.deltaCache.defaults, path.join('.'))
           if (meta || fromDefaults) {
-            res.json({...meta, ...fromDefaults})
+            res.json({ ...meta, ...fromDefaults })
             return
           }
         }
@@ -75,10 +67,8 @@ module.exports = function(app) {
           }
         }
 
-        if ( path[0] === 'vessels' && path[1] === 'self' ) {
-          path[1] = app.selfId
-        }
-             
+        path = path.map(p => (p === 'self' ? app.selfId : p))
+
         function sendResult(last, aPath) {
           if (last) {
             // tslint:disable-next-line: forin
