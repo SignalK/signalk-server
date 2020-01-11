@@ -1,5 +1,5 @@
-import React, { Suspense } from 'react'
-const Form = React.lazy(() => import('react-jsonschema-form-bs4'))
+import React, { Component } from 'react'
+import Form from 'react-jsonschema-form-bs4'
 
 
 export default ({plugin, onSubmit}) => {
@@ -40,7 +40,6 @@ export default ({plugin, onSubmit}) => {
   }
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <Form
       schema={topSchema}
       uiSchema={uiSchema}
@@ -49,6 +48,5 @@ export default ({plugin, onSubmit}) => {
         onSubmit(submitData.formData)
       }}
     />
-    </Suspense>
   )
 }
