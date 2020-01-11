@@ -174,7 +174,7 @@ module.exports = function(app) {
     getModulesInfo(webapps, getWebApp, all)
 
     if ( process.env.DISABLED_PLUGIN_UPDATES ) {
-      let disabled = process.env.DISABLED_PLUGIN_UPDATES.split(' ')
+      let disabled = process.env.DISABLED_PLUGIN_UPDATES.split(',')
       all.updates = all.updates.filter(info => !disabled.includes(info.name))
     }
     
