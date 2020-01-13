@@ -617,7 +617,7 @@ function startServerEvents(app, spark) {
 
 function getAssertBufferSize(config) {
   const MAXSENDBUFFERSIZE =
-    process.env.MAXSENDBUFFERSIZE || config.maxSendBufferSize || 512 * 1024
+    process.env.MAXSENDBUFFERSIZE || config.maxSendBufferSize || 4 * 512 * 1024
   debug(`MAXSENDBUFFERSIZE:${MAXSENDBUFFERSIZE}`)
 
   if (MAXSENDBUFFERSIZE === 0) {

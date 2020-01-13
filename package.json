@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "1.18.0",
+  "version": "1.19.0-beta.2",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
@@ -10,7 +10,7 @@
     "lint": "tslint --config tslint.js --project tsconfig.json --fix",
     "prepublishOnly": "npm run lint && npm run build && npm run build-declaration",
     "create-release": "github-create-release --owner signalk --repository signalk-server-node --npm-base-url https://www.npmjs.com/package/signalk-server",
-    "release": "git tag -d v$npm_package_version ;git tag v$npm_package_version && git push --tags && git push && git tag -d latest && git push origin :refs/tags/latest && git tag latest && git push origin tag latest && npm run create-release",
+    "release": "git push --tags && git push && git tag -d latest && git push --delete origin latest && git tag latest && git push origin tag latest && npm run create-release",
     "start": "node bin/signalk-server",
     "test-only": "mocha --timeout 10000 --exit 'test/**/*.js' 'lib/**/*.test.js'",
     "test": "npm run build && npm run test-only && npm run lint",
@@ -67,7 +67,7 @@
   },
   "dependencies": {
     "@serialport/bindings": "^8.0.6",
-    "@signalk/server-admin-ui": "~1.15.0",
+    "@signalk/server-admin-ui": "1.15.1",
     "@signalk/signalk-schema": "1.3.1",
     "@signalk/streams": "~1.4.0",
     "@types/debug": "^4.1.5",
