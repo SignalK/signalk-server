@@ -10,7 +10,7 @@
     "lint": "tslint --config tslint.js --project tsconfig.json --fix",
     "prepublishOnly": "npm run lint && npm run build && npm run build-declaration",
     "create-release": "github-create-release --owner signalk --repository signalk-server-node --npm-base-url https://www.npmjs.com/package/signalk-server",
-    "release": "git push --tags && git push && git tag -d latest && git push origin :refs/tags/latest && git tag latest && git push origin tag latest && npm run create-release",
+    "release": "git push --tags && git push && git tag -d latest && git push --delete origin latest && git tag latest && git push origin tag latest && npm run create-release",
     "start": "node bin/signalk-server",
     "test-only": "mocha --timeout 10000 --exit 'test/**/*.js' 'lib/**/*.test.js'",
     "test": "npm run build && npm run test-only && npm run lint",
