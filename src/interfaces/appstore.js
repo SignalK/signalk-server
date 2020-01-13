@@ -211,9 +211,8 @@ module.exports = function(app) {
       } else if (installedModule) {
         if (compareVersions(version, installedModule.version) > 0) {
           addIfNotDuplicate(result.updates, pluginInfo)
-        } else {
-          addIfNotDuplicate(result.installed, pluginInfo)
-        }
+        } 
+        addIfNotDuplicate(result.installed, pluginInfo)
       } else {
         addIfNotDuplicate(result.available, pluginInfo)
       }
