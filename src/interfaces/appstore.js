@@ -172,6 +172,12 @@ module.exports = function(app) {
 
     getModulesInfo(plugins, getPlugin, all)
     getModulesInfo(webapps, getWebApp, all)
+
+    if ( process.env.PLUGINS_WITH_UPDATE_DISABLED ) {
+      let disabled = process.env.PLUGINS_WITH_UPDATE_DISABLED.split(',')
+      all.updates = all.updates.filter(info => !disabled.includes(info.name))
+    }
+    
     return all
   }
 
