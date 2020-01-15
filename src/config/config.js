@@ -221,7 +221,7 @@ function setFullDefaults(app) {
       debug(`No defaults found at ${defaultsPath.toString()}`)
     } else {
       invalidDefaultsFile = true
-      console.error('unable to parse defaults.json')
+      console.error(`unable to parse ${defaultsPath.toString()}`)
       console.error(e)
       process.exit(1)
     }
