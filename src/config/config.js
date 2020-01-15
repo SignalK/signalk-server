@@ -24,6 +24,7 @@ const uuidv4 = require('uuid/v4')
 const semver = require('semver')
 
 let disableWriteSettings = false
+let invalidDefaultsFile = false
 
 function load(app) {
   app.__argv = process.argv.slice(2)
@@ -219,7 +220,10 @@ function setFullDefaults(app) {
     if (e.code && e.code === 'ENOENT') {
       debug(`No defaults found at ${defaultsPath.toString()}`)
     } else {
-      console.log(e)
+      invalidDefaultsFile = true
+      console.error('unable to parse defaults.json')
+      console.error(e)
+      process.exit(1)
     }
     app.config.defaults = { vessels: { self: {} } }
   }
@@ -263,7 +267,7 @@ function setSelfSettings(app) {
   if (_.isUndefined(mmsi) && _.isUndefined(uuid)) {
     uuid = 'urn:mrn:signalk:uuid:' + uuidv4()
     _.set(app.config.defaults, 'vessels.self.uuid', uuid)
-    if (!disableWriteSettings) {
+    if (!disableWriteSettings && !invalidDefaultsFile) {
       writeDefaultsFile(app, app.config.defaults, err => {
         if (err) {
           console.error(`unable to write defaults file: ${err}`)
