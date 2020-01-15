@@ -50,11 +50,12 @@ function Simple (options) {
       options.subOptions.type === 'canbus-canboatjs'
     ) {
       mappingType = 'NMEA2000JS'
-    } else if (options.subOptions.type === 'ikonvert-canboatjs') {
+    } else if (options.subOptions.type === 'ikonvert-canboatjs' ||
+               options.subOptions.type === 'navlink2-tcp-canboatjs' ) {
       mappingType = 'NMEA2000IK'
     } else if (options.subOptions.type === 'ydwg02-canboatjs' ||
               options.subOptions.type === 'ydwg02-udp-canboatjs' ) {
-      mappingType = 'NMEA2000YD'
+      mappingType = 'NMEA2000'
     } 
   }
 
@@ -146,7 +147,16 @@ const dataTypeMapping = {
       )
     } // else
     {
-      result.unshift(new iKonvert(options.subOptions))
+      let subOptions
+      if ( options.subOptions.type === 'navlink2-tcp-canboatjs' )
+      {
+        subOptions = {...options.subOptions, tcp: true}
+      }
+      else
+      {
+        subOptions = options.subOptions
+      }
+      result.unshift(new iKonvert(subOptions))
     }
     return result.concat([new N2kToSignalK(options.subOptions)])
   },
@@ -203,6 +213,13 @@ function nmea2000input (subOptions, logging) {
       outEvent: 'ydwg02-out'
     }), new Liner(subOptions)]
   } else if (subOptions.type === 'ydwg02-udp-canboatjs') {
+    return [new Udp(subOptions), new Liner(subOptions)]
+  } else if (subOptions.type === 'navlink2-tcp-canboatjs') {
+    return [new Tcp({
+      ...subOptions,
+      outEvent: 'navlink2-out'
+    }), new Liner(subOptions)]
+  } else if (subOptions.type === 'navlink2-udp-canboatjs' ) {
     return [new Udp(subOptions), new Liner(subOptions)]
   } else {
     let command
