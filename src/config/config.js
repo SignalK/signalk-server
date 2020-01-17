@@ -219,7 +219,9 @@ function setFullDefaults(app) {
     if (e.code && e.code === 'ENOENT') {
       debug(`No defaults found at ${defaultsPath.toString()}`)
     } else {
-      console.log(e)
+      console.error(`unable to parse ${defaultsPath.toString()}`)
+      console.error(e)
+      process.exit(1)
     }
     app.config.defaults = { vessels: { self: {} } }
   }
