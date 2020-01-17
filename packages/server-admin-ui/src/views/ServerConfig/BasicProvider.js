@@ -416,6 +416,8 @@ const NMEA2000 = props => {
             <option value='ngt-1-canboatjs'>Actisense NGT-1 (canboatjs)</option>
             <option value='ngt-1' disabled={!props.hasAnalyzer}>Actisense NGT-1 (canboat)</option>
             <option value='ikonvert-canboatjs'>iKonvert (canboatjs)</option>
+            <option value='navlink2-tcp-canboatjs'>NavLink2 (canboatjs)</option>
+
             <option value='ydwg02-canboatjs'>Yacht Devices YDWG-02 TCP (canboatjs)</option>
             <option value='ydwg02-udp-canboatjs'>Yacht Devices YDWG-02 UDP (canboatjs)</option>
             <option value='canbus-canboatjs'>Canbus (canboatjs)</option>
@@ -439,6 +441,12 @@ const NMEA2000 = props => {
       )}
       {(props.value.options.type === 'ydwg02-udp-canboatjs') && (
         <div>
+          <PortInput value={props.value.options} onChange={props.onChange} />
+        </div>
+      )}
+      {(props.value.options.type === 'navlink2-tcp-canboatjs') && (
+        <div>
+          <HostInput value={props.value.options} onChange={props.onChange} />
           <PortInput value={props.value.options} onChange={props.onChange} />
         </div>
       )}
