@@ -165,6 +165,13 @@ module.exports = function(app) {
           }
         })
       })
+
+      if (app.historyProvider && app.historyProvider.registerHistoryApiRoute) {
+        debug('Adding history api route')
+        const historyApiRouter = express.Router()
+        app.historyProvider.registerHistoryApiRoute(historyApiRouter)
+        app.use(pathPrefix + versionPrefix + '/history', historyApiRouter)
+      }
     },
 
     mdns: {
