@@ -21,7 +21,6 @@ if (typeof [].includes !== 'function') {
 
 const express = require('express')
 const _ = require('lodash')
-const debug = require('debug')('signalk-server')
 const DeltaCache = require('./deltacache')
 const path = require('path')
 const http = require('http')
@@ -34,6 +33,8 @@ const getSecondaryPort = ports.getSecondaryPort
 const getExternalPort = ports.getExternalPort
 const DeltaChain = require('./deltachain')
 import { checkForNewServerVersion } from './modules'
+const winston = require('winston')
+const LogStorageTransport = require('./logtransport')
 
 const { StreamBundle } = require('./streambundle')
 const {
@@ -55,6 +56,86 @@ function Server(opts) {
   this.app = app
   app.started = false
   _.merge(app, opts)
+
+  const format = winston.format.printf((info, oppts) => {
+    return `[${info.level}] [${info.label}] ${info.message} ${info.stack || ''}`
+  })
+
+  app.logTransport = new LogStorageTransport(app, {
+    format: winston.format.combine(
+      winston.format.errors({ stack: true }),
+      winston.format.splat(),
+      winston.format.timestamp(),
+      winston.format.json()
+    ),
+    handleExceptions: true
+  })
+
+  /*
+  app.rootLogger = winston.createLogger({
+    level: 'info',
+    transports: [
+      new winston.transports.Console({
+        format: winston.format.combine(
+          winston.format.colorize(),
+          winston.format.errors({ stack: true }),
+          winston.format.splat(),
+          format
+        ),
+        handleExceptions: true
+      }),
+      this.app.logTransport
+    ]
+  })
+  app.rootLogger.exitOnError = false
+  
+  this.app.logger = this.app.rootLogger.child({ label: 'signalk-server' })
+  this.app.getLogger = label => {
+    return this.app.rootLogger.child({ label: label })
+  }
+  */
+  
+  this.app.getLogger = label => {
+    let logger
+
+    if ( winston.loggers.has(label) ) {
+      logger = winston.loggers.get(label)
+    } else {
+      logger = winston.loggers.add(label, {
+        level: 'info',
+        label: label,
+        transports: [
+          new winston.transports.Console({
+            format: winston.format.combine(
+              winston.format.label({label}),
+              winston.format.colorize(),
+              winston.format.errors({ stack: true }),
+              winston.format.splat(),
+              format
+            ),
+            handleExceptions: true
+          }),
+          this.app.logTransport
+        ]
+      })
+      logger.exitOnError = false
+    }
+    return logger
+  }
+
+  this.app.logger = this.app.getLogger('signalk-server')
+  //this.app.rootLogger.level = 'debug'
+
+  if ( process.env.DEBUG ) {
+    if ( process.env.DEBUG === '*' ) {
+      app.rootLogger.level = 'debug'
+    } else {
+      process.env.DEBUG.split(',').forEach(label => {
+        console.log(`DEBUG: ${label}`)
+        app.getLogger(label).level = 'debug'
+      })
+    }
+  }
 
   require('./config/config').load(app)
   app.version = '0.0.1'
@@ -133,7 +214,7 @@ function Server(opts) {
             }
           }
         } catch (e) {
-          console.error(e)
+          app.logger.error(e)
           providerStatus.push({
             message:
               'Error fetching provider status, see server log for details',
@@ -179,7 +260,7 @@ function Server(opts) {
       try {
         deltachain.process(data)
       } catch (err) {
-        console.error(err.message)
+        app.logger.error(err.message)
       }
     }
   }
@@ -238,11 +319,11 @@ Server.prototype.start = function() {
 
   function serverUpgradeIsAvailable(err, newVersion) {
     if (err) {
-      console.error(err)
+      app.logger.error(err)
       return
     }
     const msg = `A new version (${newVersion}) of the server is available`
-    console.log(msg)
+    app.logger.info(msg)
     app.handleMessage(app.config.name, {
       updates: [
         {
@@ -290,26 +371,27 @@ Server.prototype.start = function() {
       app.interfaces = {}
       app.clients = 0
 
-      debug('ID type: ' + app.selfType)
-      debug('ID: ' + app.selfId)
+      app.logger.debug('ID type: ' + app.selfType)
+      app.logger.debug('ID: ' + app.selfId)
 
       startInterfaces(app)
       startMdns(app)
       app.providers = require('./pipedproviders')(app).start()
 
       const primaryPort = getPrimaryPort(app)
-      debug(`primary port:${primaryPort}`)
+      app.logger.debug(`primary port:${primaryPort}`)
       server.listen(primaryPort, function() {
-        console.log(
+        app.logger.info(
           'signalk-server running at 0.0.0.0:' + primaryPort.toString() + '\n'
         )
         app.started = true
         resolve(self)
       })
       const secondaryPort = getSecondaryPort(app)
-      debug(`secondary port:${primaryPort}`)
+      app.logger.debug(`secondary port:${primaryPort}`)
       if (app.config.settings.ssl && secondaryPort) {
         startRedirectToSsl(
+          app,
           secondaryPort,
           getExternalPort(app),
           (anErr, aServer) => {
@@ -329,7 +411,7 @@ function createServer(app, cb) {
       if (err) {
         cb(err)
       } else {
-        debug('Starting server to serve both http and https')
+        app.logger.debug('Starting server to serve both http and https')
         cb(null, spdy.createServer(options, app))
       }
     })
@@ -337,7 +419,7 @@ function createServer(app, cb) {
   }
   let server
   try {
-    debug('Starting server to serve only http')
+    app.logger.debug('Starting server to serve only http')
     server = http.createServer(app)
   } catch (e) {
     cb(e)
@@ -346,7 +428,7 @@ function createServer(app, cb) {
   cb(null, server)
 }
 
-function startRedirectToSsl(port, redirectPort, cb) {
+function startRedirectToSsl(app, port, redirectPort, cb) {
   const redirectApp = new express()
   redirectApp.use((req, res) => {
     const hostHeader = req.headers.host || ''
@@ -356,29 +438,29 @@ function startRedirectToSsl(port, redirectPort, cb) {
   const server = http.createServer(redirectApp)
   server.listen(port, err => {
     if (err) {
-      console.error(err)
+      app.logger.error(err)
       return
     }
-    console.log(`Redirect server running on port ${port.toString()}`)
+    app.logger.info(`Redirect server running on port ${port.toString()}`)
     cb(null, server)
   })
 }
 
 function startMdns(app) {
   if (_.isUndefined(app.config.settings.mdns) || app.config.settings.mdns) {
-    debug(`Starting interface 'mDNS'`)
+    app.logger.debug(`Starting interface 'mDNS'`)
     try {
       app.interfaces.mdns = require('./mdns')(app)
     } catch (ex) {
-      console.error('Could not start mDNS:' + ex)
+      app.logger.error('Could not start mDNS:' + ex)
     }
   } else {
-    debug(`Interface 'mDNS' was disabled in configuration`)
+    app.logger.debug(`Interface 'mDNS' was disabled in configuration`)
   }
 }
 
 function startInterfaces(app) {
-  debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
+  app.logger.debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
   const availableInterfaces = require('./interfaces')
   _.forIn(availableInterfaces, function(theInterface, name) {
     if (
@@ -386,21 +468,21 @@ function startInterfaces(app) {
       _.isUndefined(app.config.settings.interfaces[name]) ||
       app.config.settings.interfaces[name]
     ) {
-      debug(`Loading interface '${name}'`)
+      app.logger.debug(`Loading interface '${name}'`)
       app.interfaces[name] = theInterface(app)
       if (app.interfaces[name] && _.isFunction(app.interfaces[name].start)) {
         if (
           _.isUndefined(app.interfaces[name].forceInactive) ||
           !app.interfaces[name].forceInactive
         ) {
-          debug(`Starting interface '${name}'`)
+          app.logger.debug(`Starting interface '${name}'`)
           app.interfaces[name].data = app.interfaces[name].start()
         } else {
-          debug(`Not starting interface '${name}' by forceInactive`)
+          app.logger.debug(`Not starting interface '${name}' by forceInactive`)
         }
       }
     } else {
-      debug(`Not loading interface '${name}' because of configuration`)
+      app.logger.debug(`Not loading interface '${name}' because of configuration`)
     }
   })
 }
@@ -413,7 +495,7 @@ Server.prototype.reload = function(mixed) {
     try {
       settings = require(path.join(process.cwd(), mixed))
     } catch (e) {
-      debug(`Settings file '${settings}' does not exist`)
+      this.app.logger.debug(`Settings file '${settings}' does not exist`)
     }
   }
 
@@ -458,15 +540,15 @@ Server.prototype.stop = function(cb) {
           providerHolder.pipeElements[0].end()
         })
 
-        debug('Closing server...')
+        this.app.logger.debug('Closing server...')
 
         const that = this
         this.app.server.close(function() {
-          debug('Server closed')
+          that.app.logger.debug('Server closed')
           if (that.app.redirectServer) {
             try {
               that.app.redirectServer.close(() => {
-                debug('Redirect server closed')
+                that.app.debug('Redirect server closed')
                 delete that.app.redirectServer
                 that.app.started = false
                 cb && cb()

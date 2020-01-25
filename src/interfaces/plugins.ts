@@ -13,9 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-import Debug from 'debug'
 import { Request, Response } from 'express'
-const debug = Debug('signalk:interfaces:plugins')
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
 import express from 'express'
@@ -121,6 +119,7 @@ interface ModuleMetadata {
 
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
+  const logger = theApp.getLogger('signalk:interfaces:plugins')
   return {
     start() {
       startPlugins(theApp)
@@ -146,7 +145,7 @@ module.exports = (theApp: any) => {
             try {
               data = getPluginOptions(plugin.id)
             } catch (e) {
-              console.log(e.code + ' ' + e.path)
+              logger.error(e.code + ' ' + e.path)
             }
 
             if (
@@ -226,7 +225,7 @@ module.exports = (theApp: any) => {
     try {
       optionsAsString = fs.readFileSync(pathForPluginId(id), 'utf8')
     } catch (e) {
-      debug(
+      logger.debug(
         'Could not find options for plugin ' +
           id +
           ', returning empty options: '
@@ -235,17 +234,17 @@ module.exports = (theApp: any) => {
     try {
       const options = JSON.parse(optionsAsString)
       if (optionsAsString === '{}' && DEFAULT_ENABLED_PLUGINS.includes(id)) {
-        debug('Override enable for plugin ' + id)
+        logger.debug('Override enable for plugin ' + id)
         options.enabled = true
       }
       if (process.env.DISABLEPLUGINS) {
-        debug('Plugins disabled by configuration')
+        logger.debug('Plugins disabled by configuration')
         options.enabled = false
       }
-      debug(optionsAsString)
+      logger.debug(optionsAsString)
       return options
     } catch (e) {
-      console.error(
+      logger.error(
         'Could not parse JSON options:' + e.message + ' ' + optionsAsString
       )
       return {}
@@ -326,27 +325,27 @@ module.exports = (theApp: any) => {
     metadata: ModuleMetadata,
     location: string
   ) {
-    debug('Registering plugin ' + pluginName)
+    logger.debug('Registering plugin ' + pluginName)
     try {
       doRegisterPlugin(app, pluginName, metadata, location)
     } catch (e) {
-      console.error(e)
+      logger.error(e)
     }
   }
 
   function stopPlugin(plugin: PluginInfo) {
-    debug('Stopping plugin ' + plugin.name)
+    logger.debug('Stopping plugin ' + plugin.name)
     onStopHandlers[plugin.id].forEach((f: () => void) => {
       try {
         f()
       } catch (err) {
-        console.error(err)
+        logger.error(err)
       }
     })
     onStopHandlers[plugin.id] = []
     plugin.stop()
     theApp.setProviderStatus(plugin.name, 'Stopped')
-    debug('Stopped plugin ' + plugin.name)
+    logger.debug('Stopped plugin ' + plugin.name)
   }
 
   function setPluginStartedMessage(plugin: PluginInfo) {
@@ -370,15 +369,15 @@ module.exports = (theApp: any) => {
     configuration: any,
     restart: (newConfiguration: any) => void
   ) {
-    debug('Starting plugin %s from %s', plugin.name, location)
+    logger.debug('Starting plugin %s from %s', plugin.name, location)
     try {
       app.setProviderStatus(plugin.name, null)
       plugin.start(configuration, restart)
-      debug('Started plugin ' + plugin.name)
+      logger.debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
     } catch (e) {
-      console.error('error starting plugin: ' + e)
-      console.error(e.stack)
+      logger.error('error starting plugin: ' + e)
+      logger.error(e.stack)
       app.setProviderError(plugin.name, `Failed to start: ${e.message}`)
     }
   }
@@ -390,16 +389,15 @@ module.exports = (theApp: any) => {
     location: string
   ) {
     let plugin: PluginInfo
+    const pluginLogger = theApp.getLogger(packageName)
     const appCopy: ServerAPI = _.assign({}, app, {
       getSelfPath,
       getPath,
       putSelfPath,
       putPath,
       queryRequest,
-      error: (msg: string) => {
-        console.error(`${packageName}:${msg}`)
-      },
-      debug: require('debug')(packageName),
+      error: pluginLogger.error.bind(pluginLogger),
+      debug: pluginLogger.debug.bind(pluginLogger),
       registerDeltaInputHandler: (handler: any) => {
         onStopHandlers[plugin.id].push(app.registerDeltaInputHandler(handler))
       },
@@ -416,15 +414,15 @@ module.exports = (theApp: any) => {
       ) => PluginInfo = require(path.join(location, packageName))
       plugin = pluginConstructor(appCopy)
     } catch (e) {
-      console.error(`${packageName} failed to start: ${e.message}`)
-      console.error(e)
+      logger.error(`${packageName} failed to start: ${e.message}`)
+      logger.error(e)
       app.setProviderError(packageName, `Failed to start: ${e.message}`)
       return
     }
     onStopHandlers[plugin.id] = []
 
     if (app.pluginsMap[plugin.id]) {
-      console.log(
+      logger.warning(
         `WARNING: found multiple copies of plugin with id ${
           plugin.id
         } at ${location} and ${app.pluginsMap[plugin.id].packageLocation}`
@@ -465,7 +463,7 @@ module.exports = (theApp: any) => {
       pluginOptions.configuration = newConfiguration
       savePluginOptions(plugin.id, pluginOptions, err => {
         if (err) {
-          console.error(err)
+          logger.error(err)
         } else {
           stopPlugin(plugin)
           doPluginStart(app, plugin, location, newConfiguration, restart)
@@ -515,7 +513,7 @@ module.exports = (theApp: any) => {
     router.post('/config', (req: Request, res: Response) => {
       savePluginOptions(plugin.id, req.body, err => {
         if (err) {
-          console.log(err)
+          logger.info(err)
           res.status(500)
           res.send(err)
           return
