@@ -133,7 +133,7 @@
     "chai": "^4.0.0",
     "chai-things": "^0.2.0",
     "freeport-promise": "^1.0.0",
-    "lint-staged": "^9.2.1",
+    "lint-staged": "^10.0.3",
     "mocha": "^7.0.1",
     "prettier": "^1.18.2",
     "request": "^2.88.0",
