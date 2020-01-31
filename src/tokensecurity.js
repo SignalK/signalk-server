@@ -621,7 +621,10 @@ module.exports = function(app, config) {
       if (req.query && req.query.token) {
         token = req.query.token
       } else if (req.headers) {
-        const header = req.headers.authorization
+        let header = req.headers.authorization
+        if (!header) {
+          header = req.headers['x-authorization']
+        }
         if (header && header.startsWith('JWT ')) {
           token = header.substring('JWT '.length)
         }
@@ -799,7 +802,10 @@ module.exports = function(app, config) {
       const configuration = getConfiguration()
 
       if (!token) {
-        const header = req.headers.authorization
+        let header = req.headers.authorization
+        if (!header) {
+          header = req.headers['x-authorization']
+        }
         if (header && header.startsWith('JWT ')) {
           token = header.substring('JWT '.length)
         }
