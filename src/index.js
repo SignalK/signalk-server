@@ -131,7 +131,6 @@ function Server(opts) {
       app.rootLogger.level = 'debug'
     } else {
       process.env.DEBUG.split(',').forEach(label => {
-        console.log(`DEBUG: ${label}`)
         app.getLogger(label).level = 'debug'
       })
     }
