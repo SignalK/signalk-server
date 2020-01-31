@@ -251,6 +251,9 @@ function checkPosition(app: any, context: any, normalizedDeltaData: any) {
   const subsPosition = get(context, 'position')
   if (
     position &&
+    position.value &&
+    position.value.latitude &&
+    position.value.longitude &&
     subsPosition &&
     subsPosition.latitude &&
     subsPosition.longitude
