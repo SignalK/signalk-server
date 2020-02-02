@@ -47,7 +47,15 @@ function MdnsWs (options) {
     this.connect(this.signalkClient)
   } else {
     try {
-      const mdns = require('mdns')
+      let mdns
+
+      try {
+        mdns = require('mdns')
+      } catch ( ex ) {
+        this.options.app.setProviderError(this.options.providerId, 'mdns module not installed')
+        console.error(ex)
+        return
+      }
 
       const discovery = new SignalK.Discovery(mdns, 60000)
     
