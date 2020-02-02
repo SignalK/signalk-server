@@ -292,7 +292,11 @@ module.exports = (theApp: any) => {
   }
 
   function getPath(aPath: string) {
-    return _.get(theApp.signalk.retrieve(), aPath)
+    if ( aPath === '/sources' )  {
+      return { ...theApp.signalk.retrieve().sources, ...theApp.deltaCache.getSources() }
+    } else {
+      return _.get(theApp.signalk.retrieve(), aPath)
+    }
   }
 
   function putSelfPath(aPath: string, value: any, updateCb: () => void) {
