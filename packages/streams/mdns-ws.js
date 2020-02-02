@@ -37,16 +37,49 @@ function MdnsWs (options) {
     })
   }
   if (options.host && options.port) {
-    this.connect(options)
-  } else {
-    this.signalkClient = new SignalK.Client()
-    this.signalkClient.on('discovery', this.connect.bind(this))
-    this.signalkClient.on('discoveryError', info => {
-      const providerId = `${options.providerId}.${info.host}:${info.port}`
-      options.app.setProviderError(providerId, info.error.message)
+    this.signalkClient = new SignalK.Client({
+      hostname: options.host,
+      port: options.port,
+      useSSL: options.type === 'wss',
+      reconnect: true,
+      autoConnect: false,
     })
-    debug('Starting discovery')
-    this.signalkClient.startDiscovery()
+    this.connect(this.signalkClient)
+  } else {
+    try {
+      let mdns
+
+      try {
+        mdns = require('mdns')
+      } catch ( ex ) {
+        this.options.app.setProviderError(this.options.providerId, 'mdns module not installed')
+        console.error(ex)
+        return
+      }
+
+      const discovery = new SignalK.Discovery(mdns, 60000)
+    
+      debug('Starting discovery')
+      
+      discovery.on('timeout', () => console.log('No SK servers found'))
+      
+      discovery.on('found', server => {
+        if (server.isMain() && server.isMaster()) {
+          if ( !this.remoteServers[server.hostname + ':' + server.port] ) {
+            client = server.createClient({
+              useTLS: false,
+              reconnect: true,
+              autoConnect: false
+            })
+            this.connect(client)
+          }
+        }
+      })
+    } catch (ex) {
+      this.options.app.setProviderError(this.options.providerId, ex.message)
+      console.error(ex)
+      return
+    }
   }
 }
 
@@ -55,100 +88,37 @@ require('util').inherits(MdnsWs, Transform)
 function setProviderStatus (that, providerId, message, isError) {
   if (!isError) {
     that.options.app.setProviderStatus(providerId, message)
+    console.log(message)
   } else {
     that.options.app.setProviderError(providerId, message)
+    console.error(message)
   }
 }
 
-MdnsWs.prototype.connect = function (discovery) {
-  if (this.remoteServers[discovery.host + ':' + discovery.port]) {
-    debug(
-      'Discovered ' +
-        discovery.host +
-        ':' +
-        discovery.port +
-        ' already known, not connecting'
-    )
-    return
-  }
-  const signalkClient = new SignalK.Client()
-  let url
-  if (discovery.discoveryResponse) {
-    _object.values(discovery.discoveryResponse.endpoints)[0]['signalk-ws']
-  } else {
-    const protocol = discovery.protocol || 'ws'
-    url =
-      protocol +
-      '://' +
-      discovery.host +
-      ':' +
-      discovery.port +
-      '/signalk/v1/stream?subscribe=all'
-  }
+MdnsWs.prototype.connect = function (client) {
   const that = this
-
-  const providerId = `${that.options.providerId}.${discovery.host}:${
-    discovery.port
-  }`
-
-  const onData = function (data) {
+  const providerId = `${that.options.providerId}.${client.options.hostname}:${client.options.port}`
+  
+  client
+    .connect()
+    .then(() => {
+      setProviderStatus(that, providerId, `ws connection connected to ${client.options.hostname}:${client.options.port}`)
+      that.remoteServers[client.options.hostname + ':' + client.options.port] = client
+      client.subscribe()
+    })
+    .catch(err => {
+      setProviderStatus(that, providerId, err.message, true)
+    })
+  
+  client.on('delta', (data) => {
     if (data && data.updates) {
       data.updates.forEach(function (update) {
         update['$source'] = providerId
       })
     }
-
+    
     that.push(data)
-  }
-
-  const start = () => {
-    const msg = `Trying url: ${url}`
-    debug(msg)
-    setProviderStatus(that, providerId, msg, false)
-    signalkClient.connectDeltaByUrl(
-      url,
-      onData,
-      () => {
-        console.log('ws connection connected')
-      },
-      () => {
-        console.log('ws connection disconnected')
-      },
-      err => {
-        console.error(err)
-      },
-      () => {
-        console.log('ws connection closed')
-      }
-    )
-  }
-  onConnect = function (connection) {
-    that.remoteServers[discovery.host + ':' + discovery.port] = {}
-    const msg = 'Connected to ' + url
-    setProviderStatus(that, providerId, msg, false)
-    debug(msg)
-    connection.subscribeAll()
-  }
-  onDisconnect = function () {
-    const msg = 'Disconnected from ' + url
-    setProviderStatus(that, providerId, msg, true)
-    debug(msg)
-  }
-  onClose = function () {
-    const msg = 'Connection closed from ' + url
-    setProviderStatus(that, providerId, msg, true)
-    debug(msg)
-    if (that.options.host && that.options.port) {
-      setTimeout(start, 5000)
-    } else {
-      delete that.remoteServers[discovery.host + ':' + discovery.port]
-    }
-  }
-  onError = function (err) {
-    setProviderStatus(that, providerId, err.message, true)
-    debug('Error:' + err)
-  }
-  start()
+  })
 }
 
 MdnsWs.prototype._transform = function (chunk, encoding, done) {}
