@@ -606,6 +606,19 @@ module.exports = function(app, config) {
     }
   }
 
+  function getAuthorizationFromHeaders(req) {
+    if (req.headers) {
+      let header = req.headers.authorization
+      if (!header) {
+        header = req.headers['x-authorization']
+      }
+      if (header && header.startsWith('JWT ')) {
+        return header.substring('JWT '.length)
+      }
+    }
+    return undefined
+  }
+
   strategy.authorizeWS = function(req) {
     let token = req.token
     let error
@@ -620,11 +633,8 @@ module.exports = function(app, config) {
     if (!token) {
       if (req.query && req.query.token) {
         token = req.query.token
-      } else if (req.headers) {
-        const header = req.headers.authorization
-        if (header && header.startsWith('JWT ')) {
-          token = header.substring('JWT '.length)
-        }
+      } else {
+        token = getAuthorizationFromHeaders(req)
       }
     }
 
@@ -799,10 +809,7 @@ module.exports = function(app, config) {
       const configuration = getConfiguration()
 
       if (!token) {
-        const header = req.headers.authorization
-        if (header && header.startsWith('JWT ')) {
-          token = header.substring('JWT '.length)
-        }
+        token = getAuthorizationFromHeaders(req)
       }
 
       if (token) {
