@@ -191,6 +191,24 @@ describe('Security', () => {
     })
     result.status.should.equal(200)
   })
+  
+  it('authorized read with Authorization header works', async function () {
+    const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
+      headers: {
+        Authorization: `JWT ${readToken}`
+      }
+    })
+    result.status.should.equal(200)
+  })
+
+  it('authorized read with X-Authorization header works', async function () {
+    const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
+      headers: {
+        'X-Authorization': `JWT ${readToken}`
+      }
+    })
+    result.status.should.equal(200)
+  })
 
   it('admin request fails', async function () {
     const result = await fetch(`${url}/plugins`)
