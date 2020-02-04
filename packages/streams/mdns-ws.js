@@ -104,7 +104,16 @@ MdnsWs.prototype.connect = function (client) {
     .then(() => {
       setProviderStatus(that, providerId, `ws connection connected to ${client.options.hostname}:${client.options.port}`)
       that.remoteServers[client.options.hostname + ':' + client.options.port] = client
-      client.subscribe()
+      if ( that.options.subscription ) {
+        let parsed 
+        try {
+          parsed = JSON.parse(that.options.subscription)
+          } catch ( ex ) {
+            setProviderStatus(that, providerId, `unable to parse subscription json: ${that.options.subscription}: ${ex.message}`, true)
+          }
+      } else {
+        client.subscribe()
+      }
     })
     .catch(err => {
       setProviderStatus(that, providerId, err.message, true)

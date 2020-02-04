@@ -277,7 +277,8 @@ function signalKInput (subOptions) {
     const options = {
       app: subOptions.app,
       providerId: subOptions.providerId,
-      ignoreServers: subOptions.ignoreServers
+      ignoreServers: subOptions.ignoreServers,
+      subscription: subOptions.subscription
     }
     if (!subOptions.useDiscovery) {
       options.host = subOptions.host
