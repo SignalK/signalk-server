@@ -129,6 +129,34 @@ function getFarPosistionDelta () {
   return delta
 }
 
+function getNullPositionDelta (overwrite) {
+  const delta = {
+    updates: [
+      {
+        source: {
+          label: 'langford-canboatjs',
+          type: 'NMEA2000',
+          pgn: 129025,
+          src: '3'
+        },
+        timestamp: '2017-04-15T14:58:01.200Z',
+        values: [
+          {
+            path: 'navigation.position',
+            value: {
+              longitude: null,
+              latitude: null
+            }
+          }
+        ]
+      }
+    ],
+    context: 'vessels.nullPosition'
+  }
+
+  return _.assign(delta, overwrite)
+}
+
 describe('Subscriptions', _ => {
   let serverP, port, deltaUrl
 
@@ -486,6 +514,51 @@ describe('Subscriptions', _ => {
       })
       .then(results => {
         assert(results[0] === 'timeout')
+      })
+  })
+
+it('relativePosition subscription works with null positions', function () {
+    let self, wsPromiser
+
+    return serverP
+      .then(_ => {
+        wsPromiser = new WsPromiser(
+          'ws://localhost:' + port + '/signalk/v1/stream?subsribe=none'
+        )
+        return wsPromiser.nextMsg()
+      })
+      .then(wsHello => {
+        self = JSON.parse(wsHello).self
+
+        return wsPromiser.send({
+          context: {
+            radius: 1,
+            position: {
+              longitude: -76.4639314,
+              latitude: 39.0700403
+            }
+          },
+          subscribe: [
+            {
+              path: 'navigation.position'
+            }
+          ]
+        })
+      })
+    .then(results => {
+      return Promise.all([
+        wsPromiser.nextMsg(),
+        sendDelta(getNullPositionDelta())
+      ])
+    })
+      .then(results => {
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          sendDelta(getNullPositionDelta())
+        ])
+      })
+    .then(results => {
+      assert(results[0] === 'timeout')
       })
   })
 
