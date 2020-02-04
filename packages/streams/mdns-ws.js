@@ -108,10 +108,18 @@ MdnsWs.prototype.connect = function (client) {
         let parsed 
         try {
           parsed = JSON.parse(that.options.subscription)
-          } catch ( ex ) {
-            setProviderStatus(that, providerId, `unable to parse subscription json: ${that.options.subscription}: ${ex.message}`, true)
-          }
+        } catch ( ex ) {
+          setProviderStatus(that, providerId, `unable to parse subscription json: ${that.options.subscription}: ${ex.message}`, true)
+        }
+        if ( !Array.isArray(parsed) ) {
+          parsed = [ parsed ]
+        }
+        parsed.forEach((sub, idx) => {
+          debug('sending subscription %j', sub)
+          client.subscribe(sub, String(idx))
+        })
       } else {
+        debug('subscribing to all')
         client.subscribe()
       }
     })
