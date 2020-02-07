@@ -292,8 +292,11 @@ module.exports = (theApp: any) => {
   }
 
   function getPath(aPath: string) {
-    if ( aPath === '/sources' )  {
-      return { ...theApp.signalk.retrieve().sources, ...theApp.deltaCache.getSources() }
+    if (aPath === '/sources') {
+      return {
+        ...theApp.signalk.retrieve().sources,
+        ...theApp.deltaCache.getSources()
+      }
     } else {
       return _.get(theApp.signalk.retrieve(), aPath)
     }

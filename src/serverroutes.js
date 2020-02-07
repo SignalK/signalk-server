@@ -325,7 +325,12 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       if (app.securityStrategy.isDummy()) {
         app.config.settings.security = { strategy: defaultSecurityStrategy }
         const adminUser = req.body
-        if (!adminUser.userId || adminUser.userId.length === 0 || !adminUser.password || adminUser.password.length === 0) {
+        if (
+          !adminUser.userId ||
+          adminUser.userId.length === 0 ||
+          !adminUser.password ||
+          adminUser.password.length === 0
+        ) {
           res.status(400).send('userId or password missing or too short')
           return
         }

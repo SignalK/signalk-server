@@ -104,15 +104,12 @@ DeltaCache.prototype.buildFull = function(user, path) {
 }
 
 DeltaCache.prototype.getSources = function() {
-    const signalk = new FullSignalK(
-    this.app.selfId,
-    this.app.selfType
-  )
+  const signalk = new FullSignalK(this.app.selfId, this.app.selfType)
 
   const addDelta = signalk.addDelta.bind(signalk)
   _.values(this.sourceDeltas).forEach(addDelta)
 
-  return signalk.retrieve().sources;
+  return signalk.retrieve().sources
 }
 
 DeltaCache.prototype.buildFullFromDeltas = function(

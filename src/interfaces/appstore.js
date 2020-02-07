@@ -173,11 +173,11 @@ module.exports = function(app) {
     getModulesInfo(plugins, getPlugin, all)
     getModulesInfo(webapps, getWebApp, all)
 
-    if ( process.env.PLUGINS_WITH_UPDATE_DISABLED ) {
+    if (process.env.PLUGINS_WITH_UPDATE_DISABLED) {
       let disabled = process.env.PLUGINS_WITH_UPDATE_DISABLED.split(',')
       all.updates = all.updates.filter(info => !disabled.includes(info.name))
     }
-    
+
     return all
   }
 
@@ -217,7 +217,7 @@ module.exports = function(app) {
       } else if (installedModule) {
         if (compareVersions(version, installedModule.version) > 0) {
           addIfNotDuplicate(result.updates, pluginInfo)
-        } 
+        }
         addIfNotDuplicate(result.installed, pluginInfo)
       } else {
         addIfNotDuplicate(result.available, pluginInfo)
