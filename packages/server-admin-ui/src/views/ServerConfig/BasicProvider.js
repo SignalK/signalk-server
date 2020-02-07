@@ -614,7 +614,7 @@ const SignalK = props => {
                rows='6'
                value={props.value.options.subscription}
                onChange={event => props.onChange(event, 'jsonstring')}
-               helpText='Defaults to all. This cam be an array of subscriptions'
+               helpText='Defaults to all. This can be an array of subscriptions.'
              />
             </div>
           )}
