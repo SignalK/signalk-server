@@ -125,6 +125,30 @@ class TextInput extends Component {
   }
 }
 
+class TextAreaInput extends Component {
+  render () {
+    return (
+      <FormGroup row>
+        <Col md='2'>
+          <Label htmlFor={this.props.name}>{this.props.title}</Label>
+        </Col>
+        <Col xs='12' md='3'>
+          <Input
+            type='textarea'
+            name={this.props.name}
+            value={this.props.value}
+            rows={this.props.rows}
+            onChange={event => this.props.onChange(event)}
+          />
+          {this.props.helpText && (
+            <FormText color='muted'>{this.props.helpText}</FormText>
+          )}
+        </Col>
+      </FormGroup>
+    )
+  }
+}
+
 class DeviceInput extends Component {
   constructor(props) {
     super()
@@ -563,7 +587,7 @@ const SignalK = props => {
                       name='options.useDiscovery'
                       onChange={props.onChange}
                       checked={props.value.options.useDiscovery}
-                    />Use Discovery
+                    />Use Discovery 
                   </Label>
                 </div>
               </Col>
@@ -579,6 +603,19 @@ const SignalK = props => {
                 value={props.value.options}
                 onChange={props.onChange}
               />
+            </div>
+          )}
+          {(props.value.options.type === 'ws' ||
+            props.value.options.type === 'wss') && (
+            <div>
+             <TextAreaInput
+               title='Subscription'
+               name='options.subscription'
+               rows='6'
+               value={props.value.options.subscription}
+               onChange={event => props.onChange(event, 'jsonstring')}
+               helpText='Defaults to all. This can be an array of subscriptions.'
+             />
             </div>
           )}
         </div>
