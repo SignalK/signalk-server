@@ -55,7 +55,7 @@ function Simple (options) {
       mappingType = 'NMEA2000IK'
     } else if (options.subOptions.type === 'ydwg02-canboatjs' ||
               options.subOptions.type === 'ydwg02-udp-canboatjs' ) {
-      mappingType = 'NMEA2000'
+      mappingType = 'NMEA2000YD'
     } 
   }
 
