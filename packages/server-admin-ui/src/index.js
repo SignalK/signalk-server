@@ -36,7 +36,11 @@ const state = {
   webSocket: null,
   restarting: false,
   accessRequests: [],
-  discoveredProviders: []
+  discoveredProviders: [],
+  log: {
+    entries: [],
+    debugEnabled: []
+  }
 }
 
 let store = createStore(
@@ -174,6 +178,26 @@ let store = createStore(
         discoveredProviders: action.data
       }
     }
+    if ( action.type === 'DEBUG_ENABLED' ) {
+      return {
+        ...state,
+        log: { ...state.log, debugEnabled: action.data }
+      }
+    }
+    if (action.type === 'LOG') {
+      state.log.entries.push(action.data)
+      if (state.log.length > 100) {
+        state.log.splice(0, state.log.length - 100)
+      }
+      return {
+        ...state,
+        log: {
+          entries: state.log.entries,
+          debugEnabled: state.log.debugEnabled
+        }
+      }
+    }
+
     return state
   },
   state,

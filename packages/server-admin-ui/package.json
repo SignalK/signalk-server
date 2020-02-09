@@ -63,5 +63,8 @@
   "engines": {
     "node": ">= 6.4.0",
     "npm": ">= 5.0.0"
+  },
+  "dependencies": {
+    "react-html-parser": "^2.0.2"
   }
 }

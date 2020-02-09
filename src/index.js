@@ -56,6 +56,7 @@ function Server(opts) {
   app.started = false
   _.merge(app, opts)
 
+  app.logging = require('./logging')(app)
   require('./config/config').load(app)
   app.version = '0.0.1'
 

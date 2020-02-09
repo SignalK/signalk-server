@@ -255,6 +255,10 @@ const mapStateToProps = state => {
             url: '/serverConfiguration/datalogs'
           },
           {
+            name: 'Server Log',
+            url: '/serverConfiguration/serverlogs'
+          },
+          {
             name: 'Update',
             url: '/serverConfiguration/update',
             badge: serverUpdateBadge

@@ -596,4 +596,9 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       .then(() => res.json(true))
       .catch(() => res.json(false))
   })
+
+  app.post(`${serverRoutesPrefix}/debug`, (req, res) => {
+    app.logging.enabledDebug(req.body.value)
+    res.status(200)
+  })
 }

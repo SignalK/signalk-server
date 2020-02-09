@@ -607,6 +607,16 @@ function startServerEvents(app, spark) {
   Object.keys(app.lastServerEvents).forEach(propName => {
     spark.write(app.lastServerEvents[propName])
   })
+  app.logging.getLogs().forEach(log => {
+    spark.write({
+      type: 'LOG',
+      data: log
+    })
+  })
+  spark.write({
+    type: 'DEBUG_ENABLED',
+    data: app.logging.getDebugEnabled()
+  })
   if (app.securityStrategy.canAuthorizeWS()) {
     spark.write({
       type: 'RECEIVE_LOGIN_STATUS',
