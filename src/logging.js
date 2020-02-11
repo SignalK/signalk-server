@@ -37,7 +37,7 @@ module.exports = function(app) {
   }
 
   return {
-    getLogs: () => {
+    getLog: () => {
       return log
     },
     enabledDebug: enabled => {

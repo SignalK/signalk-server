@@ -607,7 +607,7 @@ function startServerEvents(app, spark) {
   Object.keys(app.lastServerEvents).forEach(propName => {
     spark.write(app.lastServerEvents[propName])
   })
-  app.logging.getLogs().forEach(log => {
+  app.logging.getLog().forEach(log => {
     spark.write({
       type: 'LOG',
       data: log
