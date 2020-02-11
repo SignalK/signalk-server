@@ -256,7 +256,7 @@ const mapStateToProps = state => {
           },
           {
             name: 'Server Log',
-            url: '/serverConfiguration/serverlogs'
+            url: '/serverConfiguration/log'
           },
           {
             name: 'Update',

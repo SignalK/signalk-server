@@ -84,7 +84,7 @@ class Full extends Component {
                   component={loginOrOriginal(Logging)}
                 />
                 <Route
-                  path='/serverConfiguration/serverlogs'
+                  path='/serverConfiguration/log'
                   component={loginOrOriginal(ServerLogs)}
                 />
                 <Route
