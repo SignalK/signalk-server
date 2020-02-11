@@ -101,7 +101,7 @@ class ServerLogs extends Component {
   }
 }
 
-class LogList extends Component {
+class LogListX extends Component {
   render() {
     return (
       <Table hover responsive bordered striped size="sm">
@@ -113,9 +113,6 @@ class LogList extends Component {
             <tbody>
 
       {this.props.value.entries && this.props.value.entries.map((log, index) => {
-        let levelClass
-        levelClass = 'text-info'
-
             return (
                 <tr key={index}>
                 <td>{ ReactHtmlParser(log) }</td>
@@ -126,6 +123,19 @@ class LogList extends Component {
       
             </tbody>
           </Table>
+    )
+  }
+}
+
+class LogList extends Component {
+  render() {
+    return (
+        <div style={{'overflow-y': 'scroll', height: '500px'}} >
+      {this.props.value.entries && this.props.value.entries.map((log, index) => {
+            return ReactHtmlParser(log + '</br>') 
+        })
+       }
+      </div>
     )
   }
 }
