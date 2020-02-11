@@ -41,16 +41,21 @@ module.exports = function(app) {
       return log
     },
     enabledDebug: enabled => {
-      let all = enabled.length > 0 ? enabled.split(',') : []
-      all.forEach(name => {
-        debugCore.enable(name)
-      })
-      debugEnabled.forEach(name => {
-        if ( all.indexOf(name) === -1 ) {
-          debugCore.disable(name)
-        }
-      })
-      debugEnabled = all
+      if ( enabled.length > 0 ) {
+        let all = enabled.split(',')
+        all.forEach(name => {
+          debugCore.enable(name)
+        })
+        debugEnabled.forEach(name => {
+          if ( all.indexOf(name) === -1 ) {
+            debugCore.disable(name)
+          }
+        })
+        debugEnabled = all
+      } else {
+        debugEnabled.forEach(debugCore.disable)
+        debugEnabled = []
+      }
 
       app.emit('serverevent', {
         type: 'DEBUG_ENABLED',
