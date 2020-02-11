@@ -30,7 +30,6 @@ class ServerLogs extends Component {
   }
 
   componentDidMount () {
-    console.log('componentDidMount: ' + this.props.webSocket)
     if ( this.props.webSocket ) {
       const sub = { "context": "vessels.self", "subscribe": [ { "path": "log" } ] }
       this.props.webSocket.send(JSON.stringify(sub))
