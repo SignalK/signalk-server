@@ -17,12 +17,10 @@ module.exports = function(app) {
       log.splice(0, log.length - size)
     }
     
-    if ( app.listenerCount('serverevent') > 1 ) {
-      app.emit('serverevent', {
-        type: 'LOG',
-        data: html
-      })
-    }
+    app.emit('serverevent', {
+      type: 'LOG',
+      data: html
+    })
   }
   
   const out_write = process.stdout.write
