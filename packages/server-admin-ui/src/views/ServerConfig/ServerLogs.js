@@ -83,8 +83,8 @@ class ServerLogs extends Component {
                 value={this.props.log.debugEnabled}
             />
             <FormText color='muted'>
-               Enter the name of the plugin or component to debug.
-               For example: signalk-server*
+               Enter the name of the component to debug. Mulitple entries should be separated by a comma.
+               For example: signalk-server*,signalk-provider-tcp
             </FormText>
           </Col>
           </FormGroup>
