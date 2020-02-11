@@ -10,7 +10,7 @@ module.exports = function(app) {
   let convert = new Convert()
   
   function storeOutput(output) {
-    const html = moment().format('DD/MM/YYYY HH:mm:ss ') + convert.toHtml(output)
+    const html = '<span style="font-weight:lighter">' + moment().format('MMM DD HH:mm:ss') + '</span> ' + convert.toHtml(output)
     log.push(html)
     
     if (log.length > size) {
