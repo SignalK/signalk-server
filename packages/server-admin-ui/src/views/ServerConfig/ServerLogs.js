@@ -76,12 +76,16 @@ class ServerLogs extends Component {
             <Label htmlFor='select'>Debug</Label>
           </Col>
           <Col xs='12' md='12'>
-                              <Input
-                                type='text'
-                                name='debug'
-                                onChange={this.handleDebug}
-                                value={this.props.log.debugEnabled}
-                              />
+            <Input
+              type='text'
+              name='debug'
+              onChange={this.handleDebug}
+                value={this.props.log.debugEnabled}
+            />
+            <FormText color='muted'>
+               Enter the name of the plugin or component to debug.
+               For example: signalk-server*
+            </FormText>
           </Col>
           </FormGroup>
 
