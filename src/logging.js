@@ -1,5 +1,6 @@
 
 const debugCore = require('debug')
+const moment = require('moment')
  
 module.exports = function(app) {
   const log = []
@@ -9,7 +10,7 @@ module.exports = function(app) {
   let convert = new Convert()
   
   function storeOutput(output) {
-    const html = convert.toHtml(output)
+    const html = moment().format('DD/MM/YYYY HH:mm:ss ') + convert.toHtml(output)
     log.push(html)
     
     if (log.length > size) {
