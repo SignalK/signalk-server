@@ -30,6 +30,18 @@ class ServerLogs extends Component {
   }
 
   componentDidMount () {
+    console.log('componentDidMount: ' + this.props.webSocket)
+    if ( this.props.webSocket ) {
+      const sub = { "context": "vessels.self", "subscribe": [ { "path": "log" } ] }
+      this.props.webSocket.send(JSON.stringify(sub))
+    }
+  }
+
+  componentWillUnmount () {
+    if ( this.props.webSocket ) {
+      const sub = { "context": "vessels.self", "unsubscribe": [ { "path": "log" } ] }
+      this.props.webSocket.send(JSON.stringify(sub))
+    }
   }
 
   handleDebug (event) {
@@ -115,4 +127,4 @@ class LogList extends Component {
   }
 }
 
-export default connect(({log, debug}) => ({log, debug}))(ServerLogs)
+export default connect(({log, webSocket}) => ({log, webSocket}))(ServerLogs)

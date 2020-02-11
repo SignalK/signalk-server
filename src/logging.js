@@ -17,7 +17,7 @@ module.exports = function(app) {
       log.splice(0, log.length - size)
     }
     
-    app.emit('serverevent', {
+    app.emit('serverlog', {
       type: 'LOG',
       data: html
     })
