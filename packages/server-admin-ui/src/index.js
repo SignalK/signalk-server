@@ -21,7 +21,10 @@ import Full from './containers/Full/'
 
 import { openServerEventsConnection } from './actions'
 
+import escape from 'escape-html'
+import Convert from 'ansi-to-html'
 
+const convert = new Convert()
 const entries = []
 
 let logEntryCount = 0
@@ -199,9 +202,10 @@ let store = createStore(
       }
     }
     if (action.type === 'LOG') {
+      const html = '<span style="font-weight:lighter">' + action.data.ts + '</span> ' + convert.toHtml(escape(action.data.row))
       state.log.entries.push({
         i: logEntryCount++,
-        d: action.data
+        d: html
       })
       if (state.log.entries.length > 100) {
         state.log.entries.shift()

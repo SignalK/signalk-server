@@ -1,8 +1,6 @@
 
 const debugCore = require('debug')
 const moment = require('moment')
-const Convert = require('ansi-to-html')
-const escape = require('escape-html')
 const path = require('path')
 const fs = require('fs')
 
@@ -11,7 +9,6 @@ module.exports = function(app) {
   let debugEnabled = ''
   let rememberDebug = false
   const size = 100
-  let convert = new Convert()
   let debugPath
 
   if ( process.env.HOME ) {
@@ -27,8 +24,8 @@ module.exports = function(app) {
   }
   
   function storeOutput(output) {
-    const html = '<span style="font-weight:lighter">' + moment().format('MMM DD HH:mm:ss') + '</span> ' + convert.toHtml(escape(output))
-    log.push(html)
+    const data = {ts: moment().format('MMM DD HH:mm:ss'), row:  output}
+    log.push(data)
     
     if (log.length > size) {
       log.splice(0, log.length - size)
@@ -36,7 +33,7 @@ module.exports = function(app) {
     
     app.emit('serverlog', {
       type: 'LOG',
-      data: html
+      data: data
     })
   }
   
