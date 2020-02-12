@@ -24,9 +24,15 @@ import { openServerEventsConnection } from './actions'
 
 const entries = []
 
+let logEntryCount = 0
+
 for (let i = 0; i < 100; i++) {
-  entries[i] = ''
+  entries[i] = {
+    i: logEntryCount++,
+    d: ''
+  }
 }
+
 
 const state = {
   plugins: [],
@@ -193,7 +199,10 @@ let store = createStore(
       }
     }
     if (action.type === 'LOG') {
-      state.log.entries.push(action.data)
+      state.log.entries.push({
+        i: logEntryCount++,
+        d: action.data
+      })
       if (state.log.entries.length > 100) {
         state.log.entries.shift()
       }

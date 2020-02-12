@@ -178,19 +178,25 @@ class LogListX extends Component {
 
 class LogList extends Component {
   componentDidMount() {
-    this.end.scrollIntoView({ behavior: "smooth" })
+    this.end.scrollIntoView()
   }
 
   render() {
     return (
-        <div style={{'overflow-y': 'scroll', 'maxHeight': '60vh'}} >
-      {this.props.value.entries && this.props.value.entries.map((log, index) => {
-            return ReactHtmlParser(log + '</br>') 
+        <div style={{'overflowY': 'scroll', 'maxHeight': '60vh'}} >
+      {this.props.value.entries && this.props.value.entries.map((logEntry, index) => {
+            return <PureLogRow key={logEntry.i} log={logEntry.d}/>
         })
        }
-        <div ref={(el) => { this.end = el}}></div>
+        <div ref={(el) => { this.end = el}}>&nbsp;</div>
       </div>
     )
+  }
+}
+
+class PureLogRow extends React.PureComponent {
+  render() {
+    return <span>{ ReactHtmlParser(this.props.log) }<br/></span>
   }
 }
 
