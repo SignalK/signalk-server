@@ -23,23 +23,36 @@ class ServerLogs extends Component {
   constructor (props) {
     super(props)
     this.state = {
-      hasData: true
+      hasData: true,
+      webSocket: null,
+      didSubScribe: false
     }
 
     this.handleDebug = this.handleDebug.bind(this)
   }
 
-  componentDidMount () {
-    if ( this.props.webSocket ) {
+  subscribeToLogsIfNeeded() {
+     if ( this.props.webSocket && (this.props.webSocket != this.state.webSocket ||  this.state.didSubScribe === false) ) {
       const sub = { "context": "vessels.self", "subscribe": [ { "path": "log" } ] }
       this.props.webSocket.send(JSON.stringify(sub))
+      this.state.webSocket = this.props.webSocket
+      this.state.didSubScribe = true
     }
   }
 
+  componentDidMount() {
+    this.subscribeToLogsIfNeeded()
+  }
+
+  componentDidUpdate() {
+    this.subscribeToLogsIfNeeded()
+  }
+  
   componentWillUnmount () {
     if ( this.props.webSocket ) {
       const sub = { "context": "vessels.self", "unsubscribe": [ { "path": "log" } ] }
       this.props.webSocket.send(JSON.stringify(sub))
+      this.state.didSubScribe = false
     }
   }
 
@@ -54,7 +67,7 @@ class ServerLogs extends Component {
     })
       .then(response => response.text())
       .then(response => {
-        this.props.log.debugEnabled = event.target.value
+        //this.props.log.debugEnabled = event.target.value
       })
   }
 
@@ -134,12 +147,12 @@ class LogList extends Component {
 
   render() {
     return (
-        <div style={{'overflow-y': 'scroll', height: '500px'}} >
+        <div style={{'overflow-y': 'scroll', 'maxHeight': '60vh'}} >
       {this.props.value.entries && this.props.value.entries.map((log, index) => {
             return ReactHtmlParser(log + '</br>') 
         })
        }
-        <div ref={(el) => { this.end = el}}>The End</div>
+        <div ref={(el) => { this.end = el}}></div>
       </div>
     )
   }
