@@ -109,8 +109,8 @@ class ServerLogs extends Component {
                 value={this.props.log.debugEnabled}
             />
             <FormText color='muted'>
-               Enter the name of the component to debug. Mulitple entries should be separated by a comma.
-               For example: signalk-server*,signalk-provider-tcp
+               Enter the appropriate debug keys to enable debug logging. Multiple entries should be separated by a comma.
+               For example: <code>signalk-server*,signalk-provider-tcp</code>
             </FormText>
           </Col>
           </FormGroup>
