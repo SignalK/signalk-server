@@ -2,13 +2,29 @@
 const debugCore = require('debug')
 const moment = require('moment')
 const Convert = require('ansi-to-html')
-const escape = require('escape-html');
- 
+const escape = require('escape-html')
+const path = require('path')
+const fs = require('fs')
+
 module.exports = function(app) {
   const log = []
   let debugEnabled = ''
+  let rememberDebug = false
   const size = 100
   let convert = new Convert()
+  let debugPath
+
+  if ( process.env.HOME ) {
+    debugPath = path.join(process.env.HOME, '.signalk_debug')
+    if ( fs.existsSync(debugPath) ) {
+      const enabled = fs.readFileSync(debugPath, 'utf8')
+      if ( enabled.length > 0 ) {
+        debugCore.enable(enabled)
+        debugEnabled = enabled
+        rememberDebug = true
+      }
+    }
+  }
   
   function storeOutput(output) {
     const html = '<span style="font-weight:lighter">' + moment().format('MMM DD HH:mm:ss') + '</span> ' + convert.toHtml(escape(output))
@@ -56,14 +72,40 @@ module.exports = function(app) {
 
       debugEnabled = enabled
 
+      if ( rememberDebug && debugPath ) {
+        fs.writeFileSync(debugPath, debugEnabled)
+      }
+
       app.emit('serverevent', {
-        type: 'DEBUG_ENABLED',
-        data: enabled
+        type: 'DEBUG_SETTINGS',
+        data: {
+          debugEnabled: enabled,
+          rememberDebug
+        }
       })
       return true
     },
-    getDebugEnabled: () => {
-      return debugEnabled
+    getDebugSettings: () => {
+      return { debugEnabled, rememberDebug }
+    },
+    rememberDebug: enabled => {
+
+      if ( debugPath ) {
+        if ( enabled ) {
+          fs.writeFileSync(debugPath, debugEnabled)
+        } else {
+          fs.unlinkSync(debugPath)
+        }
+      }
+      
+      rememberDebug = enabled
+      app.emit('serverevent', {
+        type: 'DEBUG_SETTINGS',
+        data: {
+          debugEnabled,
+          rememberDebug
+        }
+      })
     }
   }
 }

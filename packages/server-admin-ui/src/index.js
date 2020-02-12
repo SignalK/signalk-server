@@ -46,7 +46,8 @@ const state = {
   discoveredProviders: [],
   log: {
     entries,
-    debugEnabled: []
+    debugEnabled: [],
+    rememberDebug: false
   }
 }
 
@@ -185,10 +186,10 @@ let store = createStore(
         discoveredProviders: action.data
       }
     }
-    if ( action.type === 'DEBUG_ENABLED' ) {
+    if ( action.type === 'DEBUG_SETTINGS' ) {
       return {
         ...state,
-        log: { ...state.log, debugEnabled: action.data }
+        log: { ...state.log, ...action.data }
       }
     }
     if (action.type === 'LOG') {
@@ -199,8 +200,8 @@ let store = createStore(
       return {
         ...state,
         log: {
-          entries: state.log.entries,
-          debugEnabled: state.log.debugEnabled
+          ...state.log,
+          entries: state.log.entries
         }
       }
     }

@@ -604,4 +604,9 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       res.status(200).send()
     }
   })
+
+  app.post(`${serverRoutesPrefix}/rememberDebug`, (req, res) => {
+    app.logging.rememberDebug(req.body.value)
+    res.status(200).send()
+  })
 }

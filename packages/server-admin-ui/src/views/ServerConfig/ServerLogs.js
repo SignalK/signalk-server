@@ -71,6 +71,18 @@ class ServerLogs extends Component {
       })
   }
 
+  handleRememberDebug (event) {
+    fetch(`${window.serverRoutesPrefix}/rememberDebug`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ value: event.target.checked }),
+      credentials: 'include'
+    })
+      .then(response => response.text())
+  }
+
   render () {
     return (
       this.state.hasData && (
@@ -101,7 +113,30 @@ class ServerLogs extends Component {
             </FormText>
           </Col>
           </FormGroup>
-
+<FormGroup row>
+          <Col xs='3' md='2'>
+            <Label htmlFor='select'>Remember Debug</Label>
+          </Col>
+          <Col xs='6' md='3'>
+          <Label className='switch switch-text switch-primary'>
+                              <Input
+                                type='checkbox'
+                                id="Enabled"
+                                name='debug'
+                                className='switch-input'
+                                onChange={this.handleRememberDebug}
+                                checked={this.props.log.rememberDebug}
+                              />
+                              <span
+                                className='switch-label'
+                                data-on='Yes'
+                                data-off='No'
+                              />
+                              <span className='switch-handle' />
+                            </Label>
+          </Col>
+          </FormGroup>
+          
           <LogList value={this.props.log} />
               </Form>
             </CardBody>

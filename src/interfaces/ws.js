@@ -622,8 +622,8 @@ function startServerEvents(app, spark) {
     spark.write(app.lastServerEvents[propName])
   })
   spark.write({
-    type: 'DEBUG_ENABLED',
-    data: app.logging.getDebugEnabled()
+    type: 'DEBUG_SETTINGS',
+    data: app.logging.getDebugSettings()
   })
   if (app.securityStrategy.canAuthorizeWS()) {
     spark.write({
