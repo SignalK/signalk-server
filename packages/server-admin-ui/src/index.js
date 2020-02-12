@@ -21,6 +21,13 @@ import Full from './containers/Full/'
 
 import { openServerEventsConnection } from './actions'
 
+
+const entries = []
+
+for (let i = 0; i < 100; i++) {
+  entries[i] = ''
+}
+
 const state = {
   plugins: [],
   webapps: [],
@@ -38,7 +45,7 @@ const state = {
   accessRequests: [],
   discoveredProviders: [],
   log: {
-    entries: [],
+    entries,
     debugEnabled: []
   }
 }
@@ -186,8 +193,8 @@ let store = createStore(
     }
     if (action.type === 'LOG') {
       state.log.entries.push(action.data)
-      if (state.log.length > 100) {
-        state.log.splice(0, state.log.length - 100)
+      if (state.log.entries.length > 100) {
+        state.log.entries.shift()
       }
       return {
         ...state,

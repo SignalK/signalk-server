@@ -128,6 +128,10 @@ class LogListX extends Component {
 }
 
 class LogList extends Component {
+  componentDidMount() {
+    this.end.scrollIntoView({ behavior: "smooth" })
+  }
+
   render() {
     return (
         <div style={{'overflow-y': 'scroll', height: '500px'}} >
@@ -135,6 +139,7 @@ class LogList extends Component {
             return ReactHtmlParser(log + '</br>') 
         })
        }
+        <div ref={(el) => { this.end = el}}>The End</div>
       </div>
     )
   }
