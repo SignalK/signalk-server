@@ -25,6 +25,11 @@ export default ({plugin, onSubmit}) => {
         title: 'Enable Logging',
         default: false
       },
+      enableDebug: {
+        type: 'boolean',
+        title: 'Enable Debug',
+        default: false
+      },
       configuration: {
         type: 'object',
         title: ' ',

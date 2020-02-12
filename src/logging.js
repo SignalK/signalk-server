@@ -53,38 +53,40 @@ module.exports = function(app) {
     storeOutput(string)
   }
 
+  function enableDebug(enabled) {
+    if ( enabled.length > 0 ) {
+      let all = enabled.split(',')
+      
+      if ( all.indexOf('*') != -1 ) {
+          return false
+      }
+      
+      debugCore.enable(enabled)
+    } else {
+      debugCore.disable()
+    }
+    
+    debugEnabled = enabled
+    
+    if ( rememberDebug && debugPath ) {
+      fs.writeFileSync(debugPath, debugEnabled)
+    }
+    
+    app.emit('serverevent', {
+      type: 'DEBUG_SETTINGS',
+      data: {
+        debugEnabled: enabled,
+        rememberDebug
+      }
+      })
+    return true
+  }
+
   return {
     getLog: () => {
       return log
     },
-    enabledDebug: enabled => {
-      if ( enabled.length > 0 ) {
-        let all = enabled.split(',')
-
-        if ( all.indexOf('*') != -1 ) {
-          return false
-        }
-
-        debugCore.enable(enabled)
-      } else {
-        debugCore.disable()
-      }
-
-      debugEnabled = enabled
-
-      if ( rememberDebug && debugPath ) {
-        fs.writeFileSync(debugPath, debugEnabled)
-      }
-
-      app.emit('serverevent', {
-        type: 'DEBUG_SETTINGS',
-        data: {
-          debugEnabled: enabled,
-          rememberDebug
-        }
-      })
-      return true
-    },
+    enableDebug: enableDebug,
     getDebugSettings: () => {
       return { debugEnabled, rememberDebug }
     },
@@ -106,6 +108,26 @@ module.exports = function(app) {
           rememberDebug
         }
       })
+    },
+    addDebug: name => {
+      if ( debugEnabled.length > 0 ) {
+        const all = debugEnabled.split(',')
+        if (all.indexOf(name) === -1 ) {
+          enableDebug(debugEnabled + ',' + name)
+        }
+      } else {
+        enableDebug(name)
+      }
+    },
+    removeDebug: name => {
+      if ( debugEnabled.length > 0 ) {
+        const all = debugEnabled.split(',')
+        const idx = all.indexOf(name)
+        if ( idx != -1 ) {
+          all.splice(idx, 1)
+          enableDebug(all.join(','))
+        }
+      }
     }
   }
 }

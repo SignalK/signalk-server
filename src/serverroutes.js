@@ -598,7 +598,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   })
 
   app.post(`${serverRoutesPrefix}/debug`, (req, res) => {
-    if ( !app.logging.enabledDebug(req.body.value) ) {
+    if ( !app.logging.enableDebug(req.body.value) ) {
       res.status(400).send('invalid debug value')
     } else {
       res.status(200).send()

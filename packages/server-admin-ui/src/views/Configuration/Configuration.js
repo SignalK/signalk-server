@@ -79,10 +79,11 @@ class PluginCard extends Component {
     <Card key={this.props.i}>
     <CardHeader onClick={this.props.toggleForm}>
       <i className={'fa fa-chevron-' + (this.props.isOpen ? 'down':'right')}/>
-      {this.props.plugin.name}
+        {this.props.plugin.name}
     </CardHeader>
     <Collapse isOpen={this.props.isOpen}>
-      <CardBody>
+        <CardBody>
+        Package Name: {this.props.plugin.packageName}<br/>
         <PluginConfigurationForm plugin={this.props.plugin} onSubmit={this.props.saveData}/>
       </CardBody>
     </Collapse>
