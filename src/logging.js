@@ -6,7 +6,7 @@ const escape = require('escape-html');
  
 module.exports = function(app) {
   const log = []
-  let debugEnabled = []
+  let debugEnabled = ''
   const size = 100
   let convert = new Convert()
   
