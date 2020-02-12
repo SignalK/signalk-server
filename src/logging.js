@@ -1,16 +1,17 @@
 
 const debugCore = require('debug')
 const moment = require('moment')
+const Convert = require('ansi-to-html')
+const escape = require('escape-html');
  
 module.exports = function(app) {
   const log = []
   let debugEnabled = []
   const size = 100
-  let Convert = require('ansi-to-html')
   let convert = new Convert()
   
   function storeOutput(output) {
-    const html = '<span style="font-weight:lighter">' + moment().format('MMM DD HH:mm:ss') + '</span> ' + convert.toHtml(output)
+    const html = '<span style="font-weight:lighter">' + moment().format('MMM DD HH:mm:ss') + '</span> ' + convert.toHtml(escape(output))
     log.push(html)
     
     if (log.length > size) {
@@ -43,27 +44,26 @@ module.exports = function(app) {
     enabledDebug: enabled => {
       if ( enabled.length > 0 ) {
         let all = enabled.split(',')
-        all.forEach(name => {
-          debugCore.enable(name)
-        })
-        debugEnabled.forEach(name => {
-          if ( all.indexOf(name) === -1 ) {
-            debugCore.disable(name)
-          }
-        })
-        debugEnabled = all
+
+        if ( all.indexOf('*') != -1 ) {
+          return false
+        }
+
+        debugCore.enable(enabled)
       } else {
-        debugEnabled.forEach(debugCore.disable)
-        debugEnabled = []
+        debugCore.disable()
       }
+
+      debugEnabled = enabled
 
       app.emit('serverevent', {
         type: 'DEBUG_ENABLED',
         data: enabled
       })
+      return true
     },
     getDebugEnabled: () => {
-      return debugEnabled.join(',')
+      return debugEnabled
     }
   }
 }
