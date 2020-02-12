@@ -94,6 +94,7 @@ class ServerLogs extends Component {
                 method='post'
                 encType='multipart/form-data'
                 className='form-horizontal'
+                onSubmit={e => { e.preventDefault()}}
           >
 
           <FormGroup row>
