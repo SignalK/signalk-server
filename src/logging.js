@@ -11,6 +11,10 @@ module.exports = function(app) {
   const size = 100
   let debugPath
 
+  if ( process.env.DEBUG ) {
+    debugEnabled = process.env.DEBUG
+  }
+
   if ( process.env.HOME ) {
     debugPath = path.join(process.env.HOME, '.signalk_debug')
     if ( fs.existsSync(debugPath) ) {
