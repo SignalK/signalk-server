@@ -596,4 +596,17 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       .then(() => res.json(true))
       .catch(() => res.json(false))
   })
+
+  app.post(`${serverRoutesPrefix}/debug`, (req, res) => {
+    if (!app.logging.enableDebug(req.body.value)) {
+      res.status(400).send('invalid debug value')
+    } else {
+      res.status(200).send()
+    }
+  })
+
+  app.post(`${serverRoutesPrefix}/rememberDebug`, (req, res) => {
+    app.logging.rememberDebug(req.body.value)
+    res.status(200).send()
+  })
 }

@@ -481,28 +481,51 @@ function processUpdates(app, pathSources, spark, msg) {
 }
 
 function processSubscribe(app, unsubscribes, spark, assertBufferSize, msg) {
-  app.subscriptionmanager.subscribe(
-    msg,
-    unsubscribes,
-    spark.write.bind(spark),
-    message => {
-      const filtered = app.securityStrategy.filterReadDelta(
-        spark.request,
-        message
-      )
-      if (filtered) {
-        spark.write(filtered)
-        assertBufferSize(spark)
-      }
-    },
-    spark.request.skPrincipal
-  )
+  if (spark.hasServerEvents) {
+    if (
+      Array.isArray(msg.subscribe) &&
+      msg.subscribe.length > 0 &&
+      msg.subscribe[0].path === 'log' &&
+      !spark.logUnsubscribe
+    ) {
+      spark.logUnsubscribe = startServerLog(app, spark)
+    }
+  } else {
+    app.subscriptionmanager.subscribe(
+      msg,
+      unsubscribes,
+      spark.write.bind(spark),
+      message => {
+        const filtered = app.securityStrategy.filterReadDelta(
+          spark.request,
+          message
+        )
+        if (filtered) {
+          spark.write(filtered)
+          assertBufferSize(spark)
+        }
+      },
+      spark.request.skPrincipal
+    )
+  }
 }
 
 function processUnsubscribe(app, unsubscribes, msg, onChange, spark) {
   try {
-    app.subscriptionmanager.unsubscribe(msg, unsubscribes)
-    app.signalk.removeListener('delta', onChange)
+    if (spark.hasServerEvents) {
+      if (
+        Array.isArray(msg.unsubscribe) &&
+        msg.unsubscribe.length > 0 &&
+        msg.unsubscribe[0].path === 'log' &&
+        spark.logUnsubscribe
+      ) {
+        spark.logUnsubscribe()
+        spark.logUnsubscribe = undefined
+      }
+    } else {
+      app.subscriptionmanager.unsubscribe(msg, unsubscribes)
+      app.signalk.removeListener('delta', onChange)
+    }
   } catch (e) {
     console.log(e.message)
     spark.write(e.message)
@@ -577,6 +600,7 @@ function handleRealtimeConnection(app, spark, onChange) {
   sendLatestDeltas(app.deltaCache, app.selfContext, spark)
 
   if (spark.query.serverevents === 'all') {
+    spark.hasServerEvents = true
     startServerEvents(app, spark)
   }
 }
@@ -607,11 +631,36 @@ function startServerEvents(app, spark) {
   Object.keys(app.lastServerEvents).forEach(propName => {
     spark.write(app.lastServerEvents[propName])
   })
+  spark.write({
+    type: 'DEBUG_SETTINGS',
+    data: app.logging.getDebugSettings()
+  })
   if (app.securityStrategy.canAuthorizeWS()) {
     spark.write({
       type: 'RECEIVE_LOGIN_STATUS',
       data: app.securityStrategy.getLoginStatus(spark.request)
     })
+  }
+}
+
+function startServerLog(app, spark) {
+  const onServerLogEvent = wrapWithverifyWS(
+    app.securityStrategy,
+    spark,
+    spark.write.bind(spark)
+  )
+  app.on('serverlog', onServerLogEvent)
+  spark.onDisconnects.push(() => {
+    app.removeListener('serverlog', onServerLogEvent)
+  })
+  app.logging.getLog().forEach(log => {
+    spark.write({
+      type: 'LOG',
+      data: log
+    })
+  })
+  return () => {
+    app.removeListener('serverlog', onServerLogEvent)
   }
 }
 

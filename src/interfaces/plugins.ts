@@ -50,6 +50,7 @@ export interface Plugin {
 
 interface PluginInfo extends Plugin {
   enableLogging: any
+  enableDebug: any
   packageName: any
   packageLocation: string
   registerWithRouter: any
@@ -170,6 +171,7 @@ module.exports = (theApp: any) => {
             return {
               id: plugin.id,
               name: plugin.name,
+              packageName: plugin.packageName,
               version: plugin.version,
               description: plugin.description,
               schema,
@@ -380,6 +382,13 @@ module.exports = (theApp: any) => {
     debug('Starting plugin %s from %s', plugin.name, location)
     try {
       app.setProviderStatus(plugin.name, null)
+
+      if (plugin.enableDebug) {
+        app.logging.addDebug(plugin.packageName)
+      } else {
+        app.logging.removeDebug(plugin.packageName)
+      }
+
       plugin.start(configuration, restart)
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
@@ -486,6 +495,11 @@ module.exports = (theApp: any) => {
       plugin.enabledByDefault = true
     }
 
+    plugin.enableDebug = startupOptions.enableDebug
+    plugin.version = metadata.version
+    plugin.packageName = metadata.name
+    plugin.packageLocation = location
+
     if (startupOptions && startupOptions.enabled) {
       doPluginStart(
         app,
@@ -498,10 +512,6 @@ module.exports = (theApp: any) => {
     plugin.enableLogging = startupOptions.enableLogging
     app.plugins.push(plugin)
     app.pluginsMap[plugin.id] = plugin
-
-    plugin.version = metadata.version
-    plugin.packageName = metadata.name
-    plugin.packageLocation = location
 
     const router = express.Router()
     router.get('/', (req: Request, res: Response) => {
@@ -531,6 +541,7 @@ module.exports = (theApp: any) => {
         stopPlugin(plugin)
         const options = getPluginOptions(plugin.id)
         plugin.enableLogging = options.enableLogging
+        plugin.enableDebug = options.enableDebug
         if (options.enabled) {
           doPluginStart(app, plugin, location, options.configuration, restart)
         }

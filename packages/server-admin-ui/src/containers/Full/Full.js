@@ -23,6 +23,7 @@ import VesselConfiguration from '../../views/ServerConfig/VesselConfiguration'
 import ProvidersConfiguration from '../../views/ServerConfig/ProvidersConfiguration'
 import Settings from '../../views/ServerConfig/Settings'
 import Logging from '../../views/ServerConfig/Logging'
+import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
 
 import {
@@ -81,6 +82,10 @@ class Full extends Component {
                 <Route
                   path='/serverConfiguration/datalogs'
                   component={loginOrOriginal(Logging)}
+                />
+                <Route
+                  path='/serverConfiguration/log'
+                  component={loginOrOriginal(ServerLog)}
                 />
                 <Route
                   path='/serverConfiguration/update'

@@ -21,6 +21,22 @@ import Full from './containers/Full/'
 
 import { openServerEventsConnection } from './actions'
 
+import escape from 'escape-html'
+import Convert from 'ansi-to-html'
+
+const convert = new Convert()
+const entries = []
+
+let logEntryCount = 0
+
+for (let i = 0; i < 100; i++) {
+  entries[i] = {
+    i: logEntryCount++,
+    d: ''
+  }
+}
+
+
 const state = {
   plugins: [],
   webapps: [],
@@ -36,7 +52,12 @@ const state = {
   webSocket: null,
   restarting: false,
   accessRequests: [],
-  discoveredProviders: []
+  discoveredProviders: [],
+  log: {
+    entries,
+    debugEnabled: [],
+    rememberDebug: false
+  }
 }
 
 let store = createStore(
@@ -174,6 +195,30 @@ let store = createStore(
         discoveredProviders: action.data
       }
     }
+    if ( action.type === 'DEBUG_SETTINGS' ) {
+      return {
+        ...state,
+        log: { ...state.log, ...action.data }
+      }
+    }
+    if (action.type === 'LOG') {
+      const html = '<span style="font-weight:lighter">' + action.data.ts + '</span> ' + convert.toHtml(escape(action.data.row))
+      state.log.entries.push({
+        i: logEntryCount++,
+        d: html
+      })
+      if (state.log.entries.length > 100) {
+        state.log.entries.shift()
+      }
+      return {
+        ...state,
+        log: {
+          ...state.log,
+          entries: state.log.entries
+        }
+      }
+    }
+
     return state
   },
   state,

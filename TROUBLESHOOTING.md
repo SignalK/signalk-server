@@ -10,10 +10,6 @@ Share the resulting file, preferably via Dropbox, Google Drive, Github Gist or s
 
 # Turning On Debug
 
-Debug logging can be turned on for many features of the node server. If you need to turn debugging on, modify `~/.signalk/signalk-server` and add the DEBUG variable as below.
+If the console is available, go to Server -> Server Log and enter the the names of the compononets you want to debug.
 
-```
-#!/bin/sh
-export DEBUG="@signalk/aisreporter,signalk-server:udp-provider"
-/usr/lib/node_modules/signalk-server/bin/signalk-server -c /home/pi/.signalk $*
-```
+Otherwise, you can edit the file `~/.signalk_debug' and add them there. For example: `@signalk/aisreporter,signalk-server:udp-provider`
