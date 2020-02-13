@@ -150,32 +150,6 @@ class ServerLogs extends Component {
   }
 }
 
-class LogListX extends Component {
-  render() {
-    return (
-      <Table hover responsive bordered striped size="sm">
-            <thead>
-                <tr>
-                <th>Log</th>
-              </tr>
-            </thead>
-            <tbody>
-
-      {this.props.value.entries && this.props.value.entries.map((log, index) => {
-            return (
-                <tr key={index}>
-                <td>{ ReactHtmlParser(log) }</td>
-                </tr>
-            )
-            })
-            }
-      
-            </tbody>
-          </Table>
-    )
-  }
-}
-
 class LogList extends Component {
   componentDidMount() {
     this.end.scrollIntoView()
@@ -183,7 +157,7 @@ class LogList extends Component {
 
   render() {
     return (
-        <div style={{'overflowY': 'scroll', 'maxHeight': '60vh'}} >
+        <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
       {this.props.value.entries && this.props.value.entries.map((logEntry, index) => {
             return <PureLogRow key={logEntry.i} log={logEntry.d}/>
         })
