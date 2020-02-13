@@ -1,4 +1,3 @@
-
 const debugCore = require('debug')
 const moment = require('moment')
 const path = require('path')
@@ -11,75 +10,77 @@ module.exports = function(app) {
   const size = 100
   let debugPath
 
-  if ( process.env.DEBUG ) {
+  if (process.env.DEBUG) {
     debugEnabled = process.env.DEBUG
   }
 
-  if ( process.env.HOME ) {
+  if (process.env.HOME) {
     debugPath = path.join(process.env.HOME, '.signalk_debug')
-    if ( fs.existsSync(debugPath) ) {
+    if (fs.existsSync(debugPath)) {
       const enabled = fs.readFileSync(debugPath, 'utf8')
-      if ( enabled.length > 0 ) {
+      if (enabled.length > 0) {
         debugCore.enable(enabled)
         debugEnabled = enabled
         rememberDebug = true
       }
     }
   }
-  
+
   function storeOutput(output) {
-    const data = {ts: moment().format('MMM DD HH:mm:ss'), row:  output}
+    const data = { ts: moment().format('MMM DD HH:mm:ss'), row: output }
     log.push(data)
-    
+
     if (log.length > size) {
       log.splice(0, log.length - size)
     }
-    
+
     app.emit('serverlog', {
       type: 'LOG',
       data: data
     })
   }
-  
-  const out_write = process.stdout.write
-  const err_write = process.stderr.write
-    
+
+  const outWrite = process.stdout.write
+  const errWrite = process.stderr.write
+
+  // tslint:disable-next-line
   process.stdout.write = function(string) {
-    out_write.apply(process.stdout, arguments)
+    outWrite.apply(process.stdout, arguments)
     storeOutput(string)
   }
-  
+
+  // tslint:disable-next-line
   process.stderr.write = function(string) {
-    err_write.apply(process.stderr, arguments)
+    errWrite.apply(process.stderr, arguments)
     storeOutput(string)
   }
 
   function enableDebug(enabled) {
-    if ( enabled.length > 0 ) {
+    if (enabled.length > 0) {
       let all = enabled.split(',')
-      
-      if ( all.indexOf('*') != -1 ) {
-          return false
+
+      if (all.indexOf('*') !== -1) {
+        return false
       }
-      
+
       debugCore.enable(enabled)
     } else {
       debugCore.disable()
     }
-    
+
     debugEnabled = enabled
-    
-    if ( rememberDebug && debugPath ) {
+
+    if (rememberDebug && debugPath) {
       fs.writeFileSync(debugPath, debugEnabled)
     }
-    
+
     app.emit('serverevent', {
       type: 'DEBUG_SETTINGS',
       data: {
         debugEnabled: enabled,
         rememberDebug
       }
-      })
+    })
     return true
   }
 
@@ -92,15 +93,14 @@ module.exports = function(app) {
       return { debugEnabled, rememberDebug }
     },
     rememberDebug: enabled => {
-
-      if ( debugPath ) {
-        if ( enabled ) {
+      if (debugPath) {
+        if (enabled) {
           fs.writeFileSync(debugPath, debugEnabled)
         } else {
           fs.unlinkSync(debugPath)
         }
       }
-      
+
       rememberDebug = enabled
       app.emit('serverevent', {
         type: 'DEBUG_SETTINGS',
@@ -111,9 +111,9 @@ module.exports = function(app) {
       })
     },
     addDebug: name => {
-      if ( debugEnabled.length > 0 ) {
+      if (debugEnabled.length > 0) {
         const all = debugEnabled.split(',')
-        if (all.indexOf(name) === -1 ) {
+        if (all.indexOf(name) === -1) {
           enableDebug(debugEnabled + ',' + name)
         }
       } else {
@@ -121,10 +121,10 @@ module.exports = function(app) {
       }
     },
     removeDebug: name => {
-      if ( debugEnabled.length > 0 ) {
+      if (debugEnabled.length > 0) {
         const all = debugEnabled.split(',')
         const idx = all.indexOf(name)
-        if ( idx != -1 ) {
+        if (idx !== -1) {
           all.splice(idx, 1)
           enableDebug(all.join(','))
         }

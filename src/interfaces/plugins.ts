@@ -383,12 +383,12 @@ module.exports = (theApp: any) => {
     try {
       app.setProviderStatus(plugin.name, null)
 
-      if ( plugin.enableDebug ) {
+      if (plugin.enableDebug) {
         app.logging.addDebug(plugin.packageName)
       } else {
         app.logging.removeDebug(plugin.packageName)
       }
-      
+
       plugin.start(configuration, restart)
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
