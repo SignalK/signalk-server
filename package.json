@@ -15,7 +15,7 @@
     "test-only": "mocha --timeout 10000 --exit 'test/**/*.js' 'lib/**/*.test.js'",
     "test": "npm run build && npm run test-only && npm run lint",
     "typedoc": "typedoc",
-    "heroku-postbuild": "npm install @signalk/simple-gpx"
+    "heroku-postbuild": "npm run build"
   },
   "bin": {
     "signalk-server": "./bin/signalk-server",
