@@ -41,6 +41,8 @@ const skPrefix = '/signalk/v1'
 const skAPIPrefix = `${skPrefix}/api`
 const skAuthPrefix = `${skPrefix}/auth`
 
+const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
+
 module.exports = function(app, config) {
   const strategy = {}
   const accessRequests = []
@@ -276,7 +278,7 @@ module.exports = function(app, config) {
 
       const user = configuration.users.find(aUser => aUser.username === name)
       if (!user) {
-        resolve({ statusCode: 401, message: 'Invalid Username' })
+        resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
         return
       }
 
@@ -293,7 +295,7 @@ module.exports = function(app, config) {
           resolve({ statusCode: 200, token })
         } else {
           debug('password did not match')
-          resolve({ statusCode: 401, message: 'Invalid Password' })
+          resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
         }
       })
     })
