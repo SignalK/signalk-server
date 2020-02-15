@@ -53,13 +53,11 @@
     "style-loader": "0.19.0",
     "uglify-js": "3.1.10",
     "url-loader": "0.6.2",
-    "webpack": "3.8.1",
-    "webpack-dev-server": "2.9.4"
+    "webpack": "3.8.1"
   },
   "scripts": {
     "prepublishOnly": "npm run clean && npm run build",
     "dev": "webpack -d --progress --watch --profile --json > compilation-stats.json --env.dev",
-    "start": "webpack-dev-server --progress --colors --inline --env.dev",
     "build": "webpack -p --progress --env.prod",
     "clean": "rimraf ./build"
   },
