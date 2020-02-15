@@ -16,7 +16,7 @@ const app = {
 new require('../lib/pipedproviders')(app).createPipedProvider({
   pipeElements: [
     {
-      type: 'providers/Simple',
+      type: 'providers/simple',
       options: {
         logging: false,
         noThrottle: true,
