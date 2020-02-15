@@ -26,8 +26,12 @@ module.exports = function(app) {
     }
   }
 
-  function storeOutput(output) {
-    const data = { ts: moment().format('MMM DD HH:mm:ss'), row: output }
+  function storeOutput(output, isError) {
+    const data = {
+      ts: moment().format('MMM DD HH:mm:ss'),
+      row: output,
+      isError
+    }
     log.push(data)
 
     if (log.length > size) {
@@ -46,14 +50,17 @@ module.exports = function(app) {
   // tslint:disable-next-line
   process.stdout.write = function(string) {
     outWrite.apply(process.stdout, arguments)
-    storeOutput(string)
+    storeOutput(string, false)
   }
 
   // tslint:disable-next-line
   process.stderr.write = function(string) {
     errWrite.apply(process.stderr, arguments)
-    storeOutput(string)
+    storeOutput(string, true)
   }
+
+  // send debug to stdout so it does not look like an error
+  debugCore.log = console.info.bind(console);
 
   function enableDebug(enabled) {
     if (enabled.length > 0) {
