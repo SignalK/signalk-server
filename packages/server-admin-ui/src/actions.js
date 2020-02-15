@@ -170,5 +170,6 @@ export function openServerEventsConnection (dispatch) {
       type: 'WEBSOCKET_OPEN',
       data: ws
     })
+    fetchServerSpecification(dispatch)
   }
 }
