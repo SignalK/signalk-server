@@ -138,7 +138,7 @@ export function fetchAllData (dispatch) {
   fetchAccessRequests(dispatch)
 }
 
-export function openServerEventsConnection (dispatch) {
+export function openServerEventsConnection (dispatch, isReconnect) {
   const proto = window.location.protocol == 'https:' ? 'wss' : 'ws'
   const ws = new WebSocket(
     proto +
@@ -170,5 +170,8 @@ export function openServerEventsConnection (dispatch) {
       type: 'WEBSOCKET_OPEN',
       data: ws
     })
+    if ( isReconnect ) {
+      window.location.reload()
+    }
   }
 }

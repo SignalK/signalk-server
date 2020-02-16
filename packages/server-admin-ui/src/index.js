@@ -148,7 +148,7 @@ let store = createStore(
       if (!state.webSocketTimer) {
         state.webSocketTimer = setInterval(() => {
           console.log(`retry...`)
-          openServerEventsConnection(store.dispatch)
+          openServerEventsConnection(store.dispatch, true)
         }, 5 * 1000)
       }
       return {
@@ -163,7 +163,7 @@ let store = createStore(
         state.webSocket.onclose = undefined
         state.webSocket.close()
       }
-      openServerEventsConnection(store.dispatch, action.data)
+      openServerEventsConnection(store.dispatch)
       return state
     }
     if (action.type === 'SERVER_RESTART') {
