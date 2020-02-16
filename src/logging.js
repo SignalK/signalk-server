@@ -29,8 +29,10 @@ module.exports = function(app) {
   function storeOutput(output, isError) {
     const data = {
       ts: moment().format('MMM DD HH:mm:ss'),
-      row: output,
-      isError
+      row: output
+    }
+    if ( isError ) {
+      data.isError = true
     }
     log.push(data)
 
