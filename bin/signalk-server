@@ -16,6 +16,9 @@
  * limitations under the License.
 */
 
+// Allows SSL/TLS connection to a server with a self-signed certificate
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+
 var Server = require('../lib');
 var server = new Server();
 
