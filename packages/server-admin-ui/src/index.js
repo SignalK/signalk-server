@@ -202,7 +202,8 @@ let store = createStore(
       }
     }
     if (action.type === 'LOG') {
-      const html = '<span style="font-weight:lighter">' + action.data.ts + '</span> ' + convert.toHtml(escape(action.data.row))
+      const style = action.data.isError ? 'color:red' : 'font-weight:lighter'
+      const html = `<span style="${style}">` + action.data.ts + '</span> ' + convert.toHtml(escape(action.data.row))
       state.log.entries.push({
         i: logEntryCount++,
         d: html
