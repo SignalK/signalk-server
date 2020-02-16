@@ -157,7 +157,7 @@ class LogList extends Component {
 
   render() {
     return (
-        <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
+        <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px', 'font-family': 'monospace'}} >
       {this.props.value.entries && this.props.value.entries.map((logEntry, index) => {
             return <PureLogRow key={logEntry.i} log={logEntry.d}/>
         })
