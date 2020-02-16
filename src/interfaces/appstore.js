@@ -17,7 +17,7 @@
 const debug = require('debug')('signalk:interfaces:appstore')
 const _ = require('lodash')
 const compareVersions = require('compare-versions')
-const installModule = require('../modules').installModule
+const { installModule, removeModule } = require('../modules')
 const { findModulesWithKeyword, getLatestServerVersion } = require('../modules')
 
 const npmServerInstallLocations = [
@@ -75,6 +75,45 @@ module.exports = function(app) {
         }
       )
 
+      app.post(
+        [
+          '/appstore/remove/:name',
+          '/appstore/remove/:org/:name'
+        ],
+        (req, res) => {
+          let name = req.params.name
+
+          if (req.params.org) {
+            name = req.params.org + '/' + name
+          }
+
+          findPluginsAndWebapps()
+            .then(([plugins, webapps]) => {
+              if (
+                !plugins.find(packageNameIs(name)) &&
+                  !webapps.find(packageNameIs(name))
+              ) {
+                res.status(404)
+                res.send('No such webapp or plugin available:' + name)
+              } else {
+                if (moduleInstalling) {
+                  moduleInstallQueue.push({ name: name, isRemove: true })
+                  sendAppStoreChangedEvent()
+                } else {
+                  removeSKModule(name)
+                }
+                res.send(`Removing ${name}...`)
+              }
+            })
+            .catch(error => {
+              console.error(error.message)
+              console.error(error.stack)
+              res.status(500)
+              res.send('<pre>' + error.message + '</pre>')
+            })
+        }
+      )
+      
       app.get('/appstore/available/', (req, res) => {
         findPluginsAndWebapps()
           .then(([plugins, webapps]) => {
@@ -209,10 +248,15 @@ module.exports = function(app) {
         addIfNotDuplicate(result.installing, pluginInfo)
       } else if (modulesInstalledSinceStartup[name]) {
         if (moduleInstalling && moduleInstalling.name === name) {
-          pluginInfo.isInstalling = true
+          if ( moduleInstalling.isRemove ) {
+            pluginInfo.isRemoving = true
+          } else {
+            pluginInfo.isInstalling = true
+          }
         } else if (modulesInstalledSinceStartup[name].code !== 0) {
           pluginInfo.installFailed = true
         }
+        pluginInfo.isRemove = modulesInstalledSinceStartup[name].isRemove
         addIfNotDuplicate(result.installing, pluginInfo)
       } else if (installedModule) {
         if (compareVersions(version, installedModule.version) > 0) {
@@ -266,16 +310,27 @@ module.exports = function(app) {
   }
 
   function installSKModule(module, version) {
+    updateSKModule(module, version, false)
+  }
+
+  function removeSKModule(module) {
+    updateSKModule(module, null, true)
+  }
+
+  function updateSKModule(module, version, isRemove) {
     moduleInstalling = {
       name: module,
       output: [],
-      version: version
+      version: version,
+      isRemove: isRemove
     }
     modulesInstalledSinceStartup[module] = moduleInstalling
 
     sendAppStoreChangedEvent()
 
-    installModule(
+    const fn = isRemove ? removeModule : installModule
+
+    fn(
       app,
       module,
       version,
@@ -295,7 +350,11 @@ module.exports = function(app) {
 
         if (moduleInstallQueue.length) {
           const next = moduleInstallQueue.splice(0, 1)[0]
-          installSKModule(next.name, next.version)
+          if  ( next.isRemove ) {
+            removeSKModule(next.name)
+          } else {
+            installSKModule(next.name, next.version)
+          }
         }
 
         sendAppStoreChangedEvent()

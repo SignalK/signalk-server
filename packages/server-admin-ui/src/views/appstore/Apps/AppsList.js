@@ -23,18 +23,30 @@ export default props => (
           <strong>
             {app.installedVersion || app.version}
             {app.installedVersion &&
-              app.version != app.installedVersion &&
+             app.version != app.installedVersion &&
+             props.listName !== 'installed' &&
               ' \u27a1 ' + app.version}
           </strong>
         </div>
         <div className='actions'>
-          {(!app.installedVersion || app.version != app.installedVersion) && (
+
+      {(props.listName !== 'installed' && (!app.installedVersion || app.version != app.installedVersion)) && (
             <Button
               color='link'
               className='text-muted'
               onClick={installApp.bind(this, app.name, app.version)}
             >
               <i className='icon-cloud-download' />
+            </Button>
+       )}
+      
+      {(props.listName === 'installed') && (
+            <Button
+              color='link'
+              className='text-danger'
+              onClick={removeApp.bind(this, app.name)}
+            >
+          <i className='fas fa-trash' />
             </Button>
           )}
         </div>
@@ -54,6 +66,14 @@ function mainIcon (app) {
 
 function installApp (name, version) {
   fetch(`/appstore/install/${name}/${version}`, {
+    method: 'POST',
+    credentials: 'include'
+  })
+}
+
+
+function removeApp (name) {
+  fetch(`/appstore/remove/${name}`, {
     method: 'POST',
     credentials: 'include'
   })

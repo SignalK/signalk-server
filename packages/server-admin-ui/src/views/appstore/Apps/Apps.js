@@ -43,6 +43,7 @@ class AppTable extends Component {
               <AppsList
                 apps={this.props.appStore[viewData.listName]}
                 storeAvailable={this.props.appStore.storeAvailable}
+                listName={viewData.listName}
               />
             </CardBody>
           </Card>

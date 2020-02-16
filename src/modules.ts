@@ -121,7 +121,6 @@ function modulesWithKeyword(app: App, keyword: string) {
     moduleData => moduleData.module
   ).sort(priorityPrefix)
 }
-
 function installModule(
   app: App,
   name: string,
@@ -130,22 +129,47 @@ function installModule(
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {
-  debug('installing: ' + name + ' ' + version)
+  runNpm(app, name, version, 'install', onData, onErr, onClose)
+}
+
+function removeModule(
+  app: App,
+  name: string,
+  version: any,
+  onData: () => any,
+  onErr: (err: Error) => any,
+  onClose: (code: number) => any
+) {
+  runNpm(app, name, null, 'remove', onData, onErr, onClose)
+}
+
+function runNpm(
+  app: App,
+  name: string,
+  version: any,
+  command: string,
+  onData: () => any,
+  onErr: (err: Error) => any,
+  onClose: (code: number) => any
+) {
   let npm
 
   const opts: { cwd?: string } = {}
+  const packageString = version ? `${name}@${version}` : name
 
+  debug(`${command}: ${packageString}`)
+  
   if (name === app.config.name) {
     if (process.platform === 'win32') {
       npm = spawn(
         'cmd',
-        ['/c', 'npm install -g --unsafe-perm ' + `${name}@${version}`],
+        ['/c', `npm ${command} -g --unsafe-perm ${packageString} `],
         opts
       )
     } else {
       npm = spawn(
         'sudo',
-        ['npm', 'install', '-g', '--unsafe-perm', `${name}@${version}`],
+        ['npm', command, '-g', '--unsafe-perm', packageString],
         opts
       )
     }
@@ -155,11 +179,11 @@ function installModule(
     if (process.platform === 'win32') {
       npm = spawn(
         'cmd',
-        ['/c', 'npm --save install ' + `${name}@${version}`],
+        ['/c', `npm --save ${command} ${packageString}`],
         opts
       )
     } else {
-      npm = spawn('npm', ['--save', 'install', `${name}@${version}`], opts)
+      npm = spawn('npm', ['--save', command, packageString], opts)
     }
   }
 
@@ -276,6 +300,7 @@ function checkForNewServerVersion(
 module.exports = {
   modulesWithKeyword,
   installModule,
+  removeModule,
   findModulesWithKeyword,
   getLatestServerVersion,
   checkForNewServerVersion
