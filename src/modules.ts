@@ -158,7 +158,7 @@ function runNpm(
   const packageString = version ? `${name}@${version}` : name
 
   debug(`${command}: ${packageString}`)
-  
+
   if (name === app.config.name) {
     if (process.platform === 'win32') {
       npm = spawn(
@@ -177,11 +177,7 @@ function runNpm(
     opts.cwd = app.config.configPath
 
     if (process.platform === 'win32') {
-      npm = spawn(
-        'cmd',
-        ['/c', `npm --save ${command} ${packageString}`],
-        opts
-      )
+      npm = spawn('cmd', ['/c', `npm --save ${command} ${packageString}`], opts)
     } else {
       npm = spawn('npm', ['--save', command, packageString], opts)
     }

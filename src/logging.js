@@ -31,7 +31,7 @@ module.exports = function(app) {
       ts: moment().format('MMM DD HH:mm:ss'),
       row: output
     }
-    if ( isError ) {
+    if (isError) {
       data.isError = true
     }
     log.push(data)
@@ -62,7 +62,7 @@ module.exports = function(app) {
   }
 
   // send debug to stdout so it does not look like an error
-  debugCore.log = console.info.bind(console);
+  debugCore.log = console.info.bind(console)
 
   function enableDebug(enabled) {
     if (enabled.length > 0) {

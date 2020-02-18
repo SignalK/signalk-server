@@ -76,10 +76,7 @@ module.exports = function(app) {
       )
 
       app.post(
-        [
-          '/appstore/remove/:name',
-          '/appstore/remove/:org/:name'
-        ],
+        ['/appstore/remove/:name', '/appstore/remove/:org/:name'],
         (req, res) => {
           let name = req.params.name
 
@@ -91,7 +88,7 @@ module.exports = function(app) {
             .then(([plugins, webapps]) => {
               if (
                 !plugins.find(packageNameIs(name)) &&
-                  !webapps.find(packageNameIs(name))
+                !webapps.find(packageNameIs(name))
               ) {
                 res.status(404)
                 res.send('No such webapp or plugin available:' + name)
@@ -113,7 +110,7 @@ module.exports = function(app) {
             })
         }
       )
-      
+
       app.get('/appstore/available/', (req, res) => {
         findPluginsAndWebapps()
           .then(([plugins, webapps]) => {
@@ -248,7 +245,7 @@ module.exports = function(app) {
         addIfNotDuplicate(result.installing, pluginInfo)
       } else if (modulesInstalledSinceStartup[name]) {
         if (moduleInstalling && moduleInstalling.name === name) {
-          if ( moduleInstalling.isRemove ) {
+          if (moduleInstalling.isRemove) {
             pluginInfo.isRemoving = true
           } else {
             pluginInfo.isInstalling = true
@@ -350,7 +347,7 @@ module.exports = function(app) {
 
         if (moduleInstallQueue.length) {
           const next = moduleInstallQueue.splice(0, 1)[0]
-          if  ( next.isRemove ) {
+          if (next.isRemove) {
             removeSKModule(next.name)
           } else {
             installSKModule(next.name, next.version)
