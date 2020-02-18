@@ -5,9 +5,9 @@ import { Button } from 'reactstrap'
 export default props => (
   <ul className='icons-list'>
     {props.apps.map(app => (
-      <li key={app.name}>
+      <li key={app.name} style={{borderBottom: '1px solid #a4b7c1'}}>
         {mainIcon(app)}
-        <div className='desc'>
+        <div className='desc' style={{overflow: 'hidden', whiteSpace: 'nowrap', marginRight: '90px'}}>
           <a href={app.npmUrl} target='_blank' title='Open package on npmjs.com'>
             <i className='icon-info' />
           </a>
