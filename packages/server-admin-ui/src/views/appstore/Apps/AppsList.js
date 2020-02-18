@@ -73,8 +73,10 @@ function installApp (name, version) {
 
 
 function removeApp (name) {
-  fetch(`/appstore/remove/${name}`, {
-    method: 'POST',
-    credentials: 'include'
-  })
+  if (confirm(`Are you sure you want to remove ${name}?`)) {
+    fetch(`/appstore/remove/${name}`, {
+      method: 'POST',
+      credentials: 'include'
+    })
+  }
 }
