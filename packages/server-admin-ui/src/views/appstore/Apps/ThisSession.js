@@ -38,11 +38,11 @@ class ThisSession extends Component {
                   </tr>
                 </thead>
                 <tbody>
-                  {thisSessionApps.map(app => {
+          {thisSessionApps.map(app => {
                     var status
                     var progress = ''
-                    if (app.isInstalling || app.isWaiting) {
-                      status = 'Installing'
+                    if ((app.isInstalling || app.isRemoving) || app.isWaiting) {
+                      status = app.isRemove ? 'Removing' : 'Installing'
                       progress = (
                         <Progress
                           className='progress-sm'
@@ -55,6 +55,7 @@ class ThisSession extends Component {
                       status = 'Failed'
                     } else {
                       status = 'Installed '
+                      status = app.isRemove ? 'Removed' : 'Installed'
                     }
 
                     return (
