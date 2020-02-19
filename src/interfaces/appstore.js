@@ -172,7 +172,8 @@ module.exports = function(app) {
 
     if (
       process.argv.length > 1 &&
-      npmServerInstallLocations.includes(process.argv[1]) &&
+      (npmServerInstallLocations.includes(process.argv[1]) ||
+        process.env.SIGNALK_SERVER_IS_UPDATABLE) &&
       !process.env.SIGNALK_DISABLE_SERVER_UPDATES
     ) {
       all.canUpdateServer = !all.isInDocker && true

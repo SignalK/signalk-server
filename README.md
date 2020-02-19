@@ -114,22 +114,32 @@ In this case, the server would look for the settings file at `/usr/local/etc/nod
 
 Environment variables
 ---------------------
-- `SIGNALK_NODE_SETTINGS` override the path to the settings file
-- `SIGNALK_NODE_CONFIG_DIR` override the path to find server configuration files
-- `PORT` override the port for http/ws service
+- `SIGNALK_NODE_SETTINGS` override the path to the settings file.
+- `SIGNALK_NODE_CONFIG_DIR` override the path to find server configuration files.
+- `PORT` override the port for http/ws service.
 - `SSLPORT` override the port for https/wss service. If defined activates ssl as forced, default protocol.
 - `EXTERNALPORT` the port used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
 - `EXTERNALHOST` the host used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
-- `FILEUPLOADSIZELIMIT` override the file upload size limit (default is '10mb')
-- `NMEA0183PORT`  override the port for the NMEA 0183 over tcp service (default 10110)
-- `TCPSTREAMPORT` override the port for the Signal K Streaming (deltas) over TCP
-- `TCPSTREAMADDRESS` override the address the Signal K Stream (deltas) over TCP is listening on
-- `DISABLEPLUGINS` disable all plugins so that they can not be enabled
-- `DEFAULTENABLEDPLUGINS` a comma separated list of plugin ids that are overridden to be enabled by default if no setttings exist. lower preference than `DISABLEPLUGINS`
-- `SECURITYSTRATEGY` override the security strategy module name
-- `WSCOMPRESSION` compress websocket messages
+- `FILEUPLOADSIZELIMIT` override the file upload size limit (default is '10mb').
+- `NMEA0183PORT`  override the port for the NMEA 0183 over tcp service (default 10110).
+- `TCPSTREAMPORT` override the port for the Signal K Streaming (deltas) over TCP.
+- `TCPSTREAMADDRESS` override the address the Signal K Stream (deltas) over TCP is listening on.
+- `DISABLEPLUGINS` disable all plugins so that they can not be enabled.
+- `DEFAULTENABLEDPLUGINS` a comma separated list of plugin ids that are overridden to be enabled by default if no setttings exist. lower preference than `DISABLEPLUGINS`.
+- `PLUGINS_WITH_UPDATE_DISABLED` a comma separated list of plugin that will not be updated.
+- `SECURITYSTRATEGY` override the security strategy module name.
+- `WSCOMPRESSION` compress websocket messages.
 - `MAXSENDBUFFERSIZE` the maximum number of bytes allowed in the server's send buffer of a WebSocket connection. The connection will be terminated if this is exceeded. Guards against slow or dysfunctional clients that can not cope with the message volume. Default is 512 * 1024 bytes.
-
+- `SIGNALK_SERVER_IS_UPDATABLE` allows the server to be updated through the GUI even if it is not installed in the standard paths.
+- `SIGNALK_DISABLE_SERVER_UPDATES` invalidates the ability to update the server through the GUI.
+- `DEBUG` a comma-separated list of tags for debugging the specified module (For example: signalk-server*,signalk-provider-tcp). Can now be defined directly in the graphical interface.
+- `IS_IN_DOCKER` Automatically enabled if the server is running under docker and disables updating process through the GUI.
+- `NPMREGISTRYTIMEOUT` allow adjust the timeout to acces to NPN web site (by default 20s)
+- `SECRETKEY` remains to be commented...
+- `ALLOW_DEVICE_ACCESS_REQUESTS` remains to be commented...
+- `ALLOW_NEW_USER_REGISTRATION` remains to be commented...
+- `ADMINUSER` remains to be commented...
+- `PRESERIALCOMMAND` remains to be commented...
 
 Real Inputs
 ---------------
