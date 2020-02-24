@@ -109,7 +109,7 @@
     "spdy": "^4.0.0",
     "split": "^1.0.0",
     "stat-mode": "^1.0.0",
-    "uuid": "^3.2.1",
+    "uuid": "^7.0.0",
     "ws": "^7.0.0"
   },
   "optionalDependencies": {
