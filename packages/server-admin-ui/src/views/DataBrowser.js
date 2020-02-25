@@ -54,7 +54,7 @@ class DataBrowser extends Component {
   }
 
   handleMessage(msg) {
-    if ( msg.updates ) {
+    if ( msg.context && msg.updates ) {
       const key = msg.context === this.state.webSocket.skSelf ? 'self' : msg.context
 
       let isNew = false
@@ -63,47 +63,50 @@ class DataBrowser extends Component {
         isNew = true
       }
 
-      //if ( this.state.context && this.state.context === key )
-      {
-        let context = this.state.data[key]
+      let context = this.state.data[key]
       
-        msg.updates.forEach(update => {
-          if ( update.values ) {
-            update.values.forEach(vp => {
-              /*if ( vp.path === '' ) {
-                context = { ...context, ...vp.value }
-                this.state.data[msg.context] = context
-                } else*/
-              if ( vp.path !== '' ) {
-                context[vp.path + '$' + update['$source']] = {
-                  path: vp.path,
+      msg.updates.forEach(update => {
+        if ( update.values ) {
+          update.values.forEach(vp => {
+            if ( vp.path === '' ) {
+              keys(vp.value).forEach(k => {
+                context[k] = {
+                  path: k,
+                  value: vp.value[k],
                   source: update['$source'],
-                  value: vp.value,
                   timestamp: update.timestamp
                 }
-
-                const metaKey = vp.path + '.meta'
-                if ( !context[metaKey] ) {
-                  const idx = msg.context.indexOf('.')
-                  const rootKey = msg.context.substring(0, idx)
-                  let urn = msg.context.substring(idx+1)
-                  if ( this.state.full &&
-                       this.state.full[rootKey] &&
-                       this.state.full[rootKey][urn] ) {
-                    const meta = get(this.state.full[rootKey][urn], metaKey)
-                    if ( meta ) {
-                      context[metaKey] = {
-                        path: metaKey,
-                        value: meta
+              })
+            } else {
+              context[vp.path + '$' + update['$source']] = {
+                path: vp.path,
+                source: update['$source'],
+                value: vp.value,
+                timestamp: update.timestamp
+              }
+              
+              const metaKey = vp.path + '.meta'
+              if ( !context[metaKey] ) {
+                const idx = msg.context.indexOf('.')
+                const rootKey = msg.context.substring(0, idx)
+                let urn = msg.context.substring(idx+1)
+                if ( this.state.full &&
+                     this.state.full[rootKey] &&
+                     this.state.full[rootKey][urn] ) {
+                  const meta = get(this.state.full[rootKey][urn], metaKey)
+                  if ( meta ) {
+                    context[metaKey] = {
+                      path: metaKey,
+                      value: meta
                       }
-                    }
                   }
                 }
               }
-            })
-          }
-        })
-      }
+            }
+          })
+        }
+      })
+      
       if ( isNew || (this.state.context && this.state.context === key) ) {
         this.setState({...this.state, hasData:true, data: this.state.data })
       }
