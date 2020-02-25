@@ -251,7 +251,8 @@ class DataBrowser extends Component {
                               </Label>
           </Col>
           </FormGroup>
-<FormGroup row>
+          { this.state.context && this.state.context !== 'none' && this.state.context !== 'sources' && (
+          <FormGroup row>
           <Col xs='3' md='2'>
             <Label htmlFor='select'>Search</Label>
           </Col>
@@ -263,10 +264,11 @@ class DataBrowser extends Component {
               value={this.state.search}
             />
           </Col>
-          </FormGroup>
+              </FormGroup>
+          )}
 
         { this.state.context && this.state.context !== 'none' && this.state.context !== 'sources' && (
-          <Table hover responsive bordered striped size='sm'>
+          <Table responsive bordered striped size='sm'>
                 <thead>
                   <tr>
                   <th>Path</th>
