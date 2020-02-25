@@ -287,7 +287,7 @@ class DataBrowser extends Component {
           return (
                  <tr key={key} >
                    <td>{data.path}</td>
-                   <td><code>{JSON.stringify(data.value)}</code></td>
+                   <td><pre className='text-primary'>{JSON.stringify(data.value, null, 2)}</pre></td>
                    <td>{data.timestamp}</td>
                    <td>{data.source}</td>
                  </tr>
