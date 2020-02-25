@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import { keys } from 'lodash'
+import { keys, get } from 'lodash'
+import JSONTree from 'react-json-tree'
 import {
   Badge,
   Button,
@@ -25,17 +26,7 @@ function fetchRoot () {
   })
     .then(response => response.json())
     .then(data => {
-      let self
-      if ( data.self ) {
-        self = data.self.substring('vessels.'.length)
-        if ( data.vessels[self] ) {
-          data.vessels.self = data.vessels[self]
-          delete data.vessels[self]
-          delete data.self
-        }
-      }
-      delete data.version
-      this.setState({ data: data, self:self, hasData: true })
+      this.setState({ ...this.state, data: {...this.state.data, sources: data.sources }, full: data})
     })
 }
 
@@ -48,6 +39,7 @@ class DataBrowser extends Component {
       webSocket: null,
       didSubScribe: false,
       pause: false,
+      includeMeta: false,
       data: {},
       context: 'none',
       search: ''
@@ -58,6 +50,7 @@ class DataBrowser extends Component {
     this.handleMessage = this.handleMessage.bind(this)
     this.handleContextChange = this.handleContextChange.bind(this)
     this.handleSearch = this.handleSearch.bind(this)
+    this.handleMeta = this.handleMeta.bind(this)
   }
 
   handleMessage(msg) {
@@ -87,7 +80,25 @@ class DataBrowser extends Component {
                   source: update['$source'],
                   value: vp.value,
                   timestamp: update.timestamp
-              }
+                }
+
+                const metaKey = vp.path + '.meta'
+                if ( !context[metaKey] ) {
+                  const idx = msg.context.indexOf('.')
+                  const rootKey = msg.context.substring(0, idx)
+                  let urn = msg.context.substring(idx+1)
+                  if ( this.state.full &&
+                       this.state.full[rootKey] &&
+                       this.state.full[rootKey][urn] ) {
+                    const meta = get(this.state.full[rootKey][urn], metaKey)
+                    if ( meta ) {
+                      context[metaKey] = {
+                        path: metaKey,
+                        value: meta
+                      }
+                    }
+                  }
+                }
               }
             })
           }
@@ -132,7 +143,7 @@ class DataBrowser extends Component {
   }
   
   componentDidMount() {
-    //this.fetchRoot()
+    this.fetchRoot()
     this.subscribeToDataIfNeeded()
   }
 
@@ -150,6 +161,10 @@ class DataBrowser extends Component {
 
   handleSearch(event) {
     this.setState({...this.state, search: event.target.value})
+  }
+
+  handleMeta(event) {
+    this.setState({...this.state, includeMeta: event.target.checked})
   }
 
   handlePause (event) {
@@ -178,7 +193,7 @@ class DataBrowser extends Component {
           >
 
           <FormGroup row>
-          <Col xs='6' md='6'>
+          <Col xs='12' md='4'>
           <Input
             type='select'
             value={this.state.context}
@@ -194,9 +209,30 @@ class DataBrowser extends Component {
           </Input>
           </Col>
           <Col xs='3' md='2'>
+            <Label htmlFor='select'>Meta Data</Label>
+          </Col>
+          <Col xs='8' md='1'>
+          <Label className='switch switch-text switch-primary'>
+                              <Input
+                                type='checkbox'
+                                id="Meta"
+                                name='meta'
+                                className='switch-input'
+                                onChange={this.handleMeta}
+                                checked={this.state.includeMeta}
+                              />
+                              <span
+                                className='switch-label'
+                                data-on='Yes'
+                                data-off='No'
+                              />
+                              <span className='switch-handle' />
+                              </Label>
+          </Col>
+          <Col xs='3' md='2'>
             <Label htmlFor='select'>Pause</Label>
           </Col>
-          <Col xs='6' md='3'>
+          <Col xs='8' md='1'>
           <Label className='switch switch-text switch-primary'>
                               <Input
                                 type='checkbox'
@@ -228,7 +264,8 @@ class DataBrowser extends Component {
             />
           </Col>
           </FormGroup>
-          
+
+        { this.state.context && this.state.context !== 'none' && this.state.context !== 'sources' && (
           <Table hover responsive bordered striped size='sm'>
                 <thead>
                   <tr>
@@ -240,7 +277,7 @@ class DataBrowser extends Component {
                 </thead>
           <tbody>
 
-        {this.state.context && this.state.contect != 'none' && keys(this.state.data[this.state.context]).filter(key => { return !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1 }).sort().map(key => {
+          {keys(this.state.data[this.state.context]).filter(key => { return !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1 }).filter(key => { return this.state.includeMeta || !key.endsWith('.meta') }).sort().map(key => {
           let data = this.state.data[this.state.context][key]
           return (
                  <tr key={key} >
@@ -251,9 +288,14 @@ class DataBrowser extends Component {
                  </tr>
                )
         })}
-        
+       
           </tbody>
-          </Table>
+            </Table>
+         )}
+
+        { this.state.context && this.state.context !== 'none' && this.state.context === 'sources' && (
+          <JSONTree data={this.state.data.sources} theme="default" sortObjectKeys />
+        )}
               </Form>
             </CardBody>
             <CardFooter>
