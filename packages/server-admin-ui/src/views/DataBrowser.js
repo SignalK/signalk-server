@@ -89,11 +89,6 @@ class DataBrowser extends Component {
         root = this.state.data[rootKey][urn]
       }
       
-      /*
-      console.log(`${rootKey} ${urn}`)
-      console.log('root: ' + root)
-      */
-
       msg.updates.forEach(update => {
         if ( update.values ) {
           update.values.forEach(vp => {
