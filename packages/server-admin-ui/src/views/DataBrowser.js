@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import JSONTree from 'react-json-tree'
+import { keys } from 'lodash'
 import {
   Badge,
   Button,
@@ -48,89 +48,54 @@ class DataBrowser extends Component {
       webSocket: null,
       didSubScribe: false,
       pause: false,
-      data: {}
+      data: {},
+      context: 'none',
+      search: ''
     }
 
     this.fetchRoot = fetchRoot.bind(this)
     this.handlePause = this.handlePause.bind(this)
-    this.handleRememberDebug = this.handleRememberDebug.bind(this)
     this.handleMessage = this.handleMessage.bind(this)
+    this.handleContextChange = this.handleContextChange.bind(this)
+    this.handleSearch = this.handleSearch.bind(this)
   }
 
-  handleMessagex(msg) {
-    this.state.data.hello = "world"
-    this.setState({...this.state, data: this.state.data})
-  }
-  
   handleMessage(msg) {
     if ( msg.updates ) {
-      const idx = msg.context.indexOf('.')
-      const rootKey = msg.context.substring(0, idx)
-      let urn = msg.context.substring(idx+1)
-      let root
+      const key = msg.context === this.state.webSocket.skSelf ? 'self' : msg.context
 
-      let isSelf = false
-      if ( rootKey === 'vessels' && urn === this.state.self ) {
-        isSelf = true
-        urn = 'self'
-      }
-      
-      if ( !this.state.data[rootKey] ) {
-        this.state.data[rootKey] = {}
-      } else {
-        this.state.data[rootKey] = { ...this.state.data[rootKey] }
+      let isNew = false
+      if ( !this.state.data[key] ) {
+        this.state.data[key] = {}
+        isNew = true
       }
 
-      if ( !this.state.data[rootKey][urn] ) {
-        root = {}
-        this.state.data[rootKey][urn] = root
-      } else {
-        this.state.data[rootKey][urn] = { ...this.state.data[rootKey][urn] }
-        root = this.state.data[rootKey][urn]
-      }
+      //if ( this.state.context && this.state.context === key )
+      {
+        let context = this.state.data[key]
       
-      msg.updates.forEach(update => {
-        if ( update.values ) {
-          update.values.forEach(vp => {
-            if ( vp.path === '' ) {
-              root = { ...root, ...vp.value }
-              this.state.data[rootKey][urn] = root
-            } else {
-              const parts = vp.path.split('.')
-              let last = root
-              for (const i in parts) {
-                const p = parts[i]
-                
-                if (typeof last[p] === 'undefined') {
-                  last[p] = {}
-                } else {
-                  last[p] = { ...last[p] }
-                }
-                last = last[p]
-              }
-              if ( last.values ||
-                   (last['$source'] &&
-                    update['$source'] &&
-                    last['$source'] != update['$source']) ) {
-                if ( !last.values ) {
-                  last.values = {}
-                } else {
-                  last.values = { ...last.values }
-                }
-                last.values[update['$source']] = {
+        msg.updates.forEach(update => {
+          if ( update.values ) {
+            update.values.forEach(vp => {
+              /*if ( vp.path === '' ) {
+                context = { ...context, ...vp.value }
+                this.state.data[msg.context] = context
+                } else*/
+              if ( vp.path !== '' ) {
+                context[vp.path + '$' + update['$source']] = {
+                  path: vp.path,
+                  source: update['$source'],
                   value: vp.value,
                   timestamp: update.timestamp
-                }
               }
-
-              last.value = vp.value
-              last.timestamp = update.timestamp
-              last['$source'] = update['$source']
-            }
-          })
-        }
-      })
-      this.setState({...this.state, hasData:true, data: { ...this.state.data } })
+              }
+            })
+          }
+        })
+      }
+      if ( isNew || (this.state.context && this.state.context === key) ) {
+        this.setState({...this.state, hasData:true, data: this.state.data })
+      }
     }
   }
 
@@ -167,7 +132,7 @@ class DataBrowser extends Component {
   }
   
   componentDidMount() {
-    this.fetchRoot()
+    //this.fetchRoot()
     this.subscribeToDataIfNeeded()
   }
 
@@ -179,8 +144,12 @@ class DataBrowser extends Component {
     this.unsubscribeToData()
   }
 
-  handleRememberDebug (event) {
-    this.fetchRoot()
+  handleContextChange(event) {
+    this.setState({...this.state, context: event.target.value})
+  }
+
+  handleSearch(event) {
+    this.setState({...this.state, search: event.target.value})
   }
 
   handlePause (event) {
@@ -209,6 +178,21 @@ class DataBrowser extends Component {
           >
 
           <FormGroup row>
+          <Col xs='6' md='6'>
+          <Input
+            type='select'
+            value={this.state.context}
+            name='context'
+            onChange={this.handleContextChange}
+          >
+            <option value="none">Select a context</option>
+            {keys(this.state.data).sort().map(key => {
+              return (
+                  <option key={key} value={key}>{key}</option>
+              )
+            })}
+          </Input>
+          </Col>
           <Col xs='3' md='2'>
             <Label htmlFor='select'>Pause</Label>
           </Col>
@@ -231,9 +215,45 @@ class DataBrowser extends Component {
                               </Label>
           </Col>
           </FormGroup>
+<FormGroup row>
+          <Col xs='3' md='2'>
+            <Label htmlFor='select'>Search</Label>
+          </Col>
+          <Col xs='12' md='12'>
+            <Input
+              type='text'
+              name='search'
+              onChange={this.handleSearch}
+              value={this.state.search}
+            />
+          </Col>
+          </FormGroup>
+          
+          <Table hover responsive bordered striped size='sm'>
+                <thead>
+                  <tr>
+                  <th>Path</th>
+                  <th>Value</th>
+                  <th>Timestamp</th>
+                  <th>Source</th>
+                  </tr>
+                </thead>
+          <tbody>
 
-          <JSONTree data={this.state.data} theme="default" hideRoot sortObjectKeys />
+        {this.state.context && this.state.contect != 'none' && keys(this.state.data[this.state.context]).filter(key => { return !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1 }).sort().map(key => {
+          let data = this.state.data[this.state.context][key]
+          return (
+                 <tr key={key} >
+                   <td>{data.path}</td>
+                   <td><code>{JSON.stringify(data.value)}</code></td>
+                   <td>{data.timestamp}</td>
+                   <td>{data.source}</td>
+                 </tr>
+               )
+        })}
         
+          </tbody>
+          </Table>
               </Form>
             </CardBody>
             <CardFooter>
