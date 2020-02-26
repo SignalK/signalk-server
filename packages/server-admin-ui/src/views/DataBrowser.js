@@ -37,7 +37,7 @@ class DataBrowser extends Component {
     this.state = {
       hasData: false,
       webSocket: null,
-      didSubScribe: false,
+      didSubscribe: false,
       pause: false,
       includeMeta: false,
       data: {},
@@ -54,6 +54,11 @@ class DataBrowser extends Component {
   }
 
   handleMessage(msg) {
+
+    if ( this.state.pause ) {
+      return
+    }
+    
     if ( msg.context && msg.updates ) {
       const key = msg.context === this.state.webSocket.skSelf ? 'self' : msg.context
 
@@ -114,7 +119,7 @@ class DataBrowser extends Component {
   }
 
   subscribeToDataIfNeeded() {
-    if ( !this.state.pause && this.props.webSocket && (this.props.webSocket != this.state.webSocket ||  this.state.didSubScribe === false) ) {
+    if ( !this.state.pause && this.props.webSocket && (this.props.webSocket != this.state.webSocket ||  this.state.didSubscribe === false) ) {
 
       const sub = {
         context: '*',
@@ -126,7 +131,7 @@ class DataBrowser extends Component {
       
       this.props.webSocket.send(JSON.stringify(sub))
       this.state.webSocket = this.props.webSocket
-      this.state.didSubScribe = true
+      this.state.didSubscribe = true
       this.state.webSocket.messageHandler = this.handleMessage
     }
   }
@@ -140,7 +145,7 @@ class DataBrowser extends Component {
         }]
       }
       this.props.webSocket.send(JSON.stringify(sub))
-      this.state.didSubScribe = false
+      this.state.didSubscribe = false
       this.state.webSocket.messageHandler = null
     }
   }
@@ -283,11 +288,12 @@ class DataBrowser extends Component {
           <tbody>
 
           {keys(this.state.data[this.state.context]).filter(key => { return !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1 }).filter(key => { return this.state.includeMeta || !key.endsWith('.meta') }).sort().map(key => {
-          let data = this.state.data[this.state.context][key]
+          const data = this.state.data[this.state.context][key]
+            const formatted = JSON.stringify(data.value, null, typeof data.value === 'object' && keys(data.value).length > 1 ? 2 : 0)
           return (
                  <tr key={key} >
                    <td>{data.path}</td>
-                   <td><pre className='text-primary'>{JSON.stringify(data.value, null, 2)}</pre></td>
+                   <td><pre className='text-primary'>{formatted}</pre></td>
                    <td>{data.timestamp}</td>
                    <td>{data.source}</td>
                  </tr>
