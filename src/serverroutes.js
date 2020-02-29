@@ -27,6 +27,7 @@ const { getAISShipTypeName } = require('@signalk/signalk-schema')
 const { queryRequest } = require('./requestResponse')
 const serialBingings = require('@serialport/bindings')
 const commandExists = require('command-exists')
+const { getAuthor } = require('./modules')
 
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
@@ -608,5 +609,20 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   app.post(`${serverRoutesPrefix}/rememberDebug`, (req, res) => {
     app.logging.rememberDebug(req.body.value)
     res.status(200).send()
+  })
+
+  app.get(`${skPrefix}/api/apps`, (req, res) => {
+    res.json(
+      app.webapps.map(webapp => {
+        return {
+          name: webapp.name,
+          version: webapp.version,
+          description: webapp.description,
+          location: `/${webapp.name}`,
+          license: webapp.license,
+          author: getAuthor(webapp)
+        }
+      })
+    )
   })
 }

@@ -293,11 +293,25 @@ function checkForNewServerVersion(
     })
 }
 
+function getAuthor(thePackage: any) {
+  debug(thePackage.name + ' author: ' + thePackage.author)
+  return (
+    (thePackage.author && (thePackage.author.name || thePackage.author.email)) +
+    '' +
+    (thePackage.contributors || [])
+      .map((contributor: any) => contributor.name || contributor.email)
+      .join(',') +
+    '' +
+    (thePackage.name.startsWith('@signalk/') ? ' (Signal K team)' : '')
+  )
+}
+
 module.exports = {
   modulesWithKeyword,
   installModule,
   removeModule,
   findModulesWithKeyword,
   getLatestServerVersion,
-  checkForNewServerVersion
+  checkForNewServerVersion,
+  getAuthor
 }

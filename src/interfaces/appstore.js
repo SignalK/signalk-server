@@ -18,7 +18,11 @@ const debug = require('debug')('signalk:interfaces:appstore')
 const _ = require('lodash')
 const compareVersions = require('compare-versions')
 const { installModule, removeModule } = require('../modules')
-const { findModulesWithKeyword, getLatestServerVersion } = require('../modules')
+const {
+  findModulesWithKeyword,
+  getLatestServerVersion,
+  getAuthor
+} = require('../modules')
 
 const npmServerInstallLocations = [
   '/usr/bin/signalk-server',
@@ -273,20 +277,6 @@ module.exports = function(app) {
     if (!theArray.find(p => p.name === moduleInfo.name)) {
       theArray.push(moduleInfo)
     }
-  }
-
-  function getAuthor(thePackage) {
-    debug(thePackage.name + ' author: ' + thePackage.author)
-    return (
-      (thePackage.author &&
-        (thePackage.author.name || thePackage.author.email)) +
-      '' +
-      (thePackage.contributors || [])
-        .map(contributor => contributor.name || contributor.email)
-        .join(',') +
-      '' +
-      (thePackage.name.startsWith('@signalk/') ? ' (Signal K team)' : '')
-    )
   }
 
   function getNpmUrl(moduleInfo) {
