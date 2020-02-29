@@ -28,10 +28,10 @@ module.exports = function mdnsResponder(app) {
 
   try {
     mdns = require('mdns')
-    console.log('using : ' + mdns)
+    debug('using  mdns')
   } catch (ex) {
     debug(ex)
-    debug('mdns not found')
+    debug('mdns not found, using dnssd2')
   }
 
   if (typeof config.settings.mdns !== 'undefined' && !config.settings.mdns) {
