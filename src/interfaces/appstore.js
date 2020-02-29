@@ -18,7 +18,11 @@ const debug = require('debug')('signalk:interfaces:appstore')
 const _ = require('lodash')
 const compareVersions = require('compare-versions')
 const { installModule, removeModule } = require('../modules')
-const { findModulesWithKeyword, getLatestServerVersion, getAuthor } = require('../modules')
+const {
+  findModulesWithKeyword,
+  getLatestServerVersion,
+  getAuthor
+} = require('../modules')
 
 const npmServerInstallLocations = [
   '/usr/bin/signalk-server',

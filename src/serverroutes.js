@@ -612,15 +612,17 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   })
 
   app.get(`${skPrefix}/api/apps`, (req, res) => {
-    res.json(app.webapps.map(webapp => {
-      return {
-        name: webapp.name,
-        version: webapp.version,
-        description: webapp.description,
-        location: `/${webapp.name}`,
-        license: webapp.license,
-        author: getAuthor(webapp)
-      }
-    }))
+    res.json(
+      app.webapps.map(webapp => {
+        return {
+          name: webapp.name,
+          version: webapp.version,
+          description: webapp.description,
+          location: `/${webapp.name}`,
+          license: webapp.license,
+          author: getAuthor(webapp)
+        }
+      })
+    )
   })
 }
