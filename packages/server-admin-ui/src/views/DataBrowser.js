@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React, { Component, Fragment } from 'react'
 import { connect } from 'react-redux'
 import { keys, get } from 'lodash'
 import JSONTree from 'react-json-tree'
@@ -19,6 +19,10 @@ import {
   FormText,
   Table
 } from 'reactstrap'
+import { StreamBundle } from './StreamBundle'
+import { useObservable } from 'rxjs-hooks'
+import { interval } from 'rxjs'
+import { debounce } from 'rxjs/operators'
 
 function fetchRoot () {
   fetch(`/signalk/v1/api/`, {
@@ -51,9 +55,12 @@ class DataBrowser extends Component {
     this.handleContextChange = this.handleContextChange.bind(this)
     this.handleSearch = this.handleSearch.bind(this)
     this.handleMeta = this.handleMeta.bind(this)
+    this.streambundle = new StreamBundle()
   }
 
   handleMessage(msg) {
+
+    this.streambundle.handleDelta(msg)
 
     if ( this.state.pause ) {
       return
@@ -124,8 +131,7 @@ class DataBrowser extends Component {
       const sub = {
         context: '*',
         subscribe: [{
-          path: "*",
-          period: 2000
+          path: "*"
         }]
       }
       
@@ -186,7 +192,11 @@ class DataBrowser extends Component {
     }
   }
 
-  render () {
+  render() {
+    return <DataTable datalistObservable={this.streambundle.getNewStreamsObservable().pipe(debounce(() => interval(500)))}/>
+  }
+
+  render2 () {
     return (
       this.state.hasData && (
         <div className='animated fadeIn'>
@@ -316,6 +326,49 @@ class DataBrowser extends Component {
       )
     )
   }
+}
+
+const DataTable = ({datalistObservable}) => {
+  const list = useObservable(() => datalistObservable)
+  list && list.sort((a,b) => a.context > b.context ? -1 : (b.context > a.context ? 1 : 0))
+  return <Table>
+      <thead>
+        <tr>
+        <th>Context</th>
+        <th>Path</th>
+        <th>Value</th>
+        <th>Timestamp</th>
+        <th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+      {list && list.map(rd => <DataRow rowData={rd}/>) }
+      </tbody>
+    </Table>
+}
+
+const DataRow = ({rowData}) => <tr>
+  <td>{rowData.context}</td>
+  <td>{rowData.path}</td>
+    <Values observable={rowData.observable}/>
+    <td>{rowData.dollarSource}</td>
+</tr>
+
+const Values = ({observable}) => {
+  const pathValue = useObservable(() => observable)
+  if (!pathValue) return null
+
+  return <Fragment>
+    <td>{formatValue(pathValue.value)}</td>
+    <td>{pathValue.timestamp}</td>
+  </Fragment>
+}
+
+function formatValue(v) {
+  if (typeof v === 'number') {
+    return v.toFixed(2)
+  }
+  return 'JSON.stringify(v)'
 }
 
 export default connect(({webSocket}) => ({webSocket}))(DataBrowser)
