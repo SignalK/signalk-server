@@ -121,7 +121,8 @@
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
     "@signalk/simplegauges": "^1.0.1",
-    "@signalk/zones": "^1.0.0"
+    "@signalk/zones": "^1.0.0",
+    "mdns": "^2.5.1"
   },
   "devDependencies": {
     "@signalk/github-create-release": "^1.0.0",
