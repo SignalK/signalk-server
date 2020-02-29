@@ -25,14 +25,16 @@ class ServerLogs extends Component {
     this.state = {
       hasData: true,
       webSocket: null,
-      didSubScribe: false
+      didSubScribe: false,
+      pause: false
     }
 
     this.handleDebug = this.handleDebug.bind(this)
+    this.handlePause = this.handlePause.bind(this)
   }
 
   subscribeToLogsIfNeeded() {
-     if ( this.props.webSocket && (this.props.webSocket != this.state.webSocket ||  this.state.didSubScribe === false) ) {
+    if ( !this.state.pause && this.props.webSocket && (this.props.webSocket != this.state.webSocket ||  this.state.didSubScribe === false) ) {
       const sub = { "context": "vessels.self", "subscribe": [ { "path": "log" } ] }
       this.props.webSocket.send(JSON.stringify(sub))
       this.state.webSocket = this.props.webSocket
@@ -40,6 +42,14 @@ class ServerLogs extends Component {
     }
   }
 
+  unsubscribeToLogs() {
+    if ( this.props.webSocket ) {
+      const sub = { "context": "vessels.self", "unsubscribe": [ { "path": "log" } ] }
+      this.props.webSocket.send(JSON.stringify(sub))
+      this.state.didSubScribe = false
+    }
+  }
+  
   componentDidMount() {
     this.subscribeToLogsIfNeeded()
   }
@@ -49,11 +59,7 @@ class ServerLogs extends Component {
   }
   
   componentWillUnmount () {
-    if ( this.props.webSocket ) {
-      const sub = { "context": "vessels.self", "unsubscribe": [ { "path": "log" } ] }
-      this.props.webSocket.send(JSON.stringify(sub))
-      this.state.didSubScribe = false
-    }
+    this.unsubscribeToLogs()
   }
 
   handleDebug (event) {
@@ -81,6 +87,16 @@ class ServerLogs extends Component {
       credentials: 'include'
     })
       .then(response => response.text())
+  }
+
+  handlePause (event) {
+    this.state.pause = event.target.checked
+    this.setState(this.state)
+    if ( this.state.pause ) {
+      this.unsubscribeToLogs()
+    } else {
+      this.subscribeToLogsIfNeeded()
+    }
   }
 
   render () {
@@ -134,7 +150,28 @@ class ServerLogs extends Component {
                                 data-off='No'
                               />
                               <span className='switch-handle' />
-                            </Label>
+          </Label>
+          </Col>
+          <Col xs='3' md='2'>
+            <Label htmlFor='select'>Pause</Label>
+          </Col>
+          <Col xs='6' md='3'>
+          <Label className='switch switch-text switch-primary'>
+                              <Input
+                                type='checkbox'
+                                id="Pause"
+                                name='pause'
+                                className='switch-input'
+                                onChange={this.handlePause}
+                                checked={this.state.pause}
+                              />
+                              <span
+                                className='switch-label'
+                                data-on='Yes'
+                                data-off='No'
+                              />
+                              <span className='switch-handle' />
+                              </Label>
           </Col>
           </FormGroup>
           
@@ -161,8 +198,8 @@ class LogList extends Component {
       {this.props.value.entries && this.props.value.entries.map((logEntry, index) => {
             return <PureLogRow key={logEntry.i} log={logEntry.d}/>
         })
-       }
-        <div ref={(el) => { this.end = el}}>&nbsp;</div>
+      }
+      <div ref={(el) => { this.end = el}}>&nbsp;</div>
       </div>
     )
   }
