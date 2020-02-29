@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-admin-ui",
-  "version": "1.19.0",
+  "version": "1.19.2",
   "description": "Signal K server admin webapp",
   "author": "Scott Bender, Teppo Kurki",
   "contributors": [
@@ -38,6 +38,7 @@
     "react-chartjs-2": "2.6.4",
     "react-dom": "^16.12.0",
     "react-html-parser": "^2.0.2",
+    "react-json-tree": "^0.11.2",
     "react-jsonschema-form-bs4": "^1.0.6",
     "react-markdown": "^4.0.3",
     "react-redux": "^5.0.6",

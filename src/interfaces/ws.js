@@ -481,13 +481,12 @@ function processUpdates(app, pathSources, spark, msg) {
 }
 
 function processSubscribe(app, unsubscribes, spark, assertBufferSize, msg) {
-  if (spark.hasServerEvents) {
-    if (
-      Array.isArray(msg.subscribe) &&
+  if (
+    Array.isArray(msg.subscribe) &&
       msg.subscribe.length > 0 &&
-      msg.subscribe[0].path === 'log' &&
-      !spark.logUnsubscribe
-    ) {
+      msg.subscribe[0].path === 'log' 
+  ) {
+    if ( !spark.logUnsubscribe ) {
       spark.logUnsubscribe = startServerLog(app, spark)
     }
   } else {
@@ -512,13 +511,12 @@ function processSubscribe(app, unsubscribes, spark, assertBufferSize, msg) {
 
 function processUnsubscribe(app, unsubscribes, msg, onChange, spark) {
   try {
-    if (spark.hasServerEvents) {
-      if (
-        Array.isArray(msg.unsubscribe) &&
+    if (
+      Array.isArray(msg.unsubscribe) &&
         msg.unsubscribe.length > 0 &&
-        msg.unsubscribe[0].path === 'log' &&
-        spark.logUnsubscribe
-      ) {
+        msg.unsubscribe[0].path === 'log' 
+    ) {
+      if ( spark.logUnsubscribe ) {
         spark.logUnsubscribe()
         spark.logUnsubscribe = undefined
       }

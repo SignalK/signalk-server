@@ -151,6 +151,10 @@ export function openServerEventsConnection (dispatch, isReconnect) {
     const serverEvent = JSON.parse(event.data)
     if (serverEvent.type) {
       dispatch(serverEvent)
+    } else if ( serverEvent.name ) {
+      ws.skSelf = serverEvent.self
+    } else if ( ws.messageHandler ) {
+      ws.messageHandler(serverEvent)
     }
   }
   ws.onclose = () => {

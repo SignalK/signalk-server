@@ -199,6 +199,11 @@ const mapStateToProps = state => {
         name: 'Webapps',
         url: '/webapps',
         icon: 'icon-grid'
+      },
+      {
+        name: 'Data Browser',
+        url: '/databrowser',
+        icon: 'icon-folder'
       }
     ]
   }
