@@ -611,7 +611,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     res.status(200).send()
   })
 
-  app.get(`${skPrefix}/api/apps`, (req, res) => {
+  app.get(`${skPrefix}/api/apps/list`, (req, res) => {
     res.json(
       app.webapps.map(webapp => {
         return {
