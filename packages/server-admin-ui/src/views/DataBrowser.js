@@ -26,7 +26,7 @@ function fetchRoot () {
   })
     .then(response => response.json())
     .then(data => {
-      this.setState({ ...this.state, data: {...this.state.data, sources: data.sources }, full: data})
+      this.setState({ ...this.state, sources: data.sources, full: data})
     })
 }
 
@@ -216,10 +216,7 @@ class DataBrowser extends Component {
             })}
           </Input>
           </Col>
-          <Col xs='3' md='2'>
-            <Label htmlFor='select'>Meta Data</Label>
-          </Col>
-          <Col xs='8' md='1'>
+          <Col xs='8' md='2'>
           <Label className='switch switch-text switch-primary'>
                               <Input
                                 type='checkbox'
@@ -235,12 +232,9 @@ class DataBrowser extends Component {
                                 data-off='No'
                               />
                               <span className='switch-handle' />
-                              </Label>
+                              </Label>{' '}Meta Data
           </Col>
-          <Col xs='3' md='2'>
-            <Label htmlFor='select'>Pause</Label>
-          </Col>
-          <Col xs='8' md='1'>
+          <Col xs='8' md='2'>
           <Label className='switch switch-text switch-primary'>
                               <Input
                                 type='checkbox'
@@ -256,10 +250,10 @@ class DataBrowser extends Component {
                                 data-off='No'
                               />
                               <span className='switch-handle' />
-                              </Label>
+          </Label>{' '}Pause
           </Col>
           </FormGroup>
-          { this.state.context && this.state.context !== 'none' && this.state.context !== 'sources' && (
+          { this.state.context && this.state.context !== 'none' &&  (
           <FormGroup row>
           <Col xs='3' md='2'>
             <Label htmlFor='select'>Search</Label>
@@ -275,43 +269,78 @@ class DataBrowser extends Component {
               </FormGroup>
           )}
 
-        { this.state.context && this.state.context !== 'none' && this.state.context !== 'sources' && (
-          <Table responsive bordered striped size='sm'>
-                <thead>
-                  <tr>
-                  <th>Path</th>
-                  <th>Value</th>
-                  <th>Timestamp</th>
-                  <th>Source</th>
-                  </tr>
-                </thead>
-          <tbody>
+        { !this.state.includeMeta && this.state.context && this.state.context !== 'none' && (
+            <Table responsive bordered striped size='sm'>
+              <thead>
+              <tr>
+                <th>Path</th>
+                <th>Value</th>
+                <th>Units</th>
+                <th>Timestamp</th>
+                <th>Source</th>
+              </tr>
+              </thead >
+              <tbody>
 
-          {keys(this.state.data[this.state.context]).filter(key => { return !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1 }).filter(key => { return this.state.includeMeta || !key.endsWith('.meta') }).sort().map(key => {
+          {keys(this.state.data[this.state.context]).filter(key => { return !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1 }).filter(key => { return !key.endsWith('.meta') }).sort().map(key => {
           const data = this.state.data[this.state.context][key]
-            const formatted = JSON.stringify(data.value, null, typeof data.value === 'object' && keys(data.value).length > 1 ? 2 : 0)
+          const formatted = JSON.stringify(data.value, null, typeof data.value === 'object' && keys(data.value).length > 1 ? 2 : 0)
+          const meta = this.state.data[this.state.context][data.path + '.meta']
+          const units = meta && meta.value.units ? meta.value.units : ''
+          const path = key.substring(0, key.lastIndexOf('.'))
+
           return (
                  <tr key={key} >
                    <td>{data.path}</td>
-                   <td><pre className='text-primary'>{formatted}</pre></td>
+                   <td><pre className='text-primary' style={{"whiteSpace": "pre-wrap"}}>{formatted}</pre></td>
+                   <td>{units}</td>
                    <td>{data.timestamp}</td>
                    <td>{data.source}</td>
                  </tr>
                )
-        })}
+          })}
        
           </tbody>
-            </Table>
-         )}
+          </Table>
 
-        { this.state.context && this.state.context !== 'none' && this.state.context === 'sources' && (
-          <JSONTree data={this.state.data.sources} theme="default" sortObjectKeys />
         )}
-              </Form>
+        
+        {this.state.includeMeta && this.state.context && this.state.context !== 'none' && (
+          <Table responsive bordered striped size='sm'>
+            <thead>
+              <tr>
+              <th>Path</th>
+              <th>Meta</th>
+              </tr>
+            </thead>
+            <tbody>
+            {keys(this.state.data[this.state.context]).filter(key => { return key.endsWith('.meta') && ( !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1) }).sort().map(key => {
+          const data = this.state.data[this.state.context][key]
+          const formatted = JSON.stringify(data.value, null, 2)
+          const path = data.path.substring(0, key.lastIndexOf('.'))
+          return (
+                 <tr key={path} >
+                   <td>{path}</td>
+              <td><pre className='text-primary' style={{"whiteSpace": "pre-wrap"}}>{formatted}</pre></td>
+                 </tr>
+               )
+            })}
+          </tbody>
+            </Table>
+          )}
+         
+             </Form>
             </CardBody>
-            <CardFooter>
-            </CardFooter>
           </Card>
+
+          <Card>
+          <CardHeader>Sources</CardHeader>
+          <CardBody>
+
+          <JSONTree data={this.state.sources} theme="default" sortObjectKeys hideRoot="true" />
+
+          </CardBody>
+        </Card>
         </div>
       )
     )
