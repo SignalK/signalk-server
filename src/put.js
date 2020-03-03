@@ -184,7 +184,7 @@ function putPath(app, context, path, body, req, requestId, updateCb) {
 }
 
 function registerActionHandler(context, path, source, callback) {
-  debug(`registered action handler for ${context} ${path}`)
+  debug(`registered action handler for ${context} ${path} ${source}`)
 
   if (_.isUndefined(actionHandlers[context])) {
     actionHandlers[context] = {}
