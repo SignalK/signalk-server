@@ -579,7 +579,7 @@ Example use:
 var myFile = require('path').join(app.getDataDirPath(), 'somefile.ext')
 ```
 
-### `app.registerPutHandler(context, path, source, callback)`
+### `app.registerPutHandler(context, path, callback, source)`
 
 If a plugin wants to respond to [`PUT`](http://signalk.org/specification/1.3.0/doc/put.html) requests for a specific path, it can register an action handler.
 

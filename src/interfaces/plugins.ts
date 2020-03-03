@@ -93,12 +93,14 @@ export interface ServerAPI {
   registerPutHandler: (
     context: string,
     path: string,
-    callback: () => void
+    callback: () => void,
+    source: string
   ) => void
   registerActionHandler: (
     context: string,
     path: string,
-    callback: () => void
+    callback: () => void,
+    source: string
   ) => void
   registerHistoryProvider: (provider: {
     hasAnydata: (options: object, cb: (hasResults: boolean) => void) => void
@@ -461,9 +463,9 @@ module.exports = (theApp: any) => {
     }
     appCopy.getDataDirPath = () => dirForPluginId(plugin.id)
 
-    appCopy.registerPutHandler = (context, aPath, callback) => {
+    appCopy.registerPutHandler = (context, aPath, callback, source) => {
       onStopHandlers[plugin.id].push(
-        app.registerActionHandler(context, aPath, plugin.id, callback)
+        app.registerActionHandler(context, aPath, source || plugin.id, callback)
       )
     }
     appCopy.registerActionHandler = appCopy.registerPutHandler
