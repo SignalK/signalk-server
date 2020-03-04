@@ -18,6 +18,8 @@ const Transform = require('stream').Transform
 
 const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
 
+const { getSourceId } = require('@signalk/signalk-schema')
+
 require('util').inherits(ToSignalK, Transform)
 
 function ToSignalK (options) {
@@ -97,9 +99,10 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
                       copy.value.state = 'normal'
                       const normalDelta = {
                         context: delta.context,
-                        source: update.source,
                         updates: [
                           {
+                            source: update.source,
+                            $source: getSourceId(update.source),
                             values: [ copy ]
                           }
                         ]
