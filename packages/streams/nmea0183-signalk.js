@@ -45,7 +45,7 @@ function Nmea0183ToSignalK (options) {
   this.n2kState = {}
 
   // Object on which to send 'sentence' events
-  this.sentenceEventEmitter = options.app.signalk
+  this.sentenceEventEmitter = options.app
 
   // Prepare a list of events to send for each sentence received
   this.sentenceEvents = options.suppress0183event ? [] : ['nmea0183']
@@ -79,6 +79,7 @@ Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
       // Send 'sentences' event to the app for each sentence
       this.sentenceEvents.forEach(eventName => {
         this.sentenceEventEmitter.emit(eventName, sentence)
+        this.sentenceEventEmitter.signalk.emit(eventName, sentence)
       })
 
       let delta = null
