@@ -64,7 +64,7 @@ module.exports = function(app) {
         return { type, msgs }
       } catch (ex) {
         console.error(ex)
-        return {}
+        return {error: ex.message}
       }
     } else if (isN2KString) {
       // temporary until new canboatjs is released
@@ -73,7 +73,7 @@ module.exports = function(app) {
       } else if (msg.charAt(0) === '$' || msg.charAt(0) === '!') {
         type = '0183'
       } else {
-        return {}
+        return {error: 'unable to determine message type'}
       }
     } else if (msg.charAt(0) === '$' || msg.charAt(0) === '!') {
       type = '0183'
@@ -86,10 +86,10 @@ module.exports = function(app) {
   app.post(`${serverRoutesPrefix}/inputTest`, (req, res) => {
     const sendToServer = req.body.sendToServer
 
-    const { type, msgs } = detectType(req.body.value)
+    const { type, msgs, error } = detectType(req.body.value)
 
-    if (!type) {
-      res.status(400).send('unknown msg type')
+    if (error) {
+      res.status(400).json({ error: error })
       return
     }
 
@@ -101,14 +101,20 @@ module.exports = function(app) {
       }
       res.json(msgs)
     } else {
-      const deltas = processors[type](msgs).filter(m => typeof m !== 'undefined')
-      res.json(deltas)
 
-      if (sendToServer) {
-        deltas.forEach(msg => {
-          app.handleMessage('input-test', msg)
-        })
+      try {
+        const deltas = processors[type](msgs).filter(m => typeof m !== 'undefined')
+        res.json(deltas)
+        
+        if (sendToServer) {
+          deltas.forEach(msg => {
+            app.handleMessage('input-test', msg)
+          })
+        }
+      } catch ( ex ) {
+        console.error(ex)
+        res.status(400).json({ error: ex.message })
       }
-    }
+    } 
   })
 }

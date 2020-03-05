@@ -57,39 +57,48 @@ class Playground extends Component {
     })
       .then(response => response.json())
       .then(data => {
-        const values = []
-        data.forEach(delta => {
-          if ( !delta.context ) {
-            delta.context = 'vessels.self'
-          }
-          if ( delta.updates ) {
-            delta.updates.forEach(update => {
-              if ( update.values ) {
-                update.values.forEach(vp => {
-                  if ( vp.path === '' ) {
-                    keys(vp.value).forEach(k => {
+        if ( data.error ) {
+          this.setState({ ...this.state, data: [], error:data.error})
+        } else {
+          this.state.error = null
+          this.setState(this.state)
+          const values = []
+          data.forEach(delta => {
+            if ( !delta.context ) {
+              delta.context = 'vessels.self'
+            }
+            if ( delta.updates ) {
+              delta.updates.forEach(update => {
+                if ( update.values ) {
+                  update.values.forEach(vp => {
+                    if ( vp.path === '' ) {
+                      keys(vp.value).forEach(k => {
+                        values.push({
+                          path: k,
+                          value: vp.value[k],
+                          context: delta.context,
+                          timestamp: update.timestamp
+                        })
+                      })
+                    } else {
                       values.push({
-                        path: k,
-                        value: vp.value[k],
+                        path: vp.path,
+                        value: vp.value,
                         context: delta.context,
                         timestamp: update.timestamp
                       })
-                    })
-                  } else {
-                    values.push({
-                      path: vp.path,
-                      value: vp.value,
-                      context: delta.context,
-                      timestamp: update.timestamp
-                    })
-                  }
-                })
-              }
-            })
-          }
-        })
-        this.setState({ ...this.state, data: values})
+                    }
+                  })
+                }
+              })
+            }
+          })
+          this.setState({ ...this.state, data: values})
+        }
       })
+    .catch(error => {
+      console.error (error)
+    })
   }
 
   render () {
@@ -150,7 +159,10 @@ class Playground extends Component {
           <CardFooter>
             <Button size='sm' color='primary' onClick={this.handleExecute}>
               <i className='fa fa-plus-circle' /> Play
-            </Button>
+        </Button>{' '}
+          {this.state.error && (
+              <p className="text-danger float-right">{this.state.error}</p>
+          )}
           </CardFooter>
           </Card>
 
