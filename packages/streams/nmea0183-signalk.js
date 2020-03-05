@@ -16,7 +16,7 @@
 
 /**
  * Usage: this is the pipeElement that transforms NMEA0183 input to Signal K deltas.
- * Emits sentence data as "nmea0183" events on app.signalk by default.
+ * Emits sentence data as "nmea0183" events on app and app.signalk by default.
  * Furthermore you can use "sentenceEvent" option, that will cause sentence data to be
  * emitted as events on app. sentenceEvent can be a string or an array of strings.
  *
@@ -45,7 +45,7 @@ function Nmea0183ToSignalK (options) {
   this.n2kState = {}
 
   // Object on which to send 'sentence' events
-  this.sentenceEventEmitter = options.app.signalk
+  this.app = options.app
 
   // Prepare a list of events to send for each sentence received
   this.sentenceEvents = options.suppress0183event ? [] : ['nmea0183']
@@ -78,7 +78,8 @@ Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
     if (sentence !== undefined) {
       // Send 'sentences' event to the app for each sentence
       this.sentenceEvents.forEach(eventName => {
-        this.sentenceEventEmitter.emit(eventName, sentence)
+        this.app.emit(eventName, sentence)
+        this.app.signalk.emit(eventName, sentence)
       })
 
       let delta = null
