@@ -38,11 +38,11 @@ class DataBrowser extends Component {
       hasData: false,
       webSocket: null,
       didSubscribe: false,
-      pause: false,
-      includeMeta: false,
+      pause: localStorage.getItem('dataBrowserPause') === 'true',
+      includeMeta: localStorage.getItem('dataBrowserMeta') === 'true',
       data: {},
-      context: 'none',
-      search: ''
+      context: localStorage.getItem('dataBrowserContext') || 'none',
+      search: localStorage.getItem('dataBrowserSearch') || ''
     }
 
     this.fetchRoot = fetchRoot.bind(this)
@@ -146,7 +146,7 @@ class DataBrowser extends Component {
       }
       this.props.webSocket.send(JSON.stringify(sub))
       this.state.didSubscribe = false
-      this.state.webSocket.messageHandler = null
+      this.props.webSocket.messageHandler = null
     }
   }
   
@@ -165,19 +165,23 @@ class DataBrowser extends Component {
 
   handleContextChange(event) {
     this.setState({...this.state, context: event.target.value})
+    localStorage.setItem('dataBrowserContext', event.target.value)  
   }
 
   handleSearch(event) {
     this.setState({...this.state, search: event.target.value})
+    localStorage.setItem('dataBrowserSearch', event.target.value)  
   }
 
   handleMeta(event) {
     this.setState({...this.state, includeMeta: event.target.checked})
+    localStorage.setItem('dataBrowserMeta', event.target.checked)
   }
 
   handlePause (event) {
     this.state.pause = event.target.checked
     this.setState(this.state)
+    localStorage.setItem('dataBrowserPause', this.state.pause)
     if ( this.state.pause ) {
       this.unsubscribeToData()
     } else {
@@ -188,7 +192,6 @@ class DataBrowser extends Component {
 
   render () {
     return (
-      this.state.hasData && (
         <div className='animated fadeIn'>
           <Card>
             <CardBody>
@@ -333,17 +336,19 @@ class DataBrowser extends Component {
             </CardBody>
           </Card>
 
+        {this.state.sources && (
           <Card>
           <CardHeader>Sources</CardHeader>
           <CardBody>
 
-          <JSONTree data={this.state.sources} theme="default" sortObjectKeys hideRoot="true" />
+          <JSONTree data={this.state.sources} theme="default" sortObjectKeys hideRoot />
 
           </CardBody>
-        </Card>
+            </Card>
+        )}
         </div>
       )
-    )
+    
   }
 }
 
