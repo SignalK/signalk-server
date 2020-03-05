@@ -363,6 +363,39 @@ class BaudRateIntputCanboat extends Component {
   }
 }
 
+class StdOutInput extends Component {
+  constructor(props) {
+    super();
+    let value = props.value.toStdout;
+    if(Array.isArray(value)) {
+      value = value.join(',');
+    }
+    this.state = {value}
+    this.onChange = this.onChange.bind(this);
+  }
+  onChange(e) {
+    this.setState({value: e.target.value});
+    this.props.onChange({
+      target: {
+        type: e.target.type,
+        name: e.target.name,
+        value: e.target.value.split(','),
+      }
+    });
+  }
+  render () {
+    return (
+      <TextInput
+        title='Output Events'
+        name='options.toStdout'
+        helpText='Output events to this connection. Example: nmea0183,nmea0183out'
+        value={this.state.value}
+        onChange={this.onChange}
+      />
+    )
+  }
+}
+
 class PortInput extends Component {
   render () {
     return (
@@ -646,6 +679,10 @@ const serialParams = props => (props.value.options.type === 'serial' && (
   <div>
     <DeviceInput value={props.value.options} onChange={props.onChange} />
     <BaudRateIntput
+      value={props.value.options}
+      onChange={props.onChange}
+    />
+    <StdOutInput
       value={props.value.options}
       onChange={props.onChange}
     />
