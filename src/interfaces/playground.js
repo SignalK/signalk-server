@@ -14,48 +14,54 @@
  * limitations under the License.
 */
 
-const canboatjs = require('@signalk/streams/canboatjs')
-const N2kToSignalK = require('@signalk/streams/n2k-signalk')
-const nmea0183Signalk = require('@signalk/streams/nmea0183-signalk')
+//const canboatjs = require('@signalk/streams/canboatjs')
+//const N2kToSignalK = require('@signalk/streams/n2k-signalk')
+//const nmea0183Signalk = require('@signalk/streams/nmea0183-signalk')
+
+const Parser0183 = require('@signalk/nmea0183-signalk')
+const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
 const {
   isN2KString,
+  FromPgn,
   pgnToActisenseSerialFormat
 } = require('@canboat/canboatjs')
 
 const serverRoutesPrefix = '/skServer'
 
 module.exports = function(app) {
-  const typeStreams = {
+  const processors = {
     n2k: msgs => {
-      return {
-        pipeElements: [new canboatjs({ app }), new N2kToSignalK({ app })]
-      }
+      const n2kMapper = new N2kMapper({app})
+      const parser  = new FromPgn()
+      return msgs.map(msg => {
+        const n2k = parser.parseString(msg)
+        if ( n2k ) {
+          return n2kMapper.toDelta(n2k)          
+        }
+      })
     },
     '0183': msgs => {
-      return {
-        pipeElements: [new nmea0183Signalk({ app })]
-      }
+      const parser = new Parser0183({app})
+      return msgs.map(parser.parse.bind(parser))
     },
     'n2k-json': msgs => {
-      return {
-        pipeElements: [new canboatjs({ app }), new N2kToSignalK({ app })],
-        converter: pgnToActisenseSerialFormat
-      }
+      return processors.n2k(msgs.map(pgnToActisenseSerialFormat))
     }
   }
 
-  function detectType(msgs) {
-    const msg = msgs[0]
+  function detectType(msg) {
     let type
-    if (msg.charAt(0) === '{') {
+    if (msg.charAt(0) === '{' || msg.charAt(0) === '[' ) {
       try {
         const parsed = JSON.parse(msg)
-        if (parsed.pgn) {
+        const first = Array.isArray(parsed) ? parsed[0] : parsed
+        if (first.pgn) {
           type = 'n2k-json'
         } else {
           type = 'signalk'
         }
-        msgs = msgs.map(JSON.parse)
+        const msgs = Array.isArray(parsed) ? parsed : [ parsed ]
+        return { type, msgs }
       } catch (ex) {
         console.error(ex)
         return {}
@@ -74,7 +80,7 @@ module.exports = function(app) {
     } else {
       type = 'n2k'
     }
-    return { type, msgs }
+    return { type, msgs: msg.split('\n').filter(s => s.length > 0) }
   }
 
   app.post(`${serverRoutesPrefix}/inputTest`, (req, res) => {
@@ -95,26 +101,13 @@ module.exports = function(app) {
       }
       res.json(msgs)
     } else {
-      const { pipeElements, converter } = typeStreams[type](msgs)
+      const deltas = processors[type](msgs).filter(m => typeof m !== 'undefined')
+      res.json(deltas)
 
-      const converted = converter ? msgs.map(converter) : msgs
-
-      if (pipeElements) {
-        for (let i = pipeElements.length - 2; i >= 0; i--) {
-          pipeElements[i].pipe(pipeElements[i + 1])
-        }
-        pipeElements[pipeElements.length - 1].on('data', msg => {
-          if (sendToServer) {
-            app.handleMessage('input-test', msg)
-          }
-          res.json(msg)
+      if (sendToServer) {
+        deltas.forEach(msg => {
+          app.handleMessage('input-test', msg)
         })
-
-        converted.forEach(msg => {
-          pipeElements[0].write(msg)
-        })
-      } else {
-        res.status(400).send(`unknown type ${type}`)
       }
     }
   })

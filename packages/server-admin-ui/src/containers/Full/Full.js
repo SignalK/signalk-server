@@ -12,6 +12,7 @@ import Footer from '../../components/Footer/'
 import Dashboard from '../../views/Dashboard/'
 import Webapps from '../../views/Webapps/'
 import DataBrowser from '../../views/DataBrowser'
+import Playground from '../../views/Playground'
 import Apps from '../../views/appstore/Apps/'
 import Configuration from '../../views/Configuration'
 import Login from '../../views/security/Login'
@@ -64,6 +65,11 @@ class Full extends Component {
                   path='/databrowser'
                   name='DataBrowser'
                   component={loginOrOriginal(DataBrowser, true)}
+                 />
+                <Route
+                  path='/playground'
+                  name='Playground'
+                  component={loginOrOriginal(Playground, true)}
                 />
                 <Route
                   path='/appstore/:view'
