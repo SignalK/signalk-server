@@ -388,7 +388,7 @@ class StdOutInput extends Component {
       <TextInput
         title='Output Events'
         name='options.toStdout'
-        helpText='Output events to this connection. Example: nmea0183,nmea0183out'
+        helpText='Events that should be written as output to this connection. Example: nmea0183,nmea0183out'
         value={this.state.value}
         onChange={this.onChange}
       />
