@@ -26,7 +26,7 @@ class Playground extends Component {
       hasData: true,
       data: [],
       input: localStorage.getItem('lastPlaygroundInput') || '',
-      sendToServer: localStorage.getItem('lastPlaygroundSend')
+      sendToServer: localStorage.getItem('lastPlaygroundSend') === 'true'
     }
 
     this.handleExecute = this.handleExecute.bind(this)
@@ -41,7 +41,7 @@ class Playground extends Component {
 
   handleSendToServer(event) {
     this.setState({...this.state, sendToServer: event.target.checked})
-    localStorage.setItem('lastPlaygroundSend', this.state.sendToServer)
+    localStorage.setItem('lastPlaygroundSend', event.target.checked)
   }
 
   handleExecute(event) {
@@ -173,7 +173,7 @@ class Playground extends Component {
           {this.state.data.map(data => {
           const formatted = JSON.stringify(data.value, null, typeof data.value === 'object' && keys(data.value).length > 1 ? 2 : 0)
             const path = data.path
-            const key = `${data.path}${data.self}`
+            const key = `${data.path}${data.context}`
 
           return (
                  <tr key={key} >
