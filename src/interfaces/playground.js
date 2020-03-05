@@ -86,6 +86,13 @@ module.exports = function(app) {
   app.post(`${serverRoutesPrefix}/inputTest`, (req, res) => {
     const sendToServer = req.body.sendToServer
 
+    if ( sendToServer &&
+         !app.securityStrategy.isDummy() &&
+         !app.securityStrategy.allowConfigure(req) ) {
+      res.status(400).json({ error: "permission denied" })
+      return
+    }
+
     const { type, msgs, error } = detectType(req.body.value)
 
     if (error) {
