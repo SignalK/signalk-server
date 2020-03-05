@@ -290,9 +290,9 @@ class SentenceEventInput extends Component {
   render () {
     return (
       <TextInput
-        title='sentenceEvent'
+        title='Sentence Event'
         name='options.sentenceEvent'
-        helpText='Example: nmea1data'
+        helpText='Event name for incoming sentences. Example: nmea1data'
         value={this.props.value.sentenceEvent}
         onChange={this.props.onChange}
       />
@@ -350,7 +350,7 @@ class BaudRateIntputCanboat extends Component {
     super(props)
     this.props.value.baudrate = this.props.value.baudrate || (this.props.value.type === 'ikonvert-canboatjs' ? 230400 : 115200)
   }
-	
+
   render () {
     return (
       <TextInput
@@ -587,7 +587,7 @@ const SignalK = props => {
                       name='options.useDiscovery'
                       onChange={props.onChange}
                       checked={props.value.options.useDiscovery}
-                    />Use Discovery 
+                    />Use Discovery
                   </Label>
                 </div>
               </Col>
