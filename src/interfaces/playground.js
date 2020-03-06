@@ -112,7 +112,7 @@ module.exports = function(app) {
     } else {
       try {
         const deltas = processors[type](msgs).filter(
-          m => typeof m !== 'undefined'
+          m => typeof m !== 'undefined' && m != null
         )
         res.json(deltas)
 
