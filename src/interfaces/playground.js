@@ -57,8 +57,10 @@ module.exports = function(app) {
         const first = Array.isArray(parsed) ? parsed[0] : parsed
         if (first.pgn) {
           type = 'n2k-json'
-        } else {
+        } else if ( first.updates ) {
           type = 'signalk'
+        } else {
+          return { error: 'unknown JSON format' }
         }
         const msgs = Array.isArray(parsed) ? parsed : [parsed]
         return { type, msgs }
