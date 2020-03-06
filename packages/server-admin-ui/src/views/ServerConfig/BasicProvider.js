@@ -290,9 +290,9 @@ class SentenceEventInput extends Component {
   render () {
     return (
       <TextInput
-        title='sentenceEvent'
+        title='Sentence Event'
         name='options.sentenceEvent'
-        helpText='Example: nmea1data'
+        helpText='Event name for incoming sentences. Example: nmea1data'
         value={this.props.value.sentenceEvent}
         onChange={this.props.onChange}
       />
@@ -350,7 +350,7 @@ class BaudRateIntputCanboat extends Component {
     super(props)
     this.props.value.baudrate = this.props.value.baudrate || (this.props.value.type === 'ikonvert-canboatjs' ? 230400 : 115200)
   }
-	
+
   render () {
     return (
       <TextInput
@@ -358,6 +358,39 @@ class BaudRateIntputCanboat extends Component {
         name='options.baudrate'
         value={this.props.value.baudrate}
         onChange={event => this.props.onChange(event, 'number')}
+      />
+    )
+  }
+}
+
+class StdOutInput extends Component {
+  constructor(props) {
+    super();
+    let value = props.value.toStdout;
+    if(Array.isArray(value)) {
+      value = value.join(',');
+    }
+    this.state = {value}
+    this.onChange = this.onChange.bind(this);
+  }
+  onChange(e) {
+    this.setState({value: e.target.value});
+    this.props.onChange({
+      target: {
+        type: e.target.type,
+        name: e.target.name,
+        value: e.target.value.split(','),
+      }
+    });
+  }
+  render () {
+    return (
+      <TextInput
+        title='Output Events'
+        name='options.toStdout'
+        helpText='Events that should be written as output to this connection. Example: nmea0183,nmea0183out'
+        value={this.state.value}
+        onChange={this.onChange}
       />
     )
   }
@@ -587,7 +620,7 @@ const SignalK = props => {
                       name='options.useDiscovery'
                       onChange={props.onChange}
                       checked={props.value.options.useDiscovery}
-                    />Use Discovery 
+                    />Use Discovery
                   </Label>
                 </div>
               </Col>
@@ -646,6 +679,10 @@ const serialParams = props => (props.value.options.type === 'serial' && (
   <div>
     <DeviceInput value={props.value.options} onChange={props.onChange} />
     <BaudRateIntput
+      value={props.value.options}
+      onChange={props.onChange}
+    />
+    <StdOutInput
       value={props.value.options}
       onChange={props.onChange}
     />

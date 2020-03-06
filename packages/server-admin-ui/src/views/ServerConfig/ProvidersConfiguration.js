@@ -129,7 +129,7 @@ class ProvidersConfiguration extends Component {
     var provider = this.state.selectedProvider
     delete this.state.selectedProvider.json
 
-    var id = this.state.selectedProvider.originalId 
+    var id = this.state.selectedProvider.originalId
 
     fetch(`/providers/${id && !isNew ? id : ''}`, {
       method: isNew ? 'POST' : 'PUT',
