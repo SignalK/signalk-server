@@ -19,6 +19,9 @@ import {
   FormText,
   Table
 } from 'reactstrap'
+import moment from 'moment'
+
+const timestampFormat = 'MM/DD HH:mm:ss'
 
 function fetchRoot () {
   fetch(`/signalk/v1/api/`, {
@@ -79,7 +82,7 @@ class DataBrowser extends Component {
                   path: k,
                   value: vp.value[k],
                   source: update['$source'],
-                  timestamp: update.timestamp
+                  timestamp: moment(update.timestamp).format(timestampFormat)
                 }
               })
             } else {
@@ -87,7 +90,7 @@ class DataBrowser extends Component {
                 path: vp.path,
                 source: update['$source'],
                 value: vp.value,
-                timestamp: update.timestamp
+                timestamp: moment(update.timestamp).format(timestampFormat)
               }
               
               const metaKey = vp.path + '.meta'
