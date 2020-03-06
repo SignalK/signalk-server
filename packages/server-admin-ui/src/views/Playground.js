@@ -19,14 +19,17 @@ import {
   Table
 } from 'reactstrap'
 
+const inputStorageKey = 'admin.v1.playground.input'
+const sendStorageKey = 'admin.v1.playground.sendToServer'
+
 class Playground extends Component {
   constructor (props) {
     super(props)
     this.state = {
       hasData: true,
       data: [],
-      input: localStorage.getItem('lastPlaygroundInput') || '',
-      sendToServer: localStorage.getItem('lastPlaygroundSend') === 'true'
+      input: localStorage.getItem(inputStorageKey) || '',
+      sendToServer: localStorage.getItem(sendStorageKey) === 'true'
     }
 
     this.handleExecute = this.handleExecute.bind(this)
@@ -36,17 +39,17 @@ class Playground extends Component {
 
   handleInput(event) {
     this.setState({...this.state, input: event.target.value})
-    localStorage.setItem('lastPlaygroundInput', this.state.input)
+    localStorage.setItem(inputStorageKey, this.state.input)
   }
 
   handleSendToServer(event) {
     this.setState({...this.state, sendToServer: event.target.checked})
-    localStorage.setItem('lastPlaygroundSend', event.target.checked)
+    localStorage.setItem(sendStorageKey, event.target.checked)
   }
 
   handleExecute(event) {
     const body = { value: this.state.input, sendToServer: this.state.sendToServer }
-    localStorage.setItem('lastPlaygroundInput', this.state.input)
+    localStorage.setItem(inputStorageKey, this.state.input)
     fetch(`/skServer/inputTest`, {
       method: 'POST',
       credentials: 'include',
