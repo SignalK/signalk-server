@@ -23,6 +23,11 @@ import moment from 'moment'
 
 const timestampFormat = 'MM/DD HH:mm:ss'
 
+const metaStorageKey = 'admin.v1.dataBrowser.meta'
+const pauseStorageKey = 'admin.v1.dataBrowser.v1.pause'
+const contextStorageKey = 'admin.v1.dataBrowser.context'
+const searchStorageKey = 'admin.v1.dataBrowser.search'
+
 function fetchRoot () {
   fetch(`/signalk/v1/api/`, {
     credentials: 'include'
@@ -41,11 +46,11 @@ class DataBrowser extends Component {
       hasData: false,
       webSocket: null,
       didSubscribe: false,
-      pause: localStorage.getItem('dataBrowserPause') === 'true',
-      includeMeta: localStorage.getItem('dataBrowserMeta') === 'true',
+      pause: localStorage.getItem(pauseStorageKey) === 'true',
+      includeMeta: localStorage.getItem(metaStorageKey) === 'true',
       data: {},
-      context: localStorage.getItem('dataBrowserContext') || 'none',
-      search: localStorage.getItem('dataBrowserSearch') || ''
+      context: localStorage.getItem(contextStorageKey) || 'none',
+      search: localStorage.getItem(searchStorageKey) || ''
     }
 
     this.fetchRoot = fetchRoot.bind(this)
@@ -168,23 +173,23 @@ class DataBrowser extends Component {
 
   handleContextChange(event) {
     this.setState({...this.state, context: event.target.value})
-    localStorage.setItem('dataBrowserContext', event.target.value)  
+    localStorage.setItem(contextStorageKey, event.target.value)  
   }
 
   handleSearch(event) {
     this.setState({...this.state, search: event.target.value})
-    localStorage.setItem('dataBrowserSearch', event.target.value)  
+    localStorage.setItem(searchStorageKey, event.target.value)  
   }
 
   handleMeta(event) {
     this.setState({...this.state, includeMeta: event.target.checked})
-    localStorage.setItem('dataBrowserMeta', event.target.checked)
+    localStorage.setItem(metaStorageKey, event.target.checked)
   }
 
   handlePause (event) {
     this.state.pause = event.target.checked
     this.setState(this.state)
-    localStorage.setItem('dataBrowserPause', this.state.pause)
+    localStorage.setItem(pauseStorageKey, this.state.pause)
     if ( this.state.pause ) {
       this.unsubscribeToData()
     } else {
