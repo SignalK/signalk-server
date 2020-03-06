@@ -149,7 +149,7 @@ function getCertificateOptions(app, cb) {
 
 function hasStrictPermissions(stat) {
   if (process.platform === 'win32') {
-    return new Mode(stat).toString() === '-r--r--r--'
+    return true
   } else {
     return /^-r[-w][-x]------$/.test(new Mode(stat).toString())
   }
