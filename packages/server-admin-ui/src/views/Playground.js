@@ -18,9 +18,10 @@ import {
   FormText,
   Table
 } from 'reactstrap'
+import moment from 'moment'
 
+const timestampFormat = 'MM/DD HH:mm:ss'
 const inputStorageKey = 'admin.v1.playground.input'
-const sendStorageKey = 'admin.v1.playground.sendToServer'
 
 class Playground extends Component {
   constructor (props) {
@@ -29,27 +30,41 @@ class Playground extends Component {
       hasData: true,
       data: [],
       input: localStorage.getItem(inputStorageKey) || '',
-      sendToServer: localStorage.getItem(sendStorageKey) === 'true'
+      sending: false
     }
 
     this.handleExecute = this.handleExecute.bind(this)
     this.handleInput = this.handleInput.bind(this)
-    this.handleSendToServer = this.handleSendToServer.bind(this)
+    this.send = this.send.bind(this)
   }
 
   handleInput(event) {
     this.setState({...this.state, input: event.target.value})
     localStorage.setItem(inputStorageKey, this.state.input)
-  }
-
-  handleSendToServer(event) {
-    this.setState({...this.state, sendToServer: event.target.checked})
-    localStorage.setItem(sendStorageKey, event.target.checked)
+    if ( this.inputWaitTimeout ) {
+      clearTimeout(this.inputWaitTimeout)
+    }
+    this.inputWaitTimeout = setTimeout(() => {
+      this.send(false)
+    }, 2000)
   }
 
   handleExecute(event) {
-    const body = { value: this.state.input, sendToServer: this.state.sendToServer }
+    this.send(true)
+  }
+
+  componentDidMount() {
+    if ( this.state.input && this.state.input.length > 0 ) {
+      this.send(false)
+    }
+  }
+
+  send(sendToServer) {
+    const body = { value: this.state.input, sendToServer }
     localStorage.setItem(inputStorageKey, this.state.input)
+    if ( sendToServer ) {
+      this.setState({...this.state, sending: true})
+    }
     fetch(`/skServer/inputTest`, {
       method: 'POST',
       credentials: 'include',
@@ -60,6 +75,11 @@ class Playground extends Component {
     })
       .then(response => response.json())
       .then(data => {
+        if ( sendToServer ) {
+          setTimeout(() => {
+            this.setState({ ...this.state, sending:false })
+          }, 1000)
+        }
         if ( data.error ) {
           this.setState({ ...this.state, data: [], error:data.error})
         } else {
@@ -80,7 +100,7 @@ class Playground extends Component {
                           path: k,
                           value: vp.value[k],
                           context: delta.context,
-                          timestamp: update.timestamp
+                          timestamp: moment(update.timestamp).format(timestampFormat)
                         })
                       })
                     } else {
@@ -88,7 +108,7 @@ class Playground extends Component {
                         path: vp.path,
                         value: vp.value,
                         context: delta.context,
-                        timestamp: update.timestamp
+                        timestamp: moment(update.timestamp).format(timestampFormat)
                       })
                     }
                   })
@@ -101,6 +121,10 @@ class Playground extends Component {
       })
     .catch(error => {
       console.error (error)
+      this.setState({ ...this.state, error:error.message })
+      if ( sendToServer ) {
+          this.setState({ ...this.state, sending:false })
+        }
     })
   }
 
@@ -118,26 +142,6 @@ class Playground extends Component {
                 onSubmit={e => { e.preventDefault()}}
           >
 
-          <FormGroup row>
-          <Col xs='8' md='4'>
-          <Label className='switch switch-text switch-primary'>
-                              <Input
-                                type='checkbox'
-                                id="SendToServer"
-                                name='sendToServer'
-                                className='switch-input'
-                                onChange={this.handleSendToServer}
-                                checked={this.state.sendToServer}
-                              />
-                              <span
-                                className='switch-label'
-                                data-on='Yes'
-                                data-off='No'
-                              />
-                              <span className='switch-handle' />
-                              </Label>{' '}Send To Server
-          </Col>
-          </FormGroup>
           <FormGroup row>
           <Col xs='3' md='2'>
           <Label htmlFor='select'>Input</Label>
@@ -161,7 +165,7 @@ class Playground extends Component {
           </CardBody>
           <CardFooter>
             <Button size='sm' color='primary' onClick={this.handleExecute}>
-              <i className='fa fa-plus-circle' /> Play
+          <i className={ this.state.sending ? 'fa fa-spinner fa-spin' : 'fa fa-plus-circle'} /> Send To Server
         </Button>{' '}
           {this.state.error && (
               <p className="text-danger float-right">{this.state.error}</p>
