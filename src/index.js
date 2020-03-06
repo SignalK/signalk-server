@@ -26,7 +26,7 @@ const DeltaCache = require('./deltacache')
 const path = require('path')
 const http = require('http')
 const spdy = require('spdy')
-const FullSignalK = require('@signalk/signalk-schema').FullSignalK
+const { FullSignalK, getSourceId } = require('@signalk/signalk-schema')
 const SubscriptionManager = require('./subscriptionmanager')
 const ports = require('./ports')
 const getPrimaryPort = ports.getPrimaryPort
@@ -168,6 +168,9 @@ function Server(opts) {
       data.updates.forEach(function(update) {
         if (typeof update.source !== 'undefined') {
           update.source.label = providerId
+          if (!update.$source) {
+            update.$source = getSourceId(update.source)
+          }
         } else {
           if (typeof update.$source === 'undefined') {
             update.$source = providerId

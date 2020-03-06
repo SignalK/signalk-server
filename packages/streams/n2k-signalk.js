@@ -18,6 +18,8 @@ const Transform = require('stream').Transform
 
 const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
 
+const { getSourceId } = require('@signalk/signalk-schema')
+
 require('util').inherits(ToSignalK, Transform)
 
 function ToSignalK (options) {
@@ -82,34 +84,40 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
       delta.updates.forEach(update => {
           update.values.forEach(kv => {
             if ( kv.path && kv.path.startsWith('notifications.') ) {
-              if ( kv.value.state === 'normal' && this.notifications[kv.path]) {
-                clearInterval(this.notifications[kv.path].interval)
-                delete this.notifications[kv.path]
+              const source = update.source.src
+              if ( kv.value.state === 'normal' && this.notifications[kv.path] && this.notifications[kv.path][src]) {
+                clearInterval(this.notifications[kv.path][src].interval)
+                delete this.notifications[kv.path][src]
               } else if ( kv.value.state !== 'normal' ) {
                 if ( !this.notifications[kv.path] ) {
+                  this.notifications[kv.path] = {}
+                }
+                if ( !this.notifications[kv.path][src] ) {
                   const interval = setInterval(() => {
-                    if (Date.now() - this.notifications[kv.path].lastTime > 10000) {
+                    if (Date.now() - this.notifications[kv.path][src].lastTime > 10000) {
                       const copy = JSON.parse(JSON.stringify(kv))
                       copy.value.state = 'normal'
                       const normalDelta = {
                         context: delta.context,
                         updates: [
                           {
+                            source: update.source,
+                            $source: getSourceId(update.source),
                             values: [ copy ]
                           }
                         ]
                       }
-                      delete this.notifications[kv.path]
+                      delete this.notifications[kv.path][src]
                       clearInterval(interval)
                       this.app.handleMessage(this.options.providerId, normalDelta)
                     }
                   }, 5000)
-                  this.notifications[kv.path] = {
+                  this.notifications[kv.path][src] = {
                     lastTime: Date.now(),
                     interval: interval
                   }
                 } else {
-                  this.notifications[kv.path].lastTime = Date.now()
+                  this.notifications[kv.path][src].lastTime = Date.now()
                 }
               }
             }
