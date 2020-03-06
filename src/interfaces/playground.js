@@ -31,17 +31,17 @@ const serverRoutesPrefix = '/skServer'
 module.exports = function(app) {
   const processors = {
     n2k: msgs => {
-      const n2kMapper = new N2kMapper({app})
-      const parser  = new FromPgn()
+      const n2kMapper = new N2kMapper({ app })
+      const parser = new FromPgn()
       return msgs.map(msg => {
         const n2k = parser.parseString(msg)
-        if ( n2k ) {
-          return n2kMapper.toDelta(n2k)          
+        if (n2k) {
+          return n2kMapper.toDelta(n2k)
         }
       })
     },
     '0183': msgs => {
-      const parser = new Parser0183({app})
+      const parser = new Parser0183({ app })
       return msgs.map(parser.parse.bind(parser))
     },
     'n2k-json': msgs => {
@@ -51,7 +51,7 @@ module.exports = function(app) {
 
   function detectType(msg) {
     let type
-    if (msg.charAt(0) === '{' || msg.charAt(0) === '[' ) {
+    if (msg.charAt(0) === '{' || msg.charAt(0) === '[') {
       try {
         const parsed = JSON.parse(msg)
         const first = Array.isArray(parsed) ? parsed[0] : parsed
@@ -60,11 +60,11 @@ module.exports = function(app) {
         } else {
           type = 'signalk'
         }
-        const msgs = Array.isArray(parsed) ? parsed : [ parsed ]
+        const msgs = Array.isArray(parsed) ? parsed : [parsed]
         return { type, msgs }
       } catch (ex) {
         console.error(ex)
-        return {error: ex.message}
+        return { error: ex.message }
       }
     } else if (isN2KString) {
       // temporary until new canboatjs is released
@@ -73,7 +73,7 @@ module.exports = function(app) {
       } else if (msg.charAt(0) === '$' || msg.charAt(0) === '!') {
         type = '0183'
       } else {
-        return {error: 'unable to determine message type'}
+        return { error: 'unable to determine message type' }
       }
     } else if (msg.charAt(0) === '$' || msg.charAt(0) === '!') {
       type = '0183'
@@ -86,10 +86,12 @@ module.exports = function(app) {
   app.post(`${serverRoutesPrefix}/inputTest`, (req, res) => {
     const sendToServer = req.body.sendToServer
 
-    if ( sendToServer &&
-         !app.securityStrategy.isDummy() &&
-         !app.securityStrategy.allowConfigure(req) ) {
-      res.status(400).json({ error: "permission denied" })
+    if (
+      sendToServer &&
+      !app.securityStrategy.isDummy() &&
+      !app.securityStrategy.allowConfigure(req)
+    ) {
+      res.status(400).json({ error: 'permission denied' })
       return
     }
 
@@ -108,20 +110,21 @@ module.exports = function(app) {
       }
       res.json(msgs)
     } else {
-
       try {
-        const deltas = processors[type](msgs).filter(m => typeof m !== 'undefined')
+        const deltas = processors[type](msgs).filter(
+          m => typeof m !== 'undefined'
+        )
         res.json(deltas)
-        
+
         if (sendToServer) {
           deltas.forEach(msg => {
             app.handleMessage('input-test', msg)
           })
         }
-      } catch ( ex ) {
+      } catch (ex) {
         console.error(ex)
         res.status(400).json({ error: ex.message })
       }
-    } 
+    }
   })
 }
