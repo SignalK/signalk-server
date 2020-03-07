@@ -204,6 +204,11 @@ const mapStateToProps = state => {
         name: 'Data Browser',
         url: '/databrowser',
         icon: 'icon-folder'
+      },
+      {
+        name: 'Playground',
+        url: '/playground',
+        icon: 'icon-control-play'
       }
     ]
   }

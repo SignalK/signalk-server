@@ -208,6 +208,7 @@ module.exports = function(app, config) {
     app.use('/providers', http_authorize(false))
     app.use('/settings', http_authorize(false))
     app.use('/webapps', http_authorize(false))
+    app.use('/skServer/inputTest', http_authorize(false))
 
     app.put(['/logout', `${skAuthPrefix}/logout`], function(req, res) {
       res.clearCookie('JAUTHENTICATION')
