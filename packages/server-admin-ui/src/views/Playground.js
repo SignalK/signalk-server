@@ -16,7 +16,8 @@ import {
   Label,
   FormGroup,
   FormText,
-  Table
+  Table,
+  Row
 } from 'reactstrap'
 import moment from 'moment'
 
@@ -29,6 +30,8 @@ class Playground extends Component {
     this.state = {
       hasData: true,
       data: [],
+      deltas: [],
+      n2kJson: [],
       input: localStorage.getItem(inputStorageKey) || '',
       sending: false
     }
@@ -36,6 +39,7 @@ class Playground extends Component {
     this.handleExecute = this.handleExecute.bind(this)
     this.handleInput = this.handleInput.bind(this)
     this.send = this.send.bind(this)
+    this.beautify = this.beautify.bind(this)
   }
 
   handleInput(event) {
@@ -45,7 +49,9 @@ class Playground extends Component {
       clearTimeout(this.inputWaitTimeout)
     }
     this.inputWaitTimeout = setTimeout(() => {
-      this.send(false)
+      if ( this.state.input.length > 0 ) {
+        this.send(false)
+      }
     }, 2000)
   }
 
@@ -57,6 +63,11 @@ class Playground extends Component {
     if ( this.state.input && this.state.input.length > 0 ) {
       this.send(false)
     }
+  }
+
+  beautify() {
+    const text = JSON.stringify(JSON.parse(this.state.input), null, 2)
+    this.setState({...this.state, input: text})
   }
 
   send(sendToServer) {
@@ -81,12 +92,12 @@ class Playground extends Component {
           }, 1000)
         }
         if ( data.error ) {
-          this.setState({ ...this.state, data: [], error:data.error})
+          this.setState({ ...this.state, data: [], deltas:[], n2kJson: [], error:data.error})
         } else {
           this.state.error = null
           this.setState(this.state)
           const values = []
-          data.forEach(delta => {
+          data.deltas.forEach(delta => {
             if ( !delta.context ) {
               delta.context = 'vessels.self'
             }
@@ -116,12 +127,12 @@ class Playground extends Component {
               })
             }
           })
-          this.setState({ ...this.state, data: values})
+          this.setState({ ...this.state, data: values, deltas: data.deltas, n2kJson: data.n2kJson })
         }
       })
     .catch(error => {
       console.error (error)
-      this.setState({ ...this.state, error:error.message })
+      this.setState({ ...this.state, data: [], deltas:[], n2kJson: [], error:error.message})
       if ( sendToServer ) {
           this.setState({ ...this.state, sending:false })
         }
@@ -133,7 +144,20 @@ class Playground extends Component {
       this.state.hasData && (
         <div className='animated fadeIn'>
           <Card>
-            <CardBody>
+          <CardBody>
+          <Row>
+          <Col xs='12' md='6'>
+          <Card>
+          <CardHeader>Input<p className="float-right">
+        <Button size='sm' color='primary' onClick={this.handleExecute}>
+          <i className={ this.state.sending ? 'fa fa-spinner fa-spin' : 'fa fa-dot-circle-o'} /> Send To Server
+        </Button>{' '}
+                <Button size='sm' color='primary' onClick={this.beautify}>
+          <i className="fa fa-dot-circle-o" /> Beautify JSON
+        </Button>
+          </p>
+        </CardHeader>
+           <CardBody>
               <Form
                 action=''
                 method='post'
@@ -143,9 +167,6 @@ class Playground extends Component {
           >
 
           <FormGroup row>
-          <Col xs='3' md='2'>
-          <Label htmlFor='select'>Input</Label>
-          </Col>
           <Col xs='12' md='12'>
           <FormText color='muted'>
           You can enter multi-line raw NMEA 2000, NMEA 0183 or Signal K deltas (one delta or an array)
@@ -161,18 +182,31 @@ class Playground extends Component {
               </FormGroup>
 
                
-             </Form>
+          </Form>
+          </CardBody>
+          </Card>
+          </Col>
+          <Col xs='12' md='6'>
+        { this.state.data.length > 0 && (        
+          <Card>
+           <CardHeader>Deltas</CardHeader>
+           <CardBody>
+           <pre>{JSON.stringify(this.state.deltas, null, 2)}</pre>
+           </CardBody>
+         </Card>
+        )}
+        </Col>
+        
+          </Row>
           </CardBody>
           <CardFooter>
-            <Button size='sm' color='primary' onClick={this.handleExecute}>
-          <i className={ this.state.sending ? 'fa fa-spinner fa-spin' : 'fa fa-plus-circle'} /> Send To Server
-        </Button>{' '}
+            
           {this.state.error && (
               <p className="text-danger float-right">{this.state.error}</p>
           )}
           </CardFooter>
           </Card>
-
+        
         { this.state.data.length > 0 && (
           <Card>
           <CardBody>
@@ -207,9 +241,18 @@ class Playground extends Component {
           </tbody>
           </Table>
           </CardBody>
-        </Card>
+         </Card>
         )}        
-        
+
+        { this.state.n2kJson && this.state.n2kJson.length > 0 && (
+         <Card>
+           <CardHeader>N2K Json</CardHeader>
+           <CardBody>
+           <pre>{JSON.stringify(this.state.n2kJson, null, 2)}</pre>
+           </CardBody>
+         </Card>
+        )}
+          
         </div>
       )
     )

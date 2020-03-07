@@ -33,19 +33,25 @@ module.exports = function(app) {
     n2k: msgs => {
       const n2kMapper = new N2kMapper({ app })
       const parser = new FromPgn()
-      return msgs.map(msg => {
+      const n2kJson = []
+      let last = []
+      const deltas = msgs.map(msg => {
+        last.push(msg)
         const n2k = parser.parseString(msg)
         if (n2k) {
+          n2kJson.push([ last, n2k ])
+          last = []
           return n2kMapper.toDelta(n2k)
         }
       })
+      return { deltas, n2kJson:  n2kJson }
     },
     '0183': msgs => {
       const parser = new Parser0183({ app })
-      return msgs.map(parser.parse.bind(parser))
+      return { deltas: msgs.map(parser.parse.bind(parser)) }
     },
     'n2k-json': msgs => {
-      return processors.n2k(msgs.map(pgnToActisenseSerialFormat))
+      return { deltas: processors.n2k(msgs.map(pgnToActisenseSerialFormat)) }
     }
   }
 
@@ -57,7 +63,7 @@ module.exports = function(app) {
         const first = Array.isArray(parsed) ? parsed[0] : parsed
         if (first.pgn) {
           type = 'n2k-json'
-        } else if (first.updates) {
+        } else if ( first.updates ) {
           type = 'signalk'
         } else {
           return { error: 'unknown JSON format' }
@@ -110,13 +116,19 @@ module.exports = function(app) {
           app.handleMessage('input-test', msg)
         })
       }
-      res.json(msgs)
+      res.json({ deltas: msgs })
     } else {
       try {
-        const deltas = processors[type](msgs).filter(
-          m => typeof m !== 'undefined' && m != null
+        const data = processors[type](msgs)
+
+        data.deltas = data.deltas.filter(
+          m => typeof m !== 'undefined' &&
+            m != null  &&
+            m.updates.length > 0 &&
+            m.updates[0].values &&
+            m.updates[0].values.length > 0
         )
-        res.json(deltas)
+        res.json(data)
 
         if (sendToServer) {
           deltas.forEach(msg => {
