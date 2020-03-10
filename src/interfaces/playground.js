@@ -118,8 +118,13 @@ module.exports = function(app) {
         msgs.forEach(msg => {
           if ( msg.put ) {
             puts.push(new Promise((resolve, reject) => {
-              putPath(app, msg.context, msg.put.path, msg.put.value, req, msg.requestId, (reply) => {
-                resolve(reply)
+              setTimeout(() => {
+                resolve('Timed out waiting for put result')
+              }, 5000)
+              putPath(app, msg.context, msg.put.path, msg.put, req, msg.requestId, (reply) => {
+                if ( reply.state !== 'PENDING' ) {
+                  resolve(reply)
+                }
               })
             }))
           } else {
