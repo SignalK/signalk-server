@@ -40,12 +40,12 @@ module.exports = function(app) {
         last.push(msg)
         const n2k = parser.parseString(msg)
         if (n2k) {
-          n2kJson.push([ last, n2k ])
+          n2kJson.push([last, n2k])
           last = []
           return n2kMapper.toDelta(n2k)
         }
       })
-      return { deltas, n2kJson:  n2kJson }
+      return { deltas, n2kJson: n2kJson }
     },
     '0183': msgs => {
       const parser = new Parser0183({ app })
@@ -65,7 +65,7 @@ module.exports = function(app) {
 
         if (first.pgn) {
           type = 'n2k-json'
-        } else if ( first.updates || first.put ) {
+        } else if (first.updates || first.put) {
           type = 'signalk'
         } else {
           return { error: 'unknown JSON format' }
@@ -116,27 +116,36 @@ module.exports = function(app) {
       let puts = []
       if (sendToServer) {
         msgs.forEach(msg => {
-          if ( msg.put ) {
-            puts.push(new Promise((resolve, reject) => {
-              setTimeout(() => {
-                resolve('Timed out waiting for put result')
-              }, 5000)
-              putPath(app, msg.context, msg.put.path, msg.put, req, msg.requestId, (reply) => {
-                if ( reply.state !== 'PENDING' ) {
-                  resolve(reply)
-                }
+          if (msg.put) {
+            puts.push(
+              new Promise((resolve, reject) => {
+                setTimeout(() => {
+                  resolve('Timed out waiting for put result')
+                }, 5000)
+                putPath(
+                  app,
+                  msg.context,
+                  msg.put.path,
+                  msg.put,
+                  req,
+                  msg.requestId,
+                  reply => {
+                    if (reply.state !== 'PENDING') {
+                      resolve(reply)
+                    }
+                  }
+                )
               })
-            }))
+            )
           } else {
             app.handleMessage('input-test', msg)
           }
         })
       }
-      if ( puts.length > 0 ) {
-        Promise.all(puts)
-          .then(results => {
-            res.json({deltas: msgs, putResults: results})
-          })
+      if (puts.length > 0) {
+        Promise.all(puts).then(results => {
+          res.json({ deltas: msgs, putResults: results })
+        })
       } else {
         res.json({ deltas: msgs })
       }
@@ -145,8 +154,9 @@ module.exports = function(app) {
         const data = processors[type](msgs)
 
         data.deltas = data.deltas.filter(
-          m => typeof m !== 'undefined' &&
-            m != null  &&
+          m =>
+            typeof m !== 'undefined' &&
+            m != null &&
             m.updates.length > 0 &&
             m.updates[0].values &&
             m.updates[0].values.length > 0
