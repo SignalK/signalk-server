@@ -20,6 +20,7 @@ import {
   Row
 } from 'reactstrap'
 import moment from 'moment'
+import jsonlint from 'jsonlint'
 
 const timestampFormat = 'MM/DD HH:mm:ss'
 const inputStorageKey = 'admin.v1.playground.input'
@@ -66,11 +67,26 @@ class Playground extends Component {
   }
 
   beautify() {
-    const text = JSON.stringify(JSON.parse(this.state.input), null, 2)
-    this.setState({...this.state, input: text})
+    try {
+      jsonlint.parse(this.state.input)
+      const text = JSON.stringify(JSON.parse(this.state.input), null, 2)
+      this.setState({...this.state, input: text, jsonError: null})
+    } catch (error) {
+      this.setState({...this.state, jsonError: error.message})
+    }
   }
 
   send(sendToServer) {
+    let start =  this.state.input.trim().charAt(0)
+    if ( start === '{' || start === '[' ) {
+      try {
+        jsonlint.parse(this.state.input)
+      } catch (error) {
+        this.setState({...this.state, error: 'invalid json', jsonError: error.message})
+      return
+      }
+    }
+    
     const body = { value: this.state.input, sendToServer }
     localStorage.setItem(inputStorageKey, this.state.input)
     if ( sendToServer ) {
@@ -92,7 +108,7 @@ class Playground extends Component {
           }, 1000)
         }
         if ( data.error ) {
-          this.setState({ ...this.state, data: [], deltas:[], putResults: [], n2kJson: [], error:data.error})
+          this.setState({ ...this.state, data: [], deltas:[], putResults: [], n2kJson: [], jsonError: null, error:data.error})
         } else {
           this.state.error = null
           this.setState(this.state)
@@ -127,12 +143,12 @@ class Playground extends Component {
               })
             }
           })
-          this.setState({ ...this.state, data: values, deltas: data.deltas, n2kJson: data.n2kJson, putResults:data.putResults })
+          this.setState({ ...this.state, data: values, deltas: data.deltas, n2kJson: data.n2kJson, putResults:data.putResults, jsonError: null })
         }
       })
     .catch(error => {
       console.error (error)
-      this.setState({ ...this.state, data: [], deltas:[], putResults:[], n2kJson: [], error:error.message})
+      this.setState({ ...this.state, data: [], deltas:[], putResults:[], n2kJson: [], error:error.message, jsonError: null})
       if ( sendToServer ) {
           this.setState({ ...this.state, sending:false })
         }
@@ -258,6 +274,15 @@ class Playground extends Component {
            <CardHeader>N2K Json</CardHeader>
            <CardBody>
            <pre>{JSON.stringify(this.state.n2kJson, null, 2)}</pre>
+           </CardBody>
+         </Card>
+        )}
+
+        { this.state.jsonError && (
+         <Card>
+           <CardHeader>Json Lint Error</CardHeader>
+           <CardBody>
+            <pre>{this.state.jsonError}</pre>
            </CardBody>
          </Card>
         )}
