@@ -20,6 +20,7 @@
 
 const Parser0183 = require('@signalk/nmea0183-signalk')
 const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
+const { putPath } = require('../put')
 const {
   isN2KString,
   FromPgn,
@@ -61,9 +62,10 @@ module.exports = function(app) {
       try {
         const parsed = JSON.parse(msg)
         const first = Array.isArray(parsed) ? parsed[0] : parsed
+
         if (first.pgn) {
           type = 'n2k-json'
-        } else if ( first.updates ) {
+        } else if ( first.updates || first.put ) {
           type = 'signalk'
         } else {
           return { error: 'unknown JSON format' }
@@ -111,12 +113,28 @@ module.exports = function(app) {
     }
 
     if (type === 'signalk') {
+      let puts = []
       if (sendToServer) {
         msgs.forEach(msg => {
-          app.handleMessage('input-test', msg)
+          if ( msg.put ) {
+            puts.push(new Promise((resolve, reject) => {
+              putPath(app, msg.context, msg.put.path, msg.put.value, req, msg.requestId, (reply) => {
+                resolve(reply)
+              })
+            }))
+          } else {
+            app.handleMessage('input-test', msg)
+          }
         })
       }
-      res.json({ deltas: msgs })
+      if ( puts.length > 0 ) {
+        Promise.all(puts)
+          .then(results => {
+            res.json({deltas: msgs, putResults: results})
+          })
+      } else {
+        res.json({ deltas: msgs })
+      }
     } else {
       try {
         const data = processors[type](msgs)

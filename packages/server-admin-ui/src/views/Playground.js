@@ -92,7 +92,7 @@ class Playground extends Component {
           }, 1000)
         }
         if ( data.error ) {
-          this.setState({ ...this.state, data: [], deltas:[], n2kJson: [], error:data.error})
+          this.setState({ ...this.state, data: [], deltas:[], putResults: [], n2kJson: [], error:data.error})
         } else {
           this.state.error = null
           this.setState(this.state)
@@ -127,12 +127,12 @@ class Playground extends Component {
               })
             }
           })
-          this.setState({ ...this.state, data: values, deltas: data.deltas, n2kJson: data.n2kJson })
+          this.setState({ ...this.state, data: values, deltas: data.deltas, n2kJson: data.n2kJson, putResults:data.putResults })
         }
       })
     .catch(error => {
       console.error (error)
-      this.setState({ ...this.state, data: [], deltas:[], n2kJson: [], error:error.message})
+      this.setState({ ...this.state, data: [], deltas:[], putResults:[], n2kJson: [], error:error.message})
       if ( sendToServer ) {
           this.setState({ ...this.state, sending:false })
         }
@@ -187,7 +187,7 @@ class Playground extends Component {
           </Card>
           </Col>
           <Col xs='12' md='6'>
-        { this.state.data.length > 0 && (        
+        { this.state.deltas.length > 0 && (
           <Card>
            <CardHeader>Deltas</CardHeader>
            <CardBody>
@@ -244,6 +244,15 @@ class Playground extends Component {
          </Card>
         )}        
 
+        { this.state.putResults && this.state.putResults.length > 0 && (
+         <Card>
+           <CardHeader>Put Results</CardHeader>
+           <CardBody>
+           <pre>{JSON.stringify(this.state.putResults, null, 2)}</pre>
+           </CardBody>
+         </Card>
+        )}        
+        
         { this.state.n2kJson && this.state.n2kJson.length > 0 && (
          <Card>
            <CardHeader>N2K Json</CardHeader>
@@ -252,11 +261,11 @@ class Playground extends Component {
            </CardBody>
          </Card>
         )}
-          
+                  
         </div>
       )
     )
   }
 }
 
-export default connect(({}) => ({}))(Playground)
+export default connect(({webSocket}) => ({webSocket}))(Playground)
