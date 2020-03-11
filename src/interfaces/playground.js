@@ -35,13 +35,10 @@ module.exports = function(app) {
       const n2kMapper = new N2kMapper({ app })
       const parser = new FromPgn()
       const n2kJson = []
-      let last = []
       const deltas = msgs.map(msg => {
-        last.push(msg)
         const n2k = parser.parseString(msg)
         if (n2k) {
-          n2kJson.push([last, n2k])
-          last = []
+          n2kJson.push(n2k)
           return n2kMapper.toDelta(n2k)
         }
       })
@@ -56,8 +53,9 @@ module.exports = function(app) {
     }
   }
 
-  function detectType(msg) {
+  function detectType(message) {
     let type
+    let msg = message.trim()
     if (msg.charAt(0) === '{' || msg.charAt(0) === '[') {
       try {
         const parsed = JSON.parse(msg)
@@ -153,18 +151,20 @@ module.exports = function(app) {
       try {
         const data = processors[type](msgs)
 
-        data.deltas = data.deltas.filter(
-          m =>
-            typeof m !== 'undefined' &&
-            m != null &&
-            m.updates.length > 0 &&
-            m.updates[0].values &&
-            m.updates[0].values.length > 0
-        )
+        if ( data.deltas ) {
+          data.deltas = data.deltas.filter(
+            m =>
+              typeof m !== 'undefined' &&
+              m != null &&
+              m.updates.length > 0 &&
+              m.updates[0].values &&
+              m.updates[0].values.length > 0
+          )
+        }
         res.json(data)
 
         if (sendToServer) {
-          deltas.forEach(msg => {
+          data.deltas.forEach(msg => {
             app.handleMessage('input-test', msg)
           })
         }
