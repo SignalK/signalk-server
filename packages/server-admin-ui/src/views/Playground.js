@@ -19,6 +19,9 @@ import {
   Table,
   Row
 } from 'reactstrap'
+import { Tabs, Tab, TabList, TabPanel } from 'react-tabs'
+import 'react-tabs/style/react-tabs.css';
+
 import moment from 'moment'
 import jsonlint from 'jsonlint'
 
@@ -164,15 +167,7 @@ class Playground extends Component {
           <Row>
           <Col xs='12' md='6'>
           <Card>
-          <CardHeader>Input<p className="float-right">
-        <Button size='sm' color='primary' onClick={this.handleExecute}>
-          <i className={ this.state.sending ? 'fa fa-spinner fa-spin' : 'fa fa-dot-circle-o'} /> Send To Server
-        </Button>{' '}
-                <Button size='sm' color='primary' onClick={this.beautify}>
-          <i className="fa fa-dot-circle-o" /> Beautify JSON
-        </Button>
-          </p>
-        </CardHeader>
+          <CardHeader>Input</CardHeader>
            <CardBody>
               <Form
                 action=''
@@ -190,7 +185,7 @@ class Playground extends Component {
             <Input
               type='textarea'
               name='input'
-              rows='12'
+              rows='15'
               onChange={this.handleInput}
               value={this.state.input}
             />
@@ -200,34 +195,44 @@ class Playground extends Component {
                
           </Form>
           </CardBody>
+          <CardFooter>
+        <Button size='sm' color='primary' onClick={this.handleExecute}>
+          <i className={ this.state.sending ? 'fa fa-spinner fa-spin' : 'fa fa-dot-circle-o'} /> Send To Server
+        </Button>{' '}
+                <Button size='sm' color='primary' onClick={this.beautify}>
+          <i className="fa fa-dot-circle-o" /> Beautify JSON
+        </Button>
+          </CardFooter>
           </Card>
           </Col>
           <Col xs='12' md='6'>
-        { this.state.deltas.length > 0 && (
-          <Card>
-           <CardHeader>Deltas</CardHeader>
-           <CardBody>
-           <pre>{JSON.stringify(this.state.deltas, null, 2)}</pre>
-           </CardBody>
-         </Card>
-        )}
-        </Col>
-        
-          </Row>
-          </CardBody>
-          <CardFooter>
-            
-          {this.state.error && (
-              <p className="text-danger float-right">{this.state.error}</p>
+          <Tabs defaultIndex={this.state.jsonError ? 2 : 1} >
+          <TabList>
+          <Tab>Deltas</Tab>
+          { this.state.data.length > 0 && (
+            <Tab>Paths</Tab>
           )}
-          </CardFooter>
-          </Card>
-        
+        { this.state.n2kJson && this.state.n2kJson.length > 0 && (
+          <Tab>Decoded NMEA 2000</Tab>
+        )}
+        { this.state.putResults && this.state.putResults.length > 0 && (
+          <Tab>Put Results</Tab>
+        )}
+        { this.state.jsonError && (
+          <Tab>Json Lint Error</Tab>
+        )}
+        </TabList>
+        <TabPanel>
+        { this.state.deltas.length > 0 && (
+            <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
+          <pre>{JSON.stringify(this.state.deltas, null, 2)}</pre>
+          </div>
+        )}
+        </TabPanel>
+
         { this.state.data.length > 0 && (
-          <Card>
-          <CardBody>
-
-
+          <TabPanel>
+          <div style={{'overflowY': 'scroll', 'maxHeight': '60vh'}} >
             <Table responsive bordered striped size='sm'>
               <thead>
               <tr>
@@ -256,28 +261,47 @@ class Playground extends Component {
        
           </tbody>
           </Table>
-          </CardBody>
-         </Card>
+          </div>
+          </TabPanel>
+        )}        
+
+        { this.state.n2kJson && this.state.n2kJson.length > 0 && (
+            <TabPanel>
+            <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
+            <pre>{JSON.stringify(this.state.n2kJson, null, 2)}</pre>
+            </div>
+          </TabPanel>
         )}        
 
         { this.state.putResults && this.state.putResults.length > 0 && (
-         <Card>
-           <CardHeader>Put Results</CardHeader>
-           <CardBody>
-           <pre>{JSON.stringify(this.state.putResults, null, 2)}</pre>
-           </CardBody>
-         </Card>
-        )}        
-        
-        { this.state.n2kJson && this.state.n2kJson.length > 0 && (
-         <Card>
-           <CardHeader>N2K Json</CardHeader>
-           <CardBody>
-           <pre>{JSON.stringify(this.state.n2kJson, null, 2)}</pre>
-           </CardBody>
-         </Card>
+            <TabPanel>
+            <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
+            <pre>{JSON.stringify(this.state.putResults, null, 2)}</pre>
+            </div>
+          </TabPanel>
         )}
 
+        { this.state.jsonError && (
+          <TabPanel>
+          <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
+            <pre>{this.state.jsonError}</pre>
+            </div>
+          </TabPanel>
+      )}        
+        
+        </Tabs>
+        </Col>
+        
+          </Row>
+          </CardBody>
+          <CardFooter>
+            
+          {this.state.error && (
+              <p className="text-danger float-right">{this.state.error}</p>
+          )}
+          </CardFooter>
+          </Card>
+                
         { this.state.jsonError && (
          <Card>
            <CardHeader>Json Lint Error</CardHeader>
@@ -286,7 +310,7 @@ class Playground extends Component {
            </CardBody>
          </Card>
         )}
-                  
+
         </div>
       )
     )
