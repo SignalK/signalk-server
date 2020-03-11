@@ -56,7 +56,7 @@ class Playground extends Component {
       if ( this.state.input.length > 0 ) {
         this.send(false)
       }
-    }, 2000)
+    }, 500)
   }
 
   handleExecute(event) {
@@ -239,7 +239,6 @@ class Playground extends Component {
                 <th>Path</th>
                 <th>Value</th>
                 <th>Context</th>
-                <th>Timestamp</th>
               </tr>
               </thead >
               <tbody>
@@ -254,7 +253,6 @@ class Playground extends Component {
                    <td>{data.path}</td>
                    <td><pre className='text-primary' style={{"whiteSpace": "pre-wrap"}}>{formatted}</pre></td>
                    <td>{data.context}</td>
-                   <td>{data.timestamp}</td>
                  </tr>
                )
           })}
