@@ -75,7 +75,7 @@ class Playground extends Component {
       const text = JSON.stringify(JSON.parse(this.state.input), null, 2)
       this.setState({...this.state, input: text, jsonError: null})
     } catch (error) {
-      this.setState({...this.state, jsonError: error.message})
+      this.setState({ ...this.state, data: [], deltas:[], putResults: [], n2kJson: [], jsonError: null, error: 'invalid json', jsonError: error.message})
     }
   }
 
@@ -85,7 +85,7 @@ class Playground extends Component {
       try {
         jsonlint.parse(this.state.input)
       } catch (error) {
-        this.setState({...this.state, error: 'invalid json', jsonError: error.message})
+        this.setState({ ...this.state, data: [], deltas:[], putResults: [], n2kJson: [], jsonError: null, error: 'invalid json', jsonError: error.message})
       return
       }
     }
@@ -299,15 +299,6 @@ class Playground extends Component {
           )}
           </CardFooter>
           </Card>
-                
-        { this.state.jsonError && (
-         <Card>
-           <CardHeader>Json Lint Error</CardHeader>
-           <CardBody>
-            <pre>{this.state.jsonError}</pre>
-           </CardBody>
-         </Card>
-        )}
 
         </div>
       )
