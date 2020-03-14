@@ -202,11 +202,12 @@ class Playground extends Component {
           </Form>
           </CardBody>
           <CardFooter>
-        <Button size='sm' color='primary' onClick={this.handleExecute}>
-          <i className={ this.state.sending ? 'fa fa-spinner fa-spin' : 'fa fa-dot-circle-o'} /> Send To Server
-        </Button>{' '}
-                <Button size='sm' color='primary' disabled={!this.state.inputIsJson} onClick={this.beautify}>
+        <Button size='sm' color='primary' disabled={!this.state.inputIsJson} onClick={this.beautify}>
           <i className="fa fa-dot-circle-o" /> Beautify JSON
+        </Button>
+        {' '}
+        <Button size='sm' color='primary' onClick={this.handleExecute} className='float-right'>
+          <i className={ this.state.sending ? 'fa fa-spinner fa-spin' : 'fa fa-dot-circle-o'} /> Send To Server
         </Button>
           </CardFooter>
           </Card>
