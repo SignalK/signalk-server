@@ -31,12 +31,14 @@ const inputStorageKey = 'admin.v1.playground.input'
 class Playground extends Component {
   constructor (props) {
     super(props)
+    const input = localStorage.getItem(inputStorageKey) || ''
     this.state = {
       hasData: true,
       data: [],
       deltas: [],
       n2kJson: [],
-      input: localStorage.getItem(inputStorageKey) || '',
+      input,
+      inputIsJson: isJson(input),
       sending: false
     }
 
@@ -47,7 +49,11 @@ class Playground extends Component {
   }
 
   handleInput(event) {
-    this.setState({...this.state, input: event.target.value})
+    this.setState({
+      ...this.state,
+      input: event.target.value,
+      inputIsJson: isJson(event.target.value)
+    })
     localStorage.setItem(inputStorageKey, this.state.input)
     if ( this.inputWaitTimeout ) {
       clearTimeout(this.inputWaitTimeout)
@@ -199,7 +205,7 @@ class Playground extends Component {
         <Button size='sm' color='primary' onClick={this.handleExecute}>
           <i className={ this.state.sending ? 'fa fa-spinner fa-spin' : 'fa fa-dot-circle-o'} /> Send To Server
         </Button>{' '}
-                <Button size='sm' color='primary' onClick={this.beautify}>
+                <Button size='sm' color='primary' disabled={!this.state.inputIsJson} onClick={this.beautify}>
           <i className="fa fa-dot-circle-o" /> Beautify JSON
         </Button>
           </CardFooter>
@@ -304,6 +310,15 @@ class Playground extends Component {
       )
     )
   }
+}
+
+function isJson(input) {
+  let inputIsJson = false
+  try {
+    JSON.parse(input)
+    inputIsJson = true
+  } catch (e) {}
+  return inputIsJson
 }
 
 export default connect(({webSocket}) => ({webSocket}))(Playground)
