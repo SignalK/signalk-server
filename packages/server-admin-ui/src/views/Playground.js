@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React, { Component, useState } from 'react'
 import { connect } from 'react-redux'
 import { keys, get } from 'lodash'
 import {
@@ -17,10 +17,16 @@ import {
   FormGroup,
   FormText,
   Table,
-  Row
+  Row,
+  TabContent,
+  TabPane,
+  Nav,
+  NavItem,
+  NavLink
 } from 'reactstrap'
-import { Tabs, Tab, TabList, TabPanel } from 'react-tabs'
-import 'react-tabs/style/react-tabs.css';
+import classnames from 'classnames';
+//import { Tabs, Tab, TabList, TabPanel } from 'react-tabs'
+//import 'react-tabs/style/react-tabs.css';
 
 import moment from 'moment'
 import jsonlint from 'jsonlint'
@@ -39,7 +45,8 @@ class Playground extends Component {
       n2kJson: [],
       input,
       inputIsJson: isJson(input),
-      sending: false
+      sending: false,
+      activeTab: '1'
     }
 
     this.handleExecute = this.handleExecute.bind(this)
@@ -81,7 +88,7 @@ class Playground extends Component {
       const text = JSON.stringify(JSON.parse(this.state.input), null, 2)
       this.setState({...this.state, input: text, jsonError: null})
     } catch (error) {
-      this.setState({ ...this.state, data: [], deltas:[], putResults: [], n2kJson: [], jsonError: null, error: 'invalid json', jsonError: error.message})
+      this.setState({ ...this.state, data: [], deltas:[], putResults: [], n2kJson: [], jsonError: null, error: 'invalid json', jsonError: error.message, activeTab: '5'})
     }
   }
 
@@ -91,7 +98,7 @@ class Playground extends Component {
       try {
         jsonlint.parse(this.state.input)
       } catch (error) {
-        this.setState({ ...this.state, data: [], deltas:[], putResults: [], n2kJson: [], jsonError: null, error: 'invalid json', jsonError: error.message})
+        this.setState({ ...this.state, data: [], deltas:[], putResults: [], n2kJson: [], error: 'invalid json', jsonError: error.message, activeTab: '5'})
       return
       }
     }
@@ -165,6 +172,9 @@ class Playground extends Component {
   }
 
   render () {
+    const toggle = (tab) => {
+      this.setState({...this.state, activeTab: tab})
+    }
     return (
       this.state.hasData && (
         <div className='animated fadeIn'>
@@ -223,32 +233,67 @@ class Playground extends Component {
           <Card>
           <CardHeader>Output</CardHeader>
           <CardBody>
-          <Tabs defaultIndex={this.state.jsonError ? 2 : 1} >
-          <TabList>
-          <Tab>Deltas</Tab>
+          <Nav tabs>
+           <NavItem>
+          <NavLink
+            className={classnames({ active: this.state.activeTab === '1' })}
+            onClick={() => { toggle('1'); }}
+          >
+          Deltas
+           </NavLink>
+          </NavItem>
           { this.state.data.length > 0 && (
-            <Tab>Paths</Tab>
+          <NavItem>
+          <NavLink
+            className={classnames({ active: this.state.activeTab === '2' })}
+            onClick={() => { toggle('2'); }}
+          >
+              Paths
+            </NavLink>
+           </NavItem>
           )}
         { this.state.n2kJson && this.state.n2kJson.length > 0 && (
-          <Tab>Decoded NMEA 2000</Tab>
+          <NavItem>
+          <NavLink
+            className={classnames({ active: this.state.activeTab === '3' })}
+            onClick={() => { toggle('3'); }}
+          >
+            Decoded NMEA 2000
+          </NavLink>
+          </NavItem>
         )}
         { this.state.putResults && this.state.putResults.length > 0 && (
-          <Tab>Put Results</Tab>
+          <NavItem>
+          <NavLink
+            className={classnames({ active: this.state.activeTab === '4' })}
+            onClick={() => { toggle('4'); }}
+          >
+            Put Results
+          </NavLink>
+          </NavItem>
         )}
         { this.state.jsonError && (
-          <Tab>Json Lint Error</Tab>
+          <NavItem>
+          <NavLink
+            className={classnames({ active: this.state.activeTab === '5' })}
+            onClick={() => { toggle('5'); }}
+          >
+            Json Lint Error
+          </NavLink>
+          </NavItem>
         )}
-        </TabList>
-        <TabPanel>
+        </Nav>
+        <TabContent activeTab={this.state.activeTab}>
+        <TabPane tabId="1">
         { this.state.deltas.length > 0 && (
             <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
           <pre>{JSON.stringify(this.state.deltas, null, 2)}</pre>
           </div>
         )}
-        </TabPanel>
+        </TabPane>
 
         { this.state.data.length > 0 && (
-          <TabPanel>
+          <TabPane tabId="2">
           <div style={{'overflowY': 'scroll', 'maxHeight': '60vh'}} >
             <Table responsive bordered striped size='sm'>
               <thead>
@@ -277,28 +322,27 @@ class Playground extends Component {
           </tbody>
           </Table>
           </div>
-          </TabPanel>
+          </TabPane>
         )}        
 
         { this.state.n2kJson && this.state.n2kJson.length > 0 && n2kJsonPanel(this.state.n2kJson)}
 
         { this.state.putResults && this.state.putResults.length > 0 && (
-            <TabPanel>
+          <TabPane tabId="4">
             <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
             <pre>{JSON.stringify(this.state.putResults, null, 2)}</pre>
             </div>
-          </TabPanel>
+          </TabPane>
         )}
 
         { this.state.jsonError && (
-          <TabPanel>
+          <TabPane tabId="5">
           <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
             <pre>{this.state.jsonError}</pre>
             </div>
-          </TabPanel>
+          </TabPane>
       )}        
-        
-        </Tabs>
+        </TabContent>
         </CardBody>
         </Card>
         </Col>
@@ -311,13 +355,12 @@ class Playground extends Component {
 }
 
 function n2kJsonPanel(n2kData) {
-  const displayN2k = n2kData.map(e => ({ts: e[0][0], data: e[1]}))
   return (
-    <TabPanel>
+    <TabPane tabId="3">
       <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
-      <pre>{JSON.stringify(displayN2k, null, 2)}</pre>
+      <pre>{JSON.stringify(n2kData, null, 2)}</pre>
       </div>
-    </TabPanel>
+    </TabPane>
   )
 }
 
