@@ -54,7 +54,7 @@ class Playground extends Component {
       input: event.target.value,
       inputIsJson: isJson(event.target.value)
     })
-    localStorage.setItem(inputStorageKey, this.state.input)
+    localStorage.setItem(inputStorageKey, event.target.value)
     if ( this.inputWaitTimeout ) {
       clearTimeout(this.inputWaitTimeout)
     }
