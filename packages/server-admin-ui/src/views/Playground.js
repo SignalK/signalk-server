@@ -270,13 +270,7 @@ class Playground extends Component {
           </TabPanel>
         )}        
 
-        { this.state.n2kJson && this.state.n2kJson.length > 0 && (
-            <TabPanel>
-            <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
-            <pre>{JSON.stringify(this.state.n2kJson, null, 2)}</pre>
-            </div>
-          </TabPanel>
-        )}        
+        { this.state.n2kJson && this.state.n2kJson.length > 0 && n2kJsonPanel(this.state.n2kJson)}
 
         { this.state.putResults && this.state.putResults.length > 0 && (
             <TabPanel>
@@ -311,6 +305,17 @@ class Playground extends Component {
       )
     )
   }
+}
+
+function n2kJsonPanel(n2kData) {
+  const displayN2k = n2kData.map(e => ({ts: e[0][0], data: e[1]}))
+  return (
+    <TabPanel>
+      <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
+      <pre>{JSON.stringify(displayN2k, null, 2)}</pre>
+      </div>
+    </TabPanel>
+  )
 }
 
 function isJson(input) {
