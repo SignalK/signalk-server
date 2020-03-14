@@ -168,8 +168,6 @@ class Playground extends Component {
     return (
       this.state.hasData && (
         <div className='animated fadeIn'>
-          <Card>
-          <CardBody>
           <Row>
           <Col xs='12' md='6'>
           <Card>
@@ -202,10 +200,19 @@ class Playground extends Component {
           </Form>
           </CardBody>
           <CardFooter>
-        <Button size='sm' color='primary' disabled={!this.state.inputIsJson} onClick={this.beautify}>
+        <Button
+          size='sm'
+          color='primary'
+          className='float-left'
+          disabled={!this.state.inputIsJson}
+          onClick={this.beautify}>
           <i className="fa fa-dot-circle-o" /> Beautify JSON
         </Button>
-        {' '}
+        <span className='float-left' style={{paddingLeft: '10px', paddingTop: '0.25rem'}}>        {this.state.error && (
+              <p className="text-danger">{this.state.error}</p>
+          )}
+</span>
+{' '}
         <Button size='sm' color='primary' onClick={this.handleExecute} className='float-right'>
           <i className={ this.state.sending ? 'fa fa-spinner fa-spin' : 'fa fa-dot-circle-o'} /> Send To Server
         </Button>
@@ -213,6 +220,9 @@ class Playground extends Component {
           </Card>
           </Col>
           <Col xs='12' md='6'>
+          <Card>
+          <CardHeader>Output</CardHeader>
+          <CardBody>
           <Tabs defaultIndex={this.state.jsonError ? 2 : 1} >
           <TabList>
           <Tab>Deltas</Tab>
@@ -289,18 +299,11 @@ class Playground extends Component {
       )}        
         
         </Tabs>
+        </CardBody>
+        </Card>
         </Col>
         
           </Row>
-          </CardBody>
-          <CardFooter>
-            
-          {this.state.error && (
-              <p className="text-danger float-right">{this.state.error}</p>
-          )}
-          </CardFooter>
-          </Card>
-
         </div>
       )
     )
