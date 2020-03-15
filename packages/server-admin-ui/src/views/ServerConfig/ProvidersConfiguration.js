@@ -194,7 +194,18 @@ class ProvidersConfiguration extends Component {
   }
 
   providerClicked (provider, index) {
-    this.props.history.push('/serverConfiguration/connections/' + provider.id)
+    this.setState(
+      {
+        selectedProvider: {
+          ...JSON.parse(JSON.stringify(provider)),
+          originalId: provider.id
+        },
+        selectedIndex: index
+      },
+      () => {
+        this.refs['selectedProvider'].scrollIntoView()
+      }
+    )
   }
 
   toggle (tab) {
