@@ -20,6 +20,7 @@
 
 const Parser0183 = require('@signalk/nmea0183-signalk')
 const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
+const { putPath } = require('../put')
 const {
   isN2KString,
   FromPgn,
@@ -33,31 +34,36 @@ module.exports = function(app) {
     n2k: msgs => {
       const n2kMapper = new N2kMapper({ app })
       const parser = new FromPgn()
-      return msgs.map(msg => {
+      const n2kJson = []
+      const deltas = msgs.map(msg => {
         const n2k = parser.parseString(msg)
         if (n2k) {
+          n2kJson.push(n2k)
           return n2kMapper.toDelta(n2k)
         }
       })
+      return { deltas, n2kJson: n2kJson }
     },
     '0183': msgs => {
       const parser = new Parser0183({ app })
-      return msgs.map(parser.parse.bind(parser))
+      return { deltas: msgs.map(parser.parse.bind(parser)) }
     },
     'n2k-json': msgs => {
-      return processors.n2k(msgs.map(pgnToActisenseSerialFormat))
+      return { deltas: processors.n2k(msgs.map(pgnToActisenseSerialFormat)) }
     }
   }
 
-  function detectType(msg) {
+  function detectType(message) {
     let type
+    let msg = message.trim()
     if (msg.charAt(0) === '{' || msg.charAt(0) === '[') {
       try {
         const parsed = JSON.parse(msg)
         const first = Array.isArray(parsed) ? parsed[0] : parsed
+
         if (first.pgn) {
           type = 'n2k-json'
-        } else if (first.updates) {
+        } else if (first.updates || first.put) {
           type = 'signalk'
         } else {
           return { error: 'unknown JSON format' }
@@ -105,21 +111,60 @@ module.exports = function(app) {
     }
 
     if (type === 'signalk') {
+      let puts = []
       if (sendToServer) {
         msgs.forEach(msg => {
-          app.handleMessage('input-test', msg)
+          if (msg.put) {
+            puts.push(
+              new Promise((resolve, reject) => {
+                setTimeout(() => {
+                  resolve('Timed out waiting for put result')
+                }, 5000)
+                putPath(
+                  app,
+                  msg.context,
+                  msg.put.path,
+                  msg.put,
+                  req,
+                  msg.requestId,
+                  reply => {
+                    if (reply.state !== 'PENDING') {
+                      resolve(reply)
+                    }
+                  }
+                )
+              })
+            )
+          } else {
+            app.handleMessage('input-test', msg)
+          }
         })
       }
-      res.json(msgs)
+      if (puts.length > 0) {
+        Promise.all(puts).then(results => {
+          res.json({ deltas: msgs, putResults: results })
+        })
+      } else {
+        res.json({ deltas: msgs })
+      }
     } else {
       try {
-        const deltas = processors[type](msgs).filter(
-          m => typeof m !== 'undefined' && m != null
-        )
-        res.json(deltas)
+        const data = processors[type](msgs)
+
+        if ( data.deltas ) {
+          data.deltas = data.deltas.filter(
+            m =>
+              typeof m !== 'undefined' &&
+              m != null &&
+              m.updates.length > 0 &&
+              m.updates[0].values &&
+              m.updates[0].values.length > 0
+          )
+        }
+        res.json(data)
 
         if (sendToServer) {
-          deltas.forEach(msg => {
+          data.deltas.forEach(msg => {
             app.handleMessage('input-test', msg)
           })
         }
