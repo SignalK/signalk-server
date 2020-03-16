@@ -29,7 +29,7 @@ import classnames from 'classnames';
 //import 'react-tabs/style/react-tabs.css';
 
 import moment from 'moment'
-import jsonlint from 'jsonlint'
+import jsonlint from 'jsonlint-mod'
 
 const timestampFormat = 'MM/DD HH:mm:ss'
 const inputStorageKey = 'admin.v1.playground.input'
