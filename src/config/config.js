@@ -125,8 +125,10 @@ function load(app) {
       app.env.WSCOMPRESSION.toLowerCase() === 'true'
   }
 
-  if ( config.settings.landingPage &&
-       config.settings.landingPage.charAt(0) != '/' ) {
+  if (
+    config.settings.landingPage &&
+    config.settings.landingPage.charAt(0) != '/'
+  ) {
     console.error(`invalid rootUri: ${config.settings.landingPage}`)
     process.exit(1)
   }
