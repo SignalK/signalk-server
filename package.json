@@ -142,7 +142,7 @@
     "tslint": "^5.20.0",
     "tslint-config-prettier": "^1.18.0",
     "tslint-plugin-prettier": "^2.0.1",
-    "typedoc": "^0.16.0",
+    "typedoc": "^0.17.3",
     "typescript": "^3.6.3"
   },
   "lint-staged": {
