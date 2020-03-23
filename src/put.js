@@ -2,6 +2,7 @@ const _ = require('lodash')
 const debug = require('debug')('signalk-server:put')
 const uuidv4 = require('uuid/v4')
 const { createRequest, updateRequest } = require('./requestResponse')
+const skConfig = require('./config/config')
 
 const pathPrefix = '/signalk'
 const versionPrefix = '/v1'
@@ -21,6 +22,7 @@ const Result = {
 }
 
 const actionHandlers = {}
+let putMetaHandler
 
 module.exports = {
   start: function(app) {
@@ -59,6 +61,31 @@ module.exports = {
           res.status(500).send(err.message)
         })
     })
+
+    putMetaHandler = (context, path, value, cb) => {
+      let defaults
+
+      try {
+        defaults = skConfig.readDefaultsFile(app)
+      } catch (e) {
+        defaults = {
+          vessels: {
+            self: {}
+          }
+        }
+      }
+      _.set(defaults, context + '.' + path, value)
+
+      skConfig.writeDefaultsFile(app, defaults, err => {
+        if (err) {
+          cb({ state: 'FAILURE', message: 'Unable to save to defaults file' })
+        } else {
+          cb({ state: 'SUCCESS' })
+        }
+      })
+
+      return { state: 'PENDING' }
+    }
   },
 
   registerActionHandler: registerActionHandler,
@@ -91,25 +118,31 @@ function putPath(app, context, path, body, req, requestId, updateCb) {
           return
         }
 
-        const handlers = actionHandlers[context]
-          ? actionHandlers[context][path]
-          : null
         let handler
+        const parts = path.split('.')
 
-        if (_.keys(handlers).length > 0) {
-          if (body.source) {
-            handler = handlers[body.source]
-          } else if (_.keys(handlers).length === 1) {
-            handler = _.values(handlers)[0]
-          } else {
-            updateRequest(request.requestId, 'COMPLETED', {
-              statusCode: 400,
-              message:
-                'there are multiple sources for the given path, but no source was specified in the request'
-            })
-              .then(resolve)
-              .catch(reject)
-            return
+        if (parts.length > 1 && parts[parts.length - 2] === 'meta') {
+          handler = putMetaHandler
+        } else {
+          const handlers = actionHandlers[context]
+            ? actionHandlers[context][path]
+            : null
+
+          if (_.keys(handlers).length > 0) {
+            if (body.source) {
+              handler = handlers[body.source]
+            } else if (_.keys(handlers).length === 1) {
+              handler = _.values(handlers)[0]
+            } else {
+              updateRequest(request.requestId, 'COMPLETED', {
+                statusCode: 400,
+                message:
+                  'there are multiple sources for the given path, but no source was specified in the request'
+              })
+                .then(resolve)
+                .catch(reject)
+              return
+            }
           }
         }
 
