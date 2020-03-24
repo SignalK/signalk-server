@@ -31,7 +31,6 @@ describe('Demo plugin ', () => {
     const plugins = await fetch(`http://0.0.0.0:${port}/plugins`).then(res =>
       res.json()
     )
-
     assert(plugins.find(plugin => plugin.id === 'testplugin'))
 
     const plugin = server.app.plugins.find(plugin => plugin.id === 'testplugin')
