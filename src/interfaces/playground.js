@@ -151,7 +151,7 @@ module.exports = function(app) {
       try {
         const data = processors[type](msgs)
 
-        if ( data.deltas ) {
+        if (data.deltas) {
           data.deltas = data.deltas.filter(
             m =>
               typeof m !== 'undefined' &&
