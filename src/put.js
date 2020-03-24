@@ -74,7 +74,10 @@ module.exports = {
           }
         }
       }
-      _.set(defaults, context + '.' + path, value)
+      const full = context + '.' + path
+      _.set(defaults, full, value)
+      _.set(app.config.defaults, full, value)
+      _.set(app.deltaCache.defaults, full, value)
 
       skConfig.writeDefaultsFile(app, defaults, err => {
         if (err) {
