@@ -12,7 +12,6 @@ const expectedModules = [
   '@signalk/freeboard-sk',
   '@signalk/instrumentpanel',
   '@signalk/maptracker',
-  '@signalk/playground',
   '@signalk/sailgauge',
   '@signalk/simplegauges'
 ]
