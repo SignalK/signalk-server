@@ -127,5 +127,10 @@ module.exports = {
   updateRequest,
   findRequest,
   filterRequests,
-  queryRequest
+  queryRequest,
+  stop: () => {
+    if (pruneInterval) {
+      clearInterval(pruneInterval)
+    }
+  }
 }
