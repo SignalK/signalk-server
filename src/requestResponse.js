@@ -8,7 +8,7 @@ const pruneRequestTimeout = 60 * 60 * 1000
 const pruneIntervalRate = 15 * 60 * 1000
 let pruneInterval
 
-function createRequest(type, clientRequest, user, clientIp, updateCb) {
+function createRequest(app, type, clientRequest, user, clientIp, updateCb) {
   return new Promise((resolve, reject) => {
     const requestId = clientRequest.requestId
       ? clientRequest.requestId
@@ -28,6 +28,7 @@ function createRequest(type, clientRequest, user, clientIp, updateCb) {
 
     if (!pruneInterval) {
       pruneInterval = setInterval(pruneRequests, pruneIntervalRate)
+      app.intervals.push(pruneInterval)
     }
 
     resolve(request)
@@ -127,10 +128,5 @@ module.exports = {
   updateRequest,
   findRequest,
   filterRequests,
-  queryRequest,
-  stop: () => {
-    if (pruneInterval) {
-      clearInterval(pruneInterval)
-    }
-  }
+  queryRequest
 }

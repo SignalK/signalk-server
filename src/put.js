@@ -69,6 +69,7 @@ function putPath(app, context, path, body, req, requestId, updateCb) {
   debug('received put %s %s %j', context, path, body)
   return new Promise((resolve, reject) => {
     createRequest(
+      app,
       'put',
       {
         context: context,
