@@ -63,9 +63,9 @@ module.exports = {
     })
 
     putMetaHandler = (context, path, value, cb) => {
-      const full = context + '.' + path
-      _.set(app.config.defaults, full, value)
-      _.set(app.deltaCache.defaults, full, value)
+      const pathWithContext = context + '.' + path
+      _.set(app.config.defaults, pathWithContext, value)
+      _.set(app.deltaCache.defaults, pathWithContext, value)
 
       skConfig.writeDefaultsFile(app, app.config.defaults, err => {
         if (err) {
