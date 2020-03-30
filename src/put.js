@@ -63,23 +63,11 @@ module.exports = {
     })
 
     putMetaHandler = (context, path, value, cb) => {
-      let defaults
-
-      try {
-        defaults = skConfig.readDefaultsFile(app)
-      } catch (e) {
-        defaults = {
-          vessels: {
-            self: {}
-          }
-        }
-      }
       const full = context + '.' + path
-      _.set(defaults, full, value)
       _.set(app.config.defaults, full, value)
       _.set(app.deltaCache.defaults, full, value)
 
-      skConfig.writeDefaultsFile(app, defaults, err => {
+      skConfig.writeDefaultsFile(app, app.config.defaults, err => {
         if (err) {
           cb({ state: 'FAILURE', message: 'Unable to save to defaults file' })
         } else {

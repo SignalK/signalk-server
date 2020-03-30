@@ -29,7 +29,7 @@ function DeltaCache(app, streambundle) {
   this.cache = {}
   this.lastModifieds = {}
   this.app = app
-  this.defaults = JSON.parse(JSON.stringify(app.config.defaults || {}))
+  this.defaults = app.config.defaults
   this.sourceDeltas = {}
   streambundle.keys.onValue(key => {
     streambundle.getBus(key).onValue(this.onValue.bind(this))
