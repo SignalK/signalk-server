@@ -34,7 +34,6 @@ const getSecondaryPort = ports.getSecondaryPort
 const getExternalPort = ports.getExternalPort
 const DeltaChain = require('./deltachain')
 import { checkForNewServerVersion } from './modules'
-const stopReqRespInterval = require('./requestResponse').stop
 
 const { StreamBundle } = require('./streambundle')
 const {
@@ -458,8 +457,6 @@ Server.prototype.stop = function(cb) {
         this.app.intervals.forEach(interval => {
           clearInterval(interval)
         })
-
-        stopReqRespInterval()
 
         this.app.providers.forEach(function(providerHolder) {
           providerHolder.pipeElements[0].end()
