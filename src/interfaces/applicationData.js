@@ -67,7 +67,7 @@ module.exports = function (app) {
     )
 
     if (req.params[0] && req.params[0].length != 0) {
-      applicationData = _.get(applicationData, req.params[0].replace('/', '.'))
+      applicationData = _.get(applicationData, req.params[0].replace(/\//g, '.'))
 
       if (!applicationData) {
         res.status(404).send()
