@@ -30,7 +30,7 @@ const userApplicationDataUrls = [
   '/signalk/v1/applicationData/user/:appid/:version'
 ]
 
-module.exports = function (app) {
+module.exports = function(app) {
   if (app.securityStrategy.isDummy()) {
     debug('ApplicationData disabled because security is off')
     return
@@ -58,7 +58,7 @@ module.exports = function (app) {
     postApplicationData(req, res, false)
   })
 
-  function getApplicationData (req, res, isUser) {
+  function getApplicationData(req, res, isUser) {
     let applicationData = readApplicationData(
       req,
       req.params.appid,
@@ -67,7 +67,7 @@ module.exports = function (app) {
     )
 
     let data = applicationData
-    if (req.params[0] && req.params[0].length != 0) {
+    if (req.params[0] && req.params[0].length !== 0) {
       data = _.get(applicationData, req.params[0].replace(/\//g, '.'))
 
       if (!data) {
@@ -76,8 +76,8 @@ module.exports = function (app) {
       }
     }
 
-    if ( req.query.keys === 'true' ) {
-      if ( typeof data !== 'object' ) {
+    if (req.query.keys === 'true') {
+      if (typeof data !== 'object') {
         res.status(404).send()
         return
       }
@@ -88,7 +88,7 @@ module.exports = function (app) {
     res.json(data)
   }
 
-  function postApplicationData (req, res, isUser) {
+  function postApplicationData(req, res, isUser) {
     let applicationData = readApplicationData(
       req,
       req.params.appid,
@@ -96,7 +96,7 @@ module.exports = function (app) {
       isUser
     )
 
-    if (req.params[0] && req.params[0].length != 0) {
+    if (req.params[0] && req.params[0].length !== 0) {
       _.set(applicationData, req.params[0].replace(/\//g, '.'), req.body)
     } else if (_.isArray(req.body)) {
       jsonpatch.apply(applicationData, req.body)
@@ -121,7 +121,7 @@ module.exports = function (app) {
     )
   }
 
-  function readApplicationData (req, appid, version, isUser) {
+  function readApplicationData(req, appid, version, isUser) {
     let applicationDataString = '{}'
     try {
       applicationDataString = fs.readFileSync(
@@ -135,14 +135,12 @@ module.exports = function (app) {
       const applicationData = JSON.parse(applicationDataString)
       return applicationData
     } catch (e) {
-      console.error(
-        'Could not parse applicationData:' + e.message
-      )
+      console.error('Could not parse applicationData:' + e.message)
       return {}
     }
   }
 
-  function pathForApplicationData (req, appid, version, isUser) {
+  function pathForApplicationData(req, appid, version, isUser) {
     let location = path.join(
       app.config.configPath,
       'applicationData',
@@ -152,7 +150,7 @@ module.exports = function (app) {
     return path.join(location, `${appid}-${version}.json`)
   }
 
-  function saveApplicationData (req, appid, version, isUser, data, callback) {
+  function saveApplicationData(req, appid, version, isUser, data, callback) {
     const applicationDataDir = path.join(
       app.config.configPath,
       'applicationData'
