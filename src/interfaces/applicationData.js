@@ -87,7 +87,7 @@ module.exports = function (app) {
     )
 
     if (req.params[0] && req.params[0].length != 0) {
-      _.set(applicationData, req.params[0].replace('/', '.'), req.body)
+      _.set(applicationData, req.params[0].replace(/\//g, '.'), req.body)
     } else if (_.isArray(req.body)) {
       jsonpatch.apply(applicationData, req.body)
     } else {
@@ -126,7 +126,7 @@ module.exports = function (app) {
       return applicationData
     } catch (e) {
       console.error(
-        'Could not parse applicationData:' + e.message + ' ' + optionsAsString
+        'Could not parse applicationData:' + e.message
       )
       return {}
     }
