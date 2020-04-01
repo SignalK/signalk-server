@@ -66,16 +66,26 @@ module.exports = function (app) {
       isUser
     )
 
+    let data = applicationData
     if (req.params[0] && req.params[0].length != 0) {
-      applicationData = _.get(applicationData, req.params[0].replace(/\//g, '.'))
+      data = _.get(applicationData, req.params[0].replace(/\//g, '.'))
 
-      if (!applicationData) {
+      if (!data) {
         res.status(404).send()
         return
       }
     }
 
-    res.json(applicationData)
+    if ( req.query.keys === 'true' ) {
+      if ( typeof data !== 'object' ) {
+        res.status(404).send()
+        return
+      }
+
+      data = _.keys(data)
+    }
+
+    res.json(data)
   }
 
   function postApplicationData (req, res, isUser) {
