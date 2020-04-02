@@ -20,14 +20,17 @@ const fs = require('fs')
 const path = require('path')
 const jsonpatch = require('json-patch')
 
+const prefix = '/signalk/v1/applicationData'
+
 const applicationDataUrls = [
-  '/signalk/v1/applicationData/global/:appid/:version/*',
-  '/signalk/v1/applicationData/global/:appid/:version'
+  `${prefix}/global/:appid/:version/*`,
+  `${prefix}/global/:appid/:version`
 ]
 
+
 const userApplicationDataUrls = [
-  '/signalk/v1/applicationData/user/:appid/:version/*',
-  '/signalk/v1/applicationData/user/:appid/:version'
+  `${prefix}/user/:appid/:version/*`,
+  `${prefix}/user/:appid/:version`
 ]
 
 module.exports = function(app) {
@@ -36,11 +39,13 @@ module.exports = function(app) {
     return
   }
 
-  app.securityStrategy.addAdminWriteMiddleware(applicationDataUrls[0])
-  app.securityStrategy.addAdminWriteMiddleware(applicationDataUrls[1])
+  applicationDataUrls.forEach(url => {
+    app.securityStrategy.addAdminWriteMiddleware(url)
+  })
 
-  app.securityStrategy.addWriteMiddleware(userApplicationDataUrls[0])
-  app.securityStrategy.addWriteMiddleware(userApplicationDataUrls[1])
+  userApplicationDataUrls.forEach(url => {  
+    app.securityStrategy.addWriteMiddleware(url)
+  })
 
   app.get(userApplicationDataUrls, (req, res) => {
     getApplicationData(req, res, true)
@@ -57,6 +62,27 @@ module.exports = function(app) {
   app.post(applicationDataUrls, (req, res) => {
     postApplicationData(req, res, false)
   })
+
+  app.get(`${prefix}/global/:appid`, (req, res) => {
+    listVersions(req, res, false)
+  })
+
+  app.get(`${prefix}/user/:appid`, (req, res) => {
+    listVersions(req, res, true)
+  })
+
+  function listVersions(req, res, isUser) {
+    const dir = dirForApplicationData(req,
+                                      req.params.appid,
+                                      isUser)
+
+    if ( !fs.existsSync(dir) ) {
+      res.sendStatus(404)
+      return
+    }
+    
+    res.json(fs.readdirSync(dir).map(file => file.slice(0, -5)))
+  }
 
   function getApplicationData(req, res, isUser) {
     let applicationData = readApplicationData(
@@ -140,14 +166,18 @@ module.exports = function(app) {
     }
   }
 
-  function pathForApplicationData(req, appid, version, isUser) {
+  function dirForApplicationData(req, appid, isUser) {
     let location = path.join(
       app.config.configPath,
       'applicationData',
       isUser ? req.skPrincipal.identifier : 'global'
     )
 
-    return path.join(location, `${appid}-${version}.json`)
+    return path.join(location, appid)
+  }
+
+  function pathForApplicationData(req, appid, version, isUser) {
+    return path.join(dirForApplicationData(req, appid, isUser), `${version}.json`)
   }
 
   function saveApplicationData(req, appid, version, isUser, data, callback) {
@@ -167,6 +197,11 @@ module.exports = function(app) {
       fs.mkdirSync(subPath)
     }
 
+    const appPath = path.join(subPath, appid)
+    if (!fs.existsSync(appPath)) {
+      fs.mkdirSync(appPath)
+    }
+    
     const config = JSON.parse(JSON.stringify(data))
     fs.writeFile(
       pathForApplicationData(req, appid, version, isUser),
