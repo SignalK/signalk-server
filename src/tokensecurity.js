@@ -138,26 +138,25 @@ module.exports = function(app, config) {
     }
   }
 
-function writeAuthenticationMiddleware(redirect) {
-      return function(req, res, next) {
-        if (!getIsEnabled()) {
+  function writeAuthenticationMiddleware(redirect) {
+    return function(req, res, next) {
+      if (!getIsEnabled()) {
+        return next()
+      }
+
+      debug('skIsAuthenticated: ' + req.skIsAuthenticated)
+      if (req.skIsAuthenticated) {
+        if (
+          req.skPrincipal.permissions === 'admin' ||
+          req.skPrincipal.permissions === 'readwrite'
+        ) {
           return next()
         }
-
-        debug('skIsAuthenticated: ' + req.skIsAuthenticated)
-        if (req.skIsAuthenticated) {
-          if (
-            req.skPrincipal.permissions === 'admin' ||
-            req.skPrincipal.permissions === 'readwrite'
-          ) {
-            return next()
-          }
-        }
-        handlePermissionDenied(req, res, next)
       }
+      handlePermissionDenied(req, res, next)
     }
-  
-  
+  }
+
   function adminAuthenticationMiddleware(redirect) {
     return function(req, res, next) {
       if (!getIsEnabled()) {
@@ -218,7 +217,7 @@ function writeAuthenticationMiddleware(redirect) {
     // tslint:disable-next-line:variable-name
     const do_redir = http_authorize(false)
 
-    app.use('/', http_authorize(false, true))    
+    app.use('/', http_authorize(false, true))
     app.use('/apps', http_authorize(false))
     app.use('/appstore', http_authorize(false))
     app.use('/plugins', http_authorize(false))
@@ -236,7 +235,6 @@ function writeAuthenticationMiddleware(redirect) {
       res.send('Logout OK')
     })
 
-    
     function readOnlyAuthenticationMiddleware(redirect) {
       return function(req, res, next) {
         if (!getIsEnabled()) {

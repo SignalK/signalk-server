@@ -27,7 +27,6 @@ const applicationDataUrls = [
   `${prefix}/global/:appid/:version`
 ]
 
-
 const userApplicationDataUrls = [
   `${prefix}/user/:appid/:version/*`,
   `${prefix}/user/:appid/:version`
@@ -43,7 +42,7 @@ module.exports = function(app) {
     app.securityStrategy.addAdminWriteMiddleware(url)
   })
 
-  userApplicationDataUrls.forEach(url => {  
+  userApplicationDataUrls.forEach(url => {
     app.securityStrategy.addWriteMiddleware(url)
   })
 
@@ -72,15 +71,13 @@ module.exports = function(app) {
   })
 
   function listVersions(req, res, isUser) {
-    const dir = dirForApplicationData(req,
-                                      req.params.appid,
-                                      isUser)
+    const dir = dirForApplicationData(req, req.params.appid, isUser)
 
-    if ( !fs.existsSync(dir) ) {
+    if (!fs.existsSync(dir)) {
       res.sendStatus(404)
       return
     }
-    
+
     res.json(fs.readdirSync(dir).map(file => file.slice(0, -5)))
   }
 
@@ -177,7 +174,10 @@ module.exports = function(app) {
   }
 
   function pathForApplicationData(req, appid, version, isUser) {
-    return path.join(dirForApplicationData(req, appid, isUser), `${version}.json`)
+    return path.join(
+      dirForApplicationData(req, appid, isUser),
+      `${version}.json`
+    )
   }
 
   function saveApplicationData(req, appid, version, isUser, data, callback) {
@@ -201,7 +201,7 @@ module.exports = function(app) {
     if (!fs.existsSync(appPath)) {
       fs.mkdirSync(appPath)
     }
-    
+
     const config = JSON.parse(JSON.stringify(data))
     fs.writeFile(
       pathForApplicationData(req, appid, version, isUser),
