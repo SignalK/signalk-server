@@ -65,7 +65,9 @@ describe('Application Data', () => {
     paths.forEach(p => {
       if (fs.existsSync(p)) {
         fs.readdirSync(p).forEach(f => {
-          fs.unlinkSync(path.join(p, f))
+          fs.readdirSync(path.join(p, f)).forEach(s => {
+            fs.unlinkSync(path.join(p, f, s))
+          })
         })
       }
     })
