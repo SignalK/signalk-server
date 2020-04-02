@@ -127,7 +127,7 @@ function load(app) {
 
   if (
     config.settings.landingPage &&
-    config.settings.landingPage.charAt(0) != '/'
+    config.settings.landingPage.charAt(0) !== '/'
   ) {
     console.error(`invalid rootUri: ${config.settings.landingPage}`)
     process.exit(1)
