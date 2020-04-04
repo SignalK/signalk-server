@@ -167,7 +167,7 @@ module.exports = function(app) {
     let location = path.join(
       app.config.configPath,
       'applicationData',
-      isUser ? req.skPrincipal.identifier : 'global'
+      isUser ? `users/${req.skPrincipal.identifier}` : 'global'
     )
 
     return path.join(location, appid)
@@ -185,23 +185,31 @@ module.exports = function(app) {
       app.config.configPath,
       'applicationData'
     )
+    const usersDir = path.join(applicationDataDir, 'users')
+    const globalDir = path.join(applicationDataDir, 'global')
 
     if (!fs.existsSync(applicationDataDir)) {
       fs.mkdirSync(applicationDataDir)
+      fs.mkdirSync(globalDir)
+      fs.mkdirSync(usersDir)
     }
-
-    const subDir = isUser ? req.skPrincipal.identifier : 'global'
-
-    const subPath = path.join(applicationDataDir, subDir)
-    if (!fs.existsSync(subPath)) {
-      fs.mkdirSync(subPath)
+    
+    if ( isUser ) {
+      const userDir = path.join(usersDir, req.skPrincipal.identifier) 
+      if (!fs.existsSync(userDir)) {
+        fs.mkdirSync(userDir)
+      }
+      const appDir = path.join(userDir, appid)
+      if (!fs.existsSync(appDir) ) {
+        fs.mkdirSync(appDir)
+      }
+    } else {
+      const appDir = path.join(globalDir, appid)
+      if (!fs.existsSync(appDir) ) {
+        fs.mkdirSync(appDir)
+      }
     }
-
-    const appPath = path.join(subPath, appid)
-    if (!fs.existsSync(appPath)) {
-      fs.mkdirSync(appPath)
-    }
-
+    
     const config = JSON.parse(JSON.stringify(data))
     fs.writeFile(
       pathForApplicationData(req, appid, version, isUser),
