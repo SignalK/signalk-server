@@ -19,6 +19,7 @@ const debug = require('debug')('signalk-server:interfaces:applicationData')
 const fs = require('fs')
 const path = require('path')
 const jsonpatch = require('json-patch')
+const semver = require('semver')
 
 const prefix = '/signalk/v1/applicationData'
 
@@ -71,7 +72,14 @@ module.exports = function(app) {
   })
 
   function listVersions(req, res, isUser) {
-    const dir = dirForApplicationData(req, req.params.appid, isUser)
+    const appid = validateAppId(req.params.appid)
+
+    if ( !appid ) {
+      res.status(400).send('invalid application id')
+      return
+    }
+    
+    const dir = dirForApplicationData(req, appid, isUser)
 
     if (!fs.existsSync(dir)) {
       res.sendStatus(404)
@@ -82,10 +90,23 @@ module.exports = function(app) {
   }
 
   function getApplicationData(req, res, isUser) {
+    const appid = validateAppId(req.params.appid)
+    const version = validateVersion(req.params.version)
+
+    if ( !appid ) {
+      res.status(400).send('invalid application id')
+      return
+    }
+
+    if ( !version ) {
+      res.status(400).send('invalid application version')
+      return
+    }
+    
     let applicationData = readApplicationData(
       req,
-      req.params.appid,
-      req.params.version,
+      appid,
+      version,
       isUser
     )
 
@@ -112,10 +133,23 @@ module.exports = function(app) {
   }
 
   function postApplicationData(req, res, isUser) {
+    const appid = validateAppId(req.params.appid)
+    const version = validateVersion(req.params.version)
+
+    if ( !appid ) {
+      res.status(400).send('invalid application id')
+      return
+    }
+
+    if ( !version ) {
+      res.status(400).send('invalid application version')
+      return
+    }
+    
     let applicationData = readApplicationData(
       req,
-      req.params.appid,
-      req.params.version,
+      appid,
+      version,
       isUser
     )
 
@@ -129,8 +163,8 @@ module.exports = function(app) {
 
     saveApplicationData(
       req,
-      req.params.appid,
-      req.params.version,
+      appid,
+      version,
       isUser,
       applicationData,
       err => {
@@ -161,6 +195,15 @@ module.exports = function(app) {
       console.error('Could not parse applicationData:' + e.message)
       return {}
     }
+  }
+
+  function validateAppId(appid) {
+    return appid.length < 30 &&
+      appid.indexOf('/') === -1 ? appid : null
+  }
+
+  function validateVersion(version) {
+    return semver.valid(semver.coerce(version))
   }
 
   function dirForApplicationData(req, appid, isUser) {

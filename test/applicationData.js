@@ -17,7 +17,7 @@ const assert = require('assert')
 const rimraf = require('rimraf')
 
 const APP_ID = 'testApplication'
-const APP_VERSION = '1.0'
+const APP_VERSION = '1.0.0'
 
 const TEST_SETTINGS = {
   something: 100,
@@ -124,6 +124,29 @@ describe('Application Data', () => {
       return null
     }
   }
+
+  it('invalid appid or version fails', async function () {
+    let server = await start()
+
+    async function fail(appid, version) {
+      var result = await fetch(
+        `${url}/signalk/v1/applicationData/global/${appid}/${version}`,
+        {
+          headers: readHeaders
+        }
+      )
+      result.status.should.equal(400)
+    }
+    
+    try {
+      await fail('foo/bar', '1.0')
+      await fail('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 1.0)
+      await fail('validApp', 'a.b.c')
+      await fail('validApp', 'a.b.c')
+    } finally {
+      await server.stop()
+    }
+  })
 
   it('fetch global returns empty data', async function () {
     let server = await start()
