@@ -24,6 +24,31 @@ const TEST_SETTINGS = {
   sometingElse: 'hello'
 }
 
+const tests = [
+  {
+    appid: 'testApplication',
+    version: '1.0.0',
+    settings: {
+      something: 100,
+      sometingElse: 'hello'
+    }
+  }, {
+    appid: 'testApplication',
+    version: '1.1.1',
+    settings: {
+      something: 111,
+      sometingElse: 'hello 111'
+    }
+  }, {
+    appid: 'anotherApplication',
+    version: '2.0.0',
+    settings: {
+      something: 200,
+      sometingElse: 'hello 200'
+    }
+  }
+]
+
 describe('Application Data', () => {
   var server,
     url,
@@ -76,47 +101,50 @@ describe('Application Data', () => {
   async function post(globalOrUser, token, expected) {
     let server = await start()
     try {
-      const req = globalOrUser ?
-            `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}` :
-            `${url}/signalk/v1/applicationData/user/${APP_ID}/${APP_VERSION}`
-      var result = await fetch(
-        req,
-        {
-          method: 'POST',
-          headers: {
-            Cookie: `JAUTHENTICATION=${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(TEST_SETTINGS)
-        }
-      )
-      result.status.should.equal(expected)
-
-      if ( globalOrUser ) {
-        result = await fetch(
+      for ( const test of tests ) {
+        const req = globalOrUser ?
+              `${url}/signalk/v1/applicationData/global/${test.appid}/${test.version}` :
+              `${url}/signalk/v1/applicationData/user/${test.appid}/${test.version}`
+        var result = await fetch(
           req,
           {
+            method: 'POST',
             headers: {
-              ...adminHeaders,
+              Cookie: `JAUTHENTICATION=${token}`,
               'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify(test.settings)
           }
         )
-        result.status.should.equal(200)
-        let data = await result.json()
-        if ( expected !== 200 ) {
-          data.should.not.jsonEqual(TEST_SETTINGS)
-        } else {
-          data.should.jsonEqual(TEST_SETTINGS)
+        result.status.should.equal(expected)
+
+        if ( globalOrUser ) {
+          result = await fetch(
+            req,
+            {
+              headers: {
+                ...adminHeaders,
+                'Content-Type': 'application/json'
+              }
+            }
+          )
+          result.status.should.equal(200)
+          let data = await result.json()
+          if ( expected !== 200 ) {
+            data.should.not.jsonEqual(test.settings)
+          } else {
+            data.should.jsonEqual(test.settings)
+          }
         }
       }
     } finally {
+      console.log('stop')
       await server.stop()
     }
   }
 
-  function readUserData(userName) {
-    const userPath = path.join(process.env.SIGNALK_NODE_CONFIG_DIR, 'applicationData', 'users', userName, APP_ID, `${APP_VERSION}.json`)
+  function readUserData(test, userName) {
+    const userPath = path.join(process.env.SIGNALK_NODE_CONFIG_DIR, 'applicationData', 'users', userName, test.appid, `${test.version}.json`)
 
     if ( fs.existsSync(userPath) ) {
       return JSON.parse(fs.readFileSync(userPath))
@@ -141,7 +169,6 @@ describe('Application Data', () => {
     try {
       await fail('foo/bar', '1.0')
       await fail('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 1.0)
-      await fail('validApp', 'a.b.c')
       await fail('validApp', 'a.b.c')
     } finally {
       await server.stop()
@@ -179,47 +206,53 @@ describe('Application Data', () => {
 
   it('post user data fails readonly user', async function () {
     await post(false, readToken, 401)
-    const data = readUserData('testuser')
-    assert(data === null)
+    for ( test of tests ) {
+      const data = readUserData(test, 'testuser')
+      assert(data === null)
+    }
   })
 
   it('post user data works', async function () {
     await post(false, writeToken, 200)
-    const data = readUserData('writeuser')
-    assert(data !== null)
-    data.should.jsonEqual(TEST_SETTINGS)
+    for ( test of tests ) {
+      const data = readUserData(test, 'writeuser')
+      assert(data !== null)
+      data.should.jsonEqual(test.settings)
+    }
   })
 
   it('json patch works', async function () {
     let server = await start()
     try {
-      var result = await fetch(
-        `${url}/signalk/v1/applicationData/user/${APP_ID}/${APP_VERSION}`,
-        {
-          method: 'POST',
-          headers: {
-            ...writeHeaders,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify([
-            { op: 'add', path: '/testing', value: 'Hello World' }
-          ])
-        }
-      )
-      result.status.should.equal(200)
-      
-      result = await fetch(
-        `${url}/signalk/v1/applicationData/user/${APP_ID}/${APP_VERSION}/testing`,
-        {
-          headers: {
-            ...writeHeaders,
-          'Content-Type': 'application/json'
+      for ( test of tests ) {
+        var result = await fetch(
+          `${url}/signalk/v1/applicationData/user/${test.appid}/${test.version}`,
+          {
+            method: 'POST',
+            headers: {
+              ...writeHeaders,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify([
+              { op: 'add', path: '/testing', value: test.settings.something }
+            ])
           }
-        }
-      )
-      result.status.should.equal(200)
-      let data = await result.json()
-      data.should.equal('Hello World')
+        )
+        result.status.should.equal(200)
+        
+        result = await fetch(
+          `${url}/signalk/v1/applicationData/user/${test.appid}/${test.version}/testing`,
+          {
+            headers: {
+              ...writeHeaders,
+              'Content-Type': 'application/json'
+            }
+          }
+        )
+        result.status.should.equal(200)
+        let data = await result.json()
+        data.should.equal(test.settings.something)
+      }
     } finally {
       await server.stop()
     }
