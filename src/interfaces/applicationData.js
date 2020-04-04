@@ -234,11 +234,12 @@ module.exports = function(app) {
     try {
       if (!fs.existsSync(applicationDataDir)) {
         fs.mkdirSync(applicationDataDir)
-        fs.mkdirSync(globalDir)
-        fs.mkdirSync(usersDir)
       }
     
       if ( isUser ) {
+        if ( !fs.existsSync(usersDir) ) {
+          fs.mkdirSync(usersDir)
+        }
         const userDir = path.join(usersDir, req.skPrincipal.identifier) 
         if (!fs.existsSync(userDir)) {
           fs.mkdirSync(userDir)
@@ -248,6 +249,9 @@ module.exports = function(app) {
           fs.mkdirSync(appDir)
         }
       } else {
+        if ( !fs.existsSync(globalDir) ) {
+          fs.mkdirSync(globalDir)
+        }
         const appDir = path.join(globalDir, appid)
         if (!fs.existsSync(appDir) ) {
           fs.mkdirSync(appDir)
