@@ -74,11 +74,11 @@ module.exports = function(app) {
   function listVersions(req, res, isUser) {
     const appid = validateAppId(req.params.appid)
 
-    if ( !appid ) {
+    if (!appid) {
       res.status(400).send('invalid application id')
       return
     }
-    
+
     const dir = dirForApplicationData(req, appid, isUser)
 
     if (!fs.existsSync(dir)) {
@@ -93,22 +93,17 @@ module.exports = function(app) {
     const appid = validateAppId(req.params.appid)
     const version = validateVersion(req.params.version)
 
-    if ( !appid ) {
+    if (!appid) {
       res.status(400).send('invalid application id')
       return
     }
 
-    if ( !version ) {
+    if (!version) {
       res.status(400).send('invalid application version')
       return
     }
-    
-    let applicationData = readApplicationData(
-      req,
-      appid,
-      version,
-      isUser
-    )
+
+    let applicationData = readApplicationData(req, appid, version, isUser)
 
     let data = applicationData
     if (req.params[0] && req.params[0].length !== 0) {
@@ -136,22 +131,17 @@ module.exports = function(app) {
     const appid = validateAppId(req.params.appid)
     const version = validateVersion(req.params.version)
 
-    if ( !appid ) {
+    if (!appid) {
       res.status(400).send('invalid application id')
       return
     }
 
-    if ( !version ) {
+    if (!version) {
       res.status(400).send('invalid application version')
       return
     }
-    
-    let applicationData = readApplicationData(
-      req,
-      appid,
-      version,
-      isUser
-    )
+
+    let applicationData = readApplicationData(req, appid, version, isUser)
 
     if (req.params[0] && req.params[0].length !== 0) {
       _.set(applicationData, req.params[0].replace(/\//g, '.'), req.body)
@@ -161,21 +151,14 @@ module.exports = function(app) {
       applicationData = req.body
     }
 
-    saveApplicationData(
-      req,
-      appid,
-      version,
-      isUser,
-      applicationData,
-      err => {
-        if (err) {
-          console.log(err)
-          res.status(500).send(err.message)
-        } else {
-          res.send()
-        }
+    saveApplicationData(req, appid, version, isUser, applicationData, err => {
+      if (err) {
+        console.log(err)
+        res.status(500).send(err.message)
+      } else {
+        res.send()
       }
-    )
+    })
   }
 
   function readApplicationData(req, appid, version, isUser) {
@@ -198,8 +181,7 @@ module.exports = function(app) {
   }
 
   function validateAppId(appid) {
-    return appid.length < 30 &&
-      appid.indexOf('/') === -1 ? appid : null
+    return appid.length < 30 && appid.indexOf('/') === -1 ? appid : null
   }
 
   function validateVersion(version) {
@@ -235,25 +217,25 @@ module.exports = function(app) {
       if (!fs.existsSync(applicationDataDir)) {
         fs.mkdirSync(applicationDataDir)
       }
-    
-      if ( isUser ) {
-        if ( !fs.existsSync(usersDir) ) {
+
+      if (isUser) {
+        if (!fs.existsSync(usersDir)) {
           fs.mkdirSync(usersDir)
         }
-        const userDir = path.join(usersDir, req.skPrincipal.identifier) 
+        const userDir = path.join(usersDir, req.skPrincipal.identifier)
         if (!fs.existsSync(userDir)) {
           fs.mkdirSync(userDir)
         }
         const appDir = path.join(userDir, appid)
-        if (!fs.existsSync(appDir) ) {
+        if (!fs.existsSync(appDir)) {
           fs.mkdirSync(appDir)
         }
       } else {
-        if ( !fs.existsSync(globalDir) ) {
+        if (!fs.existsSync(globalDir)) {
           fs.mkdirSync(globalDir)
         }
         const appDir = path.join(globalDir, appid)
-        if (!fs.existsSync(appDir) ) {
+        if (!fs.existsSync(appDir)) {
           fs.mkdirSync(appDir)
         }
       }
@@ -261,7 +243,7 @@ module.exports = function(app) {
       callback(err)
       return
     }
-    
+
     const config = JSON.parse(JSON.stringify(data))
     fs.writeFile(
       pathForApplicationData(req, appid, version, isUser),
