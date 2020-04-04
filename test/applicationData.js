@@ -13,6 +13,8 @@ const {
 const fs = require('fs')
 const promisify = require('util').promisify
 const path = require('path')
+const assert = require('assert')
+const rimraf = require('rimraf')
 
 const APP_ID = 'testApplication'
 const APP_VERSION = '1.0'
@@ -37,8 +39,10 @@ describe('Application Data', () => {
     this.timeout(5000)
     port = await freeport()
     url = `http://0.0.0.0:${port}`
-    
-    server = await startServerP(port, true)
+  })
+
+  async function start() {
+    let server = await startServerP(port, true)
 
     readToken = await getReadOnlyToken(server)
     writeToken = await getWriteToken(server)
@@ -54,171 +58,147 @@ describe('Application Data', () => {
       Cookie: `JAUTHENTICATION=${adminToken}`
     }
 
-    let paths = [
-      path.join(
-        process.env.SIGNALK_NODE_CONDFIG_DIR,
-        'applicationData',
-        'global'
-      ),
-      path.join(process.env.SIGNALK_NODE_CONDFIG_DIR, 'applicationData', 'user')
-    ]
-    paths.forEach(p => {
-      if (fs.existsSync(p)) {
-        fs.readdirSync(p).forEach(f => {
-          fs.readdirSync(path.join(p, f)).forEach(s => {
-            fs.unlinkSync(path.join(p, f, s))
-          })
+    await new Promise((resolve, reject) => {
+      rimraf(path.join(
+        process.env.SIGNALK_NODE_CONFIG_DIR,
+        'applicationData'), error => {
+          if ( error ) {
+            reject(error)
+          } else {
+            resolve()
+          }
         })
-      }
     })
-  })
+    
+    return server
+  }
 
-  after(async function () {
-    await server.stop()
-  })
+  async function post(globalOrUser, token, expected) {
+    let server = await start()
+    try {
+      const req = globalOrUser ?
+            `${url}/signalk/v1/applicationData/global/${APP_ID}/${APP_VERSION}` :
+            `${url}/signalk/v1/applicationData/user/${APP_ID}/${APP_VERSION}`
+      var result = await fetch(
+        req,
+        {
+          method: 'POST',
+          headers: {
+            Cookie: `JAUTHENTICATION=${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(TEST_SETTINGS)
+        }
+      )
+      result.status.should.equal(expected)
+
+      if ( globalOrUser ) {
+        result = await fetch(
+          req,
+          {
+            headers: {
+              ...adminHeaders,
+              'Content-Type': 'application/json'
+            }
+          }
+        )
+        result.status.should.equal(200)
+        let data = await result.json()
+        if ( expected !== 200 ) {
+          data.should.not.jsonEqual(TEST_SETTINGS)
+        } else {
+          data.should.jsonEqual(TEST_SETTINGS)
+        }
+      }
+    } finally {
+      await server.stop()
+    }
+  }
+
+  function readUserData(userName) {
+    const userPath = path.join(process.env.SIGNALK_NODE_CONFIG_DIR, 'applicationData', 'users', userName, APP_ID, `${APP_VERSION}.json`)
+
+    if ( fs.existsSync(userPath) ) {
+      return JSON.parse(fs.readFileSync(userPath))
+    } else {
+      return null
+    }
+  }
 
   it('fetch global returns empty data', async function () {
-    var result = await fetch(
-      `${url}/signalk/v1/applicationData/global/${APP_ID}/:${APP_VERSION}`,
-      {
-        headers: readHeaders
-      }
-    )
-    result.status.should.equal(200)
-    let data = await result.json()
-    data.should.jsonEqual({})
+    let server = await start()
+    try {
+      var result = await fetch(
+        `${url}/signalk/v1/applicationData/global/${APP_ID}/:${APP_VERSION}`,
+        {
+          headers: readHeaders
+        }
+      )
+      result.status.should.equal(200)
+      let data = await result.json()
+      data.should.jsonEqual({})
+    } finally {
+      await server.stop()
+    }
   })
-
+  
   it('post global fails readonly user', async function () {
-    var result = await fetch(
-      `${url}/signalk/v1/applicationData/global/${APP_ID}/:${APP_VERSION}`,
-      {
-        method: 'POST',
-        headers: {
-          ...readHeaders,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(TEST_SETTINGS)
-      }
-    )
-    result.status.should.equal(401)
+    await post(true, readToken, 401)
   })
 
   it('post global fails write user', async function () {
-    var result = await fetch(
-      `${url}/signalk/v1/applicationData/global/${APP_ID}/:${APP_VERSION}`,
-      {
-        method: 'POST',
-        headers: {
-          ...writeHeaders,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(TEST_SETTINGS)
-      }
-    )
-    result.status.should.equal(401)
+    await post(true, writeToken, 401)
   })
 
   it('post global works admin user', async function () {
-    var result = await fetch(
-      `${url}/signalk/v1/applicationData/global/${APP_ID}/:${APP_VERSION}`,
-      {
-        method: 'POST',
-        headers: {
-          ...adminHeaders,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(TEST_SETTINGS)
-      }
-    )
-    result.status.should.equal(200)
-
-    result = await fetch(
-      `${url}/signalk/v1/applicationData/global/${APP_ID}/:${APP_VERSION}`,
-      {
-        headers: {
-          ...adminHeaders,
-          'Content-Type': 'application/json'
-        }
-      }
-    )
-    result.status.should.equal(200)
-    let data = await result.json()
-    data.should.jsonEqual(TEST_SETTINGS)
+    await post(true, adminToken, 200)
   })
 
   it('post user data fails readonly user', async function () {
-    var result = await fetch(
-      `${url}/signalk/v1/applicationData/user/${APP_ID}/:${APP_VERSION}`,
-      {
-        method: 'POST',
-        headers: {
-          ...readHeaders,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          setting: 'on'
-        })
-      }
-    )
-    result.status.should.equal(401)
+    await post(false, readToken, 401)
+    const data = readUserData('testuser')
+    assert(data === null)
   })
 
   it('post user data works', async function () {
-    var result = await fetch(
-      `${url}/signalk/v1/applicationData/user/${APP_ID}/:${APP_VERSION}`,
-      {
-        method: 'POST',
-        headers: {
-          ...writeHeaders,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(TEST_SETTINGS)
-      }
-    )
-    result.status.should.equal(200)
-
-    result = await fetch(
-      `${url}/signalk/v1/applicationData/user/${APP_ID}/:${APP_VERSION}`,
-      {
-        headers: {
-          ...writeHeaders,
-          'Content-Type': 'application/json'
-        }
-      }
-    )
-    result.status.should.equal(200)
-    let data = await result.json()
+    await post(false, writeToken, 200)
+    const data = readUserData('writeuser')
+    assert(data !== null)
     data.should.jsonEqual(TEST_SETTINGS)
   })
 
   it('json patch works', async function () {
-    var result = await fetch(
-      `${url}/signalk/v1/applicationData/user/${APP_ID}/:${APP_VERSION}`,
-      {
-        method: 'POST',
-        headers: {
-          ...writeHeaders,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify([
-          { op: 'add', path: '/testing', value: 'Hello World' }
-        ])
-      }
-    )
-    result.status.should.equal(200)
-
-    result = await fetch(
-      `${url}/signalk/v1/applicationData/user/${APP_ID}/:${APP_VERSION}/testing`,
-      {
-        headers: {
-          ...writeHeaders,
-          'Content-Type': 'application/json'
+    let server = await start()
+    try {
+      var result = await fetch(
+        `${url}/signalk/v1/applicationData/user/${APP_ID}/${APP_VERSION}`,
+        {
+          method: 'POST',
+          headers: {
+            ...writeHeaders,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify([
+            { op: 'add', path: '/testing', value: 'Hello World' }
+          ])
         }
-      }
-    )
-    result.status.should.equal(200)
-    let data = await result.json()
-    data.should.equal('Hello World')
+      )
+      result.status.should.equal(200)
+      
+      result = await fetch(
+        `${url}/signalk/v1/applicationData/user/${APP_ID}/${APP_VERSION}/testing`,
+        {
+          headers: {
+            ...writeHeaders,
+          'Content-Type': 'application/json'
+          }
+        }
+      )
+      result.status.should.equal(200)
+      let data = await result.json()
+      data.should.equal('Hello World')
+    } finally {
+      await server.stop()
+    }
   })
 })
