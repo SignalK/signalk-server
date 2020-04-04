@@ -188,26 +188,31 @@ module.exports = function(app) {
     const usersDir = path.join(applicationDataDir, 'users')
     const globalDir = path.join(applicationDataDir, 'global')
 
-    if (!fs.existsSync(applicationDataDir)) {
-      fs.mkdirSync(applicationDataDir)
-      fs.mkdirSync(globalDir)
-      fs.mkdirSync(usersDir)
-    }
+    try {
+      if (!fs.existsSync(applicationDataDir)) {
+        fs.mkdirSync(applicationDataDir)
+        fs.mkdirSync(globalDir)
+        fs.mkdirSync(usersDir)
+      }
     
-    if ( isUser ) {
-      const userDir = path.join(usersDir, req.skPrincipal.identifier) 
-      if (!fs.existsSync(userDir)) {
-        fs.mkdirSync(userDir)
+      if ( isUser ) {
+        const userDir = path.join(usersDir, req.skPrincipal.identifier) 
+        if (!fs.existsSync(userDir)) {
+          fs.mkdirSync(userDir)
+        }
+        const appDir = path.join(userDir, appid)
+        if (!fs.existsSync(appDir) ) {
+          fs.mkdirSync(appDir)
+        }
+      } else {
+        const appDir = path.join(globalDir, appid)
+        if (!fs.existsSync(appDir) ) {
+          fs.mkdirSync(appDir)
+        }
       }
-      const appDir = path.join(userDir, appid)
-      if (!fs.existsSync(appDir) ) {
-        fs.mkdirSync(appDir)
-      }
-    } else {
-      const appDir = path.join(globalDir, appid)
-      if (!fs.existsSync(appDir) ) {
-        fs.mkdirSync(appDir)
-      }
+    } catch (err) {
+      callback(err)
+      return
     }
     
     const config = JSON.parse(JSON.stringify(data))
