@@ -31,7 +31,7 @@ describe('Metadata retrieval', () => {
   before(() => {
     serverP = freeport().then(p => {
       port = p
-      return startServerP(p, metaConfig)
+      return startServerP(p, false, metaConfig)
     })
       .catch(e => {
         console.log(e)

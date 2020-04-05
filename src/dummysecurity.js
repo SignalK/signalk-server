@@ -94,6 +94,10 @@ module.exports = function(app, config) {
 
     addAdminMiddleware: () => {},
 
+    addAdminWriteMiddleware: () => {},
+
+    addWriteMiddleware: () => {},
+    
     allowReadOnly: () => {
       return true
     },

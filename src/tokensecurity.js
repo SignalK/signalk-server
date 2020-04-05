@@ -138,6 +138,25 @@ module.exports = function(app, config) {
     }
   }
 
+  function writeAuthenticationMiddleware(redirect) {
+    return function(req, res, next) {
+      if (!getIsEnabled()) {
+        return next()
+      }
+
+      debug('skIsAuthenticated: ' + req.skIsAuthenticated)
+      if (req.skIsAuthenticated) {
+        if (
+          req.skPrincipal.permissions === 'admin' ||
+          req.skPrincipal.permissions === 'readwrite'
+        ) {
+          return next()
+        }
+      }
+      handlePermissionDenied(req, res, next)
+    }
+  }
+
   function adminAuthenticationMiddleware(redirect) {
     return function(req, res, next) {
       if (!getIsEnabled()) {
@@ -198,6 +217,7 @@ module.exports = function(app, config) {
     // tslint:disable-next-line:variable-name
     const do_redir = http_authorize(false)
 
+    app.use('/', http_authorize(false, true))
     app.use('/apps', http_authorize(false))
     app.use('/appstore', http_authorize(false))
     app.use('/plugins', http_authorize(false))
@@ -214,25 +234,6 @@ module.exports = function(app, config) {
       res.clearCookie('JAUTHENTICATION')
       res.send('Logout OK')
     })
-
-    function writeAuthenticationMiddleware(redirect) {
-      return function(req, res, next) {
-        if (!getIsEnabled()) {
-          return next()
-        }
-
-        debug('skIsAuthenticated: ' + req.skIsAuthenticated)
-        if (req.skIsAuthenticated) {
-          if (
-            req.skPrincipal.permissions === 'admin' ||
-            req.skPrincipal.permissions === 'readwrite'
-          ) {
-            return next()
-          }
-        }
-        handlePermissionDenied(req, res, next)
-      }
-    }
 
     function readOnlyAuthenticationMiddleware(redirect) {
       return function(req, res, next) {
@@ -312,6 +313,18 @@ module.exports = function(app, config) {
   strategy.addAdminMiddleware = function(aPath) {
     app.use(aPath, http_authorize(false))
     app.use(aPath, adminAuthenticationMiddleware(false))
+  }
+
+  strategy.addAdminWriteMiddleware = function(aPath) {
+    app.use(aPath, http_authorize(false))
+    app.put(aPath, adminAuthenticationMiddleware(false))
+    app.post(aPath, adminAuthenticationMiddleware(false))
+  }
+
+  strategy.addWriteMiddleware = function(aPath) {
+    app.use(aPath, http_authorize(false))
+    app.put(aPath, writeAuthenticationMiddleware(false))
+    app.post(aPath, writeAuthenticationMiddleware(false))
   }
 
   strategy.generateToken = function(req, res, next, id, theExpiration) {
