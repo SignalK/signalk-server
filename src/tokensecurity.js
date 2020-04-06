@@ -1003,7 +1003,14 @@ module.exports = function(app, config) {
 
   strategy.requestAccess = (theConfig, clientRequest, sourceIp, updateCb) => {
     return new Promise((resolve, reject) => {
-      createRequest(app, 'accessRequest', clientRequest, null, sourceIp, updateCb)
+      createRequest(
+        app,
+        'accessRequest',
+        clientRequest,
+        null,
+        sourceIp,
+        updateCb
+      )
         .then(request => {
           const accessRequest = clientRequest.accessRequest
           if (!validateAccessRequest(accessRequest)) {
