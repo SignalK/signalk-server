@@ -540,6 +540,7 @@ const NMEA0183 = props => {
             <option value='tcp'>TCP Client</option>
             <option value='tcpserver'>TCP Server</option>
             <option value='udp'>UDP</option>
+            <option value='gpsd'>GPSD</option>
           </Input>
         </Col>
         {props.value.options.type === 'tcpserver' && (
@@ -550,7 +551,7 @@ const NMEA0183 = props => {
         )}
       </FormGroup>
       {serialParams(props)}
-      {props.value.options.type === 'tcp' && (
+      {(props.value.options.type === 'tcp' || props.value.options.type === 'gpsd') && (
         <div>
           <HostInput value={props.value.options} onChange={props.onChange} />
           <PortInput value={props.value.options} onChange={props.onChange} />
