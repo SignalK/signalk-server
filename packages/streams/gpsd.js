@@ -38,19 +38,31 @@ function Gpsd (options) {
   Transform.call(this, {
     objectMode: true
   })
+  
+  const port = options.port || 2947
+  const hostname = options.hostname || options.host || 'localhost'
+
+  function setProviderStatus(msg) {
+    options.app.setProviderStatus(options.providerId, msg)
+  }
+  
   this.listener = new gpsd.Listener({
-    port: options.port || 2947,
-    hostname: options.hostname || 'localhost',
+    port,
+    hostname,
     logger: {
       info: debug,
       warn: console.warn,
-      error: console.error
+      error: (msg) => {
+        options.app.setProviderError(options.providerId, `${hostname}:${port}: ` + msg)
+      }
     },
     parse: false
   })
 
+  setProviderStatus(`Connecting to ${hostname}:${port}`)
+  
   this.listener.connect(function () {
-    debug('Connected')
+    setProviderStatus(`Connected to ${hostname}:${port}`)
   })
 
   const self = this

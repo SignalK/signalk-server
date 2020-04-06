@@ -20,6 +20,7 @@ const TimestampThrottle = require('./timestamp-throttle')
 const CanboatJs = require('./canboatjs')
 const iKonvert = require('@canboat/canboatjs').iKonvert
 const Ydwg02 = require('@canboat/canboatjs').Ydwg02
+const gpsd = require('./gpsd')
 
 function Simple (options) {
   Transform.call(this, { objectMode: true })
@@ -257,6 +258,8 @@ function nmea0183input (subOptions) {
   } else if (subOptions.type === 'serial') {
     const serialport = require('./serialport')
     return [new serialport(subOptions)]
+  } else if (subOptions.type === 'gpsd') {
+    return [new gpsd(subOptions)]
   } else {
     throw new Error(`Unknown networking tyoe: ${options.networking}`)
   }
