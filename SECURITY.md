@@ -45,7 +45,7 @@ If there is no match is found for a specific path in the acl list, then permissi
           ]
         },
         {
-          "sources": [ 'actisense.35' ],
+          "sources": [ "actisense.35" ],
           "permissions": [
             {
               "subject": "john",
