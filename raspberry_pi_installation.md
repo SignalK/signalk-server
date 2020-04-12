@@ -55,8 +55,6 @@ We want to make sure that we're using the latest version of npm:
 
 ## Step 2 - Install Signal K Node Server and Consumers
 
-In this "How To" guide we are going to use the Signal K Node Server, but we also have a [guide for the Java Server](https://github.com/SignalK/specification/wiki/Raspberry-Pi-Installation-(Java-Server)) which is the other popular Signal K server.
-
 A Signal K Server is the central hub of a Signal K system; reading and converting the boat's NMEA data (or Signal K data from a gateway), which it then stores and logs, before outputting the Signal K data to web apps (consumers) on the boat or sending it off the boat to other vessels or Cloud services.
 
 Install the Node Server using npm
