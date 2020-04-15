@@ -109,8 +109,23 @@ class VesselConfiguration extends Component {
                     </FormText>
                   </Col>
                 </FormGroup>
-                
-                  <FormGroup row>
+                <FormGroup row>
+                  <Col md='2'>
+                    <Label htmlFor='callsignVhf'>Call Sign</Label>
+                  </Col>
+                  <Col xs='12' md='4'>
+                    <Input
+                      type='text'
+                      name='callsignVhf'
+                      onChange={this.handleChange}
+                      value={this.state.callsignVhf}
+                    />
+                    <FormText color='muted'>
+                      Leave blank if there is no call sign
+                    </FormText>
+                  </Col>
+                </FormGroup>
+                <FormGroup row>
                   <Col md='2'>
                     <Label htmlFor='uuid'>UUID</Label>
                   </Col>
