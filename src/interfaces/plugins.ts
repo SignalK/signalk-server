@@ -306,19 +306,19 @@ module.exports = (theApp: any) => {
     }
   }
 
-  function putSelfPath(aPath: string, value: any, updateCb: () => void) {
+  function putSelfPath(aPath: string, value: any, updateCb: () => void, source: string) {
     return _putPath(
       theApp,
       'vessels.self',
       aPath,
-      { value },
+      { value, source },
       null,
       null,
       updateCb
     )
   }
 
-  function putPath(aPath: string, value: any, updateCb: (err?: Error) => void) {
+  function putPath(aPath: string, value: any, updateCb: (err?: Error) => void, source: string) {
     const parts = aPath.length > 0 ? aPath.split('.') : []
 
     if (parts.length <= 2) {
@@ -328,7 +328,7 @@ module.exports = (theApp: any) => {
 
     const context = `${parts[0]}.${parts[1]}`
     const skpath = parts.slice(2).join('.')
-    return _putPath(theApp, context, skpath, { value }, null, null, updateCb)
+    return _putPath(theApp, context, skpath, { value, source }, null, null, updateCb)
   }
 
   function registerPlugin(
