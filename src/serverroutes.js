@@ -453,7 +453,8 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       height: _.get(self, 'design.airHeight.value'),
       gpsFromBow: _.get(self, 'sensors.gps.fromBow.value'),
       gpsFromCenter: _.get(self, 'sensors.gps.fromCenter.value'),
-      aisShipType: _.get(self, 'design.aisShipType.value.id')
+      aisShipType: _.get(self, 'design.aisShipType.value.id'),
+      callsignVhf: _.get(self, 'communication.callsignVhf')
     }
 
     if (app.config.settings.vessel) {
@@ -532,6 +533,9 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
         name: getAISShipTypeName(newVessel.aisShipType),
         id: Number(newVessel.aisShipType)
       })
+    }
+    if (newVessel.callsignVhf) {
+      set('communication.callsignVhf', newVessel.callsignVhf)
     }
 
     skConfig.writeDefaultsFile(app, data, err => {
