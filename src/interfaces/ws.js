@@ -595,7 +595,9 @@ function handleRealtimeConnection(app, spark, onChange) {
     app.signalk.removeListener('delta', onChange)
   })
 
-  sendLatestDeltas(app.deltaCache, app.selfContext, spark)
+  if (!(spark.request.query['sendCachedValues'] === 'false')) {
+    sendLatestDeltas(app.deltaCache, app.selfContext, spark)
+  }
 
   if (spark.query.serverevents === 'all') {
     spark.hasServerEvents = true
