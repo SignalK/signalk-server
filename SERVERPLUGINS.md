@@ -640,7 +640,7 @@ function myActionHandler(context, path, value, callback) {
 }
 
 plugin.start = function(options) {
-  app.registerPutHandler('vessels.self', 'some.path', myActionHandler);
+  app.registerPutHandler('vessels.self', 'some.path', myActionHandler, 'somesource.1');
 }
 ```
 
