@@ -73,7 +73,8 @@ export interface ServerAPI {
   putPath: (
     aPath: string,
     value: number | string | object | boolean,
-    updateCb: (err?: Error) => void
+    updateCb: (err?: Error) => void,
+    source: string
   ) => Promise<any>
   queryRequest: (requestId: string) => Promise<any>
   error: (msg: string) => void
@@ -306,19 +307,29 @@ module.exports = (theApp: any) => {
     }
   }
 
-  function putSelfPath(aPath: string, value: any, updateCb: () => void) {
+  function putSelfPath(
+    aPath: string,
+    value: any,
+    updateCb: () => void,
+    source: string
+  ) {
     return _putPath(
       theApp,
       'vessels.self',
       aPath,
-      { value },
+      { value, source },
       null,
       null,
       updateCb
     )
   }
 
-  function putPath(aPath: string, value: any, updateCb: (err?: Error) => void) {
+  function putPath(
+    aPath: string,
+    value: any,
+    updateCb: (err?: Error) => void,
+    source: string
+  ) {
     const parts = aPath.length > 0 ? aPath.split('.') : []
 
     if (parts.length <= 2) {
@@ -328,7 +339,15 @@ module.exports = (theApp: any) => {
 
     const context = `${parts[0]}.${parts[1]}`
     const skpath = parts.slice(2).join('.')
-    return _putPath(theApp, context, skpath, { value }, null, null, updateCb)
+    return _putPath(
+      theApp,
+      context,
+      skpath,
+      { value, source },
+      null,
+      null,
+      updateCb
+    )
   }
 
   function registerPlugin(
@@ -412,7 +431,6 @@ module.exports = (theApp: any) => {
       getSelfPath,
       getPath,
       putSelfPath,
-      putPath,
       queryRequest,
       error: (msg: string) => {
         console.error(`${packageName}:${msg}`)
@@ -428,6 +446,7 @@ module.exports = (theApp: any) => {
         app.setProviderError(plugin.name, msg)
       }
     })
+    appCopy.putPath = putPath
     try {
       const pluginConstructor: (
         app: ServerAPI
