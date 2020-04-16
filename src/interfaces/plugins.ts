@@ -73,7 +73,8 @@ export interface ServerAPI {
   putPath: (
     aPath: string,
     value: number | string | object | boolean,
-    updateCb: (err?: Error) => void
+    updateCb: (err?: Error) => void,
+    source: string
   ) => Promise<any>
   queryRequest: (requestId: string) => Promise<any>
   error: (msg: string) => void
@@ -430,7 +431,6 @@ module.exports = (theApp: any) => {
       getSelfPath,
       getPath,
       putSelfPath,
-      putPath,
       queryRequest,
       error: (msg: string) => {
         console.error(`${packageName}:${msg}`)
@@ -446,6 +446,7 @@ module.exports = (theApp: any) => {
         app.setProviderError(plugin.name, msg)
       }
     })
+    appCopy.putPath = putPath
     try {
       const pluginConstructor: (
         app: ServerAPI
