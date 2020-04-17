@@ -32,20 +32,81 @@ class Settings extends Component {
   constructor (props) {
     super(props)
     this.state = {
-      hasData: false
+      hasData: false,
+      restoreFile: null
     }
 
     this.fetchSettings = fetchSettings.bind(this)
     this.handleChange = this.handleChange.bind(this)
+    this.fileChanged = this.fileChanged.bind(this)
     this.handleOptionChange = this.handleOptionChange.bind(this)
     this.handleInterfaceChange = this.handleInterfaceChange.bind(this)
     this.handleSaveSettings = this.handleSaveSettings.bind(this)
+    this.backup = this.backup.bind(this)
+    this.restore = this.restore.bind(this)
   }
 
   componentDidMount () {
     this.fetchSettings()
   }
 
+  fileChanged (event) {
+    this.setState({ ...this.state,
+      restoreFile: event.target.files[0]
+    })
+  }
+
+  backup() {
+    window.location = '/backup'
+    /*
+    fetch(`/backup`, {
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/zip'
+      }
+    })
+      .then(response => {
+        console.log(response)
+      })
+    */
+  }
+
+  restore() {
+    if ( !this.state.restoreFile ) {
+      alert('Please choose a file')
+      return
+    }
+
+    if ( confirm('Are you sure you want restore your settings?') ) {
+      const data = new FormData() 
+      data.append('file', this.state.restoreFile)
+      
+      fetch(`/restore`, {
+        credentials: 'include',
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json'
+        },
+        body: data
+      })
+        .then(response => {
+          if (response.ok) {
+            alert('The backup was restored. Please restart the server.')
+
+          }
+          return response.text()
+        })
+        .then(text => {
+          if ( text && text.length ) {
+            alert(text)
+          }
+        })
+        .catch(error => {
+          alert(error.message)
+        })
+    }
+  }
+  
   handleChange (event) {
     const value =
       event.target.type === 'checkbox'
@@ -267,6 +328,50 @@ class Settings extends Component {
               <Badge color='danger' className='float-right'>
                 Restart Required
               </Badge>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>Backup and Restore</CardHeader>
+            <CardBody>
+              <Form
+                action=''
+                method='post'
+                encType='multipart/form-data'
+                className='form-horizontal'
+              >
+              </Form>
+<FormText color='muted'>
+              The backup will contain the server and plugin settings only.
+            </FormText><br/>
+              <FormGroup row>
+                  <Col xs='12' md={fieldColWidthMd}>
+                    <Input
+                      type='file'
+                      name='backupFile'
+                      onChange={this.fileChanged}
+                    />
+                    <FormText color='muted'>
+                      Your existing settings will be overwritten
+                    </FormText>
+                  </Col>
+              </FormGroup>
+            </CardBody>
+            <CardFooter>
+              <Button
+                size='sm'
+                color='primary'
+                onClick={this.backup}
+              >
+                <i className='fa fa-dot-circle-o' /> Backup
+              </Button>{' '}
+              <Button
+                size='sm'
+                color='danger'
+                onClick={this.restore}
+              >
+                <i className='fa fa-dot-circle-o' /> Restore
+              </Button>{' '}
             </CardFooter>
           </Card>
         </div>

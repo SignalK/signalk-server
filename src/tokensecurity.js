@@ -260,6 +260,8 @@ module.exports = function(app, config) {
     app.use('/appstore', adminAuthenticationMiddleware(false))
     app.use('/security', adminAuthenticationMiddleware(false))
     app.use('/settings', adminAuthenticationMiddleware(false))
+    app.use('/backup', adminAuthenticationMiddleware(false))
+    app.use('/restore', adminAuthenticationMiddleware(false))
     app.use('/providers', adminAuthenticationMiddleware(false))
     app.use('/vessel', adminAuthenticationMiddleware(false))
 

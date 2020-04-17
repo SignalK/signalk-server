@@ -28,6 +28,10 @@ const { queryRequest } = require('./requestResponse')
 const serialBingings = require('@serialport/bindings')
 const commandExists = require('command-exists')
 const { getAuthor } = require('./modules')
+const zip = require('express-easy-zip')
+const unzipper = require('unzipper')
+const moment = require('moment')
+const Busboy = require('busboy')
 
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
@@ -628,5 +632,66 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
         }
       })
     )
+  })
+
+  app.post('/restore', (req, res, next) => {
+    const busboy = new Busboy({ headers: req.headers })
+    busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
+      try {
+        if (!filename.endsWith('.backup')) {
+          res.status(400).send('Invalid backup file')
+          return
+        }
+        const unzipStream = unzipper.Extract({ path: app.config.configPath })
+        let error
+        file.readableFlowing = true
+        file
+          .pipe(unzipStream)
+          .on('error', err => {
+            console.log(err)
+            error = err
+            res.status(500).send(error.message)
+          })
+          .on('close', () => {
+            if (!error) {
+              res.send()
+            }
+          })
+      } catch (err) {
+        console.log(err)
+        res.status(500).send(err.message)
+      }
+    })
+    busboy.on('error', err => {
+      console.log(err)
+      res.status(500).send(err.message)
+    })
+    req.pipe(busboy)
+  })
+
+  app.use(zip())
+  app.get('/backup', (req, res) => {
+    readdir(app.config.configPath).then(filenames => {
+      const files = filenames
+        .filter(file => {
+          return (
+            file !== 'node_modules' &&
+            !file.endsWith('.log') &&
+            file !== 'signalk-server' &&
+            file !== '.npmrc'
+          )
+        })
+        .map(name => {
+          const filename = path.join(app.config.configPath, name)
+          return {
+            path: filename,
+            name
+          }
+        })
+      res.zip({
+        files,
+        filename: `signalk-${moment().format('MMM-DD-YYYY-HHTmm')}.backup`
+      })
+    })
   })
 }
