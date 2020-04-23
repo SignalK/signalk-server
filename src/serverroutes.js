@@ -15,6 +15,7 @@
 */
 
 const fs = require('fs')
+const os = require('os')
 const readdir = require('util').promisify(fs.readdir)
 const page = require('./page')
 const debug = require('debug')('signalk-server:serverroutes')
@@ -27,11 +28,12 @@ const { getAISShipTypeName } = require('@signalk/signalk-schema')
 const { queryRequest } = require('./requestResponse')
 const serialBingings = require('@serialport/bindings')
 const commandExists = require('command-exists')
-const { getAuthor } = require('./modules')
+const { getAuthor, restoreModules } = require('./modules')
 const zip = require('express-easy-zip')
 const unzipper = require('unzipper')
 const moment = require('moment')
 const Busboy = require('busboy')
+const ncp = require('ncp').ncp
 
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
@@ -39,6 +41,7 @@ const serverRoutesPrefix = '/skServer'
 
 module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   let securityWasEnabled
+  let restoreFilePath
 
   app.use(
     '/admin',
@@ -634,27 +637,144 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     )
   })
 
+  const safeFiles = [
+    'settings.json',
+    'defaults.json',
+    'security.json',
+    'package.json'
+  ]
+  function listSafeRestoreFiles(restorePath) {
+    return new Promise((resolve, reject) => {
+      readdir(restorePath)
+        .catch(reject)
+        .then(filnames => {
+          const goodFiles = filnames.filter(
+            name => safeFiles.indexOf(name) !== -1
+          )
+          filnames.forEach(name => {
+            try {
+              const stats = fs.lstatSync(path.join(restorePath, name))
+              if (stats.isDirectory()) {
+                goodFiles.push(name + '/')
+              }
+              resolve(goodFiles)
+            } catch (err) {
+              reject(err)
+            }
+          })
+        })
+    })
+  }
+
+  function sendRestoreStatus(state, message, percentComplete) {
+    const status = {
+      state,
+      message,
+      percentComplete: percentComplete * 100
+    }
+    app.emit('serverevent', {
+      type: 'RESTORESTATUS',
+      from: 'signalk-server',
+      data: status
+    })
+  }
+
   app.post('/restore', (req, res, next) => {
+    if (!restoreFilePath) {
+      res.status(400).send('not exting restore file')
+    } else if (!fs.existsSync(restoreFilePath)) {
+      res.status(400).send('restore file does not exist')
+    } else {
+      res.status(202).send()
+    }
+
+    listSafeRestoreFiles(restoreFilePath)
+      .then(files => {
+        const wanted = files.filter(name => {
+          const stats = fs.lstatSync(path.join(restoreFilePath, name))
+          return req.body[name]
+        })
+
+        let hasError = false
+        for (let i = 0; i < wanted.length; i++) {
+          const name = wanted[i]
+          sendRestoreStatus(
+            'Copying Files',
+            `Copying ${name}`,
+            i / wanted.length
+          )
+          ncp(
+            path.join(restoreFilePath, name),
+            path.join(app.config.configPath, name),
+            { stopOnErr: true },
+            err => {
+              if (err) {
+                sendRestoreStatus('error', err.message)
+                hasError = true
+              }
+            }
+          )
+        }
+        if (!hasError) {
+          sendRestoreStatus('Installing Plugins', '', 1)
+
+          restoreModules(
+            app,
+            output => {
+              sendRestoreStatus('Installing Plugins', `${output}`, 1)
+              console.log(`stdout: ${output}`)
+            },
+            output => {
+              //sendRestoreStatus('Error', `${output}`, 1)
+              console.error(`stderr: ${output}`)
+            },
+            code => {
+              sendRestoreStatus('Complete', 'Please restart', 1)
+            }
+          )
+        }
+      })
+      .catch(err => {
+        console.error(err)
+        sendRestoreStatus('error', err.message)
+      })
+  })
+
+  app.post('/validateBackup', (req, res, next) => {
     const busboy = new Busboy({ headers: req.headers })
     busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
       try {
         if (!filename.endsWith('.backup')) {
-          res.status(400).send('Invalid backup file')
+          res
+            .status(400)
+            .send('the backup file does not have the .backup extension')
           return
         }
-        const unzipStream = unzipper.Extract({ path: app.config.configPath })
+        if (!filename.startsWith('signalk-')) {
+          res.status(400).send('the backup file does not start with signalk-')
+          return
+        }
+        const tmpDir = os.tmpdir()
+        restoreFilePath = fs.mkdtempSync(`${tmpDir}${path.sep}`)
+        const unzipStream = unzipper.Extract({ path: restoreFilePath })
         let error
         file.readableFlowing = true
         file
           .pipe(unzipStream)
           .on('error', err => {
             console.log(err)
-            error = err
-            res.status(500).send(error.message)
+            res.status(500).send(err.message)
           })
           .on('close', () => {
             if (!error) {
-              res.send()
+              listSafeRestoreFiles(restoreFilePath)
+                .then(files => {
+                  res.send(files)
+                })
+                .catch(err => {
+                  console.error(err)
+                  res.status(500).send(err.message)
+                })
             }
           })
       } catch (err) {

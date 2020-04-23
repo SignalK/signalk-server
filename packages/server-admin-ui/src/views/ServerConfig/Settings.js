@@ -15,8 +15,15 @@ import {
   Label,
   FormGroup,
   FormText,
-  Table
+  Table,
+  Progress
 } from 'reactstrap'
+import escape from 'escape-html'
+
+const RESTORE_NONE = 0
+const RESTORE_VALIDATING = 1
+const RESTORE_CONFIRM = 2
+const RESTORE_RUNNING = 3
 
 function fetchSettings () {
   fetch(`/settings`, {
@@ -33,7 +40,8 @@ class Settings extends Component {
     super(props)
     this.state = {
       hasData: false,
-      restoreFile: null
+      restoreFile: null,
+      restoreState: RESTORE_NONE
     }
 
     this.fetchSettings = fetchSettings.bind(this)
@@ -42,7 +50,9 @@ class Settings extends Component {
     this.handleOptionChange = this.handleOptionChange.bind(this)
     this.handleInterfaceChange = this.handleInterfaceChange.bind(this)
     this.handleSaveSettings = this.handleSaveSettings.bind(this)
+    this.handleRestoreFileChange = this.handleRestoreFileChange.bind(this)
     this.backup = this.backup.bind(this)
+    this.validate = this.validate.bind(this)
     this.restore = this.restore.bind(this)
   }
 
@@ -58,53 +68,87 @@ class Settings extends Component {
 
   backup() {
     window.location = '/backup'
-    /*
-    fetch(`/backup`, {
-      credentials: 'include',
-      headers: {
-        'Accept': 'application/zip'
-      }
-    })
-      .then(response => {
-        console.log(response)
-      })
-    */
   }
 
   restore() {
+    console.log(this.state.restoreContents)
+    fetch(`/restore`, {
+      credentials: 'include',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(this.state.restoreContents)
+    })
+      .then(response => {
+        if (!response.ok) {
+          return response.text()
+        }
+      })
+      .then(res => {
+        if ( typeof res === 'string' ) {
+          alert(res)
+          this.setState({restoreState: RESTORE_NONE, restoreFile:null})
+
+        } else {
+          this.setState({restoreState: RESTORE_RUNNING})
+        }
+      })
+      .catch(error => {
+        alert(error.message)
+      })
+  }
+
+  validate() {
     if ( !this.state.restoreFile ) {
       alert('Please choose a file')
       return
     }
 
-    if ( confirm('Are you sure you want restore your settings?') ) {
-      const data = new FormData() 
-      data.append('file', this.state.restoreFile)
-      
-      fetch(`/restore`, {
-        credentials: 'include',
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json'
-        },
-        body: data
-      })
-        .then(response => {
-          if (response.ok) {
-            alert('The backup was restored. Please restart the server.')
-
-          }
+    const data = new FormData() 
+    data.append('file', this.state.restoreFile)
+    
+    this.setState({restoreState: RESTORE_VALIDATING})
+    fetch(`/validateBackup`, {
+      credentials: 'include',
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json'
+      },
+      body: data
+    })
+      .then(response => {
+        if (response.ok) {
+          return response.json()
+        } else {
           return response.text()
-        })
-        .then(text => {
-          if ( text && text.length ) {
-            alert(text)
-          }
-        })
-        .catch(error => {
-          alert(error.message)
-        })
-    }
+        }
+      })
+      .then(res => {
+        if ( typeof res === 'string' ) {
+          alert(res)
+          this.setState({restoreState: RESTORE_NONE, restoreFile:null})
+
+        } else {
+          const restoreContents = {}
+          res.forEach(filename => {
+            restoreContents[filename] = true
+          })
+          this.setState({restoreState: RESTORE_CONFIRM, restoreContents})
+        }
+      })
+      .catch(error => {
+        alert(error.message)
+      })
+  }
+
+  handleRestoreFileChange (event) {
+    const value =
+      event.target.type === 'checkbox'
+        ? event.target.checked
+        : event.target.value
+    this.state.restoreContents[event.target.name] = value
+    this.setState({ restoreContents: this.state.restoreContents })
   }
   
   handleChange (event) {
@@ -152,7 +196,8 @@ class Settings extends Component {
     const fieldColWidthMd = 10
     return (
       this.state.hasData && (
-        <div className='animated fadeIn'>
+          <div className='animated fadeIn'>
+          {this.state.restoreState === RESTORE_NONE && (
           <Card>
             <CardBody>
               <Form
@@ -330,7 +375,7 @@ class Settings extends Component {
               </Badge>
             </CardFooter>
           </Card>
-
+          )}
           <Card>
             <CardHeader>Backup and Restore</CardHeader>
             <CardBody>
@@ -340,8 +385,9 @@ class Settings extends Component {
                 encType='multipart/form-data'
                 className='form-horizontal'
               >
-              </Form>
-<FormText color='muted'>
+            {this.state.restoreState === RESTORE_NONE && (
+            <div>
+            <FormText color='muted'>
               The backup will contain the server and plugin settings only.
             </FormText><br/>
               <FormGroup row>
@@ -356,8 +402,60 @@ class Settings extends Component {
                     </FormText>
                   </Col>
               </FormGroup>
+              </div>
+             )}
+             {this.state.restoreState === RESTORE_CONFIRM && (
+                  <FormGroup check>
+                  <Col xs='12' md={fieldColWidthMd}>
+                      {_.keys(this.state.restoreContents).map(name => {
+                        return (
+                          <div key={name}>
+                            <Label className='switch switch-text switch-primary'>
+                              <Input
+                                type='checkbox'
+                                id={name}
+                                name={name}
+                                className='switch-input'
+                                onChange={this.handleRestoreFileChange}
+                                checked={this.state.restoreContents[name]}
+                              />
+                              <span
+                                className='switch-label'
+                                data-on='Yes'
+                                data-off='No'
+                              />
+                              <span className='switch-handle' />
+                            </Label>{' '}
+                            {name}
+                          </div>
+                        )
+                      })}
+                  </Col>
+                  </FormGroup>
+             )}
+             {this.state.restoreState == RESTORE_RUNNING && this.props.restoreStatus && this.props.restoreStatus.state && (
+             <div>
+             <FormGroup row>             
+               <Col xs='12' md={fieldColWidthMd}>
+               <FormText>{this.props.restoreStatus.state} : {escape(this.props.restoreStatus.message)}</FormText>
+               </Col>
+             </FormGroup>
+             <FormGroup row>             
+               <Col xs='12' md={fieldColWidthMd}>
+               <Progress
+                 animated
+                 color='success'
+                 value={this.props.restoreStatus.percentComplete}
+               />
+               </Col>
+             </FormGroup>
+             </div>
+             )}
+             </Form>
             </CardBody>
             <CardFooter>
+            {this.state.restoreState === RESTORE_NONE && (
+            <div>
               <Button
                 size='sm'
                 color='primary'
@@ -368,10 +466,30 @@ class Settings extends Component {
               <Button
                 size='sm'
                 color='danger'
-                onClick={this.restore}
+                onClick={this.validate}
               >
                 <i className='fa fa-dot-circle-o' /> Restore
               </Button>{' '}
+            </div>
+            )}
+            {this.state.restoreState === RESTORE_CONFIRM && (
+            <div>
+              <Button
+                size='sm'
+                color='primary'
+                onClick={this.cancelRestore}
+              >
+                <i className='fa fa-dot-circle-o' /> Cancel
+              </Button>{' '}
+              <Button
+                size='sm'
+                color='danger'
+                onClick={this.restore}
+              >
+                <i className='fa fa-dot-circle-o' /> Confirm
+              </Button>
+              </div>
+            )}
             </CardFooter>
           </Card>
         </div>
@@ -380,4 +498,4 @@ class Settings extends Component {
   }
 }
 
-export default connect()(Settings)
+export default connect(({restoreStatus}) => ({restoreStatus}))(Settings)

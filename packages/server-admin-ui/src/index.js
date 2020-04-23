@@ -57,7 +57,8 @@ const state = {
     entries,
     debugEnabled: [],
     rememberDebug: false
-  }
+  },
+  restoreStatus: {}
 }
 
 let store = createStore(
@@ -219,7 +220,12 @@ let store = createStore(
         }
       }
     }
-
+    if ( action.type === 'RESTORESTATUS' ) {
+      return {
+        ...state,
+        restoreStatus: action.data
+      }
+    }
     return state
   },
   state,
