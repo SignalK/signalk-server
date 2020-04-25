@@ -489,8 +489,9 @@ const NMEA2000 = props => {
             <option value='ikonvert-canboatjs'>iKonvert (canboatjs)</option>
             <option value='navlink2-tcp-canboatjs'>NavLink2 (canboatjs)</option>
 
-            <option value='ydwg02-canboatjs'>Yacht Devices YDWG-02 TCP (canboatjs)</option>
-            <option value='ydwg02-udp-canboatjs'>Yacht Devices YDWG-02 UDP (canboatjs)</option>
+            <option value='ydwg02-canboatjs'>Yacht Devices RAW TCP (canboatjs)</option>
+            <option value='ydwg02-udp-canboatjs'>Yacht Devices RAW UDP (canboatjs)</option>
+            <option value='ydwg02-usb-canboatjs'>Yacht Devices RAW USB (canboatjs)</option>
             <option value='canbus-canboatjs'>Canbus (canboatjs)</option>
             <option value='canbus' disabled={!props.hasAnalyzer}>Canbus (canboat)</option>
           </Input>
@@ -498,6 +499,7 @@ const NMEA2000 = props => {
       </FormGroup>
       {(props.value.options.type === 'ngt-1' ||
         props.value.options.type === 'ngt-1-canboatjs' ||
+        props.value.options.type === 'ydwg02-usb-canboatjs' ||
         props.value.options.type === 'ikonvert-canboatjs') && (
          <div>
              <DeviceInput value={props.value.options} onChange={props.onChange} />
