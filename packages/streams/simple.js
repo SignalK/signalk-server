@@ -55,7 +55,8 @@ function Simple (options) {
                options.subOptions.type === 'navlink2-tcp-canboatjs' ) {
       mappingType = 'NMEA2000IK'
     } else if (options.subOptions.type === 'ydwg02-canboatjs' ||
-              options.subOptions.type === 'ydwg02-udp-canboatjs' ) {
+               options.subOptions.type === 'ydwg02-udp-canboatjs' ||
+               options.subOptions.type === 'ydwg02-usb-canboatjs') {
       mappingType = 'NMEA2000YD'
     } 
   }
@@ -222,6 +223,15 @@ function nmea2000input (subOptions, logging) {
     }), new Liner(subOptions)]
   } else if (subOptions.type === 'navlink2-udp-canboatjs' ) {
     return [new Udp(subOptions), new Liner(subOptions)]
+  } else if (subOptions.type === 'ydwg02-usb-canboatjs') {
+    const serialport = require('./serialport')
+    return [
+      new serialport({
+        ...subOptions,
+        baudrate: 38400,
+        toStdout: 'ydwg02-out'
+      })
+    ]
   } else {
     let command
     let toChildProcess
