@@ -44,7 +44,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   )
 
   app.get('/', (req, res) => {
-    res.redirect('/admin')
+    res.redirect(app.config.settings.landingPage || '/admin')
   })
 
   app.get('/@signalk/server-admin-ui', (req, res) => {
