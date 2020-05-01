@@ -611,19 +611,28 @@ const SignalK = props => {
             props.value.options.type === 'wss') && (
             <FormGroup row>
               <Col xs='0' md='2'>
-                <Label />
+              <Label htmlFor='options.useDiscovery'>Discovery</Label>
               </Col>
-              <Col xs='12' md='3'>
-                <div className='checkbox'>
-                  <Label check htmlFor='enabled'>
+              <Col xs='12' md='10'>
+                <div key={name}>
+                  <Label className='switch switch-text switch-primary'>
                     <Input
                       type='checkbox'
+                      id='options.useDiscovery'
                       name='options.useDiscovery'
+                      className='switch-input'
                       onChange={props.onChange}
                       checked={props.value.options.useDiscovery}
-                    />Use Discovery
+                    />
+                    <span
+                      className='switch-label'
+                      data-on='On'
+                      data-off='Off'
+                    />
+                    <span className='switch-handle' />
                   </Label>
-                </div>
+                  Discover Signal K servers automatically
+                  </div>
               </Col>
             </FormGroup>
           )}
