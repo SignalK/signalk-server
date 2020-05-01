@@ -277,19 +277,8 @@ function fileInput (subOptions) {
 
 function signalKInput (subOptions) {
   if (subOptions.type === 'ws' || subOptions.type === 'wss') {
-    const options = {
-      app: subOptions.app,
-      providerId: subOptions.providerId,
-      ignoreServers: subOptions.ignoreServers,
-      subscription: subOptions.subscription
-    }
-    if (!subOptions.useDiscovery) {
-      options.host = subOptions.host
-      options.port = subOptions.port
-    }
-    options.protocol = subOptions.type
     const mdns_ws = require('./mdns-ws')
-    return [new mdns_ws(options)]
+    return [new mdns_ws(subOptions)]
   } else if (subOptions.type === 'tcp') {
     return [new Tcp(subOptions), new Liner(subOptions)]
   } else if (subOptions.type === 'udp') {
