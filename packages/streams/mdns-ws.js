@@ -19,6 +19,7 @@ const Transform = require('stream').Transform
 const SignalK = require('@signalk/client')
 
 const debug = require('debug')('signalk-server:providers:mdns-ws')
+const dataDebug = require('debug')('signalk-server:providers:mdns-ws:data')
 
 const WebSocket = require('ws')
 
@@ -32,6 +33,22 @@ function MdnsWs (options) {
   this.remoteServers = {}
   this.remoteServers[this.selfHost + ':' + this.selfPort] = {}
   const deltaStreamBehaviour = options.subscription ? 'none' : 'all'
+  debug(`deltaStreamBehaviour:${deltaStreamBehaviour}`)
+
+  this.handleContext = () => { }
+  if (options.selfHandling === 'manualSelf') {
+    if (options.remoteSelf) {
+      debug(`Using manual remote self ${options.remoteSelf}`)
+      this.handleContext = (delta) => {
+        if (delta.context === options.remoteSelf) {
+          delete delta.context
+        }
+      }
+    } else {
+      console.error('Manual self handling speficied but no remoteSelf configured')
+    }
+  }
+
   if (options.ignoreServers) {
     options.ignoreServers.forEach(s => {
       this.remoteServers[s] = {}
@@ -106,6 +123,19 @@ MdnsWs.prototype.connect = function (client) {
     .connect()
     .then(() => {
       setProviderStatus(that, providerId, `ws connection connected to ${client.options.hostname}:${client.options.port}`)
+      if (this.options.selfHandling === 'useRemoteSelf') {
+        client.API().then(api => api.get('/self')).then(selfFromServer => {
+          debug(`Mapping context ${selfFromServer} to self (empty context)`)
+          this.handleContext = (delta) => {
+            if (delta.context === selfFromServer) {
+              delete delta.context
+            }
+          }
+        }).catch(err => {
+          console.error('Error retrieving self from remote server')
+          console.error(err)
+        })
+      }
       that.remoteServers[client.options.hostname + ':' + client.options.port] = client
       if ( that.options.subscription ) {
         let parsed 
@@ -129,6 +159,8 @@ MdnsWs.prototype.connect = function (client) {
   
   client.on('delta', (data) => {
     if (data && data.updates) {
+      that.handleContext(data)
+      if (dataDebug.enabled) { dataDebug(JSON.stringify(data)) }
       data.updates.forEach(function (update) {
         update['$source'] = providerId
       })

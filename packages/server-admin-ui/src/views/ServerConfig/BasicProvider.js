@@ -424,6 +424,20 @@ class HostInput extends Component {
   }
 }
 
+class RemoteSelfInput extends Component {
+  render () {
+    return (
+      <TextInput
+        title="Remote 'self' to use"
+        name='options.remoteSelf'
+        helpText='like vessels.urn:mrn:signalk:uuid:f6d9f041-4e61-4335-82c0-7a51fb10ae86 OR vessels.urn:mrn:imo:mmsi:230099999'
+        value={this.props.value.remoteSelf}
+        onChange={this.props.onChange}
+      />
+    )
+  }
+}
+
 class Suppress0183Checkbox extends Component {
   constructor (props) {
     super(props)
@@ -667,6 +681,26 @@ const SignalK = props => {
         <PortInput value={props.value.options} onChange={props.onChange} />
       )}
       {serialParams(props)}
+      <FormGroup row>
+        <Col md='2'>
+          <Label htmlFor='options.type'>'self' handling</Label>
+        </Col>
+        <Col xs='12' md='3'>
+          <Input
+            type='select'
+            value={props.value.options.selfHandling || 'noSelf'}
+            name='options.selfHandling'
+            onChange={event => props.onChange(event)}
+          >
+            <option value='useRemoteSelf'>Map remote 'self' to local 'self'</option>
+            <option value='manualSelf'>Manual mapping</option>
+            <option value='noSelf'>No 'self' mapping</option>
+          </Input>
+        </Col>
+      </FormGroup>
+      {props.value.options.selfHandling === 'manualSelf' && (
+        <RemoteSelfInput value={props.value.options} onChange={props.onChange} />
+      )}
     </div>
   )
 }
