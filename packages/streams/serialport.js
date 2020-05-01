@@ -77,6 +77,7 @@ function SerialStream (options) {
   this.options = options
   this.maxPendingWrites = options.maxPendingWrites || 5
   this.start()
+  this.isFirstError = true
 }
 
 require('util').inherits(SerialStream, Transform)
@@ -110,6 +111,7 @@ SerialStream.prototype.start = function () {
         this.options.providerId,
         `Connected to ${this.options.device}`
       )
+      this.isFirstError = true
       this.options.app.setProviderError(this.options.providerId, '')
       const parser = new SerialPort.parsers.Readline()
       this.serial.pipe(parser).pipe(this)
@@ -120,7 +122,11 @@ SerialStream.prototype.start = function () {
     'error',
     function (x) {
       this.options.app.setProviderError(this.options.providerId, x.message)
-      console.log(x.message)
+      if (this.isFirstError) {
+        console.log(x.message)
+      }
+      debug(x.message)
+      this.isFirstError = false
       this.scheduleReconnect()
     }.bind(this)
   )
