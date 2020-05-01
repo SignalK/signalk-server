@@ -31,6 +31,7 @@ function MdnsWs (options) {
   this.selfPort = options.app.config.getExternalPort()
   this.remoteServers = {}
   this.remoteServers[this.selfHost + ':' + this.selfPort] = {}
+  const deltaStreamBehaviour = options.subscription ? 'none' : 'all'
   if (options.ignoreServers) {
     options.ignoreServers.forEach(s => {
       this.remoteServers[s] = {}
@@ -43,6 +44,7 @@ function MdnsWs (options) {
       useTLS: options.protocol === 'wss',
       reconnect: true,
       autoConnect: false,
+      deltaStreamBehaviour
     })
     this.connect(this.signalkClient)
   } else {
@@ -69,7 +71,8 @@ function MdnsWs (options) {
             client = server.createClient({
               useTLS: false,
               reconnect: true,
-              autoConnect: false
+              autoConnect: false,
+              deltaStreamBehaviour
             })
             this.connect(client)
           }
@@ -118,9 +121,6 @@ MdnsWs.prototype.connect = function (client) {
           debug('sending subscription %j', sub)
           client.subscribe(sub, String(idx))
         })
-      } else {
-        debug('subscribing to all')
-        client.subscribe()
       }
     })
     .catch(err => {
