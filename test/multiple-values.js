@@ -3,9 +3,9 @@ chai.Should()
 chai.use(require('chai-things'))
 chai.use(require('@signalk/signalk-schema').chaiModule)
 const freeport = require('freeport-promise')
-const startServerP = require('./servertestutilities').startServerP
+const fetch = require('node-fetch')
+const { startServerP, sendDelta } = require('./servertestutilities')
 
-const rp = require('request-promise')
 
 const uuid = 'urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d'
 
@@ -54,12 +54,11 @@ describe('Server', function () {
     const deltaUrl = host + '/signalk/v1/api/_test/delta'
     const restUrl = host + '/signalk/v1/api/'
 
-    return rp({ url: deltaUrl, method: 'POST', json: delta })
-      .then(function (body) {
-        return rp({ url: restUrl, method: 'GET' })
+    return sendDelta(delta, deltaUrl)
+      .then(function () {
+        return fetch(restUrl).then(r => r.json())
       })
-      .then(function (body) {
-        const treeAfterFirstDelta = JSON.parse(body)
+      .then(function (treeAfterFirstDelta) {
         treeAfterFirstDelta.vessels[uuid].should.have.nested.property(
           'navigation.trip.log.value',
           43374
@@ -71,13 +70,12 @@ describe('Server', function () {
         treeAfterFirstDelta.should.be.validSignalK
 
         delta.updates[0].values[0].value = 1
-        return rp({ url: deltaUrl, method: 'POST', json: delta })
+        return sendDelta(delta, deltaUrl)
       })
-      .then(function (body) {
-        return rp({ url: restUrl, method: 'GET' })
+      .then(function () {
+        return fetch(restUrl).then(r => r.json())
       })
-      .then(function (body) {
-        const treeAfterSecondDelta = JSON.parse(body)
+      .then(function (treeAfterSecondDelta) {
         treeAfterSecondDelta.vessels[uuid].should.have.nested.property(
           'navigation.trip.log.value',
           1
@@ -90,13 +88,12 @@ describe('Server', function () {
 
         delta.updates[0].values[0].value = 2
         delta.updates[0].source.src = '116'
-        return rp({ url: deltaUrl, method: 'POST', json: delta })
+        return sendDelta(delta, deltaUrl)
       })
       .then(function (body) {
-        return rp({ url: restUrl, method: 'GET' })
+        return fetch(restUrl).then(r => r.json())
       })
-      .then(function (body) {
-        const treeAfterOtherSourceDelta = JSON.parse(body)
+      .then(function (treeAfterOtherSourceDelta) {
         treeAfterOtherSourceDelta.vessels[uuid].should.have.nested.property(
           'navigation.trip.log.value',
           2

@@ -80,6 +80,10 @@ const ADMIN_USER_PASSWORD = 'admin'
 
 module.exports = {
   WsPromiser: WsPromiser,
+  sendDelta: (delta, deltaUrl) => {
+    if(!deltaUrl) console.trace()
+    return fetch(deltaUrl, { method: 'POST', body: JSON.stringify(delta), headers: { 'Content-Type': 'application/json' } })
+  },
   startServerP: function startServerP (port, enableSecurity, extraConfig={}, securityConfig) {
     const Server = require('../lib')
     const props = {
