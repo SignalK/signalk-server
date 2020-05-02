@@ -161,27 +161,33 @@ module.exports = (theApp: any) => {
               data.enabled = true
             }
 
-            const schema =
-              typeof plugin.schema === 'function'
-                ? plugin.schema()
-                : plugin.schema
-            const status = providerStatus.find((p: any) => p.id === plugin.name)
-            const statusMessage = status ? status.message : ''
-            const uiSchema =
-              typeof plugin.uiSchema === 'function'
-                ? plugin.uiSchema()
-                : plugin.uiSchema
-            return {
-              id: plugin.id,
-              name: plugin.name,
-              packageName: plugin.packageName,
-              version: plugin.version,
-              description: plugin.description,
-              schema,
-              statusMessage,
-              uiSchema,
-              state: plugin.state,
-              data
+            try {
+              const schema =
+                typeof plugin.schema === 'function'
+                  ? plugin.schema()
+                  : plugin.schema
+              const status = providerStatus.find(
+                (p: any) => p.id === plugin.name
+              )
+              const statusMessage = status ? status.message : ''
+              const uiSchema =
+                typeof plugin.uiSchema === 'function'
+                  ? plugin.uiSchema()
+                  : plugin.uiSchema
+              return {
+                id: plugin.id,
+                name: plugin.name,
+                packageName: plugin.packageName,
+                version: plugin.version,
+                description: plugin.description,
+                schema,
+                statusMessage,
+                uiSchema,
+                state: plugin.state,
+                data
+              }
+            } catch (err) {
+              // console.error(err)
             }
           })
         )
@@ -450,7 +456,7 @@ module.exports = (theApp: any) => {
     try {
       const pluginConstructor: (
         app: ServerAPI
-      ) => PluginInfo = require(path.join(location, packageName))
+      ) => PluginInfo = require(location)
       plugin = pluginConstructor(appCopy)
     } catch (e) {
       console.error(`${packageName} failed to start: ${e.message}`)

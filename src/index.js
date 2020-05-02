@@ -60,6 +60,11 @@ function Server(opts) {
   require('./config/config').load(app)
   app.version = '0.0.1'
 
+  if (process.versions.pnp) {
+    app.findPnpApi = require(`module`).findPnpApi
+    app.pnpApi = app.findPnpApi(app.config.appPath)
+  }
+  
   startSecurity(app, opts ? opts.securityConfig : null)
 
   require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)

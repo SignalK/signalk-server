@@ -46,7 +46,7 @@ function load(app) {
     config.version = pkg.version
     config.description = pkg.description
 
-    checkPackageVersion('@signalk/server-admin-ui', pkg, app.config.appPath)
+    //checkPackageVersion('@signalk/server-admin-ui', pkg, app.config.appPath)
   } catch (err) {
     console.error('error parsing package.json', err)
     process.exit(1)
@@ -148,7 +148,8 @@ function checkPackageVersion(name, pkg, appPath) {
   if (!fs.existsSync(modulePackageJsonPath)) {
     modulePackageJsonPath = path.join(appPath, '..', name, 'package.json')
   }
-  const installed = require(modulePackageJsonPath)
+  const data = fs.readFileSync(modulePackageJsonPath)
+  const installed = JSON.parse(data)
 
   if (!semver.satisfies(installed.version, expected)) {
     console.error(

@@ -34,7 +34,7 @@ module.exports = function(app) {
 function mountWebapps(app) {
   debug('MountWebApps')
   modulesWithKeyword(app, 'signalk-webapp').forEach(moduleData => {
-    let webappPath = path.join(moduleData.location, moduleData.module)
+    let webappPath = moduleData.location
     if (fs.existsSync(webappPath + '/public/')) {
       webappPath += '/public/'
     }

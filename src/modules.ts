@@ -46,7 +46,45 @@ interface Config {
 }
 
 interface App {
-  config: Config
+  config: Config,
+  pnpApi: any,
+  findPnpApi: any
+}
+
+function findYarnModules(app: App, dir: string, keyword: string): ModuleData[] {
+  const info = app.pnpApi.getPackageInformation(
+    app.findPnpApi(dir).getDependencyTreeRoots()[0]
+    )
+  let dirs = []
+  for (let key of info.packageDependencies.keys()) {
+    if ( key !== 'signalk-server' ) {
+      dirs.push(app.pnpApi.resolveToUnqualified(
+        key,
+        'signalk-server'
+      ))
+    }
+  }
+  return dirs.reduce<ModuleData[]>((result, filename) => {
+    let metadata
+    try {
+      const data = fs.readFileSync(filename + '/package.json')
+      metadata = JSON.parse(data.toString())
+    } catch (err) {
+      debug(err)
+    }
+    if (
+      metadata &&
+        metadata.keywords &&
+        metadata.keywords.includes(keyword)
+    ) {
+      result.push({
+        module: metadata.name,
+        metadata,
+        location: filename
+      })
+    }
+    return result
+  }, [])  
 }
 
 function findModulesInDir(dir: string, keyword: string): ModuleData[] {
@@ -65,17 +103,20 @@ function findModulesInDir(dir: string, keyword: string): ModuleData[] {
             return {
               module: entry.module,
               metadata: entry.metadata,
-              location: dir
+              location: path.join(dir, entry.module)
             }
           })
         )
       } else {
         let metadata
+       
         try {
-          metadata = require(dir + filename + '/package.json')
+          const data = fs.readFileSync(dir + filename + '/package.json')
+          metadata = JSON.parse(data.toString())
         } catch (err) {
           debug(err)
         }
+        
         if (
           metadata &&
           metadata.keywords &&
@@ -84,7 +125,7 @@ function findModulesInDir(dir: string, keyword: string): ModuleData[] {
           result.push({
             module: metadata.name,
             metadata,
-            location: dir
+            location: dir + filename
           })
         }
       }
@@ -96,10 +137,9 @@ function findModulesInDir(dir: string, keyword: string): ModuleData[] {
 function getModulePaths(app: App) {
   // appPath is the app working directory.
   const { appPath, configPath } = app.config
-  return (appPath === configPath
+  return appPath === configPath
     ? [appPath]
     : [configPath, appPath]
-  ).map(pathOption => path.join(pathOption, 'node_modules/'))
 }
 
 const getModuleSortName = (x: ModuleData) =>
@@ -114,8 +154,13 @@ function modulesWithKeyword(app: App, keyword: string) {
   return _.uniqBy(
     // _.flatten since values are inside an array. [[modules...], [modules...]]
     _.flatten(
-      getModulePaths(app).map(pathOption =>
-        findModulesInDir(pathOption, keyword)
+      getModulePaths(app).map(pathOption => {
+        if (fs.existsSync(path.join(pathOption, '.yarn/cache')) && app.pnpApi) {
+          return findYarnModules(app, pathOption, keyword)
+        } else {
+          return findModulesInDir(path.join(pathOption, 'node_modules/'), keyword)
+        }
+      }
       )
     ),
     moduleData => moduleData.module

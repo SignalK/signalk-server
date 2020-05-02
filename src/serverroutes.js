@@ -33,15 +33,21 @@ const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
 const serverRoutesPrefix = '/skServer'
 
+// We'll be able to inspect the dependencies of the module passed as first argument
 module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   let securityWasEnabled
+  let adminLocation
 
-  app.use(
-    '/admin',
-    express.static(
-      __dirname + '/../node_modules/@signalk/server-admin-ui/public'
+  if (app.pnpApi) {
+    adminLocation = app.pnpApi.resolveToUnqualified(
+      '@signalk/server-admin-ui',
+      'signalk-server'
     )
-  )
+  } else {
+    adminLocation = __dirname + '/../node_modules/@signalk/server-admin-ui'
+  }
+
+  app.use('/admin', express.static(path.join(adminLocation, 'public')))
 
   app.get('/', (req, res) => {
     res.redirect(app.config.settings.landingPage || '/admin')
