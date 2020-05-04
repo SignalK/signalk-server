@@ -109,7 +109,7 @@ const discriminatorByDataType = {
 
 const dataTypeMapping = {
   SignalK: options =>
-    options.subOptions.type !== 'wss' && options.subOptions.type !== 'ws'
+    options.subOptions.type !== 'wss-ssc' && options.subOptions.type !== 'wss' && options.subOptions.type !== 'ws'
       ? [new FromJson(options.subOptions)]
       : [],
   NMEA0183: options => {
@@ -286,7 +286,7 @@ function fileInput (subOptions) {
 }
 
 function signalKInput (subOptions) {
-  if (subOptions.type === 'ws' || subOptions.type === 'wss') {
+  if (subOptions.type === 'ws' || subOptions.type === 'wss' || subOptions.type === 'wss-ssc') {
     const mdns_ws = require('./mdns-ws')
     return [new mdns_ws(subOptions)]
   } else if (subOptions.type === 'tcp') {

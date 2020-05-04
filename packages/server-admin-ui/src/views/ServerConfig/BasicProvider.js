@@ -614,6 +614,7 @@ const SignalK = props => {
             <option value='serial'>Serial</option>
             <option value='ws'>WebSocket</option>
             <option value='wss'>WebSocket SSL</option>
+            <option value='wss-ssc'>WebSocket SSL self-signed cert</option>
             <option value='tcp'>TCP</option>
             <option value='udp'>UDP</option>
           </Input>
@@ -621,10 +622,12 @@ const SignalK = props => {
       </FormGroup>
       {(props.value.options.type === 'ws' ||
         props.value.options.type === 'wss' ||
+        props.value.options.type === 'wss-ssc' ||
         props.value.options.type === 'tcp') && (
         <div>
           {(props.value.options.type === 'ws' ||
-            props.value.options.type === 'wss') && (
+            props.value.options.type === 'wss' ||
+            props.value.options.type === 'wss-ssc') && (
             <FormGroup row>
               <Col xs='0' md='2'>
               <Label htmlFor='options.useDiscovery'>Discovery</Label>
@@ -665,7 +668,8 @@ const SignalK = props => {
             </div>
           )}
           {(props.value.options.type === 'ws' ||
-            props.value.options.type === 'wss') && (
+            props.value.options.type === 'wss' ||
+            props.value.options.type === 'wss-ssc') && (
             <div>
              <TextAreaInput
                title='Subscription'

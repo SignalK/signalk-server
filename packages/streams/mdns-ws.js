@@ -58,10 +58,11 @@ function MdnsWs (options) {
     this.signalkClient = new SignalK.Client({
       hostname: options.host,
       port: options.port,
-      useTLS: options.type === 'wss',
+      useTLS: options.type.startsWith('wss'),
       reconnect: true,
       autoConnect: false,
-      deltaStreamBehaviour
+      deltaStreamBehaviour,
+      rejectUnauthorized: !options.type.startsWith('-ssc',3)
     })
     this.connect(this.signalkClient)
   } else {
