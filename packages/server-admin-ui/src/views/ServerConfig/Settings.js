@@ -19,6 +19,7 @@ import {
   Progress
 } from 'reactstrap'
 import escape from 'escape-html'
+import { restart } from '../../actions'
 
 const RESTORE_NONE = 0
 const RESTORE_VALIDATING = 1
@@ -43,7 +44,6 @@ class Settings extends Component {
       restoreFile: null,
       restoreState: RESTORE_NONE
     }
-
     this.fetchSettings = fetchSettings.bind(this)
     this.handleChange = this.handleChange.bind(this)
     this.fileChanged = this.fileChanged.bind(this)
@@ -54,6 +54,7 @@ class Settings extends Component {
     this.backup = this.backup.bind(this)
     this.validate = this.validate.bind(this)
     this.restore = this.restore.bind(this)
+    this.restart = this.restart.bind(this)
   }
 
   componentDidMount () {
@@ -97,6 +98,12 @@ class Settings extends Component {
       .catch(error => {
         alert(error.message)
       })
+  }
+
+  restart() {
+    this.props.restart()
+    this.setState({restoreState: RESTORE_NONE})
+    window.location = "/admin/#/dashboard"
   }
 
   validate() {
@@ -197,7 +204,7 @@ class Settings extends Component {
     return (
       this.state.hasData && (
           <div className='animated fadeIn'>
-          {this.state.restoreState === RESTORE_NONE && (
+          {this.state.restoreState === RESTORE_NONE && !this.props.restoreStatus.state && (
           <Card>
             <CardBody>
               <Form
@@ -385,7 +392,7 @@ class Settings extends Component {
                 encType='multipart/form-data'
                 className='form-horizontal'
               >
-            {this.state.restoreState === RESTORE_NONE && (
+            {this.state.restoreState === RESTORE_NONE && !this.props.restoreStatus.state && (
             <div>
             <FormText color='muted'>
               The backup will contain the server and plugin settings only.
@@ -433,11 +440,11 @@ class Settings extends Component {
                   </Col>
                   </FormGroup>
              )}
-             {this.state.restoreState == RESTORE_RUNNING && this.props.restoreStatus && this.props.restoreStatus.state && (
+             {this.props.restoreStatus && this.props.restoreStatus.state && this.props.restoreStatus.state !== 'Complete' && (
              <div>
              <FormGroup row>             
                <Col xs='12' md={fieldColWidthMd}>
-               <FormText>{this.props.restoreStatus.state} : {escape(this.props.restoreStatus.message)}</FormText>
+               <FormText>{this.props.restoreStatus.state} : {this.props.restoreStatus.message}</FormText>
                </Col>
              </FormGroup>
              <FormGroup row>             
@@ -451,10 +458,34 @@ class Settings extends Component {
              </FormGroup>
              </div>
              )}
+             {this.props.restoreStatus.state && this.props.restoreStatus.state === 'Complete' && (
+             <div>
+             <FormGroup row>             
+               <Col xs='12' md={fieldColWidthMd}>
+               <FormText>Please Restart</FormText>
+               </Col>
+             </FormGroup>
+             <FormGroup row>             
+               <Col xs='12' md={fieldColWidthMd}>
+                 <Button
+                    size='sm'
+                    color='danger'
+                    onClick={this.restart}
+                  >
+                   {this.props.restarting ? (
+                     <i className='fa fa-circle-o-notch fa-spin' />
+                   ) : (
+                     <i className='fa fa-circle-o-notch' /> 
+                   )} Restart
+                  </Button>
+               </Col>
+             </FormGroup>
+             </div>
+             )}
              </Form>
             </CardBody>
             <CardFooter>
-            {this.state.restoreState === RESTORE_NONE && (
+            {this.state.restoreState === RESTORE_NONE && !this.props.restoreStatus.state && (
             <div>
               <Button
                 size='sm'
@@ -498,4 +529,4 @@ class Settings extends Component {
   }
 }
 
-export default connect(({restoreStatus}) => ({restoreStatus}))(Settings)
+export default connect(({restoreStatus, restarting}) => ({restoreStatus, restarting}), {restart})(Settings)
