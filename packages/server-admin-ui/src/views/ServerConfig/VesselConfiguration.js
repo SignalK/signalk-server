@@ -72,6 +72,9 @@ class VesselConfiguration extends Component {
       this.state.hasData && (
         <div className='animated fadeIn'>
           <Card>
+            <CardHeader>
+              <i className='fa fa-align-justify' /><strong>Vessel Base Data</strong>
+            </CardHeader>
             <CardBody>
               <Form
                 action=''

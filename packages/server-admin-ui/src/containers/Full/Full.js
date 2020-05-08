@@ -67,8 +67,8 @@ class Full extends Component {
                   component={loginOrOriginal(DataBrowser, true)}
                  />
                 <Route
-                  path='/playground'
-                  name='Playground'
+                  path='/serverConfiguration/datafiddler'
+                  name='DataFiddler'
                   component={loginOrOriginal(Playground, true)}
                 />
                 <Route
@@ -84,16 +84,8 @@ class Full extends Component {
                   component={loginOrOriginal(Settings)}
                 />
                 <Route
-                  path='/serverConfiguration/vessel'
-                  component={loginOrOriginal(VesselConfiguration)}
-                />
-                <Route
                   path='/serverConfiguration/connections/:providerId'
                   component={loginOrOriginal(ProvidersConfiguration)}
-                />
-                <Route
-                  path='/serverConfiguration/datalogs'
-                  component={loginOrOriginal(Logging)}
                 />
                 <Route
                   path='/serverConfiguration/log'
