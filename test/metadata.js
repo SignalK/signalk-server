@@ -1,8 +1,7 @@
 const _ = require('lodash')
 const assert = require('assert')
 const freeport = require('freeport-promise')
-const WebSocket = require('ws')
-const rp = require('request-promise')
+const fetch = require('node-fetch')
 const startServerP = require('./servertestutilities').startServerP
 
 const metaConfig = {
@@ -49,7 +48,7 @@ describe('Metadata retrieval', () => {
   it('valid .../meta works', () => {
     return getUrl(
       `http://localhost:${port}/signalk/v1/api/vessels/foo/navigation/headingTrue/meta`
-    ).then(result => {
+    ).then(r => r.json()).then(result => {
       assert.equal(result.units, 'rad')
     })
   })
@@ -57,8 +56,8 @@ describe('Metadata retrieval', () => {
   it('invalid .../meta returns error', done => {
     getUrl(
       `http://localhost:${port}/signalk/v1/api/vessels/foo/navigation/headingTrueTRUE/meta`
-    ).catch(reason => {
-      assert.equal(reason.statusCode, 404)
+    ).then(response => {
+      assert.equal(response.status, 404)
       done()
     })
   })
@@ -66,7 +65,7 @@ describe('Metadata retrieval', () => {
   it('valid .../units works', () => {
     return getUrl(
       `http://localhost:${port}/signalk/v1/api/vessels/foo/navigation/headingTrue/meta/units`
-    ).then(result => {
+    ).then(r => r.json()).then(result => {
       assert.equal(result, 'rad')
     })
   })
@@ -74,8 +73,8 @@ describe('Metadata retrieval', () => {
   it('invalid .../units returns error', done => {
     getUrl(
       `http://localhost:${port}/signalk/v1/api/vessels/foo/navigation/headingTrueTRUE/meta/units`
-    ).catch(reason => {
-      assert.equal(reason.statusCode, 404)
+    ).then(response => {
+      assert.equal(response.status, 404)
       done()
     })
   })
@@ -83,7 +82,7 @@ describe('Metadata retrieval', () => {
   it('valid .../from defaults works', () => {
     return getUrl(
       `http://localhost:${port}/signalk/v1/api/vessels/self/electrical/batteries/1/voltage/meta/testKey`
-    ).then(result => {
+    ).then(r => r.json()).then(result => {
       assert.equal(result, 'testValue')
     })
   })
@@ -91,18 +90,12 @@ describe('Metadata retrieval', () => {
   it('valid .../units with defaults works', () => {
     return getUrl(
       `http://localhost:${port}/signalk/v1/api/vessels/self/electrical/batteries/1/voltage/meta/units`
-    ).then(result => {
+    ).then(r => r.json()).then(result => {
       assert.equal(result, 'V')
     })
   })
 
-  function getUrl (url) {
-    return serverP.then(_ => {
-      return rp({
-        url: url,
-        method: 'GET',
-        json: true
-      })
-    })
+  function getUrl(url) {
+    return serverP.then(_ => fetch(url))
   }
 })

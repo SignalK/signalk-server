@@ -1,8 +1,7 @@
 const _ = require('lodash')
 const assert = require('assert')
+const {sendDelta} = require('./servertestutilities')
 const freeport = require('freeport-promise')
-const WebSocket = require('ws')
-const rp = require('request-promise')
 const { startServerP, WsPromiser } = require('./servertestutilities')
 
 function getDelta (overwrite) {
@@ -176,10 +175,6 @@ describe('Subscriptions', _ => {
       })
   })
 
-  function sendDelta (delta) {
-    return rp({ url: deltaUrl, method: 'POST', json: delta })
-  }
-
   it('?subscribe=self subscription serves self data', function () {
     let self, wsPromiser
 
@@ -198,7 +193,8 @@ describe('Subscriptions', _ => {
           sendDelta(
             getDelta({
               context: self
-            })
+            }),
+            deltaUrl
           )
         ])
       })
@@ -212,7 +208,7 @@ describe('Subscriptions', _ => {
 
         return Promise.all([
           wsPromiser.nextMsg(),
-          sendDelta(getDelta({ context: 'vessels.othervessel' }))
+          sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
         ])
       })
       .then(results => {
@@ -238,7 +234,8 @@ describe('Subscriptions', _ => {
           sendDelta(
             getDelta({
               context: self
-            })
+            }),
+            deltaUrl
           )
         ])
       })
@@ -247,7 +244,7 @@ describe('Subscriptions', _ => {
 
         return Promise.all([
           wsPromiser.nextMsg(),
-          sendDelta(getDelta({ context: 'vessels.othervessel' }))
+          sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
         ])
       })
       .then(results => {
@@ -273,7 +270,8 @@ describe('Subscriptions', _ => {
           sendDelta(
             getDelta({
               context: self
-            })
+            }),
+            deltaUrl
           )
         ])
       })
@@ -282,7 +280,7 @@ describe('Subscriptions', _ => {
 
         return Promise.all([
           wsPromiser.nextMsg(),
-          sendDelta(getDelta({ context: 'vessels.othervessel' }))
+          sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
         ])
       })
       .then(results => {
@@ -311,7 +309,8 @@ describe('Subscriptions', _ => {
           sendDelta(
             getDelta({
               context: self
-            })
+            }),
+            deltaUrl
           )
         ])
       })
@@ -320,7 +319,7 @@ describe('Subscriptions', _ => {
 
         return Promise.all([
           wsPromiser.nextMsg(),
-          sendDelta(getDelta({ context: 'vessels.othervessel' }))
+          sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
         ])
       })
       .then(results => {
@@ -359,7 +358,8 @@ describe('Subscriptions', _ => {
           sendDelta(
             getDelta({
               context: self
-            })
+            }),
+            deltaUrl
           )
         ])
       })
@@ -376,7 +376,7 @@ describe('Subscriptions', _ => {
 
         return Promise.all([
           wsPromiser.nextMsg(),
-          sendDelta(getDelta({ context: 'vessels.othervessel' }))
+          sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
         ])
       })
       .then(results => {
@@ -419,7 +419,8 @@ describe('Subscriptions', _ => {
           sendDelta(
             getNameDelta({
               context: 'vessels.' + self
-            })
+            }),
+            deltaUrl
           )
         ])
       })
@@ -445,7 +446,7 @@ describe('Subscriptions', _ => {
 
         return Promise.all([
           wsPromiser.nextMsg(),
-          sendDelta(getNameDelta({ context: 'vessels.othervessel' }))
+          sendDelta(getNameDelta({ context: 'vessels.othervessel' }), deltaUrl)
         ])
       })
       .then(results => {
@@ -488,13 +489,13 @@ describe('Subscriptions', _ => {
       .then(results => {
         return Promise.all([
           wsPromiser.nextMsg(),
-          sendDelta(getClosePosistionDelta())
+          sendDelta(getClosePosistionDelta(), deltaUrl)
         ])
       })
       .then(results => {
         return Promise.all([
           wsPromiser.nextMsg(),
-          sendDelta(getClosePosistionDelta())
+          sendDelta(getClosePosistionDelta(), deltaUrl)
         ])
       })
       .then(results => {
@@ -504,12 +505,12 @@ describe('Subscriptions', _ => {
         assert(delta.updates[0].values.length === 1, 'Receives just one value')
         assert(delta.context === 'vessels.closeVessel')
 
-        return sendDelta(getFarPosistionDelta())
+        return sendDelta(getFarPosistionDelta(), deltaUrl)
       })
       .then(results => {
         return Promise.all([
           wsPromiser.nextMsg(),
-          sendDelta(getFarPosistionDelta())
+          sendDelta(getFarPosistionDelta(), deltaUrl)
         ])
       })
       .then(results => {
@@ -548,13 +549,13 @@ it('relativePosition subscription works with null positions', function () {
     .then(results => {
       return Promise.all([
         wsPromiser.nextMsg(),
-        sendDelta(getNullPositionDelta())
+        sendDelta(getNullPositionDelta(), deltaUrl)
       ])
     })
       .then(results => {
         return Promise.all([
           wsPromiser.nextMsg(),
-          sendDelta(getNullPositionDelta())
+          sendDelta(getNullPositionDelta(), deltaUrl)
         ])
       })
     .then(results => {
@@ -582,7 +583,8 @@ it('relativePosition subscription works with null positions', function () {
           sendDelta(
             getDelta({
               context: self
-            })
+            }),
+            deltaUrl
           )
         ])
       })

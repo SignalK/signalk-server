@@ -138,8 +138,6 @@
     "lint-staged": "^10.0.3",
     "mocha": "^7.0.1",
     "prettier": "^1.18.2",
-    "request": "^2.88.0",
-    "request-promise": "^4.2.5",
     "rimraf": "^3.0.2",
     "tslint": "^5.20.0",
     "tslint-config-prettier": "^1.18.0",
