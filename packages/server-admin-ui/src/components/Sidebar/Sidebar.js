@@ -204,11 +204,6 @@ const mapStateToProps = state => {
         name: 'Data Browser',
         url: '/databrowser',
         icon: 'icon-folder'
-      },
-      {
-        name: 'Playground',
-        url: '/playground',
-        icon: 'icon-control-play'
       }
     ]
   }
@@ -249,20 +244,12 @@ const mapStateToProps = state => {
             url: '/serverConfiguration/settings'
           },
           {
-            name: 'Vessel data',
-            url: '/serverConfiguration/vessel'
-          },
-          {
-            name: 'Plugin Config',
-            url: '/serverConfiguration/plugins/-'
-          },
-          {
             name: 'Connections',
             url: '/serverConfiguration/connections/-'
           },
           {
-            name: 'Data log files',
-            url: '/serverConfiguration/datalogs'
+            name: 'Plugin Config',
+            url: '/serverConfiguration/plugins/-'
           },
           {
             name: 'Server Log',
@@ -272,6 +259,10 @@ const mapStateToProps = state => {
             name: 'Update',
             url: '/serverConfiguration/update',
             badge: serverUpdateBadge
+          },
+          {
+            name: 'Data Fiddler',
+            url: '/serverConfiguration/datafiddler'
           }
         ]
       }

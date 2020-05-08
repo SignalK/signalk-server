@@ -5,9 +5,7 @@ chai.use(require('@signalk/signalk-schema').chaiModule)
 const _ = require('lodash')
 const assert = require('assert')
 const freeport = require('freeport-promise')
-const WebSocket = require('ws')
-const rp = require('request-promise')
-const startServerP = require('./servertestutilities').startServerP
+const { startServerP, sendDelta } = require('./servertestutilities')
 
 const testDelta = {
   context: 'vessels.self',
@@ -71,10 +69,6 @@ const expectedOrder = [
 describe('deltacache', () => {
   let serverP, port, deltaUrl, deltaP
 
-  function sendDelta (delta) {
-    return rp({ url: deltaUrl, method: 'POST', json: delta })
-  }
-
   before(() => {
     serverP = freeport().then(p => {
       port = p
@@ -82,7 +76,7 @@ describe('deltacache', () => {
       return startServerP(p)
     })
     deltaP = serverP.then(() => {
-      return sendDelta(testDelta)
+      return sendDelta(testDelta, deltaUrl)
     })
   })
 

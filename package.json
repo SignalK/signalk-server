@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "1.28.0",
+  "version": "1.29.0",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
@@ -68,9 +68,9 @@
   },
   "dependencies": {
     "@serialport/bindings": "^8.0.6",
-    "@signalk/server-admin-ui": "1.24.x",
+    "@signalk/server-admin-ui": "1.25.x",
     "@signalk/signalk-schema": "1.3.1",
-    "@signalk/streams": "~1.8.0",
+    "@signalk/streams": "~1.9.0",
     "@types/debug": "^4.1.5",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
@@ -107,7 +107,6 @@
     "morgan": "^1.5.0",
     "ncp": "^2.0.0",
     "node-fetch": "^2.6.0",
-    "node-gpsd": "^0.3.0",
     "pem": "^1.14.3",
     "primus": "^7.0.0",
     "semver": "^7.1.1",
@@ -143,8 +142,6 @@
     "lint-staged": "^10.0.3",
     "mocha": "^7.0.1",
     "prettier": "^1.18.2",
-    "request": "^2.88.0",
-    "request-promise": "^4.2.5",
     "rimraf": "^3.0.2",
     "tslint": "^5.20.0",
     "tslint-config-prettier": "^1.18.0",

@@ -424,6 +424,20 @@ class HostInput extends Component {
   }
 }
 
+class RemoteSelfInput extends Component {
+  render () {
+    return (
+      <TextInput
+        title="Remote 'self' to use"
+        name='options.remoteSelf'
+        helpText='like vessels.urn:mrn:signalk:uuid:f6d9f041-4e61-4335-82c0-7a51fb10ae86 OR vessels.urn:mrn:imo:mmsi:230099999'
+        value={this.props.value.remoteSelf}
+        onChange={this.props.onChange}
+      />
+    )
+  }
+}
+
 class Suppress0183Checkbox extends Component {
   constructor (props) {
     super(props)
@@ -475,8 +489,9 @@ const NMEA2000 = props => {
             <option value='ikonvert-canboatjs'>iKonvert (canboatjs)</option>
             <option value='navlink2-tcp-canboatjs'>NavLink2 (canboatjs)</option>
 
-            <option value='ydwg02-canboatjs'>Yacht Devices YDWG-02 TCP (canboatjs)</option>
-            <option value='ydwg02-udp-canboatjs'>Yacht Devices YDWG-02 UDP (canboatjs)</option>
+            <option value='ydwg02-canboatjs'>Yacht Devices RAW TCP (canboatjs)</option>
+            <option value='ydwg02-udp-canboatjs'>Yacht Devices RAW UDP (canboatjs)</option>
+            <option value='ydwg02-usb-canboatjs'>Yacht Devices RAW USB (canboatjs)</option>
             <option value='canbus-canboatjs'>Canbus (canboatjs)</option>
             <option value='canbus' disabled={!props.hasAnalyzer}>Canbus (canboat)</option>
           </Input>
@@ -484,6 +499,7 @@ const NMEA2000 = props => {
       </FormGroup>
       {(props.value.options.type === 'ngt-1' ||
         props.value.options.type === 'ngt-1-canboatjs' ||
+        props.value.options.type === 'ydwg02-usb-canboatjs' ||
         props.value.options.type === 'ikonvert-canboatjs') && (
          <div>
              <DeviceInput value={props.value.options} onChange={props.onChange} />
@@ -611,19 +627,28 @@ const SignalK = props => {
             props.value.options.type === 'wss') && (
             <FormGroup row>
               <Col xs='0' md='2'>
-                <Label />
+              <Label htmlFor='options.useDiscovery'>Discovery</Label>
               </Col>
-              <Col xs='12' md='3'>
-                <div className='checkbox'>
-                  <Label check htmlFor='enabled'>
+              <Col xs='12' md='10'>
+                <div key={name}>
+                  <Label className='switch switch-text switch-primary'>
                     <Input
                       type='checkbox'
+                      id='options.useDiscovery'
                       name='options.useDiscovery'
+                      className='switch-input'
                       onChange={props.onChange}
                       checked={props.value.options.useDiscovery}
-                    />Use Discovery
+                    />
+                    <span
+                      className='switch-label'
+                      data-on='On'
+                      data-off='Off'
+                    />
+                    <span className='switch-handle' />
                   </Label>
-                </div>
+                  Discover Signal K servers automatically
+                  </div>
               </Col>
             </FormGroup>
           )}
@@ -658,6 +683,26 @@ const SignalK = props => {
         <PortInput value={props.value.options} onChange={props.onChange} />
       )}
       {serialParams(props)}
+      <FormGroup row>
+        <Col md='2'>
+          <Label htmlFor='options.type'>'self' handling</Label>
+        </Col>
+        <Col xs='12' md='3'>
+          <Input
+            type='select'
+            value={props.value.options.selfHandling || 'noSelf'}
+            name='options.selfHandling'
+            onChange={event => props.onChange(event)}
+          >
+            <option value='useRemoteSelf'>Map remote 'self' to local 'self'</option>
+            <option value='manualSelf'>Manual mapping</option>
+            <option value='noSelf'>No 'self' mapping</option>
+          </Input>
+        </Col>
+      </FormGroup>
+      {props.value.options.selfHandling === 'manualSelf' && (
+        <RemoteSelfInput value={props.value.options} onChange={props.onChange} />
+      )}
     </div>
   )
 }

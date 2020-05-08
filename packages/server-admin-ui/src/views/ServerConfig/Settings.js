@@ -26,6 +26,9 @@ const RESTORE_VALIDATING = 1
 const RESTORE_CONFIRM = 2
 const RESTORE_RUNNING = 3
 
+import VesselConfiguration from './VesselConfiguration'
+import LogFiles from './Logging'
+
 function fetchSettings () {
   fetch(`/settings`, {
     credentials: 'include'
@@ -36,7 +39,7 @@ function fetchSettings () {
     })
 }
 
-class Settings extends Component {
+class ServerSettings extends Component {
   constructor (props) {
     super(props)
     this.state = {
@@ -206,6 +209,9 @@ class Settings extends Component {
           <div className='animated fadeIn'>
           {this.state.restoreState === RESTORE_NONE && !this.props.restoreStatus.state && (
           <Card>
+            <CardHeader>
+              <i className='fa fa-align-justify' /><strong>Server Settings</strong>
+            </CardHeader>
             <CardBody>
               <Form
                 action=''
@@ -331,6 +337,24 @@ class Settings extends Component {
                 </FormGroup>
                 <FormGroup row>
                   <Col md='2'>
+                    <Label htmlFor='pruneContextsMinutes'>
+                    Maximum age of inactive vessels' data
+                    </Label>
+                  </Col>
+                  <Col xs='12' md={fieldColWidthMd}>
+                    <Input
+                      type='text'
+                      name='pruneContextsMinutes'
+                      onChange={this.handleChange}
+                      value={this.state.pruneContextsMinutes}
+                    />
+                     <FormText color='muted'>
+                      Vessels that have not been updated after this many minutes will be removed
+                    </FormText>
+                  </Col>
+                </FormGroup>
+                <FormGroup row>
+                  <Col md='2'>
                     <Label htmlFor='loggingDirectory'>
                       Data Logging Directory
                     </Label>
@@ -348,25 +372,6 @@ class Settings extends Component {
                     </FormText>
                   </Col>
               </FormGroup>
-              <FormGroup row>
-                  <Col md='2'>
-                    <Label htmlFor='pruneContextsMinutes'>
-                    Maximum age of inactive vessels' data
-                    </Label>
-                  </Col>
-                  <Col xs='12' md={fieldColWidthMd}>
-                    <Input
-                      type='text'
-                      name='pruneContextsMinutes'
-                      onChange={this.handleChange}
-                      value={this.state.pruneContextsMinutes}
-                    />
-                     <FormText color='muted'>
-                      
-                      Vessels that have not been updated after this many minutes will be removed
-                    </FormText>
-                  </Col>
-                </FormGroup>
               </Form>
             </CardBody>
             <CardFooter>
@@ -529,4 +534,16 @@ class Settings extends Component {
   }
 }
 
-export default connect(({restoreStatus, restarting}) => ({restoreStatus, restarting}), {restart})(Settings)
+const ReduxedSettings = connect(({restoreStatus, restarting}) => ({restoreStatus, restarting}), {restart})(ServerSettings)
+
+class Settings extends Component {
+  render() {
+    return <div>
+      <VesselConfiguration/>
+      <ReduxedSettings/>
+      <LogFiles/>
+      </div>
+  }
+}
+
+export default Settings
