@@ -65,7 +65,7 @@ function Server(opts) {
   require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
   require('./put').start(app)
 
-  app.signalk = new FullSignalK(app.selfId, app.selfType, app.config.defaults)
+  app.signalk = new FullSignalK(app.selfId, app.selfType, JSON.parse(JSON.stringify(app.config.defaults)) )
 
   const deltachain = new DeltaChain(app.signalk.addDelta.bind(app.signalk))
   app.registerDeltaInputHandler = deltachain.register

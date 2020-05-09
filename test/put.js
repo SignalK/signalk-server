@@ -6,6 +6,7 @@ const Server = require('../lib')
 const fetch = require('node-fetch')
 const { registerActionHandler } = require('../lib/put')
 const WebSocket = require('ws')
+const _ = require('lodash')
 // const { WsPromiser } = require('./servertestutilities')
 
 const sleep = ms => new Promise(res => setTimeout(res, ms))
@@ -23,7 +24,8 @@ describe('Put Requests', () => {
           interfaces: {
             plugins: false
           }
-        }
+        },
+        defaults: {}
       }
     })
     server = await serverApp.start()
@@ -107,6 +109,40 @@ describe('Put Requests', () => {
     json = await result.json()
     json.should.have.property('state')
     json.state.should.equal('COMPLETED')
+  })
+
+  it('HTTP successfull meta put', async function () {
+    let result = await fetch(
+      `${url}/signalk/v1/api/vessels/self/electrical/switches/switch2.meta.units`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          value: 'number'
+        })
+      }
+    )
+
+    result.status.should.equal(202)
+
+    let json = await result.json()
+    json.should.have.property('state')
+    json.state.should.equal('PENDING')
+    json.should.have.property('href')
+
+    await sleep(200)
+
+    result = await fetch(`${url}${json.href}`)
+
+    result.status.should.equal(200)
+
+    json = await result.json()
+    json.should.have.property('state')
+    json.state.should.equal('COMPLETED')
+
+    _.get(server.app.config.defaults, 'vessels.self.electrical.switches.switch2.meta.units').should.equal('number')
   })
 
   it('HTTP failing put', async function () {
