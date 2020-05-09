@@ -21,12 +21,6 @@ import {
 
 import VesselConfiguration from './VesselConfiguration'
 import LogFiles from './Logging'
-import BackupRestore from './BackupRestore'
-
-const RESTORE_NONE = 0
-const RESTORE_VALIDATING = 1
-const RESTORE_CONFIRM = 2
-const RESTORE_RUNNING = 3
 
 function fetchSettings () {
   fetch(`/settings`, {
@@ -291,16 +285,11 @@ const ReduxedSettings = connect()(ServerSettings)
 class Settings extends Component {
   render() {
     return <div>
-      {!this.props.restoreStatus.state && (
-        <div>
-        <VesselConfiguration/>
-        <ReduxedSettings/>
-        <LogFiles/>
-        </div>
-      )}
-      <BackupRestore/>
+      <VesselConfiguration/>
+      <ReduxedSettings/>
+      <LogFiles/>
       </div>
   }
 }
 
-export default connect(({restoreStatus}) => ({restoreStatus}))(Settings)
+export default Settings

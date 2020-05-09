@@ -24,6 +24,7 @@ import AccessRequests from '../../views/security/AccessRequests'
 import VesselConfiguration from '../../views/ServerConfig/VesselConfiguration'
 import ProvidersConfiguration from '../../views/ServerConfig/ProvidersConfiguration'
 import Settings from '../../views/ServerConfig/Settings'
+import BackupRestore from '../../views/ServerConfig/BackupRestore'
 import Logging from '../../views/ServerConfig/Logging'
 import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
@@ -82,6 +83,10 @@ class Full extends Component {
                 <Route
                   path='/serverConfiguration/settings'
                   component={loginOrOriginal(Settings)}
+                />
+                <Route
+                  path='/serverConfiguration/backuprestore'
+                  component={loginOrOriginal(BackupRestore)}
                 />
                 <Route
                   path='/serverConfiguration/connections/:providerId'
