@@ -197,7 +197,8 @@ function nmea2000input (subOptions, logging) {
       new require('./canbus')({
         canDevice: subOptions.interface,
         app: subOptions.app,
-        providerId: subOptions.providerId
+        providerId: subOptions.providerId,
+        uniqueNumber: subOptions.uniqueNumber
       })
     ]
   } else if (subOptions.type === 'ikonvert-canboatjs') {
