@@ -16,7 +16,6 @@
 
 
 const Transform = require('stream').Transform
-const fillTemplate = require('es6-dynamic-template')
 
 require('util').inherits(Replacer, Transform)
 
