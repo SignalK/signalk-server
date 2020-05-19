@@ -27,14 +27,21 @@ class BackupRestore extends Component {
     super(props)
     this.state = {
       restoreFile: null,
-      restoreState: RESTORE_NONE
+      restoreState: RESTORE_NONE,
+      includePlugins: false
     }
     this.fileChanged = this.fileChanged.bind(this)
     this.handleRestoreFileChange = this.handleRestoreFileChange.bind(this)
+    this.includePluginsChange = this.includePluginsChange.bind(this)
     this.backup = this.backup.bind(this)
     this.validate = this.validate.bind(this)
     this.restore = this.restore.bind(this)
     this.restart = this.restart.bind(this)
+    this.cancelRestore = this.cancelRestore.bind(this)
+  }
+
+  cancelRestore(event) {
+    this.setState({ restoreState: RESTORE_NONE })
   }
 
   fileChanged (event) {
@@ -44,7 +51,9 @@ class BackupRestore extends Component {
   }
 
   backup() {
-    window.location = '/backup'
+    const url = `/backup?includePlugins=${this.state.includePlugins}`
+    //const url = `/backup`
+    window.location = url
   }
 
   restore() {
@@ -133,11 +142,59 @@ class BackupRestore extends Component {
     this.setState({ restoreContents: this.state.restoreContents })
   }
 
+  includePluginsChange (event) {
+    this.state.includePlugins = event.target.checked
+    this.setState({ includePlugins: this.state.includePlugins })
+  }
+
   render() {
    const fieldColWidthMd = 10
     return (
+            <div>
+            {this.state.restoreState === RESTORE_NONE && !this.props.restoreStatus.state && (
           <Card>
-            <CardHeader>Backup and Restore</CardHeader>
+            <CardHeader>Backup</CardHeader>
+            <CardBody>
+              <Form
+                action=''
+                method='post'
+                encType='multipart/form-data'
+                className='form-horizontal'
+            >
+            <FormGroup row>
+          <Col xs='3' md='2'>
+            <Label>Include Plugins</Label>
+          </Col>
+          <Col xs='2' md={fieldColWidthMd}>
+            <Label className='switch switch-text switch-primary'>
+              <Input
+                type='checkbox'
+                name='enabled'
+                className='switch-input'
+                onChange={event => this.includePluginsChange(event)}
+                checked={this.state.includePlugins}
+              />
+              <span className='switch-label' data-on='Yes' data-off='No' />
+              <span className='switch-handle' />
+            </Label>
+            <FormText color='muted'>Selecting Yes will increase the size of the backup, but will allow for offline restore.</FormText>
+          </Col>
+          </FormGroup>
+              </Form>
+            </CardBody>
+            <CardFooter>
+              <Button
+                size='sm'
+                color='primary'
+                onClick={this.backup}
+              >
+                <i className='fa fa-dot-circle-o' /> Backup
+              </Button>{' '}
+            </CardFooter>
+           </Card>
+          )}
+          <Card>
+            <CardHeader>Restore</CardHeader>
             <CardBody>
               <Form
                 action=''
@@ -242,13 +299,6 @@ class BackupRestore extends Component {
             <div>
               <Button
                 size='sm'
-                color='primary'
-                onClick={this.backup}
-              >
-                <i className='fa fa-dot-circle-o' /> Backup
-              </Button>{' '}
-              <Button
-                size='sm'
                 color='danger'
                 onClick={this.validate}
               >
@@ -276,6 +326,7 @@ class BackupRestore extends Component {
             )}
             </CardFooter>
           </Card>
+        </div>
     )
   }
 }

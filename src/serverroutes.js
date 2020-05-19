@@ -756,26 +756,35 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
         }
         const tmpDir = os.tmpdir()
         restoreFilePath = fs.mkdtempSync(`${tmpDir}${path.sep}`)
+        const zipFileDir = fs.mkdtempSync(`${tmpDir}${path.sep}`)
+        const zipFile = path.join(zipFileDir, 'backup.zip')
         const unzipStream = unzipper.Extract({ path: restoreFilePath })
-        let error
-        file.readableFlowing = true
-        file
-          .pipe(unzipStream)
+
+        file.pipe(fs.createWriteStream(zipFile))
           .on('error', err => {
-            console.log(err)
+            console.error(err)
             res.status(500).send(err.message)
           })
           .on('close', () => {
-            if (!error) {
-              listSafeRestoreFiles(restoreFilePath)
-                .then(files => {
-                  res.send(files)
-                })
-                .catch(err => {
-                  console.error(err)
-                  res.status(500).send(err.message)
-                })
-            }
+            const zipStream = fs.createReadStream(zipFile)
+        
+            zipStream
+              .pipe(unzipStream)
+              .on('error', err => {
+                console.error(err)
+                res.status(500).send(err.message)
+              })
+              .on('close', () => {
+                fs.unlinkSync(zipFile)
+                listSafeRestoreFiles(restoreFilePath)
+                  .then(files => {
+                    res.send(files)
+                  })
+                  .catch(err => {
+                    console.error(err)
+                    res.status(500).send(err.message)
+                  })
+              })
           })
       } catch (err) {
         console.log(err)
@@ -786,20 +795,26 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       console.log(err)
       res.status(500).send(err.message)
     })
+    busboy.on('finish', function() {
+      console.log('finish')
+    })
     req.pipe(busboy)
   })
 
   app.use(zip())
+
   app.get('/backup', (req, res) => {
     readdir(app.config.configPath).then(filenames => {
       const files = filenames
         .filter(file => {
-          return (
-            file !== 'node_modules' &&
+          let res = (
+            (file !== 'node_modules' || (file === 'node_modules' && req.query.includePlugins === 'true')) &&
+              //file !== 'node_modules' &&
             !file.endsWith('.log') &&
             file !== 'signalk-server' &&
             file !== '.npmrc'
           )
+          return res
         })
         .map(name => {
           const filename = path.join(app.config.configPath, name)
