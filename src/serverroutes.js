@@ -760,14 +760,15 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
         const zipFile = path.join(zipFileDir, 'backup.zip')
         const unzipStream = unzipper.Extract({ path: restoreFilePath })
 
-        file.pipe(fs.createWriteStream(zipFile))
+        file
+          .pipe(fs.createWriteStream(zipFile))
           .on('error', err => {
             console.error(err)
             res.status(500).send(err.message)
           })
           .on('close', () => {
             const zipStream = fs.createReadStream(zipFile)
-        
+
             zipStream
               .pipe(unzipStream)
               .on('error', err => {
@@ -807,14 +808,14 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     readdir(app.config.configPath).then(filenames => {
       const files = filenames
         .filter(file => {
-          let res = (
-            (file !== 'node_modules' || (file === 'node_modules' && req.query.includePlugins === 'true')) &&
-              //file !== 'node_modules' &&
+          return (
+            (file !== 'node_modules' ||
+              (file === 'node_modules' &&
+                req.query.includePlugins === 'true')) &&
             !file.endsWith('.log') &&
             file !== 'signalk-server' &&
             file !== '.npmrc'
           )
-          return res
         })
         .map(name => {
           const filename = path.join(app.config.configPath, name)
