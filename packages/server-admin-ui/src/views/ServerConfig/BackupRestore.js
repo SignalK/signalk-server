@@ -204,8 +204,8 @@ class BackupRestore extends Component {
               >
             {this.state.restoreState === RESTORE_NONE && !this.props.restoreStatus.state && (
             <div>
-            <FormText color='muted'>
-              The backup will contain the server and plugin settings only.
+             <FormText color='muted'>
+                Please select the backup file from your device to use in restoring the settings. Your existing settings will be overwritten.
             </FormText><br/>
               <FormGroup row>
                   <Col xs='12' md={fieldColWidthMd}>
@@ -214,9 +214,6 @@ class BackupRestore extends Component {
                       name='backupFile'
                       onChange={this.fileChanged}
                     />
-                    <FormText color='muted'>
-                      Your existing settings will be overwritten
-                    </FormText>
                   </Col>
               </FormGroup>
               </div>
