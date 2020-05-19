@@ -263,6 +263,10 @@ const mapStateToProps = state => {
           {
             name: 'Data Fiddler',
             url: '/serverConfiguration/datafiddler'
+          },
+          {
+            name: 'Backup/Restore',
+            url: '/serverConfiguration/backuprestore'
           }
         ]
       }

@@ -15,7 +15,8 @@ import {
   Label,
   FormGroup,
   FormText,
-  Table
+  Table,
+  Progress
 } from 'reactstrap'
 
 import VesselConfiguration from './VesselConfiguration'
@@ -35,9 +36,8 @@ class ServerSettings extends Component {
   constructor (props) {
     super(props)
     this.state = {
-      hasData: false
+      hasData: false,
     }
-
     this.fetchSettings = fetchSettings.bind(this)
     this.handleChange = this.handleChange.bind(this)
     this.handleOptionChange = this.handleOptionChange.bind(this)
@@ -48,7 +48,7 @@ class ServerSettings extends Component {
   componentDidMount () {
     this.fetchSettings()
   }
-
+ 
   handleChange (event) {
     const value =
       event.target.type === 'checkbox'
@@ -94,7 +94,7 @@ class ServerSettings extends Component {
     const fieldColWidthMd = 10
     return (
       this.state.hasData && (
-        <div className='animated fadeIn'>
+          <div className='animated fadeIn'>
           <Card>
             <CardHeader>
               <i className='fa fa-align-justify' /><strong>Server Settings</strong>

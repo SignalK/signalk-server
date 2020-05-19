@@ -143,9 +143,18 @@ function removeModule(
   runNpm(app, name, null, 'remove', onData, onErr, onClose)
 }
 
+function restoreModules(
+  app: App,
+  onData: () => any,
+  onErr: (err: Error) => any,
+  onClose: (code: number) => any
+) {
+  runNpm(app, null, null, 'remove', onData, onErr, onClose)
+}
+
 function runNpm(
   app: App,
-  name: string,
+  name: any,
   version: any,
   command: string,
   onData: () => any,
@@ -155,7 +164,13 @@ function runNpm(
   let npm
 
   const opts: { cwd?: string } = {}
-  const packageString = version ? `${name}@${version}` : name
+  let packageString
+
+  if (name) {
+    packageString = version ? `${name}@${version}` : name
+  } else {
+    packageString = ''
+  }
 
   debug(`${command}: ${packageString}`)
 
@@ -313,5 +328,6 @@ module.exports = {
   findModulesWithKeyword,
   getLatestServerVersion,
   checkForNewServerVersion,
-  getAuthor
+  getAuthor,
+  restoreModules
 }
