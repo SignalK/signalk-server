@@ -286,6 +286,36 @@ class ValidateChecksumInput extends Component {
   }
 }
 
+class RemoveNullsInput extends Component {
+  constructor (props) {
+    super(props)
+    this.props.value.removeNulls =
+      this.props.value.removeNulls
+  }
+  render () {
+    return (
+      <FormGroup row>
+        <Col xs='3' md='2'>
+          <Label>Remove NULL characters</Label>
+        </Col>
+        <Col xs='2' md='3'>
+          <Label className='switch switch-text switch-primary'>
+            <Input
+              type='checkbox'
+              name='options.removeNulls'
+              className='switch-input'
+              onChange={event => this.props.onChange(event)}
+              checked={this.props.value.removeNulls}
+            />
+            <span className='switch-label' data-on='Yes' data-off='No' />
+            <span className='switch-handle' />
+          </Label>
+        </Col>
+      </FormGroup>
+    )
+  }
+}
+
 class SentenceEventInput extends Component {
   render () {
     return (
@@ -389,6 +419,39 @@ class StdOutInput extends Component {
         title='Output Events'
         name='options.toStdout'
         helpText='Events that should be written as output to this connection. Example: nmea0183,nmea0183out'
+        value={this.state.value}
+        onChange={this.onChange}
+      />
+    )
+  }
+}
+
+class IgnoredSentences extends Component {
+  constructor(props) {
+    super();
+    let value = props.value.ignoredSentences;
+    if(Array.isArray(value)) {
+      value = value.join(',');
+    }
+    this.state = {value}
+    this.onChange = this.onChange.bind(this);
+  }
+  onChange(e) {
+    this.setState({value: e.target.value});
+    this.props.onChange({
+      target: {
+        type: e.target.type,
+        name: e.target.name,
+        value: e.target.value.split(','),
+      }
+    });
+  }
+  render () {
+    return (
+      <TextInput
+        title='Ignored Sentences'
+        name='options.ignoredSentences'
+        helpText='NMEA0183 sentences to throw away from the input data. Example: RMC,ROT'
         value={this.state.value}
         onChange={this.onChange}
       />
@@ -592,6 +655,15 @@ const NMEA0183 = props => {
         value={props.value.options}
         onChange={props.onChange}
       />
+      <RemoveNullsInput
+        value={props.value.options}
+        onChange={props.onChange}
+      />
+      <IgnoredSentences
+        value={props.value.options}
+        onChange={props.onChange}
+      />
+
     </div>
   )
 }

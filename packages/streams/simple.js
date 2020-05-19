@@ -15,6 +15,7 @@ const Udp = require('./udp')
 const Tcp = require('./tcp')
 const TcpServer = require('./tcpserver')
 const FileStream = require('./filestream')
+const Replacer = require('./replacer')
 const Throttle = require('./throttle')
 const TimestampThrottle = require('./timestamp-throttle')
 const CanboatJs = require('./canboatjs')
@@ -260,17 +261,39 @@ function nmea2000input (subOptions, logging) {
 }
 
 function nmea0183input (subOptions) {
+  let pipePart
   if (subOptions.type === 'tcp') {
-    return [new Tcp(subOptions), new Liner(subOptions)]
+    pipePart = [new Tcp(subOptions), new Liner(subOptions)]
   } else if (subOptions.type === 'tcpserver') {
-    return [new TcpServer(subOptions), new Liner(subOptions)]
+    pipePart = [new TcpServer(subOptions), new Liner(subOptions)]
   } else if (subOptions.type === 'udp') {
-    return [new Udp(subOptions), new SplittingLiner(subOptions)]
+    pipePart = [new Udp(subOptions), new SplittingLiner(subOptions)]
   } else if (subOptions.type === 'serial') {
     const serialport = require('./serialport')
-    return [new serialport(subOptions)]
+    pipePart = [new serialport(subOptions)]
   } else if (subOptions.type === 'gpsd') {
-    return [new gpsd(subOptions)]
+    pipePart = [new gpsd(subOptions)]
+  }
+
+  if (pipePart) {
+    if (subOptions.removeNulls) {
+      pipePart.push(new Replacer({
+        regexp: '\u0000',
+        template: ''
+      }))
+    }
+    if (subOptions.ignoredSentences) {
+      console.log(subOptions.ignoredSentences)
+      subOptions.ignoredSentences.forEach(sentence => {
+        if (sentence.length > 0) {
+          pipePart.push(new Replacer({
+            regexp: `^...${sentence}.*`,
+            template: ''
+          }))
+        }
+      })
+    }
+    return pipePart
   } else {
     throw new Error(`Unknown networking tyoe: ${options.networking}`)
   }
