@@ -56,7 +56,7 @@ function load(app) {
   if (_.isObject(app.config.settings)) {
     debug('Using settings from constructor call, not reading defaults')
     disableWriteSettings = true
-    if ( !config.defaults ) {
+    if (!config.defaults) {
       config.defaults = {}
     }
   } else {

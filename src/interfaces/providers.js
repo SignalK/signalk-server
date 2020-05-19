@@ -137,7 +137,10 @@ module.exports = function(app) {
       ]
     }
 
-    if ( provider.options.type === 'canbus-canboatjs' && !provider.options.uniqueNumber) {
+    if (
+      provider.options.type === 'canbus-canboatjs' &&
+      !provider.options.uniqueNumber
+    ) {
       provider.options.uniqueNumber = Math.floor(Math.random() * 2097151)
     }
 

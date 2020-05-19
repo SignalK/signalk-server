@@ -113,8 +113,10 @@ function putPath(app, context, path, body, req, requestId, updateCb) {
         let handler
         const parts = path.split('.')
 
-        if ( parts.length > 1 && parts[parts.length - 1] === 'meta' ||
-             parts.length > 1 && parts[parts.length - 2] === 'meta') {
+        if (
+          (parts.length > 1 && parts[parts.length - 1] === 'meta') ||
+          (parts.length > 1 && parts[parts.length - 2] === 'meta')
+        ) {
           handler = putMetaHandler
         } else {
           const handlers = actionHandlers[context]

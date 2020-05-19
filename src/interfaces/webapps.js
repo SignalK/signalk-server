@@ -34,9 +34,11 @@ module.exports = function(app) {
 function mountWebapps(app) {
   debug('MountWebApps')
   const logopath = path.resolve(app.config.configPath, 'logo.svg')
-  if(fs.existsSync(logopath)) {
+  if (fs.existsSync(logopath)) {
     debug(`Found custom logo at ${logopath}, adding route for it`)
-    app.use('/admin/fonts/signal-k-logo-image-text.*', (req, res) => res.sendFile(logopath))
+    app.use('/admin/fonts/signal-k-logo-image-text.*', (req, res) =>
+      res.sendFile(logopath)
+    )
   }
   modulesWithKeyword(app, 'signalk-webapp').forEach(moduleData => {
     let webappPath = path.join(moduleData.location, moduleData.module)
