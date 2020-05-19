@@ -153,15 +153,18 @@ class BackupRestore extends Component {
             <div>
             {this.state.restoreState === RESTORE_NONE && !this.props.restoreStatus.state && (
           <Card>
-            <CardHeader>Backup</CardHeader>
+            <CardHeader>Backup Settings</CardHeader>
             <CardBody>
               <Form
                 action=''
                 method='post'
                 encType='multipart/form-data'
                 className='form-horizontal'
-            >
-            <FormGroup row>
+                >
+          <FormText color='muted'>
+                This will backup your server and plugin settings.
+          </FormText><br/>
+          <FormGroup row>
           <Col xs='3' md='2'>
             <Label>Include Plugins</Label>
           </Col>
@@ -194,7 +197,7 @@ class BackupRestore extends Component {
            </Card>
           )}
           <Card>
-            <CardHeader>Restore</CardHeader>
+            <CardHeader>Restore Settings</CardHeader>
             <CardBody>
               <Form
                 action=''
@@ -206,7 +209,7 @@ class BackupRestore extends Component {
             <div>
              <FormText color='muted'>
                 Please select the backup file from your device to use in restoring the settings. Your existing settings will be overwritten.
-            </FormText><br/>
+             </FormText><br/>
               <FormGroup row>
                   <Col xs='12' md={fieldColWidthMd}>
                     <Input
