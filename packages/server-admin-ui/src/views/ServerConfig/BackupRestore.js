@@ -301,6 +301,7 @@ class BackupRestore extends Component {
                 size='sm'
                 color='danger'
                 onClick={this.validate}
+                disabled={this.state.restoreFile === null}
               >
                 <i className='fa fa-dot-circle-o' /> Restore
               </Button>{' '}
