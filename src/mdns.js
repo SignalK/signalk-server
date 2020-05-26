@@ -18,21 +18,11 @@
 
 const _ = require('lodash')
 const debug = require('debug')('signalk-server:interfaces:mdns')
-const dnssd = require('dnssd2')
+var bonjour = require('bonjour-hap')()
 const ports = require('./ports')
 
 module.exports = function mdnsResponder(app) {
   const config = app.config
-
-  let mdns = dnssd
-
-  try {
-    mdns = require('mdns')
-    debug('using  mdns')
-  } catch (ex) {
-    debug(ex)
-    debug('mdns not found, using dnssd2')
-  }
 
   if (typeof config.settings.mdns !== 'undefined' && !config.settings.mdns) {
     debug('Mdns disabled by configuration')
@@ -56,7 +46,9 @@ module.exports = function mdnsResponder(app) {
 
   const types = []
   types.push({
-    type: app.config.settings.ssl ? mdns.tcp('https') : mdns.tcp('http'),
+    type: app.config.settings.ssl ? 'https' : 'http',
+    name: config.defaults.vessels.self.name,
+    protocol: 'tcp',
     port: ports.getExternalPort(app)
   })
 
@@ -72,7 +64,9 @@ module.exports = function mdnsResponder(app) {
         service.name.charAt(0) === '_'
       ) {
         types.push({
-          type: mdns[service.type](service.name),
+          type: service.name.substring(1),
+          name: config.defaults.vessels.self.name,
+          protocol: service.type,
           port: service.port
         })
       } else {
@@ -85,7 +79,6 @@ module.exports = function mdnsResponder(app) {
   }
 
   const options = {
-    txtRecord,
     txt: txtRecord
   }
 
@@ -102,28 +95,24 @@ module.exports = function mdnsResponder(app) {
   for (const i in types) {
     const type = types[i]
     debug(
-      'Starting mDNS ad: ' +
+      'Starting mDNS ad: _' +
         type.type +
+        '.' +
+        type.protocol +
         ' ' +
         app.config.getExternalHostname() +
         ':' +
         type.port
     )
-    const ad = new mdns.Advertisement(type.type, type.port, options)
-    ad.on('error', err => {
-      console.log(type.type.name)
+    const service = bonjour.publish({...options, ...type})
+    service.on('error', err => {
       console.error(err)
     })
-    ad.start()
-    ads.push(ad)
   }
 
   return {
     stop: function() {
-      ads.forEach(function(ad) {
-        debug('Stopping mDNS advertisement...')
-        ad.stop()
-      })
+      bonjour.unpublishAll()
     }
   }
 }
