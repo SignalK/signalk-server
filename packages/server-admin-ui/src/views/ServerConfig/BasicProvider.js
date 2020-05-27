@@ -316,27 +316,27 @@ class RemoveNullsInput extends Component {
   }
 }
 
-class RecalculateChecksum extends Component {
+class AppendChecksum extends Component {
   constructor(props) {
     super(props)
-    this.props.value.recalculateChecksum =
-      this.props.value.recalculateChecksum
+    this.props.value.appendChecksum =
+      this.props.value.appendChecksum
   }
   render() {
     return (
       <FormGroup row>
         <Col xs='3' md='2'>
-          <Label>Recalculate Checksum</Label>
+          <Label>Append Checksum</Label>
         </Col>
         <Col xs='2' md='3'>
           <Label className='switch switch-text switch-primary'>
             <Input
               type='checkbox'
-              name='options.recalculateChecksum'
-              helpText='Recalculates the Checksum, adding it for incoming sentences missing the Checksum'
+              name='options.appendChecksum'
+              helpText='Append checksum if missing'
               className='switch-input'
               onChange={event => this.props.onChange(event)}
-              checked={this.props.value.recalculateChecksum}
+              checked={this.props.value.appendChecksum}
             />
             <span className='switch-label' data-on='Yes' data-off='No' />
             <span className='switch-handle' />
@@ -688,7 +688,7 @@ const NMEA0183 = props => {
         onChange={props.onChange}
       />
       {props.value.options.validateChecksum === false && (
-        <RecalculateChecksum
+        <AppendChecksum
           value={props.value.options}
           onChange={props.onChange}
         />

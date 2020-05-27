@@ -50,7 +50,7 @@ function Nmea0183ToSignalK (options) {
 
   // Prepare a list of events to send for each sentence received
   this.sentenceEvents = options.suppress0183event ? [] : ['nmea0183']
-  this.recalculateChecksum =  options.recalculateChecksum;
+  this.appendChecksum = options.appendChecksum;
 
   if (options.sentenceEvent) {
     if (Array.isArray(options.sentenceEvent)) {
@@ -78,7 +78,9 @@ Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
 
   try {
     if (sentence !== undefined) {
-     sentence = utils.checksummedSentence(sentence,this.recalculateChecksum);
+      if (this.appendChecksum) {
+        sentence = utils.appendChecksum(sentence);
+      }
       // Send 'sentences' event to the app for each sentence
       this.sentenceEvents.forEach(eventName => {
         this.app.emit(eventName, sentence)
