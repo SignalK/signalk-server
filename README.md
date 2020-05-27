@@ -232,6 +232,10 @@ Signal K chart support is provided by the [@signalk/charts-plugin](https://www.n
 
 After installing and configuring the plugin from the admin console, use a client app such as [Freeboard SK](https://www.npmjs.com/package/@signalk/freeboard-sk) or [Tuktuk Plotter](https://www.npmjs.com/package/tuktuk-chart-plotter) to retrieve a list of charts and present them.
 
+# Custom logo
+
+You can change the admin application's top left logo by placing a SVG file named `logo.svg` in the settings directory (default: $HOME/.signalk/).
+
 Changelog
 ---------
 
