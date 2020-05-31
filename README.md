@@ -241,6 +241,11 @@ Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).
 
+
+[FAQ](https://github.com/SignalK/signalk-server-node/wiki/FAQ:-Frequently-Asked-Questions)
+-------------
+
+
 Further Reading
 ---------------
 * http://signalk.org/index.html
