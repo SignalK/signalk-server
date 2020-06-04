@@ -317,11 +317,6 @@ class RemoveNullsInput extends Component {
 }
 
 class AppendChecksum extends Component {
-  constructor(props) {
-    super(props)
-    this.props.value.appendChecksum =
-      this.props.value.appendChecksum
-  }
   render() {
     return (
       <FormGroup row>
@@ -336,7 +331,8 @@ class AppendChecksum extends Component {
               helpText='Append checksum if missing'
               className='switch-input'
               onChange={event => this.props.onChange(event)}
-              checked={this.props.value.appendChecksum}
+              checked={this.props.value.appendChecksum && !this.props.value.validateChecksum}
+              disabled={!!this.props.value.validateChecksum}
             />
             <span className='switch-label' data-on='Yes' data-off='No' />
             <span className='switch-handle' />
@@ -687,12 +683,10 @@ const NMEA0183 = props => {
         value={props.value.options}
         onChange={props.onChange}
       />
-      {props.value.options.validateChecksum === false && (
         <AppendChecksum
           value={props.value.options}
           onChange={props.onChange}
         />
-      )}
       <RemoveNullsInput
         value={props.value.options}
         onChange={props.onChange}
