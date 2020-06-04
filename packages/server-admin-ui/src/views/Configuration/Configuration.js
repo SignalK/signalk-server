@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import ReactDOM from 'react-dom'
 import { connect } from 'react-redux'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
-import {Button, Card, CardBody, CardHeader, Collapse} from 'reactstrap'
+import {Container, Card, CardBody, CardHeader, Collapse} from 'reactstrap'
 
 class Dashboard extends Component {
   constructor(props) {
@@ -41,7 +41,7 @@ class Dashboard extends Component {
 
   render () {
     return (
-      <div>
+      <Container>
         {this.state.plugins.map((plugin, i) => {
           const isOpen = this.props.match.params.pluginid === plugin.id
           return (
@@ -52,7 +52,7 @@ class Dashboard extends Component {
               toggleForm={this.toggleForm.bind(this, i, plugin.id)}
               saveData={saveData.bind(null, plugin.id)}/>
         )})}
-      </div>
+      </Container>
     )
   }
 }
