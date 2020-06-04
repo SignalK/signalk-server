@@ -304,7 +304,6 @@ module.exports = function(app) {
       .catch(err => {
         spark.write({
           requestId: msg.requestId,
-          state: 'COMPLETED',
           statusCode: 404
         })
       })
