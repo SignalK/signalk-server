@@ -30,6 +30,7 @@
 
 const net = require('net')
 const Transform = require('stream').Transform
+const isArray = require('lodash').isArray
 
 const debug = require('debug')('signalk-provider-tcp')
 const debugData = require('debug')('signalk-provider-tcp.data')
@@ -51,7 +52,20 @@ TcpStream.prototype.pipe = function (pipeTo) {
       }
     })
   }
-  
+
+  const stdOutEvent = this.options.toStdout
+  if (stdOutEvent) {
+    const that = this
+    (isArray(stdOutEvent) ? stdOutEvent : [stdOutEvent]).forEach(stdEvent => {
+      that.options.app.on(stdEvent, function (d) {
+        if (that.tcpStream) {
+          that.tcpStream.write(d + '\r\n')
+          debug('event %s sending %s', stdEvent, d)
+        }
+      })
+    })
+  }
+
   const re = require('reconnect-core')(function () {
     return net.connect.apply(null, arguments)
   })({ maxDelay: 5 * 1000 }, tcpStream => {
