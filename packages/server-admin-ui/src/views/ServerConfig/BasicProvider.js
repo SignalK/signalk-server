@@ -634,6 +634,7 @@ const NMEA0183 = props => {
         <div>
           <HostInput value={props.value.options} onChange={props.onChange} />
           <PortInput value={props.value.options} onChange={props.onChange} />
+          <StdOutInput value={props.value.options} onChange={props.onChange} />
         </div>
       )}
       {props.value.options.type === 'tcpserver' && (
