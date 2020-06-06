@@ -5,7 +5,6 @@
     "type": "22",
     "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d"
   },
-
   "pipedProviders": [
     {
       "id": "nmeaFromFile",
@@ -13,7 +12,8 @@
         {
           "type": "providers/filestream",
           "options": {
-            "filename": "samples/plaka.log"
+            "filename": "samples/plaka.log",
+            "providerId": "nmeaFromFile"
           },
           "optionMappings": [
             {
@@ -25,7 +25,8 @@
         {
           "type": "providers/throttle",
           "options": {
-            "rate": 1000
+            "rate": 1000,
+            "providerId": "nmeaFromFile"
           }
         },
         {
@@ -34,10 +35,35 @@
         {
           "type": "providers/nmea0183-signalk",
           "options": {
-            "sentenceEvent": "nmea0183-B"
+            "sentenceEvent": "nmea0183-B",
+            "providerId": "nmeaFromFile",
+            "validateChecksum": true
           }
         }
       ]
+    },
+    {
+      "pipeElements": [
+        {
+          "type": "providers/simple",
+          "options": {
+            "logging": false,
+            "type": "NMEA0183",
+            "subOptions": {
+              "validateChecksum": true,
+              "type": "tcp",
+              "host": "localhost",
+              "port": "9999",
+              "toStdout": [
+                "nmea0183"
+              ]
+            }
+          }
+        }
+      ],
+      "id": "a",
+      "enabled": true
     }
-  ]
+  ],
+  "interfaces": {}
 }

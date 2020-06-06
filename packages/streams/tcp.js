@@ -55,7 +55,7 @@ TcpStream.prototype.pipe = function (pipeTo) {
 
   const stdOutEvent = this.options.toStdout
   if (stdOutEvent) {
-    const that = this
+    const that = this; //semicolon required here
     (isArray(stdOutEvent) ? stdOutEvent : [stdOutEvent]).forEach(stdEvent => {
       that.options.app.on(stdEvent, function (d) {
         if (that.tcpStream) {
