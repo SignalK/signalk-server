@@ -44,27 +44,30 @@ module.exports = function(app) {
 
         path = path.length > 0 ? path.replace(/\/$/, '').split('/') : []
 
-        if (path.length > 4 && path[path.length - 1] === 'meta') {
+        if (path.length > 4 && path.join(".").endsWith("meta")) {
           let meta = getMetadata(path.slice(0, path.length - 1).join('.'))
           let fromDefaults = _.get(app.deltaCache.defaults, path.join('.'))
-          if (meta || fromDefaults) {
-            res.json({ ...meta, ...fromDefaults })
-            return
+
+          const metaData = {...meta, ...fromDefaults};
+          console.log(metaData)
+          if (!metaData.zones) {
+            metaData.zones = [];
           }
+
+          res.json(metaData);
+          return
         }
-        if (
-          path.length > 5 &&
-          path[path.length - 1] === 'units' &&
-          path[path.length - 2] === 'meta'
-        ) {
+        if (path.length > 5 && path.join(".").endsWith("meta.units")) {
           let units = _.get(app.deltaCache.defaults, path.join('.'))
-          if (!units) {
-            units = getUnits(path.slice(0, path.length - 2).join('.'))
-          }
-          if (units) {
-            res.json(units)
-            return
-          }
+            || getUnits(path.slice(0, path.length - 2).join('.'))
+
+          res.json(units)
+          return
+        }
+        if (path.length > 5 && path.join(".").endsWith("meta.zones")) {
+          let zones = _.get(app.deltaCache.defaults, path.join('.')) || [];
+          res.json(zones)
+          return
         }
 
         path = path.map(p => (p === 'self' ? app.selfId : p))
