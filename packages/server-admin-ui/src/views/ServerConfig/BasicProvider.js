@@ -274,7 +274,13 @@ class ValidateChecksumInput extends Component {
               type='checkbox'
               name='options.validateChecksum'
               className='switch-input'
-              onChange={event => this.props.onChange(event)}
+              onChange={event => {
+                this.props.onChange(event)
+                if (this.props.value.validateChecksum) {
+                  this.props.value.appendChecksum = false;
+                }
+              }
+              }
               checked={this.props.value.validateChecksum}
             />
             <span className='switch-label' data-on='Yes' data-off='No' />
@@ -323,12 +329,11 @@ class AppendChecksum extends Component {
         <Col xs='3' md='2'>
           <Label>Append Checksum</Label>
         </Col>
-        <Col xs='2' md='3'>
+        <Col xs='2' md='1'>
           <Label className='switch switch-text switch-primary'>
             <Input
               type='checkbox'
               name='options.appendChecksum'
-              helpText='Append checksum if missing'
               className='switch-input'
               onChange={event => this.props.onChange(event)}
               checked={this.props.value.appendChecksum && !this.props.value.validateChecksum}
@@ -337,6 +342,11 @@ class AppendChecksum extends Component {
             <span className='switch-label' data-on='Yes' data-off='No' />
             <span className='switch-handle' />
           </Label>
+        </Col>
+        <Col xs='12' md='6'>
+          {this.props.value.validateChecksum && (
+           <label className='text-muted small'>Turn Validate Checksum OFF to enable appending the checksum</label>
+          )}
         </Col>
       </FormGroup>
     )
