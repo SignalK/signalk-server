@@ -127,9 +127,10 @@ function installModule(
   version: string,
   onData: () => any,
   onErr: (err: Error) => any,
-  onClose: (code: number) => any
+  onClose: (code: number) => any,
+  extraArgs: string[]
 ) {
-  runNpm(app, name, version, 'install', onData, onErr, onClose)
+  runNpm(app, name, version, 'install', onData, onErr, onClose, extraArgs)
 }
 
 function removeModule(
@@ -159,7 +160,8 @@ function runNpm(
   command: string,
   onData: () => any,
   onErr: (err: Error) => any,
-  onClose: (code: number) => any
+  onClose: (code: number) => any,
+  extraArgs: string[] = []
 ) {
   let npm
 
@@ -178,13 +180,14 @@ function runNpm(
     if (process.platform === 'win32') {
       npm = spawn(
         'cmd',
-        ['/c', `npm ${command} -g --unsafe-perm ${packageString} `],
+        ['/c', `npm ${command} -g --unsafe-perm ${packageString} ${extraArgs.join(' ')}`],
         opts
       )
     } else {
+      const cmd: string[] = ['npm', command, '-g', '--unsafe-perm', packageString].concat(extraArgs)
       npm = spawn(
         'sudo',
-        ['npm', command, '-g', '--unsafe-perm', packageString],
+        cmd,
         opts
       )
     }
@@ -192,9 +195,10 @@ function runNpm(
     opts.cwd = app.config.configPath
 
     if (process.platform === 'win32') {
-      npm = spawn('cmd', ['/c', `npm --save ${command} ${packageString}`], opts)
+      npm = spawn('cmd', ['/c', `npm --save ${command} ${packageString} ${extraArgs.join(' ')}`], opts)
     } else {
-      npm = spawn('npm', ['--save', command, packageString], opts)
+      const cmd: string[] = ['--save', command, packageString].concat(extraArgs)
+      npm = spawn('npm', cmd, opts)
     }
   }
 

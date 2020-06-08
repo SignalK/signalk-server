@@ -317,6 +317,7 @@ module.exports = function(app) {
     sendAppStoreChangedEvent()
 
     const fn = isRemove ? removeModule : installModule
+    const extraArgs = isRemove ? [] : ['--production']
 
     fn(
       app,
@@ -346,7 +347,8 @@ module.exports = function(app) {
         }
 
         sendAppStoreChangedEvent()
-      }
+      },
+      extraArgs
     )
   }
 }
