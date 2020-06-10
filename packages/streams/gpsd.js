@@ -32,7 +32,7 @@
 
 const Transform = require('stream').Transform
 const gpsd = require('node-gpsd')
-const debug = require('debug')('signalk:provider:gpsd')
+const debug = require('debug')('signalk:streams:gpsd')
 
 function Gpsd (options) {
   Transform.call(this, {

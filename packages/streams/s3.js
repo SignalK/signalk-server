@@ -16,7 +16,7 @@
 
 var Transform = require('stream').Transform
 const AWS = require('aws-sdk')
-const debug = require('debug')('signalk-server:s3-provider')
+const debug = require('debug')('signalk:streams:s3-provider')
 
 function S3Provider ({ bucket, prefix }) {
   Transform.call(this, {

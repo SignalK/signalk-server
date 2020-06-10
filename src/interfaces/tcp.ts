@@ -17,7 +17,7 @@ import Debug from 'debug'
 import { values } from 'lodash'
 import { createServer, Server, Socket } from 'net'
 import split from 'split'
-const debug = Debug('signalk-server:interfaces:tcpstream')
+const debug = Debug('signalk-server:interfaces:tcp:signalk')
 import { Interface, SignalKServer, Unsubscribes } from '../types'
 
 interface SocketWithId extends Socket {

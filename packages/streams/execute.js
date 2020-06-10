@@ -37,7 +37,7 @@
  */
 
 const Transform = require('stream').Transform
-const debug = require('debug')('signalk:executor')
+const debug = require('debug')('signalk:streams:execute')
 
 function Execute (options) {
   Transform.call(this, {})

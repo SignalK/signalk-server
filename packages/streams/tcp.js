@@ -32,8 +32,8 @@ const net = require('net')
 const Transform = require('stream').Transform
 const isArray = require('lodash').isArray
 
-const debug = require('debug')('signalk-provider-tcp')
-const debugData = require('debug')('signalk-provider-tcp.data')
+const debug = require('debug')('signalk-server:streams:tcp')
+const debugData = require('debug')('signalk-server:streams:tcp-data')
 
 function TcpStream (options) {
   Transform.call(this, options)

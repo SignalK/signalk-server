@@ -16,7 +16,7 @@
 
 const Transform = require('stream').Transform
 const FromPgn = require('@canboat/canboatjs').FromPgn
-const debug = require('debug')('signalk:canbusjs')
+const debug = require('debug')('signalk:streams:canboatjs')
 const _ = require('lodash')
 
 function CanboatJs (options) {

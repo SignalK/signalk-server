@@ -15,7 +15,7 @@
  */
 
 const Transform = require('stream').Transform
-const debug = require('debug')('signalk:n2kAnalyzer')
+const debug = require('debug')('signalk:streams:n2k-analyzer')
 
 function N2KAnalyzer (options) {
   Transform.call(this, {
