@@ -20,7 +20,7 @@ const express = require('express')
 const debug = require('debug')('signalk-server:config')
 const _ = require('lodash')
 const fs = require('fs')
-const uuidv4 = require('uuid/v4')
+const { v4: uuidv4 } = require('uuid')
 const semver = require('semver')
 
 let disableWriteSettings = false

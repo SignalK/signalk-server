@@ -9,7 +9,7 @@ const fs = require('fs')
 const path = require('path')
 const _ = require('lodash')
 const Listr = require('listr');
-const uuidv4 = require('uuid/v4')
+const { v4: uuidv4 } = require('uuid')
 
 const settingsFile = 'settings.json'
 const defaultsFile = 'defaults.json'

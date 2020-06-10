@@ -114,7 +114,7 @@
     "split": "^1.0.0",
     "stat-mode": "^1.0.0",
     "unzipper": "^0.10.10",
-    "uuid": "^7.0.0",
+    "uuid": "^8.1.0",
     "ws": "^7.0.0"
   },
   "optionalDependencies": {
