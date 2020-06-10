@@ -31,6 +31,7 @@
 
 const Transform = require('stream').Transform
 const Parser = require('@signalk/nmea0183-signalk')
+const utils = require('@signalk/nmea0183-utilities')
 const debug = require('debug')('signalk-server-node/providers/nmea0183-signalk')
 const n2kToDelta = require('@signalk/n2k-signalk').toDelta
 const FromPgn = require('@canboat/canboatjs').FromPgn
@@ -49,6 +50,7 @@ function Nmea0183ToSignalK (options) {
 
   // Prepare a list of events to send for each sentence received
   this.sentenceEvents = options.suppress0183event ? [] : ['nmea0183']
+  this.appendChecksum = options.appendChecksum;
 
   if (options.sentenceEvent) {
     if (Array.isArray(options.sentenceEvent)) {
@@ -76,6 +78,9 @@ Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
 
   try {
     if (sentence !== undefined) {
+      if (this.appendChecksum) {
+        sentence = utils.appendChecksum(sentence);
+      }
       // Send 'sentences' event to the app for each sentence
       this.sentenceEvents.forEach(eventName => {
         this.app.emit(eventName, sentence)
