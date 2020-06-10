@@ -19,7 +19,11 @@ const ports = require('../ports')
 const cookie = require('cookie')
 const { getSourceId } = require('@signalk/signalk-schema')
 const { requestAccess, InvalidTokenError } = require('../security')
-const { findRequest, updateRequest } = require('../requestResponse')
+const {
+  findRequest,
+  updateRequest,
+  queryRequest
+} = require('../requestResponse')
 const { putPath } = require('../put')
 const debug = require('debug')('signalk-server:interfaces:ws')
 const Primus = require('primus')
@@ -220,6 +224,10 @@ module.exports = function(app) {
               if (msg.put) {
                 processPutRequest(spark, msg)
               }
+
+              if (msg.requestId && msg.query) {
+                processReuestQuery(spark, msg)
+              }
             } catch (e) {
               console.error(e)
             }
@@ -286,6 +294,19 @@ module.exports = function(app) {
         timeout: 500
       })
     )
+  }
+
+  function processReuestQuery(spark, msg) {
+    queryRequest(msg.requestId)
+      .then(reply => {
+        spark.write(reply)
+      })
+      .catch(err => {
+        spark.write({
+          requestId: msg.requestId,
+          statusCode: 404
+        })
+      })
   }
 
   function processPutRequest(spark, msg) {
