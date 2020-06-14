@@ -34,6 +34,13 @@ import jsonlint from 'jsonlint-mod'
 const timestampFormat = 'MM/DD HH:mm:ss'
 const inputStorageKey = 'admin.v1.playground.input'
 
+const DELTAS_TAB_ID = 'deltas'
+const PATHS_TAB_ID = 'paths'
+const N2KJSON_TAB_ID = 'n2kjson'
+const PUTRESULTS_TAB_ID = 'putresults'
+const LINT_ERROR_TAB_ID = 'lintErrors'
+
+
 class Playground extends Component {
   constructor (props) {
     super(props)
@@ -46,7 +53,7 @@ class Playground extends Component {
       input,
       inputIsJson: isJson(input),
       sending: false,
-      activeTab: '1'
+      activeTab: DELTAS_TAB_ID
     }
 
     this.handleExecute = this.handleExecute.bind(this)
@@ -88,7 +95,7 @@ class Playground extends Component {
       const text = JSON.stringify(JSON.parse(this.state.input), null, 2)
       this.setState({...this.state, input: text, jsonError: null})
     } catch (error) {
-      this.setState({ ...this.state, data: [], deltas:[], putResults: [], n2kJson: [], jsonError: null, error: 'invalid json', jsonError: error.message, activeTab: '5'})
+      this.setState({ ...this.state, data: [], deltas:[], putResults: [], n2kJson: [], jsonError: null, error: 'invalid json', jsonError: error.message, activeTab: LINT_ERROR_TAB_ID})
     }
   }
 
@@ -97,8 +104,11 @@ class Playground extends Component {
     if ( start === '{' || start === '[' ) {
       try {
         jsonlint.parse(this.state.input)
+        if(this.state.activeTab === LINT_ERROR_TAB_ID) {
+          this.setState({ ...this.state, activeTab: DELTAS_TAB_ID})
+        }
       } catch (error) {
-        this.setState({ ...this.state, data: [], deltas:[], putResults: [], n2kJson: [], error: 'invalid json', jsonError: error.message, activeTab: '5'})
+        this.setState({ ...this.state, data: [], deltas:[], putResults: [], n2kJson: [], error: 'invalid json', jsonError: error.message, activeTab: LINT_ERROR_TAB_ID})
       return
       }
     }
@@ -236,8 +246,8 @@ class Playground extends Component {
           <Nav tabs>
            <NavItem>
           <NavLink
-            className={classnames({ active: this.state.activeTab === '1' })}
-            onClick={() => { toggle('1'); }}
+            className={classnames({ active: this.state.activeTab === DELTAS_TAB_ID })}
+            onClick={() => { toggle(DELTAS_TAB_ID); }}
           >
           Deltas
            </NavLink>
@@ -245,8 +255,8 @@ class Playground extends Component {
           { this.state.data.length > 0 && (
           <NavItem>
           <NavLink
-            className={classnames({ active: this.state.activeTab === '2' })}
-            onClick={() => { toggle('2'); }}
+            className={classnames({ active: this.state.activeTab === PATHS_TAB_ID })}
+            onClick={() => { toggle(PATHS_TAB_ID); }}
           >
               Paths
             </NavLink>
@@ -255,8 +265,8 @@ class Playground extends Component {
         { this.state.n2kJson && this.state.n2kJson.length > 0 && (
           <NavItem>
           <NavLink
-            className={classnames({ active: this.state.activeTab === '3' })}
-            onClick={() => { toggle('3'); }}
+            className={classnames({ active: this.state.activeTab === N2KJSON_TAB_ID })}
+            onClick={() => { toggle(N2KJSON_TAB_ID); }}
           >
             Decoded NMEA 2000
           </NavLink>
@@ -265,8 +275,8 @@ class Playground extends Component {
         { this.state.putResults && this.state.putResults.length > 0 && (
           <NavItem>
           <NavLink
-            className={classnames({ active: this.state.activeTab === '4' })}
-            onClick={() => { toggle('4'); }}
+            className={classnames({ active: this.state.activeTab === PUTRESULTS_TAB_ID })}
+            onClick={() => { toggle(PUTRESULTS_TAB_ID); }}
           >
             Put Results
           </NavLink>
@@ -275,8 +285,8 @@ class Playground extends Component {
         { this.state.jsonError && (
           <NavItem>
           <NavLink
-            className={classnames({ active: this.state.activeTab === '5' })}
-            onClick={() => { toggle('5'); }}
+            className={classnames({ active: this.state.activeTab === LINT_ERROR_TAB_ID })}
+            onClick={() => { toggle(LINT_ERROR_TAB_ID); }}
           >
             Json Lint Error
           </NavLink>
@@ -284,7 +294,7 @@ class Playground extends Component {
         )}
         </Nav>
         <TabContent activeTab={this.state.activeTab}>
-        <TabPane tabId="1">
+        <TabPane tabId={DELTAS_TAB_ID}>
         { this.state.deltas.length > 0 && (
             <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
           <pre>{JSON.stringify(this.state.deltas, null, 2)}</pre>
@@ -293,7 +303,7 @@ class Playground extends Component {
         </TabPane>
 
         { this.state.data.length > 0 && (
-          <TabPane tabId="2">
+          <TabPane tabId={PATHS_TAB_ID}>
           <div style={{'overflowY': 'scroll', 'maxHeight': '60vh'}} >
             <Table responsive bordered striped size='sm'>
               <thead>
@@ -328,7 +338,7 @@ class Playground extends Component {
         { this.state.n2kJson && this.state.n2kJson.length > 0 && n2kJsonPanel(this.state.n2kJson)}
 
         { this.state.putResults && this.state.putResults.length > 0 && (
-          <TabPane tabId="4">
+          <TabPane tabId={PUTRESULTS_TAB_ID}>
             <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
             <pre>{JSON.stringify(this.state.putResults, null, 2)}</pre>
             </div>
@@ -336,7 +346,7 @@ class Playground extends Component {
         )}
 
         { this.state.jsonError && (
-          <TabPane tabId="5">
+          <TabPane tabId={LINT_ERROR_TAB_ID}>
           <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
             <pre>{this.state.jsonError}</pre>
             </div>
@@ -356,7 +366,7 @@ class Playground extends Component {
 
 function n2kJsonPanel(n2kData) {
   return (
-    <TabPane tabId="3">
+    <TabPane tabId={N2KJSON_TAB_ID}>
       <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px'}} >
       <pre>{JSON.stringify(n2kData, null, 2)}</pre>
       </div>
