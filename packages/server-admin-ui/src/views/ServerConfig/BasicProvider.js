@@ -25,6 +25,7 @@ class BasicProvider extends Component {
       NMEA2000: NMEA2000,
       NMEA0183: NMEA0183,
       SignalK: SignalK,
+      Seatalk: Seatalk,
       FileStream: FileStream
     }
     let TypeComponent = lookup[this.props.value.type] || (() => null)
@@ -46,6 +47,7 @@ class BasicProvider extends Component {
                 <option value='NMEA2000'>NMEA 2000</option>
                 <option value='NMEA0183'>NMEA 0183</option>
                 <option value='SignalK'>Signal K</option>
+                <option value='Seatalk'>Seatalk</option>
                 <option value='FileStream'>File Stream</option>
               </Input>
             ) : (
@@ -820,6 +822,8 @@ const SignalK = props => {
     </div>
   )
 }
+
+const Seatalk = props => null
 
 const FileStream = props => {
   return (
