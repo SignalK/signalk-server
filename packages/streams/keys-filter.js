@@ -1,7 +1,7 @@
 'use strict'
 
 const Transform = require('stream').Transform
-const debug = require('debug')('signalk-server-node/providers/keys-filter')
+const debug = require('debug')('signalk:streams:keys-filter')
 
 function ToSignalK (options) {
   Transform.call(this, {

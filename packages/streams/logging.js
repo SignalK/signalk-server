@@ -16,7 +16,7 @@
 
 const { FileTimestampStream } = require('file-timestamp-stream')
 const path = require('path')
-const debug = require('debug')('signalk:logging')
+const debug = require('debug')('signalk:streams:logging')
 const fs = require('fs')
 
 const filenamePattern = /skserver\-raw\_\d\d\d\d\-\d\d\-\d\dT\d\d\.log/

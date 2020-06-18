@@ -34,7 +34,7 @@
  */
 
 const Transform = require('stream').Transform
-const debug = require('debug')('signalk-server:udp-provider')
+const debug = require('debug')('signalk:streams:udp')
 
 function Udp (options) {
   Transform.call(this, {

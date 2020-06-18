@@ -18,7 +18,7 @@ const fs = require('fs')
 const path = require('path')
 const Mode = require('stat-mode')
 const pem = require('pem')
-const debug = require('debug')('signalk-server')
+const debug = require('debug')('signalk-server:security')
 const _ = require('lodash')
 const dummysecurity = require('./dummysecurity')
 

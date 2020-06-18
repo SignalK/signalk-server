@@ -62,7 +62,7 @@ const child_process = require('child_process')
 const shellescape = require('any-shell-escape')
 const SerialPort = require('serialport')
 const isArray = require('lodash').isArray
-const debug = require('debug')('signalk:serialport')
+const debug = require('debug')('signalk:streams:serialport')
 
 function SerialStream (options) {
   if (!(this instanceof SerialStream)) {

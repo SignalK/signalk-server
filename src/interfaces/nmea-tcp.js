@@ -24,7 +24,7 @@ module.exports = function(app) {
   const port = process.env.NMEA0183PORT || 10110
   const api = {}
 
-  const debug = require('debug')('signalk-server:interfaces:tcp')
+  const debug = require('debug')('signalk-server:interfaces:tcp:nmea0183')
   api.start = function() {
     debug('Starting tcp interface')
 

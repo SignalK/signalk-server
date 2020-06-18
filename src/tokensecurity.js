@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const debug = require('debug')('sk-simple-token-security')
+const debug = require('debug')('signalk-server:tokensecurity')
 const util = require('util')
 const jwt = require('jsonwebtoken')
 const _ = require('lodash')

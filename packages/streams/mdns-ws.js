@@ -18,8 +18,8 @@ const Transform = require('stream').Transform
 
 const SignalK = require('@signalk/client')
 
-const debug = require('debug')('signalk-server:providers:mdns-ws')
-const dataDebug = require('debug')('signalk-server:providers:mdns-ws:data')
+const debug = require('debug')('signalk:streams:mdns-ws')
+const dataDebug = require('debug')('signalk:streams:mdns-ws-data')
 
 const WebSocket = require('ws')
 

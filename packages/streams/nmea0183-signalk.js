@@ -32,7 +32,7 @@
 const Transform = require('stream').Transform
 const Parser = require('@signalk/nmea0183-signalk')
 const utils = require('@signalk/nmea0183-utilities')
-const debug = require('debug')('signalk-server-node/providers/nmea0183-signalk')
+const debug = require('debug')('signalk:streams:nmea0183-signalk')
 const n2kToDelta = require('@signalk/n2k-signalk').toDelta
 const FromPgn = require('@canboat/canboatjs').FromPgn
 
