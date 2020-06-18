@@ -22,7 +22,7 @@ const fs = require('fs')
 const path = require('path')
 const bcrypt = require('bcryptjs')
 const getSourceId = require('@signalk/signalk-schema').getSourceId
-const uuidv4 = require('uuid/v4')
+const { v4: uuidv4 } = require('uuid')
 const { InvalidTokenError } = require('./security')
 const {
   createRequest,

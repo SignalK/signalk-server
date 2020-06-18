@@ -1,6 +1,6 @@
 const _ = require('lodash')
 const debug = require('debug')('signalk-server:put')
-const uuidv4 = require('uuid/v4')
+const { v4: uuidv4 } = require('uuid')
 const { createRequest, updateRequest } = require('./requestResponse')
 const skConfig = require('./config/config')
 
