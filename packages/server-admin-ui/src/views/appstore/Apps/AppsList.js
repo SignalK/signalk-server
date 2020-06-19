@@ -75,9 +75,16 @@ function mainIcon (app) {
   )
 }
 
+function updateInstalling(that, name, value)
+{
+  that.setState((state, props) => {
+    state.installing[name] = value
+    return { installing: state.installing }                   
+  })
+}
+
 function installApp (name, version) {
-  this.state.installing[name] = true
-  this.setState(this.state)
+  updateInstalling(this, name, true)
   fetch(`/appstore/install/${name}/${version}`, {
     method: 'POST',
     credentials: 'include'
@@ -86,9 +93,8 @@ function installApp (name, version) {
 
 
 function removeApp (name) {
-  this.state.installing[name] = true
-  this.setState(this.state)
   if (confirm(`Are you sure you want to remove ${name}?`)) {
+    updateInstalling(this, name, true)
     fetch(`/appstore/remove/${name}`, {
       method: 'POST',
       credentials: 'include'
