@@ -257,6 +257,7 @@ module.exports = function(app) {
           }
         } else if (modulesInstalledSinceStartup[name].code !== 0) {
           pluginInfo.installFailed = true
+          addIfNotDuplicate(result.available, pluginInfo)
         }
         pluginInfo.isRemove = modulesInstalledSinceStartup[name].isRemove
         addIfNotDuplicate(result.installing, pluginInfo)
