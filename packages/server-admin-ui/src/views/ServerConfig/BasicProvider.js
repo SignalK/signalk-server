@@ -823,7 +823,49 @@ const SignalK = props => {
   )
 }
 
-const Seatalk = props => null
+const gpios = [4, 5, 6, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27].map(gpio => `0${gpio}`.slice(-2))
+const Seatalk = props =>
+<span>
+<FormGroup row>
+    <Col md='2'>
+      <Label htmlFor="gpio">GPIO Pin</Label>
+    </Col>
+    <Col xs='12' md='3'>
+      <Input
+        type="select"
+        name="options.gpio"
+        id="gpio"
+        onChange={props.onChange}
+        value={props.value.options.gpio || gpios[0]}
+      >
+      {gpios.map(gpio => <option key={gpio}>{`GPIO${gpio}`}</option>)}
+      </Input>
+    </Col>
+  </FormGroup>
+  <FormGroup row>
+    <Col md='2'>
+      <Label htmlFor="gpioInvert">Invert signal</Label>
+    </Col>
+    <Col xs='12' md='10'>
+        <Label className='switch switch-text switch-primary'>
+          <Input
+            type='checkbox'
+            id='gpioInvert'
+            name='options.gpioInvert'
+            className='switch-input'
+            onChange={props.onChange}
+            checked={props.value.options.gpioInvert}
+          />
+          <span
+            className='switch-label'
+            data-on='Yes'
+            data-off='No'
+          />
+          <span className='switch-handle' />
+        </Label>
+    </Col>
+  </FormGroup>
+</span>
 
 const FileStream = props => {
   return (
