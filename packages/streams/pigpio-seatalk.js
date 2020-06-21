@@ -21,10 +21,42 @@
 const Execute = require('./execute')
 const debug = require('debug')('signalk:streams:pigpio-seatalk')
 
-const cmd = `import time
-while True:
-  print("$STALK,00,02,41,22,22*6A")
-  time.sleep(2.0)
+const cmd = `
+import pigpio, time, signal, sys
+gpio= 19 #define gpio where the seatalk1 (yellow wire) is connected
+
+if __name__ == "__main__":
+        st1read =pigpio.pi()
+        
+        try:
+                st1read.bb_serial_read_close(gpio) #close if already run
+        except:
+                pass
+        
+        st1read.bb_serial_read_open(gpio, 4800,9)
+        data=""
+        
+        try:
+                while True:
+                        out=(st1read.bb_serial_read(gpio))
+                        out0=out[0]
+                        if out0>0:
+                                out_data=out[1]
+                                x=0
+                                while x < out0:
+                                        if out_data[x+1] ==0:
+                                                string1=str(hex(out_data[x]))
+                                                data= data+string1[2:]+ ","
+                                        else:
+                                                data=data[0:-1]
+                                                data="$STALK,"+data
+                                                print (data)
+                                                string2=str(hex(out_data[x]))
+                                                data=string2[2:]+ ","
+                                                x+=2
+        except:
+                st1read.bb_serial_read_close(gpio)
+                print ("exit")
 `
 
 function PigpioSeatalk (options) {
