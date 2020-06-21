@@ -115,7 +115,7 @@ const dataTypeMapping = {
     options.subOptions.type !== 'wss' && options.subOptions.type !== 'ws'
       ? [new FromJson(options.subOptions)]
       : [],
-  Seatalk:  options => [new nmea0183_signalk(options.subOptions)],
+  Seatalk:  options => [new nmea0183_signalk({...options.subOptions, validateChecksum: false})],
   NMEA0183: options => {
     const result = [new nmea0183_signalk(options.subOptions)]
     if (options.type === 'FileStream') {
