@@ -53,7 +53,7 @@ if __name__ == "__main__":
                                                 print (data)
                                                 string2=str(hex(out_data[x]))
                                                 data=string2[2:]+ ","
-                                                x+=2
+                                        x+=2
         except:
                 st1read.bb_serial_read_close(gpio)
                 print ("exit")
