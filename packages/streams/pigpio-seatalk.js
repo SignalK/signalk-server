@@ -62,7 +62,7 @@ if __name__ == "__main__":
 function PigpioSeatalk (options) {
   Execute.call(this, {debug})
   this.options = options
-  this.options.command = `python -u -c '${cmd}' --gpio=${options.gpio} --invert=${options.gpioInvert} `
+  this.options.command = `python -u -c '${cmd}' ${options.gpio} ${options.gpioInvert} `
 }
 
 require('util').inherits(PigpioSeatalk, Execute)
