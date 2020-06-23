@@ -268,14 +268,16 @@ Server.prototype.start = function() {
       ]
     })
   }
-  checkForNewServerVersion(app.config.version, serverUpgradeIsAvailable)
-  app.intervals.push(
-    setInterval(
-      () =>
-        checkForNewServerVersion(app.config.version, serverUpgradeIsAvailable),
-      60 * 1000 * 60 * 24
+  if ( !process.env.SIGNALK_DISABLE_SERVER_UPDATES ) {
+    checkForNewServerVersion(app.config.version, serverUpgradeIsAvailable)
+    app.intervals.push(
+      setInterval(
+        () =>
+          checkForNewServerVersion(app.config.version, serverUpgradeIsAvailable),
+        60 * 1000 * 60 * 24
+      )
     )
-  )
+  }
 
   this.app.providers = []
 
