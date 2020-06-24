@@ -17,7 +17,6 @@
 const Transform = require('stream').Transform
 
 const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
-
 const { getSourceId } = require('@signalk/signalk-schema')
 
 require('util').inherits(ToSignalK, Transform)
@@ -30,6 +29,7 @@ function ToSignalK (options) {
   this.notifications = {}
   this.options = options
   this.app = options.app
+  this.options.useCanName = true
 
 
   this.n2kMapper = new N2kMapper(options)
@@ -71,16 +71,24 @@ function ToSignalK (options) {
 
 ToSignalK.prototype._transform = function (chunk, encoding, done) {
   try {
-
+    const delta = this.n2kMapper.toDelta(chunk)
+    
     const src = Number(chunk.src)
     if ( !this.sourceMeta[src] ) {
       this.sourceMeta[src] = {}
       this.n2kMapper.emit('n2kRequestMetadata', src)
-    }
-    
-    const delta = this.n2kMapper.toDelta(chunk)
+    } 
 
     if (delta && delta.updates[0].values.length > 0) {
+      const canName = delta.updates[0].source.canName
+      
+      if ( !canName ) {
+        done()
+        return
+      }
+
+      const $source = getCanNameSourceId(this.options.providerId, delta.updates[0].source, canName)
+      delta.updates[0].$source = $source
       delta.updates.forEach(update => {
           update.values.forEach(kv => {
             if ( kv.path && kv.path.startsWith('notifications.') ) {
@@ -102,7 +110,7 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
                         updates: [
                           {
                             source: update.source,
-                            $source: getSourceId(update.source),
+                            $source: $source,
                             values: [ copy ]
                           }
                         ]
@@ -132,3 +140,11 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
 }
 
 module.exports = ToSignalK
+
+function getCanNameSourceId(label, source, canName) {
+  if ( canName ) {
+    return `${label}.${canName.toString()}`
+  } else {
+    return getSourceId(source)
+  }
+}
