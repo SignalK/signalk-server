@@ -34,6 +34,7 @@ const getSecondaryPort = ports.getSecondaryPort
 const getExternalPort = ports.getExternalPort
 const DeltaChain = require('./deltachain')
 import { checkForNewServerVersion } from './modules'
+import { getToPreferredDelta } from './preferredDelta'
 
 const { StreamBundle } = require('./streambundle')
 const {
@@ -159,7 +160,19 @@ function Server(opts) {
     delete app.historyProvider
   }
 
-  app.handleMessage = function(providerId, data) {
+  const toPreferredDelta = getToPreferredDelta({
+    'environment.wind.speedApparent': [
+      {
+        sourceRef: 'fs.105',
+        timeout: 0
+      },
+      {
+        sourceRef: 'fs.II',
+        timeout: 300
+      }
+    ]
+  })
+  app.handleMessage = function (providerId, data) {
     if (data && data.updates) {
       incDeltaStatistics(app, providerId)
 
@@ -169,7 +182,8 @@ function Server(opts) {
       ) {
         data.context = 'vessels.' + app.selfId
       }
-      data.updates.forEach(function(update) {
+      const now = new Date()
+      data.updates.forEach(function (update) {
         if (typeof update.source !== 'undefined') {
           update.source.label = providerId
           if (!update.$source) {
@@ -181,11 +195,11 @@ function Server(opts) {
           }
         }
         if (!update.timestamp || app.config.overrideTimestampWithNow) {
-          update.timestamp = new Date().toISOString()
+          update.timestamp = now.toISOString()
         }
       })
       try {
-        deltachain.process(data)
+        deltachain.process(toPreferredDelta(data, now, app.selfContext))
       } catch (err) {
         console.error(err.message)
       }
