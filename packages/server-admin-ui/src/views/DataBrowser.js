@@ -80,20 +80,28 @@ class DataBrowser extends Component {
       
       msg.updates.forEach(update => {
         if ( update.values ) {
+          let source = update['$source']
+          if ( update.source ) {
+            if ( update.source.pgn ) {
+              source = `${source} (${update.source.pgn})`
+            } else if ( update.source.sentence ) {
+              source = `${source} (${update.source.sentence})`
+            }
+          }
           update.values.forEach(vp => {
             if ( vp.path === '' ) {
               keys(vp.value).forEach(k => {
                 context[k] = {
                   path: k,
                   value: vp.value[k],
-                  source: update['$source'],
+                  source: source,
                   timestamp: moment(update.timestamp).format(timestampFormat)
                 }
               })
             } else {
               context[vp.path + '$' + update['$source']] = {
                 path: vp.path,
-                source: update['$source'],
+                source: source,
                 value: vp.value,
                 timestamp: moment(update.timestamp).format(timestampFormat)
               }
