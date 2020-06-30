@@ -15,6 +15,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * 2020-06-24 Original Python code from @Thomas-GeDaD https://github.com/Thomas-GeDaD/Seatalk1-Raspi-reader
+ * and finetuned by @MatsA
  *
  */
 
@@ -23,7 +26,11 @@ const debug = require('debug')('signalk:streams:pigpio-seatalk')
 
 const cmd = `
 import pigpio, time, signal, sys
-gpio= 19 #define gpio where the seatalk1 (yellow wire) is connected
+
+if  sys.argv[1] == "undefined":
+        gpio = 4					                            #Default GPIO4 if not set
+else:
+        gpio = int(filter(str.isdigit, sys.argv[1])) 	#Ggpio, info as "GPIOnn", from GUI setup. Sensing the seatalk1 (yellow wire)
 
 if __name__ == "__main__":
         st1read =pigpio.pi()
@@ -34,6 +41,10 @@ if __name__ == "__main__":
                 pass
         
         st1read.bb_serial_read_open(gpio, 4800,9)
+
+        if  sys.argv[2] == "true":			        # Invert, inverted input from ST1, selected in the GUI
+                st1read.bb_serial_invert(gpio, 1)
+
         data=""
         
         try:
