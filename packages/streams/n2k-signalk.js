@@ -29,8 +29,6 @@ function ToSignalK (options) {
   this.notifications = {}
   this.options = options
   this.app = options.app
-  this.options.useCanName = true
-
 
   this.n2kMapper = new N2kMapper(options)
 
@@ -82,12 +80,12 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
     if (delta && delta.updates[0].values.length > 0) {
       const canName = delta.updates[0].source.canName
       
-      if ( !canName ) {
+      if ( this.options.useCanName && !canName ) {
         done()
         return
       }
 
-      const $source = getCanNameSourceId(this.options.providerId, delta.updates[0].source, canName)
+      const $source = getCanNameSourceId(this.options.providerId, delta.updates[0].source, this.options.useCanName && canName)
       delta.updates[0].$source = $source
       delta.updates.forEach(update => {
           update.values.forEach(kv => {
