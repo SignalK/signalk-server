@@ -17,7 +17,6 @@
 const Transform = require('stream').Transform
 
 const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
-const { getSourceId } = require('@signalk/signalk-schema')
 
 require('util').inherits(ToSignalK, Transform)
 
@@ -96,11 +95,9 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
         return
       }
 
-      const $source = getCanNameSourceId(this.options.providerId, delta.updates[0].source, this.options.useCanName && canName)
       delta.updates.forEach(update => {
           update.values.forEach(kv => {
             if ( kv.path && kv.path.startsWith('notifications.') ) {
-              const source = update.source.src
               if ( kv.value.state === 'normal' && this.notifications[kv.path] && this.notifications[kv.path][src]) {
                 clearInterval(this.notifications[kv.path][src].interval)
                 delete this.notifications[kv.path][src]
@@ -118,7 +115,6 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
                         updates: [
                           {
                             source: update.source,
-                            $source: $source,
                             values: [ copy ]
                           }
                         ]
@@ -148,11 +144,3 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
 }
 
 module.exports = ToSignalK
-
-function getCanNameSourceId(label, source, canName) {
-  if ( canName ) {
-    return `${label}.${canName.toString()}`
-  } else {
-    return getSourceId(source)
-  }
-}
