@@ -8,7 +8,7 @@ Original idea is picked from https://github.com/Thomas-GeDaD/Seatalk1-Raspi-read
 
 ### 2. Hardware
 
-![SeaTalk_opto](https://user-images.githubusercontent.com/16189982/86119990-cdb0c000-bad3-11ea-9e55-4937ba9d42a7.jpeg)
+![ST1_opto_SK](https://user-images.githubusercontent.com/16189982/86477381-99920500-bd48-11ea-828d-75459a93d0c5.jpeg)
 
 The circuit is referring to [this optocoupler](https://www.amazon.com/ARCELI-Optocoupler-Isolation-Converter-Photoelectric/dp/B07M78S8LB/ref=sr_1_2?dchild=1&keywords=pc817+optocoupler&qid=1593516071&sr=8-2) but a similar product can of course be used. The LED in the circuit will flicker when there is ST1 traffic. 
 
@@ -31,11 +31,20 @@ Could be checked with
 
 Now go on add a connection, in the admin GUI, with type ”Seatalk(GPIO)” according to the picture. 
 
-![seatalk_connection](https://user-images.githubusercontent.com/16189982/86120712-1ae16180-bad5-11ea-9c55-3591791f9d3d.png)
+![ST1_connection_SK](https://user-images.githubusercontent.com/16189982/86477500-d78f2900-bd48-11ea-87f6-875950c462ef.png)
 
-Select which pin, one of the green ones in the picture below, You have shoosen as input and don’t use ”Invert signal” if You are using the hardware setup above. Invert is used if You have a different hardware interface which is inverting the input signal.
+Select which pin, one of the green ones in the picture below, You have shoosen as input and use ”Invert signal” "YES" if You are using the hardware setup above. Invert "NO" is used if You have a different hardware interface which is not inverting the input signal.
 
-![RPi_GPIO](https://user-images.githubusercontent.com/16189982/86120870-5a0fb280-bad5-11ea-9b4a-e7f36307e0ce.png)
+![GPIO](https://user-images.githubusercontent.com/16189982/86477812-8469a600-bd49-11ea-8e55-4ee4400a2c17.png)
 
 Restart the SignalK server and then use the ”Data Browser” in the admin GUI to confirm that You are receiving the SK data
  
+If You are in doubt, if there is data available at the selected GPIO, You can download a program
+
+    $ wget https://raw.githubusercontent.com/MatsA/seatalk1-to-NMEA0183/master/STALK_read.py
+    
+change the setup in the beginning of program and execute it with 
+
+    $ sudo python STALK_read.py
+    
+If You succed You will se the ST1 sentences roll in.
