@@ -85,6 +85,10 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
     } 
 
     if (delta && delta.updates[0].values.length > 0) {
+      if ( !this.options.useCanName ) {
+        delete delta.updates[0].source.canName
+      }
+
       const canName = delta.updates[0].source.canName
       
       if ( this.options.useCanName && !canName && !this.sourceMeta[src].unknowCanName ) {
@@ -93,7 +97,6 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
       }
 
       const $source = getCanNameSourceId(this.options.providerId, delta.updates[0].source, this.options.useCanName && canName)
-      delta.updates[0].$source = $source
       delta.updates.forEach(update => {
           update.values.forEach(kv => {
             if ( kv.path && kv.path.startsWith('notifications.') ) {
