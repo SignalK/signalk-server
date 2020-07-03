@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import { keys, get } from 'lodash'
+import { keys, get, values } from 'lodash'
 import JSONTree from 'react-json-tree'
 import {
   Badge,
@@ -34,6 +34,19 @@ function fetchRoot () {
   })
     .then(response => response.json())
     .then(data => {
+      if ( data.sources ) {
+        values(data.sources).forEach(source => {
+          if ( source.type === "NMEA2000" ) {
+            keys(source).forEach(key => {
+              let device = source[key]
+              if ( device.n2k && device.n2k.productName ) {
+                source[`${device.n2k.manufacturerName || ''} ${device.n2k.productName} (${key})`] = device
+                delete source[key]
+              }
+            })
+          }
+        })
+      }
       this.setState({ ...this.state, sources: data.sources, full: data})
     })
 }
