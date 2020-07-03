@@ -573,8 +573,8 @@ class UseCanNameInput extends Component {
   constructor (props) {
     super(props)
     this.props.value.useCanName =
-      typeof (this.props.value.useCanName !== 'undefined' &&
-              this.props.value.useCanName) || this.props.value.isNew
+      (typeof this.props.value.useCanName !== 'undefined' &&
+       this.props.value.useCanName) || this.props.value.isNew
   }
   render () {
     return (
