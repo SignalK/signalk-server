@@ -62,6 +62,13 @@ function ToSignalK (options) {
     this.app.deltaCache.setSourceDelta(`${this.options.providerId}.${n2k.src}`, delta)
   })
 
+  this.n2kMapper.on('n2kSourceMetadataTimeout', (pgn, src) => {
+    if ( pgn == 60928 ) {
+      console.warn(`unable to detect can name for src ${src}`)
+      this.sourceMeta[src].unknowCanName = true
+    }
+  })
+
   setTimeout(() => {
     this.n2kMapper.emit('n2kRequestMetadata', 255)
   }, 5000)
@@ -80,7 +87,7 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
     if (delta && delta.updates[0].values.length > 0) {
       const canName = delta.updates[0].source.canName
       
-      if ( this.options.useCanName && !canName ) {
+      if ( this.options.useCanName && !canName && !this.sourceMeta[src].unknowCanName ) {
         done()
         return
       }
