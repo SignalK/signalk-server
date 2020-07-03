@@ -68,6 +68,10 @@ function ToSignalK (options) {
     }
   })
 
+  this.n2kMapper.on('n2kSourceChanged', src => {
+    delete this.sourceMeta[src]
+  })
+
   setTimeout(() => {
     this.n2kMapper.emit('n2kRequestMetadata', 255)
   }, 5000)
