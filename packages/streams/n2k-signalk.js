@@ -63,13 +63,16 @@ function ToSignalK (options) {
 
   this.n2kMapper.on('n2kSourceMetadataTimeout', (pgn, src) => {
     if ( pgn == 60928 ) {
-      console.warn(`unable to detect can name for src ${src}`)
+      console.warn(`n2k-signalk: unable to detect can name for src ${src}`)
       this.sourceMeta[src].unknowCanName = true
     }
   })
 
-  this.n2kMapper.on('n2kSourceChanged', src => {
-    delete this.sourceMeta[src]
+  this.n2kMapper.on('n2kSourceChanged', (src, from, to) => {
+    console.warn(`n2k-signalk: address ${src} changed from ${from} ${to}`)
+    if ( this.sourceMeta[src] ) {
+      delete this.sourceMeta[src]
+    }
   })
 
   setTimeout(() => {
