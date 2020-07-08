@@ -32,7 +32,7 @@ class BasicProvider extends Component {
     return (
       <div>
         <FormGroup row>
-          <Col xs='3' md='2'>
+          <Col xs='3' md='3'>
             <Label htmlFor='select'>Input Type</Label>
           </Col>
           <Col xs='6' md='3'>
@@ -54,7 +54,7 @@ class BasicProvider extends Component {
           </Col>
         </FormGroup>
         <FormGroup row>
-          <Col xs='3' md='2'>
+          <Col xs='3' md='3'>
             <Label>Enabled</Label>
           </Col>
           <Col xs='2' md='3'>
@@ -78,7 +78,7 @@ class BasicProvider extends Component {
           />
         )}
         <FormGroup row>
-          <Col md='2'>
+          <Col md='3'>
             <Label htmlFor='id'>ID</Label>
           </Col>
           <Col xs='12' md='3'>
@@ -106,7 +106,7 @@ class TextInput extends Component {
   render () {
     return (
       <FormGroup row>
-        <Col md='2'>
+        <Col md='3'>
           <Label htmlFor={this.props.name}>{this.props.title}</Label>
         </Col>
         <Col xs='12' md='3'>
@@ -129,7 +129,7 @@ class TextAreaInput extends Component {
   render () {
     return (
       <FormGroup row>
-        <Col md='2'>
+        <Col md='3'>
           <Label htmlFor={this.props.name}>{this.props.title}</Label>
         </Col>
         <Col xs='12' md='3'>
@@ -178,7 +178,7 @@ class DeviceInput extends Component {
       : ''
     return (
       <FormGroup row>
-        <Col md='2'>
+        <Col md='3'>
           <Label htmlFor="serialportselect">Serial port</Label>
         </Col>
         <Col xs='12' md='3'>
@@ -234,7 +234,7 @@ class LoggingInput extends Component {
   render () {
     return (
       <FormGroup row>
-        <Col xs='3' md='2'>
+        <Col xs='3' md='3'>
           <Label>Logging</Label>
         </Col>
         <Col xs='2' md='3'>
@@ -265,7 +265,7 @@ class ValidateChecksumInput extends Component {
   render () {
     return (
       <FormGroup row>
-        <Col xs='3' md='2'>
+        <Col xs='3' md='3'>
           <Label>Validate Checksum</Label>
         </Col>
         <Col xs='2' md='3'>
@@ -301,7 +301,7 @@ class RemoveNullsInput extends Component {
   render () {
     return (
       <FormGroup row>
-        <Col xs='3' md='2'>
+        <Col xs='3' md='3'>
           <Label>Remove NULL characters</Label>
         </Col>
         <Col xs='2' md='3'>
@@ -326,7 +326,7 @@ class AppendChecksum extends Component {
   render() {
     return (
       <FormGroup row>
-        <Col xs='3' md='2'>
+        <Col xs='3' md='3'>
           <Label>Append Checksum</Label>
         </Col>
         <Col xs='2' md='1'>
@@ -371,7 +371,7 @@ class DataTypeInput extends Component {
   render () {
     return (
       <FormGroup row>
-        <Col md='2'>
+        <Col md='3'>
           <Label htmlFor='dataType'>Data Type</Label>
         </Col>
         <Col xs='12' md='4'>
@@ -548,7 +548,7 @@ class Suppress0183Checkbox extends Component {
   render () {
     return (
       <FormGroup row>
-        <Col xs='3' md='2'>
+        <Col xs='3' md='3'>
           <Label>Suppress nmea0183 event</Label>
         </Col>
         <Col xs='2' md='3'>
@@ -569,11 +569,44 @@ class Suppress0183Checkbox extends Component {
   }
 }
 
+class UseCanNameInput extends Component {
+  constructor (props) {
+    super(props)
+    /*
+    this.props.value.useCanName =
+      (typeof this.props.value.useCanName !== 'undefined' &&
+       this.props.value.useCanName) || this.props.value.isNew
+    */
+  }
+  render () {
+    return (
+      <FormGroup row>
+        <Col xs='3' md='3'>
+          <Label>Use Can NAME in source data</Label>
+        </Col>
+        <Col xs='2' md='3'>
+          <Label className='switch switch-text switch-primary'>
+            <Input
+              type='checkbox'
+              name='options.useCanName'
+              className='switch-input'
+              onChange={event => this.props.onChange(event)}
+              checked={this.props.value.useCanName}
+            />
+            <span className='switch-label' data-on='Yes' data-off='No' />
+            <span className='switch-handle' />
+          </Label>
+        </Col>
+      </FormGroup>
+    )
+  }
+}
+
 const NMEA2000 = props => {
   return (
     <div>
       <FormGroup row>
-        <Col md='2'>
+        <Col md='3'>
           <Label htmlFor='options.type'>NMEA 2000 Source</Label>
         </Col>
         <Col xs='12' md='3'>
@@ -632,7 +665,11 @@ const NMEA2000 = props => {
           value={props.value.options.interface}
           onChange={props.onChange}
         />
-      )}
+        )}
+      <UseCanNameInput
+        value={props.value.options}
+        onChange={props.onChange}
+      />
     </div>
   )
 }
@@ -641,7 +678,7 @@ const NMEA0183 = props => {
   return (
     <div>
       <FormGroup row>
-        <Col md='2'>
+        <Col md='3'>
           <Label htmlFor='options.type'>NMEA 0183 Source</Label>
         </Col>
         <Col xs='12' md='3'>
@@ -714,7 +751,7 @@ const SignalK = props => {
   return (
     <div>
       <FormGroup row>
-        <Col md='2'>
+        <Col md='3'>
           <Label htmlFor='options.type'>SignalK Source</Label>
         </Col>
         <Col xs='12' md='3'>
@@ -740,10 +777,10 @@ const SignalK = props => {
           {(props.value.options.type === 'ws' ||
             props.value.options.type === 'wss') && (
             <FormGroup row>
-              <Col xs='0' md='2'>
+              <Col xs='0' md='3'>
               <Label htmlFor='options.useDiscovery'>Discovery</Label>
               </Col>
-              <Col xs='12' md='10'>
+              <Col xs='12' md='8'>
                 <div key={name}>
                   <Label className='switch switch-text switch-primary'>
                     <Input
@@ -798,7 +835,7 @@ const SignalK = props => {
       )}
       {serialParams(props)}
       <FormGroup row>
-        <Col md='2'>
+        <Col md='3'>
           <Label htmlFor='options.type'>'self' handling</Label>
         </Col>
         <Col xs='12' md='3'>

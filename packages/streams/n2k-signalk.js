@@ -18,8 +18,6 @@ const Transform = require('stream').Transform
 
 const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
 
-const { getSourceId } = require('@signalk/signalk-schema')
-
 require('util').inherits(ToSignalK, Transform)
 
 function ToSignalK (options) {
@@ -30,7 +28,6 @@ function ToSignalK (options) {
   this.notifications = {}
   this.options = options
   this.app = options.app
-
 
   this.n2kMapper = new N2kMapper(options)
 
@@ -64,6 +61,20 @@ function ToSignalK (options) {
     this.app.deltaCache.setSourceDelta(`${this.options.providerId}.${n2k.src}`, delta)
   })
 
+  this.n2kMapper.on('n2kSourceMetadataTimeout', (pgn, src) => {
+    if ( pgn == 60928 ) {
+      console.warn(`n2k-signalk: unable to detect can name for src ${src}`)
+      this.sourceMeta[src].unknowCanName = true
+    }
+  })
+
+  this.n2kMapper.on('n2kSourceChanged', (src, from, to) => {
+    console.warn(`n2k-signalk: address ${src} changed from ${from} ${to}`)
+    if ( this.sourceMeta[src] ) {
+      delete this.sourceMeta[src]
+    }
+  })
+
   setTimeout(() => {
     this.n2kMapper.emit('n2kRequestMetadata', 255)
   }, 5000)
@@ -71,20 +82,29 @@ function ToSignalK (options) {
 
 ToSignalK.prototype._transform = function (chunk, encoding, done) {
   try {
-
+    const delta = this.n2kMapper.toDelta(chunk)
+    
     const src = Number(chunk.src)
     if ( !this.sourceMeta[src] ) {
       this.sourceMeta[src] = {}
       this.n2kMapper.emit('n2kRequestMetadata', src)
-    }
-    
-    const delta = this.n2kMapper.toDelta(chunk)
+    } 
 
     if (delta && delta.updates[0].values.length > 0) {
+      if ( !this.options.useCanName ) {
+        delete delta.updates[0].source.canName
+      }
+
+      const canName = delta.updates[0].source.canName
+      
+      if ( this.options.useCanName && !canName && !this.sourceMeta[src].unknowCanName ) {
+        done()
+        return
+      }
+
       delta.updates.forEach(update => {
           update.values.forEach(kv => {
             if ( kv.path && kv.path.startsWith('notifications.') ) {
-              const source = update.source.src
               if ( kv.value.state === 'normal' && this.notifications[kv.path] && this.notifications[kv.path][src]) {
                 clearInterval(this.notifications[kv.path][src].interval)
                 delete this.notifications[kv.path][src]
@@ -102,7 +122,6 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
                         updates: [
                           {
                             source: update.source,
-                            $source: getSourceId(update.source),
                             values: [ copy ]
                           }
                         ]
