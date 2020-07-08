@@ -582,7 +582,7 @@ class UseCanNameInput extends Component {
     return (
       <FormGroup row>
         <Col xs='3' md='3'>
-          <Label>Use Can NAME For $source</Label>
+          <Label>Use Can NAME in source data</Label>
         </Col>
         <Col xs='2' md='3'>
           <Label className='switch switch-text switch-primary'>
