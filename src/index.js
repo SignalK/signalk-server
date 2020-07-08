@@ -220,7 +220,9 @@ Server.prototype.start = function() {
     if (eventName !== 'serverlog') {
       let eventDebug = eventDebugs[eventName]
       if (!eventDebug) {
-        eventDebugs[eventName] = eventDebug = require('debug')(`signalk-server:events:${eventName}`)
+        eventDebugs[eventName] = eventDebug = require('debug')(
+          `signalk-server:events:${eventName}`
+        )
       }
       if (eventDebug.enabled) {
         eventDebug([...arguments].slice(1))
@@ -228,7 +230,6 @@ Server.prototype.start = function() {
     }
     emit.apply(app, arguments)
   }
-
 
   this.app.intervals = []
 
@@ -284,12 +285,15 @@ Server.prototype.start = function() {
       ]
     })
   }
-  if ( !process.env.SIGNALK_DISABLE_SERVER_UPDATES ) {
+  if (!process.env.SIGNALK_DISABLE_SERVER_UPDATES) {
     checkForNewServerVersion(app.config.version, serverUpgradeIsAvailable)
     app.intervals.push(
       setInterval(
         () =>
-          checkForNewServerVersion(app.config.version, serverUpgradeIsAvailable),
+          checkForNewServerVersion(
+            app.config.version,
+            serverUpgradeIsAvailable
+          ),
         60 * 1000 * 60 * 24
       )
     )

@@ -631,7 +631,7 @@ module.exports = function(app, config) {
         header = req.headers['x-authorization']
       }
       if (header && header.startsWith('Bearer ')) {
-        return header.substring('Bearer '.length);
+        return header.substring('Bearer '.length)
       }
       if (header && header.startsWith('JWT ')) {
         return header.substring('JWT '.length)
