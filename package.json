@@ -69,7 +69,7 @@
   "dependencies": {
     "@serialport/bindings": "^8.0.6",
     "@signalk/server-admin-ui": "1.28.x",
-    "@signalk/signalk-schema": "1.3.1",
+    "@signalk/signalk-schema": "1.5.0",
     "@signalk/streams": "1.12.x",
     "@types/debug": "^4.1.5",
     "baconjs": "^1.0.1",
