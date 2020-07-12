@@ -229,6 +229,41 @@ After installing and configuring the plugin from the admin console, use a client
 
 You can change the admin application's top left logo by placing a SVG file named `logo.svg` in the settings directory (default: $HOME/.signalk/).
 
+#Preferred sources
+
+You can specify relative preferences between sources for a single Signal K path by adding a section like
+
+```
+  "sourcePreferences": {
+    "environment.wind.speedApparent": [
+      {
+        "sourceRef": "fs.105",
+        "timeout": 0
+      },
+      {
+        "sourceRef": "fs.II",
+        "timeout": 300
+      }
+    ]
+  }
+```
+in the settings file. This will set up a _precedence/priority/preference_ between these two sources: data from source `fs.II` is not processed by the server if the latest data is from the first source and not older than 300 milliseconds.
+
+The _preferred source_ algorithm  compares the *latest value* that was passed through against a new value:
+- is the latest value from a source that has a lower or equal priority/preference than the incoming value's source?
+- if true pass the value
+- else: is the latest value older than the timeout for incoming source's timeout? if yes pass the value
+- else: ignore the value
+
+Note that the filtering takes place on *path level, not on delta* level: if a delta contains multiple path-value pairs some may be filtered out and others published.
+
+The first source's timeout is ignored, as the priority for the latest value's source can never be higher than the priority for that source and the timeout test never fires.
+
+Sources should have increasing timeouts for lower priorities, as the algorithm considers only the latest value and lower priority sources firing before higher ones may cause unintended sequences like
+- 1st level data passed at time 0ms
+- 3rd level data with timeout of 300ms passed at time 310ms
+- 2nd level data with timeout of 500ms passed at time 320ms, even if 1st level data is still more up to date than 500ms
+
 Changelog
 ---------
 
