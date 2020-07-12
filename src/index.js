@@ -160,18 +160,13 @@ function Server(opts) {
     delete app.historyProvider
   }
 
-  const toPreferredDelta = getToPreferredDelta({
-    'environment.wind.speedApparent': [
-      {
-        sourceRef: 'fs.105',
-        timeout: 0
-      },
-      {
-        sourceRef: 'fs.II',
-        timeout: 300
-      }
-    ]
-  })
+  let toPreferredDelta
+  try {
+    toPreferredDelta = getToPreferredDelta(app.config.settings.sourcePreferences)
+  } catch (e) {
+    console.error(`getToPreferredDelta failed: ${e.message}`)
+    toPreferredDelta = (delta) => delta
+  }
   app.handleMessage = function (providerId, data) {
     if (data && data.updates) {
       incDeltaStatistics(app, providerId)
