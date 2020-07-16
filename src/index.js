@@ -162,12 +162,14 @@ function Server(opts) {
 
   let toPreferredDelta
   try {
-    toPreferredDelta = getToPreferredDelta(app.config.settings.sourcePreferences)
+    toPreferredDelta = getToPreferredDelta(
+      app.config.settings.sourcePreferences
+    )
   } catch (e) {
     console.error(`getToPreferredDelta failed: ${e.message}`)
-    toPreferredDelta = (delta) => delta
+    toPreferredDelta = delta => delta
   }
-  app.handleMessage = function (providerId, data) {
+  app.handleMessage = function(providerId, data) {
     if (data && data.updates) {
       incDeltaStatistics(app, providerId)
 
@@ -178,7 +180,7 @@ function Server(opts) {
         data.context = 'vessels.' + app.selfId
       }
       const now = new Date()
-      data.updates.forEach(function (update) {
+      data.updates.forEach(function(update) {
         if (typeof update.source !== 'undefined') {
           update.source.label = providerId
           if (!update.$source) {
