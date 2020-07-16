@@ -19,6 +19,10 @@
 const Server = require('../lib')
 const server = new Server()
 
+process.on('uncaughtException', err => {
+  console.error(err)
+})
+
 server.start().catch(err => {
   console.log(err)
   process.exit(-1)
