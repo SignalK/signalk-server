@@ -33,6 +33,14 @@ function ToSignalK (options) {
 
   this.n2kMapper.on('n2kOut', (pgn) => this.app.emit('nmea2000JsonOut', pgn))
 
+  this.n2kMapper.on('unknownPGN', (n2k) => {
+    const existing = this.sourceMeta[n2k.src] || {}
+    if ( !existing.unknownPGNs ) {
+      existing.unknownPGNs = []
+    }
+    existing.unknownPGNs.push(n2k.pgn)
+  })
+
   this.n2kMapper.on('n2kSourceMetadata', (n2k, meta) => {
     const existing = this.sourceMeta[n2k.src] || {}
     this.sourceMeta[n2k.src] = {
@@ -63,9 +71,7 @@ function ToSignalK (options) {
 
   this.n2kMapper.on('n2kSourceMetadataTimeout', (pgn, src) => {
     if ( pgn == 60928 ) {
-      if ( this.options.useCanName ) {
-        console.warn(`n2k-signalk: unable to detect can name for src ${src}`)
-      }
+      console.warn(`n2k-signalk: unable to detect can name for src ${src}`)
       this.sourceMeta[src].unknowCanName = true
     }
   })
