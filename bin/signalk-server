@@ -16,11 +16,14 @@
  * limitations under the License.
 */
 
-var Server = require('../lib');
-var server = new Server();
+const Server = require('../lib')
+const server = new Server()
 
-server.start()
-  .catch(err => {
-    console.log(err)
-    process.exit(-1)
-  })
+process.on('uncaughtException', err => {
+  console.error(err)
+})
+
+server.start().catch(err => {
+  console.log(err)
+  process.exit(-1)
+})
