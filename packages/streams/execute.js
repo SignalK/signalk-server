@@ -37,11 +37,11 @@
  */
 
 const Transform = require('stream').Transform
-const debug = require('debug')('signalk:streams:execute')
 
 function Execute (options) {
   Transform.call(this, {})
   this.options = options
+  this.debug = options.debug || require('debug')('signalk:streams:execute')
 }
 
 require('util').inherits(Execute, Transform)
@@ -52,7 +52,7 @@ Execute.prototype._transform = function (chunk, encoding, done) {
   done()
 }
 function start (command, that) {
-  debug(`starting '${command}'`)
+  that.debug(`starting |${command}|`)
   if (process.platform === 'win32') {
     that.childProcess = require('child_process').spawn('cmd', ['/c', command])
   } else {
@@ -68,11 +68,14 @@ function start (command, that) {
   })
 
   that.childProcess.stdout.on('data', function (data) {
+    if (that.debug.enabled) {
+      that.debug(data.toString())
+    }
     that.push(data)
   })
 
   that.childProcess.on('close', code => {
-    const msg = `'${command} exited' with ${code}`
+    const msg = `|${command}| exited with ${code}`
     // that.options.app.setProviderError(that.options.providerId, msg)
     console.error(msg)
     if (
@@ -88,7 +91,7 @@ function start (command, that) {
         const nextStart = throttleTime - sinceLast
         const msg = `Waiting ${nextStart / 1000} seconds to restart`
         that.options.app.setProviderStatus(that.options.providerId, msg)
-        debug(msg)
+        that.debug(msg)
         setTimeout(function () {
           start(command, that)
         }, nextStart)
@@ -102,7 +105,7 @@ Execute.prototype.pipe = function (pipeTo) {
   start(this.options.command, this)
 
   const stdOutEvent = this.options.toChildProcess || 'toChildProcess'
-  debug('Using event ' + stdOutEvent + " for output to child process's stdin")
+  this.debug('Using event ' + stdOutEvent + " for output to child process's stdin")
   const that = this
   that.options.app.on(stdOutEvent, function (d) {
     try {
@@ -123,7 +126,7 @@ Execute.prototype.pipe = function (pipeTo) {
 }
 
 Execute.prototype.end = function () {
-  debug('end, killing child  process')
+  this.debug('end, killing child  process')
   this.childProcess.kill()
   this.pipeTo.end()
 }

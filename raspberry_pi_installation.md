@@ -138,7 +138,17 @@ Check status with;
 
 ## Real inputs
 
-NMEA2000
+Real inputs are configured in ”Server => Connections” where You can choose from the following
+
+Input Type | Remark
+--------- | ---------------------------------------------------------------
+NMEA 2000 | Check possible hardware in the ”NMEA 2000 Source” drop down list
+NMEA 0183 | Check possible sources in the ”NMEA 0183 Source” drop down list
+SignalK | Check possible sources in the ”NMEA 0183 Source” drop down list
+SeaTalk(GPIO) | SeaTalk 1 data via a Raspberry GPIO pin, [documentation here](https://github.com/SignalK/signalk-server-node/blob/seatalk/Seatalk(GPIO).md)
+Filestream |Check possible data types in the ”Data Type” drop down list
+
+**NMEA2000**
 
 If You have a NMEA2000 network You can use the the Actisense interface or other CAN bus interfaces to connect to the SignalK server. To configure it You have to know the the device path. One way to check it, is using the `dmesg` command direct after You plugged in the Actisense to a RPi USB port. In a Terminal window type
 
@@ -177,7 +187,7 @@ The SignalK server **must be restarted** to accept the changes so click on "Rest
 
 After the restart check the data with the Webapp Instrumentpanel in the admin UI.
 
-NMEA0183
+**NMEA0183**
 
 If You have a NMEA0183 network, plug in Your NMEA0183 to USB interface and do the same procedure as for the Actisense above.
 With a configuration maybe looking like this
@@ -190,13 +200,11 @@ If You don’t have any NMEA interface hardware You could set up a "File Stream"
 
 Find the path to NMEA2000 file
 
-    cd /
-    sudo find -name "aava-n2k.data"
+    sudo find / -name "aava-n2k.data"
 
 Or the path to NMEA0183 file 
 
-    cd /
-    sudo find -name "plaka.log"
+    sudo find / -name "plaka.log"
 
 ## NMEA0183 data on the network
 

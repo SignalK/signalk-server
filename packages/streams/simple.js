@@ -22,6 +22,7 @@ const CanboatJs = require('./canboatjs')
 const iKonvert = require('@canboat/canboatjs').iKonvert
 const Ydwg02 = require('@canboat/canboatjs').Ydwg02
 const gpsd = require('./gpsd')
+const pigpioSeatalk = require('./pigpio-seatalk')
 
 function Simple (options) {
   Transform.call(this, { objectMode: true })
@@ -105,7 +106,8 @@ const discriminatorByDataType = {
   NMEA2000YD: 'A',
   NMEA2000: 'A',
   NMEA0183: 'N',
-  SignalK: 'I'
+  SignalK: 'I',
+  Seatalk: 'N'
 }
 
 const dataTypeMapping = {
@@ -113,6 +115,7 @@ const dataTypeMapping = {
     options.subOptions.type !== 'wss' && options.subOptions.type !== 'ws'
       ? [new FromJson(options.subOptions)]
       : [],
+  Seatalk:  options => [new nmea0183_signalk({...options.subOptions, validateChecksum: false})],
   NMEA0183: options => {
     const result = [new nmea0183_signalk(options.subOptions)]
     if (options.type === 'FileStream') {
@@ -178,7 +181,8 @@ const pipeStartByType = {
   NMEA0183: nmea0183input,
   Execute: executeInput,
   FileStream: fileInput,
-  SignalK: signalKInput
+  SignalK: signalKInput,
+  Seatalk: seatalkInput
 }
 
 function nmea2000input (subOptions, logging) {
@@ -322,4 +326,8 @@ function signalKInput (subOptions) {
     return [new serialport(subOptions)]
   }
   throw new Error(`unknown SignalK type: ${subOptions.type}`)
+}
+
+function seatalkInput(subOptions) {
+  return [new pigpioSeatalk(subOptions)]
 }
