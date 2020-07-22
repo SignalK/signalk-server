@@ -68,9 +68,9 @@
   },
   "dependencies": {
     "@serialport/bindings": "^8.0.6",
-    "@signalk/server-admin-ui": "1.28.x",
+    "@signalk/server-admin-ui": "1.29.x",
     "@signalk/signalk-schema": "1.5.0",
-    "@signalk/streams": "1.12.x",
+    "@signalk/streams": "1.13.x",
     "@types/debug": "^4.1.5",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
