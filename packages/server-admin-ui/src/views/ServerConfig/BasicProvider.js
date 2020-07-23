@@ -526,6 +526,20 @@ class HostInput extends Component {
   }
 }
 
+class NoDataReceivedTimeoutInput extends Component {
+  render () {
+    return (
+      <TextInput
+        title='No data timeout'
+        name='options.noDataReceivedTimeout'
+        helpText='Timeout for no data received in milliseconds. Socket is disconnected and reconnection attempted if timeout is reached. Leave empty or 0 to disable.'
+        value={this.props.value.noDataReceivedTimeout}
+        onChange={this.props.onChange}
+      />
+    )
+  }
+}
+
 class RemoteSelfInput extends Component {
   render () {
     return (
@@ -711,6 +725,10 @@ const NMEA0183 = props => {
           <HostInput value={props.value.options} onChange={props.onChange} />
           <PortInput value={props.value.options} onChange={props.onChange} />
           <StdOutInput value={props.value.options} onChange={props.onChange} />
+          <NoDataReceivedTimeoutInput
+            value={props.value.options}
+            onChange={props.onChange}
+          />
         </div>
       )}
       {props.value.options.type === 'tcpserver' && (
