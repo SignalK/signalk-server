@@ -44,7 +44,7 @@ module.exports = (app: SignalKServer) => {
       socket.name = socket.remoteAddress + ':' + socket.remotePort
       debug('Connected:' + socket.id + ' ' + socket.name)
 
-      socket.on('error', err => {
+      socket.on('error', (err: Error) => {
         debug('Error:' + err + ' ' + socket.id + ' ' + socket.name)
       })
       socket.on('close', hadError => {
@@ -65,7 +65,7 @@ module.exports = (app: SignalKServer) => {
           })
         )
         .on('data', socketMessageHandler(app, socket, unsubscibes))
-        .on('error', err => {
+        .on('error', (err: Error)  => {
           console.error(err)
         })
       socket.on('end', () => {
