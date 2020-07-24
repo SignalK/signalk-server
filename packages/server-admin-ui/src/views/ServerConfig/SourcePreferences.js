@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { Card, CardHeader, CardBody, CardFooter } from 'reactstrap'
 
-export default class SourcePreferences extends Component {
+class SourcePreferences extends Component {
   constructor(props) {
     super(props)
   }
@@ -11,9 +11,13 @@ export default class SourcePreferences extends Component {
     return (
       <Card>
         <CardHeader>Source Preferences</CardHeader>
-        <CardBody></CardBody>
+        <CardBody>${JSON.stringify(this.props.sourcePriorities)}</CardBody>
         <CardFooter></CardFooter>
       </Card>
     )
   }
 }
+
+const mapStateToProps = ({ sourcePriorities  }) => ({ sourcePriorities })
+
+export default connect(mapStateToProps)(SourcePreferences)

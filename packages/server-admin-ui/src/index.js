@@ -236,6 +236,12 @@ let store = createStore(
         restoreStatus: action.data
       }
     }
+    if ( action.type === 'SOURCEPRIORITIES' ) {
+      return {
+        ...state,
+        sourcePriorities: action.data
+      }
+    }
     return state
   },
   state,
