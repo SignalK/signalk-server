@@ -166,6 +166,10 @@ module.exports = function(app) {
         })
       })
 
+      app.get(`${pathPrefix}${versionPrefix}/sourcepriorities`, (req, res) => {
+        res.json(app.config.settings.sourcePreferences || {})
+      })
+
       if (app.historyProvider && app.historyProvider.registerHistoryApiRoute) {
         debug('Adding history api route')
         const historyApiRouter = express.Router()
