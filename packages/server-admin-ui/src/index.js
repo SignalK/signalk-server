@@ -59,7 +59,8 @@ const state = {
     rememberDebug: false
   },
   restoreStatus: {},
-  vesselInfo: {}
+  vesselInfo: {},
+  sourcePriorities: {}
 }
 
 let store = createStore(
