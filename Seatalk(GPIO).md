@@ -12,7 +12,11 @@ Original idea is picked from https://github.com/Thomas-GeDaD/Seatalk1-Raspi-read
 
 The circuit is referring to [this optocoupler](https://www.amazon.com/ARCELI-Optocoupler-Isolation-Converter-Photoelectric/dp/B07M78S8LB/ref=sr_1_2?dchild=1&keywords=pc817+optocoupler&qid=1593516071&sr=8-2) but a similar product can of course be used. The LED in the circuit will flicker when there is ST1 traffic. 
 
-Choosing an optocoupler as the hardware interface is a smart way to avoid ground loops and electrical isolation from hazardous voltages.
+Choosing an optocoupler as the hardware interface is a smart way to avoid ground loops and creats electrical isolation from hazardous voltages.
+
+Do You want it simple ?  The simplest possible interface solution is according to the picture below. You use a small signal NPN transistor which shifts the DC level, from 12 V DC to 3,3 V DC, and inverts the signal.
+
+![ST1_Tr](https://user-images.githubusercontent.com/16189982/88704045-d6fe6e00-d10d-11ea-8f83-cb765e4c65f3.jpeg)
 
 ### 3. Software
 
@@ -28,6 +32,8 @@ The connection relies on a [daemon](http://abyz.me.uk/rpi/pigpio/) which is enab
 Could be checked with 
 
     $ sudo systemctl status pigpiod
+
+Please note that pigpio deamon provides, by default, a socket interface on port 8888, which could conflict with other software You have installed. If You want to move the socket interface to another port You have to change the [pigpiod.service file](http://abyz.me.uk/rpi/pigpio/pigpiod.html) with the -p option, and the [Python program](http://abyz.me.uk/rpi/pigpio/python.html#pigpio.pi). So maybe it's easier to move the conflicting program ?
 
 Now go on add a connection, in the admin GUI, with type ”Seatalk(GPIO)” according to the picture. 
 
