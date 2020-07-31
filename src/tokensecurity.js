@@ -187,13 +187,18 @@ module.exports = function(app, config) {
     app.post(['/login', `${skAuthPrefix}/login`], (req, res) => {
       const name = req.body.username
       const password = req.body.password
+      const remember = req.body.rememberMe
 
       login(name, password)
         .then(reply => {
           const requestType = req.get('Content-Type')
 
           if (reply.statusCode === 200) {
-            res.cookie('JAUTHENTICATION', reply.token, { httpOnly: true })
+            let options = { httpOnly: true }
+            if ( remember ) {
+              options.maxAge = 90000
+            }
+            res.cookie('JAUTHENTICATION', reply.token, options)
 
             if (requestType === 'application/json') {
               res.json({ token: reply.token })

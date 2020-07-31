@@ -36,10 +36,11 @@ export function logout () {
   }
 }
 
-export function login (dispatch, username, password, callback) {
+export function login (dispatch, username, password, rememberMe, callback) {
   var payload = {
     username: username,
-    password: password
+    password: password,
+    rememberMe: rememberMe
   }
   authFetch('/signalk/v1/auth/login', {
     method: 'POST',
