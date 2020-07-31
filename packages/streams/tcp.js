@@ -38,6 +38,7 @@ const debugData = require('debug')('signalk-server:streams:tcp-data')
 function TcpStream (options) {
   Transform.call(this, options)
   this.options = options
+  this.noDataReceivedTimeout = Number.parseInt((this.options.noDataReceivedTimeout + '').trim()) * 1000
 }
 
 require('util').inherits(TcpStream, Transform)
@@ -69,6 +70,18 @@ TcpStream.prototype.pipe = function (pipeTo) {
   const re = require('reconnect-core')(function () {
     return net.connect.apply(null, arguments)
   })({ maxDelay: 5 * 1000 }, tcpStream => {
+    if (!isNaN(this.noDataReceivedTimeout)) {
+      tcpStream.setTimeout(this.noDataReceivedTimeout)
+      debug(
+        `Setting socket idle timeout ${this.options.host}:${this.options.port} ${this.noDataReceivedTimeout}`
+      )
+      tcpStream.on('timeout', () => {
+        debug(
+          `Idle timeout, closing socket ${this.options.host}:${this.options.port}`
+        )
+        tcpStream.end()
+      })
+    }
     tcpStream.on('data', data => {
       if (debugData.enabled) {
         debugData(data.toString())
