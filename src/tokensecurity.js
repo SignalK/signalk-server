@@ -194,11 +194,11 @@ module.exports = function(app, config) {
           const requestType = req.get('Content-Type')
 
           if (reply.statusCode === 200) {
-            let options = { httpOnly: true }
-            if ( remember ) {
-              options.maxAge = 90000
+            let cookieOptions = { httpOnly: true }
+            if (remember) {
+              cookieOptions.maxAge = 90000
             }
-            res.cookie('JAUTHENTICATION', reply.token, options)
+            res.cookie('JAUTHENTICATION', reply.token, cookieOptions)
 
             if (requestType === 'application/json') {
               res.json({ token: reply.token })
