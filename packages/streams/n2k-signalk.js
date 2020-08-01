@@ -28,7 +28,7 @@ function ToSignalK (options) {
   this.notifications = {}
   this.options = options
   this.app = options.app
-  if ( options.filters ) {
+  if ( options.filters && options.filtersEnabled ) {
     this.filters = options.filters.filter(f => {
       return (f.source && f.source.length) || (f.pgn && f.pgn.length)
     })

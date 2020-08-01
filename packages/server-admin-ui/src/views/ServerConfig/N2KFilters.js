@@ -1,12 +1,13 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import { Table, Input, Button, Card, CardBody, CardHeader, FormText } from 'reactstrap'
+import { Table, Input, Button, Card, CardBody, CardHeader, FormText, Label } from 'reactstrap'
 
 class N2KFilters extends Component {
   constructor(props) {
     super()
 
     this.handleAddFilter = this.handleAddFilter.bind(this)
+    this.handleEnabledChange = this.handleEnabledChange.bind(this)
   }
 
   filterChanged (filter, event) {
@@ -16,6 +17,11 @@ class N2KFilters extends Component {
 
   deleteFilter(index, event) {
     this.props.value.options.filters.splice(index, 1)
+    this.props.onChange(event)
+  }
+
+  handleEnabledChange(event) {
+    this.props.value.options.filtersEnabled = event.target.checked
     this.props.onChange(event)
   }
 
@@ -34,6 +40,17 @@ class N2KFilters extends Component {
         <Card>
         <CardHeader>Filters</CardHeader>
         <CardBody>
+        <Label className='switch switch-text switch-primary'>
+                            <Input
+                              type='checkbox'
+                              name='enabled'
+                              className='switch-input'
+                            checked={this.props.value.options.filtersEnabled}
+                              onChange={this.handleEnabledChange}
+                            />
+                           <span className='switch-label' data-on='Yes' data-off='No' />
+                           <span className='switch-handle' />
+                           </Label>&nbsp; Enabled <br/><br/>
         Filter out all messages from a specific {sourceName} by entering just the {sourceName}.<br/>
         Filter out a specific PGN from all devices by entering just the PGN.<br/>
         Filter out a specific PGN from a specific {sourceName} by entering both.<br/><br/>
