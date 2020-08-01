@@ -103,7 +103,7 @@ class Login extends Component {
                             />
                            <span className='switch-label' data-on='Yes' data-off='No' />
                            <span className='switch-handle' />
-                           </Label>&nbsp; Remeber Me
+                           </Label>&nbsp; Remember Me
                            </InputGroup>
                          </Col>
                       </Row>
