@@ -11,7 +11,8 @@ import {
   Input,
   InputGroup,
   InputGroupAddon,
-  HelpBlock
+  HelpBlock,
+  Label
 } from 'reactstrap'
 import { Link } from 'react-router-dom'
 import { connect } from 'react-redux'
@@ -34,7 +35,7 @@ class Login extends Component {
   handleClick (event) {
     this.setState({ loggingIn: true })
     const { dispatch } = this.props
-    login(dispatch, this.state.username, this.state.password, error => {
+    login(dispatch, this.state.username, this.state.password, this.state.rememberMe, error => {
       this.setState({
         loggingIn: false,
         loginErrorMessage: error
@@ -43,7 +44,11 @@ class Login extends Component {
   }
 
   handleInputChange (event) {
-    this.setState({ [event.target.name]: event.target.value })
+    var value =
+      event.target.type === 'checkbox'
+        ? event.target.checked
+        : event.target.value
+    this.setState({ [event.target.name]: value })
   }
 
   render () {
@@ -85,7 +90,23 @@ class Login extends Component {
                           placeholder='Password'
                           onChange={this.handleInputChange}
                         />
-                      </InputGroup>
+                        </InputGroup>
+                        <Row>
+                          <Col xs='8'>
+                            <InputGroup className='mb-4'>
+                            <Label className='switch switch-text switch-primary'>
+                            <Input
+                              type='checkbox'
+                              name='rememberMe'
+                              className='switch-input'
+                              onChange={this.handleInputChange}
+                            />
+                           <span className='switch-label' data-on='Yes' data-off='No' />
+                           <span className='switch-handle' />
+                           </Label>&nbsp; Remember Me
+                           </InputGroup>
+                         </Col>
+                      </Row>
                       <Row>
                         <Col xs='6'>
                           <Button
