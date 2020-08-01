@@ -30,6 +30,7 @@ const {
   findRequest,
   filterRequests
 } = require('./requestResponse')
+const ms = require('ms')
 
 const CONFIG_PLUGINID = 'sk-simple-token-security-config'
 const passwordSaltRounds = 10
@@ -188,6 +189,7 @@ module.exports = function(app, config) {
       const name = req.body.username
       const password = req.body.password
       const remember = req.body.rememberMe
+      const configuration = getConfiguration()
 
       login(name, password)
         .then(reply => {
@@ -196,7 +198,7 @@ module.exports = function(app, config) {
           if (reply.statusCode === 200) {
             let cookieOptions = { httpOnly: true }
             if (remember) {
-              cookieOptions.maxAge = 90000
+              cookieOptions.maxAge = ms(configuration.expiration || '1h')
             }
             res.cookie('JAUTHENTICATION', reply.token, cookieOptions)
 
