@@ -65,7 +65,7 @@ module.exports = (app: SignalKServer) => {
           })
         )
         .on('data', socketMessageHandler(app, socket, unsubscibes))
-        .on('error', (err: Error)  => {
+        .on('error', (err: Error) => {
           console.error(err)
         })
       socket.on('end', () => {
