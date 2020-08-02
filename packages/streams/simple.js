@@ -167,7 +167,16 @@ const dataTypeMapping = {
     return result.concat([new N2kToSignalK(options.subOptions)])
   },
   NMEA2000YD: options => {
-    const result = [new Ydwg02(options.subOptions)]
+    let subOptions
+    if ( options.subOptions.type === 'ydwg02-usb-canboatjs' )
+    {
+      subOptions = {...options.subOptions, usb: true}
+    }
+    else
+    {
+      subOptions = options.subOptions
+    }
+    const result = [new Ydwg02(subOptions)]
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
     }

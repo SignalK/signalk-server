@@ -63,6 +63,7 @@ const shellescape = require('any-shell-escape')
 const SerialPort = require('serialport')
 const isArray = require('lodash').isArray
 const debug = require('debug')('signalk:streams:serialport')
+const isBuffer = require('lodash').isBuffer
 
 function SerialStream (options) {
   if (!(this instanceof SerialStream)) {
@@ -146,8 +147,6 @@ SerialStream.prototype.start = function () {
   const stdOutEvent = this.options.toStdout
   if (stdOutEvent) {
     (isArray(stdOutEvent) ? stdOutEvent : [stdOutEvent]).forEach(event => {
-      console.log(event)
-
       const onDrain = () => {
         pendingWrites--
       }
@@ -158,7 +157,11 @@ SerialStream.prototype.start = function () {
           return
         }
         debug('Writing:' + d)
-        that.serial.write(d + '\r\n')
+        if ( isBuffer(d) ) {
+          that.serial.write(d)
+        } else {
+          that.serial.write(d + '\r\n')
+        } 
         pendingWrites++
         that.serial.drain(onDrain)
       })
