@@ -189,21 +189,16 @@ function nmea2000input (subOptions, logging) {
   if (subOptions.type === 'ngt-1-canboatjs') {
     return [
       new require('./actisense-serial')({
-        device: subOptions.device,
-        baudrate: subOptions.baudrate,
-        app: subOptions.app,
+        ...subOptions,
         outEvent: 'nmea2000out',
-        plainText: logging,
-        providerId: subOptions.providerId
+        plainText: logging
       })
     ]
   } else if (subOptions.type === 'canbus-canboatjs') {
     return [
       new require('./canbus')({
+        ...subOptions,
         canDevice: subOptions.interface,
-        app: subOptions.app,
-        providerId: subOptions.providerId,
-        uniqueNumber: subOptions.uniqueNumber
       })
     ]
   } else if (subOptions.type === 'ikonvert-canboatjs') {
