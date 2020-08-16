@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { Input, FormGroup, FormText, Col, Label } from 'reactstrap'
+import N2KFilters from './N2KFilters'
 
 class BasicProvider extends Component {
   constructor(props) {
@@ -97,6 +98,12 @@ class BasicProvider extends Component {
           onChange={this.props.onChange}
           hasAnalyzer={this.state.hasAnalyzer}
         />
+        {this.props.value.type === 'NMEA2000' && (
+            <N2KFilters
+              value={this.props.value}
+              onChange={this.props.onPropChange}
+            />
+        )}
       </div>
     )
   }
@@ -527,18 +534,18 @@ class HostInput extends Component {
 }
 
 class NoDataReceivedTimeoutInput extends Component {
-  render () {
-    return (
-      <TextInput
-        title='No data timeout'
-        name='options.noDataReceivedTimeout'
-        helpText='Timeout for no data received in milliseconds. Socket is disconnected and reconnection attempted if timeout is reached. Leave empty or 0 to disable.'
-        value={this.props.value.noDataReceivedTimeout}
-        onChange={this.props.onChange}
-      />
-    )
-  }
-}
+   render () {
+     return (
+       <TextInput
+         title='No data timeout'
+         name='options.noDataReceivedTimeout'
+         helpText='Timeout for no data received in milliseconds. Socket is disconnected and reconnection attempted if timeout is reached. Leave empty or 0 to disable.'
+         value={this.props.value.noDataReceivedTimeout}
+         onChange={this.props.onChange}
+       />
+     )
+   }
+ }
 
 class RemoteSelfInput extends Component {
   render () {
@@ -726,9 +733,9 @@ const NMEA0183 = props => {
           <PortInput value={props.value.options} onChange={props.onChange} />
           <StdOutInput value={props.value.options} onChange={props.onChange} />
           <NoDataReceivedTimeoutInput
-            value={props.value.options}
-            onChange={props.onChange}
-          />
+             value={props.value.options}
+             onChange={props.onChange}
+           />
         </div>
       )}
       {props.value.options.type === 'tcpserver' && (

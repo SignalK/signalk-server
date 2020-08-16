@@ -74,6 +74,7 @@ class ProvidersConfiguration extends Component {
     this.fetchProviders = fetchProviders.bind(this)
     this.runDiscovery = runDiscovery.bind(this)
     this.handleProviderChange = this.handleProviderChange.bind(this)
+    this.handleProviderPropChange = this.handleProviderChange.bind(this)
     this.handleAddProvider = this.handleAddProvider.bind(this)
     this.handleCancel = this.handleCancel.bind(this)
     this.toggle = this.toggle.bind(this)
@@ -96,6 +97,12 @@ class ProvidersConfiguration extends Component {
       value = Number(value)
     }
     set(this.state.selectedProvider, event.target.name, value)
+    this.setState({
+      selectedProvider: this.state.selectedProvider
+    })
+  }
+
+  handleProviderPropChange(event) {
     this.setState({
       selectedProvider: this.state.selectedProvider
     })
@@ -327,6 +334,7 @@ class ProvidersConfiguration extends Component {
                   <BasicProvider
                     value={this.state.selectedProvider}
                     onChange={this.handleProviderChange}
+                    onPropChange={this.handleProviderPropChange}
                   />
                 ) : (
                   <Input

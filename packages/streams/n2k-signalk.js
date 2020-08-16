@@ -28,6 +28,11 @@ function ToSignalK (options) {
   this.notifications = {}
   this.options = options
   this.app = options.app
+  if ( options.filters && options.filtersEnabled ) {
+    this.filters = options.filters.filter(f => {
+      return (f.source && f.source.length) || (f.pgn && f.pgn.length)
+    })
+  }
 
   this.n2kMapper = new N2kMapper(options)
 
@@ -63,9 +68,7 @@ function ToSignalK (options) {
 
   this.n2kMapper.on('n2kSourceMetadataTimeout', (pgn, src) => {
     if ( pgn == 60928 ) {
-      if ( this.options.useCanName ) {
-        console.warn(`n2k-signalk: unable to detect can name for src ${src}`)
-      }
+      console.warn(`n2k-signalk: unable to detect can name for src ${src}`)
       this.sourceMeta[src].unknowCanName = true
     }
   })
@@ -82,6 +85,13 @@ function ToSignalK (options) {
   }, 5000)
 }
 
+ToSignalK.prototype.isFiltered = function(source) {
+  return this.filters && this.filters.find(filter => {
+    const sFilter = this.options.useCanName ? source.canName : source.src
+    return (!filter.source || filter.source.length === 0 || filter.source == sFilter) && (!filter.pgn || filter.pgn.length === 0 || filter.pgn == source.pgn)
+  })
+}
+
 ToSignalK.prototype._transform = function (chunk, encoding, done) {
   try {
     const delta = this.n2kMapper.toDelta(chunk)
@@ -92,7 +102,7 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
       this.n2kMapper.emit('n2kRequestMetadata', src)
     } 
 
-    if (delta && delta.updates[0].values.length > 0) {
+    if (delta && delta.updates[0].values.length > 0 && !this.isFiltered(delta.updates[0].source) ) {
       if ( !this.options.useCanName ) {
         delete delta.updates[0].source.canName
       }
