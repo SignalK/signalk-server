@@ -24,6 +24,7 @@ function ToSignalK (options) {
   Transform.call(this, {
     objectMode: true
   })
+  const n2kOutEvent = 'nmea2000JsonOut'
   this.sourceMeta = {}
   this.notifications = {}
   this.options = options
@@ -80,9 +81,12 @@ function ToSignalK (options) {
     }
   })
 
-  setTimeout(() => {
-    this.n2kMapper.emit('n2kRequestMetadata', 255)
-  }, 5000)
+  if ( this.app.isNmea2000OutAvailable ) {
+    this.n2kMapper.n2kOutIsAvailable(this.app, n2kOutEvent)
+  } else {
+    this.app.on('nmea2000OutAvailable', () =>
+                this.n2kMapper.n2kOutIsAvailable(this.app, n2kOutEvent))
+  }
 }
 
 ToSignalK.prototype.isFiltered = function(source) {
@@ -99,7 +103,6 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
     const src = Number(chunk.src)
     if ( !this.sourceMeta[src] ) {
       this.sourceMeta[src] = {}
-      this.n2kMapper.emit('n2kRequestMetadata', src)
     } 
 
     if (delta && delta.updates[0].values.length > 0 && !this.isFiltered(delta.updates[0].source) ) {

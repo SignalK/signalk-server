@@ -206,6 +206,11 @@ function Server(opts) {
     roles: ['master', 'main'],
     timestamp: new Date()
   })
+
+  app.isNmea2000OutAvailable = false
+  app.on('nmea2000OutAvailable', () => {
+    app.isNmea2000OutAvailable = true
+  })
 }
 
 module.exports = Server
