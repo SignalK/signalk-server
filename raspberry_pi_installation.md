@@ -52,6 +52,11 @@ Now, install node and npm
 We want to make sure that we're using the latest version of npm:
 
     $ sudo npm install -g npm@latest
+    
+Finally we need to install a Bonjour (mDNS) service for Linux called Avahi, which allows Apps and other network devices to Discover the Signal K server. To do this we will use "apt" again ...
+
+     $ sudo apt install libnss-mdns avahi-utils libavahi-compat-libdnssd-dev
+
 
 ## Step 2 - Install Signal K Node Server and Consumers
 
