@@ -15,12 +15,14 @@
 */
 
 const { isUndefined, values } = require('lodash')
+const moment = require('moment')
 
 module.exports = {
   startDeltaStatistics: function(app) {
     app.deltaCount = 0
     app.lastIntervalDeltaCount = 0
     app.providerStatistics = {}
+    app.startTime = moment()
 
     return setInterval(() => {
       updateProviderPeriodStats(app)
@@ -31,7 +33,8 @@ module.exports = {
           deltaRate: (app.deltaCount - app.lastIntervalDeltaCount) / 5,
           numberOfAvailablePaths: app.streambundle.getAvailablePaths().length,
           wsClients: app.interfaces.ws ? app.interfaces.ws.numClients() : 0,
-          providerStatistics: app.providerStatistics
+          providerStatistics: app.providerStatistics,
+          uptime: moment.duration(moment().diff(app.startTime)).humanize()
         }
       })
       app.lastIntervalDeltaCount = app.deltaCount
