@@ -43,9 +43,9 @@ class N2KFilters extends Component {
         <Label className='switch switch-text switch-primary'>
                             <Input
                               type='checkbox'
-                              name='enabled'
+                              name='filtersEnabled'
                               className='switch-input'
-                            checked={this.props.value.options.filtersEnabled}
+                              checked={this.props.value.options.filtersEnabled}
                               onChange={this.handleEnabledChange}
                             />
                            <span className='switch-label' data-on='Yes' data-off='No' />
