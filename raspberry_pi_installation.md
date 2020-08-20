@@ -92,7 +92,7 @@ For the purposes of this "How to" some open source web apps are automatically in
 To use the web apps, we will need to open them in a web browser so open the browser on your Pi and type "http://127.0.0.1:3000/
 This will open the Dashboard and give You some info about the SignalK server.
 
-![dashboard_1](https://user-images.githubusercontent.com/16189982/35871063-96318c80-0b63-11e8-93b8-1cc2ae825470.jpeg)
+![SK_sample_file](https://user-images.githubusercontent.com/16189982/90823208-e00de400-e335-11ea-9a7d-2758a0847c8a.png)
 
 Click on Webapps and You will get
 
@@ -102,7 +102,13 @@ Click on "@Signalk/Freeboard-Sk" and You will get a Worldmap with Your position 
 
 Go back and click "@Signalk/Instrumentpanel" and You will have an instrumentpanel to play around with.
 
-If you have managed to get to the end of this guide, you will now have a good understanding of what Signal K is all about and in particular the Node Server. We have been using the server's demo NMEA file, but Node Server can also read NMEA0183 data via an [NMEA to USB adaptor cable](http://digitalyachtamerica.com/product/usb-nmea-adaptor/), a [3rd party NMEA2000 gateway](http://www.actisense.com/product/nmea-2000-to-pc-interface-ngt-1/) or both NMEA0183 and NMEA2000 via the [iKommunicate gateway](http://ikommunicate.com).
+An excelent way to be familiar with the Signal K data format is to click on "Data Browser" and then select "self" in the drop down list at the upper left. Something like this will appear
+
+![SK_data_brws](https://user-images.githubusercontent.com/16189982/90823230-e56b2e80-e335-11ea-8a0d-44044ea75ff6.png)
+
+The differense from what You see on Your monitor and what is displayed in the picture is that a filter is applied in the "Search" field. This will just show paths including the "nav" word.
+
+Since you have managed to get to this part of the guide, you now have a good understanding of what Signal K is all about and in particular the Node Server. We have been using the server's demo NMEA file, but Node Server can also read NMEA0183 data via an [NMEA to USB adaptor cable](http://digitalyachtamerica.com/product/usb-nmea-adaptor/), a [3rd party NMEA2000 gateway](http://www.actisense.com/product/nmea-2000-to-pc-interface-ngt-1/) or both NMEA0183 and NMEA2000 via the [iKommunicate gateway](http://ikommunicate.com).
 
 ## Step 3 - your own setup and running automatically as daemon
 
@@ -135,7 +141,8 @@ Disable the automatic start with;
 
 Check status with;
 
-    $ sudo systemctl status signalk*
+    $ sudo systemctl status signalk.service
+    $ sudo systemctl status signalk.socket
 
 **In addition the setup script will enable security by default.** At the admin UI You have to use ”Login” in the upper right corner and create a account, for example user pi and password, and then logon. Security information is stored in `/home/pi/.signalk/security.json`
 
@@ -213,8 +220,14 @@ Or the path to NMEA0183 file
 
 ## NMEA0183 data on the network
 
-Many navigation or marine data applications just accept NMEA0183 data as input. SignalK have a plugin which can forward this data, to Your Tablet or Phone, and being processed in an application like iNavX, iSailor, SeaPilot and so on.
-Attach the SignalK server to a network with WiFi access, or set up the RPi as an access point(link below), and configure the signalk-to-nmea0183 plugin.
+Many navigation or marine data applications, could be iNavX, iSailor, SeaPilot....., just accepts NMEA 0183 data as input. The SignalK servers default output for NMEA0183 data is port 10 110 using the TCP protocol. Any NMEA0183 input to the SignalK server is forwarded to this output. If You are using a none NMEA 0183 input, could be NMEA 2000, You have to use a plugin that converts the data to NMEA 0183.
+
+Attach the SignalK server to a network with WiFi access, or set up the RPi as an bridged access point(link below).
+
+If You are using a none NMEA 0183 input set up the plugin otherwise go to "Tablet application setup"
+(Please note that if You have NMEA 2000 AIS data You have to use another plugin, "signalk-n2kais-to-nmea0183" to get NMEA 0183 output.)
+
+**Plugin setup**
 
 In the admin UI ”Appstore => Installed” You will find the plugin
 
@@ -223,6 +236,9 @@ In the admin UI ”Appstore => Installed” You will find the plugin
 (Handling updates, indicated by the red numbers at the ”Update” rows, is discussed below.)
 
 To activate and configure the plugin go to ”Server => Plugin Config”. Select "Convert SignalK......”. Then select "Active” and  the sentences You need for Your application, click ”Submit” and restart SignalK.
+
+**Tablet application setup**
+
 In Your tablet application, set it up to receive the NMEA0183 data from the SignalK server with the IP adress, protocol TCP, and port 10110. The picture is from iSailor
 
 ![isailor_connection_s](https://user-images.githubusercontent.com/16189982/36220383-a327ab2e-11ba-11e8-85e9-f62b6c0e71ff.png)
@@ -239,7 +255,7 @@ Additional information and how to uninstall apps is found [here](https://github.
 
 ## Additional software
 
-[Raspberry as an access point](https://www.raspberrypi.org/documentation/configuration/wireless/access-point.md)
+[Raspberry as an bridged access point](https://www.raspberrypi.org/documentation/configuration/wireless/access-point-bridged.md)
 
 [Backup to a bootable SD card](https://pysselilivet.blogspot.com/2017/11/rpi-clone-raspberry-boot-disk.html)
 
