@@ -43,6 +43,7 @@ const {
   saveSecurityConfig
 } = require('./security.js')
 const { startDeltaStatistics, incDeltaStatistics } = require('./deltastats')
+const camelCase = require('camelcase')
 
 function Server(opts) {
   const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
@@ -112,6 +113,24 @@ function Server(opts) {
       from: 'signalk-server',
       data: app.getProviderStatus()
     })
+    if (status.type === 'error' || (status.type !== 'error' && status.lastError )) {
+      app.handleMessage(app.config.name, {
+        updates: [
+          {
+            values: [
+              {
+                path: `notifications.providers.${camelCase(providerId)}`,
+                value: {
+                  state: type === 'error'? 'alert' : 'normal',
+                  method: [],
+                  message: statusMessage
+                }
+              }
+            ]
+          }
+        ]
+      });
+    }
   }
 
   app.getProviderStatus = function() {
