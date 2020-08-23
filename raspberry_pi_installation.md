@@ -220,7 +220,7 @@ Or the path to NMEA0183 file
 
 ## NMEA0183 data on the network
 
-Many navigation or marine data applications, could be iNavX, iSailor, SeaPilot....., just accepts NMEA 0183 data as input. The SignalK servers default output for NMEA0183 data is port 10 110 using the TCP protocol. Any NMEA0183 input to the SignalK server is forwarded to this output. If You are using a none NMEA 0183 input, could be NMEA 2000, You have to use a plugin that converts the data to NMEA 0183.
+Many navigation or marine data applications, could be iNavX, iSailor, SeaPilot....., just accepts NMEA 0183 data as input. The SignalK servers default output for NMEA0183 data is port 10110 using the TCP protocol. Any NMEA0183 input to the SignalK server is forwarded to this output. If You are using a none NMEA 0183 input, could be NMEA 2000, You have to use a plugin that converts the data to NMEA 0183.
 
 Attach the SignalK server to a network with WiFi access, or set up the RPi as an bridged access point(link below).
 
