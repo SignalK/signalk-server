@@ -82,7 +82,7 @@ As the file name suggests, the Signal K Node Server is now reading NMEA Data fro
 
 So that is Signal K....looks good doesn't it ? Actually this is just some JSON data that tells an App what the URL "endpoints" are so that it knows what Version of Signal K the server supports and where it can get HTTP or Websocket data from.
 
-If You want to see the the actual output from the NMEA data that SignalK is processing type "http://127.0.0.1:3000/signalk/v1/api/vessels/self/" in the adress bar and this info will be shown
+If you want to see the the actual output from the NMEA data that SignalK is processing type "http://127.0.0.1:3000/signalk/v1/api/vessels/self/" in the adress bar and this info will be shown
 
     {"name":"Plaka","mmsi":"123456789","navigation":{"speedThroughWater":{"meta":{"units":"m/s","description":"Vessel speed through the water"},"value":3.096956340117828,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.100Z","sentence":"VHW"},"courseOverGroundMagnetic":{"meta":{"units":"rad","description":"Course over ground (magnetic)"},"value":3.6030577086397786,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.100Z","sentence":"VTG"},"courseOverGroundTrue":{"meta":{"units":"rad","description":"Course over ground (true)"},"value":3.6030577086397786,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.100Z","sentence":"VTG"},"speedOverGround":{"meta":{"units":"m/s","description":"Vessel speed over ground. If converting from AIS 'HIGH' value, set to 102.2 (Ais max value) and add warning in notifications"},"value":2.9323340761912995,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.100Z","sentence":"VTG"},"position":{"meta":{"description":"The position of the vessel in 2 or 3 dimensions (WGS84 datum)"},"value":{"longitude":23.529716666666666,"latitude":60.076566666666665},"$source":"NMEA0183 Plaka.log.GP","timestamp":"2018-02-06T10:01:47.000Z","sentence":"GLL"}},"performance":{"velocityMadeGood":{"meta":{"units":"m/s","description":"The current velocity made good derived from the speed through water and appearant wind angle. A positive value is heading to upwind, negative to downwind."},"value":2.9220451846958913,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.100Z","sentence":"VPW"}},"environment":{"wind":{"speedApparent":{"meta":{"units":"m/s","description":"Apparent wind speed"},"value":7.7989797535193155,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:31.701Z","sentence":"MWV"},"angleApparent":{"meta":{"units":"rad","description":"Apparent wind angle, negative to port"},"value":-0.19198621776321237,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:31.701Z","sentence":"MWV"},"speedTrue":{"meta":{"units":"m/s","description":"Wind speed over water (as calculated from speedApparent and vessel's speed through water)"},"value":4.789478991112456,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.199Z","sentence":"MWV"},"angleTrueWater":{"meta":{"units":"rad","description":"True wind angle based on speed through water, negative to port"},"value":-0.349065850478568,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.199Z","sentence":"MWV"}},"depth":{"belowTransducer":{"meta":{"units":"m","description":"Depth below Transducer"},"value":13.29,"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.300Z","sentence":"DBT"}},"current":{"meta":{"description":"Direction and strength of current affecting the vessel"},"value":{"setTrue":0,"setMagnetic":0,"drift":0},"$source":"NMEA0183 Plaka.log.II","timestamp":"2018-02-06T16:04:32.000Z","sentence":"VDR"}}}
 
@@ -92,17 +92,23 @@ For the purposes of this "How to" some open source web apps are automatically in
 To use the web apps, we will need to open them in a web browser so open the browser on your Pi and type "http://127.0.0.1:3000/
 This will open the Dashboard and give You some info about the SignalK server.
 
-![dashboard_1](https://user-images.githubusercontent.com/16189982/35871063-96318c80-0b63-11e8-93b8-1cc2ae825470.jpeg)
+![SK_sample_file](https://user-images.githubusercontent.com/16189982/90823208-e00de400-e335-11ea-9a7d-2758a0847c8a.png)
 
-Click on Webapps and You will get
+Click on Webapps and you will get
 
 ![web_apps](https://user-images.githubusercontent.com/16189982/69761715-7840b900-1168-11ea-9052-eba7dfc2804c.png)
 
-Click on "@Signalk/Freeboard-Sk" and You will get a Worldmap with Your position in the south of Finland
+Click on "@Signalk/Freeboard-Sk" and you will get a Worldmap with your position in the south of Finland
 
-Go back and click "@Signalk/Instrumentpanel" and You will have an instrumentpanel to play around with.
+Go back and click "@Signalk/Instrumentpanel" and you will have an instrumentpanel to play around with.
 
-If you have managed to get to the end of this guide, you will now have a good understanding of what Signal K is all about and in particular the Node Server. We have been using the server's demo NMEA file, but Node Server can also read NMEA0183 data via an [NMEA to USB adaptor cable](http://digitalyachtamerica.com/product/usb-nmea-adaptor/), a [3rd party NMEA2000 gateway](http://www.actisense.com/product/nmea-2000-to-pc-interface-ngt-1/) or both NMEA0183 and NMEA2000 via the [iKommunicate gateway](http://ikommunicate.com).
+An excelent way to be familiar with the Signal K data format is to click on "Data Browser" and then select "self" in the drop down list at the upper left. Something like this will appear
+
+![SK_data_brws](https://user-images.githubusercontent.com/16189982/90823230-e56b2e80-e335-11ea-8a0d-44044ea75ff6.png)
+
+The differense from what you see on your monitor and what is displayed in the picture is that a filter is applied in the "Search" field. This will just show paths including the "nav" word.
+
+Since you have managed to get to this part of the guide, you now have a good understanding of what Signal K is all about and in particular the Node Server. We have been using the server's demo NMEA file, but Node Server can also read NMEA0183 data via an [NMEA to USB adaptor cable](http://digitalyachtamerica.com/product/usb-nmea-adaptor/), a [3rd party NMEA2000 gateway](http://www.actisense.com/product/nmea-2000-to-pc-interface-ngt-1/) or both NMEA0183 and NMEA2000 via the [iKommunicate gateway](http://ikommunicate.com).
 
 ## Step 3 - your own setup and running automatically as daemon
 
@@ -110,7 +116,7 @@ To generate your own vessel settings file and configure your Pi to start the ser
 
     $ sudo signalk-server-setup
 
-and follow the prompts. If You are following the defaults and are logged on as ”pi” the boat info will be stored in `/home/pi/.signalk/defaults.json` and the settings in `/home/pi/.signalk/settings.json`
+and follow the prompts. If you are following the defaults and are logged on as ”pi” the boat info will be stored in `/home/pi/.signalk/defaults.json` and the settings in `/home/pi/.signalk/settings.json`
 
 You can re-run this command at any time in the future to change the settings.
 
@@ -135,15 +141,16 @@ Disable the automatic start with;
 
 Check status with;
 
-    $ sudo systemctl status signalk*
+    $ sudo systemctl status signalk.service
+    $ sudo systemctl status signalk.socket
 
-**In addition the setup script will enable security by default.** At the admin UI You have to use ”Login” in the upper right corner and create a account, for example user pi and password, and then logon. Security information is stored in `/home/pi/.signalk/security.json`
+**In addition the setup script will enable security by default.** At the admin UI you have to use ”Login” in the upper right corner and create a account, for example user pi and password, and then logon. Security information is stored in `/home/pi/.signalk/security.json`
 
 ![enable_security](https://user-images.githubusercontent.com/16189982/43796658-279e7c40-9a85-11e8-98d4-a90f1e9904d1.jpeg)
 
 ## Real inputs
 
-Real inputs are configured in ”Server => Connections” where You can choose from the following
+Real inputs are configured in ”Server => Connections” where you can choose from the following
 
 Input Type | Remark
 --------- | ---------------------------------------------------------------
@@ -155,7 +162,7 @@ Filestream |Check possible data types in the ”Data Type” drop down list
 
 **NMEA2000**
 
-If You have a NMEA2000 network You can use the the Actisense interface or other CAN bus interfaces to connect to the SignalK server. To configure it You have to know the the device path. One way to check it, is using the `dmesg` command direct after You plugged in the Actisense to a RPi USB port. In a Terminal window type
+If you have a NMEA2000 network you can use the the Actisense interface or other CAN bus interfaces to connect to the SignalK server. To configure it you have to know the the device path. One way to check it, is using the `dmesg` command direct after you plugged in the Actisense to a RPi USB port. In a Terminal window type
 
     $ dmesg
 
@@ -194,14 +201,14 @@ After the restart check the data with the Webapp Instrumentpanel in the admin UI
 
 **NMEA0183**
 
-If You have a NMEA0183 network, plug in Your NMEA0183 to USB interface and do the same procedure as for the Actisense above.
+If you have a NMEA0183 network, plug in your NMEA0183 to USB interface and do the same procedure as for the Actisense above.
 With a configuration maybe looking like this
 
 ![SK_N1](https://user-images.githubusercontent.com/16189982/69761986-44b25e80-1169-11ea-9401-2c06ace9eb3b.png)
 
 ## Sample files
 
-If You don’t have any NMEA interface hardware You could set up a "File Stream" connection with the sample files instead.
+If you don’t have any NMEA interface hardware you could set up a "File Stream" connection with the sample files instead.
 
 Find the path to NMEA2000 file
 
@@ -213,23 +220,32 @@ Or the path to NMEA0183 file
 
 ## NMEA0183 data on the network
 
-Many navigation or marine data applications just accept NMEA0183 data as input. SignalK have a plugin which can forward this data, to Your Tablet or Phone, and being processed in an application like iNavX, iSailor, SeaPilot and so on.
-Attach the SignalK server to a network with WiFi access, or set up the RPi as an access point(link below), and configure the signalk-to-nmea0183 plugin.
+Many navigation or marine data applications, for example iNavX, iSailor and SeaPilot, only accepts NMEA 0183 data as input. The SignalK server's default output for NMEA0183 data is port 10110 using the TCP protocol. Any NMEA0183 input to the SignalK server is forwarded to this output. If you are using a none NMEA 0183 input, could be NMEA 2000, you have to use a plugin that converts the data to NMEA 0183.
 
-In the admin UI ”Appstore => Installed” You will find the plugin
+Attach the SignalK server to a network with WiFi access, or set up the RPi as an bridged access point(link below).
+
+If you are using a none NMEA 0183 input set up the plugin otherwise go to "Tablet application setup"
+(Please note that if you have NMEA 2000 AIS data you have to use another plugin, "signalk-n2kais-to-nmea0183" to get NMEA 0183 output.)
+
+**Plugin setup**
+
+In the admin UI ”Appstore => Installed” you will find the plugin
 
 ![appstore_installed](https://user-images.githubusercontent.com/16189982/51399380-18d84c80-1b46-11e9-99f6-04bf86eaf769.png)
 
 (Handling updates, indicated by the red numbers at the ”Update” rows, is discussed below.)
 
-To activate and configure the plugin go to ”Server => Plugin Config”. Select "Convert SignalK......”. Then select "Active” and  the sentences You need for Your application, click ”Submit” and restart SignalK.
+To activate and configure the plugin go to ”Server => Plugin Config”. Select "Convert SignalK......”. Then select "Active” and  the sentences you need for your application, click ”Submit” and restart SignalK.
+
+**Tablet application setup**
+
 In Your tablet application, set it up to receive the NMEA0183 data from the SignalK server with the IP adress, protocol TCP, and port 10110. The picture is from iSailor
 
 ![isailor_connection_s](https://user-images.githubusercontent.com/16189982/36220383-a327ab2e-11ba-11e8-85e9-f62b6c0e71ff.png)
 
 ## SignalK data on the network
 
-Here You have [applications](https://signalk.org/applications_solutions.html) that will accept the json data direct from SignalK.
+Here you have [applications](https://signalk.org/applications_solutions.html) that will accept the json data direct from SignalK.
 
 ## Apps
 
@@ -239,7 +255,7 @@ Additional information and how to uninstall apps is found [here](https://github.
 
 ## Additional software
 
-[Raspberry as an access point](https://www.raspberrypi.org/documentation/configuration/wireless/access-point.md)
+[Raspberry as an bridged access point](https://www.raspberrypi.org/documentation/configuration/wireless/access-point-bridged.md)
 
 [Backup to a bootable SD card](https://pysselilivet.blogspot.com/2017/11/rpi-clone-raspberry-boot-disk.html)
 
@@ -247,7 +263,11 @@ Additional information and how to uninstall apps is found [here](https://github.
 
 [Temperature measure using 1-wire sensor, Node Red and plugins](https://pysselilivet.blogspot.com/2018/07/signalk-measuring-temperature.html)
 
-# Updating Your Raspberry Pi and Signal K Node Server
+## FAQ
+
+FAQ is found [here](https://github.com/SignalK/signalk-server-node/wiki/FAQ:-Frequently-Asked-Questions)
+
+# Updating your Raspberry Pi and Signal K Node Server
 
 Much as we would all like to be sailing 365 days a year, the reality is that we are down on our boats as and when we can and weeks and months can go by between using your Raspberry Pi and Signal K Node Server. Of course when you get back to the boat everything will continue to operate as it did when you left it, but Signal K (and the Raspberry Pi) are constantly evolving and if you wish to update to the latest builds, then you need to follow this process.
 
@@ -301,4 +321,3 @@ The apps are updated via the Admin UI ”Appstore => Updates” clicking on the 
 
 
 Now your Signal K Node Server is updated.
-
