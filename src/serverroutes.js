@@ -583,6 +583,21 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       .catch(() => res.json(false))
   })
 
+  app.get(`${serverRoutesPrefix}/sourcePreferences`, (req, res) => {
+    res.json(app.config.settings.sourcePreferences || {})
+  })
+
+  app.put(`${serverRoutesPrefix}/sourcePreferences`, (req, res) => {
+    app.config.settings.sourcePreferences = req.body
+    skConfig.writeSettingsFile(app, app.config.settings, err => {
+      if (err) {
+        res.status(500).send('Unable to save to sourcePrefences in settings file')
+      } else {
+        res.send('SourcePreferences saved')
+      }
+    })
+  })
+
   app.post(`${serverRoutesPrefix}/debug`, (req, res) => {
     if (!app.logging.enableDebug(req.body.value)) {
       res.status(400).send('invalid debug value')
