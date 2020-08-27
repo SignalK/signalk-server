@@ -56,7 +56,12 @@ if __name__ == "__main__":
                                 x=0
                                 while x < out0:
                                         if out_data[x+1] ==0:
-                                                string1=str(hex(out_data[x]))
+                                                if out_data[x] > 15:
+                                                  string1=str(hex(out_data[x]))
+                                                elif out_data[x] ==0:
+                                                  string1="0x00"
+                                                else:
+                                                  string1="0x0"+str(hex(out_data[x]).lstrip("0x"))
                                                 data= data+string1[2:]+ ","
                                         else:
                                                 data=data[0:-1]
