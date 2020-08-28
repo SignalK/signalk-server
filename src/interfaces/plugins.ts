@@ -17,6 +17,8 @@ import Debug from 'debug'
 import { Request, Response } from 'express'
 const debug = Debug('signalk:interfaces:plugins')
 // @ts-ignore
+import serialBingings from '@serialport/bindings'
+// @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
 import express from 'express'
 import fs from 'fs'
@@ -116,6 +118,7 @@ export interface ServerAPI {
       onDelta: (delta: object) => void
     ) => void
   }) => void
+  getSerialPorts: () => Promise<any>
 }
 
 interface ModuleMetadata {
@@ -140,53 +143,69 @@ module.exports = (theApp: any) => {
 
       theApp.get('/plugins', (req: Request, res: Response) => {
         const providerStatus = theApp.getProviderStatus()
-        res.json(
+
+        Promise.all(
           _.sortBy(theApp.plugins, [
             (plugin: PluginInfo) => {
               return plugin.name
             }
-          ]).map((plugin: PluginInfo) => {
-            let data: { enabled: boolean } | null = null
-            try {
-              data = getPluginOptions(plugin.id)
-            } catch (e) {
-              console.log(e.code + ' ' + e.path)
-            }
-
-            if (
-              data &&
-              _.isUndefined(data.enabled) &&
-              plugin.enabledByDefault
-            ) {
-              data.enabled = true
-            }
-
-            const schema =
-              typeof plugin.schema === 'function'
-                ? plugin.schema()
-                : plugin.schema
-            const status = providerStatus.find((p: any) => p.id === plugin.name)
-            const statusMessage = status ? status.message : ''
-            const uiSchema =
-              typeof plugin.uiSchema === 'function'
-                ? plugin.uiSchema()
-                : plugin.uiSchema
-            return {
-              id: plugin.id,
-              name: plugin.name,
-              packageName: plugin.packageName,
-              version: plugin.version,
-              description: plugin.description,
-              schema,
-              statusMessage,
-              uiSchema,
-              state: plugin.state,
-              data
-            }
-          })
+          ]).map((plugin: PluginInfo) =>
+            getPluginResponseInfo(plugin, providerStatus)
+          )
         )
+          .then(json => res.json(json))
+          .catch(err => {
+            console.error(err)
+            res.status(500)
+            res.send(err)
+          })
       })
     }
+  }
+
+  function getPluginResponseInfo(plugin: PluginInfo, providerStatus: any) {
+    return new Promise((resolve, reject) => {
+      let data: { enabled: boolean } | null = null
+      try {
+        data = getPluginOptions(plugin.id)
+      } catch (e) {
+        console.log(e.code + ' ' + e.path)
+      }
+
+      if (data && _.isUndefined(data.enabled) && plugin.enabledByDefault) {
+        data.enabled = true
+      }
+
+      Promise.all([
+        Promise.resolve(
+          typeof plugin.schema === 'function' ? plugin.schema() : plugin.schema
+        ),
+        Promise.resolve(
+          typeof plugin.uiSchema === 'function'
+            ? plugin.uiSchema()
+            : plugin.uiSchema
+        )
+      ])
+        .then(([schema, uiSchema]) => {
+          const status = providerStatus.find((p: any) => p.id === plugin.name)
+          const statusMessage = status ? status.message : ''
+          resolve({
+            id: plugin.id,
+            name: plugin.name,
+            packageName: plugin.packageName,
+            version: plugin.version,
+            description: plugin.description,
+            schema,
+            statusMessage,
+            uiSchema,
+            state: plugin.state,
+            data
+          })
+        })
+        .catch(err => {
+          reject(err)
+        })
+    })
   }
 
   function ensureExists(dir: string) {
@@ -350,6 +369,12 @@ module.exports = (theApp: any) => {
     )
   }
 
+  function getSerialPorts() {
+    return serialBingings.list().then((ports: any) => {
+      return ports.map((port: any) => port.comName)
+    })
+  }
+
   function registerPlugin(
     app: any,
     pluginName: string,
@@ -444,7 +469,8 @@ module.exports = (theApp: any) => {
       },
       setProviderError: (msg: string) => {
         app.setProviderError(plugin.name, msg)
-      }
+      },
+      getSerialPorts
     })
     appCopy.putPath = putPath
     try {
