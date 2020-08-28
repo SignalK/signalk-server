@@ -37,6 +37,6 @@
     "stream-throttle": "^0.1.3"
   },
   "optionalDependencies": {
-    "serialport": "^7.1.5"
+    "serialport": "^9.0.1"
   }
 }
