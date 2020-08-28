@@ -9,11 +9,13 @@ const Dashboard = props => {
     numberOfAvailablePaths,
     wsClients,
     providerStatistics,
+    uptime
   } = props.serverStatistics || {
     deltaRate: 0,
     numberOfAvailablePaths: 0,
     wsClients: 0,
     providerStatistics: {},
+    uptime: ''
   }
   const providerStatus = props.providerStatus || []
   const errorCount = providerStatus.filter(s => s.type === 'error').length
@@ -30,6 +32,13 @@ const Dashboard = props => {
             <CardBody>
               <Row>
                 <Col xs='12' md='6'>
+                  <div className='callout callout-primary'>
+                    <small className='text-muted'>
+                      Uptime
+                    </small>
+                    <br />
+                    <strong className='h5'>{uptime}</strong>
+                  </div>
                   <div className='callout callout-primary'>
                     <small className='text-muted'>
                       Total server Signal K throughput (deltas/second)
