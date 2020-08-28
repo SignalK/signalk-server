@@ -34,7 +34,7 @@ const Dashboard = props => {
                 <Col xs='12' md='6'>
                   <div className='callout callout-primary'>
                     <small className='text-muted'>
-                      Signal K Uptime
+                      Uptime
                     </small>
                     <br />
                     <strong className='h5'>{uptime}</strong>
