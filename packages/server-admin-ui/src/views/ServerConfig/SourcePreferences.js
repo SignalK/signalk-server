@@ -1,43 +1,56 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import { Card, CardHeader, CardBody, CardFooter, Input, Table } from 'reactstrap'
+import { Card, CardHeader, CardBody, CardFooter, Collapse, Input, Table } from 'reactstrap'
 
-const PrefsEditor = ({ priorities }) => {
-  return (
-    <Table>
-      <thead>
-        <tr>
-          <td>sourceRef</td>
-          <td>timeout (ms)</td>
-        </tr>
-      </thead>
-      <tbody>
-        {[...priorities, {sourceRef: '', timeout: ''}].map(({ sourceRef, timeout }, i) => {
-          return (
-            <tr key={i}>
-              <td>
-                <Input
-                  type='text'
-                  name='sourceRef'
-                  onChange={() => {}}
-                  value={sourceRef}
-                />
+class PrefsEditor extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { isOpen: false }
+  }
 
-              </td>
-              <td>
-              <Input
-                  type='number'
-                  name='timeout'
-                  onChange={() => {}}
-                  value={timeout}
-                />
-              </td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </Table>
-  )
+  render() {
+    const toggleEditor = () => this.setState(state => ({ isOpen: !state.isOpen }))
+    return (
+      <div>
+        {!this.state.isOpen && <div onClick={toggleEditor}>...</div>}
+        <Collapse isOpen={this.state.isOpen}>
+          <Table>
+            <thead onClick={toggleEditor}>
+              <tr>
+                <td>sourceRef</td>
+                <td>timeout (ms)</td>
+              </tr>
+            </thead>
+            <tbody>
+              {[...this.props.priorities, { sourceRef: '', timeout: '' }].map(({ sourceRef, timeout }, i) => {
+                return (
+                  <tr key={i}>
+                    <td>
+                      <Input
+                        type='text'
+                        name='sourceRef'
+                        onChange={() => { }}
+                        value={sourceRef}
+                      />
+
+                    </td>
+                    <td>
+                      <Input
+                        type='number'
+                        name='timeout'
+                        onChange={() => { }}
+                        value={timeout}
+                      />
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </Table>
+        </Collapse>
+      </div>
+    )
+  }
 }
 
 class SourcePreferences extends Component {
