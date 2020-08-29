@@ -21,7 +21,12 @@ import Full from './containers/Full/'
 
 import { openServerEventsConnection } from './actions'
 
-import { handleSourcePriorityPathChanged, SOURCEPRIOS_PATH_CHANGED } from './views/ServerConfig/SourcePreferences'
+import {
+  handleSourcePriorityPathChanged,
+  handleSourcePriorityPriorityChanged,
+  SOURCEPRIOS_PRIO_CHANGED,
+  SOURCEPRIOS_PATH_CHANGED
+} from './views/ServerConfig/SourcePreferences'
 
 import escape from 'escape-html'
 import Convert from 'ansi-to-html'
@@ -252,6 +257,9 @@ let store = createStore(
     }
     if ( action.type === SOURCEPRIOS_PATH_CHANGED ) {
       return handleSourcePriorityPathChanged(state, action)
+    }
+    if ( action.type === SOURCEPRIOS_PRIO_CHANGED) {
+      return handleSourcePriorityPriorityChanged(state, action)
     }
     return state
   },

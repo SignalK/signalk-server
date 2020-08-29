@@ -2,7 +2,25 @@ import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { Card, CardHeader, CardBody, CardFooter, Collapse, Input, Table } from 'reactstrap'
 
-export const SOURCEPRIOS_PATH_CHANGED = 'SOURCEPRIOS_PATH_CHANGED'
+export const SOURCEPRIOS_PRIO_CHANGED = 'SOURCEPRIOS_PPRIO_CHANGED'
+
+export const handleSourcePriorityPriorityChanged = (state, action) => {
+  const { pathIndex, sourceRef, timeout, index } = action.data
+  const sourcePriorities = JSON.parse(JSON.stringify(state.sourcePriorities))
+  if (pathIndex === sourcePriorities.length) {
+    sourcePriorities.push({ path: '', priorities: [] })
+  }
+
+  const prios = sourcePriorities[pathIndex].priorities
+  if (index === prios.length) {
+    prios.push({ sourceRef: '', timeout: '' })
+  }
+  prios[index] = { sourceRef, timeout }
+  return {
+    ...state,
+    sourcePriorities
+  }
+}
 
 class PrefsEditor extends Component {
   constructor(props) {
@@ -24,14 +42,22 @@ class PrefsEditor extends Component {
               </tr>
             </thead>
             <tbody>
-              {[...this.props.priorities, { sourceRef: '', timeout: '' }].map(({ sourceRef, timeout }, i) => {
+              {[...this.props.priorities, { sourceRef: '', timeout: '' }].map(({ sourceRef, timeout }, index) => {
                 return (
-                  <tr key={i}>
+                  <tr key={index}>
                     <td>
                       <Input
                         type='text'
                         name='sourceRef'
-                        onChange={() => { }}
+                        onChange={(e) => this.props.dispatch({
+                          type: SOURCEPRIOS_PRIO_CHANGED,
+                          data: {
+                            pathIndex: this.props.pathIndex,
+                            sourceRef: e.target.value,
+                            timeout,
+                            index
+                          }
+                        })}
                         value={sourceRef}
                       />
 
@@ -40,7 +66,15 @@ class PrefsEditor extends Component {
                       <Input
                         type='number'
                         name='timeout'
-                        onChange={() => { }}
+                        onChange={(e) => this.props.dispatch({
+                          type: SOURCEPRIOS_PRIO_CHANGED,
+                          data: {
+                            pathIndex: this.props.pathIndex,
+                            sourceRef,
+                            timeout: e.target.value,
+                            index
+                          }
+                        })}
                         value={timeout}
                       />
                     </td>
@@ -55,11 +89,13 @@ class PrefsEditor extends Component {
   }
 }
 
+export const SOURCEPRIOS_PATH_CHANGED = 'SOURCEPRIOS_PATH_CHANGED'
+
 export const handleSourcePriorityPathChanged = (state, action) => {
-  const {path, index} = action.data
+  const { path, index } = action.data
   const sourcePriorities = JSON.parse(JSON.stringify(state.sourcePriorities))
   if (index === sourcePriorities.length) {
-    sourcePriorities.push({path: '', priorities: []})
+    sourcePriorities.push({ path: '', priorities: [] })
   }
   sourcePriorities[index].path = path
   return {
@@ -88,7 +124,7 @@ class SourcePreferences extends Component {
               </tr>
             </thead>
             <tbody>
-              {sourcePriorities.map(({path, priorities}, index) => {
+              {sourcePriorities.map(({ path, priorities }, index) => {
                 return (
                   <tr key={index}>
                     <td>
@@ -103,7 +139,7 @@ class SourcePreferences extends Component {
                       />
                     </td>
                     <td>
-                      <PrefsEditor priorities={priorities} />
+                      <PrefsEditor priorities={priorities} dispatch={this.props.dispatch} pathIndex={index} />
                     </td>
                   </tr>
                 )
