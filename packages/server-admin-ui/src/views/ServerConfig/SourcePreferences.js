@@ -2,6 +2,8 @@ import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { Card, CardHeader, CardBody, CardFooter, Collapse, Input, Table } from 'reactstrap'
 
+export const SOURCEPRIOS_PATH_CHANGED = 'SOURCEPRIOS_PATH_CHANGED'
+
 class PrefsEditor extends Component {
   constructor(props) {
     super(props)
@@ -53,16 +55,27 @@ class PrefsEditor extends Component {
   }
 }
 
+export const handleSourcePriorityPathChanged = (state, action) => {
+  const {path, index} = action.data
+  const sourcePriorities = JSON.parse(JSON.stringify(state.sourcePriorities))
+  if (index === sourcePriorities.length) {
+    sourcePriorities.push({path: '', priorities: []})
+  }
+  sourcePriorities[index].path = path
+  return {
+    ...state,
+    sourcePriorities
+  }
+}
+
 class SourcePreferences extends Component {
   constructor(props) {
     super(props)
   }
 
   render() {
-    const sourcePriorities = Object.keys(
-      this.props.sourcePriorities
-    ).map(key => [key, this.props.sourcePriorities[key]])
-    sourcePriorities.push(['', []])
+    const sourcePriorities = [].concat(this.props.sourcePriorities)
+    sourcePriorities.push({ path: '', priorities: [] })
     return (
       <Card>
         <CardHeader>Source Preferences</CardHeader>
@@ -75,14 +88,17 @@ class SourcePreferences extends Component {
               </tr>
             </thead>
             <tbody>
-              {sourcePriorities.map(([path, priorities]) => {
+              {sourcePriorities.map(({path, priorities}, index) => {
                 return (
-                  <tr key={path}>
+                  <tr key={index}>
                     <td>
                       <Input
                         type='text'
                         name='path'
-                        onChange={this.handleChange}
+                        onChange={(e) => this.props.dispatch({
+                          type: SOURCEPRIOS_PATH_CHANGED,
+                          data: { path: e.target.value, index }
+                        })}
                         value={path}
                       />
                     </td>
