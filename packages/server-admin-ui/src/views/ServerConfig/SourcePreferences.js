@@ -69,6 +69,7 @@ class PrefsEditor extends Component {
           <Table>
             <thead onClick={toggleEditor}>
               <tr>
+                <td>#</td>
                 <td>sourceRef</td>
                 <td>timeout (ms)</td>
                 <td>Order</td>
@@ -79,6 +80,9 @@ class PrefsEditor extends Component {
               {[...this.props.priorities, { sourceRef: '', timeout: '' }].map(({ sourceRef, timeout }, index) => {
                 return (
                   <tr key={index}>
+                    <td>
+                    {index + 1}.
+                    </td>
                     <td>
                       <Input
                         type='text'
@@ -94,10 +98,9 @@ class PrefsEditor extends Component {
                         })}
                         value={sourceRef}
                       />
-
                     </td>
                     <td>
-                      <Input
+                      {index > 0 && <Input
                         type='number'
                         name='timeout'
                         onChange={(e) => this.props.dispatch({
@@ -111,6 +114,7 @@ class PrefsEditor extends Component {
                         })}
                         value={timeout}
                       />
+                      }                    
                     </td>
                     <td>
                       {
@@ -128,7 +132,7 @@ class PrefsEditor extends Component {
                         </button>
                       }
                       {
-                        index < this.props.priorities.length-1 &&
+                        index < this.props.priorities.length - 1 &&
                         <button onClick={() => this.props.dispatch({
                           type: SOURCEPRIOS_PRIO_MOVED,
                           data: {
