@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import { Card, CardHeader, CardBody, CardFooter, Collapse, Input, Table } from 'reactstrap'
+import { Button, Card, CardHeader, CardBody, CardFooter, Collapse, Input, Table } from 'reactstrap'
 import { remove } from 'lodash'
 
 export const SOURCEPRIOS_PRIO_CHANGED = 'SOURCEPRIOS_PPRIO_CHANGED'
@@ -34,8 +34,25 @@ export const handleSourcePriorityPriorityDeleted = (state, action) => {
     ...state,
     sourcePriorities
   }
-
 }
+
+export const SOURCEPRIOS_PRIO_MOVED = 'SOURCEPRIOS_PRIO_MOVED'
+
+export const handleSourcePriorityPriorityMoved = (state, action) => {
+  const { pathIndex, index, change } = action.data
+  const sourcePriorities = JSON.parse(JSON.stringify(state.sourcePriorities))
+  const prios = sourcePriorities[pathIndex].priorities
+
+  const tmp = prios[index]
+  prios[index] = prios[index + change]
+  prios[index + change] = tmp
+
+  return {
+    ...state,
+    sourcePriorities
+  }
+}
+
 
 class PrefsEditor extends Component {
   constructor(props) {
@@ -54,6 +71,7 @@ class PrefsEditor extends Component {
               <tr>
                 <td>sourceRef</td>
                 <td>timeout (ms)</td>
+                <td>Order</td>
                 <td></td>
               </tr>
             </thead>
@@ -94,17 +112,47 @@ class PrefsEditor extends Component {
                         value={timeout}
                       />
                     </td>
-                    <td>{index < this.props.priorities.length &&
-                      <i
-                        className='fas fa-trash'
-                        onClick={() => this.props.dispatch({
-                          type: SOURCEPRIOS_PRIO_DELETED,
+                    <td>
+                      {
+                        index > 0 &&
+                        index < this.props.priorities.length &&
+                        <button onClick={() => this.props.dispatch({
+                          type: SOURCEPRIOS_PRIO_MOVED,
                           data: {
                             pathIndex: this.props.pathIndex,
-                            index
+                            index,
+                            change: -1
                           }
-                        })}
-                      />}</td>
+                        })}>
+                          <i className='fas fa-arrow-up' />
+                        </button>
+                      }
+                      {
+                        index < this.props.priorities.length-1 &&
+                        <button onClick={() => this.props.dispatch({
+                          type: SOURCEPRIOS_PRIO_MOVED,
+                          data: {
+                            pathIndex: this.props.pathIndex,
+                            index,
+                            change: 1
+                          }
+                        })}>
+                          <i className='fas fa-arrow-down' />
+                        </button>
+                      }
+                    </td>
+                    <td>
+                      {index < this.props.priorities.length &&
+                        <i
+                          className='fas fa-trash'
+                          onClick={() => this.props.dispatch({
+                            type: SOURCEPRIOS_PRIO_DELETED,
+                            data: {
+                              pathIndex: this.props.pathIndex,
+                              index
+                            }
+                          })}
+                        />}</td>
                   </tr>
                 )
               })}
