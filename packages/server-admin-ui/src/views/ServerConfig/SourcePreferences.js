@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { Card, CardHeader, CardBody, CardFooter, Collapse, Input, Table } from 'reactstrap'
-import { remove} from 'lodash'
+import { remove } from 'lodash'
 
 export const SOURCEPRIOS_PRIO_CHANGED = 'SOURCEPRIOS_PPRIO_CHANGED'
 
@@ -131,6 +131,19 @@ export const handleSourcePriorityPathChanged = (state, action) => {
   }
 }
 
+export const SOURCEPRIOS_PATH_DELETED = 'SOURCEPRIOS_PATH_DELETED'
+
+export const handleSourcePriorityPathDeleted = (state, action) => {
+  const { index } = action.data
+  const sourcePriorities = JSON.parse(JSON.stringify(state.sourcePriorities))
+  remove(sourcePriorities, (_, i) => i === index)
+  return {
+    ...state,
+    sourcePriorities
+  }
+}
+
+
 class SourcePreferences extends Component {
   constructor(props) {
     super(props)
@@ -148,6 +161,7 @@ class SourcePreferences extends Component {
               <tr>
                 <th>Path</th>
                 <th>Priorities</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -167,6 +181,19 @@ class SourcePreferences extends Component {
                     </td>
                     <td>
                       <PrefsEditor priorities={priorities} dispatch={this.props.dispatch} pathIndex={index} />
+                    </td>
+                    <td>
+                      <td style={{ border: 'none' }}>{index < this.props.sourcePriorities.length &&
+                        <i
+                          className='fas fa-trash'
+                          onClick={() => this.props.dispatch({
+                            type: SOURCEPRIOS_PATH_DELETED,
+                            data: {
+                              index
+                            }
+                          })}
+                        />} </td>
+
                     </td>
                   </tr>
                 )

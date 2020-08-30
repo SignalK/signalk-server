@@ -24,6 +24,8 @@ import { openServerEventsConnection } from './actions'
 import {
   SOURCEPRIOS_PATH_CHANGED,
   handleSourcePriorityPathChanged,
+  SOURCEPRIOS_PATH_DELETED,
+  handleSourcePriorityPathDeleted,
   SOURCEPRIOS_PRIO_CHANGED,
   handleSourcePriorityPriorityChanged,
   handleSourcePriorityPriorityDeleted,
@@ -259,6 +261,9 @@ let store = createStore(
     }
     if ( action.type === SOURCEPRIOS_PATH_CHANGED ) {
       return handleSourcePriorityPathChanged(state, action)
+    }
+    if ( action.type === SOURCEPRIOS_PATH_DELETED ) {
+      return handleSourcePriorityPathDeleted(state, action)
     }
     if ( action.type === SOURCEPRIOS_PRIO_CHANGED) {
       return handleSourcePriorityPriorityChanged(state, action)
