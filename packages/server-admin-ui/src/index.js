@@ -22,10 +22,12 @@ import Full from './containers/Full/'
 import { openServerEventsConnection } from './actions'
 
 import {
+  SOURCEPRIOS_PATH_CHANGED,
   handleSourcePriorityPathChanged,
-  handleSourcePriorityPriorityChanged,
   SOURCEPRIOS_PRIO_CHANGED,
-  SOURCEPRIOS_PATH_CHANGED
+  handleSourcePriorityPriorityChanged,
+  handleSourcePriorityPriorityDeleted,
+  SOURCEPRIOS_PRIO_DELETED
 } from './views/ServerConfig/SourcePreferences'
 
 import escape from 'escape-html'
@@ -260,6 +262,9 @@ let store = createStore(
     }
     if ( action.type === SOURCEPRIOS_PRIO_CHANGED) {
       return handleSourcePriorityPriorityChanged(state, action)
+    }
+    if ( action.type === SOURCEPRIOS_PRIO_DELETED) {
+      return handleSourcePriorityPriorityDeleted(state, action)
     }
     return state
   },

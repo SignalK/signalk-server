@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { Card, CardHeader, CardBody, CardFooter, Collapse, Input, Table } from 'reactstrap'
+import { remove} from 'lodash'
 
 export const SOURCEPRIOS_PRIO_CHANGED = 'SOURCEPRIOS_PPRIO_CHANGED'
 
@@ -22,6 +23,20 @@ export const handleSourcePriorityPriorityChanged = (state, action) => {
   }
 }
 
+export const SOURCEPRIOS_PRIO_DELETED = 'SOURCEPRIOS_PRIO_DELETED'
+
+export const handleSourcePriorityPriorityDeleted = (state, action) => {
+  const { pathIndex, index } = action.data
+  const sourcePriorities = JSON.parse(JSON.stringify(state.sourcePriorities))
+  const prios = sourcePriorities[pathIndex].priorities
+  remove(prios, (_, i) => i === index)
+  return {
+    ...state,
+    sourcePriorities
+  }
+
+}
+
 class PrefsEditor extends Component {
   constructor(props) {
     super(props)
@@ -39,6 +54,7 @@ class PrefsEditor extends Component {
               <tr>
                 <td>sourceRef</td>
                 <td>timeout (ms)</td>
+                <td></td>
               </tr>
             </thead>
             <tbody>
@@ -78,6 +94,17 @@ class PrefsEditor extends Component {
                         value={timeout}
                       />
                     </td>
+                    <td>{index < this.props.priorities.length &&
+                      <i
+                        className='fas fa-trash'
+                        onClick={() => this.props.dispatch({
+                          type: SOURCEPRIOS_PRIO_DELETED,
+                          data: {
+                            pathIndex: this.props.pathIndex,
+                            index
+                          }
+                        })}
+                      />}</td>
                   </tr>
                 )
               })}
