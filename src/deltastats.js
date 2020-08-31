@@ -34,7 +34,7 @@ module.exports = {
           numberOfAvailablePaths: app.streambundle.getAvailablePaths().length,
           wsClients: app.interfaces.ws ? app.interfaces.ws.numClients() : 0,
           providerStatistics: app.providerStatistics,
-          uptime: moment.duration(moment().diff(app.startTime)).humanize()
+          uptime: process.uptime()
         }
       })
       app.lastIntervalDeltaCount = app.deltaCount
