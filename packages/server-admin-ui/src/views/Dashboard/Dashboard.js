@@ -19,6 +19,9 @@ const Dashboard = props => {
   }
   const providerStatus = props.providerStatus || []
   const errorCount = providerStatus.filter(s => s.type === 'error').length
+  const uptimeD = Math.floor(uptime / (60*60*24))
+  const uptimeH = Math.floor(uptime % (60*60*24) / (60*60))
+  const uptimeM = Math.floor(uptime % (60*60) / 60)
   let errors = ''
   if ( errorCount > 0 ) {
     errors = `(${errorCount} errors)`
@@ -37,7 +40,7 @@ const Dashboard = props => {
                       Uptime
                     </small>
                     <br />
-                    <strong className='h5'>{uptime}</strong>
+                    <strong className='h5'>{uptimeD} Days, {uptimeH} Hours, {uptimeM} Minutes</strong>
                   </div>
                   <div className='callout callout-primary'>
                     <small className='text-muted'>
