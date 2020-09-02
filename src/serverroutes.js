@@ -593,7 +593,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       if (err) {
         res.status(500).send('Unable to save to sourcePrefences in settings file')
       } else {
-        res.send('SourcePreferences saved')
+        res.json({result: 'ok'})
       }
     })
   })

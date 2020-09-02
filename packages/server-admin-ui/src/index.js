@@ -31,7 +31,9 @@ import {
   SOURCEPRIOS_PRIO_DELETED,
   handleSourcePriorityPriorityDeleted,
   SOURCEPRIOS_PRIO_MOVED,
-  handleSourcePriorityPriorityMoved
+  handleSourcePriorityPriorityMoved,
+  SOURCEPRIOS_SAVE,
+  handleSourcePrioritySave
 } from './views/ServerConfig/SourcePreferences'
 
 import escape from 'escape-html'
@@ -73,7 +75,10 @@ const state = {
   },
   restoreStatus: {},
   vesselInfo: {},
-  sourcePriorities: []
+  sourcePriorities: [],
+  sourcePrioritiesState: {
+    dirty: false
+  }
 }
 
 let store = createStore(
@@ -275,6 +280,9 @@ let store = createStore(
     }
     if ( action.type === SOURCEPRIOS_PRIO_MOVED) {
       return handleSourcePriorityPriorityMoved(state, action)
+    }
+    if ( action.type === SOURCEPRIOS_SAVE) {
+      return handleSourcePrioritySave(state, action)
     }
     return state
   },

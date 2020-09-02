@@ -19,7 +19,11 @@ export const handleSourcePriorityPriorityChanged = (state, action) => {
   prios[index] = { sourceRef, timeout }
   return {
     ...state,
-    sourcePriorities
+    sourcePriorities,
+    sourcePrioritiesState: {
+      ...state.sourcePrioritiesState,
+      dirty: true
+    }
   }
 }
 
@@ -32,7 +36,11 @@ export const handleSourcePriorityPriorityDeleted = (state, action) => {
   remove(prios, (_, i) => i === index)
   return {
     ...state,
-    sourcePriorities
+    sourcePriorities,
+    sourcePrioritiesState: {
+      ...state.sourcePrioritiesState,
+      dirty: true
+    }
   }
 }
 
@@ -49,7 +57,11 @@ export const handleSourcePriorityPriorityMoved = (state, action) => {
 
   return {
     ...state,
-    sourcePriorities
+    sourcePriorities,
+    sourcePrioritiesState: {
+      ...state.sourcePrioritiesState,
+      dirty: true
+    }
   }
 }
 
@@ -81,7 +93,7 @@ class PrefsEditor extends Component {
                 return (
                   <tr key={index}>
                     <td>
-                    {index + 1}.
+                      {index + 1}.
                     </td>
                     <td>
                       <Input
@@ -114,7 +126,7 @@ class PrefsEditor extends Component {
                         })}
                         value={timeout}
                       />
-                      }                    
+                      }
                     </td>
                     <td>
                       {
@@ -179,7 +191,11 @@ export const handleSourcePriorityPathChanged = (state, action) => {
   sourcePriorities[index].path = path
   return {
     ...state,
-    sourcePriorities
+    sourcePriorities,
+    sourcePrioritiesState: {
+      ...state.sourcePrioritiesState,
+      dirty: true
+    }
   }
 }
 
@@ -191,8 +207,31 @@ export const handleSourcePriorityPathDeleted = (state, action) => {
   remove(sourcePriorities, (_, i) => i === index)
   return {
     ...state,
-    sourcePriorities
+    sourcePriorities,
+    sourcePrioritiesState: {
+      ...state.sourcePrioritiesState,
+      dirty: true
+    }
   }
+}
+
+export const SOURCEPRIOS_SAVE = 'SOURCEPRIOS_SAVE'
+
+export const handleSourcePrioritySave = (state, action) => {
+  fetch(`${window.serverRoutesPrefix}/sourcePreferences`, {
+    method: 'PUT',
+    credentials: "include",
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(state.sourcePriorities.reduce((acc, pathPriority) => {
+      acc[pathPriority.path] = pathPriority.priorities
+      return acc
+    }, {}))
+  })
+    .then(data => {
+      console.log(data)
+    })
 }
 
 
@@ -253,12 +292,22 @@ class SourcePreferences extends Component {
             </tbody>
           </Table>
         </CardBody>
-        <CardFooter></CardFooter>
+        <CardFooter>
+          <Button
+            size='sm'
+            color='primary'
+            disabled={!this.props.sourcePrioritiesState.dirty}
+            onClick={() => this.props.dispatch({
+              type: SOURCEPRIOS_SAVE
+            })}>
+            <i className='fa fa-save' /> Save
+            </Button>
+        </CardFooter>
       </Card>
     )
   }
 }
 
-const mapStateToProps = ({ sourcePriorities }) => ({ sourcePriorities })
+const mapStateToProps = ({ sourcePriorities, sourcePrioritiesState }) => ({ sourcePriorities, sourcePrioritiesState })
 
 export default connect(mapStateToProps)(SourcePreferences)
