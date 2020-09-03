@@ -22,18 +22,7 @@ import Full from './containers/Full/'
 import { openServerEventsConnection } from './actions'
 
 import {
-  SOURCEPRIOS_PATH_CHANGED,
-  handleSourcePriorityPathChanged,
-  SOURCEPRIOS_PATH_DELETED,
-  handleSourcePriorityPathDeleted,
-  SOURCEPRIOS_PRIO_CHANGED,
-  handleSourcePriorityPriorityChanged,
-  SOURCEPRIOS_PRIO_DELETED,
-  handleSourcePriorityPriorityDeleted,
-  SOURCEPRIOS_PRIO_MOVED,
-  handleSourcePriorityPriorityMoved,
-  SOURCEPRIOS_SAVE,
-  handleSourcePrioritySave
+  reduceSourcePriorities
 } from './views/ServerConfig/SourcePreferences'
 
 import escape from 'escape-html'
@@ -75,9 +64,11 @@ const state = {
   },
   restoreStatus: {},
   vesselInfo: {},
-  sourcePriorities: [],
-  sourcePrioritiesState: {
-    dirty: false
+  sourcePrioritiesData: {
+    sourcePriorities: [],
+    saveState: {
+      dirty: false
+    }
   }
 }
 
@@ -260,31 +251,22 @@ let store = createStore(
       const sourcePriorities = Object.keys(
         sourcePrioritiesMap
       ).map((key, i) => ({path: key, priorities: sourcePrioritiesMap[key]}))
+      sourcePriorities.state = {}
 
       return {
         ...state,
-        sourcePriorities
+        sourcePrioritiesData: {
+          sourcePriorities,
+          saveState: {
+            dirty: false
+          }
+        }
       }
     }
-    if ( action.type === SOURCEPRIOS_PATH_CHANGED ) {
-      return handleSourcePriorityPathChanged(state, action)
+    return {
+      ...state,
+      sourcePrioritiesData: reduceSourcePriorities(state.sourcePrioritiesData, action)
     }
-    if ( action.type === SOURCEPRIOS_PATH_DELETED ) {
-      return handleSourcePriorityPathDeleted(state, action)
-    }
-    if ( action.type === SOURCEPRIOS_PRIO_CHANGED) {
-      return handleSourcePriorityPriorityChanged(state, action)
-    }
-    if ( action.type === SOURCEPRIOS_PRIO_DELETED) {
-      return handleSourcePriorityPriorityDeleted(state, action)
-    }
-    if ( action.type === SOURCEPRIOS_PRIO_MOVED) {
-      return handleSourcePriorityPriorityMoved(state, action)
-    }
-    if ( action.type === SOURCEPRIOS_SAVE) {
-      return handleSourcePrioritySave(state, action)
-    }
-    return state
   },
   state,
   applyMiddleware(thunk)

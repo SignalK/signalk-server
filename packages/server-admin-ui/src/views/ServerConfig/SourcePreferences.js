@@ -1,68 +1,100 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import { Button, Card, CardHeader, CardBody, CardFooter, Collapse, Input, Table } from 'reactstrap'
+import { Badge, Button, Card, CardHeader, CardBody, CardFooter, Collapse, Input, Table } from 'reactstrap'
 import { remove } from 'lodash'
 
 export const SOURCEPRIOS_PRIO_CHANGED = 'SOURCEPRIOS_PPRIO_CHANGED'
-
-export const handleSourcePriorityPriorityChanged = (state, action) => {
-  const { pathIndex, sourceRef, timeout, index } = action.data
-  const sourcePriorities = JSON.parse(JSON.stringify(state.sourcePriorities))
-  if (pathIndex === sourcePriorities.length) {
-    sourcePriorities.push({ path: '', priorities: [] })
-  }
-
-  const prios = sourcePriorities[pathIndex].priorities
-  if (index === prios.length) {
-    prios.push({ sourceRef: '', timeout: '' })
-  }
-  prios[index] = { sourceRef, timeout }
-  return {
-    ...state,
-    sourcePriorities,
-    sourcePrioritiesState: {
-      ...state.sourcePrioritiesState,
-      dirty: true
-    }
-  }
-}
-
 export const SOURCEPRIOS_PRIO_DELETED = 'SOURCEPRIOS_PRIO_DELETED'
-
-export const handleSourcePriorityPriorityDeleted = (state, action) => {
-  const { pathIndex, index } = action.data
-  const sourcePriorities = JSON.parse(JSON.stringify(state.sourcePriorities))
-  const prios = sourcePriorities[pathIndex].priorities
-  remove(prios, (_, i) => i === index)
-  return {
-    ...state,
-    sourcePriorities,
-    sourcePrioritiesState: {
-      ...state.sourcePrioritiesState,
-      dirty: true
-    }
-  }
-}
-
 export const SOURCEPRIOS_PRIO_MOVED = 'SOURCEPRIOS_PRIO_MOVED'
 
-export const handleSourcePriorityPriorityMoved = (state, action) => {
-  const { pathIndex, index, change } = action.data
+export const SOURCEPRIOS_PATH_CHANGED = 'SOURCEPRIOS_PATH_CHANGED'
+export const SOURCEPRIOS_PATH_DELETED = 'SOURCEPRIOS_PATH_DELETED'
+
+export const SOURCEPRIOS_SAVING = 'SOURCEPRIOS_SAVING'
+export const SOURCEPRIOS_SAVED = 'SOURCEPRIOS_SAVED'
+export const SOURCEPRIOS_SAVE_FAILED = 'SOURCEPRIOS_SAVE_FAILED'
+export const SOURCEPRIOS_SAVE_FAILED_OVER = 'SOURCEPRIOS_SAVE_FAILED_OVER'
+
+export const reduceSourcePriorities = (state, action) => {
   const sourcePriorities = JSON.parse(JSON.stringify(state.sourcePriorities))
-  const prios = sourcePriorities[pathIndex].priorities
+  let saveState = {...state.saveState}
+  const { path, index, pathIndex, sourceRef, timeout, change } = action.data || {}
+  const prios = pathIndex !== undefined ? sourcePriorities[pathIndex].priorities : undefined
 
-  const tmp = prios[index]
-  prios[index] = prios[index + change]
-  prios[index + change] = tmp
+  switch (action.type) {
+    case SOURCEPRIOS_PATH_CHANGED:
+      if (index === sourcePriorities.length) {
+        sourcePriorities.push({ path: '', priorities: [] })
+      }
+      sourcePriorities[index].path = path
+      saveState.dirty = true
+      break;
 
-  return {
-    ...state,
-    sourcePriorities,
-    sourcePrioritiesState: {
-      ...state.sourcePrioritiesState,
-      dirty: true
-    }
+    case SOURCEPRIOS_PATH_DELETED:
+      remove(sourcePriorities, (_, i) => i === index)
+      saveState.dirty = true
+      break;
+
+    case SOURCEPRIOS_PRIO_CHANGED:
+      if (pathIndex === sourcePriorities.length) {
+        sourcePriorities.push({ path: '', priorities: [] })
+      }
+      if (index === prios.length) {
+        prios.push({ sourceRef: '', timeout: '' })
+      }
+      prios[index] = { sourceRef, timeout }
+      saveState.dirty = true
+      break;
+
+    case SOURCEPRIOS_PRIO_DELETED:
+      remove(prios, (_, i) => i === index)
+      saveState.dirty = true
+      break;
+
+    case SOURCEPRIOS_PRIO_MOVED:
+      const tmp = prios[index]
+      prios[index] = prios[index + change]
+      prios[index + change] = tmp
+      saveState.dirty = true
+      break;
+
+    case SOURCEPRIOS_SAVING:
+      saveState = {
+        ...saveState,
+        isSaving: true,
+        saveFailed: false
+      }
+      break;
+
+    case SOURCEPRIOS_SAVED:
+      saveState = {
+        dirty: false,
+        isSaving: false,
+        saveFailed: false
+      }
+      break;
+
+    case SOURCEPRIOS_SAVE_FAILED:
+      saveState = {
+        ...saveState,
+        isSaving: false,
+        saveFailed: true
+      }
+      break;
+
+    case SOURCEPRIOS_SAVE_FAILED_OVER:
+      saveState = {
+        ...saveState,
+        saveFailed: false
+      }
+      break;
+
+
+    default:
+      return state
   }
+  // common return statement
+  return { sourcePriorities, saveState }
 }
 
 
@@ -99,6 +131,7 @@ class PrefsEditor extends Component {
                       <Input
                         type='text'
                         name='sourceRef'
+                        disabled={this.props.isSaving}
                         onChange={(e) => this.props.dispatch({
                           type: SOURCEPRIOS_PRIO_CHANGED,
                           data: {
@@ -132,7 +165,7 @@ class PrefsEditor extends Component {
                       {
                         index > 0 &&
                         index < this.props.priorities.length &&
-                        <button onClick={() => this.props.dispatch({
+                        <button onClick={() => !this.props.isSaving && this.props.dispatch({
                           type: SOURCEPRIOS_PRIO_MOVED,
                           data: {
                             pathIndex: this.props.pathIndex,
@@ -145,7 +178,7 @@ class PrefsEditor extends Component {
                       }
                       {
                         index < this.props.priorities.length - 1 &&
-                        <button onClick={() => this.props.dispatch({
+                        <button onClick={() => !this.props.isSaving && this.props.dispatch({
                           type: SOURCEPRIOS_PRIO_MOVED,
                           data: {
                             pathIndex: this.props.pathIndex,
@@ -161,14 +194,15 @@ class PrefsEditor extends Component {
                       {index < this.props.priorities.length &&
                         <i
                           className='fas fa-trash'
-                          onClick={() => this.props.dispatch({
+                          onClick={() => !this.props.isSaving && this.props.dispatch({
                             type: SOURCEPRIOS_PRIO_DELETED,
                             data: {
                               pathIndex: this.props.pathIndex,
                               index
                             }
                           })}
-                        />}</td>
+                        />}
+                    </td>
                   </tr>
                 )
               })}
@@ -180,57 +214,35 @@ class PrefsEditor extends Component {
   }
 }
 
-export const SOURCEPRIOS_PATH_CHANGED = 'SOURCEPRIOS_PATH_CHANGED'
-
-export const handleSourcePriorityPathChanged = (state, action) => {
-  const { path, index } = action.data
-  const sourcePriorities = JSON.parse(JSON.stringify(state.sourcePriorities))
-  if (index === sourcePriorities.length) {
-    sourcePriorities.push({ path: '', priorities: [] })
-  }
-  sourcePriorities[index].path = path
-  return {
-    ...state,
-    sourcePriorities,
-    sourcePrioritiesState: {
-      ...state.sourcePrioritiesState,
-      dirty: true
-    }
-  }
-}
-
-export const SOURCEPRIOS_PATH_DELETED = 'SOURCEPRIOS_PATH_DELETED'
-
-export const handleSourcePriorityPathDeleted = (state, action) => {
-  const { index } = action.data
-  const sourcePriorities = JSON.parse(JSON.stringify(state.sourcePriorities))
-  remove(sourcePriorities, (_, i) => i === index)
-  return {
-    ...state,
-    sourcePriorities,
-    sourcePrioritiesState: {
-      ...state.sourcePrioritiesState,
-      dirty: true
-    }
-  }
-}
-
-export const SOURCEPRIOS_SAVE = 'SOURCEPRIOS_SAVE'
-
-export const handleSourcePrioritySave = (state, action) => {
+const sourcePrioritySave = (sourcePriorities) => (dispatch) => {
+  dispatch({
+    type: SOURCEPRIOS_SAVING
+  })
   fetch(`${window.serverRoutesPrefix}/sourcePreferences`, {
     method: 'PUT',
     credentials: "include",
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(state.sourcePriorities.reduce((acc, pathPriority) => {
+    body: JSON.stringify(sourcePriorities.reduce((acc, pathPriority) => {
       acc[pathPriority.path] = pathPriority.priorities
       return acc
     }, {}))
   })
-    .then(data => {
-      console.log(data)
+    .then(response => {
+      if (response.status === 200) {
+        dispatch({
+          type: SOURCEPRIOS_SAVED
+        })
+      } else {
+        throw new Error()
+      }
+    })
+    .catch(err => {
+      dispatch({
+        type: SOURCEPRIOS_SAVE_FAILED
+      })
+      setTimeout(() => dispatch({ type: SOURCEPRIOS_SAVE_FAILED_OVER }), 5 * 1000)
     })
 }
 
@@ -245,7 +257,7 @@ class SourcePreferences extends Component {
     sourcePriorities.push({ path: '', priorities: [] })
     return (
       <Card>
-        <CardHeader>Source Preferences</CardHeader>
+        <CardHeader><Badge color='danger'>Beta</Badge> Source Preferences</CardHeader>
         <CardBody>
           <Table responsive bordered striped size="sm">
             <thead>
@@ -263,6 +275,7 @@ class SourcePreferences extends Component {
                       <Input
                         type='text'
                         name='path'
+                        disabled={this.props.saveState.isSaving}
                         onChange={(e) => this.props.dispatch({
                           type: SOURCEPRIOS_PATH_CHANGED,
                           data: { path: e.target.value, index }
@@ -271,7 +284,11 @@ class SourcePreferences extends Component {
                       />
                     </td>
                     <td>
-                      <PrefsEditor priorities={priorities} dispatch={this.props.dispatch} pathIndex={index} />
+                      <PrefsEditor
+                        priorities={priorities}
+                        dispatch={this.props.dispatch}
+                        isSaving={this.props.saveState.isSaving}
+                        pathIndex={index} />
                     </td>
                     <td>
                       <td style={{ border: 'none' }}>{index < this.props.sourcePriorities.length &&
@@ -296,18 +313,23 @@ class SourcePreferences extends Component {
           <Button
             size='sm'
             color='primary'
-            disabled={!this.props.sourcePrioritiesState.dirty}
-            onClick={() => this.props.dispatch({
-              type: SOURCEPRIOS_SAVE
-            })}>
+            disabled={!this.props.saveState.dirty || this.props.saveState.isSaving}
+            onClick={(e) => {
+              e.preventDefault()
+              this.props.dispatch(sourcePrioritySave(this.props.sourcePriorities))
+            }}>
             <i className='fa fa-save' /> Save
             </Button>
+          {this.props.saveState.saveFailed && 'Saving priorities settings failed!'}
         </CardFooter>
       </Card>
     )
   }
 }
 
-const mapStateToProps = ({ sourcePriorities, sourcePrioritiesState }) => ({ sourcePriorities, sourcePrioritiesState })
+const mapStateToProps = ({ sourcePrioritiesData }) => ({
+  sourcePriorities: sourcePrioritiesData.sourcePriorities,
+  saveState: sourcePrioritiesData.saveState
+})
 
 export default connect(mapStateToProps)(SourcePreferences)
