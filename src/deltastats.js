@@ -15,14 +15,12 @@
 */
 
 const { isUndefined, values } = require('lodash')
-const moment = require('moment')
 
 module.exports = {
   startDeltaStatistics: function(app) {
     app.deltaCount = 0
     app.lastIntervalDeltaCount = 0
     app.providerStatistics = {}
-    app.startTime = moment()
 
     return setInterval(() => {
       updateProviderPeriodStats(app)

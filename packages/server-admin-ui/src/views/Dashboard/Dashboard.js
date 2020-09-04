@@ -37,13 +37,6 @@ const Dashboard = props => {
                 <Col xs='12' md='6'>
                   <div className='callout callout-primary'>
                     <small className='text-muted'>
-                      Uptime
-                    </small>
-                    <br />
-                    <strong className='h5'>{uptimeD} Days, {uptimeH} Hours, {uptimeM} Minutes</strong>
-                  </div>
-                  <div className='callout callout-primary'>
-                    <small className='text-muted'>
                       Total server Signal K throughput (deltas/second)
                     </small>
                     <br />
@@ -62,6 +55,13 @@ const Dashboard = props => {
                     </small>
                     <br />
                     <strong className='h4'>{wsClients}</strong>
+                  </div>
+                  <div className='callout callout-primary'>
+                    <small className='text-muted'>
+                      Uptime
+                    </small>
+                    <br />
+                    <strong className='h5'>{uptimeD} days, {uptimeH} hours, {uptimeM} minutes</strong>
                   </div>
                 </Col>
                 <Col xs='12' md='6'>
