@@ -239,6 +239,148 @@ const serialportListOptions = (keys, labels, deviceListMap) => {
   },[])
 }
 
+class MdnsWebSocketList extends Component {
+  constructor(props) {
+    super()
+    this.state = {
+      mdnswebsocket: [],
+      discoveryState: 'Discovery in progress...'
+    }
+    this.handleChange = this.handleChange.bind(this)
+    this.fillWebSocketList = this.fillWebSocketList.bind(this)
+    this.updateWebSocketList = undefined
+  }
+
+  handleChange(event) {
+    var wsParams = this.state.mdnswebsocket[event.target.value]
+    this.props.value.type = (wsParams.type === 'signalk-wss') ? 'wss' : 'ws'
+    this.props.value.host = wsParams.host
+    this.props.value.port = wsParams.port
+    this.props.onChange({
+      target: {
+        type: event.target.type,
+        name: event.target.name,
+        value: this.props.value.type
+      }
+    })
+  }
+
+  componentDidMount() {
+    this.updateWebSocketList = this.fillWebSocketList
+    fetch(`/websockets`, {
+      credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(webSocketList => {
+      if (typeof this.updateWebSocketList === 'function') {
+        this.updateWebSocketList(webSocketList)
+      }
+    })
+  }
+
+  componentWillUnmount() {
+    this.updateWebSocketList = undefined
+  }
+
+  fillWebSocketList(webSocketList) {
+    this.setState({
+      mdnswebsocket: webSocketList,
+      discoveryState: 'Select a WebSocket discovered'
+    })
+  }
+
+  render () {
+    return(
+      <FormGroup row>
+        <Col xs='0' md='3'>
+          <Label htmlFor='options.useDiscovery'>Discovery</Label>
+        </Col>
+        <Col xs='12' md='3'>
+          <Input
+            type='select'
+            value={this.state.discoveryState}
+            name='options.type'
+            onChange={this.handleChange}
+          >
+            <option disabled={true}>{this.state.discoveryState}</option>
+            {this.state.mdnswebsocket.reduce((acc, elm, j) => {
+              acc.push(<option key={j} value={j}>{'ws' + ((elm.type === 'signalk-wss')? 's' : '') + '://' + elm.host + ':' + elm.port}</option>)
+              return acc
+            }, [])}
+          </Input>
+        </Col>
+      </FormGroup>
+    )
+  }
+}
+
+class SelfSignedCert extends Component {
+  render () {
+    return (
+      <FormGroup row>
+        <Col xs='3' md='3'>
+          <Label>Allow self signed certificates</Label>
+        </Col>
+        <Col xs='2' md='3'>
+          <Label className='switch switch-text switch-primary'>
+            <Input
+              type='checkbox'
+              name='options.selfsignedcert'
+              className='switch-input'
+              onChange={event => this.props.onChange(event)}
+              checked={this.props.value.selfsignedcert && (this.props.value.type === 'wss')}
+              disabled={!(this.props.value.type === 'wss')}
+            />
+            <span className='switch-label' data-on='Yes' data-off='No' />
+            <span className='switch-handle' />
+          </Label>
+        </Col>
+      </FormGroup>
+    )
+  }
+}
+
+class WsUseSsl extends Component {
+  constructor(props) {
+    super()
+    this.handleChange = this.handleChange.bind(this)
+  }
+
+  handleChange(event) {
+    this.props.value.type = (event.target.checked) ? 'wss' : 'ws'
+    this.props.onChange({
+      target: {
+        type: 'select-one',
+        name: event.target.name,
+        value: this.props.value.type
+      }
+    })
+  }
+
+  render () {
+    return (
+      <FormGroup row>
+        <Col xs='3' md='3'>
+          <Label>Use SSL</Label>
+        </Col>
+        <Col xs='2' md='3'>
+          <Label className='switch switch-text switch-primary'>
+            <Input
+              type='checkbox'
+              name='options.type'
+              className='switch-input'
+              onChange={this.handleChange}
+              checked={(this.props.value.type === 'wss')}
+            />
+            <span className='switch-label' data-on='Yes' data-off='No' />
+            <span className='switch-handle' />
+          </Label>
+        </Col>
+      </FormGroup>
+    )
+  }
+}
+
 class LoggingInput extends Component {
   render () {
     return (
@@ -775,6 +917,9 @@ const NMEA0183 = props => {
 }
 
 const SignalK = props => {
+  function typeBroker( type) {
+    return (type === 'wss') ? 'ws' : type
+  }
   return (
     <div>
       <FormGroup row>
@@ -784,14 +929,13 @@ const SignalK = props => {
         <Col xs='12' md='3'>
           <Input
             type='select'
-            value={props.value.options.type}
+            value={typeBroker(props.value.options.type)}
             name='options.type'
             onChange={event => props.onChange(event)}
           >
             <option>Select a source</option>
             <option value='serial'>Serial</option>
             <option value='ws'>WebSocket</option>
-            <option value='wss'>WebSocket SSL</option>
             <option value='tcp'>TCP</option>
             <option value='udp'>UDP</option>
           </Input>
@@ -803,32 +947,7 @@ const SignalK = props => {
         <div>
           {(props.value.options.type === 'ws' ||
             props.value.options.type === 'wss') && (
-            <FormGroup row>
-              <Col xs='0' md='3'>
-              <Label htmlFor='options.useDiscovery'>Discovery</Label>
-              </Col>
-              <Col xs='12' md='8'>
-                <div key={name}>
-                  <Label className='switch switch-text switch-primary'>
-                    <Input
-                      type='checkbox'
-                      id='options.useDiscovery'
-                      name='options.useDiscovery'
-                      className='switch-input'
-                      onChange={props.onChange}
-                      checked={props.value.options.useDiscovery}
-                    />
-                    <span
-                      className='switch-label'
-                      data-on='On'
-                      data-off='Off'
-                    />
-                    <span className='switch-handle' />
-                  </Label>
-                  Discover Signal K servers automatically
-                  </div>
-              </Col>
-            </FormGroup>
+            <MdnsWebSocketList value={props.value.options} onChange={props.onChange} />
           )}
           {!props.value.options.useDiscovery && (
             <div>
@@ -840,6 +959,8 @@ const SignalK = props => {
                 value={props.value.options}
                 onChange={props.onChange}
               />
+              <WsUseSsl value={props.value.options} onChange={props.onChange} />
+              <SelfSignedCert value={props.value.options} onChange={props.onChange} />
             </div>
           )}
           {(props.value.options.type === 'ws' ||

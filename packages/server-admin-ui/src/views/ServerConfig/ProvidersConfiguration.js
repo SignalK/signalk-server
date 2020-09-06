@@ -190,7 +190,7 @@ class ProvidersConfiguration extends Component {
     })
       .then(response => response.text())
       .then(response => {
-        this.state.connections.splice(this.state.selectedIndex, 1)
+        this.state.providers.splice(this.state.selectedIndex, 1)
         this.setState({
           providers: this.state.providers,
           selectedProvider: null,

@@ -34,6 +34,7 @@ const unzipper = require('unzipper')
 const moment = require('moment')
 const Busboy = require('busboy')
 const ncp = require('ncp').ncp
+const mdns = require('mdns-js')
 
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
@@ -609,6 +610,37 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
           .filter(filename => filename.startsWith('ttyOP_'))
           .map(filename => `/dev/${filename}`)
       )
+  }
+
+  app.get('/websockets', (req, res) => {
+    listWebsockets('signalk-wss', [])
+      .then(result => {
+        listWebsockets('signalk-ws', result).then(resultFull => {
+          res.json(resultFull)
+        })
+      })
+      .catch([])
+  })
+
+  function listWebsockets(wsType, websocketFound) {
+    mdns.excludeInterface('0.0.0.0')
+    var TIMEOUT = 5000 //5 seconds
+    var browser = mdns.createBrowser(mdns.tcp(wsType))
+    browser.on('ready', function onReady() {
+      debug('mdns browser is ready for search ' + wsType)
+      browser.discover()
+    })
+    browser.on('update', function onUpdate(data) {
+      debug('mdns browser reveived data[' + wsType + ']:', data)
+      websocketFound.push({ type: wsType, host: data.host, port: data.port })
+    })
+    return new Promise((resolve, reject) => {
+      setTimeout(function onTimeout() {
+        browser.stop()
+        debug('websocket found via mdns:', websocketFound)
+        resolve(websocketFound)
+      }, TIMEOUT)
+    })
   }
 
   app.get(`${serverRoutesPrefix}/hasAnalyzer`, (req, res) => {
