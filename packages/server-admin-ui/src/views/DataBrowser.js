@@ -62,7 +62,7 @@ class DataBrowser extends Component {
       pause: localStorage.getItem(pauseStorageKey) === 'true',
       includeMeta: localStorage.getItem(metaStorageKey) === 'true',
       data: {},
-      context: localStorage.getItem(contextStorageKey) || 'none',
+      context: localStorage.getItem(contextStorageKey) || 'self',
       search: localStorage.getItem(searchStorageKey) || ''
     }
 
