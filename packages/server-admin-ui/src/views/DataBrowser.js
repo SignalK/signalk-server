@@ -316,8 +316,8 @@ class DataBrowser extends Component {
               .filter( key => {
                 return !this.state.search ||
                   this.state.search.length === 0 ||
-                  key.indexOf(this.state.search) !== -1
-              })
+                  key.toLowerCase().indexOf(this.state.search.toLowerCase()) !== -1
+                })
               .filter( key => {
                 return !key.endsWith('.meta')
               })
