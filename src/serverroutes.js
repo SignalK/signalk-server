@@ -26,7 +26,7 @@ const { getHttpPort, getSslPort } = require('./ports')
 const express = require('express')
 const { getAISShipTypeName } = require('@signalk/signalk-schema')
 const { queryRequest } = require('./requestResponse')
-const serialBingings = require('@serialport/bindings')
+const SerialPort = require('serialport')
 const commandExists = require('command-exists')
 const { getAuthor, restoreModules } = require('./modules')
 const zip = require('express-easy-zip')
@@ -580,7 +580,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   })
 
   function listSerialPorts() {
-    return serialBingings.list().then(ports => {
+    return SerialPort.list().then(ports => {
       return ports.map(port => port.comName)
     })
   }

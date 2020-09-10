@@ -17,7 +17,7 @@ import Debug from 'debug'
 import { Request, Response } from 'express'
 const debug = Debug('signalk:interfaces:plugins')
 // @ts-ignore
-import serialBingings from '@serialport/bindings'
+import SerialPort from 'serialport'
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
 import express from 'express'
@@ -370,7 +370,7 @@ module.exports = (theApp: any) => {
   }
 
   function getSerialPorts() {
-    return serialBingings.list().then((ports: any) => {
+    return SerialPort.list().then((ports: any) => {
       return ports.map((port: any) => port.comName)
     })
   }
