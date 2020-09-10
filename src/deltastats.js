@@ -15,6 +15,7 @@
 */
 
 const { isUndefined, values } = require('lodash')
+const os = require('os')
 
 module.exports = {
   startDeltaStatistics: function(app) {
@@ -32,7 +33,10 @@ module.exports = {
           numberOfAvailablePaths: app.streambundle.getAvailablePaths().length,
           wsClients: app.interfaces.ws ? app.interfaces.ws.numClients() : 0,
           providerStatistics: app.providerStatistics,
-          uptime: process.uptime()
+          uptime: process.uptime(),
+          loadAvg1m: os.loadavg()[0].toFixed(2),
+          loadAvg5m: os.loadavg()[1].toFixed(2),
+          loadAvg15m: os.loadavg()[2].toFixed(2)
         }
       })
       app.lastIntervalDeltaCount = app.deltaCount
