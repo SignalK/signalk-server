@@ -57,16 +57,7 @@ module.exports = function(app) {
     const efectiveElementType = elementConfig.type.startsWith('providers/')
       ? elementConfig.type.replace('providers/', '@signalk/streams/')
       : elementConfig.type
-    try {
-      return new (require(efectiveElementType))(options)
-    } catch (e) {
-      console.log(e)
-      try {
-        return new (require(__dirname + '/../' + elementConfig.type))(options)
-      } catch (e) {
-        console.log(e)
-      }
-    }
+    return new (require(efectiveElementType))(options)
   }
 
   function startProviders() {
