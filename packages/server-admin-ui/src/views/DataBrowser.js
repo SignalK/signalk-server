@@ -62,7 +62,7 @@ class DataBrowser extends Component {
       pause: localStorage.getItem(pauseStorageKey) === 'true',
       includeMeta: localStorage.getItem(metaStorageKey) === 'true',
       data: {},
-      context: localStorage.getItem(contextStorageKey) || 'none',
+      context: localStorage.getItem(contextStorageKey) || 'self',
       search: localStorage.getItem(searchStorageKey) || ''
     }
 
@@ -312,23 +312,37 @@ class DataBrowser extends Component {
               </thead >
               <tbody>
 
-          {keys(this.state.data[this.state.context]).filter(key => { return !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1 }).filter(key => { return !key.endsWith('.meta') }).sort().map(key => {
-          const data = this.state.data[this.state.context][key]
-          const formatted = JSON.stringify(data.value, null, typeof data.value === 'object' && keys(data.value).length > 1 ? 2 : 0)
-          const meta = this.state.data[this.state.context][data.path + '.meta']
-          const units = meta && meta.value.units ? meta.value.units : ''
-          const path = key.substring(0, key.lastIndexOf('.'))
+          { keys(this.state.data[this.state.context])
+              .filter( key => {
+                return !this.state.search ||
+                  this.state.search.length === 0 ||
+                  key.toLowerCase().indexOf(this.state.search.toLowerCase()) !== -1
+                })
+              .filter( key => {
+                return !key.endsWith('.meta')
+              })
+              .sort()
+              .map(key => {
+                const data = this.state.data[this.state.context][key]
+                const formatted = JSON.stringify(
+                  data.value,
+                  null,
+                  typeof data.value === 'object' && keys(data.value).length > 1 ? 2 : 0)
+                const meta = this.state.data[this.state.context][data.path + '.meta']
+                const units = meta && meta.value.units ? meta.value.units : ''
+                const path = key.substring(0, key.lastIndexOf('.'))
 
-          return (
-                 <tr key={key} >
-                   <td>{data.path}</td>
-                   <td><pre className='text-primary' style={{"whiteSpace": "pre-wrap"}}>{formatted}</pre></td>
-                   <td>{units}</td>
-                   <td>{data.timestamp}</td>
-              <td>{data.$source} {data.pgn || ''}{data.sentence || ''}</td>
-                 </tr>
-               )
-          })}
+                return (
+                  <tr key={key} >
+                    <td>{data.path}</td>
+                    <td><pre className='text-primary' style={{"whiteSpace": "pre-wrap"}}>{formatted}</pre></td>
+                    <td>{units}</td>
+                    <td>{data.timestamp}</td>
+                    <td>{data.$source} {data.pgn || ''}{data.sentence || ''}</td>
+                  </tr>
+                )
+              })
+          }
        
           </tbody>
           </Table>
