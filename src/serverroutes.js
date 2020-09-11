@@ -567,9 +567,8 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   })
 
   app.get('/serialports', (req, res, next) => {
-    listAllSerialPorts().then(ports => {
-      res.json(ports)
-    })
+    listAllSerialPorts()
+      .then(ports => res.json(ports))
       .catch(next)
   })
 

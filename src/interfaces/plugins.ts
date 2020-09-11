@@ -16,13 +16,13 @@
 import Debug from 'debug'
 import { Request, Response } from 'express'
 const debug = Debug('signalk:interfaces:plugins')
-import {Ports, listAllSerialPorts} from '../serialports'
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
 import express from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
+import { listAllSerialPorts, Ports } from '../serialports'
 
 // tslint:disable-next-line:no-var-requires
 const modulesWithKeyword = require('../modules').modulesWithKeyword

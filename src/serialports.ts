@@ -19,9 +19,9 @@ const readdir = require('util').promisify(fs.readdir)
 import SerialPort from 'serialport'
 
 export interface Ports {
-  byId: string[],
-  byPath: string[],
-  byOpenPlotter: string[],
+  byId: string[]
+  byPath: string[]
+  byOpenPlotter: string[]
   serialports: SerialPort.PortInfo[]
 }
 
@@ -34,8 +34,8 @@ export const listAllSerialPorts = (): Promise<Ports> => {
       listSerialPorts()
     ])
       .then(([byId, byPath, byOpenPlotter, serialports]) =>
-            resolve({ byId, byPath, byOpenPlotter, serialports })
-           )
+        resolve({ byId, byPath, byOpenPlotter, serialports })
+      )
       .catch(reject)
   })
 }
@@ -48,25 +48,24 @@ function listSafeSerialPortsDevSerialById() {
   return readdir('/dev/serial/by-id')
     .catch((err: any) => [])
     .then((filenames: string[]) =>
-          filenames.map((filename: string) => `/dev/serial/by-id/${filename}`)
-         )
+      filenames.map((filename: string) => `/dev/serial/by-id/${filename}`)
+    )
 }
 
 function listSafeSerialPortsDevSerialByPath() {
   return readdir('/dev/serial/by-path')
     .catch((err: any) => [])
     .then((filenames: string[]) =>
-          filenames.map((filename: string) => `/dev/serial/by-path/${filename}`)
-         )
+      filenames.map((filename: string) => `/dev/serial/by-path/${filename}`)
+    )
 }
 
 function listSafeSerialPortsOpenPlotter() {
   return readdir('/dev/')
     .catch((err: any) => [])
     .then((filenames: string[]) =>
-          filenames
-          .filter(filename => filename.startsWith('ttyOP_'))
-          .map(filename => `/dev/${filename}`)
-         )
+      filenames
+        .filter(filename => filename.startsWith('ttyOP_'))
+        .map(filename => `/dev/${filename}`)
+    )
 }
-
