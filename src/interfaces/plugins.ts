@@ -16,7 +16,7 @@
 import Debug from 'debug'
 import { Request, Response } from 'express'
 const debug = Debug('signalk:interfaces:plugins')
-import SerialPort from 'serialport'
+import {Ports, listAllSerialPorts} from '../serialports'
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
 import express from 'express'
@@ -117,7 +117,7 @@ export interface ServerAPI {
       onDelta: (delta: object) => void
     ) => void
   }) => void
-  getSerialPorts: () => Promise<SerialPort.PortInfo[]>
+  getSerialPorts: () => Promise<Ports>
 }
 
 interface ModuleMetadata {
@@ -369,7 +369,7 @@ module.exports = (theApp: any) => {
   }
 
   function getSerialPorts() {
-    return SerialPort.list()
+    return listAllSerialPorts()
   }
 
   function registerPlugin(
