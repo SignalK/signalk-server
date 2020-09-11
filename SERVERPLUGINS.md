@@ -698,6 +698,11 @@ Set the current error status of the plugin. The `msg` should be a short message 
 app.setProviderError('Error connecting to database');
 ```
 
+### `app.getSerialPorts() => Promise<Ports>`
+
+This returs a Promise which will resolve to a [Ports](src/serialports.ts#21) object which contains information about the serial ports available on the machine.
+
+
 ## Plugin configuration HTTP API
 
 ### `GET /plugins/`
