@@ -625,6 +625,10 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
   })
 
+  app.get(`${serverRoutesPrefix}/debugKeys`, (req, res) => {
+    res.json(_.uniq(require('debug').instances.map(i => i.namespace)))
+  })
+
   app.post(`${serverRoutesPrefix}/rememberDebug`, (req, res) => {
     app.logging.rememberDebug(req.body.value)
     res.status(200).send()
