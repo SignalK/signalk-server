@@ -66,41 +66,8 @@ function MdnsWs (options) {
     })
     this.connect(this.signalkClient)
   } else {
-    try {
-      let mdns
-
-      try {
-        mdns = require('mdns')
-      } catch ( ex ) {
-        this.options.app.setProviderError(this.options.providerId, 'mdns module not installed')
-        console.error(ex)
-        return
-      }
-
-      const discovery = new SignalK.Discovery(mdns, 60000)
-    
-      debug('Starting discovery')
-      
-      discovery.on('timeout', () => console.log('No SK servers found'))
-      
-      discovery.on('found', server => {
-        if (server.isMain() && server.isMaster()) {
-          if ( !this.remoteServers[server.hostname + ':' + server.port] ) {
-            client = server.createClient({
-              useTLS: false,
-              reconnect: true,
-              autoConnect: false,
-              deltaStreamBehaviour
-            })
-            this.connect(client)
-          }
-        }
-      })
-    } catch (ex) {
-      this.options.app.setProviderError(this.options.providerId, ex.message)
-      console.error(ex)
-      return
-    }
+    this.options.app.setProviderError(this.options.providerId, 'This connection is deprecated and must be deleted')
+    return
   }
 }
 
