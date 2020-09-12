@@ -168,7 +168,7 @@ module.exports = (theApp: any) => {
       try {
         data = getPluginOptions(plugin.id)
       } catch (e) {
-        console.log(e.code + ' ' + e.path)
+        console.error(e.code + ' ' + e.path)
       }
 
       if (data && _.isUndefined(data.enabled) && plugin.enabledByDefault) {
@@ -576,7 +576,7 @@ module.exports = (theApp: any) => {
     router.post('/config', (req: Request, res: Response) => {
       savePluginOptions(plugin.id, req.body, err => {
         if (err) {
-          console.log(err)
+          console.error(err)
           res.status(500)
           res.send(err)
           return
