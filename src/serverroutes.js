@@ -553,6 +553,11 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       set('communication.callsignVhf', newVessel.callsignVhf)
     }
 
+    app.emit('serverevent', {
+      type: 'VESSEL_INFO',
+      data: data.vessels.self
+    })
+
     skConfig.writeDefaultsFile(app, data, err => {
       if (err) {
         res.status(500).send('Unable to save to defaults file')
