@@ -840,6 +840,34 @@ const SignalK = props => {
                 value={props.value.options}
                 onChange={props.onChange}
               />
+              {(props.value.options.type === 'wss') && (
+                <FormGroup row>
+                  <Col xs='0' md='3'>
+                    <Label>Allow self signed certificates</Label>
+                  </Col>
+                  <Col xs='12' md='8'>
+                    <div key={name}>
+                      <Label className='switch switch-text switch-primary'>
+                        <Input
+                          type='checkbox'
+                          id='options.selfsignedcert'
+                          name='options.selfsignedcert'
+                          className='switch-input'
+                          onChange={props.onChange}
+                          checked={props.value.options.selfsignedcert}
+                          disabled={!(props.value.options.type === 'wss')}
+                        />
+                        <span
+                          className='switch-label'
+                          data-on='On'
+                          data-off='Off'
+                        />
+                        <span className='switch-handle' />
+                      </Label>
+                    </div>
+                  </Col>
+                </FormGroup>
+              )}
             </div>
           )}
           {(props.value.options.type === 'ws' ||

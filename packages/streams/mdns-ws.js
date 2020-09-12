@@ -61,7 +61,8 @@ function MdnsWs (options) {
       useTLS: options.type === 'wss',
       reconnect: true,
       autoConnect: false,
-      deltaStreamBehaviour
+      deltaStreamBehaviour,
+      rejectUnauthorized: !(options.selfsignedcert === true)
     })
     this.connect(this.signalkClient)
   } else {
