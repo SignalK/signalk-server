@@ -494,7 +494,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       if (e.code && e.code === 'ENOENT') {
         data = {}
       } else {
-        console.log(e)
+        console.error(e)
         res.status(500).send('Unable to read defaults file')
       }
     }
