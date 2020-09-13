@@ -157,5 +157,28 @@
         }
       ]
     }
-  ]
+  ],
+  "interfaces": {},
+  "sourcePreferences": {
+    "navigation.speedOverGround": [
+      {
+        "sourceRef": "n2k1.160",
+        "timeout": ""
+      },
+      {
+        "sourceRef": "nmea2.II",
+        "timeout": ""
+      }
+    ],
+    "performance.velocityMadeGood": [
+      {
+        "sourceRef": "nmea1.II",
+        "timeout": ""
+      },
+      {
+        "sourceRef": "nmea2.II",
+        "timeout": "123"
+      }
+    ]
+  }
 }

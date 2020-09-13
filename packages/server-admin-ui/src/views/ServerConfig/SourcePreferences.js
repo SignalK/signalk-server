@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { Badge, Button, Card, CardHeader, CardBody, CardFooter, Collapse, Input, Table } from 'reactstrap'
+import Creatable from 'react-select/creatable'
 import { remove } from 'lodash'
 
 export const SOURCEPRIOS_PRIO_CHANGED = 'SOURCEPRIOS_PPRIO_CHANGED'
@@ -97,11 +98,34 @@ export const reduceSourcePriorities = (state, action) => {
   return { sourcePriorities, saveState }
 }
 
+function fetchSourceRefs(path, cb) {
+  fetch(`/signalk/v1/api/vessels/self/${path.replace('.', '/')}`, {
+    credentials: 'include'
+  })
+    .then(response => response.json())
+    .then(pathResponse => {
+      let sourceRefs = [pathResponse.$source]
+      if (pathResponse.values) {
+        sourceRefs = sourceRefs.concat(Object.keys(pathResponse.values))
+      }
+      return _.uniq(sourceRefs)
+    })
+    .then(cb)
+
+}
 
 class PrefsEditor extends Component {
   constructor(props) {
     super(props)
-    this.state = { isOpen: false }
+    this.state = { isOpen: false, sourceRefs: [] }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.props.path !== prevProps.path) {
+      fetchSourceRefs(this.props.path, sourceRefs => {
+        this.setState({ sourceRefs })
+      })
+    }
   }
 
   render() {
@@ -113,35 +137,40 @@ class PrefsEditor extends Component {
           <Table>
             <thead onClick={toggleEditor}>
               <tr>
-                <td>#</td>
-                <td>sourceRef</td>
-                <td>timeout (ms)</td>
-                <td>Order</td>
+                <td style={{width: '30px'}}>#</td>
+                <td>Source Reference (see DataBrowser for details)</td>
+                <td style={{width: '120px'}}>Timeout (ms)</td>
+                <td style={{Width: '80px'}}>Order</td>
                 <td></td>
               </tr>
             </thead>
             <tbody>
               {[...this.props.priorities, { sourceRef: '', timeout: '' }].map(({ sourceRef, timeout }, index) => {
+                const options = this.state.sourceRefs.map(sourceRef => ({
+                  label: sourceRef,
+                  value: sourceRef
+                }))
                 return (
                   <tr key={index}>
                     <td>
                       {index + 1}.
                     </td>
                     <td>
-                      <Input
-                        type='text'
-                        name='sourceRef'
-                        disabled={this.props.isSaving}
-                        onChange={(e) => this.props.dispatch({
-                          type: SOURCEPRIOS_PRIO_CHANGED,
-                          data: {
-                            pathIndex: this.props.pathIndex,
-                            sourceRef: e.target.value,
-                            timeout,
-                            index
-                          }
-                        })}
-                        value={sourceRef}
+                      <Creatable
+                        menuPortalTarget={document.body}
+                        options={options}
+                        value={{value: sourceRef, label: sourceRef}}
+                        onChange={(e) => {
+                          this.props.dispatch({
+                            type: SOURCEPRIOS_PRIO_CHANGED,
+                            data: {
+                              pathIndex: this.props.pathIndex,
+                              sourceRef: e.value,
+                              timeout,
+                              index
+                            }
+                          })
+                        }}
                       />
                     </td>
                     <td>
@@ -246,10 +275,23 @@ const sourcePrioritySave = (sourcePriorities) => (dispatch) => {
     })
 }
 
+function fetchAvailablePaths(cb) {
+  fetch(`/availablePaths`, {
+    credentials: 'include'
+  })
+    .then(response => response.json())
+    .then(cb)
+}
 
 class SourcePreferences extends Component {
   constructor(props) {
     super(props)
+    this.state = {
+      availablePaths: []
+    }
+    fetchAvailablePaths(pathsArray => {
+      this.setState({availablePaths: pathsArray.map(path => ({value: path, label: path }))})
+    })
   }
 
   render() {
@@ -262,7 +304,7 @@ class SourcePreferences extends Component {
           <Table responsive bordered striped size="sm">
             <thead>
               <tr>
-                <th>Path</th>
+                <th style={{width: '40%'}}>Path</th>
                 <th>Priorities</th>
                 <th></th>
               </tr>
@@ -272,19 +314,21 @@ class SourcePreferences extends Component {
                 return (
                   <tr key={index}>
                     <td>
-                      <Input
-                        type='text'
-                        name='path'
-                        disabled={this.props.saveState.isSaving}
-                        onChange={(e) => this.props.dispatch({
-                          type: SOURCEPRIOS_PATH_CHANGED,
-                          data: { path: e.target.value, index }
-                        })}
-                        value={path}
-                      />
+                      <Creatable
+                        menuPortalTarget={document.body}
+                        options={this.state.availablePaths}
+                        value={{value: path, label: path}}
+                        onChange={(e) => {
+                          this.props.dispatch({
+                            type: SOURCEPRIOS_PATH_CHANGED,
+                            data: { path: e.value, index }
+                          })
+                        }}
+                        />
                     </td>
                     <td>
                       <PrefsEditor
+                        path={path}
                         priorities={priorities}
                         dispatch={this.props.dispatch}
                         isSaving={this.props.saveState.isSaving}
