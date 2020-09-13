@@ -16,6 +16,22 @@ export const SOURCEPRIOS_SAVED = 'SOURCEPRIOS_SAVED'
 export const SOURCEPRIOS_SAVE_FAILED = 'SOURCEPRIOS_SAVE_FAILED'
 export const SOURCEPRIOS_SAVE_FAILED_OVER = 'SOURCEPRIOS_SAVE_FAILED_OVER'
 
+function checkTimeouts(sourcePriorities) {
+  return sourcePriorities.reduce((acc, prio, i) => {
+    const {timeout} = prio
+    if (!acc) {
+      return acc
+    }
+    if (i === 0) {
+      return true
+    }
+    if(Number(timeout) === Number.isNaN || timeout <= 0) {
+      return false
+    }
+    return timeout > sourcePriorities[i-1].timeout
+  }, true)
+}
+
 export const reduceSourcePriorities = (state, action) => {
   const sourcePriorities = JSON.parse(JSON.stringify(state.sourcePriorities))
   let saveState = {...state.saveState}
@@ -45,6 +61,7 @@ export const reduceSourcePriorities = (state, action) => {
       }
       prios[index] = { sourceRef, timeout }
       saveState.dirty = true
+      saveState.timeoutsOk = checkTimeouts(prios)
       break;
 
     case SOURCEPRIOS_PRIO_DELETED:
@@ -57,6 +74,7 @@ export const reduceSourcePriorities = (state, action) => {
       prios[index] = prios[index + change]
       prios[index + change] = tmp
       saveState.dirty = true
+      saveState.timeoutsOk = checkTimeouts(prios)
       break;
 
     case SOURCEPRIOS_SAVING:
@@ -69,6 +87,7 @@ export const reduceSourcePriorities = (state, action) => {
 
     case SOURCEPRIOS_SAVED:
       saveState = {
+        ...saveState,
         dirty: false,
         isSaving: false,
         saveFailed: false
@@ -357,7 +376,7 @@ class SourcePreferences extends Component {
           <Button
             size='sm'
             color='primary'
-            disabled={!this.props.saveState.dirty || this.props.saveState.isSaving}
+            disabled={!this.props.saveState.dirty || this.props.saveState.isSaving || !this.props.saveState.timeoutsOk}
             onClick={(e) => {
               e.preventDefault()
               this.props.dispatch(sourcePrioritySave(this.props.sourcePriorities))
@@ -365,6 +384,11 @@ class SourcePreferences extends Component {
             <i className='fa fa-save' /> Save
             </Button>
           {this.props.saveState.saveFailed && 'Saving priorities settings failed!'}
+          {!this.props.saveState.timeoutsOk && <span style={{paddingLeft: '10px'}}>
+
+            <Badge color='danger'>Error</Badge>
+            {'The timeout values need to be in ascending order, please fix.'}
+          </span>}
         </CardFooter>
       </Card>
     )
