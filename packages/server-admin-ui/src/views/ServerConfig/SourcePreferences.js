@@ -353,18 +353,16 @@ class SourcePreferences extends Component {
                         isSaving={this.props.saveState.isSaving}
                         pathIndex={index} />
                     </td>
-                    <td>
-                      <td style={{ border: 'none' }}>{index < this.props.sourcePriorities.length &&
-                        <i
-                          className='fas fa-trash'
-                          onClick={() => this.props.dispatch({
-                            type: SOURCEPRIOS_PATH_DELETED,
-                            data: {
-                              index
-                            }
-                          })}
-                        />} </td>
-
+                    <td style={{ border: 'none' }}>{index < this.props.sourcePriorities.length &&
+                      <i
+                        className='fas fa-trash'
+                        onClick={() => this.props.dispatch({
+                          type: SOURCEPRIOS_PATH_DELETED,
+                          data: {
+                            index
+                          }
+                        })}
+                      />}
                     </td>
                   </tr>
                 )
