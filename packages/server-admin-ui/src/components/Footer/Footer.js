@@ -2,30 +2,15 @@ import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
-function fetchVessel() {
-  fetch(`/vessel`, {
-    credentials: 'include'
-  })
-    .then(response => response.json())
-    .then(data => {
-      this.setState({ ...data })
-    })
-}
+
 class Footer extends Component {
 
   constructor(props) {
-
     super(props)
-    this.state = {
-    }
-    this.fetchVessel = fetchVessel.bind(this)
-  }
-
-  componentDidMount() {
-    this.fetchVessel()
   }
 
   render() {
+    const { name, mmsi, uuid } = this.props.vesselInfo
     return (
       <footer className='app-footer'>
         <span>
@@ -51,10 +36,18 @@ class Footer extends Component {
           </span>
         )}
 
-        &nbsp;- {this.state.name || this.state.mmsi || this.state.uuid}
+        &nbsp;- {name || mmsi || uuid}
       </footer>
     )
   }
 }
 
-export default connect(({ loginStatus, serverSpecification, appStore }) => ({ loginStatus, serverSpecification, appStore }))(Footer)
+export default connect(({
+  loginStatus,
+  serverSpecification,
+  appStore,
+  vesselInfo }) => ({
+    loginStatus,
+    serverSpecification,
+    appStore,
+    vesselInfo }))(Footer)

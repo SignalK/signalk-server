@@ -494,7 +494,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       if (e.code && e.code === 'ENOENT') {
         data = {}
       } else {
-        console.log(e)
+        console.error(e)
         res.status(500).send('Unable to read defaults file')
       }
     }
@@ -552,6 +552,11 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     if (newVessel.callsignVhf) {
       set('communication.callsignVhf', newVessel.callsignVhf)
     }
+
+    app.emit('serverevent', {
+      type: 'VESSEL_INFO',
+      data: data.vessels.self
+    })
 
     skConfig.writeDefaultsFile(app, data, err => {
       if (err) {
