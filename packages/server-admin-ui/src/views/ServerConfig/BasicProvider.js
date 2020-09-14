@@ -596,11 +596,6 @@ class Suppress0183Checkbox extends Component {
 class UseCanNameInput extends Component {
   constructor (props) {
     super(props)
-    /*
-    this.props.value.useCanName =
-      (typeof this.props.value.useCanName !== 'undefined' &&
-       this.props.value.useCanName) || this.props.value.isNew
-    */
   }
   render () {
     return (
@@ -620,6 +615,39 @@ class UseCanNameInput extends Component {
             <span className='switch-label' data-on='Yes' data-off='No' />
             <span className='switch-handle' />
           </Label>
+        </Col>
+      </FormGroup>
+    )
+  }
+}
+
+class CollectNetworkStatsInput extends Component {
+  constructor (props) {
+    super(props)
+    /*
+    this.props.value.useCanName =
+      (typeof this.props.value.useCanName !== 'undefined' &&
+       this.props.value.useCanName) || this.props.value.isNew
+    */
+  }
+  render () {
+    return (
+      <FormGroup row>
+        <Col xs='3' md='3'>
+          <Label>Collect Network Statistics</Label>
+        </Col>
+        <Col xs='2' md='3'>
+          <Label className='switch switch-text switch-primary'>
+            <Input
+              type='checkbox'
+              name='options.sendNetworkStats'
+              className='switch-input'
+              onChange={event => this.props.onChange(event)}
+              checked={this.props.value.sendNetworkStats}
+            />
+            <span className='switch-label' data-on='Yes' data-off='No' />
+            <span className='switch-handle' />
+           </Label>
         </Col>
       </FormGroup>
     )
@@ -690,6 +718,14 @@ const NMEA2000 = props => {
           onChange={props.onChange}
         />
         )}
+      {(props.value.options.type === 'ngt-1-canboatjs' ||
+        props.value.options.type === 'ikonvert-canboatjs' ||
+        props.value.options.type === 'navlink2-tcp-canboatjs') && (
+        <CollectNetworkStatsInput
+          value={props.value.options}
+          onChange={props.onChange}
+        />  
+      )}
       <UseCanNameInput
         value={props.value.options}
         onChange={props.onChange}
