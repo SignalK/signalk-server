@@ -55,10 +55,11 @@ const state = {
   discoveredProviders: [],
   log: {
     entries,
-    debugEnabled: [],
+    debugEnabled: '',
     rememberDebug: false
   },
-  restoreStatus: {}
+  restoreStatus: {},
+  vesselInfo: {}
 }
 
 let store = createStore(
@@ -137,6 +138,15 @@ let store = createStore(
         ...state,
         websocketStatus: 'open',
         webSocket: action.data
+      }
+    }
+    if (action.type === 'VESSEL_INFO') {
+      if (action.data.name) {
+        document.title = action.data.name
+      }
+      return {
+        ...state,
+        vesselInfo: action.data
       }
     }
     if (action.type === 'WEBSOCKET_ERROR') {

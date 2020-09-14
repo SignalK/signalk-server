@@ -25,6 +25,7 @@ const {
   queryRequest
 } = require('../requestResponse')
 const { putPath } = require('../put')
+const skConfig = require('../config/config')
 const debug = require('debug')('signalk-server:interfaces:ws')
 const Primus = require('primus')
 
@@ -649,6 +650,14 @@ function startServerEvents(app, spark) {
   spark.onDisconnects.push(() => {
     app.removeListener('serverevent', onServerEvent)
   })
+  const defaults = skConfig.readDefaultsFile(app)
+  const vesselInfo = _.get(defaults, 'vessels.self')
+  if (vesselInfo) {
+    spark.write({
+      type: 'VESSEL_INFO',
+      data: vesselInfo
+    })
+  }
   Object.keys(app.lastServerEvents).forEach(propName => {
     spark.write(app.lastServerEvents[propName])
   })

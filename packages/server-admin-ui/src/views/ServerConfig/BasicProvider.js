@@ -41,7 +41,7 @@ class BasicProvider extends Component {
             {this.props.value.isNew ? (
               <Input
                 type='select'
-                value={this.props.type}
+                value={this.props.value.type}
                 name='type'
                 onChange={event => this.props.onChange(event)}
               >
@@ -172,6 +172,7 @@ class DeviceInput extends Component {
     })
       .then(response => response.json())
       .then(data => {
+        data.serialports = data.serialports.map(portInfo => portInfo.path)
         this.setState({
           devices: data
         })
@@ -595,11 +596,6 @@ class Suppress0183Checkbox extends Component {
 class UseCanNameInput extends Component {
   constructor (props) {
     super(props)
-    /*
-    this.props.value.useCanName =
-      (typeof this.props.value.useCanName !== 'undefined' &&
-       this.props.value.useCanName) || this.props.value.isNew
-    */
   }
   render () {
     return (
@@ -619,6 +615,39 @@ class UseCanNameInput extends Component {
             <span className='switch-label' data-on='Yes' data-off='No' />
             <span className='switch-handle' />
           </Label>
+        </Col>
+      </FormGroup>
+    )
+  }
+}
+
+class CollectNetworkStatsInput extends Component {
+  constructor (props) {
+    super(props)
+    /*
+    this.props.value.useCanName =
+      (typeof this.props.value.useCanName !== 'undefined' &&
+       this.props.value.useCanName) || this.props.value.isNew
+    */
+  }
+  render () {
+    return (
+      <FormGroup row>
+        <Col xs='3' md='3'>
+          <Label>Collect Network Statistics</Label>
+        </Col>
+        <Col xs='2' md='3'>
+          <Label className='switch switch-text switch-primary'>
+            <Input
+              type='checkbox'
+              name='options.sendNetworkStats'
+              className='switch-input'
+              onChange={event => this.props.onChange(event)}
+              checked={this.props.value.sendNetworkStats}
+            />
+            <span className='switch-label' data-on='Yes' data-off='No' />
+            <span className='switch-handle' />
+           </Label>
         </Col>
       </FormGroup>
     )
@@ -689,6 +718,14 @@ const NMEA2000 = props => {
           onChange={props.onChange}
         />
         )}
+      {(props.value.options.type === 'ngt-1-canboatjs' ||
+        props.value.options.type === 'ikonvert-canboatjs' ||
+        props.value.options.type === 'navlink2-tcp-canboatjs') && (
+        <CollectNetworkStatsInput
+          value={props.value.options}
+          onChange={props.onChange}
+        />  
+      )}
       <UseCanNameInput
         value={props.value.options}
         onChange={props.onChange}
@@ -787,6 +824,7 @@ const SignalK = props => {
             value={props.value.options.type}
             name='options.type'
             onChange={event => props.onChange(event)}
+            disabled={props.value.options.useDiscovery}
           >
             <option>Select a source</option>
             <option value='serial'>Serial</option>
@@ -797,26 +835,38 @@ const SignalK = props => {
           </Input>
         </Col>
       </FormGroup>
-      {(props.value.options.type === 'ws' ||
+      {props.value.options.useDiscovery && (
+        <p className='text-danger'>This connection is deprecated, please delete it and recreate it with the connection automatically discovered at the top of the page.</p>
+      )}
+      {!props.value.options.useDiscovery &&
+        (props.value.options.type === 'ws' ||
         props.value.options.type === 'wss' ||
         props.value.options.type === 'tcp') && (
         <div>
-          {(props.value.options.type === 'ws' ||
-            props.value.options.type === 'wss') && (
+          <HostInput
+            value={props.value.options}
+            onChange={props.onChange}
+          />
+          <PortInput
+            value={props.value.options}
+            onChange={props.onChange}
+          />
+          {(props.value.options.type === 'wss') && (
             <FormGroup row>
               <Col xs='0' md='3'>
-              <Label htmlFor='options.useDiscovery'>Discovery</Label>
+                <Label>Allow self signed certificates</Label>
               </Col>
               <Col xs='12' md='8'>
                 <div key={name}>
                   <Label className='switch switch-text switch-primary'>
                     <Input
                       type='checkbox'
-                      id='options.useDiscovery'
-                      name='options.useDiscovery'
+                      id='options.selfsignedcert'
+                      name='options.selfsignedcert'
                       className='switch-input'
                       onChange={props.onChange}
-                      checked={props.value.options.useDiscovery}
+                      checked={props.value.options.selfsignedcert}
+                      disabled={!(props.value.options.type === 'wss')}
                     />
                     <span
                       className='switch-label'
@@ -825,50 +875,9 @@ const SignalK = props => {
                     />
                     <span className='switch-handle' />
                   </Label>
-                  Discover Signal K servers automatically
-                  </div>
+                </div>
               </Col>
             </FormGroup>
-          )}
-          {!props.value.options.useDiscovery && (
-            <div>
-              <HostInput
-                value={props.value.options}
-                onChange={props.onChange}
-              />
-              <PortInput
-                value={props.value.options}
-                onChange={props.onChange}
-              />
-              {(props.value.options.type === 'wss') && (
-                <FormGroup row>
-                  <Col xs='0' md='3'>
-                    <Label>Allow self signed certificates</Label>
-                  </Col>
-                  <Col xs='12' md='8'>
-                    <div key={name}>
-                      <Label className='switch switch-text switch-primary'>
-                        <Input
-                          type='checkbox'
-                          id='options.selfsignedcert'
-                          name='options.selfsignedcert'
-                          className='switch-input'
-                          onChange={props.onChange}
-                          checked={props.value.options.selfsignedcert}
-                          disabled={!(props.value.options.type === 'wss')}
-                        />
-                        <span
-                          className='switch-label'
-                          data-on='On'
-                          data-off='Off'
-                        />
-                        <span className='switch-handle' />
-                      </Label>
-                    </div>
-                  </Col>
-                </FormGroup>
-              )}
-            </div>
           )}
           {(props.value.options.type === 'ws' ||
             props.value.options.type === 'wss') && (
@@ -889,24 +898,27 @@ const SignalK = props => {
         <PortInput value={props.value.options} onChange={props.onChange} />
       )}
       {serialParams(props)}
-      <FormGroup row>
-        <Col md='3'>
-          <Label htmlFor='options.type'>'self' handling</Label>
-        </Col>
-        <Col xs='12' md='3'>
-          <Input
-            type='select'
-            value={props.value.options.selfHandling || 'noSelf'}
-            name='options.selfHandling'
-            onChange={event => props.onChange(event)}
-          >
-            <option value='useRemoteSelf'>Map remote 'self' to local 'self'</option>
-            <option value='manualSelf'>Manual mapping</option>
-            <option value='noSelf'>No 'self' mapping</option>
-          </Input>
-        </Col>
-      </FormGroup>
-      {props.value.options.selfHandling === 'manualSelf' && (
+      {!props.value.options.useDiscovery && (
+        <FormGroup row>
+          <Col md='3'>
+            <Label htmlFor='options.type'>'self' handling</Label>
+          </Col>
+          <Col xs='12' md='3'>
+            <Input
+              type='select'
+              value={props.value.options.selfHandling || 'noSelf'}
+              name='options.selfHandling'
+              onChange={event => props.onChange(event)}
+            >
+              <option value='useRemoteSelf'>Map remote 'self' to local 'self'</option>
+              <option value='manualSelf'>Manual mapping</option>
+              <option value='noSelf'>No 'self' mapping</option>
+            </Input>
+          </Col>
+        </FormGroup>
+      )}
+      {!props.value.options.useDiscovery &&
+        props.value.options.selfHandling === 'manualSelf' && (
         <RemoteSelfInput value={props.value.options} onChange={props.onChange} />
       )}
     </div>

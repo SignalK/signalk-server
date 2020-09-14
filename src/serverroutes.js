@@ -26,7 +26,7 @@ const { getHttpPort, getSslPort } = require('./ports')
 const express = require('express')
 const { getAISShipTypeName } = require('@signalk/signalk-schema')
 const { queryRequest } = require('./requestResponse')
-const serialBingings = require('@serialport/bindings')
+const { listAllSerialPorts } = require('./serialports')
 const commandExists = require('command-exists')
 const { getAuthor, restoreModules } = require('./modules')
 const zip = require('express-easy-zip')
@@ -494,7 +494,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       if (e.code && e.code === 'ENOENT') {
         data = {}
       } else {
-        console.log(e)
+        console.error(e)
         res.status(500).send('Unable to read defaults file')
       }
     }
@@ -553,6 +553,11 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       set('communication.callsignVhf', newVessel.callsignVhf)
     }
 
+    app.emit('serverevent', {
+      type: 'VESSEL_INFO',
+      data: data.vessels.self
+    })
+
     skConfig.writeDefaultsFile(app, data, err => {
       if (err) {
         res.status(500).send('Unable to save to defaults file')
@@ -567,49 +572,10 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   })
 
   app.get('/serialports', (req, res, next) => {
-    Promise.all([
-      listSafeSerialPortsDevSerialById(),
-      listSafeSerialPortsDevSerialByPath(),
-      listSafeSerialPortsOpenPlotter(),
-      listSerialPorts()
-    ])
-      .then(([byId, byPath, byOpenPlotter, serialports]) =>
-        res.json({ byId, byPath, byOpenPlotter, serialports })
-      )
+    listAllSerialPorts()
+      .then(ports => res.json(ports))
       .catch(next)
   })
-
-  function listSerialPorts() {
-    return serialBingings.list().then(ports => {
-      return ports.map(port => port.comName)
-    })
-  }
-
-  function listSafeSerialPortsDevSerialById() {
-    return readdir('/dev/serial/by-id')
-      .catch(err => [])
-      .then(filenames =>
-        filenames.map(filename => `/dev/serial/by-id/${filename}`)
-      )
-  }
-
-  function listSafeSerialPortsDevSerialByPath() {
-    return readdir('/dev/serial/by-path')
-      .catch(err => [])
-      .then(filenames =>
-        filenames.map(filename => `/dev/serial/by-path/${filename}`)
-      )
-  }
-
-  function listSafeSerialPortsOpenPlotter() {
-    return readdir('/dev/')
-      .catch(err => [])
-      .then(filenames =>
-        filenames
-          .filter(filename => filename.startsWith('ttyOP_'))
-          .map(filename => `/dev/${filename}`)
-      )
-  }
 
   app.get(`${serverRoutesPrefix}/hasAnalyzer`, (req, res) => {
     commandExists('analyzer')
@@ -623,6 +589,10 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     } else {
       res.status(200).send()
     }
+  })
+
+  app.get(`${serverRoutesPrefix}/debugKeys`, (req, res) => {
+    res.json(_.uniq(require('debug').instances.map(i => i.namespace)))
   })
 
   app.post(`${serverRoutesPrefix}/rememberDebug`, (req, res) => {

@@ -17,8 +17,8 @@ Plugins
 The plugin module must export a single `function(app)` that must return an object with the following:
 - function `start(configuration, restartPlugin)`: This function will be called when the plugin is activated or when the server starts and the plugin is activated. Here you'll setup your plugin, subscribe to streams, connect to devices or start async loops to fetch data.
 - function `stop()`: This function is called when the plugin is deactivated. Here you typically unsubscribe from streams, stop loops that fetch data or close devices.
-- property or function `schema`: The structure returned from this property or function defines the configuration of the plugin and is exposed in the UI.
-- (optional) property or function  `uiSchema`: The returned structure defines additional UI components or effects.
+- property or function `schema`: The object returned from this property or function defines the configuration of the plugin and is used to generate the configuration user interface for the plugin. The value can be an object or `Promise<object>`.
+- (optional) property or function  `uiSchema`: The returned structure defines additional UI components or effects. The value can be an object or `Promise<object>`.
 
 ## Getting Started with Plugin Development
 
@@ -697,6 +697,11 @@ Set the current error status of the plugin. The `msg` should be a short message 
 ```javascript
 app.setProviderError('Error connecting to database');
 ```
+
+### `app.getSerialPorts() => Promise<Ports>`
+
+This returs a Promise which will resolve to a [Ports](src/serialports.ts#21) object which contains information about the serial ports available on the machine.
+
 
 ## Plugin configuration HTTP API
 

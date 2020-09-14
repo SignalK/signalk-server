@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "1.33.0",
+  "version": "1.34.0",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "watch": "npm run build -- -w",
     "lint": "tslint --config tslint.js --project tsconfig.json --fix",
     "prepublishOnly": "npm run lint && npm run build && npm run build-declaration",
-    "create-release": "github-create-release --owner signalk --repository signalk-server-node --npm-base-url https://www.npmjs.com/package/signalk-server",
+    "create-release": "github-create-release --owner signalk --repository signalk-server --npm-base-url https://www.npmjs.com/package/signalk-server",
     "release": "npm run prepublishOnly && git push --tags && git push && git tag -d latest && git push --delete origin latest && git tag latest && git push origin tag latest && npm run create-release",
     "update-latest-release": "git checkout master && git branch -D latest-release && git checkout -b latest-release && git push -f",
     "start": "node bin/signalk-server",
@@ -25,10 +25,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/SignalK/signalk-server-node.git"
+    "url": "https://github.com/SignalK/signalk-server.git"
   },
   "bugs": {
-    "url": "https://github.com/SignalK/signalk-server-node/issues"
+    "url": "https://github.com/SignalK/signalk-server/issues"
   },
   "keywords": [
     "signalk",
@@ -67,10 +67,11 @@
     "node": "10"
   },
   "dependencies": {
-    "@signalk/server-admin-ui": "1.30.x",
+    "@signalk/server-admin-ui": "1.31.x",
     "@signalk/signalk-schema": "1.5.0",
-    "@signalk/streams": "1.14.x",
+    "@signalk/streams": "1.15.x",
     "@types/debug": "^4.1.5",
+    "@types/serialport": "^8.0.1",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.14.1",
@@ -101,6 +102,7 @@
     "jsonwebtoken": "^8.1.1",
     "listr": "^0.14.1",
     "lodash": "^4.17.4",
+    "mdns-js": "^1.0.3",
     "minimist": "^1.1.0",
     "moment": "^2.10.6",
     "morgan": "^1.5.0",

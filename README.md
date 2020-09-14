@@ -62,20 +62,13 @@ wscat 'ws://localhost:3000/signalk/v1/stream?subscribe=all'
 [Marinepi-provisioning](https://github.com/tkurki/marinepi-provisioning) has useful roles and examples for provisioning Signal K and auxiliary services on a headless Raspberry Pi.
 
 
-## Use: Run on Docker
+## Docker
 
 You can start a local server on port 3000  with demo data with
 
 ```
-docker run --name signalk-server --publish 3000:3000 --entrypoint signalk-server signalk/signalk-server-node:latest --sample-nmea0183-data
+docker run --init -it --rm --name signalk-server --publish 3000:3000 --entrypoint bin/signalk-server signalk/signalk-server --sample-nmea0183-data
 ```
-
-For real use the easiest way is mount HOME/.signalk from the host and run priviledged so that the container has access to host's /dev under /dev/hostdev:
-
-```
-docker run --name signalk-server --publish 3000:3000 -v --privileged -v $HOME/.signalk:/home/node/.signalk -v /dev:/dev/hostdev signalk/signalk-server-node
-```
-
 
 Now what?
 ---------
