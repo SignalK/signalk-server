@@ -172,6 +172,7 @@ class DeviceInput extends Component {
     })
       .then(response => response.json())
       .then(data => {
+        data.serialports = data.serialports.map(portInfo => portInfo.path)
         this.setState({
           devices: data
         })

@@ -71,6 +71,7 @@
     "@signalk/signalk-schema": "1.5.0",
     "@signalk/streams": "1.15.x",
     "@types/debug": "^4.1.5",
+    "@types/serialport": "^8.0.1",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.14.1",
