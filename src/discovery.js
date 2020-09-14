@@ -17,6 +17,8 @@
 const debug = require('debug')('signalk-server:discovery')
 const canboatjs = require('@canboat/canboatjs')
 const dgram = require('dgram')
+const mdns = require('mdns-js')
+const { networkInterfaces } = require('os')
 
 module.exports.runDiscovery = function(app) {
   if (canboatjs.discover) {
@@ -29,6 +31,8 @@ module.exports.runDiscovery = function(app) {
 
   discoverWLN10()
   discoverGoFree()
+  discoverSignalkWs('ws')
+  discoverSignalkWs('wss')
 
   function findUDPProvider(port) {
     return app.config.settings.pipedProviders.find(provider => {
@@ -55,6 +59,23 @@ module.exports.runDiscovery = function(app) {
         provider.pipeElements[0].options.subOptions.type === 'tcp' &&
         provider.pipeElements[0].options.subOptions.host === host &&
         provider.pipeElements[0].options.subOptions.port === port
+      )
+    })
+  }
+
+  function findWSProvider(ip, wsType, host, port) {
+    return app.config.settings.pipedProviders.find(provider => {
+      return (
+        provider.pipeElements &&
+        provider.pipeElements.length === 1 &&
+        provider.pipeElements[0].type === 'providers/simple' &&
+        provider.pipeElements[0].options &&
+        provider.pipeElements[0].options.type === 'SignalK' &&
+        provider.pipeElements[0].options.subOptions.type === wsType &&
+        provider.pipeElements[0].options.subOptions.port.toString() ===
+          port.toString() &&
+        (provider.pipeElements[0].options.subOptions.host === host ||
+          provider.pipeElements[0].options.subOptions.host === ip)
       )
     })
   }
@@ -97,16 +118,16 @@ module.exports.runDiscovery = function(app) {
             })
           }
         } catch (err) {
-          debug(err)
+          debug('discoverGoFree:', err)
           return
         }
       }
     })
     socket.on('error', error => {
-      debug(error)
+      debug('discoverGoFree:', error)
     })
     socket.on('close', () => {
-      debug('close')
+      debug('discoverGoFree close')
     })
     debug('looking for GoFree broadcasting on UDP port 2052')
     try {
@@ -114,11 +135,11 @@ module.exports.runDiscovery = function(app) {
         try {
           socket.addMembership('239.2.1.1')
         } catch (ex) {
-          debug(ex)
+          debug('discoverGoFree:', ex)
         }
       })
     } catch (ex) {
-      debug(ex)
+      debug('discoverGoFree:', ex)
     }
     setTimeout(() => {
       if (socket) {
@@ -153,16 +174,16 @@ module.exports.runDiscovery = function(app) {
         }
       })
       socket.on('error', error => {
-        debug(error)
+        debug('discoverWLN10:', error)
       })
       socket.on('close', () => {
-        debug('close')
+        debug('discoverWLN10 close')
       })
       debug('looking for a WLN10 broadcasting UDP port 2000')
       try {
         socket.bind(2000)
       } catch (ex) {
-        debug(ex)
+        debug('discoverWLN10:', ex)
       }
       setTimeout(() => {
         if (socket) {
@@ -170,6 +191,83 @@ module.exports.runDiscovery = function(app) {
         }
       }, 5000)
     }
+  }
+
+  function discoverSignalkWs(wsType) {
+    try {
+      mdns.excludeInterface('0.0.0.0')
+      var browser = mdns.createBrowser(mdns.tcp('signalk-' + wsType))
+
+      browser.on('ready', function onReady() {
+        try {
+          debug('looking for SignalK ' + wsType)
+          browser.discover()
+        } catch (err) {
+          debug('discoverSignalkWs:', err)
+        }
+      })
+
+      browser.on('update', function onUpdate(data) {
+        try {
+          if (
+            !isLocalIP(data.addresses[0]) &&
+            Array.isArray(data.type) &&
+            data.type[0].name === 'signalk-' + wsType &&
+            !findWSProvider(data.addresses[0], wsType, data.host, data.port)
+          ) {
+            debug('discoverSignalkWs found data[' + wsType + ']:', data)
+            const providerId = wsType + '-' + data.host + ':' + data.port
+            app.emit('discovered', {
+              id: providerId,
+              enabled: false,
+              pipeElements: [
+                {
+                  type: 'providers/simple',
+                  options: {
+                    type: 'SignalK',
+                    subOptions: {
+                      type: wsType,
+                      host: data.host,
+                      port: data.port,
+                      providerId: providerId
+                    },
+                    providerId: providerId
+                  }
+                }
+              ]
+            })
+          }
+        } catch (err) {
+          debug('discoverSignalkWs:', err)
+        }
+      })
+
+      setTimeout(() => {
+        try {
+          browser.stop()
+          debug('discoverSignalkWs close')
+        } catch (err) {
+          debug('discoverSignalkWs:', err)
+        }
+      }, 5000)
+    } catch (err) {
+      debug('discoverSignalkWs:', err)
+    }
+  }
+
+  function isLocalIP(IP) {
+    const nets = networkInterfaces()
+
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name]) {
+        if (net.family === 'IPv4' && !net.internal) {
+          if (net.address === IP) {
+            return true
+          }
+        }
+      }
+    }
+    return false
   }
 }
 
