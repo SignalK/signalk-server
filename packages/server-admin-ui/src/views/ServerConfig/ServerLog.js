@@ -2,21 +2,14 @@ import React, { Component } from 'react'
 import ReactHtmlParser from 'react-html-parser'
 import { connect } from 'react-redux'
 import {
-  Badge,
-  Button,
   Card,
-  CardHeader,
   CardBody,
-  CardFooter,
-  InputGroup,
-  InputGroupAddon,
   Input,
   Form,
   Col,
   Label,
   FormGroup,
-  FormText,
-  Table
+  FormText
 } from 'reactstrap'
 
 class ServerLogs extends Component {
@@ -26,11 +19,13 @@ class ServerLogs extends Component {
       hasData: true,
       webSocket: null,
       didSubScribe: false,
-      pause: false
+      pause: false,
+      debugKeys: []
     }
 
     this.handleDebug = this.handleDebug.bind(this)
     this.handlePause = this.handlePause.bind(this)
+    this.fetchDebugKeys = this.fetchDebugKeys.bind(this)
   }
 
   subscribeToLogsIfNeeded() {
@@ -49,9 +44,21 @@ class ServerLogs extends Component {
       this.state.didSubScribe = false
     }
   }
+
+  fetchDebugKeys() {
+    fetch(`${window.serverRoutesPrefix}/debugKeys`, {
+      credentials: 'include'
+    })
+      .then(response => response.json())
+      .then(debugKeys => {
+        this.setState({ debugKeys: debugKeys.sort() })
+      })
+
+  }
   
   componentDidMount() {
     this.subscribeToLogsIfNeeded()
+    this.fetchDebugKeys()
   }
 
   componentDidUpdate() {
@@ -63,18 +70,29 @@ class ServerLogs extends Component {
   }
 
   handleDebug (event) {
+    this.doHandleDebug(event.target.value)
+  }
+
+  handleDebugCheckbox(value, enabled) {
+    const keysToSend = this.props.log.debugEnabled.length > 0 ? this.props.log.debugEnabled.split(',') : []
+    if (enabled) {
+      keysToSend.push(value)
+    } else {
+      _.remove(keysToSend, v => v === value)
+    }
+    this.doHandleDebug(keysToSend.toString())
+  }
+
+  doHandleDebug (value) {
     fetch(`${window.serverRoutesPrefix}/debug`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ value: event.target.value }),
+      body: JSON.stringify({ value }),
       credentials: 'include'
     })
       .then(response => response.text())
-      .then(response => {
-        //this.props.log.debugEnabled = event.target.value
-      })
   }
 
   handleRememberDebug (event) {
@@ -100,6 +118,7 @@ class ServerLogs extends Component {
   }
 
   render () {
+    const activeDebugKeys = this.props.log.debugEnabled.split(',')
     return (
       this.state.hasData && (
         <div className='animated fadeIn'>
@@ -111,75 +130,100 @@ class ServerLogs extends Component {
                 encType='multipart/form-data'
                 className='form-horizontal'
                 onSubmit={e => { e.preventDefault()}}
-          >
+              >
+                <FormGroup row>
 
-          <FormGroup row>
-          <Col xs='3' md='2'>
-            <Label htmlFor='select'>Debug</Label>
-          </Col>
-          <Col xs='12' md='12'>
-            <Input
-              type='text'
-              name='debug'
-              onChange={this.handleDebug}
-                value={this.props.log.debugEnabled}
-            />
-            <FormText color='muted'>
-               Enter the appropriate debug keys to enable debug logging. Multiple entries should be separated by a comma.
-               For example: <code>signalk-server*,signalk-provider-tcp</code>
-            </FormText>
-          </Col>
-          </FormGroup>
-<FormGroup row>
-          <Col xs='3' md='2'>
-            <Label htmlFor='select'>Remember Debug</Label>
-          </Col>
-          <Col xs='6' md='3'>
-          <Label className='switch switch-text switch-primary'>
-                              <Input
-                                type='checkbox'
-                                id="Enabled"
-                                name='debug'
-                                className='switch-input'
-                                onChange={this.handleRememberDebug}
-                                checked={this.props.log.rememberDebug}
-                              />
-                              <span
-                                className='switch-label'
-                                data-on='Yes'
-                                data-off='No'
-                              />
-                              <span className='switch-handle' />
-          </Label>
-          </Col>
-          <Col xs='3' md='2'>
-            <Label htmlFor='select'>Pause</Label>
-          </Col>
-          <Col xs='6' md='3'>
-          <Label className='switch switch-text switch-primary'>
-                              <Input
-                                type='checkbox'
-                                id="Pause"
-                                name='pause'
-                                className='switch-input'
-                                onChange={this.handlePause}
-                                checked={this.state.pause}
-                              />
-                              <span
-                                className='switch-label'
-                                data-on='Yes'
-                                data-off='No'
-                              />
-                              <span className='switch-handle' />
-                              </Label>
-          </Col>
-          </FormGroup>
-          
-          <LogList value={this.props.log} />
+                  <Col xs='1' md='1'>
+                    <Label htmlFor='select'>Debug</Label>
+                  </Col>
+
+                  <Col xs='6' md='6'>
+                    <Input
+                      type='text'
+                      name='debug'
+                      onChange={this.handleDebug}
+                        value={this.props.log.debugEnabled}
+                    />
+                    <FormText color='muted' style={{marginBottom: '15px'}}>
+                      Enter the appropriate debug keys to enable debug logging. Multiple entries should be separated by a comma.
+                      For example: <code>signalk-server*,signalk-provider-tcp</code>. You can also activate individual debug keys on the right.
+                    </FormText>
+                    <Label className='switch switch-text switch-primary'>
+                      <Input
+                        type='checkbox'
+                        id="Enabled"
+                        name='debug'
+                        className='switch-input'
+                        onChange={this.handleRememberDebug}
+                        checked={this.props.log.rememberDebug}
+                      />
+                      <span
+                        className='switch-label'
+                        data-on='Yes'
+                        data-off='No'
+                      />
+                      <span className='switch-handle' />
+                    </Label> Remember debug setting
+                  </Col>
+
+                  <Col xs='5' md='5'>
+                    <div style={{
+                      overflow: 'scroll',
+                      maxHeight: '30vh',
+                      borderStyle: 'solid',
+                      borderWidth: '0.5px',
+                      borderColor: 'lightgray',
+                      padding: '8px'
+                    }}>
+                      {this.state.debugKeys.map((key, i) =>
+                        <div key={i}>
+                          <Label className='switch switch-text switch-primary'>
+                            <Input
+                              type='checkbox'
+                              id={key}
+                              name={key}
+                              className='switch-input'
+                              onChange={(e) => {
+                                this.handleDebugCheckbox(key, activeDebugKeys.indexOf(key) === -1)
+                              }}
+                              checked={activeDebugKeys.indexOf(key) >= 0}
+                            />
+                            <span
+                              className='switch-label'
+                              data-on='Yes'
+                              data-off='No'
+                            />
+                            <span className='switch-handle' />
+                          </Label>{' '}{key}
+                        </div>
+                      )}
+                    </div>
+                  </Col>
+                </FormGroup>
+
+                <div>
+                  Pause the log window
+                  <Label className='switch switch-text switch-primary'>
+                    <Input
+                      type='checkbox'
+                      id="Pause"
+                      name='pause'
+                      className='switch-input'
+                      onChange={this.handlePause}
+                      checked={this.state.pause}
+                    />
+                    <span
+                      className='switch-label'
+                      data-on='Yes'
+                      data-off='No'
+                    />
+                    <span className='switch-handle' />
+                  </Label>
+                </div>
+
+                <LogList value={this.props.log} />
               </Form>
             </CardBody>
-            <CardFooter>
-            </CardFooter>
           </Card>
         </div>
       )
@@ -194,7 +238,7 @@ class LogList extends Component {
 
   render() {
     return (
-        <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px', 'font-family': 'monospace'}} >
+        <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px', 'fontFamily': 'monospace'}} >
       {this.props.value.entries && this.props.value.entries.map((logEntry, index) => {
             return <PureLogRow key={logEntry.i} log={logEntry.d}/>
         })

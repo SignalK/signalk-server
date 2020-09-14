@@ -55,7 +55,7 @@ const state = {
   discoveredProviders: [],
   log: {
     entries,
-    debugEnabled: [],
+    debugEnabled: '',
     rememberDebug: false
   },
   restoreStatus: {}
