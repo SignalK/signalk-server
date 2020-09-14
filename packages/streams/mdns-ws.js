@@ -118,12 +118,11 @@ function setProviderStatus (that, providerId, message, isError) {
 
 MdnsWs.prototype.connect = function (client) {
   const that = this
-  const providerId = `${that.options.providerId}.${client.options.hostname}:${client.options.port}`
-  
+
   client
     .connect()
     .then(() => {
-      setProviderStatus(that, providerId, `ws connection connected to ${client.options.hostname}:${client.options.port}`)
+      setProviderStatus(that, that.options.providerId, `ws connection connected to ${client.options.hostname}:${client.options.port}`)
       if (this.options.selfHandling === 'useRemoteSelf') {
         client.API().then(api => api.get('/self')).then(selfFromServer => {
           debug(`Mapping context ${selfFromServer} to self (empty context)`)
@@ -143,7 +142,7 @@ MdnsWs.prototype.connect = function (client) {
         try {
           parsed = JSON.parse(that.options.subscription)
         } catch ( ex ) {
-          setProviderStatus(that, providerId, `unable to parse subscription json: ${that.options.subscription}: ${ex.message}`, true)
+          setProviderStatus(that, that.options.providerId, `unable to parse subscription json: ${that.options.subscription}: ${ex.message}`, true)
         }
         if ( !Array.isArray(parsed) ) {
           parsed = [ parsed ]
@@ -155,7 +154,7 @@ MdnsWs.prototype.connect = function (client) {
       }
     })
     .catch(err => {
-      setProviderStatus(that, providerId, err.message, true)
+      setProviderStatus(that, that.options.providerId, err.message, true)
     })
   
   client.on('delta', (data) => {
@@ -163,7 +162,7 @@ MdnsWs.prototype.connect = function (client) {
       that.handleContext(data)
       if (dataDebug.enabled) { dataDebug(JSON.stringify(data)) }
       data.updates.forEach(function (update) {
-        update['$source'] = providerId
+        update['$source'] = `${that.options.providerId}.${client.options.hostname}:${client.options.port}`
       })
     }
     

@@ -375,7 +375,7 @@ module.exports = (theApp: any) => {
     })
     onStopHandlers[plugin.id] = []
     plugin.stop()
-    theApp.setProviderStatus(plugin.name, 'Stopped')
+    theApp.setPluginStatus(plugin.name, 'Stopped')
     debug('Stopped plugin ' + plugin.name)
   }
 
@@ -389,7 +389,7 @@ module.exports = (theApp: any) => {
       _.isUndefined(theApp.providerStatus[plugin.name]) &&
       _.isUndefined(plugin.statusMessage)
     ) {
-      theApp.setProviderStatus(plugin.name, 'Started')
+      theApp.setPluginStatus(plugin.name, 'Started')
     }
   }
 
@@ -402,7 +402,7 @@ module.exports = (theApp: any) => {
   ) {
     debug('Starting plugin %s from %s', plugin.name, location)
     try {
-      app.setProviderStatus(plugin.name, null)
+      app.setPluginStatus(plugin.name, null)
 
       if (plugin.enableDebug) {
         app.logging.addDebug(plugin.packageName)
@@ -440,10 +440,10 @@ module.exports = (theApp: any) => {
         onStopHandlers[plugin.id].push(app.registerDeltaInputHandler(handler))
       },
       setProviderStatus: (msg: string) => {
-        app.setProviderStatus(plugin.name, msg)
+        app.setPluginStatus(plugin.name, msg)
       },
       setProviderError: (msg: string) => {
-        app.setProviderError(plugin.name, msg)
+        app.setPluginError(plugin.name, msg)
       }
     })
     appCopy.putPath = putPath
