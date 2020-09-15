@@ -71,7 +71,6 @@
     "@signalk/signalk-schema": "1.5.0",
     "@signalk/streams": "1.15.x",
     "@types/debug": "^4.1.5",
-    "@types/serialport": "^8.0.1",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.14.1",
@@ -112,7 +111,6 @@
     "pem": "^1.14.3",
     "primus": "^7.0.0",
     "semver": "^7.1.1",
-    "serialport": "^9.0.1",
     "spdy": "^4.0.0",
     "split": "^1.0.0",
     "stat-mode": "^1.0.0",
@@ -129,7 +127,8 @@
     "@signalk/signalk-to-nmea0183": "^1.0.0",
     "@signalk/simplegauges": "^1.0.1",
     "@signalk/zones": "^1.0.0",
-    "mdns": "^2.5.1"
+    "mdns": "^2.5.1",
+    "serialport": "^9.0.1"
   },
   "devDependencies": {
     "@signalk/github-create-release": "^1.0.0",
@@ -137,6 +136,7 @@
     "@types/lodash": "^4.14.139",
     "@types/node-fetch": "^2.5.3",
     "@types/semver": "^7.1.0",
+    "@types/serialport": "^8.0.1",
     "@types/split": "^1.0.0",
     "chai": "^4.0.0",
     "chai-json-equal": "0.0.1",

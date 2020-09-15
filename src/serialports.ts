@@ -15,13 +15,12 @@
 */
 
 import fs from 'fs'
-import SerialPort from 'serialport'
 
 export interface Ports {
   byId: string[]
   byPath: string[]
   byOpenPlotter: string[]
-  serialports: SerialPort.PortInfo[]
+  serialports: any
 }
 
 export const listAllSerialPorts = (): Promise<Ports> => {
@@ -40,7 +39,11 @@ export const listAllSerialPorts = (): Promise<Ports> => {
 }
 
 function listSerialPorts() {
-  return SerialPort.list()
+  try {
+    return require('serialport').list()
+  } catch ( err ) {
+    return Promise.resolve([])
+  }
 }
 
 function listSafeSerialPortsDevSerialById() {
