@@ -4,8 +4,7 @@ FROM $IMAGE_BASE:10
 #COPY requires one valid argument, second can be nonexistent
 COPY empty_file tmp/qemu-arm-stati[c] /usr/bin/
 
-RUN apt-get update && apt-get -y install apt-utils
-RUN apt-get update && apt-get -y install sudo git python3 python build-essential avahi-daemon avahi-discover avahi-utils libnss-mdns mdns-scan libavahi-compat-libdnssd-dev sysstat procps
+RUN apt-get update && apt-get -y install git python3 python build-essential avahi-daemon avahi-discover avahi-utils libnss-mdns mdns-scan libavahi-compat-libdnssd-dev sysstat procps
 RUN groupadd -r i2c -g 998 && groupadd -r spi -g 999 && usermod -a -G dialout,i2c,spi,netdev node
 
 USER node
