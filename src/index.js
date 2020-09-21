@@ -76,6 +76,14 @@ function Server(opts) {
 
   app.providerStatus = {}
 
+  app.setPluginStatus = function(providerId, statusMessage) {
+    doSetProviderStatus(providerId, statusMessage, 'status', 'plugin')
+  }
+
+  app.setPluginError = function(providerId, errorMessage) {
+    doSetProviderStatus(providerId, errorMessage, 'error', 'plugin')
+  }
+
   app.setProviderStatus = function(providerId, statusMessage) {
     doSetProviderStatus(providerId, statusMessage, 'status')
   }
@@ -84,7 +92,7 @@ function Server(opts) {
     doSetProviderStatus(providerId, errorMessage, 'error')
   }
 
-  function doSetProviderStatus(providerId, statusMessage, type) {
+  function doSetProviderStatus(providerId, statusMessage, type, statusType = 'provider') {
     if (!statusMessage) {
       delete app.providerStatus[providerId]
       return
@@ -102,10 +110,11 @@ function Server(opts) {
 
     status.type = type
     status.id = providerId
-    status.statusType = 'provider'
+    status.statusType = statusType
     status.timeStamp = new Date().toLocaleString()
 
     status.message = statusMessage
+    console.log(app.getProviderStatus())
 
     app.emit('serverevent', {
       type: 'PROVIDERSTATUS',
