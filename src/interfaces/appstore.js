@@ -21,7 +21,7 @@ const { installModule, removeModule } = require('../modules')
 const {
   isTheServerModule,
   findModulesWithKeyword,
-  getLatestServerVersion,
+  getLatestServerVersionInfo,
   getAuthor,
   getKeywords
 } = require('../modules')
@@ -125,9 +125,9 @@ module.exports = function(app) {
       app.get(`${SERVERROUTESPREFIX}/appstore/available/`, (req, res) => {
         findPluginsAndWebapps()
           .then(([plugins, webapps]) => {
-            getLatestServerVersion(app.config.version)
-              .then(serverVersion => {
-                const result = getAllModuleInfo(plugins, webapps, serverVersion)
+            getLatestServerVersionInfo(app.config.version)
+              .then(({ version }) => {
+                const result = getAllModuleInfo(plugins, webapps, version)
                 res.send(JSON.stringify(result))
               })
               .catch(err => {
@@ -189,7 +189,8 @@ module.exports = function(app) {
       installing: [],
       categories: getAvailableCategories(),
       storeAvailable: true,
-      isInDocker: process.env.IS_IN_DOCKER === 'true'
+      isInDocker: process.env.IS_IN_DOCKER === 'true',
+      nodeVersion: {}
     }
   }
 
