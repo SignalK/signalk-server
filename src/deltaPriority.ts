@@ -122,10 +122,14 @@ export const getToPreferredDelta = (
     const latestIsFromHigherPrecedence =
       latestPrecedence.precedence < incomingPrecedence.precedence
 
-    return (
+    const isPreferred = (
       !latestIsFromHigherPrecedence ||
       millis - latest.timestamp > incomingPrecedence.timeout
     )
+    if (debug.enabled) {
+      debug(`${path}:${sourceRef}:${isPreferred}:${millis}`)
+    }
+    return isPreferred
   }
 
   return (delta: any, now: Date, selfContext: string) => {
@@ -146,9 +150,6 @@ export const getToPreferredDelta = (
                 update.$source,
                 millis
               )
-              if (debug.enabled) {
-                debug(`${pathValue.path}:${update.$source}:${isPreferred}:${millis}`)
-              }
               if (isPreferred) {
                 setLatest(
                   delta.context as Context,
