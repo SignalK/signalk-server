@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import { Badge, Button, Card, CardHeader, CardBody, CardFooter, Collapse, Input, Table } from 'reactstrap'
+import {Alert, Badge, Button, Card, CardHeader, CardBody, CardFooter, Collapse, Input, Table } from 'reactstrap'
 import Creatable from 'react-select/creatable'
 import { remove } from 'lodash'
 
@@ -302,7 +302,7 @@ function fetchAvailablePaths(cb) {
     .then(cb)
 }
 
-class SourcePreferences extends Component {
+class SourcePriorities extends Component {
   constructor(props) {
     super(props)
     this.state = {
@@ -318,8 +318,12 @@ class SourcePreferences extends Component {
     sourcePriorities.push({ path: '', priorities: [] })
     return (
       <Card>
-        <CardHeader><Badge color='danger'>Experimental</Badge> Source Preferences</CardHeader>
+        <CardHeader>Source Priorities Settings <Badge color='danger'>Experimental</Badge></CardHeader>
         <CardBody>
+          <Alert>
+            <p>Use Source Priorities to filter incoming data so that data from lower priority sources is discarded when there is fresh data from some higher priority source.</p>
+            <p>Incoming data is not handled if the <b>latest value for a path is from a higher priority source and it is not older than the timeout</b> specified for the source of the incoming data.</p>
+          </Alert>
           <Table responsive bordered striped size="sm">
             <thead>
               <tr>
@@ -398,4 +402,4 @@ const mapStateToProps = ({ sourcePrioritiesData }) => ({
   saveState: sourcePrioritiesData.saveState
 })
 
-export default connect(mapStateToProps)(SourcePreferences)
+export default connect(mapStateToProps)(SourcePriorities)
