@@ -1,5 +1,5 @@
 import Debug from 'debug'
-const debug = Debug('signalk-server:preferredDeltas')
+const debug = Debug('signalk-server:sourcepriorities')
 
 type Brand<K, T> = K & { __brand: T }
 
@@ -39,7 +39,6 @@ const toPrecedences = (sourcePrioritiesMap: {
 }) =>
   Object.keys(sourcePrioritiesMap).reduce<Map<Path, PathPrecedences>>(
     (acc, path: string) => {
-      debug(path)
       const priorityIndices = sourcePrioritiesMap[path].reduce<
         PathPrecedences
       >((acc2, { sourceRef, timeout }, i: number) => {
@@ -147,6 +146,9 @@ export const getToPreferredDelta = (
                 update.$source,
                 millis
               )
+              if (debug.enabled) {
+                debug(`${pathValue.path}:${update.$source}:${isPreferred}:${millis}`)
+              }
               if (isPreferred) {
                 setLatest(
                   delta.context as Context,
