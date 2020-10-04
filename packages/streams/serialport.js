@@ -113,7 +113,6 @@ SerialStream.prototype.start = function () {
         `Connected to ${this.options.device}`
       )
       this.isFirstError = true
-      this.options.app.setProviderError(this.options.providerId, '')
       const parser = new SerialPort.parsers.Readline()
       this.serial.pipe(parser).pipe(this)
     }.bind(this)
