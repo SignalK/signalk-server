@@ -229,7 +229,7 @@ After installing and configuring the plugin from the admin console, use a client
 
 You can change the admin application's top left logo by placing a SVG file named `logo.svg` in the settings directory (default: $HOME/.signalk/).
 
-#Source Priority
+# Source Priority
 
 You can specify relative precedence between sources for a single Signal K path.
 
@@ -238,7 +238,7 @@ The idea is that for a specific path you list sources in decreasing precedence w
 Incoming data from a source is dropped (not handled at all) by the server if the previous value for the path is *from a source with higher precedence* and it is *not older than the timeout*.
 
 The _source priority_ algorithm  compares the *latest value* that was passed through against a new value:
-- is the latest value from a source that has a lower or equal priority/preference than the incoming value's source? if true pass the value
+- is the latest value from a source that has a lower or equal priority than the incoming value's source? if true pass the value
 - else: is the latest value older than the timeout for incoming source's timeout? if yes pass the value
 - else: ignore the value
 
