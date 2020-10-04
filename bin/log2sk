@@ -10,6 +10,7 @@ const app = {
     configPath: __dirname
   },
   emit: () => {},
+  on: () => {},
   handleMessage: (id, delta) => console.log(JSON.stringify(delta))
 }
 
