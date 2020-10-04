@@ -318,7 +318,7 @@ class SourcePreferences extends Component {
     sourcePriorities.push({ path: '', priorities: [] })
     return (
       <Card>
-        <CardHeader><Badge color='danger'>Beta</Badge> Source Preferences</CardHeader>
+        <CardHeader><Badge color='danger'>Experimental</Badge> Source Preferences</CardHeader>
         <CardBody>
           <Table responsive bordered striped size="sm">
             <thead>
