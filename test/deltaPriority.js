@@ -2,7 +2,7 @@ const chai = require('chai')
 chai.Should()
 
 
-const { getToPreferredDelta } = require('../lib/preferredDelta')
+const { getToPreferredDelta } = require('../lib/deltaPriority')
 
 describe('toPreferredDelta logic', () => {
   it('works', () => {

@@ -673,7 +673,7 @@ function startServerEvents(app, spark) {
   }
   spark.write({
     type: 'SOURCEPRIORITIES',
-    data: app.config.settings.sourcePreferences || {}
+    data: app.config.settings.sourcePriorities || {}
   })
 }
 

@@ -23,7 +23,7 @@ import { openServerEventsConnection } from './actions'
 
 import {
   reduceSourcePriorities
-} from './views/ServerConfig/SourcePreferences'
+} from './views/ServerConfig/SourcePriorities'
 
 import escape from 'escape-html'
 import Convert from 'ansi-to-html'

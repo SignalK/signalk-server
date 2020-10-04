@@ -34,7 +34,7 @@ const getSecondaryPort = ports.getSecondaryPort
 const getExternalPort = ports.getExternalPort
 const DeltaChain = require('./deltachain')
 import { checkForNewServerVersion } from './modules'
-import { getToPreferredDelta } from './preferredDelta'
+import { getToPreferredDelta } from './deltaPriority'
 
 const { StreamBundle } = require('./streambundle')
 const {
@@ -163,7 +163,7 @@ function Server(opts) {
   let toPreferredDelta
   try {
     toPreferredDelta = getToPreferredDelta(
-      app.config.settings.sourcePreferences
+      app.config.settings.sourcePriorities
     )
   } catch (e) {
     console.error(`getToPreferredDelta failed: ${e.message}`)

@@ -266,7 +266,7 @@ const sourcePrioritySave = (sourcePriorities) => (dispatch) => {
   dispatch({
     type: SOURCEPRIOS_SAVING
   })
-  fetch(`${window.serverRoutesPrefix}/sourcePreferences`, {
+  fetch(`${window.serverRoutesPrefix}/sourcePriorities`, {
     method: 'PUT',
     credentials: "include",
     headers: {

@@ -7,13 +7,13 @@ type Context = Brand<string, 'context'>
 type SourceRef = Brand<string, 'sourceRef'>
 type Path = Brand<string, 'path'>
 
-interface SourcePreference {
+interface SourcePriority {
   sourceRef: SourceRef
   timeout: number
 }
 
-export interface SourcePreferencesData {
-  [path: string]: SourcePreference[]
+export interface SourcePrioritiesData {
+  [path: string]: SourcePriority[]
 }
 
 interface PathValue {
@@ -34,13 +34,13 @@ interface SourcePrecedenceData {
 type PathLatestTimestamps = Map<Path, TimestampedSource>
 
 type PathPrecedences = Map<SourceRef, SourcePrecedenceData>
-const toPrecedences = (sourcePreferencesMap: {
-  [path: string]: SourcePreference[]
+const toPrecedences = (sourcePrioritiesMap: {
+  [path: string]: SourcePriority[]
 }) =>
-  Object.keys(sourcePreferencesMap).reduce<Map<Path, PathPrecedences>>(
+  Object.keys(sourcePrioritiesMap).reduce<Map<Path, PathPrecedences>>(
     (acc, path: string) => {
       debug(path)
-      const priorityIndices = sourcePreferencesMap[path].reduce<
+      const priorityIndices = sourcePrioritiesMap[path].reduce<
         PathPrecedences
       >((acc2, { sourceRef, timeout }, i: number) => {
         acc2.set(sourceRef, {
@@ -56,13 +56,13 @@ const toPrecedences = (sourcePreferencesMap: {
   )
 
 export const getToPreferredDelta = (
-  sourcePreferencesData?: SourcePreferencesData
+  sourcePrioritiesData?: SourcePrioritiesData
 ) => {
-  if (!sourcePreferencesData) {
-    debug('No preferences data')
+  if (!sourcePrioritiesData) {
+    debug('No priorities data')
     return (delta: any, now: Date, selfContext: string) => delta
   }
-  const precedences = toPrecedences(sourcePreferencesData)
+  const precedences = toPrecedences(sourcePrioritiesData)
 
   const contextPathTimestamps = new Map<Context, PathLatestTimestamps>()
 
