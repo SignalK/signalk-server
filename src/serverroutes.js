@@ -589,6 +589,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
   app.put(`${serverRoutesPrefix}/sourcePriorities`, (req, res) => {
     app.config.settings.sourcePriorities = req.body
+    app.activateSourcePriorities()
     skConfig.writeSettingsFile(app, app.config.settings, err => {
       if (err) {
         res.status(500).send('Unable to save to sourcePrefences in settings file')

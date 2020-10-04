@@ -160,15 +160,18 @@ function Server(opts) {
     delete app.historyProvider
   }
 
-  let toPreferredDelta
-  try {
-    toPreferredDelta = getToPreferredDelta(
-      app.config.settings.sourcePriorities
-    )
-  } catch (e) {
-    console.error(`getToPreferredDelta failed: ${e.message}`)
-    toPreferredDelta = delta => delta
+  let toPreferredDelta = delta => delta
+  app.activateSourcePriorities = () => {
+    try {
+      toPreferredDelta = getToPreferredDelta(
+        app.config.settings.sourcePriorities
+      )
+    } catch (e) {
+      console.error(`getToPreferredDelta failed: ${e.message}`)
+    }
   }
+  app.activateSourcePriorities()
+
   app.handleMessage = function(providerId, data) {
     if (data && data.updates) {
       incDeltaStatistics(app, providerId)
