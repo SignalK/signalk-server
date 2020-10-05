@@ -55,7 +55,8 @@ const toPrecedences = (sourcePrioritiesMap: {
   )
 
 export const getToPreferredDelta = (
-  sourcePrioritiesData?: SourcePrioritiesData
+  sourcePrioritiesData: SourcePrioritiesData,
+  unknownSourceTimeout: number = 10000
 ) => {
   if (!sourcePrioritiesData) {
     debug('No priorities data')
@@ -102,6 +103,11 @@ export const getToPreferredDelta = (
     timeout: 0
   }
 
+  const LOWESTPRECEDENCE = {
+    precedence: Number.POSITIVE_INFINITY,
+    timeout: unknownSourceTimeout
+  }
+
   const isPreferredValue = (
     path: Path,
     latest: TimestampedSource,
@@ -117,7 +123,7 @@ export const getToPreferredDelta = (
     const latestPrecedence =
       pathPrecedences.get(latest.sourceRef) || HIGHESTPRECEDENCE
     const incomingPrecedence =
-      pathPrecedences.get(sourceRef) || HIGHESTPRECEDENCE
+      pathPrecedences.get(sourceRef) || LOWESTPRECEDENCE
 
     const latestIsFromHigherPrecedence =
       latestPrecedence.precedence < incomingPrecedence.precedence
@@ -127,7 +133,7 @@ export const getToPreferredDelta = (
       millis - latest.timestamp > incomingPrecedence.timeout
     )
     if (debug.enabled) {
-      debug(`${path}:${sourceRef}:${isPreferred}:${millis}`)
+      debug(`${path}:${sourceRef}:${isPreferred}:${millis - latest.timestamp}`)
     }
     return isPreferred
   }

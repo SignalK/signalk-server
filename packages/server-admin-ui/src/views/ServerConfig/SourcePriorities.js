@@ -322,8 +322,8 @@ class SourcePriorities extends Component {
         <CardBody>
           <Alert>
             <p>Use Source Priorities to filter incoming data so that data from lower priority sources is discarded when there is fresh data from some higher priority source.</p>
-            <p>Incoming data is not handled if the <b>latest value for a path is from a higher priority source and it is not older than the timeout</b> specified for the source of the incoming data.</p>
-            <p>You can debug the settings by saving them and activating debug key <pre>signalk-server:sourcepriorities</pre> in <a href="./#/serverConfiguration/log">Server Log</a></p>
+            <p>Incoming data is not handled if the <b>latest value for a path is from a higher priority source and it is not older than the timeout</b> specified for the source of the incoming data. Timeout for data from unlisted sources is 10 seconds.</p>
+            <p>You can debug the settings by saving them and activating debug key <b>signalk-server:sourcepriorities</b> in <a href="./#/serverConfiguration/log">Server Log</a></p>
           </Alert>
           <Table responsive bordered striped size="sm">
             <thead>

@@ -22,7 +22,7 @@ describe('toPreferredDelta logic', () => {
         }
       ]
     }
-    const toPreferredDelta = getToPreferredDelta(sourcePreferences)
+    const toPreferredDelta = getToPreferredDelta(sourcePreferences, 200)
 
 
     let totalDelay = 0
@@ -61,9 +61,10 @@ describe('toPreferredDelta logic', () => {
     push('c', 150, true)
     push('a', 10, true)
     push('b', 10, false)
-    push('d', 0, true)
+    push('d', 0, false)
     push('c', 10, false)
     push('c', 150, true)
+    push('d', 205, true)
 
 
     return new Promise((resolve, reject) => {

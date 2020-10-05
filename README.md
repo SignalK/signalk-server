@@ -246,6 +246,8 @@ Note that the filtering takes place on *path level, not on delta level*: if a de
 
 There is no timeout for the highest priority source, it is handled always.
 
+Timeout for data from unlisted sources is 10 seconds.
+
 Changelog
 ---------
 
