@@ -584,7 +584,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   })
 
   app.get(`${serverRoutesPrefix}/sourcePriorities`, (req, res) => {
-    res.json(app.config.settings.sourcePriorities || {})
+    res.json(app.config.settings.sourcePriorities || {})
   })
 
   app.put(`${serverRoutesPrefix}/sourcePriorities`, (req, res) => {
@@ -592,9 +592,11 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     app.activateSourcePriorities()
     skConfig.writeSettingsFile(app, app.config.settings, err => {
       if (err) {
-        res.status(500).send('Unable to save to sourcePrefences in settings file')
+        res
+          .status(500)
+          .send('Unable to save to sourcePrefences in settings file')
       } else {
-        res.json({result: 'ok'})
+        res.json({ result: 'ok' })
       }
     })
   })

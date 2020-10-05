@@ -39,15 +39,16 @@ const toPrecedences = (sourcePrioritiesMap: {
 }) =>
   Object.keys(sourcePrioritiesMap).reduce<Map<Path, PathPrecedences>>(
     (acc, path: string) => {
-      const priorityIndices = sourcePrioritiesMap[path].reduce<
-        PathPrecedences
-      >((acc2, { sourceRef, timeout }, i: number) => {
-        acc2.set(sourceRef, {
-          precedence: i,
-          timeout
-        })
-        return acc2
-      }, new Map<SourceRef, SourcePrecedenceData>())
+      const priorityIndices = sourcePrioritiesMap[path].reduce<PathPrecedences>(
+        (acc2, { sourceRef, timeout }, i: number) => {
+          acc2.set(sourceRef, {
+            precedence: i,
+            timeout
+          })
+          return acc2
+        },
+        new Map<SourceRef, SourcePrecedenceData>()
+      )
       acc.set(path as Path, priorityIndices)
       return acc
     },
@@ -128,10 +129,9 @@ export const getToPreferredDelta = (
     const latestIsFromHigherPrecedence =
       latestPrecedence.precedence < incomingPrecedence.precedence
 
-    const isPreferred = (
+    const isPreferred =
       !latestIsFromHigherPrecedence ||
       millis - latest.timestamp > incomingPrecedence.timeout
-    )
     if (debug.enabled) {
       debug(`${path}:${sourceRef}:${isPreferred}:${millis - latest.timestamp}`)
     }
