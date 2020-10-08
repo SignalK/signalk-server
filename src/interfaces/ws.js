@@ -671,6 +671,10 @@ function startServerEvents(app, spark) {
       data: app.securityStrategy.getLoginStatus(spark.request)
     })
   }
+  spark.write({
+    type: 'SOURCEPRIORITIES',
+    data: app.config.settings.sourcePriorities || {}
+  })
 }
 
 function startServerLog(app, spark) {

@@ -244,7 +244,7 @@ const mapStateToProps = state => {
             url: '/serverConfiguration/settings'
           },
           {
-            name: 'Connections',
+            name: 'Data Connections',
             url: '/serverConfiguration/connections/-'
           },
           {

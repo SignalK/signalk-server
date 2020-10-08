@@ -21,6 +21,10 @@ import Full from './containers/Full/'
 
 import { openServerEventsConnection } from './actions'
 
+import {
+  reduceSourcePriorities
+} from './views/ServerConfig/SourcePriorities'
+
 import escape from 'escape-html'
 import Convert from 'ansi-to-html'
 
@@ -59,7 +63,14 @@ const state = {
     rememberDebug: false
   },
   restoreStatus: {},
-  vesselInfo: {}
+  vesselInfo: {},
+  sourcePrioritiesData: {
+    sourcePriorities: [],
+    saveState: {
+      dirty: false,
+      timeoutsOk: true
+    }
+  }
 }
 
 let store = createStore(
@@ -236,7 +247,28 @@ let store = createStore(
         restoreStatus: action.data
       }
     }
-    return state
+    if ( action.type === 'SOURCEPRIORITIES' ) {
+      const sourcePrioritiesMap = action.data
+      const sourcePriorities = Object.keys(
+        sourcePrioritiesMap
+      ).map((key, i) => ({path: key, priorities: sourcePrioritiesMap[key]}))
+      sourcePriorities.state = {}
+
+      return {
+        ...state,
+        sourcePrioritiesData: {
+          sourcePriorities,
+          saveState: {
+            dirty: false,
+            timeoutsOk: true
+          }
+        }
+      }
+    }
+    return {
+      ...state,
+      sourcePrioritiesData: reduceSourcePriorities(state.sourcePrioritiesData, action)
+    }
   },
   state,
   applyMiddleware(thunk)

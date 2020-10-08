@@ -583,6 +583,24 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       .catch(() => res.json(false))
   })
 
+  app.get(`${serverRoutesPrefix}/sourcePriorities`, (req, res) => {
+    res.json(app.config.settings.sourcePriorities || {})
+  })
+
+  app.put(`${serverRoutesPrefix}/sourcePriorities`, (req, res) => {
+    app.config.settings.sourcePriorities = req.body
+    app.activateSourcePriorities()
+    skConfig.writeSettingsFile(app, app.config.settings, err => {
+      if (err) {
+        res
+          .status(500)
+          .send('Unable to save to sourcePrefences in settings file')
+      } else {
+        res.json({ result: 'ok' })
+      }
+    })
+  })
+
   app.post(`${serverRoutesPrefix}/debug`, (req, res) => {
     if (!app.logging.enableDebug(req.body.value)) {
       res.status(400).send('invalid debug value')

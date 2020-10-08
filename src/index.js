@@ -34,6 +34,7 @@ const getSecondaryPort = ports.getSecondaryPort
 const getExternalPort = ports.getExternalPort
 const DeltaChain = require('./deltachain')
 import { checkForNewServerVersion } from './modules'
+import { getToPreferredDelta } from './deltaPriority'
 
 const { StreamBundle } = require('./streambundle')
 const {
@@ -159,6 +160,18 @@ function Server(opts) {
     delete app.historyProvider
   }
 
+  let toPreferredDelta = delta => delta
+  app.activateSourcePriorities = () => {
+    try {
+      toPreferredDelta = getToPreferredDelta(
+        app.config.settings.sourcePriorities
+      )
+    } catch (e) {
+      console.error(`getToPreferredDelta failed: ${e.message}`)
+    }
+  }
+  app.activateSourcePriorities()
+
   app.handleMessage = function(providerId, data) {
     if (data && data.updates) {
       incDeltaStatistics(app, providerId)
@@ -169,6 +182,7 @@ function Server(opts) {
       ) {
         data.context = 'vessels.' + app.selfId
       }
+      const now = new Date()
       data.updates.forEach(function(update) {
         if (typeof update.source !== 'undefined') {
           update.source.label = providerId
@@ -181,11 +195,11 @@ function Server(opts) {
           }
         }
         if (!update.timestamp || app.config.overrideTimestampWithNow) {
-          update.timestamp = new Date().toISOString()
+          update.timestamp = now.toISOString()
         }
       })
       try {
-        deltachain.process(data)
+        deltachain.process(toPreferredDelta(data, now, app.selfContext))
       } catch (err) {
         console.error(err.message)
       }
