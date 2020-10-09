@@ -40,11 +40,11 @@ module.exports = function(app) {
     app.post(userApplicationDataUrls, (req, res) => {
       res.status(405).send('security is not enabled')
     })
-    
+
     app.post(applicationDataUrls, (req, res) => {
       res.status(405).send('security is not enabled')
     })
-    
+
     return
   }
 

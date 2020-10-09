@@ -93,7 +93,12 @@ function Server(opts) {
     doSetProviderStatus(providerId, errorMessage, 'error')
   }
 
-  function doSetProviderStatus(providerId, statusMessage, type, statusType = 'provider') {
+  function doSetProviderStatus(
+    providerId,
+    statusMessage,
+    type,
+    statusType = 'provider'
+  ) {
     if (!statusMessage) {
       delete app.providerStatus[providerId]
       return

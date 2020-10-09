@@ -41,7 +41,7 @@ export const listAllSerialPorts = (): Promise<Ports> => {
 function listSerialPorts() {
   try {
     return require('serialport').list()
-  } catch ( err ) {
+  } catch (err) {
     return Promise.resolve([])
   }
 }
