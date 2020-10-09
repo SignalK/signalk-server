@@ -35,7 +35,7 @@ class BasicProvider extends Component {
       <div>
         <FormGroup row>
           <Col xs='3' md='3'>
-            <Label htmlFor='select'>Input Type</Label>
+            <Label htmlFor='select'>Data Type</Label>
           </Col>
           <Col xs='6' md='3'>
             {this.props.value.isNew ? (
