@@ -120,7 +120,6 @@ function Server(opts) {
     status.timeStamp = new Date().toLocaleString()
 
     status.message = statusMessage
-    console.log(app.getProviderStatus())
 
     app.emit('serverevent', {
       type: 'PROVIDERSTATUS',
