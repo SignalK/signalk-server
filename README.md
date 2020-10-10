@@ -248,12 +248,6 @@ There is no timeout for the highest priority source, it is handled always.
 
 Timeout for data from unlisted sources is 10 seconds.
 
-Changelog
----------
-
-See [CHANGELOG.md](CHANGELOG.md).
-
-
 [FAQ](https://github.com/SignalK/signalk-server-node/wiki/FAQ:-Frequently-Asked-Questions)
 -------------
 

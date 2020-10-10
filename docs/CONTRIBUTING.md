@@ -38,10 +38,10 @@ Before you submit your Pull Request (PR) consider the following guidelines:
     git push origin my-fix-branch
     ```
 
-1. In GitHub, send a pull request to `signalk-server-node:master`.
-* Use the same guidelines as commit messages to write the PR title and description. The server changelog is automatically generated from PR titles, so think about how you can make the changelog informative and easy to understand. The description should tell how the change affects the server's behavior and motivation for doing the change.
-* If we suggest changes then:
-  * Make the required updates.
+1. In GitHub, send a pull request to `signalk-server:master`.
+* Use the same guidelines as commit messages to write the PR title and description. The server's release notes are automatically generated from PR titles, so think about how you can make them informative and easy to understand. The description should tell how the change affects the server's behavior and motivation for doing the change.
+* If we suggest changes to your PR we expect you to:
+  * Once agreed implement the changes.
   * Rebase your branch and force push to your GitHub repository (this will update your Pull Request):
 
     ```shell

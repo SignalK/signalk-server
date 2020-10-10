@@ -189,8 +189,7 @@ module.exports = function(app) {
           version: serverVersion,
           description: app.config.description,
           author: getAuthor(app.config),
-          npmUrl:
-            'https://github.com/SignalK/signalk-server-node/blob/master/CHANGELOG.md',
+          npmUrl: null,
           isPlugin: false,
           isWebapp: false
         }
