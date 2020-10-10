@@ -37,6 +37,15 @@ class ServerUpdate extends Component {
   }
 
   render () {
+    if (!this.props.appStore.storeAvailable) {
+      return (
+        <div className='animated fadeIn'>
+          <Card>
+            <CardHeader>Waiting for App store data to load...</CardHeader>
+          </Card>
+        </div>
+      )
+    }
     let isInstalling = false
     let isInstalled = false
     let info = this.props.appStore.installing.find(p => p.name == 'signalk-server')
