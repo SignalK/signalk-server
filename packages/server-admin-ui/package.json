@@ -59,7 +59,7 @@
   },
   "scripts": {
     "prepublishOnly": "npm run clean && npm run build",
-    "dev": "webpack -d --progress --watch --profile --json > compilation-stats.json --env.dev",
+    "dev": "webpack -d --progress --watch --env.dev",
     "build": "webpack -p --progress --env.prod",
     "clean": "rimraf ./build"
   },
