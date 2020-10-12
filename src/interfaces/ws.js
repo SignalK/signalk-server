@@ -650,13 +650,18 @@ function startServerEvents(app, spark) {
   spark.onDisconnects.push(() => {
     app.removeListener('serverevent', onServerEvent)
   })
-  const defaults = skConfig.readDefaultsFile(app)
-  const vesselInfo = _.get(defaults, 'vessels.self')
-  if (vesselInfo) {
-    spark.write({
-      type: 'VESSEL_INFO',
-      data: vesselInfo
-    })
+  try {
+    const vesselInfo = _.get(skConfig.readDefaultsFile(app), 'vessels.self')
+    if (vesselInfo) {
+      spark.write({
+        type: 'VESSEL_INFO',
+        data: vesselInfo
+      })
+    }
+  } catch (e) {
+    if (e.code != 'ENOENT') {
+      console.error(e)
+    }
   }
   Object.keys(app.lastServerEvents).forEach(propName => {
     spark.write(app.lastServerEvents[propName])
