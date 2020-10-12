@@ -680,7 +680,7 @@ app.registerDeltaInputHandler((delta, next) => {
 })
 ```
 
-### `app.setProviderStatus(msg)`
+### `app.setPluginStatus(msg)`
 
 Set the current status of the plugin. The `msg` should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.
 
@@ -690,13 +690,17 @@ app.setProviderStatus('Initializing');
 app.setProviderStatus('Done initializing');
 ```
 
-### `app.setProviderError(msg)`
+Use this instead of deprecated `setProviderStatus`
+
+### `app.setPluginError(msg)`
 
 Set the current error status of the plugin. The `msg` should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.
 
 ```javascript
-app.setProviderError('Error connecting to database');
+app.setPluginError('Error connecting to database');
 ```
+
+Use this instead of deprecated `setProviderError`
 
 ### `app.getSerialPorts() => Promise<Ports>`
 

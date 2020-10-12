@@ -449,6 +449,13 @@ module.exports = (theApp: any) => {
     location: string
   ) {
     let plugin: PluginInfo
+    let setProviderUseLogged = false
+    const logSetProviderUsage = () => {
+      if (!setProviderUseLogged) {
+        console.log(`Note: ${plugin.name} is using deprecated setProviderStatus/Error https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md#appsetproviderstatusmsg`)
+        setProviderUseLogged = true
+      }
+    }
     const appCopy: ServerAPI = _.assign({}, app, {
       getSelfPath,
       getPath,
@@ -462,9 +469,17 @@ module.exports = (theApp: any) => {
         onStopHandlers[plugin.id].push(app.registerDeltaInputHandler(handler))
       },
       setProviderStatus: (msg: string) => {
+        logSetProviderUsage()
         app.setPluginStatus(plugin.id, msg)
       },
       setProviderError: (msg: string) => {
+        logSetProviderUsage()
+        app.setPluginError(plugin.id, msg)
+      },
+      setPluginStatus: (msg: string) => {
+        app.setPluginStatus(plugin.id, msg)
+      },
+      setPluginError: (msg: string) => {
         app.setPluginError(plugin.id, msg)
       },
       getSerialPorts
