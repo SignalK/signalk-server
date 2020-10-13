@@ -461,7 +461,7 @@ module.exports = (theApp: any) => {
       registerDeltaInputHandler: (handler: any) => {
         onStopHandlers[plugin.id].push(app.registerDeltaInputHandler(handler))
       },
-      setPluginStatus: (msg: string) => {
+      setProviderStatus: (msg: string) => {
         app.setPluginStatus(plugin.id, msg)
       },
       setProviderError: (msg: string) => {
