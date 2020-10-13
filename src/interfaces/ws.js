@@ -659,7 +659,7 @@ function startServerEvents(app, spark) {
       })
     }
   } catch (e) {
-    if (e.code != 'ENOENT') {
+    if (e.code !== 'ENOENT') {
       console.error(e)
     }
   }
