@@ -1,8 +1,7 @@
 import React, { Component } from 'react'
 import { Alert, Button, Card, CardHeader, CardBody } from 'reactstrap'
 import { connect } from 'react-redux'
-import {withRouter} from "react-router-dom";
-import ReactMarkdown from 'react-markdown'
+import {withRouter} from "react-router-dom"
 
 class ServerUpdate extends Component {
   constructor (props) {
@@ -38,6 +37,15 @@ class ServerUpdate extends Component {
   }
 
   render () {
+    if (!this.props.appStore.storeAvailable) {
+      return (
+        <div className='animated fadeIn'>
+          <Card>
+            <CardHeader>Waiting for App store data to load...</CardHeader>
+          </Card>
+        </div>
+      )
+    }
     let isInstalling = false
     let isInstalled = false
     let info = this.props.appStore.installing.find(p => p.name == 'signalk-server')
@@ -68,13 +76,14 @@ class ServerUpdate extends Component {
         )}
       {this.props.appStore.canUpdateServer && this.props.appStore.serverUpdate && !isInstalling && !isInstalled  && (
         <Card>
-            <CardHeader>Version {this.props.appStore.serverUpdate} is available <Button className="btn btn-danger float-right" size='sm' color='primary' onClick={this.handleUpdate}>Update</Button></CardHeader>
+          <CardHeader>Server version {this.props.appStore.serverUpdate} is available</CardHeader>
           <CardBody>
-     
-          <ReactMarkdown source={this.state.changelog} />
-            </CardBody>
-            </Card>
-        
+            <a href="https://github.com/SignalK/signalk-server/releases/">Release Notes for latest releases.</a>
+            <br/><br/>
+            <Button className="btn btn-danger" size='sm' color='primary' onClick={this.handleUpdate}>Update</Button>
+          </CardBody>
+        </Card>
+
       )}
       {isInstalling && (
         <Card>

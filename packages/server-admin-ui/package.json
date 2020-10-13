@@ -41,7 +41,6 @@
     "react-html-parser": "^2.0.2",
     "react-json-tree": "^0.11.2",
     "react-jsonschema-form-bs4": "^1.0.6",
-    "react-markdown": "^4.0.3",
     "react-redux": "^5.0.6",
     "react-router-dom": "4.2.2",
     "react-select": "^3.1.0",
@@ -60,7 +59,7 @@
   },
   "scripts": {
     "prepublishOnly": "npm run clean && npm run build",
-    "dev": "webpack -d --progress --watch --profile --json > compilation-stats.json --env.dev",
+    "dev": "webpack -d --progress --watch --env.dev",
     "build": "webpack -p --progress --env.prod",
     "clean": "rimraf ./build"
   },
