@@ -17,9 +17,8 @@ import {
 import { Link } from 'react-router-dom'
 import { connect } from 'react-redux'
 import { login, fetchAllData } from '../../actions'
-import Dashboard from '../Dashboard/'
+import Dashboard from '../Dashboard/Dashboard'
 import EnableSecurity from './EnableSecurity'
-import Register from './Register'
 
 class Login extends Component {
   constructor (props) {

@@ -44,3 +44,4 @@ compilation-stats.json
 .babelrc
 public/*.hot-update.js
 public/*.hot-update.json
+public/stats.json
