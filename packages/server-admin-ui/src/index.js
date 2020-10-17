@@ -286,6 +286,8 @@ function nameCollator (left, right) {
 
 window.serverRoutesPrefix = '/skServer'
 
+__webpack_init_sharing__('default')
+
 ReactDOM.render(
   <HashRouter>
     <Switch>
