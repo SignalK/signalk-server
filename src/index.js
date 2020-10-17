@@ -219,8 +219,6 @@ function Server(opts) {
     }
   }
 
-  app.webapps = []
-
   app.streambundle = new StreamBundle(app.selfId)
   app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
   app.subscriptionmanager = new SubscriptionManager(app)
