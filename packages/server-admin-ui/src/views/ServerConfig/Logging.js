@@ -13,7 +13,7 @@ import {
 } from 'reactstrap'
 
 function fetchLogfileList () {
-  const okResponse = fetch(`/logfiles/`, {
+  const okResponse = fetch(`${window.serverRoutesPrefix}/logfiles/`, {
     credentials: 'include'
   }).then(response => {
     if (!response.ok) {

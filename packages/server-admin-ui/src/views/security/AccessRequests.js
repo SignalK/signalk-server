@@ -41,7 +41,7 @@ class AccessRequests extends Component {
       expiration: this.state.selectedRequest.expiration || '1y'
     }
     
-    fetch(`/security/access/requests/${identifier}/${approved ? 'approved' : 'denied'}`, {
+    fetch(`${window.serverRoutesPrefix}/security/access/requests/${identifier}/${approved ? 'approved' : 'denied'}`, {
       method: 'PUT',
       credentials: "include",
       headers: {

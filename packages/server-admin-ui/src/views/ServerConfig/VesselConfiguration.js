@@ -18,7 +18,7 @@ import {
 } from 'reactstrap'
 
 function fetchVessel () {
-  fetch(`/vessel`, {
+  fetch(`${window.serverRoutesPrefix}/vessel`, {
     credentials: 'include'
   })
     .then(response => response.json())
@@ -53,7 +53,7 @@ class VesselConfiguration extends Component {
   }
 
   handleSaveVessel () {
-    fetch(`/vessel`, {
+    fetch(`${window.serverRoutesPrefix}/vessel`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'

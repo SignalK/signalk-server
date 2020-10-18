@@ -19,12 +19,13 @@ const fs = require('fs')
 const path = require('path')
 const express = require('express')
 const modulesWithKeyword = require('../modules').modulesWithKeyword
+import { SERVERROUTESPREFIX } from '../constants'
 
 module.exports = function(app) {
   return {
     start: function() {
       mountWebapps(app)
-      mountApi(app)
+      mountApis(app)
     },
     // tslint:disable-next-line: no-empty
     stop: function() {}
@@ -44,8 +45,8 @@ function mountWebapps(app) {
   })
 }
 
-function mountApi(app) {
-  app.get('/webapps', function(req, res, next) {
+function mountApis(app) {
+  app.get(`${SERVERROUTESPREFIX}/webapps`, function(req, res) {
     res.json(app.webapps)
   })
 }

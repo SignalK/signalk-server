@@ -20,12 +20,11 @@ import {
 import EnableSecurity from './EnableSecurity'
 
 export function fetchSecurityConfig () {
-  fetch(`/security/config`, {
+  fetch(`${window.serverRoutesPrefix}/security/config`, {
     credentials: 'include'
   })
     .then(response => response.json())
     .then(data => {
-      console.log(JSON.stringify(data))
       this.setState(data)
     })
 }
@@ -66,7 +65,7 @@ class Settings extends Component {
       allowNewUserRegistration: this.state.allowNewUserRegistration,
       allowDeviceAccessRequests: this.state.allowDeviceAccessRequests
     }
-    fetch('/security/config', {
+    fetch(`${window.serverRoutesPrefix}/security/config`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'

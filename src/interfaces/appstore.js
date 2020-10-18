@@ -23,6 +23,7 @@ const {
   getLatestServerVersion,
   getAuthor
 } = require('../modules')
+const { SERVERROUTESPREFIX } = require('../constants')
 
 const npmServerInstallLocations = [
   '/usr/bin/signalk-server',
@@ -40,8 +41,8 @@ module.exports = function(app) {
     start: function() {
       app.post(
         [
-          '/appstore/install/:name/:version',
-          '/appstore/install/:org/:name/:version'
+          `${SERVERROUTESPREFIX}/appstore/install/:name/:version`,
+          `${SERVERROUTESPREFIX}/appstore/install/:org/:name/:version`
         ],
         (req, res) => {
           let name = req.params.name
@@ -80,7 +81,10 @@ module.exports = function(app) {
       )
 
       app.post(
-        ['/appstore/remove/:name', '/appstore/remove/:org/:name'],
+        [
+          `${SERVERROUTESPREFIX}/appstore/remove/:name`,
+          `${SERVERROUTESPREFIX}/appstore/remove/:org/:name`
+        ],
         (req, res) => {
           let name = req.params.name
 
@@ -115,7 +119,7 @@ module.exports = function(app) {
         }
       )
 
-      app.get('/appstore/available/', (req, res) => {
+      app.get(`${SERVERROUTESPREFIX}/appstore/available/`, (req, res) => {
         findPluginsAndWebapps()
           .then(([plugins, webapps]) => {
             getLatestServerVersion(app.config.version)

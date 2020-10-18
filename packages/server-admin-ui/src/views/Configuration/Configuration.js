@@ -19,7 +19,7 @@ class Dashboard extends Component {
   }
 
   componentDidMount() {
-    fetch(`/plugins`, {credentials: 'same-origin'}).then((response) => {
+    fetch(`${window.serverRoutesPrefix}/plugins`, {credentials: 'same-origin'}).then((response) => {
       if (response.status == 200) {
         return response.json()
       } else {
@@ -58,7 +58,7 @@ class Dashboard extends Component {
 }
 
 function saveData(id, data) {
-  fetch('/plugins/' + id + "/config", {
+  fetch(`${window.serverRoutesPrefix}/plugins/${id}/config`, {
     method: 'POST',
     body: JSON.stringify(data),
     headers: new Headers({'Content-Type': 'application/json'}),
