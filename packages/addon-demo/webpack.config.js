@@ -4,7 +4,8 @@ const path = require('path');
 const { ModuleFederationPlugin } = require('webpack').container;
 const { WatchIgnorePlugin } = require('webpack')
 
-console.log(path.resolve(__dirname, 'public'))
+const packageJson = require('./package')
+
 module.exports = {
   entry: './src/index',
   mode: 'development',
@@ -27,7 +28,7 @@ module.exports = {
     // Use Plugin
     new ModuleFederationPlugin({
       name: 'Addon Demo',
-      library: { type: 'var', name: 'addon_demo' },
+      library: { type: 'var', name: packageJson.name.replace(/-/g, '_') },
       filename: 'remoteEntry.js',
       exposes: {
         // expose each component you want 

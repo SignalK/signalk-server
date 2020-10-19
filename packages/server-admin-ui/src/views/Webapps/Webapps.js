@@ -4,21 +4,34 @@ import { Card, CardBody, CardHeader, Col } from 'reactstrap'
 
 import Webapp from './Webapp'
 
-const AddonPanel = React.lazy(() => new Promise((resolve) => {
-  const container = window.addon_demo;
+const toLazyAddonComponent = (moduleData) => React.lazy(() => new Promise((resolve) => {
+  const container = window[moduleData.name.replace(/-/g, '_')];
   container.init(__webpack_share_scopes__.default)
   const module = container.get('./AddonPanel')
   module.then(factory => {
     resolve(factory())
   })
-}));
-
+}))
 
 class Webapps extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      count: 314
+      addonComponents: []
+    }
+  }
+
+  componentDidMount() {
+    this.setState({
+      addonComponents: this.props.addons.map(toLazyAddonComponent)
+    })
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.props.addons != prevProps.addons) {
+      this.setState({
+        addonComponents: this.props.addons.map(toLazyAddonComponent)
+      })
     }
   }
 
@@ -52,9 +65,11 @@ class Webapps extends Component {
         <Card>
           <CardHeader>Addons</CardHeader>
           <CardBody>
-            <Suspense fallback='Loading...'>
-              <AddonPanel {...this.props}/>
-            </Suspense>
+            {this.state.addonComponents.map((c,i) => (
+              <Suspense key={i} fallback='Loading...'>
+                {React.createElement(c, {...this.props})}
+              </Suspense>
+            ))}
           </CardBody>
         </Card>
       </div>
@@ -62,6 +77,6 @@ class Webapps extends Component {
   }
 }
 
-const mapStateToProps = ({ webapps }) => ({ webapps })
+const mapStateToProps = ({ webapps, addons }) => ({ webapps, addons })
 
 export default connect(mapStateToProps)(Webapps)

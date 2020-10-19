@@ -55,4 +55,7 @@ function mountApis(app) {
   app.get(`${SERVERROUTESPREFIX}/webapps`, function(req, res) {
     res.json(app.webapps)
   })
+  app.get(`${SERVERROUTESPREFIX}/addons`, function(req, res) {
+    res.json(app.addons)
+  })
 }

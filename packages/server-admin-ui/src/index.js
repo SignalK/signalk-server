@@ -44,6 +44,7 @@ for (let i = 0; i < 100; i++) {
 const state = {
   plugins: [],
   webapps: [],
+  addons: [],
   appStore: {
     updates: [],
     installed: [],
@@ -86,6 +87,12 @@ let store = createStore(
       return {
         ...state,
         webapps: action.data
+      }
+    }
+    if (action.type === 'RECEIVE_ADDONS_LIST') {
+      return {
+        ...state,
+        addons: action.data
       }
     }
     if (
