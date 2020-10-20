@@ -32,6 +32,7 @@ module.exports = {
       filename: 'remoteEntry.js',
       exposes: {
         // expose each component you want 
+        './AppPanel': './src/components/AppPanel',
         './AddonPanel': './src/components/AddonPanel',
       },
       shared: ['react', 'react-dom'],

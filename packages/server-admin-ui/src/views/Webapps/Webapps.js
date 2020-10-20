@@ -1,17 +1,9 @@
 import React, { Component, Suspense } from 'react'
 import { connect } from 'react-redux'
 import { Card, CardBody, CardHeader, Col } from 'reactstrap'
+import { toLazyDynamicComponent, toSafeModuleId } from './dynamicutilities'
 
 import Webapp from './Webapp'
-
-const toLazyAddonComponent = (moduleData) => React.lazy(() => new Promise((resolve) => {
-  const container = window[moduleData.name.replace(/-/g, '_')];
-  container.init(__webpack_share_scopes__.default)
-  const module = container.get('./AddonPanel')
-  module.then(factory => {
-    resolve(factory())
-  })
-}))
 
 class Webapps extends Component {
   constructor(props) {
@@ -21,17 +13,19 @@ class Webapps extends Component {
     }
   }
 
-  componentDidMount() {
+  setAddonComponents() {
     this.setState({
-      addonComponents: this.props.addons.map(toLazyAddonComponent)
+      addonComponents: this.props.addons.map(md => toLazyDynamicComponent(md.name, './AddonPanel'))
     })
+  }
+
+  componentDidMount() {
+    this.setAddonComponents()
   }
 
   componentDidUpdate(prevProps) {
     if (this.props.addons != prevProps.addons) {
-      this.setState({
-        addonComponents: this.props.addons.map(toLazyAddonComponent)
-      })
+      this.setAddonComponents()
     }
   }
 
@@ -45,13 +39,16 @@ class Webapps extends Component {
             {this.props.webapps
               .filter(webAppInfo => webAppInfo.name !== '@signalk/server-admin-ui')
               .map(webappInfo => {
+                const url = webappInfo.keywords.includes('signalk-embeddable-webapp') ? 
+                  `/admin/#/e/${toSafeModuleId(webappInfo.name)}` : 
+                  `/${webappInfo.name}`
                 return (
                   <Col xs='12' md='12' lg='6' xl='4' key={webappInfo.name}>
                     <Webapp
                       key={webappInfo.name}
                       header={webappInfo.name}
                       mainText={webappInfo.description}
-                      url={`/${webappInfo.name}`}
+                      url={url}
                       icon='fa fa-external-link'
                       color='primary'
                     />

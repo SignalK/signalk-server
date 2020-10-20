@@ -10,7 +10,9 @@
     "clean": "rimraf ./public"
   },
   "keywords": [
-    "signalk-node-server-addon"
+    "signalk-node-server-addon",
+    "signalk-webapp",
+    "signalk-embeddable-webapp"
   ],
   "author": "teppo.kurki@iki.fi",
   "license": "Apache-2.0",
