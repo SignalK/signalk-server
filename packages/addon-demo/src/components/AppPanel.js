@@ -4,6 +4,12 @@ import { Map, TileLayer } from 'react-leaflet'
 import './leaflet.css'
 
 const AppPanel = (props) => {
+  props.adminUI.hideSideBar()
+
+  if (props.loginStatus.status === 'notLoggedIn' && props.loginStatus.authenticationRequired) {
+    return <props.adminUI.Login />
+  }
+
   return (
     <Map style={{ height: '100%' }} center={[60.1, 25]} zoom={10}>
       <TileLayer
