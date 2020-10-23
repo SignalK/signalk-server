@@ -22,6 +22,13 @@ module.exports = {
           presets: ['@babel/preset-react'],
         },
       },
+      {
+        test: /\.css$/,
+        use: [
+          'style-loader',
+          'css-loader'
+        ]
+      }
     ],
   },
   plugins: [
@@ -35,7 +42,7 @@ module.exports = {
         './AppPanel': './src/components/AppPanel',
         './AddonPanel': './src/components/AddonPanel',
       },
-      shared: ['react', 'react-dom'],
+      shared: ['react', 'react-dom', 'react-leaflet'],
     }),
     new WatchIgnorePlugin({
       paths: [path.resolve(__dirname, 'public/')]}),
