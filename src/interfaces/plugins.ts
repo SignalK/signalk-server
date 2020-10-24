@@ -408,7 +408,7 @@ module.exports = (theApp: any) => {
         : undefined
     if (
       _.isUndefined(statusMessage) &&
-      _.isUndefined(theApp.providerStatus[plugin.name]) &&
+      _.isUndefined(theApp.providerStatus[plugin.id]) &&
       _.isUndefined(plugin.statusMessage)
     ) {
       theApp.setPluginStatus(plugin.id, 'Started')
