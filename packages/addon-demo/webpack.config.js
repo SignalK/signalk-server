@@ -28,6 +28,14 @@ module.exports = {
           'style-loader',
           'css-loader'
         ]
+      },
+      {
+        test: /\.(png|svg|jpg|gif)$/,
+        loader:
+          'file-loader',
+        options: {
+          name: '[path][name].[ext]',
+        },
       }
     ],
   },
@@ -42,10 +50,11 @@ module.exports = {
         './AppPanel': './src/components/AppPanel',
         './AddonPanel': './src/components/AddonPanel',
       },
-      shared: ['react', 'react-dom', 'react-leaflet'],
+      shared: [{ react: { singleton: true } }, 'react-dom', 'react-leaflet', 'leaflet'],
     }),
     new WatchIgnorePlugin({
-      paths: [path.resolve(__dirname, 'public/')]}),
+      paths: [path.resolve(__dirname, 'public/')]
+    }),
     new HtmlWebpackPlugin({
       template: './public/index.html',
     }),

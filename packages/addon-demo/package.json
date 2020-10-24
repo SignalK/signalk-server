@@ -21,6 +21,7 @@
     "@babel/preset-react": "^7.10.4",
     "babel-loader": "^8.1.0",
     "css-loader": "^5.0.0",
+    "file-loader": "^6.1.1",
     "html-webpack-plugin": "^4.5.0",
     "leaflet": "^1.7.1",
     "react": "^16.13.1",
