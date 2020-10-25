@@ -1,6 +1,5 @@
 import React, { Component, useState } from 'react'
 import { connect } from 'react-redux'
-import { keys, get } from 'lodash'
 import {
   Badge,
   Button,
@@ -148,7 +147,7 @@ class Playground extends Component {
                 if ( update.values ) {
                   update.values.forEach(vp => {
                     if ( vp.path === '' ) {
-                      keys(vp.value).forEach(k => {
+                      Object.keys(vp.value).forEach(k => {
                         values.push({
                           path: k,
                           value: vp.value[k],
@@ -316,7 +315,7 @@ class Playground extends Component {
               <tbody>
 
           {this.state.data.map(data => {
-          const formatted = JSON.stringify(data.value, null, typeof data.value === 'object' && keys(data.value).length > 1 ? 2 : 0)
+          const formatted = JSON.stringify(data.value, null, typeof data.value === 'object' && Object.keys(data.value).length > 1 ? 2 : 0)
             const path = data.path
             const key = `${data.path}${data.context}`
 

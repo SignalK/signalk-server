@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import { keys, get, values } from 'lodash'
+import get from 'lodash.get'
 import JSONTree from 'react-json-tree'
 import {
   Badge,
@@ -35,9 +35,9 @@ function fetchRoot () {
     .then(response => response.json())
     .then(data => {
       if ( data.sources ) {
-        values(data.sources).forEach(source => {
+        Object.values(data.sources).forEach(source => {
           if ( source.type === "NMEA2000" ) {
-            keys(source).forEach(key => {
+            Object.keys(source).forEach(key => {
               let device = source[key]
               if ( device.n2k && device.n2k.productName ) {
                 source[`${device.n2k.manufacturerName || ''} ${device.n2k.productName} (${key})`] = device
@@ -97,7 +97,7 @@ class DataBrowser extends Component {
           let sentence = update.source && update.source.sentence && `(${update.source.sentence})`
           update.values.forEach(vp => {
             if ( vp.path === '' ) {
-              keys(vp.value).forEach(k => {
+              Object.keys(vp.value).forEach(k => {
                 context[k] = {
                   path: k,
                   value: vp.value[k],
@@ -239,7 +239,7 @@ class DataBrowser extends Component {
             onChange={this.handleContextChange}
           >
             <option value="none">Select a context</option>
-            {keys(this.state.data).sort().map(key => {
+            {Object.keys(this.state.data).sort().map(key => {
               return (
                   <option key={key} value={key}>{key}</option>
               )
@@ -312,7 +312,7 @@ class DataBrowser extends Component {
               </thead >
               <tbody>
 
-          { keys(this.state.data[this.state.context])
+          { Object.keys(this.state.data[this.state.context])
               .filter( key => {
                 return !this.state.search ||
                   this.state.search.length === 0 ||
@@ -327,7 +327,7 @@ class DataBrowser extends Component {
                 const formatted = JSON.stringify(
                   data.value,
                   null,
-                  typeof data.value === 'object' && keys(data.value).length > 1 ? 2 : 0)
+                  typeof data.value === 'object' && Object.keys(data.value).length > 1 ? 2 : 0)
                 const meta = this.state.data[this.state.context][data.path + '.meta']
                 const units = meta && meta.value.units ? meta.value.units : ''
                 const path = key.substring(0, key.lastIndexOf('.'))
@@ -358,7 +358,7 @@ class DataBrowser extends Component {
               </tr>
             </thead>
             <tbody>
-            {keys(this.state.data[this.state.context]).filter(key => { return key.endsWith('.meta') && ( !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1) }).sort().map(key => {
+            {Object.keys(this.state.data[this.state.context]).filter(key => { return key.endsWith('.meta') && ( !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1) }).sort().map(key => {
           const data = this.state.data[this.state.context][key]
           const formatted = JSON.stringify(data.value, null, 2)
           const path = data.path.substring(0, key.lastIndexOf('.'))
