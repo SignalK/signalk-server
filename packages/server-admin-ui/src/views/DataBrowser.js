@@ -312,7 +312,7 @@ class DataBrowser extends Component {
               </thead >
               <tbody>
 
-          { Object.keys(this.state.data[this.state.context])
+          { Object.keys(this.state.data[this.state.context] || {})
               .filter( key => {
                 return !this.state.search ||
                   this.state.search.length === 0 ||
