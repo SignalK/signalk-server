@@ -328,7 +328,7 @@ class ProvidersConfiguration extends Component {
         </Card>
 
         {this.state.selectedProvider && (
-          <div ref='selectedProvider'>
+          <div ref='selectedProvider' style={{ scrollMarginTop:'54px' }}>
             <Card>
               <CardBody>
                 {this.state.selectedProvider.editable ? (
