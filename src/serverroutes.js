@@ -89,7 +89,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
   app.get(`${SERVERROUTESPREFIX}/loginStatus`, getLoginStatus)
   //TODO remove after a grace period
-  app.get(`/loginStatus`, (reg, res) => {
+  app.get(`/loginStatus`, (req, res) => {
     console.log(
       `/loginStatus is deprecated, try updating webapps to the latest version`
     )
