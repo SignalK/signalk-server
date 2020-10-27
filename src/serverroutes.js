@@ -272,7 +272,10 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   )
 
   app.put(
-    `${SERVERROUTESPREFIX}/security/access/requests/:identifier/:status`,
+    [
+      `${SERVERROUTESPREFIX}/security/access/requests/:identifier/:status`,
+      '/security/access/requests/:identifier/:status' // for backwards compatibly with existing clients
+    ],
     (req, res) => {
       if (checkAllowConfigure(req, res)) {
         const config = getSecurityConfig(app)
