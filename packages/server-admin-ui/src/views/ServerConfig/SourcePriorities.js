@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import {Alert, Badge, Button, Card, CardHeader, CardBody, CardFooter, Collapse, Input, Table } from 'reactstrap'
 import Creatable from 'react-select/creatable'
-import { remove } from 'lodash'
+import remove from 'lodash.remove'
 
 export const SOURCEPRIOS_PRIO_CHANGED = 'SOURCEPRIOS_PPRIO_CHANGED'
 export const SOURCEPRIOS_PRIO_DELETED = 'SOURCEPRIOS_PRIO_DELETED'

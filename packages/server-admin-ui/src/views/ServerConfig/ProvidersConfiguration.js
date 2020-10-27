@@ -26,7 +26,7 @@ import {
 
 import BasicProvider from './BasicProvider'
 import SourcePriorities from './SourcePriorities'
-import { set } from 'lodash'
+import set from 'lodash.set'
 
 function fetchProviders () {
   fetch(`${window.serverRoutesPrefix}/providers`, {
