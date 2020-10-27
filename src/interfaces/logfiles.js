@@ -19,6 +19,7 @@ const fs = require('fs')
 const path = require('path')
 const express = require('express')
 const { getFullLogDir, listLogFiles } = require('@signalk/streams/logging')
+import { SERVERROUTESPREFIX } from '../constants'
 
 module.exports = function(app) {
   return {
@@ -31,7 +32,7 @@ module.exports = function(app) {
 
 function mountApi(app) {
   app.securityStrategy.addAdminMiddleware('/logfiles')
-  app.get('/logfiles/', function(req, res, next) {
+  app.get(`${SERVERROUTESPREFIX}/logfiles/`, function(req, res, next) {
     listLogFiles(app, (err, files) => {
       if (err) {
         console.error(err)
