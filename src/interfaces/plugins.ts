@@ -456,7 +456,9 @@ module.exports = (theApp: any) => {
     let setProviderUseLogged = false
     const logSetProviderUsage = () => {
       if (!setProviderUseLogged) {
-        console.log(`Note: ${plugin.name} is using deprecated setProviderStatus/Error https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md#appsetproviderstatusmsg`)
+        console.log(
+          `Note: ${plugin.name} is using deprecated setProviderStatus/Error https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md#appsetproviderstatusmsg`
+        )
         setProviderUseLogged = true
       }
     }
