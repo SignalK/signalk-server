@@ -1,9 +1,0 @@
-{
-  "presets": [
-    ["react"], ["env"]
-  ],
-  "plugins": [
-    "transform-object-rest-spread",
-    "syntax-dynamic-import"
-  ]
-}
