@@ -136,7 +136,7 @@ function Server(opts) {
         try {
           if (
             typeof plugin.statusMessage === 'function' &&
-            _.isUndefined(app.providerStatus[plugin.name])
+            _.isUndefined(app.providerStatus[plugin.id])
           ) {
             let message = plugin.statusMessage()
             if (message) {
