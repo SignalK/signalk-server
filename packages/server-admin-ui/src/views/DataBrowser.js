@@ -327,7 +327,7 @@ class DataBrowser extends Component {
                 const formatted = JSON.stringify(
                   data.value,
                   null,
-                  typeof data.value === 'object' && Object.keys(data.value).length > 1 ? 2 : 0)
+                  typeof data.value === 'object' && Object.keys(data.value || {}).length > 1 ? 2 : 0)
                 const meta = this.state.data[this.state.context][data.path + '.meta']
                 const units = meta && meta.value.units ? meta.value.units : ''
                 const path = key.substring(0, key.lastIndexOf('.'))
