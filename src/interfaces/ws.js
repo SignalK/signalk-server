@@ -518,7 +518,7 @@ function processSubscribe(app, unsubscribes, spark, assertBufferSize, msg) {
       spark.write.bind(spark),
       message => {
         const filtered = app.securityStrategy.filterReadDelta(
-          spark.request,
+          spark.request.skPrincipal,
           message
         )
         if (filtered) {
