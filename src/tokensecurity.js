@@ -41,6 +41,7 @@ const permissionDeniedMessage =
 const skPrefix = '/signalk/v1'
 const skAPIPrefix = `${skPrefix}/api`
 const skAuthPrefix = `${skPrefix}/auth`
+import { SERVERROUTESPREFIX } from './constants'
 
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
 
@@ -224,18 +225,20 @@ module.exports = function(app, config) {
     // tslint:disable-next-line:variable-name
     const do_redir = http_authorize(false)
 
-    app.use('/', http_authorize(false, true))
-    app.use('/apps', http_authorize(false))
-    app.use('/appstore', http_authorize(false))
-    app.use('/plugins', http_authorize(false))
-    app.use('/restart', http_authorize(false))
-    app.use('/runDiscovery', http_authorize(false))
-    app.use('/security', http_authorize(false))
-    app.use('/vessel', http_authorize(false))
-    app.use('/providers', http_authorize(false))
-    app.use('/settings', http_authorize(false))
-    app.use('/webapps', http_authorize(false))
-    app.use('/skServer/inputTest', http_authorize(false))
+    app.use('/', http_authorize(false, true)) //semicolon required
+    ;[
+      '/apps',
+      '/appstore',
+      '/plugins',
+      '/restart',
+      '/runDiscovery',
+      '/security',
+      '/vessel',
+      '/providers',
+      '/settings',
+      '/webapps',
+      '/skServer/inputTest'
+    ].forEach(p => app.use(`${SERVERROUTESPREFIX}${p}`, http_authorize(false)))
 
     app.put(['/logout', `${skAuthPrefix}/logout`], function(req, res) {
       res.clearCookie('JAUTHENTICATION')
@@ -260,19 +263,25 @@ module.exports = function(app, config) {
         handlePermissionDenied(req, res, next)
       }
     }
+    // tslint:disable-next-line:semicolon
+    ;[
+      '/restart',
+      '/runDiscovery',
+      '/plugins',
+      '/appstore',
+      '/security',
+      '/settings',
+      '/backup',
+      '/restore',
+      '/providers',
+      '/vessel'
+    ].forEach(p =>
+      app.use(`${SERVERROUTESPREFIX}${p}`, adminAuthenticationMiddleware(false))
+    )
 
-    app.use('/restart', adminAuthenticationMiddleware(false))
-    app.use('/runDiscovery', adminAuthenticationMiddleware(false))
-    app.use('/plugins', adminAuthenticationMiddleware(false))
-    app.use('/appstore', adminAuthenticationMiddleware(false))
-    app.use('/security', adminAuthenticationMiddleware(false))
-    app.use('/settings', adminAuthenticationMiddleware(false))
-    app.use('/backup', adminAuthenticationMiddleware(false))
-    app.use('/restore', adminAuthenticationMiddleware(false))
-    app.use('/providers', adminAuthenticationMiddleware(false))
-    app.use('/vessel', adminAuthenticationMiddleware(false))
-
+    //TODO remove after grace period
     app.use('/loginStatus', http_authorize(false, true))
+    app.use(`${SERVERROUTESPREFIX}/loginStatus`, http_authorize(false, true))
 
     // tslint:disable-next-line:variable-name
     const no_redir = http_authorize(false)

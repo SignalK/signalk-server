@@ -1,3 +1,5 @@
+import {isUndefined} from 'lodash'
+
 const authFetch = (url, options) => {
   return fetch(url, {
     ...options,
@@ -82,7 +84,7 @@ export function enableSecurity (dispatch, userId, password, callback) {
     password: password,
     type: 'admin'
   }
-  fetch('/enableSecurity', {
+  fetch(`${window.serverRoutesPrefix}/enableSecurity`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -102,7 +104,7 @@ export function enableSecurity (dispatch, userId, password, callback) {
 export function restart () {
   return dispatch => {
     if (confirm('Are you sure you want to restart?')) {
-      fetch('/restart', {
+      fetch(`${window.serverRoutesPrefix}/restart`, {
         credentials: 'include',
         method: 'PUT'
       }).then(() => {
@@ -113,8 +115,8 @@ export function restart () {
 }
 
 // Build actions that perform a basic authFetch to the backend. Pull #514.
-export const buildFetchAction = (endpoint, type) => dispatch =>
-  authFetch(endpoint)
+export const buildFetchAction = (endpoint, type, prefix) => dispatch =>
+  authFetch(`${isUndefined(prefix) ? window.serverRoutesPrefix : prefix}${endpoint}`)
     .then(response => response.json())
     .then(data =>
       dispatch({
@@ -128,7 +130,7 @@ export const fetchPlugins = buildFetchAction('/plugins', 'RECEIVE_PLUGIN_LIST')
 export const fetchWebapps = buildFetchAction('/webapps', 'RECEIVE_WEBAPPS_LIST')
 export const fetchApps = buildFetchAction('/appstore/available', 'RECEIVE_APPSTORE_LIST')
 export const fetchAccessRequests = buildFetchAction('/security/access/requests', 'ACCESS_REQUEST')
-export const fetchServerSpecification = buildFetchAction('/signalk', 'RECEIVE_SERVER_SPEC')
+export const fetchServerSpecification = buildFetchAction('/signalk', 'RECEIVE_SERVER_SPEC', '')
 
 export function fetchAllData (dispatch) {
   fetchPlugins(dispatch)

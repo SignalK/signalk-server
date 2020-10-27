@@ -16,6 +16,7 @@
 const _ = require('lodash')
 const config = require('../config/config')
 const { runDiscovery } = require('../discovery')
+import { SERVERROUTESPREFIX } from '../constants'
 
 module.exports = function(app) {
   app.on('discovered', provider => {
@@ -27,11 +28,11 @@ module.exports = function(app) {
     })
   })
 
-  app.get('/providers', (req, res, next) => {
+  app.get(`${SERVERROUTESPREFIX}/providers`, (req, res, next) => {
     res.json(getProviders(app.config.settings.pipedProviders))
   })
 
-  app.put('/runDiscovery', (req, res, next) => {
+  app.put(`${SERVERROUTESPREFIX}/runDiscovery`, (req, res, next) => {
     app.discoveredProviders = []
     runDiscovery(app)
     res.send('Discovery started')
@@ -67,15 +68,15 @@ module.exports = function(app) {
     })
   }
 
-  app.put('/providers/:id', (req, res, next) => {
+  app.put(`${SERVERROUTESPREFIX}/providers/:id`, (req, res, next) => {
     updateProvider(req.params.id, req.body, res)
   })
 
-  app.post('/providers', (req, res, next) => {
+  app.post(`${SERVERROUTESPREFIX}/providers`, (req, res, next) => {
     updateProvider(null, req.body, res)
   })
 
-  app.delete('/providers/:id', (req, res, next) => {
+  app.delete(`${SERVERROUTESPREFIX}/providers/:id`, (req, res, next) => {
     const idx = app.config.settings.pipedProviders.findIndex(
       p => p.id === req.params.id
     )

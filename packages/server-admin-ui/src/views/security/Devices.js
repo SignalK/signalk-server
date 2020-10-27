@@ -20,7 +20,7 @@ import {
 import EnableSecurity from './EnableSecurity'
 
 export function fetchSecurityDevices () {
-  fetch(`/security/devices`, {
+  fetch(`${window.serverRoutesPrefix}/security/devices`, {
     credentials: 'include'
   })
     .then(response => response.json())
@@ -68,7 +68,7 @@ class Devices extends Component {
       description: this.state.selectedDevice.description
     }
 
-    fetch(`/security/devices/${this.state.selectedDevice.clientId}`, {
+    fetch(`${window.serverRoutesPrefix}/security/devices/${this.state.selectedDevice.clientId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -88,7 +88,7 @@ class Devices extends Component {
   }
 
   deleteDevice (event) {
-    fetch(`/security/devices/${this.state.selectedDevice.clientId}`, {
+    fetch(`${window.serverRoutesPrefix}/security/devices/${this.state.selectedDevice.clientId}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json'

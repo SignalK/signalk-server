@@ -167,7 +167,7 @@ class DeviceInput extends Component {
   }
 
   componentDidMount() {
-    fetch(`/serialports`, {
+    fetch(`${window.serverRoutesPrefix}/serialports`, {
       credentials: 'include'
     })
       .then(response => response.json())

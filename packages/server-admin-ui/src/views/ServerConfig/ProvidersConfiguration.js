@@ -29,7 +29,7 @@ import SourcePriorities from './SourcePriorities'
 import { set } from 'lodash'
 
 function fetchProviders () {
-  fetch(`/providers`, {
+  fetch(`${window.serverRoutesPrefix}/providers`, {
     credentials: 'include'
   })
     .then(response => response.json())
@@ -52,7 +52,7 @@ function fetchProviders () {
 }
 
 function runDiscovery () {
-  fetch(`/runDiscovery`, {
+  fetch(`${window.serverRoutesPrefix}/runDiscovery`, {
     method: 'PUT',
     credentials: 'include'
   })
@@ -139,7 +139,7 @@ class ProvidersConfiguration extends Component {
 
     var id = this.state.selectedProvider.originalId
 
-    fetch(`/providers/${id && !isNew ? id : ''}`, {
+    fetch(`${window.serverRoutesPrefix}/providers/${id && !isNew ? id : ''}`, {
       method: isNew ? 'POST' : 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -182,7 +182,7 @@ class ProvidersConfiguration extends Component {
   }
 
   handleDelete (event) {
-    fetch(`/providers/${this.state.selectedProvider.id}`, {
+    fetch(`${window.serverRoutesPrefix}/providers/${this.state.selectedProvider.id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json'

@@ -85,7 +85,7 @@ function updateInstalling(that, name, value)
 
 function installApp (name, version) {
   updateInstalling(this, name, true)
-  fetch(`/appstore/install/${name}/${version}`, {
+  fetch(`${window.serverRoutesPrefix}/appstore/install/${name}/${version}`, {
     method: 'POST',
     credentials: 'include'
   })
@@ -95,7 +95,7 @@ function installApp (name, version) {
 function removeApp (name) {
   if (confirm(`Are you sure you want to remove ${name}?`)) {
     updateInstalling(this, name, true)
-    fetch(`/appstore/remove/${name}`, {
+    fetch(`${window.serverRoutesPrefix}/appstore/remove/${name}`, {
       method: 'POST',
       credentials: 'include'
     })

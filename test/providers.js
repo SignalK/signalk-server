@@ -56,7 +56,7 @@ describe('Providers', _ => {
       enabled: true,
       type: 'simple'
     }
-    let result = await fetch(`${url}/providers`, {
+    let result = await fetch(`${url}/skServer/providers`, {
       method: 'post',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(provider)
@@ -66,7 +66,7 @@ describe('Providers', _ => {
     text.should.equal(nullIdText)
 
     delete provider.id
-    result = await fetch(`${url}/providers`, {
+    result = await fetch(`${url}/skServer/providers`, {
       method: 'post',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(provider)
@@ -77,7 +77,7 @@ describe('Providers', _ => {
   })
 
   it('New provider works', async function () {
-    const result = await fetch(`${url}/providers`, {
+    const result = await fetch(`${url}/skServer/providers`, {
       method: 'post',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -112,7 +112,7 @@ describe('Providers', _ => {
         type: 'NMEA0183'
       }
     }
-    let result = await fetch(`${url}/providers/testProvider`, {
+    let result = await fetch(`${url}/skServer/providers/testProvider`, {
       method: 'put',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(provider)
@@ -124,7 +124,7 @@ describe('Providers', _ => {
     pipedProviders[1].id.should.equal('testProvider')
 
     delete provider.id
-    result = await fetch(`${url}/providers/testProvider`, {
+    result = await fetch(`${url}/skServer/providers/testProvider`, {
       method: 'put',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(provider)
@@ -145,7 +145,7 @@ describe('Providers', _ => {
         device: '/dev/usb0'
       }
     }
-    const result = await fetch(`${url}/providers/testProvider`, {
+    const result = await fetch(`${url}/skServer/providers/testProvider`, {
       method: 'put',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(provider)

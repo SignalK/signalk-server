@@ -23,7 +23,7 @@ import VesselConfiguration from './VesselConfiguration'
 import LogFiles from './Logging'
 
 function fetchSettings () {
-  fetch(`/settings`, {
+  fetch(`${window.serverRoutesPrefix}/settings`, {
     credentials: 'include'
   })
     .then(response => response.json())
@@ -76,7 +76,7 @@ class ServerSettings extends Component {
   }
 
   handleSaveSettings () {
-    fetch(`/settings`, {
+    fetch(`${window.serverRoutesPrefix}/settings`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'

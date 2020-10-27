@@ -295,7 +295,7 @@ const sourcePrioritySave = (sourcePriorities) => (dispatch) => {
 }
 
 function fetchAvailablePaths(cb) {
-  fetch(`/availablePaths`, {
+  fetch(`${window.serverRoutesPrefix}/availablePaths`, {
     credentials: 'include'
   })
     .then(response => response.json())

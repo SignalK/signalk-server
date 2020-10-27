@@ -20,7 +20,7 @@ import {
 import EnableSecurity from './EnableSecurity'
 
 export function fetchSecurityUsers () {
-  fetch(`/security/users`, {
+  fetch(`${window.serverRoutesPrefix}/security/users`, {
     credentials: 'include'
   })
     .then(response => response.json())
@@ -105,7 +105,7 @@ class Users extends Component {
       type: this.state.selectedUser.type || 'readonly'
     }
 
-    fetch(`/security/users/${this.state.selectedUser.userId}`, {
+    fetch(`${window.serverRoutesPrefix}/security/users/${this.state.selectedUser.userId}`, {
       method: isNew ? 'POST' : 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -125,7 +125,7 @@ class Users extends Component {
   }
 
   deleteUser (event) {
-    fetch(`/security/users/${this.state.selectedUser.userId}`, {
+    fetch(`${window.serverRoutesPrefix}/security/users/${this.state.selectedUser.userId}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json'

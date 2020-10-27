@@ -51,13 +51,13 @@ class BackupRestore extends Component {
   }
 
   backup() {
-    const url = `/backup?includePlugins=${this.state.includePlugins}`
+    const url = `${window.serverRoutesPrefix}/backup?includePlugins=${this.state.includePlugins}`
     //const url = `/backup`
     window.location = url
   }
 
   restore() {
-    fetch(`/restore`, {
+    fetch(`${window.serverRoutesPrefix}/restore`, {
       credentials: 'include',
       method: 'POST',
       headers: {
@@ -100,7 +100,7 @@ class BackupRestore extends Component {
     data.append('file', this.state.restoreFile)
     
     this.setState({restoreState: RESTORE_VALIDATING})
-    fetch(`/validateBackup`, {
+    fetch(`${window.serverRoutesPrefix}/validateBackup`, {
       credentials: 'include',
       method: 'POST',
       headers: {

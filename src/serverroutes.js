@@ -37,7 +37,7 @@ const ncp = require('ncp').ncp
 
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
-const serverRoutesPrefix = '/skServer'
+import { SERVERROUTESPREFIX } from './constants'
 
 module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   let securityWasEnabled
@@ -66,7 +66,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     res.redirect('/admin')
   })
 
-  app.put('/restart', (req, res, next) => {
+  app.put(`${SERVERROUTESPREFIX}/restart`, (req, res, next) => {
     if (app.securityStrategy.allowRestart(req)) {
       res.send('Restarting...')
       setTimeout(function() {
@@ -77,7 +77,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
   })
 
-  app.get('/loginStatus', (req, res, next) => {
+  const getLoginStatus = (req, res) => {
     const result = app.securityStrategy.getLoginStatus(req)
     result.securityWasEnabled = !_.isUndefined(securityWasEnabled)
 
@@ -85,9 +85,18 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     res.header('Pragma', 'no-cache')
     res.header('Expires', 0)
     res.json(result)
+  }
+
+  app.get(`${SERVERROUTESPREFIX}/loginStatus`, getLoginStatus)
+  //TODO remove after a grace period
+  app.get(`/loginStatus`, (reg, res) => {
+    console.log(
+      `/loginStatus is deprecated, try updating webapps to the latest version`
+    )
+    getLoginStatus(req, res)
   })
 
-  app.get('/security/config', (req, res, next) => {
+  app.get(`${SERVERROUTESPREFIX}/security/config`, (req, res, next) => {
     if (app.securityStrategy.allowConfigure(req)) {
       const config = getSecurityConfig(app)
       res.json(app.securityStrategy.getConfig(config))
@@ -96,7 +105,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
   })
 
-  app.put('/security/config', (req, res, next) => {
+  app.put(`${SERVERROUTESPREFIX}/security/config`, (req, res, next) => {
     if (app.securityStrategy.allowConfigure(req)) {
       let config = getSecurityConfig(app)
       config = app.securityStrategy.setConfig(config, req.body)
@@ -143,14 +152,14 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
   }
 
-  app.get('/security/devices', (req, res, next) => {
+  app.get(`${SERVERROUTESPREFIX}/security/devices`, (req, res, next) => {
     if (checkAllowConfigure(req, res)) {
       const config = getSecurityConfig(app)
       res.json(app.securityStrategy.getDevices(config))
     }
   })
 
-  app.put('/security/devices/:uuid', (req, res, next) => {
+  app.put(`${SERVERROUTESPREFIX}/security/devices/:uuid`, (req, res, next) => {
     if (checkAllowConfigure(req, res)) {
       const config = getSecurityConfig(app)
       app.securityStrategy.updateDevice(
@@ -166,29 +175,32 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
   })
 
-  app.delete('/security/devices/:uuid', (req, res, next) => {
-    if (checkAllowConfigure(req, res)) {
-      const config = getSecurityConfig(app)
-      app.securityStrategy.deleteDevice(
-        config,
-        req.params.uuid,
-        getConfigSavingCallback(
-          'Device deleted',
-          'Unable to delete device',
-          res
+  app.delete(
+    `${SERVERROUTESPREFIX}/security/devices/:uuid`,
+    (req, res, next) => {
+      if (checkAllowConfigure(req, res)) {
+        const config = getSecurityConfig(app)
+        app.securityStrategy.deleteDevice(
+          config,
+          req.params.uuid,
+          getConfigSavingCallback(
+            'Device deleted',
+            'Unable to delete device',
+            res
+          )
         )
-      )
+      }
     }
-  })
+  )
 
-  app.get('/security/users', (req, res, next) => {
+  app.get(`${SERVERROUTESPREFIX}/security/users`, (req, res, next) => {
     if (checkAllowConfigure(req, res)) {
       const config = getSecurityConfig(app)
       res.json(app.securityStrategy.getUsers(config))
     }
   })
 
-  app.put('/security/users/:id', (req, res, next) => {
+  app.put(`${SERVERROUTESPREFIX}/security/users/:id`, (req, res, next) => {
     if (checkAllowConfigure(req, res)) {
       const config = getSecurityConfig(app)
       app.securityStrategy.updateUser(
@@ -200,7 +212,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
   })
 
-  app.post('/security/users/:id', (req, res, next) => {
+  app.post(`${SERVERROUTESPREFIX}/security/users/:id`, (req, res, next) => {
     if (checkAllowConfigure(req, res)) {
       const config = getSecurityConfig(app)
       const user = req.body
@@ -213,57 +225,76 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
   })
 
-  app.put('/security/user/:username/password', (req, res, next) => {
-    if (checkAllowConfigure(req, res)) {
-      const config = getSecurityConfig(app)
-      app.securityStrategy.setPassword(
-        config,
-        req.params.username,
-        req.body,
-        getConfigSavingCallback(
-          'Password changed',
-          'Unable to change password',
-          err
+  app.put(
+    `${SERVERROUTESPREFIX}/security/user/:username/password`,
+    (req, res, next) => {
+      if (checkAllowConfigure(req, res)) {
+        const config = getSecurityConfig(app)
+        app.securityStrategy.setPassword(
+          config,
+          req.params.username,
+          req.body,
+          getConfigSavingCallback(
+            'Password changed',
+            'Unable to change password',
+            err
+          )
         )
+      }
+    }
+  )
+
+  app.delete(
+    `${SERVERROUTESPREFIX}/security/users/:username`,
+    (req, res, next) => {
+      if (checkAllowConfigure(req, res)) {
+        const config = getSecurityConfig(app)
+        app.securityStrategy.deleteUser(
+          config,
+          req.params.username,
+          getConfigSavingCallback('User deleted', 'Unable to delete user', res)
+        )
+      }
+    }
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/security/token/:id/:expiration`,
+    (req, res, next) => {
+      app.securityStrategy.generateToken(
+        req,
+        res,
+        next,
+        req.params.id,
+        req.params.expiration
       )
     }
-  })
+  )
 
-  app.delete('/security/users/:username', (req, res, next) => {
-    if (checkAllowConfigure(req, res)) {
-      const config = getSecurityConfig(app)
-      app.securityStrategy.deleteUser(
-        config,
-        req.params.username,
-        getConfigSavingCallback('User deleted', 'Unable to delete user', res)
-      )
+  app.put(
+    [
+      `${SERVERROUTESPREFIX}/security/access/requests/:identifier/:status`,
+      '/security/access/requests/:identifier/:status' // for backwards compatibly with existing clients
+    ],
+    (req, res) => {
+      if (checkAllowConfigure(req, res)) {
+        const config = getSecurityConfig(app)
+        app.securityStrategy.setAccessRequestStatus(
+          config,
+          req.params.identifier,
+          req.params.status,
+          req.body,
+          getConfigSavingCallback(
+            'Request updated',
+            'Unable update request',
+            res
+          )
+        )
+      }
     }
-  })
+  )
 
-  app.get('/security/token/:id/:expiration', (req, res, next) => {
-    app.securityStrategy.generateToken(
-      req,
-      res,
-      next,
-      req.params.id,
-      req.params.expiration
-    )
-  })
-
-  app.put('/security/access/requests/:identifier/:status', (req, res) => {
-    if (checkAllowConfigure(req, res)) {
-      const config = getSecurityConfig(app)
-      app.securityStrategy.setAccessRequestStatus(
-        config,
-        req.params.identifier,
-        req.params.status,
-        req.body,
-        getConfigSavingCallback('Request updated', 'Unable update request', res)
-      )
-    }
-  })
-
-  app.get('/security/access/requests', (req, res) => {
+  app.get(`${SERVERROUTESPREFIX}/security/access/requests`, (req, res) => {
     if (checkAllowConfigure(req, res)) {
       res.json(app.securityStrategy.getAccessRequestsResponse())
     }
@@ -303,7 +334,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       })
   })
 
-  app.get('/settings', (req, res, next) => {
+  app.get(`${SERVERROUTESPREFIX}/settings`, (req, res, next) => {
     const settings = {
       interfaces: {},
       options: {
@@ -337,7 +368,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   })
 
   if (app.securityStrategy.getUsers().length === 0) {
-    app.post('/enableSecurity', (req, res, next) => {
+    app.post(`${SERVERROUTESPREFIX}/enableSecurity`, (req, res, next) => {
       if (app.securityStrategy.isDummy()) {
         app.config.settings.security = { strategy: defaultSecurityStrategy }
         const adminUser = req.body
@@ -393,7 +424,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     })
   }
 
-  app.put('/settings', (req, res, next) => {
+  app.put(`${SERVERROUTESPREFIX}/settings`, (req, res, next) => {
     const settings = req.body
 
     _.forIn(settings.interfaces, (enabled, name) => {
@@ -444,7 +475,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     })
   })
 
-  app.get('/vessel', (req, res, next) => {
+  app.get(`${SERVERROUTESPREFIX}/vessel`, (req, res, next) => {
     let defaults
 
     try {
@@ -485,7 +516,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     res.json(json)
   })
 
-  app.put('/vessel', (req, res, next) => {
+  app.put(`${SERVERROUTESPREFIX}/vessel`, (req, res, next) => {
     let data
 
     try {
@@ -567,27 +598,27 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     })
   })
 
-  app.get('/availablePaths', (req, res, next) => {
+  app.get(`${SERVERROUTESPREFIX}/availablePaths`, (req, res, next) => {
     res.json(app.streambundle.getAvailablePaths())
   })
 
-  app.get('/serialports', (req, res, next) => {
+  app.get(`${SERVERROUTESPREFIX}/serialports`, (req, res, next) => {
     listAllSerialPorts()
       .then(ports => res.json(ports))
       .catch(next)
   })
 
-  app.get(`${serverRoutesPrefix}/hasAnalyzer`, (req, res) => {
+  app.get(`${SERVERROUTESPREFIX}/hasAnalyzer`, (req, res) => {
     commandExists('analyzer')
       .then(() => res.json(true))
       .catch(() => res.json(false))
   })
 
-  app.get(`${serverRoutesPrefix}/sourcePriorities`, (req, res) => {
+  app.get(`${SERVERROUTESPREFIX}/sourcePriorities`, (req, res) => {
     res.json(app.config.settings.sourcePriorities || {})
   })
 
-  app.put(`${serverRoutesPrefix}/sourcePriorities`, (req, res) => {
+  app.put(`${SERVERROUTESPREFIX}/sourcePriorities`, (req, res) => {
     app.config.settings.sourcePriorities = req.body
     app.activateSourcePriorities()
     skConfig.writeSettingsFile(app, app.config.settings, err => {
@@ -601,7 +632,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     })
   })
 
-  app.post(`${serverRoutesPrefix}/debug`, (req, res) => {
+  app.post(`${SERVERROUTESPREFIX}/debug`, (req, res) => {
     if (!app.logging.enableDebug(req.body.value)) {
       res.status(400).send('invalid debug value')
     } else {
@@ -609,11 +640,11 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
   })
 
-  app.get(`${serverRoutesPrefix}/debugKeys`, (req, res) => {
+  app.get(`${SERVERROUTESPREFIX}/debugKeys`, (req, res) => {
     res.json(_.uniq(require('debug').instances.map(i => i.namespace)))
   })
 
-  app.post(`${serverRoutesPrefix}/rememberDebug`, (req, res) => {
+  app.post(`${SERVERROUTESPREFIX}/rememberDebug`, (req, res) => {
     app.logging.rememberDebug(req.body.value)
     res.status(200).send()
   })
@@ -675,7 +706,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     })
   }
 
-  app.post('/restore', (req, res, next) => {
+  app.post(`${SERVERROUTESPREFIX}/restore`, (req, res, next) => {
     if (!restoreFilePath) {
       res.status(400).send('not exting restore file')
     } else if (!fs.existsSync(restoreFilePath)) {
@@ -736,7 +767,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       })
   })
 
-  app.post('/validateBackup', (req, res, next) => {
+  app.post(`${SERVERROUTESPREFIX}/validateBackup`, (req, res, next) => {
     const busboy = new Busboy({ headers: req.headers })
     busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
       try {
@@ -800,7 +831,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
   app.use(zip())
 
-  app.get('/backup', (req, res) => {
+  app.get(`${SERVERROUTESPREFIX}/backup`, (req, res) => {
     readdir(app.config.configPath).then(filenames => {
       const files = filenames
         .filter(file => {

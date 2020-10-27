@@ -27,7 +27,7 @@ class ServerUpdate extends Component {
     console.log('handleUpdate')
     if (confirm(`Are you sure you want to update the server?'`)) {
       this.props.history.push('/appstore/updates')
-      fetch(`/appstore/install/signalk-server/${this.props.appStore.serverUpdate}`, {
+      fetch(`${window.serverRoutesPrefix}/appstore/install/signalk-server/${this.props.appStore.serverUpdate}`, {
         method: 'POST',
         credentials: 'include'
       }).then(() => {

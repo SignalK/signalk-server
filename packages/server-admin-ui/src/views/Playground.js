@@ -118,7 +118,7 @@ class Playground extends Component {
     if ( sendToServer ) {
       this.setState({...this.state, sending: true})
     }
-    fetch(`/skServer/inputTest`, {
+    fetch(`${window.serverRoutesPrefix}/inputTest`, {
       method: 'POST',
       credentials: 'include',
       headers: {

@@ -184,7 +184,7 @@ describe('Security', () => {
   })
 
   it('admin request fails', async function () {
-    const result = await fetch(`${url}/plugins`)
+    const result = await fetch(`${url}/skServer/plugins`)
     result.status.should.equal(401)
   })
 
@@ -271,7 +271,7 @@ describe('Security', () => {
     json.should.have.property('requestId')
 
     result = await fetch(
-      `${url}/security/access/requests/1235-45653-343453/approved`,
+      `${url}/skServer/security/access/requests/1235-45653-343453/approved`,
       {
         method: 'PUT',
         headers: {
@@ -296,7 +296,7 @@ describe('Security', () => {
     json.accessRequest.permission.should.equal('APPROVED')
     json.accessRequest.should.have.property('token')
 
-    result = await fetch(`${url}/security/devices`, {
+    result = await fetch(`${url}/skServer/security/devices`, {
       headers: {
         Cookie: `JAUTHENTICATION=${adminToken}`
       }
@@ -334,7 +334,7 @@ describe('Security', () => {
     json.state.should.equal('PENDING')
 
     result = await fetch(
-      `${url}/security/access/requests/1235-45653-343455/denied`,
+      `${url}/skServer/security/access/requests/1235-45653-343455/denied`,
       {
         method: 'PUT',
         headers: {
@@ -357,7 +357,7 @@ describe('Security', () => {
     json.accessRequest.should.have.property('permission')
     json.accessRequest.permission.should.equal('DENIED')
 
-    result = await fetch(`${url}/security/devices`, {
+    result = await fetch(`${url}/skServer/security/devices`, {
       headers: {
         Cookie: `JAUTHENTICATION=${adminToken}`
       }

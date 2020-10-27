@@ -22,6 +22,7 @@ import express from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
+import { SERVERROUTESPREFIX } from '../constants'
 import { listAllSerialPorts, Ports } from '../serialports'
 
 // tslint:disable-next-line:no-var-requires
@@ -134,31 +135,34 @@ module.exports = (theApp: any) => {
       ensureExists(path.join(theApp.config.configPath, 'plugin-config-data'))
 
       theApp.use(
-        '/plugins/configure',
+        `${SERVERROUTESPREFIX}/plugins/configure`,
         express.static(getPluginConfigPublic(theApp))
       )
 
       const router = express.Router()
 
-      theApp.get('/plugins', (req: Request, res: Response) => {
-        const providerStatus = theApp.getProviderStatus()
+      theApp.get(
+        `${SERVERROUTESPREFIX}/plugins`,
+        (req: Request, res: Response) => {
+          const providerStatus = theApp.getProviderStatus()
 
-        Promise.all(
-          _.sortBy(theApp.plugins, [
-            (plugin: PluginInfo) => {
-              return plugin.name
-            }
-          ]).map((plugin: PluginInfo) =>
-            getPluginResponseInfo(plugin, providerStatus)
+          Promise.all(
+            _.sortBy(theApp.plugins, [
+              (plugin: PluginInfo) => {
+                return plugin.name
+              }
+            ]).map((plugin: PluginInfo) =>
+              getPluginResponseInfo(plugin, providerStatus)
+            )
           )
-        )
-          .then(json => res.json(json))
-          .catch(err => {
-            console.error(err)
-            res.status(500)
-            res.send(err)
-          })
-      })
+            .then(json => res.json(json))
+            .catch(err => {
+              console.error(err)
+              res.status(500)
+              res.send(err)
+            })
+        }
+      )
     }
   }
 
@@ -614,10 +618,13 @@ module.exports = (theApp: any) => {
     if (typeof plugin.registerWithRouter !== 'undefined') {
       plugin.registerWithRouter(router)
     }
-    app.use('/plugins/' + plugin.id, router)
+    app.use(`${SERVERROUTESPREFIX}/plugins/` + plugin.id, router)
 
     if (typeof plugin.signalKApiRoutes === 'function') {
-      app.use('/signalk/v1/api', plugin.signalKApiRoutes(express.Router()))
+      app.use(
+        `${SERVERROUTESPREFIX}/signalk/v1/api`,
+        plugin.signalKApiRoutes(express.Router())
+      )
     }
   }
 }
