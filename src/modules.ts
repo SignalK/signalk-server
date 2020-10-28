@@ -174,7 +174,7 @@ function runNpm(
 
   debug(`${command}: ${packageString}`)
 
-  if (name === app.config.name) {
+  if (isTheServerModule(name, app)) {
     if (process.platform === 'win32') {
       npm = spawn(
         'cmd',
@@ -205,6 +205,10 @@ function runNpm(
     onErr(err)
     onClose(-1)
   })
+}
+
+function isTheServerModule(moduleName: string, app: App) {
+  return moduleName === app.config.name
 }
 
 function findModulesWithKeyword(keyword: string) {
@@ -325,6 +329,7 @@ module.exports = {
   modulesWithKeyword,
   installModule,
   removeModule,
+  isTheServerModule,
   findModulesWithKeyword,
   getLatestServerVersion,
   checkForNewServerVersion,

@@ -19,6 +19,7 @@ const _ = require('lodash')
 const compareVersions = require('compare-versions')
 const { installModule, removeModule } = require('../modules')
 const {
+  isTheServerModule,
   findModulesWithKeyword,
   getLatestServerVersion,
   getAuthor
@@ -55,7 +56,7 @@ module.exports = function(app) {
           findPluginsAndWebapps()
             .then(([plugins, webapps]) => {
               if (
-                name !== app.config.name &&
+                !isTheServerModule(name, app) &&
                 !plugins.find(packageNameIs(name)) &&
                 !webapps.find(packageNameIs(name))
               ) {
@@ -302,6 +303,21 @@ module.exports = function(app) {
   }
 
   function installSKModule(module, version) {
+    if (isTheServerModule(module, app)) {
+      try {
+        app.providers.forEach(providerHolder => {
+          if (
+            typeof providerHolder.pipeElements[0].pipeline[0].options
+              .filename !== 'undefined'
+          ) {
+            debug('close file connection:', providerHolder.id)
+            providerHolder.pipeElements[0].end()
+          }
+        })
+      } catch (err) {
+        debug(err)
+      }
+    }
     updateSKModule(module, version, false)
   }
 
