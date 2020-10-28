@@ -99,7 +99,7 @@ class Settings extends Component {
           {date}
           {datesWithHours[date].map((hour, i) => (
             <span key={i}>
-              <a href={`${SERVERROUTESPREFIX}/logfiles/skserver-raw_${date}T${hour}.log`}>
+              <a href={`${window.serverRoutesPrefix}/logfiles/skserver-raw_${date}T${hour}.log`}>
                 <Button className='m-2'>{hour}</Button>
               </a>
             </span>
