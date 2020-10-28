@@ -291,7 +291,7 @@ module.exports = function(app) {
 
   function sendAppStoreChangedEvent() {
     findPluginsAndWebapps().then(([plugins, webapps]) => {
-      getLatestServerVersion().then(serverVersion => {
+      getLatestServerVersion(app.config.version).then(serverVersion => {
         const result = getAllModuleInfo(plugins, webapps, serverVersion)
         app.emit('serverevent', {
           type: 'APP_STORE_CHANGED',
