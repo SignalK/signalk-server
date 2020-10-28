@@ -126,6 +126,10 @@ interface ModuleMetadata {
   name: string
 }
 
+function backwardsCompat(url: string) {
+  return [`${SERVERROUTESPREFIX}${url}`, url]
+}
+
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
   return {
@@ -135,14 +139,14 @@ module.exports = (theApp: any) => {
       ensureExists(path.join(theApp.config.configPath, 'plugin-config-data'))
 
       theApp.use(
-        `${SERVERROUTESPREFIX}/plugins/configure`,
+        backwardsCompat('/plugins/configure'),
         express.static(getPluginConfigPublic(theApp))
       )
 
       const router = express.Router()
 
       theApp.get(
-        `${SERVERROUTESPREFIX}/plugins`,
+        backwardsCompat('/plugins'),
         (req: Request, res: Response) => {
           const providerStatus = theApp.getProviderStatus()
 
@@ -620,11 +624,11 @@ module.exports = (theApp: any) => {
     if (typeof plugin.registerWithRouter !== 'undefined') {
       plugin.registerWithRouter(router)
     }
-    app.use(`${SERVERROUTESPREFIX}/plugins/` + plugin.id, router)
+    app.use(backwardsCompat('/plugins/' + plugin.id), router)
 
     if (typeof plugin.signalKApiRoutes === 'function') {
       app.use(
-        `${SERVERROUTESPREFIX}/signalk/v1/api`,
+        backwardsCompat('/signalk/v1/api'),
         plugin.signalKApiRoutes(express.Router())
       )
     }
