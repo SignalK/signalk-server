@@ -239,7 +239,7 @@ class DataBrowser extends Component {
             onChange={this.handleContextChange}
           >
             <option value="none">Select a context</option>
-            {Object.keys(this.state.data).sort().map(key => {
+            {Object.keys(this.state.data || {}).sort().map(key => {
               return (
                   <option key={key} value={key}>{key}</option>
               )
@@ -358,7 +358,7 @@ class DataBrowser extends Component {
               </tr>
             </thead>
             <tbody>
-            {Object.keys(this.state.data[this.state.context]).filter(key => { return key.endsWith('.meta') && ( !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1) }).sort().map(key => {
+            {Object.keys(this.state.data[this.state.context] || {}).filter(key => { return key.endsWith('.meta') && ( !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1) }).sort().map(key => {
           const data = this.state.data[this.state.context][key]
           const formatted = JSON.stringify(data.value, null, 2)
           const path = data.path.substring(0, key.lastIndexOf('.'))
