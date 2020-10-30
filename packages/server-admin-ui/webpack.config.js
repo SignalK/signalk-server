@@ -71,4 +71,5 @@ module.exports = {
       statsOptions: { source: false }
     })
   ],
+  devtool: 'source-map'
 }
