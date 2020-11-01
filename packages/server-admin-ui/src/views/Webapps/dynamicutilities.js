@@ -19,3 +19,4 @@ export const toSafeModuleId = (moduleName) => moduleName.replace(/[-@/]/g, '_')
 
 export const APP_PANEL = './AppPanel'
 export const ADDON_PANEL = './AddonPanel'
+export const PLUGIN_CONFIG_PANEL = './PluginConfigurationPanel'

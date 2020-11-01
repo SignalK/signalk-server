@@ -54,6 +54,7 @@ interface PluginInfo extends Plugin {
   enableLogging: any
   enableDebug: any
   packageName: any
+  keywords: string[]
   packageLocation: string
   registerWithRouter: any
   signalKApiRoutes: any
@@ -124,6 +125,7 @@ export interface ServerAPI {
 interface ModuleMetadata {
   version: string
   name: string
+  keywords: string[]
 }
 
 function backwardsCompat(url: string) {
@@ -197,6 +199,7 @@ module.exports = (theApp: any) => {
             id: plugin.id,
             name: plugin.name,
             packageName: plugin.packageName,
+            keywords: plugin.keywords,
             version: plugin.version,
             description: plugin.description,
             schema,
@@ -564,6 +567,7 @@ module.exports = (theApp: any) => {
     plugin.enableDebug = startupOptions.enableDebug
     plugin.version = metadata.version
     plugin.packageName = metadata.name
+    plugin.keywords = metadata.keywords
     plugin.packageLocation = location
 
     if (startupOptions && startupOptions.enabled) {

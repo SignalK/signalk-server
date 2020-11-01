@@ -30,6 +30,9 @@ module.exports = function(app) {
       app.addons = mountWebModules(app, 'signalk-node-server-addon').map(
         moduleData => moduleData.metadata
       )
+      app.pluginconfigurators = mountWebModules(app, 'signalk-plugin-configurator').map(
+        moduleData => moduleData.metadata
+      )
       mountApis(app)
     },
     // tslint:disable-next-line: no-empty

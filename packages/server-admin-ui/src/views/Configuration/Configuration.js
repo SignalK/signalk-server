@@ -1,8 +1,7 @@
 import React, { Component } from 'react'
-import ReactDOM from 'react-dom'
-import { connect } from 'react-redux'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
 import {Container, Card, CardBody, CardHeader, Collapse, Row, Col, Input, InputGroup, Label} from 'reactstrap'
+import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
 
 export default class PluginConfigurationList extends Component {
   constructor() {
@@ -40,6 +39,7 @@ export default class PluginConfigurationList extends Component {
           return (
             <PluginCard
               plugin={plugin}
+              isConfigurator={isConfigurator(plugin)}
               key={i}
               isOpen={isOpen}
               toggleForm={this.toggleForm.bind(this, i, plugin.id)}
@@ -68,7 +68,7 @@ export default class PluginConfigurationList extends Component {
   }
 }
 
-
+const isConfigurator = (pluginData) => pluginData.keywords.includes('signalk-plugin-configurator')
 
 class PluginCard extends Component {
   render() {
@@ -134,7 +134,10 @@ class PluginCard extends Component {
       </CardHeader>
       {  this.props.isOpen &&
       <CardBody>
-        <PluginConfigurationForm plugin={this.props.plugin} onSubmit={this.props.saveData}/>
+        {!this.props.isConfigurator && <PluginConfigurationForm
+          plugin={this.props.plugin}
+          onSubmit={this.props.saveData}/>}
+        {this.props.isConfigurator && <EmbeddedPluginConfigurationForm {...this.props}/>}
       </CardBody>
       }
   </Card>

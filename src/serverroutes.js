@@ -64,10 +64,11 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
           res.send('Could not handle admin ui root request')
         }
         res.type('html')
+        const addonScripts = [].concat(app.addons).concat(app.pluginconfigurators)
         res.send(
           indexContent.toString().replace(
             /%ADDONSCRIPTS%/g,
-            (app.addons || []).map(
+            (addonScripts).map(
               moduleInfo =>
                 `<script src="/${moduleInfo.name}/remoteEntry.js"></script>`
             ).join('\n').toString()
