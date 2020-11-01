@@ -1,7 +1,7 @@
 import React, { Component, Suspense } from 'react'
 import { connect } from 'react-redux'
 import { Card, CardBody, CardHeader, Col } from 'reactstrap'
-import { toLazyDynamicComponent, toSafeModuleId } from './dynamicutilities'
+import { ADDON_PANEL, toLazyDynamicComponent, toSafeModuleId } from './dynamicutilities'
 
 import Webapp from './Webapp'
 
@@ -15,7 +15,7 @@ class Webapps extends Component {
 
   setAddonComponents() {
     this.setState({
-      addonComponents: this.props.addons.map(md => toLazyDynamicComponent(md.name, './AddonPanel'))
+      addonComponents: this.props.addons.map(md => toLazyDynamicComponent(md.name, ADDON_PANEL))
     })
   }
 

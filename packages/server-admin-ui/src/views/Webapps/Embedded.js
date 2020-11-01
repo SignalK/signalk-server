@@ -1,13 +1,13 @@
 import React, { Component, Suspense } from 'react'
 import { connect } from 'react-redux'
-import { toLazyDynamicComponent } from './dynamicutilities'
+import { toLazyDynamicComponent, APP_PANEL } from './dynamicutilities'
 import Login from '../../views/security/Login'
 
 class Embedded extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      component: toLazyDynamicComponent(this.props.match.params.moduleId, './AppPanel')
+      component: toLazyDynamicComponent(this.props.match.params.moduleId, APP_PANEL)
     }
     this.adminUI = {
       hideSideBar: () => {
