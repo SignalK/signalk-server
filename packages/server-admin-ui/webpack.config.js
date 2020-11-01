@@ -3,6 +3,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
 const { ModuleFederationPlugin } = require('webpack').container;
+require('@signalk/server-admin-ui-dependencies')
 
 const path = require('path');
 
