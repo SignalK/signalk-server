@@ -627,10 +627,7 @@ module.exports = (theApp: any) => {
     app.use(backwardsCompat('/plugins/' + plugin.id), router)
 
     if (typeof plugin.signalKApiRoutes === 'function') {
-      app.use(
-        backwardsCompat('/signalk/v1/api'),
-        plugin.signalKApiRoutes(express.Router())
-      )
+      app.use('/signalk/v1/api', plugin.signalKApiRoutes(express.Router()))
     }
   }
 }
