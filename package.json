@@ -67,7 +67,7 @@
     "node": "10"
   },
   "dependencies": {
-    "@signalk/server-admin-ui": "1.34.x",
+    "@signalk/server-admin-ui": "1.36.x",
     "@signalk/signalk-schema": "1.5.0",
     "@signalk/streams": "1.16.x",
     "@types/debug": "^4.1.5",
