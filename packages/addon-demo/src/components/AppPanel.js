@@ -18,8 +18,17 @@ const AppPanel = (props) => {
   aisTargetsRef.current = aisTargets
   const bufferTargets = useRef({})
 
+  const mapRef = useRef(null)
+
   useEffect(() => {
     props.adminUI.hideSideBar()
+
+    //hack to resize the map in case sidebar was animated to hidden
+    setTimeout(() => {
+      if (mapRef.current) {
+        mapRef.current.leafletElement.invalidateSize()
+      }
+    }, 500)
 
     props.adminUI.getApplicationUserData(APPLICATION_DATA_VERSION).then(appData => {
       setApplicationData(appData)
@@ -88,6 +97,7 @@ const AppPanel = (props) => {
 
   return (
     <Map
+      ref={mapRef}
       style={{ height: '100%' }}
       center={center}
       zoom={10}
