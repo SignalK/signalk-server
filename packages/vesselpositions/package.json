@@ -1,12 +1,12 @@
 {
-  "name": "signalk-addon-demo",
+  "name": "@signalk/vesselpositions",
   "version": "1.0.0",
-  "description": "Module demonstrating Signal K Server's addon feature",
+  "description": "Map showing vessel positions (also a demo of embedded components)",
   "main": "index.js",
   "scripts": {
     "prepublishOnly": "npm run clean && npm run build",
     "dev": "webpack --watch --mode development",
-    "build": "webpack -p",
+    "build": "webpack --mode=production",
     "clean": "rimraf ./public"
   },
   "keywords": [

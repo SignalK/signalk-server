@@ -43,7 +43,7 @@ module.exports = {
     // Use Plugin
     new ModuleFederationPlugin({
       name: 'Addon Demo',
-      library: { type: 'var', name: packageJson.name.replace(/-/g, '_') },
+      library: { type: 'var', name: packageJson.name.replace(/[-@/]/g, '_') },
       filename: 'remoteEntry.js',
       exposes: {
         // expose each component you want 
@@ -56,7 +56,7 @@ module.exports = {
       paths: [path.resolve(__dirname, 'public/')]
     }),
     new HtmlWebpackPlugin({
-      template: './public/index.html',
+      template: './public_src/index.html',
     }),
   ],
 };

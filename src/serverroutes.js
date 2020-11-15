@@ -64,14 +64,22 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
           res.send('Could not handle admin ui root request')
         }
         res.type('html')
-        const addonScripts = [].concat(app.addons).concat(app.pluginconfigurators)
+        const addonScripts = _.uniq(
+          []
+            .concat(app.addons)
+            .concat(app.pluginconfigurators)
+            .concat(app.embeddablewebapps)
+        )
         res.send(
           indexContent.toString().replace(
             /%ADDONSCRIPTS%/g,
-            (addonScripts).map(
-              moduleInfo =>
-                `<script src="/${moduleInfo.name}/remoteEntry.js"></script>`
-            ).join('\n').toString()
+            addonScripts
+              .map(
+                moduleInfo =>
+                  `<script src="/${moduleInfo.name}/remoteEntry.js"></script>`
+              )
+              .join('\n')
+              .toString()
           )
         )
       }

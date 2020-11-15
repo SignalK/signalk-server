@@ -3,6 +3,11 @@ import React from 'react'
 export const toLazyDynamicComponent = (moduleName, component) =>
   React.lazy(() => new Promise((resolve, reject) => {
     const container = window[toSafeModuleId(moduleName)]
+    if (container === undefined) {
+      console.error(`Could not load module ${moduleName}`)
+      resolve(import('./loadingerror'))
+      return
+    }
     container.init(__webpack_share_scopes__.default)
     try {
       const module = container.get(component)
@@ -14,6 +19,7 @@ export const toLazyDynamicComponent = (moduleName, component) =>
       reject(ex)
     }
   }))
+
 
 export const toSafeModuleId = (moduleName) => moduleName.replace(/[-@/]/g, '_')
 
