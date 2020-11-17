@@ -142,7 +142,10 @@ describe('Put Requests', () => {
     json.should.have.property('state')
     json.state.should.equal('COMPLETED')
 
-    _.get(server.app.config.defaults, 'vessels.self.electrical.switches.switch2.meta.units').should.equal('number')
+    result = await fetch(`${url}/signalk/v1/api/vessels/self/electrical/switches/switch2/meta/units`)
+    result.status.should.equal(200)
+    let units = await result.json()
+    units.should.equal('number')
   })
 
   it('HTTP failing put', async function () {

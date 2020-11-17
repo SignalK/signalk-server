@@ -215,7 +215,7 @@ function Server(opts) {
       try {
         deltachain.process(toPreferredDelta(data, now, app.selfContext))
       } catch (err) {
-        console.error(err.message)
+        console.error(err)
       }
     }
   }

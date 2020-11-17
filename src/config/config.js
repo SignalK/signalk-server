@@ -22,6 +22,7 @@ const _ = require('lodash')
 const fs = require('fs')
 const { v4: uuidv4 } = require('uuid')
 const semver = require('semver')
+const DeltaEditor = require('../deltaeditor')
 
 let disableWriteSettings = false
 
@@ -53,21 +54,23 @@ function load(app) {
   }
 
   setConfigDirectory(app)
-  app.config.baseDeltas = []
+  app.config.baseDeltaEditor = new DeltaEditor()
   if (_.isObject(app.config.settings)) {
     debug('Using settings from constructor call, not reading defaults')
     disableWriteSettings = true
     if (config.defaults) {
-      app.config.baseDeltas = convertOldDefaultsToDeltas(config.defaults)
+      convertOldDefaultsToDeltas(app.config.baseDeltaEditor, config.defaults)
     }
   } else {
     readSettingsFile(app)
     if (!setBaseDeltas(app)) {
       let defaults = getFullDefaults(app)
       if (defaults) {
-        app.config.baseDeltas = convertOldDefaultsToDeltas(defaults)
+        convertOldDefaultsToDeltas(app.config.baseDeltaEditor, defaults)
         if ( app.config.settings.useBaseDeltas ) {
-          writeBaseDeltasFileSync(app, app.config.baseDeltas)
+          writeBaseDeltasFileSync(app)
+        } else {
+          app.config.hasOldDefaults = true
         }
       }
     }
@@ -237,12 +240,6 @@ function readDefaultsFile(app) {
   return JSON.parse(data)
 }
 
-function readBaseDeltasFile(app) {
-  const defaultsPath = getBaseDeltasPath(app)
-  var data = fs.readFileSync(defaultsPath)
-  return JSON.parse(data)
-}
-
 function getFullDefaults(app) {
   const defaultsPath = getDefaultsPath(app)
   try {
@@ -264,14 +261,7 @@ function getFullDefaults(app) {
 function setBaseDeltas(app) {
   const defaultsPath = getBaseDeltasPath(app)
   try {
-    let deltas = readBaseDeltasFile(app)
-
-    if (!_.isArray(deltas)) {
-      console.error(`${defaultsPath} should contain an array of deltas`)
-      return
-    }
-
-    app.config.baseDeltas = deltas
+    app.config.baseDeltaEditor.load(defaultsPath)
     debug(`Found default deltas at ${defaultsPath.toString()}`)
   } catch (e) {
     if (e.code && e.code === 'ENOENT') {
@@ -281,13 +271,12 @@ function setBaseDeltas(app) {
       console.log(e)
     }
   }
-  return app.config.baseDeltas
+  return true
 }
 
 function sendBaseDeltas(app) {
-  let copy = JSON.parse(JSON.stringify(app.config.baseDeltas))
+  let copy = JSON.parse(JSON.stringify(app.config.baseDeltaEditor.deltas))
   copy.forEach(delta => {
-    delta.context = app.selfContext
     app.handleMessage('defaults', delta)
   })
 }
@@ -296,156 +285,18 @@ function writeDefaultsFile(app, defaults, cb) {
   fs.writeFile(getDefaultsPath(app), JSON.stringify(defaults, null, 2), cb)
 }
 
-function writeBaseDeltasFile(app, deltas, cb) {
-  fs.writeFile(getBaseDeltasPath(app), JSON.stringify(deltas, null, 2), cb)
+function writeBaseDeltasFileSync(app) {
+  app.config.baseDeltaEditor.saveSync(getBaseDeltasPath(app))
 }
 
-function writeBaseDeltasFileSync(app, deltas) {
-  fs.writeFileSync(getBaseDeltasPath(app), JSON.stringify(deltas, null, 2))
-}
-
-function getDefaultValue(app, vpath) {
-  if (vpath.indexOf('.') === -1) {
-    let rootUpdates = app.config.baseDeltas.reduce((acc, delta) => {
-      if (delta.updates) {
-        delta.updates.forEach(update => {
-          if (update.values) {
-            let value = update.values.forEach(v => {
-              if (v.path === '') {
-                acc.push(v.value)
-              }
-            })
-          }
-        })
-      }
-      return acc
-    }, [])
-    let keyUpdate = rootUpdates.find(update => {
-      return !_.isUndefined(update[vpath])
-    })
-    return _.isUndefined(keyUpdate) ? undefined : keyUpdate[vpath]
-  } else {
-    let deltas = app.config.baseDeltas.reduce((acc, delta) => {
-      if (delta.updates) {
-        delta.updates.forEach(update => {
-          if (update.values) {
-            let value = update.values.forEach(v => {
-              if (v.path === vpath) {
-                acc.push(v.value)
-              }
-            })
-          }
-        })
-      }
-      return acc
-    }, [])
-    return deltas.length > 0 ? deltas[deltas.length - 1] : undefined
-  }
-}
-
-function setDefaultValue(app, vpath, value) {
-  if (vpath.indexOf('.') === -1) {
-    let rootUpdates = app.config.baseDeltas.reduce((acc, delta) => {
-      if (delta.updates) {
-        delta.updates.forEach(update => {
-          if (update.values) {
-            update.values.forEach(v => {
-              if (v.path === '') {
-                acc.push(v.value)
-              }
-            })
-          }
-        })
-      }
-      return acc
-    }, [])
-    let keyUpdate = rootUpdates.find(update => {
-      return !_.isUndefined(update[vpath])
-    })
-    if (_.isUndefined(keyUpdate)) {
-      app.config.baseDeltas.push({
-        updates: [
-          {
-            values: [
-              {
-                path: '',
-                value: {
-                  [vpath]: value
-                }
-              }
-            ]
-          }
-        ]
-      })
-    } else {
-      keyUpdate[vpath] = value
-    }
-  } else {
-    let values = app.config.baseDeltas.reduce((acc, delta) => {
-      if (delta.updates) {
-        delta.updates.forEach(update => {
-          if (update.values) {
-            update.values.forEach(v => {
-              if (v.path === vpath) {
-                acc.push(v)
-              }
-            })
-          }
-        })
-      }
-      return acc
-    }, [])
-    if (values.length === 0) {
-      app.config.baseDeltas.push({
-        updates: [
-          {
-            values: [
-              {
-                path: vpath,
-                value: value
-              }
-            ]
-          }
-        ]
-      })
-    } else {
-      values[values.length - 1].value = value
-    }
-  }
-}
-
-function removeDefaultValue(app, vpath) {
-  let isRoot = vpath.indexOf('.') === -1
-  app.config.baseDeltas.forEach(delta => {
-    if (delta.updates) {
-      delta.updates.forEach(update => {
-        if (update.values) {
-          update.values.forEach(v => {
-            if (isRoot && v.path === '' && !_.isUndefined(v.value[vpath])) {
-              delete v.value[vpath]
-              if (_.keys(v.value).length === 0) {
-                _.pull(update.values, v)
-              }
-            } else if (v.path === vpath) {
-              _.pull(update.values, v)
-            }
-          })
-          if (update.values.length === 0) {
-            _.pull(delta.updates, update)
-          }
-        }
-      })
-      if (delta.updates.length === 0) {
-        _.pull(app.config.baseDeltas, delta)
-      }
-    }
-  })
+function writeBaseDeltasFile(app) {
+  return app.config.baseDeltaEditor.save(getBaseDeltasPath(app))
 }
 
 function setSelfSettings(app) {
-  var name = getDefaultValue(app, 'name')
-  var mmsi = getDefaultValue(app, 'mmsi')
-  var uuid = getDefaultValue(app, 'uuid')
+  var name = app.config.baseDeltaEditor.getSelfValue('name')
+  var mmsi = app.config.baseDeltaEditor.getSelfValue('mmsi')
+  var uuid = app.config.baseDeltaEditor.getSelfValue('uuid')
 
   if (mmsi && !_.isString(mmsi)) {
     throw new Error(`invalid mmsi: ${mmsi}`)
@@ -457,23 +308,7 @@ function setSelfSettings(app) {
 
   if (_.isUndefined(mmsi) && _.isUndefined(uuid)) {
     uuid = 'urn:mrn:signalk:uuid:' + uuidv4()
-    app.config.baseDeltas.push({
-      updates: [
-        {
-          values: [
-            {
-              path: '',
-              value: {
-                uuid: uuid
-              }
-            }
-          ]
-        }
-      ]
-    })
-    if (!disableWriteSettings) {
-      writeBaseDeltasFileSync(app, app.config.baseDeltas)
-    }
+    app.config.baseDeltaEditor.setSelfValue('uuid', uuid)
   }
 
   app.config.vesselName = name
@@ -558,70 +393,34 @@ function getExternalPort(config) {
   return ''
 }
 
-function scanDefaults(vpath, item, metaValues, values) {
+function scanDefaults(deltaEditor, vpath, item) {
   _.keys(item).forEach(key => {
     let value = item[key]
     if (key === 'meta') {
-      metaValues.push({
-        path: vpath,
-        value: value
-      })
+      deltaEditor.setMeta('vessels.self', vpath, value)
     } else if (key === 'value') {
-      values.push({
-        path: vpath,
-        value: value
-      })
+      deltaEditor.setSelfValue(vpath, value)
     } else if (_.isObject(value)) {
       let childPath = vpath.length > 0 ? `${vpath}.${key}` : key
-      scanDefaults(childPath, value, metaValues, values)
+      scanDefaults(deltaEditor, childPath, value)
     }
   })
 }
 
-function convertOldDefaultsToDeltas(defaults) {
+function convertOldDefaultsToDeltas(deltaEditor, defaults) {
   let deltas = []
   let self = _.get(defaults, 'vessels.self')
   if (self) {
-    let topValues = {}
-    let metaValues = []
-    let values = []
     _.keys(self).forEach(key => {
       let value = self[key]
       if (!_.isString(value)) {
-        scanDefaults(key, value, metaValues, values)
+        scanDefaults(deltaEditor, key, value)
       } else {
-        topValues[key] = value
+        deltaEditor.setSelfValue(key, value)
       }
     })
-    deltas.push({
-      updates: [
-        {
-          values: [
-            {
-              path: '',
-              value: topValues
-            }
-          ]
-        }
-      ]
-    })
-    if (metaValues.length > 0) {
-      deltas.push({
-        updates: [
-          {
-            meta: metaValues
-          }
-        ]
-      })
-    }
-    if (values.length > 0) {
-      deltas.push({
-        updates: [
-          {
-            values: values
-          }
-        ]
-      })
+    if ( self.communication ) {
+      deltaEditor.setSelfValue('communication', self.communication)
     }
   }
   return deltas
@@ -642,5 +441,5 @@ module.exports = {
   writeDefaultsFile,
   readDefaultsFile,
   sendBaseDeltas,
-  removeDefaultValue
+  writeBaseDeltasFile
 }

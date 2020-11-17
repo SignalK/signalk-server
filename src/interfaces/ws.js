@@ -655,7 +655,11 @@ function startServerEvents(app, spark) {
     if (vesselInfo) {
       spark.write({
         type: 'VESSEL_INFO',
-        data: vesselInfo
+        data: {
+          name: app.config.vesselName,
+          mmsi: app.config.vesselMMSI,
+          uuid: app.config.vesselUUID
+        }
       })
     }
   } catch (e) {

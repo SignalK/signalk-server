@@ -46,9 +46,9 @@ module.exports = function mdnsResponder(app) {
     // hardcoded out of master/slave, main/aux
     roles: 'master, main',
     self: app.selfId,
-    vname: config.defaults.vessels.self.name,
-    vmmsi: config.defaults.vessels.self.mmsi,
-    vuuid: config.defaults.vessels.self.uuid
+    vname: config.vesselName,
+    vmmsi: config.vesselMMSI,
+    vuuid: config.vesselUUID
   }
 
   // Strip all the null or empty props in txtRecord
