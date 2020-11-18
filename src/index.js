@@ -69,8 +69,7 @@ function Server(opts) {
 
   app.signalk = new FullSignalK(
     app.selfId,
-    app.selfType,
-    app.config.defaults && JSON.parse(JSON.stringify(app.config.defaults))
+    app.selfType
   )
 
   const deltachain = new DeltaChain(app.signalk.addDelta.bind(app.signalk))

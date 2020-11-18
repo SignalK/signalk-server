@@ -37,7 +37,6 @@ class DeltaCache {
 
   constructor(app: SignalKServer, streambundle: StreamBundle) {
     this.app = app
-    this.defaults = app.config.defaults
     streambundle.keys.onValue(key => {
       streambundle.getBus(key).onValue(this.onValue.bind(this))
     })
@@ -126,8 +125,7 @@ class DeltaCache {
   ) {
     const signalk = new FullSignalK(
       this.app.selfId,
-      this.app.selfType,
-      this.defaults && JSON.parse(JSON.stringify(this.defaults))
+      this.app.selfType
     )
 
     const addDelta = signalk.addDelta.bind(signalk)
