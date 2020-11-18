@@ -32,9 +32,7 @@ export function fetchSecurityUsers () {
 class Users extends Component {
   constructor (props) {
     super(props)
-    this.state = {
-      users: [],
-    }
+    this.state = {}
 
     this.handleAddUser = this.handleAddUser.bind(this)
     this.fetchSecurityUsers = fetchSecurityUsers.bind(this)
@@ -46,6 +44,12 @@ class Users extends Component {
 
   componentDidMount () {
     if (this.props.loginStatus.authenticationRequired) {
+      this.fetchSecurityUsers()
+    }
+  }
+
+  componentDidUpdate (prevProps) {
+    if (this.props.loginStatus.authenticationRequired != prevProps.loginStatus.authenticationRequired) {
       this.fetchSecurityUsers()
     }
   }
@@ -164,7 +168,7 @@ class Users extends Component {
         {this.props.loginStatus.authenticationRequired === false && (
           <EnableSecurity />
         )}
-        {this.props.loginStatus.authenticationRequired && (
+        {this.state.users && this.props.loginStatus.authenticationRequired && (
           <div>
             <Card>
               <CardHeader>
@@ -314,7 +318,7 @@ class Users extends Component {
   }
 }
 
-const mapStateToProps = ({ securityUsers }) => ({ securityUsers })
+const mapStateToProps = ({ loginStatus }) => ({ loginStatus })
 
 export default connect(mapStateToProps)(Users)
 
