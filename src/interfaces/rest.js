@@ -45,13 +45,10 @@ module.exports = function(app) {
         path = path.length > 0 ? path.replace(/\/$/, '').split('/') : []
 
         if (path.length > 4 && path[path.length - 1] === 'meta') {
-          let dataPath = path.slice(2, path.length - 1).join('.')
-          let context = path.slice(0, 2).join('.')
           let meta = getMetadata(path.slice(0, path.length - 1).join('.'))
-          let fromBase = app.config.baseDeltaEditor.getMeta(context, dataPath)
 
-          if (meta || fromBase) {
-            res.json({ ...meta, ...fromBase })
+          if (meta) {
+            res.json(meta)
             return
           }
         }
@@ -60,13 +57,7 @@ module.exports = function(app) {
           path[path.length - 1] === 'units' &&
           path[path.length - 2] === 'meta'
         ) {
-          let dataPath = path.slice(2, path.length - 2).join('.')
-          let context = path.slice(0, 2).join('.')
-          let baseMeta = app.config.baseDeltaEditor.getMeta(context, dataPath)
-          let units = baseMeta && baseMeta.units
-          if (!units) {
-            units = getUnits(path.slice(0, path.length - 2).join('.'))
-          }
+          let units = getUnits(path.slice(0, path.length - 2).join('.'))
           if (units) {
             res.json(units)
             return
