@@ -28,7 +28,6 @@ function StreamBundle(app, selfId) {
   this.selfAllPathsStream = new Bacon.Bus()
   this.keys = new Bacon.Bus()
   this.availableSelfPaths = []
-  this.metaSent = {}
   this.app = app
 }
 
@@ -72,33 +71,6 @@ StreamBundle.prototype.pushDelta = function(delta) {
     }
   } catch (e) {
     console.error(e)
-  }
-}
-
-function addMetaDelta(that, contextPath, path, timestamp) {
-  if (!that.metaSent[contextPath]) {
-    that.metaSent[contextPath] = []
-  } else if (that.metaSent[contextPath].indexOf(path) !== -1) {
-    return
-  }
-  that.metaSent[contextPath].push(path)
-  let meta = getMetadata(contextPath + '.' + path)
-  if (meta) {
-    that.app.handleMessage('schema', {
-      context: contextPath,
-      updates: [
-        {
-          timestamp: timestamp,
-          values: [],
-          meta: [
-            {
-              path: path,
-              value: meta
-            }
-          ]
-        }
-      ]
-    })
   }
 }
 
