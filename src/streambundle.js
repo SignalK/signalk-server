@@ -34,13 +34,10 @@ function StreamBundle(app, selfId) {
 
 StreamBundle.prototype.pushDelta = function(delta) {
   var that = this
-  function processIems(update, items, isMeta) {
+  function processIems(update, items) {
     if (items) {
       items.forEach(pathValue => {
         let outgoingPath = pathValue.path
-        if (isMeta) {
-          outgoingPath = outgoingPath + '.meta'
-        }
         var paths =
           pathValue.path === ''
             ? getPathsFromObjectValue(pathValue.value)
@@ -52,13 +49,6 @@ StreamBundle.prototype.pushDelta = function(delta) {
           regenerating the outgoing delta will use the unmodified, original delta pathvalue.
         */
         paths.forEach(path => {
-          if (
-            !isMeta &&
-            (_.isUndefined(that.app.config.settings.disableSchemaMetaDeltas) ||
-              !that.app.config.settings.disableSchemaMetaDeltas)
-          ) {
-            addMetaDelta(that, delta.context, pathValue.path, update.timestamp)
-          }
           that.push(path, {
             path: outgoingPath,
             value: pathValue.value,
@@ -75,11 +65,8 @@ StreamBundle.prototype.pushDelta = function(delta) {
     if (delta.updates) {
       delta.updates.forEach(update => {
         var items = update.meta || update.values
-        if (update.meta) {
-          processIems(update, update.meta, true)
-        }
         if (update.values) {
-          processIems(update, update.values, false)
+          processIems(update, update.values)
         }
       }, this)
     }
