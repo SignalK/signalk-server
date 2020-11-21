@@ -52,14 +52,6 @@ StreamBundle.prototype.pushDelta = function(delta) {
           can track hits also for paths of naked values (no path, just object value) and when
           regenerating the outgoing delta will use the unmodified, original delta pathvalue.
         */
-        /*
-        if (
-          !isMeta &&
-            (_.isUndefined(that.app.config.settings.disableSchemaMetaDeltas) ||
-             !that.app.config.settings.disableSchemaMetaDeltas)
-        ) {
-          addMetaDelta(that, delta.context, pathValue.path, update.timestamp)
-        }*/
         paths.forEach(path => {
           that.push(path, {
             path: outgoingPath,
@@ -89,33 +81,6 @@ StreamBundle.prototype.pushDelta = function(delta) {
     console.error(e)
   }
 }
-
-function addMetaDelta(that, contextPath, path, timestamp) {
-   if (!that.metaSent[contextPath]) {
-     that.metaSent[contextPath] = []
-   } else if (that.metaSent[contextPath].indexOf(path) !== -1) {
-     return
-   }
-   that.metaSent[contextPath].push(path)
-   let meta = getMetadata(contextPath + '.' + path)
-   if (meta) {
-     that.app.handleMessage('schema', {
-       context: contextPath,
-       updates: [
-         {
-           timestamp: timestamp,
-           values: [],
-           meta: [
-             {
-               path: path,
-               value: meta
-             }
-           ]
-         }
-       ]
-     })
-   }
- }
 
 function getPathsFromObjectValue(objectValue) {
   return Object.keys(objectValue).reduce((acc, propName) => {
