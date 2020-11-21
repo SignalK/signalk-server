@@ -15,21 +15,6 @@ export default ({plugin, onSubmit}) => {
   const topSchema = {
     type: 'object',
     properties: {
-      enabled: {
-        type: 'boolean',
-        title: 'Active',
-        default: false
-      },
-      enableLogging: {
-        type: 'boolean',
-        title: 'Enable Logging',
-        default: false
-      },
-      enableDebug: {
-        type: 'boolean',
-        title: 'Enable Debug',
-        default: false
-      },
       configuration: {
         type: 'object',
         title: ' ',
@@ -44,13 +29,14 @@ export default ({plugin, onSubmit}) => {
     topSchema.description = `Status: ${plugin.statusMessage}`
   }
 
+  const { enabled, enableLogging, enableDebug } = plugin.data
   return (
     <Form
       schema={topSchema}
       uiSchema={uiSchema}
       formData={plugin.data || {}}
       onSubmit={submitData => {
-        onSubmit(submitData.formData)
+        onSubmit({...submitData.formData, enabled, enableLogging, enableDebug} )
       }}
     />
   )

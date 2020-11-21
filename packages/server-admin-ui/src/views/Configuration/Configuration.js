@@ -2,10 +2,10 @@ import React, { Component } from 'react'
 import ReactDOM from 'react-dom'
 import { connect } from 'react-redux'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
-import {Container, Card, CardBody, CardHeader, Collapse} from 'reactstrap'
+import {Container, Card, CardBody, CardHeader, Collapse, Row, Col, Input, InputGroup, Label} from 'reactstrap'
 
-class Dashboard extends Component {
-  constructor(props) {
+export default class PluginConfigurationList extends Component {
+  constructor() {
     super()
     this.state = {
       plugins: []
@@ -32,13 +32,6 @@ class Dashboard extends Component {
     })
   }
 
-  shouldComponentUpdate(nextProps, nextState) {
-    const shouldUpdate = this.lastOpenedPlugin !== this.props.match.params.pluginid || this.state.plugins.length != nextState.plugins.length
-    this.lastOpenedPlugin = this.props.match.params.pluginid
-
-    return shouldUpdate
-  }
-
   render () {
     return (
       <Container>
@@ -50,43 +43,100 @@ class Dashboard extends Component {
               key={i}
               isOpen={isOpen}
               toggleForm={this.toggleForm.bind(this, i, plugin.id)}
-              saveData={saveData.bind(null, plugin.id)}/>
+              saveData={(data) => this.saveData(plugin.id, data, i)}/>
         )})}
       </Container>
     )
   }
+
+  saveData(id, data, i) {
+    fetch(`${window.serverRoutesPrefix}/plugins/${id}/config`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: new Headers({'Content-Type': 'application/json'}),
+      credentials: 'same-origin'
+    }).then((response) => {
+      if (response.status != 200) {
+        console.error(response)
+        alert('Saving plugin settings failed')
+      } else {
+        const plugins = [...this.state.plugins]
+        plugins[i].data = data
+        this.setState({ plugins })
+      }
+    })
+  }
 }
 
-function saveData(id, data) {
-  fetch(`${window.serverRoutesPrefix}/plugins/${id}/config`, {
-    method: 'POST',
-    body: JSON.stringify(data),
-    headers: new Headers({'Content-Type': 'application/json'}),
-    credentials: 'same-origin'
-  }).then((response) => {
-    if (response.status != 200) {
-      console.error(response)
-      alert('Saving plugin settings failed')
-    }
-  })
-}
 
 
 class PluginCard extends Component {
   render() {
+    const labelStyle = {marginLeft: '10px', marginBottom: '0px'}
     return (
     <div ref={(card) => { this.card = card }}>
-    <Card key={this.props.i}>
-    <CardHeader onClick={this.props.toggleForm}>
-      <i className={'fa fa-chevron-' + (this.props.isOpen ? 'down':'right')}/>
-        {this.props.plugin.name}
-    </CardHeader>
-    <Collapse isOpen={this.props.isOpen}>
-        <CardBody>
-        Package Name: {this.props.plugin.packageName}<br/>
+    <Card>
+      <CardHeader >
+        <Row>
+          <Col xs={4} onClick={this.props.toggleForm}>
+            <i style={{marginRight: '10px'}} className={'fa fa-chevron-' + (this.props.isOpen ? 'down' : 'right')} />
+            {this.props.plugin.name}
+          </Col>
+          <Col xs='2'>
+            Enabled
+              <Label style={labelStyle} className='switch switch-text switch-primary'>
+                <Input
+                  type='checkbox'
+                  name='enabled'
+                  className='switch-input'
+                  onChange={(e) => {
+                    this.props.saveData({...this.props.plugin.data, enabled: !this.props.plugin.data.enabled})
+                  }}
+                  checked={this.props.plugin.data.enabled}
+                />
+                <span className='switch-label' data-on='Yes' data-off='No' />
+                <span className='switch-handle' />
+              </Label>
+          </Col>
+          <Col xs='3'>
+            Log plugin output
+              <Label style={labelStyle} className='switch switch-text switch-primary'>
+                <Input
+                  type='checkbox'
+                  name='enableLogging'
+                  className='switch-input'
+                  onChange={(e) => {
+                    this.props.saveData({...this.props.plugin.data, enableLogging: !this.props.plugin.data.enableLogging})
+                  }}
+                  checked={this.props.plugin.data.enableLogging}
+                />
+                <span className='switch-label' data-on='Yes' data-off='No' />
+                <span className='switch-handle' />
+              </Label>
+          </Col>
+          <Col xs='3'>
+            Enable debug log
+              <Label style={labelStyle} className='switch switch-text switch-primary'>
+                <Input
+                  type='checkbox'
+                  name='enableDebug'
+                  className='switch-input'
+                  onChange={(e) => {
+                    this.props.saveData({...this.props.plugin.data, enableDebug: !this.props.plugin.data.enableDebug})
+                  }}
+                  checked={this.props.plugin.data.enableDebug}
+                />
+                <span className='switch-label' data-on='Yes' data-off='No' />
+                <span className='switch-handle' />
+              </Label>
+          </Col>
+        </Row>
+      </CardHeader>
+      {  this.props.isOpen &&
+      <CardBody>
         <PluginConfigurationForm plugin={this.props.plugin} onSubmit={this.props.saveData}/>
       </CardBody>
-    </Collapse>
+      }
   </Card>
   </div>
     )
@@ -94,13 +144,7 @@ class PluginCard extends Component {
 
   componentDidMount() {
     if (this.props.isOpen) {
-      // ReactDOM.findDOMNode(this.card).scrollIntoView()
-      window.scrollTo({top: this.card.offsetTop -54})
+      window.scrollTo({top: this.card.offsetTop -54, behavior: 'smooth'})
     }
   }
 }
-
-
-export default connect(({ serverStatistics }) => ({ serverStatistics }))(
-  Dashboard
-)
