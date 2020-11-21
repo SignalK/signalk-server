@@ -687,17 +687,14 @@ function startServerEvents(app, spark) {
     app.removeListener('serverevent', onServerEvent)
   })
   try {
-    const vesselInfo = _.get(skConfig.readDefaultsFile(app), 'vessels.self')
-    if (vesselInfo) {
-      spark.write({
-        type: 'VESSEL_INFO',
-        data: {
-          name: app.config.vesselName,
-          mmsi: app.config.vesselMMSI,
-          uuid: app.config.vesselUUID
-        }
-      })
-    }
+    spark.write({
+      type: 'VESSEL_INFO',
+      data: {
+        name: app.config.vesselName,
+        mmsi: app.config.vesselMMSI,
+        uuid: app.config.vesselUUID
+      }
+    })
   } catch (e) {
     if (e.code !== 'ENOENT') {
       console.error(e)
