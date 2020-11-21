@@ -44,6 +44,12 @@ class DeltaCache {
 
   onValue(msg: NormalizedDelta) {
     // debug(`onValue ${JSON.stringify(msg)}`)
+
+    if ( msg.isMeta ) {
+      //ignore meta data since it's getting managed by FullSignalK
+      return 
+    }
+
     const sourceRef = ensureHasDollarSource(msg)
     let contextAndPathParts = msg.context.split('.')
     if (msg.path.length !== 0) {

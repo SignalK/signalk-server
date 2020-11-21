@@ -57,6 +57,7 @@ export interface NormalizedDelta {
   path: Path
   context: Context
   value: Value
+  isMeta: boolean
 }
 
 export type SourceRef = string

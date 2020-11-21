@@ -29,14 +29,19 @@ function StreamBundle(app, selfId) {
   this.keys = new Bacon.Bus()
   this.availableSelfPaths = []
   this.app = app
+  this.metaSent = {}
 }
 
 StreamBundle.prototype.pushDelta = function(delta) {
   var that = this
-  function processIems(update, items) {
+  function processIems(update, items, isMeta) {
     if (items) {
       items.forEach(pathValue => {
         let outgoingPath = pathValue.path
+        /*
+        if (isMeta) {
+          outgoingPath = outgoingPath + '.meta'
+        }*/
         var paths =
           pathValue.path === ''
             ? getPathsFromObjectValue(pathValue.value)
@@ -47,6 +52,14 @@ StreamBundle.prototype.pushDelta = function(delta) {
           can track hits also for paths of naked values (no path, just object value) and when
           regenerating the outgoing delta will use the unmodified, original delta pathvalue.
         */
+        /*
+        if (
+          !isMeta &&
+            (_.isUndefined(that.app.config.settings.disableSchemaMetaDeltas) ||
+             !that.app.config.settings.disableSchemaMetaDeltas)
+        ) {
+          addMetaDelta(that, delta.context, pathValue.path, update.timestamp)
+        }*/
         paths.forEach(path => {
           that.push(path, {
             path: outgoingPath,
@@ -54,7 +67,8 @@ StreamBundle.prototype.pushDelta = function(delta) {
             context: delta.context,
             source: update.source,
             $source: update.$source,
-            timestamp: update.timestamp
+            timestamp: update.timestamp,
+            isMeta: isMeta
           })
         })
       }, that)
@@ -63,9 +77,11 @@ StreamBundle.prototype.pushDelta = function(delta) {
   try {
     if (delta.updates) {
       delta.updates.forEach(update => {
-        var items = update.meta || update.values
+        if (update.meta) {
+           processIems(update, update.meta, true)
+         }
         if (update.values) {
-          processIems(update, update.values)
+          processIems(update, update.values, false)
         }
       }, this)
     }
@@ -73,6 +89,33 @@ StreamBundle.prototype.pushDelta = function(delta) {
     console.error(e)
   }
 }
+
+function addMetaDelta(that, contextPath, path, timestamp) {
+   if (!that.metaSent[contextPath]) {
+     that.metaSent[contextPath] = []
+   } else if (that.metaSent[contextPath].indexOf(path) !== -1) {
+     return
+   }
+   that.metaSent[contextPath].push(path)
+   let meta = getMetadata(contextPath + '.' + path)
+   if (meta) {
+     that.app.handleMessage('schema', {
+       context: contextPath,
+       updates: [
+         {
+           timestamp: timestamp,
+           values: [],
+           meta: [
+             {
+               path: path,
+               value: meta
+             }
+           ]
+         }
+       ]
+     })
+   }
+ }
 
 function getPathsFromObjectValue(objectValue) {
   return Object.keys(objectValue).reduce((acc, propName) => {
@@ -151,15 +194,7 @@ StreamBundle.prototype.getAvailablePaths = function() {
 }
 
 function toDelta(normalizedDeltaData) {
-  var parts = normalizedDeltaData.path.split('.')
-  let isMeta = parts[parts.length - 1] === 'meta'
-  var type = isMeta ? 'meta' : 'values'
-  var path
-  if (type === 'meta') {
-    path = parts.slice(0, parts.length - 1).join('.')
-  } else {
-    path = normalizedDeltaData.path
-  }
+  var type = normalizedDeltaData.isMeta ? 'meta' : 'values'
   let delta = {
     context: normalizedDeltaData.context,
     updates: [
@@ -169,14 +204,14 @@ function toDelta(normalizedDeltaData) {
         timestamp: normalizedDeltaData.timestamp,
         [type]: [
           {
-            path: path,
+            path: normalizedDeltaData.path,
             value: normalizedDeltaData.value
           }
         ]
       }
     ]
   }
-  if (isMeta) {
+  if (normalizedDeltaData.isMeta) {
     delta.updates[0].values = []
   }
   return delta
