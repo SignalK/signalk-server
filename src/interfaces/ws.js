@@ -169,6 +169,7 @@ module.exports = function(app) {
           }`
         )
 
+        spark.sendMetaDeltas = spark.query.metaDeltas !== 'none'
         spark.sentMetaData = {}
 
         let onChange = delta => {
@@ -177,7 +178,7 @@ module.exports = function(app) {
             delta
           )
           if (filtered) {
-            sendMetaData(spark, filtered)
+            sendMetaData(app, spark, filtered)
             spark.write(filtered)
             assertBufferSize(spark)
           }
@@ -505,8 +506,8 @@ function processUpdates(app, pathSources, spark, msg) {
   })
 }
 
-function sendMetaData(spark, delta) {
-  if ( delta.updates ) {
+function sendMetaData(app, spark, delta) {
+  if ( spark.sendMetaDeltas && delta.updates ) {
     delta.updates.forEach(update => {
       if ( update.values ) {
         update.values.forEach(kp => {
@@ -519,7 +520,6 @@ function sendMetaData(spark, delta) {
                 updates: [
                   {
                     timestamp: update.timestamp,
-                    values: [],
                     meta: [
                       {
                         path: kp.path,
@@ -557,7 +557,7 @@ function processSubscribe(app, unsubscribes, spark, assertBufferSize, msg) {
           message
         )
         if (filtered) {
-          sendMetaData(spark, filtered)
+          sendMetaData(app, spark, filtered)
           spark.write(filtered)
           assertBufferSize(spark)
         }
