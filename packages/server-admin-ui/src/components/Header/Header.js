@@ -23,6 +23,13 @@ class Header extends Component {
     }
   }
 
+  componentDidMount() {
+    window.addEventListener('sidebar:hide', () => {
+      document.body.classList.toggle('sidebar-hidden', true)
+      document.body.classList.toggle('sidebar-mobile-show', false)
+    })
+  }
+
   toggleDropdown () {
     this.setState({
       dropdownOpen: !this.state.dropdownOpen

@@ -128,6 +128,7 @@ export const buildFetchAction = (endpoint, type, prefix) => dispatch =>
 export const fetchLoginStatus = buildFetchAction('/loginStatus', 'RECEIVE_LOGIN_STATUS')
 export const fetchPlugins = buildFetchAction('/plugins', 'RECEIVE_PLUGIN_LIST')
 export const fetchWebapps = buildFetchAction('/webapps', 'RECEIVE_WEBAPPS_LIST')
+export const fetchAddons = buildFetchAction('/addons', 'RECEIVE_ADDONS_LIST')
 export const fetchApps = buildFetchAction('/appstore/available', 'RECEIVE_APPSTORE_LIST')
 export const fetchAccessRequests = buildFetchAction('/security/access/requests', 'ACCESS_REQUEST')
 export const fetchServerSpecification = buildFetchAction('/signalk', 'RECEIVE_SERVER_SPEC', '')
@@ -135,6 +136,7 @@ export const fetchServerSpecification = buildFetchAction('/signalk', 'RECEIVE_SE
 export function fetchAllData (dispatch) {
   fetchPlugins(dispatch)
   fetchWebapps(dispatch)
+  fetchAddons(dispatch)
   fetchApps(dispatch)
   fetchLoginStatus(dispatch)
   fetchServerSpecification(dispatch),

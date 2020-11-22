@@ -51,6 +51,41 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     )
   }
 
+  app.get('/admin/', (req, res) => {
+    fs.readFile(
+      path.join(
+        __dirname,
+        '/../node_modules/@signalk/server-admin-ui/public/index.html'
+      ),
+      (err, indexContent) => {
+        if (err) {
+          console.error(err)
+          res.status(500)
+          res.send('Could not handle admin ui root request')
+        }
+        res.type('html')
+        const addonScripts = _.uniq(
+          []
+            .concat(app.addons)
+            .concat(app.pluginconfigurators)
+            .concat(app.embeddablewebapps)
+        )
+        res.send(
+          indexContent.toString().replace(
+            /%ADDONSCRIPTS%/g,
+            addonScripts
+              .map(
+                moduleInfo =>
+                  `<script src="/${moduleInfo.name}/remoteEntry.js"></script>`
+              )
+              .join('\n')
+              .toString()
+          )
+        )
+      }
+    )
+  })
+
   app.use(
     '/admin',
     express.static(
@@ -59,7 +94,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   )
 
   app.get('/', (req, res) => {
-    res.redirect(app.config.settings.landingPage || '/admin')
+    res.redirect(app.config.settings.landingPage || '/admin/')
   })
 
   app.get('/@signalk/server-admin-ui', (req, res) => {
