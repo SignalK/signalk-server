@@ -2,6 +2,9 @@ const webpack = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
+const { ModuleFederationPlugin } = require('webpack').container;
+require('@signalk/server-admin-ui-dependencies')
+
 const path = require('path');
 
 module.exports = {
@@ -69,7 +72,14 @@ module.exports = {
       analyzerMode: 'disabled',
       generateStatsFile: true,
       statsOptions: { source: false }
-    })
+    }),
+    new ModuleFederationPlugin({
+      name: 'adminUI)',
+      filename: 'remoteEntry.js',
+      remotes: {
+      },
+      shared: [{ react: { singleton: true } }, 'react-dom'],
+    }),
   ],
   devtool: 'source-map'
 }

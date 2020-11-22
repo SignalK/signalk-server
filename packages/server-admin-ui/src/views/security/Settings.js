@@ -25,7 +25,7 @@ export function fetchSecurityConfig () {
   })
     .then(response => response.json())
     .then(data => {
-      this.setState(data)
+      this.setState({...data, hasData: true})
     })
 }
 
@@ -33,10 +33,7 @@ class Settings extends Component {
   constructor (props) {
     super(props)
     this.state = {
-      allow_readonly: false,
-      expiration: '',
-      allowNewUserRegistration: true,
-      allowDeviceAccessRequests: true
+      hasData: false
     }
 
     this.handleChange = this.handleChange.bind(this)
@@ -46,6 +43,12 @@ class Settings extends Component {
 
   componentDidMount () {
     if (this.props.loginStatus.authenticationRequired) {
+      this.fetchSecurityConfig()
+    }
+  }
+
+  componentDidUpdate (prevProps) {
+    if (this.props.loginStatus.authenticationRequired != prevProps.loginStatus.authenticationRequired) {
       this.fetchSecurityConfig()
     }
   }
@@ -86,7 +89,7 @@ class Settings extends Component {
         {this.props.loginStatus.authenticationRequired === false && (
           <EnableSecurity />
         )}
-        {this.props.loginStatus.authenticationRequired && (
+        {this.state.hasData && this.props.loginStatus.authenticationRequired && (
           <div>
             <Card>
               <CardHeader>
@@ -189,7 +192,7 @@ class Settings extends Component {
   }
 }
 
-const mapStateToProps = ({ securityConfig }) => ({ securityConfig })
+const mapStateToProps = ({ loginStatus }) => ({ loginStatus })
 
 export default connect(mapStateToProps)(Settings)
 

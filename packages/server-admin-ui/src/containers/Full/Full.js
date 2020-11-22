@@ -9,6 +9,7 @@ import Aside from '../../components/Aside/Aside'
 import Footer from '../../components/Footer/Footer'
 
 import Dashboard from '../../views/Dashboard/Dashboard'
+import Embedded from '../../views/Webapps/Embedded'
 import Webapps from '../../views/Webapps/Webapps'
 import DataBrowser from '../../views/DataBrowser'
 import Playground from '../../views/Playground'
@@ -42,13 +43,14 @@ class Full extends Component {
   }
 
   render () {
+    const suppressPadding = this.props.location.pathname.indexOf('/e/') === 0 ? {padding: '0px'} : {}
     return (
       <div className='app'>
         <Header />
         <div className='app-body'>
           <Sidebar {...this.props} />
           <main className='main'>
-            <Container fluid>
+            <Container fluid style={suppressPadding}>
               <Switch>
                 <Route
                   path='/dashboard'
@@ -59,6 +61,11 @@ class Full extends Component {
                   path='/webapps'
                   name='Webapps'
                   component={loginOrOriginal(Webapps, true)}
+                />
+                <Route
+                  path='/e/:moduleId'
+                  name='Embedded Webapps'
+                  component={loginOrOriginal(Embedded, true)}
                 />
                 <Route
                   path='/databrowser'
