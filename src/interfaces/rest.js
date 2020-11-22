@@ -54,12 +54,12 @@ module.exports = function(app) {
         }
         if (
           path.length > 5 &&
-          path[path.length - 1] === 'units' &&
           path[path.length - 2] === 'meta'
         ) {
-          let units = getUnits(path.slice(0, path.length - 2).join('.'))
-          if (units) {
-            res.json(units)
+          let meta = getMetadata(path.slice(0, path.length - 2).join('.'))
+          let value = meta && meta[path[path.length - 1]]
+          if (value) {
+            res.json(value)
             return
           }
         }
