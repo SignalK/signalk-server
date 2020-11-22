@@ -181,7 +181,7 @@ describe('Subscriptions', _ => {
     return serverP
       .then(_ => {
         wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?subscribe=self'
+          'ws://localhost:' + port + '/signalk/v1/stream?subscribe=self&metaDeltas=none'
         )
         return wsPromiser.nextMsg()
       })
@@ -222,7 +222,7 @@ describe('Subscriptions', _ => {
     return serverP
       .then(_ => {
         wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream'
+          'ws://localhost:' + port + '/signalk/v1/stream?metaDeltas=none'
         )
         return wsPromiser.nextMsg()
       })
@@ -240,6 +240,7 @@ describe('Subscriptions', _ => {
         ])
       })
       .then(results => {
+        console.log(results)
         assert(JSON.parse(results[0]).updates[0].source.pgn === 128275)
 
         return Promise.all([
@@ -258,7 +259,7 @@ describe('Subscriptions', _ => {
     return serverP
       .then(_ => {
         wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?subscribe=all'
+          'ws://localhost:' + port + '/signalk/v1/stream?subscribe=all&metaDeltas=none'
         )
         return wsPromiser.nextMsg()
       })
@@ -297,7 +298,7 @@ describe('Subscriptions', _ => {
     return serverP
       .then(_ => {
         wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?subscribe=none'
+          'ws://localhost:' + port + '/signalk/v1/stream?subscribe=none&metaDeltas=none'
         )
         return wsPromiser.nextMsg()
       })
@@ -464,7 +465,7 @@ describe('Subscriptions', _ => {
     return serverP
       .then(_ => {
         wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?subsribe=none'
+          'ws://localhost:' + port + '/signalk/v1/stream?subsribe=none&metaDeltas=none'
         )
         return wsPromiser.nextMsg()
       })

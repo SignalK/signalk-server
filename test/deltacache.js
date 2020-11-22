@@ -82,51 +82,12 @@ const expectedOrder = [
       'vessels.urn:mrn:signalk:uuid:2204ae24-c944-5ffe-8d1d-4d411c9cea2e',
     updates: [
       {
-        $source: 'schema',
-        timestamp: '2014-05-03T09:14:11.097Z',
-        meta: [
-          {
-            path: 'navigation.speedOverGround',
-            value: {
-              units: 'm/s',
-              description:
-                "Vessel speed over ground. If converting from AIS 'HIGH' value, set to 102.2 (Ais max value) and add warning in notifications"
-            }
-          }
-        ]
-      }
-    ]
-  },
-  {
-    context:
-      'vessels.urn:mrn:signalk:uuid:2204ae24-c944-5ffe-8d1d-4d411c9cea2e',
-    updates: [
-      {
         $source: 'deltaFromHttp',
         timestamp: '2014-05-03T09:14:11.097Z',
         values: [
           {
             path: 'navigation.speedOverGround',
             value: 3.85
-          }
-        ]
-      }
-    ]
-  },
-  {
-    context:
-      'vessels.urn:mrn:signalk:uuid:2204ae24-c944-5ffe-8d1d-4d411c9cea2e',
-    updates: [
-      {
-        $source: 'schema',
-        timestamp: '2014-05-03T09:14:11.098Z',
-        meta: [
-          {
-            path: 'navigation.courseOverGroundTrue',
-            value: {
-              units: 'rad',
-              description: 'Course over ground (true)'
-            }
           }
         ]
       }
@@ -158,26 +119,6 @@ const expectedOrder = [
           {
             "path": "imaginary.path",
             "value": 17404540
-          }
-        ]
-      }
-    ]
-  },
-  {
-    context:
-      'vessels.urn:mrn:signalk:uuid:2204ae24-c944-5ffe-8d1d-4d411c9cea2e',
-    updates: [
-      {
-        $source: 'schema',
-        timestamp: '2014-05-03T09:14:11.100Z',
-        meta: [
-          {
-            path: 'navigation.trip.log',
-            value: {
-              units: 'm',
-              description:
-                'Total distance traveled on this trip / since trip reset'
-            }
           }
         ]
       }
@@ -294,8 +235,7 @@ describe('deltacache', () => {
         fullTree.should.be.validSignalK
         fullTree.sources.should.deep.equal({
           defaults: {},
-          deltaFromHttp: {},
-          schema: {}
+          deltaFromHttp: {}
         })
       })
     })
