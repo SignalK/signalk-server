@@ -16,17 +16,23 @@
 
 import Debug from 'debug'
 const debug = Debug('signalk-server:deltacache')
+import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import _, { isUndefined } from 'lodash'
-import { getSourceId, FullSignalK } from '@signalk/signalk-schema'
 import { toDelta } from './streambundle'
-import { Context, Delta, NormalizedDelta, SignalKServer, SourceRef, StreamBundle } from './types'
+import {
+  Context,
+  Delta,
+  NormalizedDelta,
+  SignalKServer,
+  SourceRef,
+  StreamBundle
+} from './types'
 
 interface StringKeyed {
   [key: string]: any
 }
 
-
-type ContextFilter = (_: { context: Context}) => boolean
+type ContextFilter = (_: { context: Context }) => boolean
 
 class DeltaCache {
   cache: StringKeyed = {}
@@ -45,9 +51,9 @@ class DeltaCache {
   onValue(msg: NormalizedDelta) {
     // debug(`onValue ${JSON.stringify(msg)}`)
 
-    if ( msg.isMeta ) {
-      //ignore meta data since it's getting managed by FullSignalK
-      return 
+    if (msg.isMeta) {
+      // ignore meta data since it's getting managed by FullSignalK
+      return
     }
 
     const sourceRef = ensureHasDollarSource(msg)
@@ -129,10 +135,7 @@ class DeltaCache {
     deltas: Delta[] | undefined,
     includeSources: boolean
   ) {
-    const signalk = new FullSignalK(
-      this.app.selfId,
-      this.app.selfType
-    )
+    const signalk = new FullSignalK(this.app.selfId, this.app.selfType)
 
     const addDelta = signalk.addDelta.bind(signalk)
 
@@ -155,7 +158,7 @@ class DeltaCache {
     _.keys(this.cache).forEach(type => {
       _.keys(this.cache[type]).forEach(id => {
         const context = `${type}.${id}`
-        if (contextFilter({ context: context })) {
+        if (contextFilter({ context })) {
           contexts.push(this.cache[type][id])
         }
       })

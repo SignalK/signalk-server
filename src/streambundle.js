@@ -70,8 +70,8 @@ StreamBundle.prototype.pushDelta = function(delta) {
     if (delta.updates) {
       delta.updates.forEach(update => {
         if (update.meta) {
-           processIems(update, update.meta, true)
-         }
+          processIems(update, update.meta, true)
+        }
         if (update.values) {
           processIems(update, update.values, false)
         }

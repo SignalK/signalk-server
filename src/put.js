@@ -63,25 +63,26 @@ module.exports = {
     })
 
     putMetaHandler = (context, path, value, cb) => {
-
       let parts = path.split('.')
       let metaPath = path
       let metaValue = value
 
-      if ( parts[parts.length-1] !== 'meta' ) {
-        let name = parts[parts.length-1]
-        metaPath = parts.slice(0, parts.length-2).join('.')
-        
-        metaValue = {...app.config.baseDeltaEditor.getMeta(context, metaPath),
-                     [name]: value}
+      if (parts[parts.length - 1] !== 'meta') {
+        let name = parts[parts.length - 1]
+        metaPath = parts.slice(0, parts.length - 2).join('.')
+
+        metaValue = {
+          ...app.config.baseDeltaEditor.getMeta(context, metaPath),
+          [name]: value
+        }
       } else {
-        metaPath = parts.slice(0, parts.length-1).join('.')
+        metaPath = parts.slice(0, parts.length - 1).join('.')
       }
-        
+
       app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
       skConfig.sendBaseDeltas(app)
 
-      if ( app.config.hasOldDefaults ) {
+      if (app.config.hasOldDefaults) {
         let data
 
         try {
@@ -98,7 +99,7 @@ module.exports = {
 
         const pathWithContext = context + '.' + path
         _.set(data, pathWithContext, value)
-        
+
         skConfig.writeDefaultsFile(app, data, err => {
           if (err) {
             cb({ state: 'FAILURE', message: 'Unable to save to defaults file' })
@@ -107,9 +108,11 @@ module.exports = {
           }
         })
       } else {
-        skConfig.writeBaseDeltasFile(app, app.config.baseDeltas).then(() => {
-          cb({ state: 'SUCCESS' })
-        })
+        skConfig
+          .writeBaseDeltasFile(app, app.config.baseDeltas)
+          .then(() => {
+            cb({ state: 'SUCCESS' })
+          })
           .catch(err => {
             cb({ state: 'FAILURE', message: 'Unable to save to defaults file' })
           })

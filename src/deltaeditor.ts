@@ -23,37 +23,37 @@ const SELF_VESSEL = 'vessels.self'
 
 class DeltaEditor {
   deltas: any[]
-  
+
   constructor() {
     this.deltas = []
   }
 
   load(filename: string) {
-    let data = fs.readFileSync(filename, 'utf8')
-    let deltas = JSON.parse(data)
+    const data = fs.readFileSync(filename, 'utf8')
+    const deltas = JSON.parse(data)
 
-    if (!_.isArray(deltas))  {
+    if (!_.isArray(deltas)) {
       throw new Error(`${filename} should contain an array of deltas`)
     }
     this.deltas = deltas
   }
-  
+
   saveSync(filename: string) {
     fs.writeFileSync(filename, JSON.stringify(this.deltas, null, 2))
   }
 
-  save(filename: string) : Promise<any> {
+  save(filename: string): Promise<any> {
     return fs.promises.writeFile(filename, JSON.stringify(this.deltas, null, 2))
   }
 
   setValue(context: string, path: string, value: any) {
-    if ( _.isUndefined(value) ) {
+    if (_.isUndefined(value)) {
       return this.removeValue(context, path)
     }
-    
-    if ( path.indexOf('.') === -1 ) {
-      let deltaInfo = getDelta(this.deltas, context, '', VALUES)
-      let newVal = deltaInfo && deltaInfo.kp ? deltaInfo.kp.value : {}
+
+    if (path.indexOf('.') === -1) {
+      const deltaInfo = getDelta(this.deltas, context, '', VALUES)
+      const newVal = deltaInfo && deltaInfo.kp ? deltaInfo.kp.value : {}
       newVal[path] = value
       return setDelta(this.deltas, context, '', newVal, VALUES)
     } else {
@@ -70,11 +70,11 @@ class DeltaEditor {
   }
 
   getValue(context: string, path: string) {
-    if ( path.indexOf('.') === -1 ) {
-      let deltaInfo = getDelta(this.deltas, context, '', VALUES)
+    if (path.indexOf('.') === -1) {
+      const deltaInfo = getDelta(this.deltas, context, '', VALUES)
       return deltaInfo && deltaInfo.kp && deltaInfo.kp.value[path]
     } else {
-      let deltaInfo = getDelta(this.deltas, context, path, VALUES)
+      const deltaInfo = getDelta(this.deltas, context, path, VALUES)
       return deltaInfo && deltaInfo.kp && deltaInfo.kp.value
     }
   }
@@ -84,25 +84,25 @@ class DeltaEditor {
   }
 
   getMeta(context: string, path: string) {
-    let deltaInfo = getDelta(this.deltas, context, path, META)
+    const deltaInfo = getDelta(this.deltas, context, path, META)
     return deltaInfo && deltaInfo.kp && deltaInfo.kp.value
   }
 
   removeValue(context: string, path: string) {
-    if ( path.indexOf('.') === -1 ) {
-      let deltaInfo = getDelta(this.deltas, context, '', VALUES)
-      if ( deltaInfo && deltaInfo.kp  ) {
+    if (path.indexOf('.') === -1) {
+      const deltaInfo = getDelta(this.deltas, context, '', VALUES)
+      if (deltaInfo && deltaInfo.kp) {
         delete deltaInfo.kp.value[path]
-        
-        if ( _.keys(deltaInfo.kp.value).length === 0 ) {
+
+        if (_.keys(deltaInfo.kp.value).length === 0) {
           _.pull(this.deltas, deltaInfo.delta)
         }
       }
     } else {
-      let deltaInfo = getDelta(this.deltas, context, path, VALUES)
-      if ( deltaInfo && deltaInfo.kp ) {
+      const deltaInfo = getDelta(this.deltas, context, path, VALUES)
+      if (deltaInfo && deltaInfo.kp) {
         _.pull(deltaInfo.delta.updates[0].values, deltaInfo.kp)
-        if ( deltaInfo.delta.updates[0].values.length == 0 ) {
+        if (deltaInfo.delta.updates[0].values.length == 0) {
           _.pull(this.deltas, deltaInfo.delta)
         }
       }
@@ -114,26 +114,32 @@ class DeltaEditor {
   }
 
   removeMeta(context: string, path: string) {
-    let deltaInfo = getDelta(this.deltas, context, path, META)
-    if ( deltaInfo && deltaInfo.kp ) {
+    const deltaInfo = getDelta(this.deltas, context, path, META)
+    if (deltaInfo && deltaInfo.kp) {
       _.pull(deltaInfo.delta.updates[0].meta, deltaInfo.kp)
-      if ( deltaInfo.delta.updates[0].meta.length == 0 ) {
+      if (deltaInfo.delta.updates[0].meta.length == 0) {
         _.pull(this.deltas, deltaInfo.delta)
       }
     }
   }
 }
 
-function setDelta(deltas: any[], context: string, path: string, value: any, type: string) {
-  let deltaInfo = getDelta(deltas, context, path, type)
-  if ( deltaInfo && deltaInfo.kp ) {
+function setDelta(
+  deltas: any[],
+  context: string,
+  path: string,
+  value: any,
+  type: string
+) {
+  const deltaInfo = getDelta(deltas, context, path, type)
+  if (deltaInfo && deltaInfo.kp) {
     deltaInfo.kp.value = value
     return deltaInfo.delta
-  } else if ( deltaInfo ) {
-    deltaInfo.delta.updates[0][type].push({path, value})
+  } else if (deltaInfo) {
+    deltaInfo.delta.updates[0][type].push({ path, value })
     return deltaInfo.delta
   } else {
-    let delta = {
+    const delta = {
       context,
       updates: [
         {
@@ -151,15 +157,20 @@ function setDelta(deltas: any[], context: string, path: string, value: any, type
   }
 }
 
-function getDelta(deltas: any[], context: string, path: string, type: string) : any {
-  for ( let i = 0; i < deltas.length; i++ ) {
-    let delta = deltas[i]
-    if ( delta.updates && delta.context == context ) {
-      for ( let j = 0; j < delta.updates.length; j++ ) {
-        let update = delta.updates[j]
-        if ( update[type] ) {
-          let foundKp = update[type].find((kp: any) => kp.path == path)
-          return { delta, kp: foundKp}
+function getDelta(
+  deltas: any[],
+  context: string,
+  path: string,
+  type: string
+): any {
+  for (let i = 0; i < deltas.length; i++) {
+    const delta = deltas[i]
+    if (delta.updates && delta.context == context) {
+      for (let j = 0; j < delta.updates.length; j++) {
+        const update = delta.updates[j]
+        if (update[type]) {
+          const foundKp = update[type].find((kp: any) => kp.path == path)
+          return { delta, kp: foundKp }
         }
       }
     }

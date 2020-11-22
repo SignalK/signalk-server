@@ -67,7 +67,7 @@ function load(app) {
       let defaults = getFullDefaults(app)
       if (defaults) {
         convertOldDefaultsToDeltas(app.config.baseDeltaEditor, defaults)
-        if ( app.config.settings.useBaseDeltas ) {
+        if (app.config.settings.useBaseDeltas) {
           writeBaseDeltasFileSync(app)
         } else {
           app.config.hasOldDefaults = true
@@ -419,7 +419,7 @@ function convertOldDefaultsToDeltas(deltaEditor, defaults) {
         deltaEditor.setSelfValue(key, value)
       }
     })
-    if ( self.communication ) {
+    if (self.communication) {
       deltaEditor.setSelfValue('communication', self.communication)
     }
   }
