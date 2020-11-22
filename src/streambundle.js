@@ -176,9 +176,6 @@ function toDelta(normalizedDeltaData) {
       }
     ]
   }
-  if (normalizedDeltaData.isMeta) {
-    delta.updates[0].values = []
-  }
   return delta
 }
 
