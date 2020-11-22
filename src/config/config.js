@@ -306,7 +306,7 @@ function setSelfSettings(app) {
     throw new Error(`invalid uuid: ${uuid}`)
   }
 
-  if (_.isUndefined(mmsi) && _.isUndefined(uuid)) {
+  if (mmsi === null && uuid === null) {
     uuid = 'urn:mrn:signalk:uuid:' + uuidv4()
     app.config.baseDeltaEditor.setSelfValue('uuid', uuid)
   }
