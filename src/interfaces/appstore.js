@@ -153,8 +153,12 @@ module.exports = function(app) {
   function findPluginsAndWebapps() {
     return Promise.all([
       findModulesWithKeyword('signalk-node-server-plugin'),
+      findModulesWithKeyword('signalk-embeddable-webapp'),
       findModulesWithKeyword('signalk-webapp')
-    ])
+    ]).then(([plugins, embeddableWebapps, webapps]) => {
+      const allWebapps = [].concat(embeddableWebapps).concat(webapps)
+      return [plugins, _.uniqBy(allWebapps, 'name')]
+    })
   }
 
   function getPlugin(id) {
@@ -240,7 +244,8 @@ module.exports = function(app) {
         isPlugin: plugin.package.keywords.some(
           v => v === 'signalk-node-server-plugin'
         ),
-        isWebapp: plugin.package.keywords.some(v => v === 'signalk-webapp')
+        isWebapp: plugin.package.keywords.some(v => v === 'signalk-webapp'),
+        isEmbeddableWebapp: plugin.package.keywords.some(v => v === 'signalk-embeddable-webapp')
       }
 
       const installedModule = existing(name)

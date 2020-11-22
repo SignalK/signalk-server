@@ -70,6 +70,7 @@ function mainIcon (app) {
   return (
     <span>
       {app.isWebapp && <i className='icon-grid bg-primary' title="webapp" />}
+      {app.isEmbeddableWebapp && <i className='icon-puzzle bg-primary' title="embeddable webapp" />}
       {app.isPlugin && <i className='icon-settings bg-success' title="plugin" />}
     </span>
   )
