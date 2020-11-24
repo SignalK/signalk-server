@@ -132,7 +132,7 @@ class DataBrowser extends Component {
       })
       
       if ( isNew || (this.state.context && this.state.context === key) ) {
-        this.setState({...this.state, hasData:true, data: this.state.data })
+        this.setState({...this.state, hasData:true, data: this.state.data, meta: this.state.meta  })
       }
     }
   }
