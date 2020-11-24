@@ -581,6 +581,7 @@ function processUnsubscribe(app, unsubscribes, msg, onChange, spark) {
     } else {
       app.subscriptionmanager.unsubscribe(msg, unsubscribes)
       app.signalk.removeListener('delta', onChange)
+      spark.sentMetaData = {}
     }
   } catch (e) {
     console.log(e.message)
