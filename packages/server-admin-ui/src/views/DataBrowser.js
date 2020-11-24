@@ -33,7 +33,7 @@ function fetchSources () {
     credentials: 'include'
   })
     .then(response => response.json())
-    .then(soures => {
+    .then(sources => {
       Object.values(sources).forEach(source => {
         if ( source.type === "NMEA2000" ) {
           Object.keys(source).forEach(key => {
@@ -204,6 +204,7 @@ class DataBrowser extends Component {
     if ( this.state.pause ) {
       this.unsubscribeToData()
     } else {
+      this.fetchSources()
       this.subscribeToDataIfNeeded()
     }
   }
