@@ -106,6 +106,7 @@ module.exports = {
       __dirname,
       'server-test-config'
     )
+    process.env.SIGNALK_DISABLE_SERVER_UPDATES = "true"
     
     const server = new Server(props)
     return new Promise((resolve, reject) => {

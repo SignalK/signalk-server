@@ -63,17 +63,60 @@ module.exports = {
     })
 
     putMetaHandler = (context, path, value, cb) => {
-      const pathWithContext = context + '.' + path
-      _.set(app.config.defaults, pathWithContext, value)
-      _.set(app.deltaCache.defaults, pathWithContext, value)
+      let parts = path.split('.')
+      let metaPath = path
+      let metaValue = value
 
-      skConfig.writeDefaultsFile(app, app.config.defaults, err => {
-        if (err) {
-          cb({ state: 'FAILURE', message: 'Unable to save to defaults file' })
-        } else {
-          cb({ state: 'SUCCESS' })
+      if (parts[parts.length - 1] !== 'meta') {
+        let name = parts[parts.length - 1]
+        metaPath = parts.slice(0, parts.length - 2).join('.')
+
+        metaValue = {
+          ...app.config.baseDeltaEditor.getMeta(context, metaPath),
+          [name]: value
         }
-      })
+      } else {
+        metaPath = parts.slice(0, parts.length - 1).join('.')
+      }
+
+      app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
+      skConfig.sendBaseDeltas(app)
+
+      if (app.config.hasOldDefaults) {
+        let data
+
+        try {
+          data = skConfig.readDefaultsFile(app)
+        } catch (e) {
+          if (e.code && e.code === 'ENOENT') {
+            data = {}
+          } else {
+            console.error(e)
+            cb({ state: 'FAILURE', message: 'Unable to read defaults file' })
+            return
+          }
+        }
+
+        const pathWithContext = context + '.' + path
+        _.set(data, pathWithContext, value)
+
+        skConfig.writeDefaultsFile(app, data, err => {
+          if (err) {
+            cb({ state: 'FAILURE', message: 'Unable to save to defaults file' })
+          } else {
+            cb({ state: 'SUCCESS' })
+          }
+        })
+      } else {
+        skConfig
+          .writeBaseDeltasFile(app, app.config.baseDeltas)
+          .then(() => {
+            cb({ state: 'SUCCESS' })
+          })
+          .catch(err => {
+            cb({ state: 'FAILURE', message: 'Unable to save to defaults file' })
+          })
+      }
 
       return { state: 'PENDING' }
     }

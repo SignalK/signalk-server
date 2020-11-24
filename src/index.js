@@ -44,6 +44,7 @@ const {
   saveSecurityConfig
 } = require('./security.js')
 const { startDeltaStatistics, incDeltaStatistics } = require('./deltastats')
+const config = require('./config/config')
 
 function Server(opts) {
   const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
@@ -58,7 +59,7 @@ function Server(opts) {
   _.merge(app, opts)
 
   app.logging = require('./logging')(app)
-  require('./config/config').load(app)
+  config.load(app)
   app.version = '0.0.1'
 
   startSecurity(app, opts ? opts.securityConfig : null)
@@ -66,11 +67,7 @@ function Server(opts) {
   require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
   require('./put').start(app)
 
-  app.signalk = new FullSignalK(
-    app.selfId,
-    app.selfType,
-    JSON.parse(JSON.stringify(app.config.defaults))
-  )
+  app.signalk = new FullSignalK(app.selfId, app.selfType)
 
   const deltachain = new DeltaChain(app.signalk.addDelta.bind(app.signalk))
   app.registerDeltaInputHandler = deltachain.register
@@ -214,12 +211,12 @@ function Server(opts) {
       try {
         deltachain.process(toPreferredDelta(data, now, app.selfContext))
       } catch (err) {
-        console.error(err.message)
+        console.error(err)
       }
     }
   }
 
-  app.streambundle = new StreamBundle(app.selfId)
+  app.streambundle = new StreamBundle(app, app.selfId)
   app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
   app.subscriptionmanager = new SubscriptionManager(app)
   app.deltaCache = new DeltaCache(app, app.streambundle)
@@ -356,6 +353,8 @@ Server.prototype.start = function() {
       startInterfaces(app)
       startMdns(app)
       app.providers = require('./pipedproviders')(app).start()
+
+      config.sendBaseDeltas(app)
 
       const primaryPort = getPrimaryPort(app)
       debug(`primary port:${primaryPort}`)

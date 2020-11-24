@@ -511,47 +511,30 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   })
 
   app.get(`${SERVERROUTESPREFIX}/vessel`, (req, res, next) => {
-    let defaults
-
-    try {
-      defaults = skConfig.readDefaultsFile(app)
-    } catch (e) {
-      defaults = {
-        vessels: {
-          self: {}
-        }
-      }
-    }
-    const self = defaults.vessels.self
-
+    const de = app.config.baseDeltaEditor
+    const communication = de.getSelfValue('communication')
+    const draft = de.getSelfValue('design.draft')
+    const length = de.getSelfValue('design.length')
+    const type = de.getSelfValue('design.aisShipType')
     const json = {
-      name: self.name,
-      mmsi: self.mmsi,
-      uuid: self.uuid,
-      draft: _.get(self, 'design.draft.value.maximum'),
-      length: _.get(self, 'design.length.value.overall'),
-      beam: _.get(self, 'design.beam.value'),
-      height: _.get(self, 'design.airHeight.value'),
-      gpsFromBow: _.get(self, 'sensors.gps.fromBow.value'),
-      gpsFromCenter: _.get(self, 'sensors.gps.fromCenter.value'),
-      aisShipType: _.get(self, 'design.aisShipType.value.id'),
-      callsignVhf: _.get(self, 'communication.callsignVhf')
-    }
-
-    if (app.config.settings.vessel) {
-      if (!json.name) {
-        json.name = app.config.settings.vessel.name
-      }
-      if (!json.uuid && !json.mmsi) {
-        json.mmsi = app.config.settings.vessel.mmsi
-        json.uuid = app.config.settings.vessel.uuid
-      }
+      name: app.config.vesselName,
+      mmsi: app.config.vesselMMSI,
+      uuid: app.config.vesselUUID,
+      draft: draft && draft.maximum,
+      length: length && length.overall,
+      beam: de.getSelfValue('design.beam'),
+      height: de.getSelfValue('design.airHeight'),
+      gpsFromBow: de.getSelfValue('sensors.gps.fromBow'),
+      gpsFromCenter: de.getSelfValue('sensors.gps.fromCenter'),
+      aisShipType: type && type.id,
+      callsignVhf: communication && communication.callsignVhf
     }
 
     res.json(json)
   })
 
-  app.put(`${SERVERROUTESPREFIX}/vessel`, (req, res, next) => {
+  function writeOldDefaults(req, res) {
+    let self
     let data
 
     try {
@@ -565,7 +548,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       }
     }
 
-    let self = _.get(data, 'vessels.self')
+    self = _.get(data, 'vessels.self')
 
     if (_.isUndefined(self)) {
       self = _.set(data, 'vessels.self', {})
@@ -573,11 +556,8 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
     const newVessel = req.body
 
-    const current = app.config.defaults
-
     function set(skPath, value) {
       _.set(data.vessels.self, skPath, value)
-      _.set(current, skPath, value)
     }
 
     if (newVessel.name) {
@@ -586,7 +566,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     if (newVessel.mmsi) {
       set('mmsi', newVessel.mmsi)
     }
-    if (newVessel.uuid && !self.mmmsi) {
+    if (newVessel.uuid && !self.mmsi) {
       set('uuid', newVessel.uuid)
     } else {
       delete self.uuid
@@ -619,11 +599,6 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       set('communication.callsignVhf', newVessel.callsignVhf)
     }
 
-    app.emit('serverevent', {
-      type: 'VESSEL_INFO',
-      data: data.vessels.self
-    })
-
     skConfig.writeDefaultsFile(app, data, err => {
       if (err) {
         res.status(500).send('Unable to save to defaults file')
@@ -631,6 +606,79 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
         res.send('Vessel changed')
       }
     })
+  }
+
+  app.put(`${SERVERROUTESPREFIX}/vessel`, (req, res, next) => {
+    const de = app.config.baseDeltaEditor
+    let vessel = req.body
+
+    de.setSelfValue('name', vessel.name)
+    app.config.vesselName = vessel.name
+    de.setSelfValue('mmsi', vessel.mmsi)
+    app.config.vesselMMSI = vessel.mmsi
+    if (vessel.uuid && !vessel.mmsi) {
+      de.setSelfValue('uuid', vessel.uuid)
+      app.config.vesselUUID = vessel.uuid
+    } else {
+      de.removeSelfValue('uuid')
+      delete app.config.vesselUUID
+    }
+
+    function makeNumber(num) {
+      return !_.isUndefined(num) && Number(num)
+    }
+
+    de.setSelfValue(
+      'design.draft',
+      !_.isUndefined(vessel.draft) ? { maximum: Number(vessel.draft) } : null
+    )
+    de.setSelfValue(
+      'design.length',
+      !_.isUndefined(vessel.length) ? { overall: Number(vessel.length) } : null
+    )
+    de.setSelfValue('design.beam', makeNumber(vessel.beam))
+    de.setSelfValue('design.airHeight', makeNumber(vessel.height))
+    de.setSelfValue('sensors.gps.fromBow', makeNumber(vessel.gpsFromBow))
+    de.setSelfValue('sensors.gps.fromCenter', makeNumber(vessel.gpsFromCenter))
+    de.setSelfValue(
+      'design.aisShipType',
+      !_.isUndefined(vessel.aisShipType)
+        ? {
+            name: getAISShipTypeName(vessel.aisShipType),
+            id: Number(vessel.aisShipType)
+          }
+        : null
+    )
+    de.setSelfValue(
+      'communication',
+      !_.isUndefined(vessel.callsignVhf)
+        ? { callsignVhf: vessel.callsignVhf }
+        : null
+    )
+
+    app.emit('serverevent', {
+      type: 'VESSEL_INFO',
+      data: {
+        name: app.config.vesselName,
+        mmsi: app.config.vesselMMSI,
+        uuid: app.config.vesselUUID
+      }
+    })
+
+    skConfig.sendBaseDeltas(app)
+
+    if (app.config.hasOldDefaults) {
+      writeOldDefaults(req, res)
+    } else {
+      skConfig
+        .writeBaseDeltasFile(app)
+        .then(() => {
+          res.send('Vessel changed')
+        })
+        .catch(err => {
+          res.status(500).send('Unable to save to defaults file')
+        })
+    }
   })
 
   app.get(`${SERVERROUTESPREFIX}/availablePaths`, (req, res, next) => {

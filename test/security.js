@@ -97,7 +97,9 @@ describe('Security', () => {
     port = await freeport()
     url = `http://0.0.0.0:${port}`
     
-    server = await startServerP(port, true, {}, securityConfig)
+    server = await startServerP(port, true, {
+      disableSchemaMetaDeltas: true
+    }, securityConfig)
 
     readToken = await getReadOnlyToken(server)
     writeToken = await getWriteToken(server)
@@ -190,13 +192,13 @@ describe('Security', () => {
 
   it('websockets acls work', async function () {
     const readPromiser = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=all&token=${readToken}`
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=all&metaDeltas=none&token=${readToken}`
     )
     let msg = await readPromiser.nextMsg()
     JSON.parse(msg)
 
     const writePromiser = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none&token=${writeToken}`
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none&metaDeltas=none&token=${writeToken}`
     )
     msg = await writePromiser.nextMsg()
     JSON.parse(msg)
@@ -211,6 +213,7 @@ describe('Security', () => {
     const succeedingResult = await succeedingReadPromise
     succeedingResult.should.not.equal('timeout')
 
+    console.log(succeedingResult)
     const d = JSON.parse(succeedingResult)
     d.updates.length.should.equal(1)
     d.updates[0].values.length.should.equal(1)

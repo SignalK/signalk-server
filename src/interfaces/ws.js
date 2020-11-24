@@ -17,7 +17,7 @@ const flatMap = require('flatmap')
 const _ = require('lodash')
 const ports = require('../ports')
 const cookie = require('cookie')
-const { getSourceId } = require('@signalk/signalk-schema')
+const { getSourceId, getMetadata } = require('@signalk/signalk-schema')
 const { requestAccess, InvalidTokenError } = require('../security')
 const {
   findRequest,
@@ -169,12 +169,16 @@ module.exports = function(app) {
           }`
         )
 
+        spark.sendMetaDeltas = spark.query.metaDeltas !== 'none'
+        spark.sentMetaData = {}
+
         let onChange = delta => {
           const filtered = app.securityStrategy.filterReadDelta(
             spark.request.skPrincipal,
             delta
           )
           if (filtered) {
+            sendMetaData(app, spark, filtered)
             spark.write(filtered)
             assertBufferSize(spark)
           }
@@ -296,7 +300,7 @@ module.exports = function(app) {
       })
     )
   }
-
+  
   function processReuestQuery(spark, msg) {
     queryRequest(msg.requestId)
       .then(reply => {
@@ -502,6 +506,37 @@ function processUpdates(app, pathSources, spark, msg) {
   })
 }
 
+function sendMetaData(app, spark, delta) {
+  if ( spark.sendMetaDeltas && delta.updates ) {
+    delta.updates.forEach(update => {
+      if ( update.values ) {
+        update.values.forEach(kp => {
+          if ( !spark.sentMetaData[kp.path] ) {
+            spark.sentMetaData[kp.path] = true
+            let meta = getMetadata(delta.context + '.' + kp.path)
+            if (meta) {
+              spark.write({
+                context: delta.context,
+                updates: [
+                  {
+                    timestamp: update.timestamp,
+                    meta: [
+                      {
+                        path: kp.path,
+                        value: meta
+                      }
+                    ]
+                  }
+                ]
+              })
+            }
+          }
+        })
+      }
+    })
+  }
+}
+
 function processSubscribe(app, unsubscribes, spark, assertBufferSize, msg) {
   if (
     Array.isArray(msg.subscribe) &&
@@ -522,6 +557,7 @@ function processSubscribe(app, unsubscribes, spark, assertBufferSize, msg) {
           message
         )
         if (filtered) {
+          sendMetaData(app, spark, filtered)
           spark.write(filtered)
           assertBufferSize(spark)
         }
@@ -651,13 +687,14 @@ function startServerEvents(app, spark) {
     app.removeListener('serverevent', onServerEvent)
   })
   try {
-    const vesselInfo = _.get(skConfig.readDefaultsFile(app), 'vessels.self')
-    if (vesselInfo) {
-      spark.write({
-        type: 'VESSEL_INFO',
-        data: vesselInfo
-      })
-    }
+    spark.write({
+      type: 'VESSEL_INFO',
+      data: {
+        name: app.config.vesselName,
+        mmsi: app.config.vesselMMSI,
+        uuid: app.config.vesselUUID
+      }
+    })
   } catch (e) {
     if (e.code !== 'ENOENT') {
       console.error(e)

@@ -22,6 +22,7 @@ const _ = require('lodash')
 const fs = require('fs')
 const { v4: uuidv4 } = require('uuid')
 const semver = require('semver')
+const DeltaEditor = require('../deltaeditor')
 
 let disableWriteSettings = false
 
@@ -53,15 +54,26 @@ function load(app) {
   }
 
   setConfigDirectory(app)
+  app.config.baseDeltaEditor = new DeltaEditor()
   if (_.isObject(app.config.settings)) {
     debug('Using settings from constructor call, not reading defaults')
     disableWriteSettings = true
-    if (!config.defaults) {
-      config.defaults = {}
+    if (config.defaults) {
+      convertOldDefaultsToDeltas(app.config.baseDeltaEditor, config.defaults)
     }
   } else {
     readSettingsFile(app)
-    setFullDefaults(app)
+    if (!setBaseDeltas(app)) {
+      let defaults = getFullDefaults(app)
+      if (defaults) {
+        convertOldDefaultsToDeltas(app.config.baseDeltaEditor, defaults)
+        if (app.config.settings.useBaseDeltas) {
+          writeBaseDeltasFileSync(app)
+        } else {
+          app.config.hasOldDefaults = true
+        }
+      }
+    }
   }
   setSelfSettings(app)
 
@@ -214,56 +226,77 @@ function getDefaultsPath(app) {
   return path.join(app.config.configPath, defaultsFile)
 }
 
+function getBaseDeltasPath(app) {
+  const defaultsFile =
+    app.config.configPath !== app.config.appPath
+      ? 'baseDeltas.json'
+      : 'settings/baseDeltas.json'
+  return path.join(app.config.configPath, defaultsFile)
+}
+
 function readDefaultsFile(app) {
   const defaultsPath = getDefaultsPath(app)
-  // return require(defaultsPath)
   const data = fs.readFileSync(defaultsPath)
   return JSON.parse(data)
 }
 
-function setFullDefaults(app) {
+function getFullDefaults(app) {
   const defaultsPath = getDefaultsPath(app)
   try {
-    app.config.defaults = readDefaultsFile(app)
+    let defaults = readDefaultsFile(app)
     debug(`Found defaults at ${defaultsPath.toString()}`)
+    return defaults
   } catch (e) {
     if (e.code && e.code === 'ENOENT') {
-      debug(`No defaults found at ${defaultsPath.toString()}`)
+      return undefined
     } else {
       console.error(`unable to parse ${defaultsPath.toString()}`)
       console.error(e)
       process.exit(1)
     }
-    app.config.defaults = { vessels: { self: {} } }
   }
+  return undefined
+}
+
+function setBaseDeltas(app) {
+  const defaultsPath = getBaseDeltasPath(app)
+  try {
+    app.config.baseDeltaEditor.load(defaultsPath)
+    debug(`Found default deltas at ${defaultsPath.toString()}`)
+  } catch (e) {
+    if (e.code && e.code === 'ENOENT') {
+      debug(`No default deltas found at ${defaultsPath.toString()}`)
+      return
+    } else {
+      console.log(e)
+    }
+  }
+  return true
+}
+
+function sendBaseDeltas(app) {
+  let copy = JSON.parse(JSON.stringify(app.config.baseDeltaEditor.deltas))
+  copy.forEach(delta => {
+    app.handleMessage('defaults', delta)
+  })
 }
 
 function writeDefaultsFile(app, defaults, cb) {
   fs.writeFile(getDefaultsPath(app), JSON.stringify(defaults, null, 2), cb)
 }
 
-function setSelfSettings(app) {
-  let name = _.get(app.config.defaults, 'vessels.self.name')
-  let mmsi = _.get(app.config.defaults, 'vessels.self.mmsi')
-  let uuid = _.get(app.config.defaults, 'vessels.self.uuid')
+function writeBaseDeltasFileSync(app) {
+  app.config.baseDeltaEditor.saveSync(getBaseDeltasPath(app))
+}
 
-  if (app.config.settings.vessel) {
-    // backwards compatibility for settings files with 'vessel'
-    if (!mmsi && !uuid) {
-      mmsi = app.config.settings.vessel.mmsi
-      uuid = app.config.settings.vessel.uuid
-      if (mmsi) {
-        app.config.defaults.vessels.self.mmsi = mmsi
-      }
-      if (uuid) {
-        app.config.defaults.vessels.self.uuid = uuid
-      }
-    }
-    if (!name) {
-      name = app.config.settings.vessel.name
-      app.config.defaults.vessels.self.name = name
-    }
-  }
+function writeBaseDeltasFile(app) {
+  return app.config.baseDeltaEditor.save(getBaseDeltasPath(app))
+}
+
+function setSelfSettings(app) {
+  var name = app.config.baseDeltaEditor.getSelfValue('name')
+  var mmsi = app.config.baseDeltaEditor.getSelfValue('mmsi')
+  var uuid = app.config.baseDeltaEditor.getSelfValue('uuid')
 
   if (mmsi && !_.isString(mmsi)) {
     throw new Error(`invalid mmsi: ${mmsi}`)
@@ -273,24 +306,20 @@ function setSelfSettings(app) {
     throw new Error(`invalid uuid: ${uuid}`)
   }
 
-  if (_.isUndefined(mmsi) && _.isUndefined(uuid)) {
+  if (mmsi === null && uuid === null) {
     uuid = 'urn:mrn:signalk:uuid:' + uuidv4()
-    _.set(app.config.defaults, 'vessels.self.uuid', uuid)
-    if (!disableWriteSettings) {
-      writeDefaultsFile(app, app.config.defaults, err => {
-        if (err) {
-          console.error(`unable to write defaults file: ${err}`)
-        }
-      })
-    }
+    app.config.baseDeltaEditor.setSelfValue('uuid', uuid)
   }
 
+  app.config.vesselName = name
   if (mmsi) {
     app.selfType = 'mmsi'
     app.selfId = 'urn:mrn:imo:mmsi:' + mmsi
+    app.config.vesselMMSI = mmsi
   } else if (uuid) {
     app.selfType = 'uuid'
     app.selfId = uuid
+    app.config.vesselUUID = uuid
   }
   if (app.selfType) {
     debug(app.selfType.toUpperCase() + ': ' + app.selfId)
@@ -364,6 +393,39 @@ function getExternalPort(config) {
   return ''
 }
 
+function scanDefaults(deltaEditor, vpath, item) {
+  _.keys(item).forEach(key => {
+    let value = item[key]
+    if (key === 'meta') {
+      deltaEditor.setMeta('vessels.self', vpath, value)
+    } else if (key === 'value') {
+      deltaEditor.setSelfValue(vpath, value)
+    } else if (_.isObject(value)) {
+      let childPath = vpath.length > 0 ? `${vpath}.${key}` : key
+      scanDefaults(deltaEditor, childPath, value)
+    }
+  })
+}
+
+function convertOldDefaultsToDeltas(deltaEditor, defaults) {
+  let deltas = []
+  let self = _.get(defaults, 'vessels.self')
+  if (self) {
+    _.keys(self).forEach(key => {
+      let value = self[key]
+      if (!_.isString(value)) {
+        scanDefaults(deltaEditor, key, value)
+      } else {
+        deltaEditor.setSelfValue(key, value)
+      }
+    })
+    if (self.communication) {
+      deltaEditor.setSelfValue('communication', self.communication)
+    }
+  }
+  return deltas
+}
+
 const pluginsPackageJsonTemplate = {
   name: 'signalk-server-config',
   version: '0.0.1',
@@ -377,5 +439,7 @@ module.exports = {
   getConfigDirectory,
   writeSettingsFile,
   writeDefaultsFile,
-  readDefaultsFile
+  readDefaultsFile,
+  sendBaseDeltas,
+  writeBaseDeltasFile
 }

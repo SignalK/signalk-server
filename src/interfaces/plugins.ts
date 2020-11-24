@@ -492,7 +492,8 @@ module.exports = (theApp: any) => {
       setPluginError: (msg: string) => {
         app.setPluginError(plugin.id, msg)
       },
-      getSerialPorts
+      getSerialPorts,
+      supportsMetaDeltas: true
     })
     appCopy.putPath = putPath
     try {

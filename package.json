@@ -68,7 +68,7 @@
   },
   "dependencies": {
     "@signalk/server-admin-ui": "1.36.x",
-    "@signalk/signalk-schema": "1.5.0",
+    "@signalk/signalk-schema": "1.5.1",
     "@signalk/streams": "1.16.x",
     "@types/debug": "^4.1.5",
     "baconjs": "^1.0.1",
