@@ -52,10 +52,7 @@ module.exports = function(app) {
             return
           }
         }
-        if (
-          path.length > 5 &&
-          path[path.length - 2] === 'meta'
-        ) {
+        if (path.length > 5 && path[path.length - 2] === 'meta') {
           let meta = getMetadata(path.slice(0, path.length - 2).join('.'))
           let value = meta && meta[path[path.length - 1]]
           if (value) {

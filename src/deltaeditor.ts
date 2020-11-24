@@ -102,7 +102,7 @@ class DeltaEditor {
       const deltaInfo = getDelta(this.deltas, context, path, VALUES)
       if (deltaInfo && deltaInfo.kp) {
         _.pull(deltaInfo.delta.updates[0].values, deltaInfo.kp)
-        if (deltaInfo.delta.updates[0].values.length == 0) {
+        if (deltaInfo.delta.updates[0].values.length === 0) {
           _.pull(this.deltas, deltaInfo.delta)
         }
       }
@@ -117,7 +117,7 @@ class DeltaEditor {
     const deltaInfo = getDelta(this.deltas, context, path, META)
     if (deltaInfo && deltaInfo.kp) {
       _.pull(deltaInfo.delta.updates[0].meta, deltaInfo.kp)
-      if (deltaInfo.delta.updates[0].meta.length == 0) {
+      if (deltaInfo.delta.updates[0].meta.length === 0) {
         _.pull(this.deltas, deltaInfo.delta)
       }
     }
@@ -163,13 +163,11 @@ function getDelta(
   path: string,
   type: string
 ): any {
-  for (let i = 0; i < deltas.length; i++) {
-    const delta = deltas[i]
-    if (delta.updates && delta.context == context) {
-      for (let j = 0; j < delta.updates.length; j++) {
-        const update = delta.updates[j]
+  for (const delta of deltas) {
+    if (delta.updates && delta.context === context) {
+      for (const update of delta.updates) {
         if (update[type]) {
-          const foundKp = update[type].find((kp: any) => kp.path == path)
+          const foundKp = update[type].find((kp: any) => kp.path === path)
           return { delta, kp: foundKp }
         }
       }

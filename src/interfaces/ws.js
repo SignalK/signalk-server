@@ -300,7 +300,7 @@ module.exports = function(app) {
       })
     )
   }
-  
+
   function processReuestQuery(spark, msg) {
     queryRequest(msg.requestId)
       .then(reply => {
@@ -507,11 +507,11 @@ function processUpdates(app, pathSources, spark, msg) {
 }
 
 function sendMetaData(app, spark, delta) {
-  if ( spark.sendMetaDeltas && delta.updates ) {
+  if (spark.sendMetaDeltas && delta.updates) {
     delta.updates.forEach(update => {
-      if ( update.values ) {
+      if (update.values) {
         update.values.forEach(kp => {
-          if ( !spark.sentMetaData[kp.path] ) {
+          if (!spark.sentMetaData[kp.path]) {
             spark.sentMetaData[kp.path] = true
             let meta = getMetadata(delta.context + '.' + kp.path)
             if (meta) {
