@@ -20,6 +20,7 @@ const path = require('path')
 const express = require('express')
 const modulesWithKeyword = require('../modules').modulesWithKeyword
 import { SERVERROUTESPREFIX } from '../constants'
+import { uniqBy} from 'lodash'
 
 module.exports = function(app) {
   return {
@@ -61,7 +62,8 @@ function mountWebModules(app, keyword) {
 
 function mountApis(app) {
   app.get(`${SERVERROUTESPREFIX}/webapps`, function(req, res) {
-    res.json(app.webapps)
+    const allWebapps = [].concat(app.webapps).concat(app.embeddablewebapps)
+    res.json(uniqBy(allWebapps, 'name'))
   })
   app.get(`${SERVERROUTESPREFIX}/addons`, function(req, res) {
     res.json(app.addons)
