@@ -16,14 +16,14 @@ export interface SecurityStrategy {
   filterReadDelta: (user: string, delta: any) => any
 }
 
-//inferred, to be improved
+interface Bus {
+  onValue: (callback: (value: any) => any) => () => void
+}
+// inferred, to be improved
 export interface StreamBundle {
   keys: { onValue: (arg0: (key: any) => void) => void }
-  getBus: (
-    arg0: any
-  ) => { (): any; new (): any; onValue: { (arg0: any): void; new (): any } }
+  getBus: (path: string) => Bus
 }
-
 
 export interface SignalKServer {
   config: { defaults: any }
@@ -65,4 +65,4 @@ export type Source = any
 export type Delta = any
 export type Path = string
 export type Context = string
-export type Value = object | number | string | null
+export type Value = object | number | string | null
