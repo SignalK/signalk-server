@@ -28,26 +28,24 @@ const pauseStorageKey = 'admin.v1.dataBrowser.v1.pause'
 const contextStorageKey = 'admin.v1.dataBrowser.context'
 const searchStorageKey = 'admin.v1.dataBrowser.search'
 
-function fetchRoot () {
-  fetch(`/signalk/v1/api/`, {
+function fetchSources () {
+  fetch(`/signalk/v1/api/sources`, {
     credentials: 'include'
   })
     .then(response => response.json())
-    .then(data => {
-      if ( data.sources ) {
-        Object.values(data.sources).forEach(source => {
-          if ( source.type === "NMEA2000" ) {
-            Object.keys(source).forEach(key => {
-              let device = source[key]
-              if ( device.n2k && device.n2k.productName ) {
-                source[`${device.n2k.manufacturerName || ''} ${device.n2k.productName} (${key})`] = device
+    .then(sources => {
+      Object.values(sources).forEach(source => {
+        if ( source.type === "NMEA2000" ) {
+          Object.keys(source).forEach(key => {
+            let device = source[key]
+            if ( device.n2k && device.n2k.productName ) {
+              source[`${device.n2k.manufacturerName || ''} ${device.n2k.productName} (${key})`] = device
                 delete source[key]
-              }
-            })
-          }
-        })
-      }
-      this.setState({ ...this.state, sources: data.sources, full: data})
+            }
+          })
+        }
+      })
+      this.setState({ ...this.state, sources: sources})
     })
 }
 
@@ -62,11 +60,12 @@ class DataBrowser extends Component {
       pause: localStorage.getItem(pauseStorageKey) === 'true',
       includeMeta: localStorage.getItem(metaStorageKey) === 'true',
       data: {},
+      meta: {},
       context: localStorage.getItem(contextStorageKey) || 'self',
       search: localStorage.getItem(searchStorageKey) || ''
     }
 
-    this.fetchRoot = fetchRoot.bind(this)
+    this.fetchSources = fetchSources.bind(this)
     this.handlePause = this.handlePause.bind(this)
     this.handleMessage = this.handleMessage.bind(this)
     this.handleContextChange = this.handleContextChange.bind(this)
@@ -89,7 +88,13 @@ class DataBrowser extends Component {
         isNew = true
       }
 
+      if ( !this.state.meta[key] ) {
+        this.state.meta[key] = {}
+        isNew = true
+      }
+
       let context = this.state.data[key]
+      let contextMeta = this.state.meta[key]
       
       msg.updates.forEach(update => {
         if ( update.values ) {
@@ -116,31 +121,18 @@ class DataBrowser extends Component {
                 sentence,
                 timestamp: moment(update.timestamp).format(timestampFormat)
               }
-              
-              const metaKey = vp.path + '.meta'
-              if ( !context[metaKey] ) {
-                const idx = msg.context.indexOf('.')
-                const rootKey = msg.context.substring(0, idx)
-                let urn = msg.context.substring(idx+1)
-                if ( this.state.full &&
-                     this.state.full[rootKey] &&
-                     this.state.full[rootKey][urn] ) {
-                  const meta = get(this.state.full[rootKey][urn], metaKey)
-                  if ( meta ) {
-                    context[metaKey] = {
-                      path: metaKey,
-                      value: meta
-                      }
-                  }
-                }
-              }
             }
+          })
+        }
+        if ( update.meta ) {
+          update.meta.forEach(vp => {
+            contextMeta[vp.path] = { ...contextMeta[vp.path], ...vp.value }
           })
         }
       })
       
       if ( isNew || (this.state.context && this.state.context === key) ) {
-        this.setState({...this.state, hasData:true, data: this.state.data })
+        this.setState({...this.state, hasData:true, data: this.state.data, meta: this.state.meta  })
       }
     }
   }
@@ -178,7 +170,7 @@ class DataBrowser extends Component {
   }
   
   componentDidMount() {
-    this.fetchRoot()
+    this.fetchSources()
     this.subscribeToDataIfNeeded()
   }
 
@@ -212,7 +204,7 @@ class DataBrowser extends Component {
     if ( this.state.pause ) {
       this.unsubscribeToData()
     } else {
-      this.fetchRoot()
+      this.fetchSources()
       this.subscribeToDataIfNeeded()
     }
   }
@@ -318,9 +310,6 @@ class DataBrowser extends Component {
                   this.state.search.length === 0 ||
                   key.toLowerCase().indexOf(this.state.search.toLowerCase()) !== -1
                 })
-              .filter( key => {
-                return !key.endsWith('.meta')
-              })
               .sort()
               .map(key => {
                 const data = this.state.data[this.state.context][key]
@@ -328,8 +317,8 @@ class DataBrowser extends Component {
                   data.value,
                   null,
                   typeof data.value === 'object' && Object.keys(data.value || {}).length > 1 ? 2 : 0)
-                const meta = this.state.data[this.state.context][data.path + '.meta']
-                const units = meta && meta.value.units ? meta.value.units : ''
+                const meta = this.state.meta[this.state.context][data.path]
+                const units = meta && meta.units ? meta.units : ''
                 const path = key.substring(0, key.lastIndexOf('.'))
 
                 return (
@@ -358,10 +347,10 @@ class DataBrowser extends Component {
               </tr>
             </thead>
             <tbody>
-            {Object.keys(this.state.data[this.state.context] || {}).filter(key => { return key.endsWith('.meta') && ( !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1) }).sort().map(key => {
-          const data = this.state.data[this.state.context][key]
-          const formatted = JSON.stringify(data.value, null, 2)
-          const path = data.path.substring(0, key.lastIndexOf('.'))
+            {Object.keys(this.state.meta[this.state.context] || {}).filter(key => { return  !this.state.search || this.state.search.length === 0 || key.indexOf(this.state.search) !== -1 }).sort().map(key => {
+          const meta = this.state.meta[this.state.context][key]
+          const formatted = JSON.stringify(meta, null, 2)
+          const path = key
           return (
                  <tr key={path} >
                    <td>{path}</td>
