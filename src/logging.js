@@ -14,15 +14,13 @@ module.exports = function(app) {
     debugEnabled = process.env.DEBUG
   }
 
-  if (process.env.HOME) {
-    debugPath = path.join(process.env.HOME, '.signalk_debug')
-    if (fs.existsSync(debugPath)) {
-      const enabled = fs.readFileSync(debugPath, 'utf8')
-      if (enabled.length > 0) {
-        debugCore.enable(enabled)
-        debugEnabled = enabled
-        rememberDebug = true
-      }
+  debugPath = path.join(app.config.configPath, 'debug')
+  if (fs.existsSync(debugPath)) {
+    const enabled = fs.readFileSync(debugPath, 'utf8')
+    if (enabled.length > 0) {
+      debugCore.enable(enabled)
+      debugEnabled = enabled
+      rememberDebug = true
     }
   }
 
