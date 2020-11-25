@@ -58,8 +58,8 @@ function Server(opts) {
   app.started = false
   _.merge(app, opts)
 
-  app.logging = require('./logging')(app)
   config.load(app)
+  app.logging = require('./logging')(app)
   app.version = '0.0.1'
 
   startSecurity(app, opts ? opts.securityConfig : null)

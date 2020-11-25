@@ -12,4 +12,4 @@ Share the resulting file, preferably via Dropbox, Google Drive, Github Gist or s
 
 If the console is available, go to Server -> Server Log and enter the the names of the compononets you want to debug.
 
-Otherwise, you can edit the file `~/.signalk_debug' and add them there. For example: `@signalk/aisreporter,signalk-server:udp-provider`
+Otherwise, you can edit the file `~/.signalk/debug' and add them there. For example: `@signalk/aisreporter,signalk-server:udp-provider`
