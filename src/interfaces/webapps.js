@@ -20,7 +20,7 @@ const path = require('path')
 const express = require('express')
 const modulesWithKeyword = require('../modules').modulesWithKeyword
 import { SERVERROUTESPREFIX } from '../constants'
-import { uniqBy} from 'lodash'
+import { uniqBy } from 'lodash'
 
 module.exports = function(app) {
   return {

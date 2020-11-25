@@ -245,7 +245,9 @@ module.exports = function(app) {
           v => v === 'signalk-node-server-plugin'
         ),
         isWebapp: plugin.package.keywords.some(v => v === 'signalk-webapp'),
-        isEmbeddableWebapp: plugin.package.keywords.some(v => v === 'signalk-embeddable-webapp')
+        isEmbeddableWebapp: plugin.package.keywords.some(
+          v => v === 'signalk-embeddable-webapp'
+        )
       }
 
       const installedModule = existing(name)
