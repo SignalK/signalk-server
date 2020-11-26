@@ -166,9 +166,12 @@ module.exports = function(app) {
   }
 
   function getWebApp(id) {
-    return (app.webapps && app.webapps.find(webapp => webapp.name === id))
-      || (app.addons && app.addons.find(webapp => webapp.name === id))
-      || (app.embeddablewebapps && app.embeddablewebapps.find(webapp => webapp.name === id))
+    return (
+      (app.webapps && app.webapps.find(webapp => webapp.name === id)) ||
+      (app.addons && app.addons.find(webapp => webapp.name === id)) ||
+      (app.embeddablewebapps &&
+        app.embeddablewebapps.find(webapp => webapp.name === id))
+    )
   }
 
   function emptyAppStoreInfo() {
