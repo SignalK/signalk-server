@@ -440,7 +440,12 @@ module.exports = (theApp: any) => {
         app.logging.removeDebug(plugin.packageName)
       }
 
-      plugin.start(configuration, restart)
+      let safeConfiguration = configuration
+      if (!safeConfiguration) {
+        console.error(`${plugin.id}:no configuration data`)
+        safeConfiguration = {}
+      }
+      plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
     } catch (e) {
