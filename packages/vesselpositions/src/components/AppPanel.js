@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Map, Marker, TileLayer } from 'react-leaflet'
 import * as lh from './leaflet-hack'
-import SVGMarker from './CustomMarker'
-
+import VesselDataBundle from './VesselDataBundle'
+import VesselDataDisplay from './VesselDataDisplay'
 const APPLICATION_DATA_VERSION = '1.0'
 
 const AppPanel = (props) => {
@@ -23,7 +23,7 @@ const AppPanel = (props) => {
   useEffect(() => {
     props.adminUI.hideSideBar()
 
-    //hack to resize the map in case sidebar was animated to hidden
+    // hack to resize the map in case sidebar was animated to hidden
     setTimeout(() => {
       if (mapRef.current) {
         mapRef.current.leafletElement.invalidateSize()
@@ -50,13 +50,21 @@ const AppPanel = (props) => {
       if (delta.context) {
         (delta.updates || []).forEach(update => {
           (update.values || []).forEach(pathValue => {
-            if (pathValue.path === 'navigation.position') {
-              const { latitude, longitude } = pathValue.value
-              const prev = bufferTargets.current[delta.context] || aisTargetsRef.current[delta.context] || {}
-              bufferTargets.current[delta.context] = { ...prev, position: [latitude, longitude] }
-            } else if (pathValue.path === 'navigation.courseOverGroundTrue') {
-              const prev = bufferTargets.current[delta.context] || aisTargetsRef.current[delta.context] || {}
-              bufferTargets.current[delta.context] = { ...prev, course: pathValue.value }
+            if (pathValue.path === 'navigation.position' || pathValue.path === 'navigation.courseOverGroundTrue') {
+              let vesselData = aisTargetsRef.current[delta.context]
+              if (!vesselData) {
+                vesselData = {
+                  vesselData: new VesselDataBundle()
+                }
+                const newTarget = {}
+                newTarget[delta.context] = vesselData
+                setAisTargets(prevTargets => ({ ...prevTargets, ...newTarget }))
+              }
+              if (pathValue.path === 'navigation.courseOverGroundTrue') {
+                vesselData.vesselData.nextHeading(pathValue.value)
+              } else {
+                vesselData.vesselData.nextPosition(pathValue.value)
+              }
             }
           })
         })
@@ -70,7 +78,7 @@ const AppPanel = (props) => {
       })
     }, 500)
     const fetchNames = () => {
-      const vesselsWithNoName = Object.entries(aisTargetsRef.current).filter(([id, data]) => data.name === undefined)
+      const vesselsWithNoName = Object.entries(aisTargetsRef.current).filter(([id, data]) => !data.hasName)
       const fetchNames = vesselsWithNoName.map(([id]) => props.adminUI.get({ context: id, path: 'name' }).then(r => r.json().then(data => [id, data])))
       Promise.allSettled(fetchNames).then(settleds => {
         const successes = settleds.filter(({ status }) => status === 'fulfilled')
@@ -80,7 +88,8 @@ const AppPanel = (props) => {
         setAisTargets((prevTargets) => {
           const result = successes.reduce((acc, { status, value }) => {
             const [id, name] = value
-            acc[id].name = name
+            acc[id].hasName = true
+            acc[id].vesselData.setName(`${name[0]}${name.slice(1).toLowerCase()}`)
             return acc
           }, { ...prevTargets })
           return result
@@ -90,7 +99,6 @@ const AppPanel = (props) => {
     const fetchNamesTimer = setInterval(fetchNames, 10000)
     setTimeout(fetchNames, 500)
     return () => {
-      clearInterval(updateTimer)
       clearInterval(fetchNamesTimer)
     }
   }, [])
@@ -123,16 +131,10 @@ const AppPanel = (props) => {
           props.adminUI.setApplicationUserData(APPLICATION_DATA_VERSION, appData).then(() => setApplicationData(appData))
         }} />
       ))}
-      {targetMarkers(Object.entries(aisTargets))}
+      {Object.entries(aisTargets).map(
+        ([context, data]) => <VesselDataDisplay key={context} vesselData={data.vesselData} />)}
     </Map>
   )
 }
-
-const targetMarkers = (targets) => targets.map(([key, value]) => {
-  return (
-    <SVGMarker key={key} position={value.position} course={value.course} name={value.name} />
-  )
-})
-
 
 export default AppPanel
