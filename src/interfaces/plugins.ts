@@ -24,6 +24,7 @@ import _ from 'lodash'
 import path from 'path'
 import { SERVERROUTESPREFIX } from '../constants'
 import { listAllSerialPorts, Ports } from '../serialports'
+const { getMetadata } = require('@signalk/signalk-schema')
 
 // tslint:disable-next-line:no-var-requires
 const modulesWithKeyword = require('../modules').modulesWithKeyword
@@ -72,6 +73,7 @@ interface PluginInfo extends Plugin {
 export interface ServerAPI {
   getSelfPath: (path: string) => void
   getPath: (path: string) => void
+  getMetadata: (path: string) => void
   putSelfPath: (aPath: string, value: any, updateCb: () => void) => Promise<any>
   putPath: (
     aPath: string,
@@ -498,7 +500,8 @@ module.exports = (theApp: any) => {
         app.setPluginError(plugin.id, msg)
       },
       getSerialPorts,
-      supportsMetaDeltas: true
+      supportsMetaDeltas: true,
+      getMetadata
     })
     appCopy.putPath = putPath
     try {
