@@ -24,7 +24,6 @@ import _ from 'lodash'
 import path from 'path'
 import { SERVERROUTESPREFIX } from '../constants'
 import { listAllSerialPorts, Ports } from '../serialports'
-const { getMetadata } = require('@signalk/signalk-schema')
 
 // tslint:disable-next-line:no-var-requires
 const modulesWithKeyword = require('../modules').modulesWithKeyword
@@ -36,6 +35,8 @@ const _putPath = put.putPath
 const getModulePublic = require('../config/get').getModulePublic
 // tslint:disable-next-line:no-var-requires
 const queryRequest = require('../requestResponse').queryRequest
+// tslint:disable-next-line:no-var-requires
+const getMetadata = require('@signalk/signalk-schema').getMetadata
 
 // #521 Returns path to load plugin-config assets.
 const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')
