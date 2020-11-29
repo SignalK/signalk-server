@@ -157,7 +157,12 @@ module.exports = function(app) {
       findModulesWithKeyword('signalk-webapp')
     ]).then(([plugins, embeddableWebapps, webapps]) => {
       const allWebapps = [].concat(embeddableWebapps).concat(webapps)
-      return [plugins, _.uniqBy(allWebapps, 'name')]
+      return [
+        plugins,
+        _.uniqBy(allWebapps, plugin => {
+          return plugin.package.name
+        })
+      ]
     })
   }
 
