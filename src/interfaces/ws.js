@@ -511,24 +511,28 @@ function sendMetaData(app, spark, delta) {
     delta.updates.forEach(update => {
       if (update.values) {
         update.values.forEach(kp => {
-          if (!spark.sentMetaData[kp.path]) {
+          if (kp.path && !spark.sentMetaData[kp.path]) {
             spark.sentMetaData[kp.path] = true
-            let meta = getMetadata(delta.context + '.' + kp.path)
-            if (meta) {
-              spark.write({
-                context: delta.context,
-                updates: [
-                  {
-                    timestamp: update.timestamp,
-                    meta: [
-                      {
-                        path: kp.path,
-                        value: meta
-                      }
+            const split = kp.path.split('.')
+            for ( let i = 2; i < split.length; i++ ) {
+              const path = split.slice(0, i).join('.')
+              let meta = getMetadata(delta.context + '.' + path)
+              if (meta) {
+                spark.write({
+                  context: delta.context,
+                  updates: [
+                    {
+                      timestamp: update.timestamp,
+                      meta: [
+                        {
+                          path: path,
+                          value: meta
+                        }
                     ]
-                  }
-                ]
-              })
+                    }
+                  ]
+                })
+              }
             }
           }
         })
