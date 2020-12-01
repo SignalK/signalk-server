@@ -507,37 +507,37 @@ function processUpdates(app, pathSources, spark, msg) {
 }
 
 function sendMetaData(app, spark, delta) {
-  if (spark.sendMetaDeltas && delta.updates) {
-    delta.updates.forEach(update => {
-      if (update.values) {
-        update.values.forEach(kp => {
-          if (kp.path && !spark.sentMetaData[kp.path]) {
-            spark.sentMetaData[kp.path] = true
-            const split = kp.path.split('.')
-            for ( let i = 2; i < split.length; i++ ) {
-              const path = split.slice(0, i).join('.')
-              let meta = getMetadata(delta.context + '.' + path)
-              if (meta) {
-                spark.write({
-                  context: delta.context,
-                  updates: [
+  if (spark.sendMetaDeltas && delta.updates && delta.updates[0].values) {
+    const kp = delta.updates[0].values[0]
+    if (kp.path && !spark.sentMetaData[kp.path]) {
+      const split = kp.path.split('.')
+      for ( let i = 2; i < split.length+1; i++ ) {
+        const path = split.slice(0, i).join('.')
+        
+        if ( !spark.sentMetaData[path] ) {
+          spark.sentMetaData[path] = true
+          
+          let meta = getMetadata(delta.context + '.' + path)
+          
+          if (meta) {
+            spark.write({
+              context: delta.context,
+              updates: [
+                {
+                  timestamp: delta.updates[0].timestamp,
+                  meta: [
                     {
-                      timestamp: update.timestamp,
-                      meta: [
-                        {
-                          path: path,
+                      path: path,
                           value: meta
-                        }
-                    ]
                     }
                   ]
-                })
-              }
-            }
+                }
+              ]
+            })
           }
-        })
+        }
       }
-    })
+    }
   }
 }
 
