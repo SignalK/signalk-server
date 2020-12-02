@@ -516,22 +516,26 @@ function sendMetaData(app, spark, delta) {
             const split = kp.path.split('.')
             for ( let i = 2; i < split.length; i++ ) {
               const path = split.slice(0, i).join('.')
-              let meta = getMetadata(delta.context + '.' + path)
-              if (meta) {
-                spark.write({
-                  context: delta.context,
-                  updates: [
-                    {
-                      timestamp: update.timestamp,
-                      meta: [
-                        {
-                          path: path,
-                          value: meta
-                        }
+              if (!spark.sentMetaData[path]) {
+                //always set to true, even if there is no meta for the path
+                spark.sentMetaData[path] = true
+                let meta = getMetadata(delta.context + '.' + path)
+                if (meta) {
+                  spark.write({
+                    context: delta.context,
+                    updates: [
+                      {
+                        timestamp: update.timestamp,
+                        meta: [
+                          {
+                            path: path,
+                            value: meta
+                          }
+                        ]
+                      }
                     ]
-                    }
-                  ]
-                })
+                  })
+                }
               }
             }
           }
