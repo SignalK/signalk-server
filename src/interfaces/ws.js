@@ -514,9 +514,12 @@ function sendMetaData(app, spark, delta) {
           if (kp.path && !spark.sentMetaData[kp.path]) {
             spark.sentMetaData[kp.path] = true
             const split = kp.path.split('.')
-            for ( let i = 2; i < split.length; i++ ) {
+            for ( let i = split.length-1; i > 1; i-- ) {
               const path = split.slice(0, i).join('.')
-              if (!spark.sentMetaData[path]) {
+              if (spark.sentMetaData[path]) {
+                //stop backing up the path with first prefix that has already been handled
+                break
+              } else {
                 //always set to true, even if there is no meta for the path
                 spark.sentMetaData[path] = true
                 let meta = getMetadata(delta.context + '.' + path)
