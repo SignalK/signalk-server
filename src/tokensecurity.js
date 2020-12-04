@@ -546,7 +546,7 @@ module.exports = function(app, config) {
         if (!source) {
           source = getSourceId(update.source)
         }
-        return update.values.find(valuePath => {
+        return (update.values && update.values.find(valuePath => {
           return (
             strategy.checkACL(
               req.skPrincipal.identifier,
@@ -556,7 +556,17 @@ module.exports = function(app, config) {
               'write'
             ) === false
           )
-        })
+        })) || (update.meta && update.meta.find(valuePath => {
+          return (
+            strategy.checkACL(
+              req.skPrincipal.identifier,
+              context,
+              valuePath.path,
+              source,
+              'write'
+            ) === false
+          )
+        }))
       })
 
       // true if we did not find anything disallowing the write
