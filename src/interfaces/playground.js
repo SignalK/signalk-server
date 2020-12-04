@@ -122,7 +122,7 @@ module.exports = function(app) {
                 }, 5000)
                 putPath(
                   app,
-                  msg.context,
+                  msg.context || 'vessels.self',
                   msg.put.path,
                   msg.put,
                   req,

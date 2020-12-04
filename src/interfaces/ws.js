@@ -315,9 +315,10 @@ module.exports = function(app) {
   }
 
   function processPutRequest(spark, msg) {
+    const context = msg.context || 'vessels.self'
     putPath(
       app,
-      msg.context,
+      context,
       msg.put.path,
       msg.put,
       spark.request,
