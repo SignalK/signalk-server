@@ -473,35 +473,37 @@ function processUpdates(app, pathSources, spark, msg) {
   app.handleMessage(spark.request.source || 'ws', msg)
 
   msg.updates.forEach(update => {
-    let source = update.$source
-    if (!source && update.source) {
-      source = getSourceId(update.source)
-    }
+    if (update.values) {
+      let source = update.$source
+      if (!source && update.source) {
+        source = getSourceId(update.source)
+      }
 
-    if (source) {
-      update.values.forEach(valuePath => {
-        if (!pathSources[valuePath.path]) {
-          pathSources[valuePath.path] = {}
-        }
-        if (
-          !pathSources[valuePath.path][source] ||
-          pathSources[valuePath.path][source] !== spark
-        ) {
-          if (pathSources[valuePath.path][source]) {
-            console.log(
-              `WARNING: got a new ws client for path ${valuePath.path} source ${source}`
-            )
+      if (source) {
+        update.values.forEach(valuePath => {
+          if (!pathSources[valuePath.path]) {
+            pathSources[valuePath.path] = {}
           }
-          debug(
-            'registered spark for source %s path %s = %s',
-            source,
-            valuePath.path,
-            spark.id
-          )
+          if (
+            !pathSources[valuePath.path][source] ||
+            pathSources[valuePath.path][source] !== spark
+          ) {
+            if (pathSources[valuePath.path][source]) {
+              console.log(
+                `WARNING: got a new ws client for path ${valuePath.path} source ${source}`
+              )
+            }
+            debug(
+              'registered spark for source %s path %s = %s',
+              source,
+              valuePath.path,
+              spark.id
+            )
 
-          pathSources[valuePath.path][source] = spark
-        }
-      })
+            pathSources[valuePath.path][source] = spark
+          }
+        })
+      }
     }
   })
 }
