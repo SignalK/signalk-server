@@ -49,6 +49,22 @@ const openNavigationDelta = {
   shouldSee: true
 }
 
+const metaDelta = {
+  context: 'vessels.self',
+  updates:[
+    {
+      meta:[
+        {
+          path:"navigation.rateOfTurn",
+          value: {
+            displayName:"Rate Of Turn"
+          }
+        }
+      ]
+    }
+  ]
+}
+  
 const WRITE_USER_NAME = 'writeuser'
 const WRITE_USER_PASSWORD = 'writepass'
 const LIMITED_USER_NAME = 'testuser'
@@ -213,12 +229,38 @@ describe('Security', () => {
     const succeedingResult = await succeedingReadPromise
     succeedingResult.should.not.equal('timeout')
 
-    console.log(succeedingResult)
     const d = JSON.parse(succeedingResult)
     d.updates.length.should.equal(1)
     d.updates[0].values.length.should.equal(1)
     d.updates[0].values[0].path.should.equal(
       openNavigationDelta.updates[0].values[0].path
+    )
+  })
+
+  it('sending meta works', async function () {
+    const readPromiser = new WsPromiser(
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=all&metaDeltas=none&token=${readToken}`
+    )
+    let msg = await readPromiser.nextMsg()
+    JSON.parse(msg)
+    
+    const writePromiser = new WsPromiser(
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none&metaDeltas=none&token=${writeToken}`
+    )
+    msg = await writePromiser.nextMsg()
+    JSON.parse(msg)
+
+    const succeedingReadPromise = readPromiser.nextMsg()
+    await writePromiser.send(metaDelta)
+    const succeedingResult = await succeedingReadPromise
+    succeedingResult.should.not.equal('timeout')
+
+    console.log(succeedingResult)
+    const d = JSON.parse(succeedingResult)
+    d.updates.length.should.equal(1)
+    d.updates[0].meta.length.should.equal(1)
+    d.updates[0].meta[0].path.should.equal(
+      metaDelta.updates[0].meta[0].path
     )
   })
 
