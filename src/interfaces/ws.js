@@ -506,34 +506,53 @@ function processUpdates(app, pathSources, spark, msg) {
   })
 }
 
-function sendMetaData(app, spark, delta) {
-  if (spark.sendMetaDeltas && delta.updates) {
-    delta.updates.forEach(update => {
-      if (update.values) {
-        update.values.forEach(kp => {
-          if (!spark.sentMetaData[kp.path]) {
-            spark.sentMetaData[kp.path] = true
-            let meta = getMetadata(delta.context + '.' + kp.path)
-            if (meta) {
-              spark.write({
-                context: delta.context,
-                updates: [
+function handleValuesMeta(kp) {
+  if (kp.path && !this.spark.sentMetaData[kp.path]) {
+    const split = kp.path.split('.')
+    for ( let i = split.length; i > 1; i-- ) {
+      const path = split.slice(0, i).join('.')
+      if (this.spark.sentMetaData[path]) {
+        //stop backing up the path with first prefix that has already been handled
+        break
+      } else {
+        //always set to true, even if there is no meta for the path
+        this.spark.sentMetaData[path] = true
+        let meta = getMetadata(this.context + '.' + path)
+        if (meta) {
+          this.spark.write({
+            context: this.context,
+            updates: [
+              {
+                timestamp: this.timestamp,
+                meta: [
                   {
-                    timestamp: update.timestamp,
-                    meta: [
-                      {
-                        path: kp.path,
-                        value: meta
-                      }
-                    ]
+                    path: path,
+                    value: meta
                   }
                 ]
-              })
-            }
-          }
-        })
+              }
+            ]
+          })
+        }
       }
-    })
+    }
+  }
+}
+
+function handleUpdatesMeta(update) {
+  if (update.values) {
+    this.timestamp = update.timestamp
+    update.values.forEach(handleValuesMeta, this)
+  }
+}
+
+function sendMetaData(app, spark, delta) {
+  if (spark.sendMetaDeltas && delta.updates) {
+    const thisContext = {
+      context: delta.context,
+      spark
+    }
+    delta.updates.forEach(handleUpdatesMeta, thisContext)
   }
 }
 
