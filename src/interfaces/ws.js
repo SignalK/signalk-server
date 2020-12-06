@@ -511,7 +511,7 @@ function processUpdates(app, pathSources, spark, msg) {
 function handleValuesMeta(kp) {
   if (kp.path && !this.spark.sentMetaData[kp.path]) {
     const split = kp.path.split('.')
-    for ( let i = split.length; i > 1; i-- ) {
+    for (let i = split.length; i > 1; i--) {
       const path = split.slice(0, i).join('.')
       if (this.spark.sentMetaData[path]) {
         //stop backing up the path with first prefix that has already been handled
