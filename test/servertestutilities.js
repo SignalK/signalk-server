@@ -37,6 +37,8 @@ function WsPromiser (url) {
   this.ws = new WebSocket(url)
   this.ws.on('message', this.onMessage.bind(this))
   this.callees = []
+  this.receivedMessagePromisers = []
+  this.messageCount = 0
 }
 
 WsPromiser.prototype.nextMsg = function () {
@@ -49,10 +51,31 @@ WsPromiser.prototype.nextMsg = function () {
   })
 }
 
+WsPromiser.prototype.nthMessagePromiser = function(n) {
+  let result = this.receivedMessagePromisers[n-1]
+  if (!result) {
+    result = this.receivedMessagePromisers[n-1] = {}
+    result.promise = new Promise((resolve, reject) => {
+      result.resolve = resolve
+      setTimeout(_ => {
+        reject('timeout')
+      }, 250)
+    })
+  }
+  return result
+}
+
+WsPromiser.prototype.nthMessage = function (n) {
+  return this.nthMessagePromiser(n).promise
+}
+
+
 WsPromiser.prototype.onMessage = function (message) {
   const theCallees = this.callees
   this.callees = []
   theCallees.forEach(callee => callee(message))
+
+  this.nthMessagePromiser(++this.messageCount).resolve(message)
 }
 
 WsPromiser.prototype.send = function (message) {
@@ -81,7 +104,6 @@ const ADMIN_USER_PASSWORD = 'admin'
 module.exports = {
   WsPromiser: WsPromiser,
   sendDelta: (delta, deltaUrl) => {
-    if(!deltaUrl) console.trace()
     return fetch(deltaUrl, { method: 'POST', body: JSON.stringify(delta), headers: { 'Content-Type': 'application/json' } })
   },
   startServerP: function startServerP (port, enableSecurity, extraConfig={}, securityConfig) {
