@@ -159,7 +159,7 @@ function getNullPositionDelta (overwrite) {
 describe('Subscriptions', _ => {
   let serverP, port, deltaUrl
 
-  before(() => {
+  beforeEach(() => {
     serverP = freeport().then(p => {
       port = p
       deltaUrl = 'http://localhost:' + port + '/signalk/v1/api/_test/delta'
@@ -167,7 +167,7 @@ describe('Subscriptions', _ => {
     })
   })
 
-  after(done => {
+  afterEach(done => {
     serverP
       .then(server => server.stop())
       .then(() => {
@@ -175,157 +175,70 @@ describe('Subscriptions', _ => {
       })
   })
 
-  it('?subscribe=self subscription serves self data', function () {
-    let self, wsPromiser
+  async function testSelfData(url) {
+    const wsPromiser = new WsPromiser(url)
+    const self = JSON.parse(await wsPromiser.nthMessage(1)).self
+    await sendDelta(getDelta({ context: self }), deltaUrl)
+    await sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
 
-    return serverP
-      .then(_ => {
-        wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?subscribe=self&metaDeltas=none'
-        )
-        return wsPromiser.nextMsg()
-      })
-      .then(wsHello => {
-        self = JSON.parse(wsHello).self
+    //skip 2nd message that is delta from defaults
+    const echoedDelta = await wsPromiser.nthMessage(3)
+    assert(JSON.parse(echoedDelta).updates[0].source.pgn === 128275)
 
-        return Promise.all([
-          wsPromiser.nextMsg(),
-          sendDelta(
-            getDelta({
-              context: self
-            }),
-            deltaUrl
-          )
-        ])
-      })
-      .then(results => {
-        const deltaFromWs = JSON.parse(results[0])
-        assert(deltaFromWs.updates[0].source.pgn === 128275)
-        assert.equal(
-          deltaFromWs.updates[0].timestamp,
-          '2014-05-03T09:14:11.000Z'
-        )
+    try {
+      await wsPromiser.nthMessage(4)
+      throw new Error('no more messages should arrive')
+    } catch (e) {
+      assert.strictEqual(e, 'timeout')
+    }
+  }
 
-        return Promise.all([
-          wsPromiser.nextMsg(),
-          sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
-        ])
-      })
-      .then(results => {
-        assert(results[0] === 'timeout')
-      })
+  it('?subscribe=self subscription serves self data', async function () {
+    await serverP
+    await testSelfData('ws://localhost:' + port + '/signalk/v1/stream?subscribe=self&metaDeltas=none')
   })
 
-  it('default subscription serves self data', function () {
-    let self, wsPromiser
-
-    return serverP
-      .then(_ => {
-        wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?metaDeltas=none'
-        )
-        return wsPromiser.nextMsg()
-      })
-      .then(wsHello => {
-        self = JSON.parse(wsHello).self
-
-        return Promise.all([
-          wsPromiser.nextMsg(),
-          sendDelta(
-            getDelta({
-              context: self
-            }),
-            deltaUrl
-          )
-        ])
-      })
-      .then(results => {
-        console.log(results)
-        assert(JSON.parse(results[0]).updates[0].source.pgn === 128275)
-
-        return Promise.all([
-          wsPromiser.nextMsg(),
-          sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
-        ])
-      })
-      .then(results => {
-        assert(results[0] === 'timeout')
-      })
+  it('default subscription serves self data', async function () {
+    await serverP
+    await testSelfData('ws://localhost:' + port + '/signalk/v1/stream?metaDeltas=none')
   })
 
-  it('?subscribe=all subscription serves all data', function () {
-    let self, wsPromiser
+  it('?subscribe=all subscription serves all data', async function () {
+    await serverP
+    const wsPromiser = new WsPromiser(
+      'ws://localhost:' + port + '/signalk/v1/stream?subscribe=all&metaDeltas=none'
+    )
+    const self = JSON.parse(await wsPromiser.nthMessage(1)).self
+    await sendDelta(getDelta({ context: self }), deltaUrl)
+    await sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
 
-    return serverP
-      .then(_ => {
-        wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?subscribe=all&metaDeltas=none'
-        )
-        return wsPromiser.nextMsg()
-      })
-      .then(wsHello => {
-        self = JSON.parse(wsHello).self
+    //skip 2nd message that is delta from defaults
+    const echoedSelfDelta = await wsPromiser.nthMessage(3)
+    assert(JSON.parse(echoedSelfDelta).updates[0].source.pgn === 128275)
 
-        return Promise.all([
-          wsPromiser.nextMsg(),
-          sendDelta(
-            getDelta({
-              context: self
-            }),
-            deltaUrl
-          )
-        ])
-      })
-      .then(results => {
-        assert(JSON.parse(results[0]).updates[0].source.pgn === 128275)
-
-        return Promise.all([
-          wsPromiser.nextMsg(),
-          sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
-        ])
-      })
-      .then(results => {
-        assert(
-          JSON.parse(results[0]).context === 'vessels.othervessel',
-          'Sends other vessel data'
-        )
-      })
+    const echoedOtherDelta = await wsPromiser.nthMessage(4)
+    assert(
+      JSON.parse(echoedOtherDelta).context === 'vessels.othervessel',
+      'Sends other vessel data'
+    )
   })
 
-  it('?subscribe=none subscription serves no data', function () {
-    let self, wsPromiser
+  it('?subscribe=none subscription serves no data', async function () {
+    await serverP
+    const wsPromiser = new WsPromiser(
+      'ws://localhost:' + port + '/signalk/v1/stream?subscribe=none&metaDeltas=none'
+    )
 
-    return serverP
-      .then(_ => {
-        wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?subscribe=none&metaDeltas=none'
-        )
-        return wsPromiser.nextMsg()
-      })
-      .then(wsHello => {
-        self = JSON.parse(wsHello).self
+    const self = JSON.parse(await wsPromiser.nthMessage(1)).self
+    await sendDelta(getDelta({ context: self }), deltaUrl)
+    await sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
 
-        return Promise.all([
-          wsPromiser.nextMsg(),
-          sendDelta(
-            getDelta({
-              context: self
-            }),
-            deltaUrl
-          )
-        ])
-      })
-      .then(results => {
-        assert(results[0] === 'timeout')
-
-        return Promise.all([
-          wsPromiser.nextMsg(),
-          sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
-        ])
-      })
-      .then(results => {
-        assert(results[0] === 'timeout')
-      })
+    try {
+      await wsPromiser.nthMessage(3)
+      throw new Error('no message number 3 should arrive')
+    } catch (e) {
+      assert.strictEqual(e, 'timeout')
+    }
   })
 
   it('unsubscribe all plus navigation.logTrip subscription serves correct data', function () {
