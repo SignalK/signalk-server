@@ -126,7 +126,8 @@ module.exports = {
   putPath: putPath
 }
 
-function putPath(app, context, path, body, req, requestId, updateCb) {
+function putPath(app, contextParam, path, body, req, requestId, updateCb) {
+  const context = contextParam || 'vessels.self'
   debug('received put %s %s %j', context, path, body)
   return new Promise((resolve, reject) => {
     createRequest(
