@@ -139,7 +139,7 @@ const dataTypeMapping = {
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
     }
-    return result.concat([new N2kToSignalK(options.subOptions)])
+    return result.concat([new N2kToSignalK(options.subOption)])
   },
   NMEA2000IK: options => {
     const result = [new CanboatJs(options.subOptions)]

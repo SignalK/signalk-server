@@ -91,7 +91,7 @@ Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
       if ( this.n2kParser.isN2KOver0183(sentence) ) {
         const pgn = this.n2kParser.parseN2KOver0183(sentence)
         if ( pgn ) {
-          delta = n2kToDelta(pgn, this.state)
+          delta = n2kToDelta(pgn, this.state, {sendMetaData: true})
         }
       } else {
         delta = this.parser.parse(sentence)
