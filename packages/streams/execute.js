@@ -37,6 +37,7 @@
  */
 
 const Transform = require('stream').Transform
+const { pgnToActisenseSerialFormat } = require('@canboat/canboatjs')
 
 function Execute (options) {
   Transform.call(this, {})
@@ -116,8 +117,8 @@ Execute.prototype.pipe = function (pipeTo) {
   })
 
   if (stdOutEvent === 'nmea2000out') {
-    that.options.app.on('nmea2000outJson', pgn => {
-      that.serial.write(pgnToActisenseSerialFormat(pgn) + '\r\n')
+    that.options.app.on('nmea2000JsonOut', pgn => {
+      that.childProcess.stdin.write(pgnToActisenseSerialFormat(pgn) + '\r\n')
     })
     that.options.app.emit('nmea2000OutAvailable')
   }
