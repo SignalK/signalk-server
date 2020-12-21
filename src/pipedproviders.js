@@ -70,7 +70,7 @@ module.exports = function(app) {
             }
           } catch (e) {
             app.setProviderError(config.id, e.message)
-            console.error(e.message)
+            console.error(e)
           }
           return result
         },
