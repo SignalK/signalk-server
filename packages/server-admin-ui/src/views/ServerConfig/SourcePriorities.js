@@ -137,6 +137,9 @@ class PrefsEditor extends Component {
   constructor(props) {
     super(props)
     this.state = { isOpen: false, sourceRefs: [] }
+    fetchSourceRefs(this.props.path, sourceRefs => {
+      this.setState({ sourceRefs })
+    })
   }
 
   componentDidUpdate(prevProps) {
@@ -352,6 +355,7 @@ class SourcePriorities extends Component {
                     </td>
                     <td>
                       <PrefsEditor
+                        key={path}
                         path={path}
                         priorities={priorities}
                         dispatch={this.props.dispatch}
