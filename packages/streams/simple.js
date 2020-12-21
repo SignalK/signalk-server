@@ -132,14 +132,14 @@ const dataTypeMapping = {
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
     }
-    return result.concat([new N2kToSignalK({...options.subOptions, sendMetaData: true})])
+    return result.concat([new N2kToSignalK(options.subOptions)])
   },
   NMEA2000JS: options => {
     const result = [new CanboatJs(options.subOptions)]
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
     }
-    return result.concat([new N2kToSignalK({...options.subOptions,sendMetaData: true})])
+    return result.concat([new N2kToSignalK(options.subOption)])
   },
   NMEA2000IK: options => {
     const result = [new CanboatJs(options.subOptions)]
