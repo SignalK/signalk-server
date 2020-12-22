@@ -187,8 +187,12 @@ const pipeStartByType = {
 
 function nmea2000input (subOptions, logging) {
   if (subOptions.type === 'ngt-1-canboatjs') {
+    const actisenseSerial = require('./actisense-serial')
+    if ( ! actisenseSerial ) {
+      throw new Error('unable to load actisense serial')
+    }
     return [
-      new require('./actisense-serial')({
+      new actisenseSerial({
         ...subOptions,
         outEvent: 'nmea2000out',
         plainText: logging
