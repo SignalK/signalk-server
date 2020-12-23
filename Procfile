@@ -1,1 +1,1 @@
-web: node bin/signalk-server -s ./settings/volare-file-settings.json
+web: node bin/signalk-server -s ./settings/n2k-from-file-settings.json
