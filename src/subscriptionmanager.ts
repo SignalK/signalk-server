@@ -81,6 +81,7 @@ class SubscriptionManager {
         })
       )
     }
+    return { contextFilter }
   }
 
   unsubscribe(msg: any, unsubscribes: Unsubscribes) {

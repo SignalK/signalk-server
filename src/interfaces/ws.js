@@ -568,7 +568,7 @@ function processSubscribe(app, unsubscribes, spark, assertBufferSize, msg) {
       spark.logUnsubscribe = startServerLog(app, spark)
     }
   } else {
-    app.subscriptionmanager.subscribe(
+    const result = app.subscriptionmanager.subscribe(
       msg,
       unsubscribes,
       spark.write.bind(spark),
@@ -585,6 +585,9 @@ function processSubscribe(app, unsubscribes, spark, assertBufferSize, msg) {
       },
       spark.request.skPrincipal
     )
+    if (!(spark.request.query.sendCachedValues === 'false')) {
+      sendLatestDeltasForSubscribe(app, spark, result.contextFilter, msg)
+    }
   }
 }
 
@@ -696,6 +699,56 @@ function sendLatestDeltas(deltaCache, selfContext, spark) {
   deltaCache
     .getCachedDeltas(spark.request.skPrincipal, deltaFilter)
     .forEach(spark.write, spark)
+}
+
+function regexPathFilter(path) {
+  const pattern = path.replace('.', '\\.').replace('*', '.*')
+  const matcher = new RegExp('^' + pattern + '$')
+  return aPath => matcher.test(aPath)
+}
+
+function filterDeltaPaths(pathFilters, delta) {
+  let updates = delta.updates
+    .map(update => {
+      let res = (update.values || update.meta).filter(valuePath => {
+        return pathFilters.find(filter => filter(valuePath.path))
+      })
+      if (update.values) {
+        return res.length > 0 ? { ...update, values: res } : null
+      } else {
+        return res.length > 0 ? { ...update, meta: res } : null
+      }
+    })
+    .filter(update => update != null)
+  return updates.length > 0 ? { ...delta, updates } : null
+}
+
+function sendLatestDeltasForSubscribe(app, spark, contextFilter, msg) {
+  let pathFilters = msg.subscribe.map(sub => {
+    if (sub.path === '*') {
+      return delta => true
+    } else {
+      let pathMatcher
+      if (sub.path.indexOf('*') !== -1) {
+        pathMatcher = regexPathFilter(sub.path)
+      } else {
+        pathMatcher = path => path === sub.path
+      }
+      return pathMatcher
+    }
+  })
+
+  let deltaFilter = delta => {
+    return filterDeltaPaths(pathFilters, delta)
+  }
+
+  app.deltaCache
+    .getCachedDeltas(spark.request.skPrincipal, contextFilter)
+    .filter(deltaFilter)
+    .forEach(delta => {
+      sendMetaData(app, spark, delta)
+      spark.write(delta)
+    })
 }
 
 function startServerEvents(app, spark) {
