@@ -676,7 +676,7 @@ function handleRealtimeConnection(app, spark, onChange) {
   })
 
   if (!(spark.request.query.sendCachedValues === 'false')) {
-    sendLatestDeltas(app.deltaCache, app.selfContext, spark)
+    sendLatestDeltas(app, app.deltaCache, app.selfContext, spark)
   }
 
   if (spark.query.serverevents === 'all') {
@@ -685,7 +685,7 @@ function handleRealtimeConnection(app, spark, onChange) {
   }
 }
 
-function sendLatestDeltas(deltaCache, selfContext, spark) {
+function sendLatestDeltas(app, deltaCache, selfContext, spark) {
   let deltaFilter = delta => false
   if (!spark.query.subscribe || spark.query.subscribe === 'self') {
     deltaFilter = delta => delta.context === selfContext
@@ -695,7 +695,10 @@ function sendLatestDeltas(deltaCache, selfContext, spark) {
 
   deltaCache
     .getCachedDeltas(spark.request.skPrincipal, deltaFilter)
-    .forEach(spark.write, spark)
+    .forEach(delta => {
+      sendMetaData(app, spark, delta)
+      spark.write(delta)
+    })
 }
 
 function startServerEvents(app, spark) {
