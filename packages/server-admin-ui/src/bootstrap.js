@@ -52,6 +52,9 @@ const state = {
     installing: []
   },
   loginStatus: {},
+  eventStatistics: {
+    stats: {}
+  },
   serverSpecification: {},
   websocketStatus: 'initial',
   webSocket: null,
@@ -115,6 +118,12 @@ let store = createStore(
       return {
         ...state,
         serverStatistics: action.data
+      }
+    }
+    if (action.type === 'EVENTSTATISTICS') {
+      return {
+        ...state,
+        eventStatistics: action.data
       }
     }
     if (action.type === 'PROVIDERSTATUS') {

@@ -34,7 +34,7 @@ const Dashboard = props => {
             <CardHeader>Stats</CardHeader>
             <CardBody>
               <Row>
-                <Col xs='12' md='6'>
+                <Col xs='12' md='4'>
                   <div className='callout callout-primary'>
                     <small className='text-muted'>
                       Total server Signal K throughput (deltas/second)
@@ -64,7 +64,7 @@ const Dashboard = props => {
                     <strong className='h5'>{uptimeD} days, {uptimeH} hours, {uptimeM} minutes</strong>
                   </div>
                 </Col>
-                <Col xs='12' md='6'>
+                <Col xs='12' md='4'>
                   <div className='text-muted'>
                     Connection activity (deltas/second)
                   </div>
@@ -101,6 +101,14 @@ const Dashboard = props => {
                         </li>
                       )
                     })}
+                  </ul>
+                </Col>
+                <Col xs='12' md='4'>
+                <div className='text-muted'>
+                    Event activity (events/second)
+                  </div>
+                  <ul className='horizontal-bars type-2'>
+                    {eventStats(props.eventStatistics)}
                   </ul>
                 </Col>
               </Row>
@@ -163,6 +171,19 @@ const Dashboard = props => {
   )
 }
 
+function eventStats(eventStatistics) {
+  return Object.entries(eventStatistics.stats)
+    .filter(([key, value]) => value > 0)
+    .map(([key, value]) => {
+    return (
+      <li key={key}>
+        <span className='title'>{key}</span>
+        <span className='value'>{(value / eventStatistics.periodMillis * 1000).toFixed(1) }</span>
+      </li>
+    )
+  })
+}
+
 function pluginNameLink (id) {
   return (<a href={'#/serverConfiguration/plugins/' + id}>{id}</a>)
 }
@@ -171,8 +192,9 @@ function providerIdLink (id) {
   return (<a href={'#/serverConfiguration/connections/' + id}>{id}</a>)
 }
 
-export default connect(({ serverStatistics, websocketStatus, providerStatus }) => ({
+export default connect(({ serverStatistics, websocketStatus, providerStatus, eventStatistics }) => ({
   serverStatistics,
+  eventStatistics,
   websocketStatus,
   providerStatus
 }))(Dashboard)
