@@ -35,6 +35,7 @@ const getExternalPort = ports.getExternalPort
 const DeltaChain = require('./deltachain')
 import { checkForNewServerVersion } from './modules'
 import { getToPreferredDelta } from './deltaPriority'
+import { startEventStats } from './events'
 
 const { StreamBundle } = require('./streambundle')
 const {
@@ -241,23 +242,6 @@ Server.prototype.start = function() {
   const self = this
   const app = this.app
 
-  const eventDebugs = {}
-  const emit = app.emit
-  app.emit = function(eventName) {
-    if (eventName !== 'serverlog') {
-      let eventDebug = eventDebugs[eventName]
-      if (!eventDebug) {
-        eventDebugs[eventName] = eventDebug = require('debug')(
-          `signalk-server:events:${eventName}`
-        )
-      }
-      if (eventDebug.enabled) {
-        eventDebug([...arguments].slice(1))
-      }
-    }
-    emit.apply(app, arguments)
-  }
-
   this.app.intervals = []
 
   this.app.intervals.push(
@@ -287,6 +271,8 @@ Server.prototype.start = function() {
       })
     }, 5 * 1000)
   )
+
+  app.intervals.push(startEventStats(app))
 
   function serverUpgradeIsAvailable(err, newVersion) {
     if (err) {
