@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  signalk:
+    image: signalk/signalk-server
+    networks:
+      - signalk
+    ports:
+      - "3000:3000"
+    volumes:
+      - dot.signalk:/home/node/.signalk
+    restart: always
+
+networks:
+  signalk:
+
+volumes:
+   dot.signalk:
