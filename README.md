@@ -70,7 +70,7 @@ You can start a local server on port 3000 with demo data:
 docker run --init -it --rm --name signalk-server --publish 3000:3000 --entrypoint bin/signalk-server signalk/signalk-server --sample-nmea0183-data
 ```
 
-Or, you can start the same local server on port 3000 with demo data with docker-compose
+Or, you can start the same local server on port 3000 with demo data with docker-compose:
 ```
 docker-compose up -d
 ```
