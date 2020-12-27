@@ -8,7 +8,6 @@ const {
   getLatestServerVersion
 } = require('./modules')
 
-
 describe('modulesWithKeyword', () => {
   it('returns a list of modules with one "installed" update in config dir', () => {
     const expectedModules = [
@@ -16,7 +15,9 @@ describe('modulesWithKeyword', () => {
       '@signalk/instrumentpanel'
     ]
     const updateInstalledModule = '@signalk/instrumentpanel'
-    const indexOfInstalledModule = expectedModules.indexOf(updateInstalledModule)
+    const indexOfInstalledModule = expectedModules.indexOf(
+      updateInstalledModule
+    )
 
     const testTempDir = path.join(
       require('os').tmpdir(),
@@ -53,7 +54,9 @@ describe('modulesWithKeyword', () => {
     const moduleList = modulesWithKeyword(app, 'signalk-webapp')
     chai.expect(_.map(moduleList, 'module')).to.eql(expectedModules)
     chai.expect(moduleList[0].location).to.not.eql(tempNodeModules)
-    chai.expect(moduleList[indexOfInstalledModule].location).to.eql(tempNodeModules)
+    chai
+      .expect(moduleList[indexOfInstalledModule].location)
+      .to.eql(tempNodeModules)
   })
 })
 
