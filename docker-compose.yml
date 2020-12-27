@@ -1,4 +1,4 @@
-version: "3.9"
+version: "2.0"
 services:
   signalk:
     image: signalk/signalk-server
@@ -9,6 +9,11 @@ services:
     volumes:
       - dot.signalk:/home/node/.signalk
     restart: always
+    # The next 4 lines should only be used for testing
+    entrypoint:
+      - bin/signalk-server
+      - signalk/signalk-server
+      - --sample-nmea0183-data
 
 networks:
   signalk:
