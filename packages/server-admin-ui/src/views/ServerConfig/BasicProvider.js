@@ -197,6 +197,7 @@ class DeviceInput extends Component {
             name="options.device"
             id="serialportselect"
             onChange={this.props.onChange}
+            helpText='help me'
             value={isManualEntry ? 'Enter manually' : this.props.value.device}
           >
             <option key="enterManually">Enter manually</option>
@@ -756,6 +757,13 @@ const NMEA0183 = props => {
             <option value='gpsd'>GPSD</option>
           </Input>
         </Col>
+        {props.value.options.type === 'serial' && (
+          <Col xs='12' md='6'>
+            Serial ports are bidirectional. Input from the connection is parsed
+            as NMEA0183. Configure Output Events below to connect server's
+            NMEA0183 data for output.
+          </Col>
+        )}
         {props.value.options.type === 'tcpserver' && (
           <Col xs='12' md='6'>
             Make this server's NMEA 10110 server bidirectional so that input
@@ -825,6 +833,7 @@ const SignalK = props => {
             name='options.type'
             onChange={event => props.onChange(event)}
             disabled={props.value.options.useDiscovery}
+            helpText='afoo'
           >
             <option>Select a source</option>
             <option value='serial'>Serial</option>
