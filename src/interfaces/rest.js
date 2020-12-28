@@ -31,6 +31,10 @@ module.exports = function(app) {
   const apiPathPrefix = pathPrefix + versionPrefix + '/api/'
   const streamPath = pathPrefix + versionPrefix + '/stream'
 
+  const KNOWN_OTHER_PATH_PREFIXES = [
+    'resources'
+  ]
+
   return {
     start: function() {
       app.use('/', express.static(__dirname + '/../../public'))
@@ -43,6 +47,11 @@ module.exports = function(app) {
         }
 
         path = path.length > 0 ? path.replace(/\/$/, '').split('/') : []
+
+        if (KNOWN_OTHER_PATH_PREFIXES.indexOf(path[0]) >= 0) {
+          next()
+          return
+        }
 
         if (path.length > 4 && path[path.length - 1] === 'meta') {
           let meta = getMetadata(path.slice(0, path.length - 1).join('.'))
