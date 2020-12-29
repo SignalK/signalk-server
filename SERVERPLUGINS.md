@@ -685,9 +685,9 @@ app.registerDeltaInputHandler((delta, next) => {
 Set the current status of the plugin. The `msg` should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.
 
 ```javascript
-app.app.setPluginStatus('Initializing');
+app.setPluginStatus('Initializing');
 // Do something
-app.app.setPluginStatus('Done initializing');
+app.setPluginStatus('Done initializing');
 ```
 
 Use this instead of deprecated `setProviderStatus`
