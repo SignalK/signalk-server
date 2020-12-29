@@ -169,7 +169,7 @@ module.exports = function(app) {
           }`
         )
 
-        spark.sendMetaDeltas = spark.query.metaDeltas !== 'none'
+        spark.sendMetaDeltas = spark.query.sendMeta === 'all'
         spark.sentMetaData = {}
 
         let onChange = delta => {
