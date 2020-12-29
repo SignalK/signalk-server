@@ -21,6 +21,7 @@ import _, { isUndefined } from 'lodash'
 import { toDelta } from './streambundle'
 import {
   Context,
+  ContextMatcher,
   Delta,
   NormalizedDelta,
   SignalKServer,
@@ -32,9 +33,7 @@ interface StringKeyed {
   [key: string]: any
 }
 
-type ContextFilter = (_: { context: Context }) => boolean
-
-class DeltaCache {
+export default class DeltaCache {
   cache: StringKeyed = {}
   lastModifieds: StringKeyed = {}
   app: SignalKServer
@@ -153,7 +152,7 @@ class DeltaCache {
     return signalk.retrieve()
   }
 
-  getCachedDeltas(user: string, contextFilter: ContextFilter, key: string) {
+  getCachedDeltas(contextFilter: ContextMatcher, user?: string, key?: string) {
     const contexts: any[] = []
     _.keys(this.cache).forEach(type => {
       _.keys(this.cache[type]).forEach(id => {
