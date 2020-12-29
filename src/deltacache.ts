@@ -193,9 +193,11 @@ class DeltaCache {
 
     deltas = deltas.map(toDelta)
 
-    deltas = deltas.filter((delta: Delta) => {
-      return this.app.securityStrategy.filterReadDelta(user, delta)
-    })
+    if (user) {
+      deltas = deltas.filter((delta: Delta) => {
+        return this.app.securityStrategy.filterReadDelta(user, delta)
+      })
+    }
 
     return deltas
   }
