@@ -209,7 +209,7 @@ describe('deltacache', () => {
   it('deltas ordered properly', function () {
     return serverP.then(server => {
       return deltaP.then(() => {
-        var deltas = server.app.deltaCache.getCachedDeltas(null, delta => true)
+        var deltas = server.app.deltaCache.getCachedDeltas(delta => true, null)
         assert(deltas.length == expectedOrder.length)
         for (var i = 0; i < expectedOrder.length; i++) {
           if (!deltas[i].updates[0].meta) {

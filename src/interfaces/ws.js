@@ -694,7 +694,7 @@ function sendLatestDeltas(app, deltaCache, selfContext, spark) {
   }
 
   deltaCache
-    .getCachedDeltas(spark.request.skPrincipal, deltaFilter)
+    .getCachedDeltas(deltaFilter, spark.request.skPrincipal)
     .forEach(delta => {
       sendMetaData(app, spark, delta)
       spark.write(delta)

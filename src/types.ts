@@ -51,11 +51,16 @@ export interface MdnsAdvertisement {
 // move to subscriptionmanage.ts when all SubscriptionManager use is in ts
 export interface Unsubscribes extends Array<() => void> {}
 
-export interface NormalizedDelta {
+export interface WithContext {
+  context: Context
+}
+
+export type ContextMatcher = (_: WithContext) => boolean
+
+export interface NormalizedDelta extends WithContext {
   $source: SourceRef
   source: Source
   path: Path
-  context: Context
   value: Value
   isMeta: boolean
 }
@@ -66,3 +71,7 @@ export type Delta = any
 export type Path = string
 export type Context = string
 export type Value = object | number | string | null
+export interface Position {
+  latitude: number
+  longitude: number
+}

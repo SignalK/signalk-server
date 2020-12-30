@@ -1,7 +1,8 @@
 import React, { Component } from 'react'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
-import {Container, Card, CardBody, CardHeader, Collapse, Row, Col, Input, InputGroup, Label} from 'reactstrap'
+import { Button, Container, Card, CardBody, CardHeader, Row, Col, Input, Label } from 'reactstrap'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
+import { Fragment } from 'react'
 
 export default class PluginConfigurationList extends Component {
   constructor() {
@@ -14,7 +15,7 @@ export default class PluginConfigurationList extends Component {
 
   toggleForm(clickedIndex, id) {
     const openedPluginId = this.props.match.params.pluginid === id ? '-' : id
-    this.props.history.push(`/serverConfiguration/plugins/${openedPluginId}`)
+    this.props.history.replace(`/serverConfiguration/plugins/${openedPluginId}`)
   }
 
   componentDidMount() {
@@ -43,7 +44,13 @@ export default class PluginConfigurationList extends Component {
               key={i}
               isOpen={isOpen}
               toggleForm={this.toggleForm.bind(this, i, plugin.id)}
-              saveData={(data) => this.saveData(plugin.id, data, i)}/>
+              saveData={(data) => {
+                if (plugin.data.configuration === undefined) {
+                  data.enabled = true
+                }
+                this.props.history.replace(`/serverConfiguration/plugins/-`)
+                this.saveData(plugin.id, data, i)
+              }}/>
         )})}
       </Container>
     )
@@ -82,54 +89,70 @@ class PluginCard extends Component {
             <i style={{marginRight: '10px'}} className={'fa fa-chevron-' + (this.props.isOpen ? 'down' : 'right')} />
             {this.props.plugin.name}
           </Col>
-          <Col xs='2'>
-            Enabled
-              <Label style={labelStyle} className='switch switch-text switch-primary'>
-                <Input
-                  type='checkbox'
-                  name='enabled'
-                  className='switch-input'
-                  onChange={(e) => {
-                    this.props.saveData({...this.props.plugin.data, enabled: !this.props.plugin.data.enabled})
-                  }}
-                  checked={this.props.plugin.data.enabled}
-                />
-                <span className='switch-label' data-on='Yes' data-off='No' />
-                <span className='switch-handle' />
-              </Label>
-          </Col>
-          <Col xs='3'>
-            Log plugin output
-              <Label style={labelStyle} className='switch switch-text switch-primary'>
-                <Input
-                  type='checkbox'
-                  name='enableLogging'
-                  className='switch-input'
-                  onChange={(e) => {
-                    this.props.saveData({...this.props.plugin.data, enableLogging: !this.props.plugin.data.enableLogging})
-                  }}
-                  checked={this.props.plugin.data.enableLogging}
-                />
-                <span className='switch-label' data-on='Yes' data-off='No' />
-                <span className='switch-handle' />
-              </Label>
-          </Col>
-          <Col xs='3'>
-            Enable debug log
-              <Label style={labelStyle} className='switch switch-text switch-primary'>
-                <Input
-                  type='checkbox'
-                  name='enableDebug'
-                  className='switch-input'
-                  onChange={(e) => {
-                    this.props.saveData({...this.props.plugin.data, enableDebug: !this.props.plugin.data.enableDebug})
-                  }}
-                  checked={this.props.plugin.data.enableDebug}
-                />
-                <span className='switch-label' data-on='Yes' data-off='No' />
-                <span className='switch-handle' />
-              </Label>
-          </Col>
+              {!this.props.plugin.data.configuration &&  !this.props.isOpen && (
+                <Col xs='2'>
+                <Button
+                  size='sm'
+                  color='primary'
+                  style={{width: '100%'}}
+                  onClick={this.props.toggleForm}
+                >
+                  Configure
+                </Button>
+                </Col>
+              )}
+          {this.props.plugin.data.configuration &&  (
+            <Fragment>
+              <Col xs='2'>
+                  Enabled
+                  <Label style={labelStyle} className='switch switch-text switch-primary'>
+                    <Input
+                      type='checkbox'
+                      name='enabled'
+                      className='switch-input'
+                      onChange={(e) => {
+                        this.props.saveData({...this.props.plugin.data, enabled: !this.props.plugin.data.enabled})
+                      }}
+                      checked={this.props.plugin.data.enabled}
+                    />
+                    <span className='switch-label' data-on='Yes' data-off='No' />
+                    <span className='switch-handle' />
+                  </Label>
+              </Col>
+              <Col xs='3'>
+                Log plugin output
+                  <Label style={labelStyle} className='switch switch-text switch-primary'>
+                    <Input
+                      type='checkbox'
+                      name='enableLogging'
+                      className='switch-input'
+                      onChange={(e) => {
+                        this.props.saveData({...this.props.plugin.data, enableLogging: !this.props.plugin.data.enableLogging})
+                      }}
+                      checked={this.props.plugin.data.enableLogging}
+                    />
+                    <span className='switch-label' data-on='Yes' data-off='No' />
+                    <span className='switch-handle' />
+                  </Label>
+              </Col>
+              <Col xs='3'>
+                Enable debug log
+                  <Label style={labelStyle} className='switch switch-text switch-primary'>
+                    <Input
+                      type='checkbox'
+                      name='enableDebug'
+                      className='switch-input'
+                      onChange={(e) => {
+                        this.props.saveData({...this.props.plugin.data, enableDebug: !this.props.plugin.data.enableDebug})
+                      }}
+                      checked={this.props.plugin.data.enableDebug}
+                    />
+                    <span className='switch-label' data-on='Yes' data-off='No' />
+                    <span className='switch-handle' />
+                  </Label>
+              </Col>
+            </Fragment>
+          )}
         </Row>
       </CardHeader>
       {  this.props.isOpen &&

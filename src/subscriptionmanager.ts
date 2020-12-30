@@ -19,14 +19,18 @@ import Debug from 'debug'
 import { isPointWithinRadius } from 'geolib'
 import _, { forOwn, get, isString } from 'lodash'
 const debug = Debug('signalk-server:subscriptionmanager')
+import DeltaCache from './deltacache'
 import { toDelta } from './streambundle'
-import { Unsubscribes } from './types'
+import { ContextMatcher, Position, Unsubscribes, WithContext } from './types'
 
 interface BusesMap {
   [key: string]: any
 }
 
-type ContextMatcher = (context: string) => boolean
+interface RelativePositionOrigin {
+  radius: number
+  position: Position
+}
 
 class SubscriptionManager {
   streambundle: any
@@ -132,8 +136,12 @@ function handleSubscribeRows(
   }, unsubscribes)
 }
 
+interface App {
+  deltaCache: DeltaCache
+}
+
 function handleSubscribeRow(
-  app: any,
+  app: App,
   subscribeRow: any,
   unsubscribes: Unsubscribes,
   buses: BusesMap,
@@ -193,7 +201,7 @@ function handleSubscribeRow(
       }
       unsubscribes.push(filteredBus.map(toDelta).onValue(callback))
 
-      const latest = app.deltaCache.getCachedDeltas(user, filter, key)
+      const latest = app.deltaCache.getCachedDeltas(filter, user, key)
       if (latest) {
         latest.forEach(callback)
       }
@@ -220,7 +228,7 @@ function contextMatcher(
         .replace('.', '\\.')
         .replace('*', '.*')
       const matcher = new RegExp('^' + pattern + '$')
-      return (normalizedDeltaData: any) =>
+      return (normalizedDeltaData: WithContext) =>
         matcher.test(normalizedDeltaData.context) ||
         ((subscribeCommand.context === 'vessels.self' ||
           subscribeCommand.context === 'self') &&
@@ -236,32 +244,28 @@ function contextMatcher(
         )
         return x => false
       }
-      return normalizedDeltaData => {
-        return checkPosition(app, subscribeCommand.context, normalizedDeltaData)
-      }
+      return (normalizedDeltaData: WithContext) =>
+        checkPosition(app, subscribeCommand.context, normalizedDeltaData)
     }
   }
   return x => true
 }
 
-function checkPosition(app: any, context: any, normalizedDeltaData: any) {
-  const vessel = get(app.signalk.root, normalizedDeltaData.context)
+function checkPosition(
+  app: any,
+  origin: RelativePositionOrigin,
+  normalizedDelta: WithContext
+): boolean {
+  const vessel = get(app.signalk.root, normalizedDelta.context)
   const position = get(vessel, 'navigation.position')
 
-  const subsPosition = get(context, 'position')
-  if (
+  return (
     position &&
     position.value &&
     position.value.latitude &&
     position.value.longitude &&
-    subsPosition &&
-    subsPosition.latitude &&
-    subsPosition.longitude
-  ) {
-    return isPointWithinRadius(position.value, subsPosition, context.radius)
-  }
-
-  return false
+    isPointWithinRadius(position.value, origin.position, origin.radius)
+  )
 }
 
 export = SubscriptionManager
