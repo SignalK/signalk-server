@@ -557,11 +557,15 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     const newVessel = req.body
 
     function set(skPath, value) {
-      _.set(data.vessels.self, skPath, value && value.length > 0 ? value : undefined)
+      _.set(
+        data.vessels.self,
+        skPath,
+        value && value.length > 0 ? value : undefined
+      )
     }
 
     function setNumber(skPath, rmPath, value) {
-      if ( _.isNumber(value) || (value && value.length) > 0 ) {
+      if (_.isNumber(value) || (value && value.length) > 0) {
         _.set(data.vessels.self, skPath, Number(value))
       } else {
         _.unset(data.vessels.self, rmPath)
@@ -580,8 +584,16 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     setNumber('design.length.value.overall', 'design.length', newVessel.length)
     setNumber('design.beam.value', 'design.beam', newVessel.beam)
     setNumber('design.airHeight.value', 'design.airHeight', newVessel.height)
-    setNumber('sensors.gps.fromBow.value', 'sensors.gps.fromBow', newVessel.gpsFromBow)
-    setNumber('sensors.gps.fromCenter.value', 'sensors.gps.fromCenter', newVessel.gpsFromCenter)
+    setNumber(
+      'sensors.gps.fromBow.value',
+      'sensors.gps.fromBow',
+      newVessel.gpsFromBow
+    )
+    setNumber(
+      'sensors.gps.fromCenter.value',
+      'sensors.gps.fromCenter',
+      newVessel.gpsFromCenter
+    )
 
     if (newVessel.aisShipType) {
       set('design.aisShipType.value', {
@@ -591,7 +603,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     } else {
       delete self.design.aisShipType
     }
-  
+
     if (newVessel.callsignVhf) {
       set('communication.callsignVhf', newVessel.callsignVhf)
     } else {
@@ -624,16 +636,22 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
 
     function makeNumber(num) {
-      return !_.isUndefined(num) && (_.isNumber(num) || num.length) ? Number(num) : undefined
+      return !_.isUndefined(num) && (_.isNumber(num) || num.length)
+        ? Number(num)
+        : undefined
     }
 
     de.setSelfValue(
       'design.draft',
-      !_.isUndefined(vessel.draft) && vessel.draft.length ? { maximum: Number(vessel.draft) } : undefined
+      !_.isUndefined(vessel.draft) && vessel.draft.length
+        ? { maximum: Number(vessel.draft) }
+        : undefined
     )
     de.setSelfValue(
       'design.length',
-      !_.isUndefined(vessel.length) && vessel.length.length ? { overall: Number(vessel.length) } : undefined
+      !_.isUndefined(vessel.length) && vessel.length.length
+        ? { overall: Number(vessel.length) }
+        : undefined
     )
     de.setSelfValue('design.beam', makeNumber(vessel.beam))
     de.setSelfValue('design.airHeight', makeNumber(vessel.height))
