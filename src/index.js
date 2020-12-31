@@ -351,7 +351,7 @@ Server.prototype.start = function() {
       debug('ID: ' + app.selfId)
 
       config.sendBaseDeltas(app)
-      
+
       startInterfaces(app)
       startMdns(app)
       app.providers = require('./pipedproviders')(app).start()
