@@ -277,6 +277,7 @@ StandardError=syslog
 WorkingDirectory=${configDirectory}
 User=${process.env.SUDO_USER}
 Environment=EXTERNALPORT=${primaryPort}
+Environment=RUN_FROM_SYSTEMD=true
 [Install]
 WantedBy=multi-user.target
 `

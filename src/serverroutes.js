@@ -381,7 +381,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       },
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
-      runFromSystemd: process.env.LISTEN_FDS > 0
+      runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true'
     }
 
     if (!settings.runFromSystemd) {
