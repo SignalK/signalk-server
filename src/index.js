@@ -350,11 +350,11 @@ Server.prototype.start = function() {
       debug('ID type: ' + app.selfType)
       debug('ID: ' + app.selfId)
 
+      config.sendBaseDeltas(app)
+
       startInterfaces(app)
       startMdns(app)
       app.providers = require('./pipedproviders')(app).start()
-
-      config.sendBaseDeltas(app)
 
       const primaryPort = getPrimaryPort(app)
       debug(`primary port:${primaryPort}`)
