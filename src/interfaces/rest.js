@@ -31,9 +31,7 @@ module.exports = function(app) {
   const apiPathPrefix = pathPrefix + versionPrefix + '/api/'
   const streamPath = pathPrefix + versionPrefix + '/stream'
 
-  const KNOWN_OTHER_PATH_PREFIXES = [
-    'resources'
-  ]
+  const KNOWN_OTHER_PATH_PREFIXES = ['resources']
 
   return {
     start: function() {
