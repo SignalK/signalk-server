@@ -557,46 +557,57 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     const newVessel = req.body
 
     function set(skPath, value) {
-      _.set(data.vessels.self, skPath, value)
+      _.set(
+        data.vessels.self,
+        skPath,
+        value && value.length > 0 ? value : undefined
+      )
     }
 
-    if (newVessel.name) {
-      set('name', newVessel.name)
+    function setNumber(skPath, rmPath, value) {
+      if (_.isNumber(value) || (value && value.length) > 0) {
+        _.set(data.vessels.self, skPath, Number(value))
+      } else {
+        _.unset(data.vessels.self, rmPath)
+      }
     }
-    if (newVessel.mmsi) {
-      set('mmsi', newVessel.mmsi)
-    }
+
+    set('name', newVessel.name)
+    set('mmsi', newVessel.mmsi)
+
     if (newVessel.uuid && !self.mmsi) {
       set('uuid', newVessel.uuid)
     } else {
       delete self.uuid
     }
-    if (newVessel.draft) {
-      set('design.draft.value.maximum', Number(newVessel.draft))
-    }
-    if (newVessel.length) {
-      set('design.length.value.overall', Number(newVessel.length))
-    }
-    if (newVessel.beam) {
-      set('design.beam.value', Number(newVessel.beam))
-    }
-    if (newVessel.height) {
-      set('design.airHeight.value', Number(newVessel.height))
-    }
-    if (newVessel.gpsFromBow) {
-      set('sensors.gps.fromBow.value', Number(newVessel.gpsFromBow))
-    }
-    if (newVessel.gpsFromCenter) {
-      set('sensors.gps.fromCenter.value', Number(newVessel.gpsFromCenter))
-    }
+    setNumber('design.draft.value.maximum', 'design.draft', newVessel.draft)
+    setNumber('design.length.value.overall', 'design.length', newVessel.length)
+    setNumber('design.beam.value', 'design.beam', newVessel.beam)
+    setNumber('design.airHeight.value', 'design.airHeight', newVessel.height)
+    setNumber(
+      'sensors.gps.fromBow.value',
+      'sensors.gps.fromBow',
+      newVessel.gpsFromBow
+    )
+    setNumber(
+      'sensors.gps.fromCenter.value',
+      'sensors.gps.fromCenter',
+      newVessel.gpsFromCenter
+    )
+
     if (newVessel.aisShipType) {
       set('design.aisShipType.value', {
         name: getAISShipTypeName(newVessel.aisShipType),
         id: Number(newVessel.aisShipType)
       })
+    } else {
+      delete self.design.aisShipType
     }
+
     if (newVessel.callsignVhf) {
       set('communication.callsignVhf', newVessel.callsignVhf)
+    } else {
+      delete self.communication
     }
 
     skConfig.writeDefaultsFile(app, data, err => {
@@ -625,16 +636,22 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
 
     function makeNumber(num) {
-      return !_.isUndefined(num) && Number(num)
+      return !_.isUndefined(num) && (_.isNumber(num) || num.length)
+        ? Number(num)
+        : undefined
     }
 
     de.setSelfValue(
       'design.draft',
-      !_.isUndefined(vessel.draft) ? { maximum: Number(vessel.draft) } : null
+      !_.isUndefined(vessel.draft) && vessel.draft.length
+        ? { maximum: Number(vessel.draft) }
+        : undefined
     )
     de.setSelfValue(
       'design.length',
-      !_.isUndefined(vessel.length) ? { overall: Number(vessel.length) } : null
+      !_.isUndefined(vessel.length) && vessel.length.length
+        ? { overall: Number(vessel.length) }
+        : undefined
     )
     de.setSelfValue('design.beam', makeNumber(vessel.beam))
     de.setSelfValue('design.airHeight', makeNumber(vessel.height))
@@ -642,18 +659,18 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     de.setSelfValue('sensors.gps.fromCenter', makeNumber(vessel.gpsFromCenter))
     de.setSelfValue(
       'design.aisShipType',
-      !_.isUndefined(vessel.aisShipType)
+      !_.isUndefined(vessel.aisShipType) && vessel.aisShipType.length
         ? {
             name: getAISShipTypeName(vessel.aisShipType),
             id: Number(vessel.aisShipType)
           }
-        : null
+        : undefined
     )
     de.setSelfValue(
       'communication',
-      !_.isUndefined(vessel.callsignVhf)
+      !_.isUndefined(vessel.callsignVhf) && vessel.callsignVhf.length
         ? { callsignVhf: vessel.callsignVhf }
-        : null
+        : undefined
     )
 
     app.emit('serverevent', {
