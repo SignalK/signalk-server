@@ -18,4 +18,5 @@ RUN mkdir -p /home/node/.signalk
 
 EXPOSE 3000
 ENV IS_IN_DOCKER true
+WORKDIR /home/node/.signalk
 ENTRYPOINT /home/node/signalk/bin/signalk-server --securityenabled
