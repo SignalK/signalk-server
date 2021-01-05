@@ -112,8 +112,10 @@ StreamBundle.prototype.push = function(path, pathValueWithSourceAndContext) {
   if (pathValueWithSourceAndContext.context === this.selfContext) {
     this.getSelfBus().push(pathValueWithSourceAndContext)
     this.getSelfBus(path).push(pathValueWithSourceAndContext)
-    this.getSelfStream().push(pathValueWithSourceAndContext.value)
-    this.getSelfStream(path).push(pathValueWithSourceAndContext.value)
+    if ( !pathValueWithSourceAndContext.isMeta ) {
+      this.getSelfStream().push(pathValueWithSourceAndContext.value)
+      this.getSelfStream(path).push(pathValueWithSourceAndContext.value)
+    }
   }
 }
 
