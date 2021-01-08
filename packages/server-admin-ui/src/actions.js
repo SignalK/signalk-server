@@ -149,7 +149,7 @@ export function openServerEventsConnection (dispatch, isReconnect) {
     proto +
       '://' +
       window.location.host +
-      `/signalk/v1/stream?serverevents=all&subscribe=none`
+      `/signalk/v1/stream?serverevents=all&subscribe=none&sendMeta=all`
   )
 
   ws.onmessage = function (event) {
