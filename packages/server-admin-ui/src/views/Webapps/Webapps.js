@@ -39,8 +39,8 @@ class Webapps extends Component {
             {this.props.webapps
               .filter(webAppInfo => webAppInfo.name !== '@signalk/server-admin-ui')
               .map(webappInfo => {
-                const url = webappInfo.keywords.includes('signalk-embeddable-webapp') ? 
-                  `/admin/#/e/${toSafeModuleId(webappInfo.name)}` : 
+                const url = webappInfo.keywords.includes('signalk-embeddable-webapp') ?
+                  `/admin/#/e/${toSafeModuleId(webappInfo.name)}` :
                   `/${webappInfo.name}`
                 return (
                   <Col xs='12' md='12' lg='6' xl='4' key={webappInfo.name}>
@@ -49,7 +49,7 @@ class Webapps extends Component {
                       header={webappInfo.name}
                       mainText={webappInfo.description}
                       url={url}
-                      icon='fa fa-external-link'
+                      icon='icon-grid fa fa-external-link'
                       color='primary'
                     />
                   </Col>
