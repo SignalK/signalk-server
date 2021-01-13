@@ -80,6 +80,9 @@ const isConfigurator = (pluginData) => pluginData.keywords.includes('signalk-plu
 class PluginCard extends Component {
   render() {
     const labelStyle = {marginLeft: '10px', marginBottom: '0px'}
+    const { schema} = this.props.plugin
+    const noConfigurationRequired = schema && schema.properties && Object.keys(this.props.plugin.schema.properties).length == 0
+    const canbeEnabled = this.props.plugin.data.configuration || noConfigurationRequired
     return (
     <div ref={(card) => { this.card = card }}>
     <Card>
@@ -101,7 +104,7 @@ class PluginCard extends Component {
                 </Button>
                 </Col>
               )}
-          {this.props.plugin.data.configuration &&  (
+          {canbeEnabled &&  (
             <Fragment>
               <Col xs='2'>
                   Enabled
