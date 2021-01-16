@@ -321,7 +321,7 @@ class SourcePriorities extends Component {
     sourcePriorities.push({ path: '', priorities: [] })
     return (
       <Card>
-        <CardHeader>Source Priorities Settings <Badge color='danger'>Experimental</Badge></CardHeader>
+        <CardHeader>Source Priorities Settings</CardHeader>
         <CardBody>
           <Alert>
             <p>Use Source Priorities to filter incoming data so that data from lower priority sources is discarded when there is fresh data from some higher priority source.</p>
