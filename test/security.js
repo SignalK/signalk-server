@@ -13,6 +13,10 @@ const {
   getReadOnlyToken,
   getWriteToken,
   getAdminToken,
+  WRITE_USER_NAME,
+  WRITE_USER_PASSWORD,
+  LIMITED_USER_NAME,
+  LIMITED_USER_PASSWORD,
   WsPromiser
 } = require('./servertestutilities')
 
@@ -64,13 +68,6 @@ const metaDelta = {
     }
   ]
 }
-  
-const WRITE_USER_NAME = 'writeuser'
-const WRITE_USER_PASSWORD = 'writepass'
-const LIMITED_USER_NAME = 'testuser'
-const LIMITED_USER_PASSWORD = 'verylimited'
-const ADMIN_USER_NAME = 'adminuser'
-const ADMIN_USER_PASSWORD = 'adminpass'
 
 describe('Security', () => {
   let server, url, port, readToken, writeToken, adminToken

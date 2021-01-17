@@ -164,9 +164,13 @@ module.exports = {
   getReadOnlyToken: server => {
     return login(server, LIMITED_USER_NAME, LIMITED_USER_PASSWORD)
   },
+  LIMITED_USER_NAME,
+  LIMITED_USER_PASSWORD,
   getWriteToken: server => {
     return login(server, WRITE_USER_NAME, WRITE_USER_PASSWORD)
   },
+  WRITE_USER_NAME,
+  WRITE_USER_PASSWORD,
   getAdminToken: server => {
     return login(server, ADMIN_USER_NAME, ADMIN_USER_PASSWORD)
   }
