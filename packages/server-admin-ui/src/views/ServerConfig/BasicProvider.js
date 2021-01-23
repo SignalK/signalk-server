@@ -89,6 +89,7 @@ class BasicProvider extends Component {
               type='text'
               name='id'
               value={this.props.value.id}
+              disabled={!this.props.value.isNew}
               onChange={event => {
                 const dummyEvent = {
                   target: {
