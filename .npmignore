@@ -68,3 +68,5 @@ packages
 signalk-server-*.tgz
 
 publishing.md
+
+bin/linkpackages

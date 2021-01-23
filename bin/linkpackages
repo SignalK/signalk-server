@@ -1,0 +1,3 @@
+#!/bin/sh
+
+pushd packages/server-admin-ui && npm link && cd ../streams && npm link && popd && npm link @signalk/server-admin-ui && npm link @signalk/streams
