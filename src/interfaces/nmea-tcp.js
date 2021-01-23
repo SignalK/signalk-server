@@ -34,7 +34,7 @@ module.exports = function(app) {
       debug('Connected:' + socket.id + ' ' + socket.name)
       openSockets[socket.id] = socket
       socket.on('data', data => {
-        app.emit('tcpserver0183data', data)
+        app.emit('tcpserver0183data', data.toString())
       })
       socket.on('end', function() {
         // client disconnects
