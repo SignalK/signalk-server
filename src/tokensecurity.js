@@ -610,10 +610,11 @@ module.exports = function(app, config) {
   strategy.filterReadDelta = (principal, delta) => {
     const configuration = getConfiguration()
     if (delta.updates && configuration.acls && configuration.acls.length) {
+      const filtered = { ...delta }
       const context =
         delta.context === app.selfContext ? 'vessels.self' : delta.context
 
-      delta.updates = delta.updates
+      filtered.updates = delta.updates
         .map(update => {
           let res = (update.values || update.meta)
             .map(valuePath => {
@@ -637,7 +638,7 @@ module.exports = function(app, config) {
           }
         })
         .filter(update => update != null)
-      return delta.updates.length > 0 ? delta : null
+      return filtered.updates.length > 0 ? filtered : null
     } else if (!principal) {
       return null
     } else {
