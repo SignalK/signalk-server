@@ -279,6 +279,8 @@ module.exports = function(app, config) {
       app.use(`${SERVERROUTESPREFIX}${p}`, adminAuthenticationMiddleware(false))
     )
 
+    app.use('/plugins', adminAuthenticationMiddleware(false))
+
     //TODO remove after grace period
     app.use('/loginStatus', http_authorize(false, true))
     app.use(`${SERVERROUTESPREFIX}/loginStatus`, http_authorize(false, true))
