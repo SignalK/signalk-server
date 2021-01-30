@@ -267,6 +267,7 @@ module.exports = function(app, config) {
     ;[
       '/restart',
       '/runDiscovery',
+      '/plugins',
       '/appstore',
       '/security',
       '/settings',
