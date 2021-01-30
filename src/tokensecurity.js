@@ -277,7 +277,7 @@ module.exports = function(app, config) {
       '/vessel'
     ].forEach(p =>
       app.use(`${SERVERROUTESPREFIX}${p}`, adminAuthenticationMiddleware(false))
-             )
+    )
 
     app.use('/plugins', adminAuthenticationMiddleware(false))
 
