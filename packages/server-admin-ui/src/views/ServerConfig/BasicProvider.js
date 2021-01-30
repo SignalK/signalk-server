@@ -89,7 +89,17 @@ class BasicProvider extends Component {
               type='text'
               name='id'
               value={this.props.value.id}
-              onChange={event => this.props.onChange(event)}
+              disabled={!this.props.value.isNew}
+              onChange={event => {
+                const dummyEvent = {
+                  target: {
+                    name: event.target.name,
+                    type: event.target.type,
+                    value: (event.target.value || '').replace(/[^a-zA-Z\d-_]/g,'')
+                  }
+                }
+                this.props.onChange(dummyEvent)
+              }}
             />
           </Col>
         </FormGroup>
