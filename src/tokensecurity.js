@@ -267,7 +267,6 @@ module.exports = function(app, config) {
     ;[
       '/restart',
       '/runDiscovery',
-      '/plugins',
       '/appstore',
       '/security',
       '/settings',
@@ -277,7 +276,9 @@ module.exports = function(app, config) {
       '/vessel'
     ].forEach(p =>
       app.use(`${SERVERROUTESPREFIX}${p}`, adminAuthenticationMiddleware(false))
-    )
+             )
+
+    app.use('/plugins', adminAuthenticationMiddleware(false))
 
     //TODO remove after grace period
     app.use('/loginStatus', http_authorize(false, true))
