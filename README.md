@@ -67,7 +67,7 @@ wscat 'ws://localhost:3000/signalk/v1/stream?subscribe=all'
 You can start a local server on port 3000  with demo data with
 
 ```
-docker run --init -it --rm --name signalk-server --publish 3000:3000 --entrypoint bin/signalk-server signalk/signalk-server --sample-nmea0183-data
+docker run --init -it --rm --name signalk-server --publish 3000:3000 --entrypoint /home/node/signalk/bin/signalk-server signalk/signalk-server --sample-nmea0183-data
 ```
 
 Now what?
