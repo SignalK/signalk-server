@@ -3,9 +3,13 @@ import Form from 'react-jsonschema-form-bs4'
 
 
 export default ({plugin, onSubmit}) => {
-  const schema = JSON.parse(JSON.stringify(plugin.schema))
+  var schema = {}
   var uiSchema = {}
 
+  if ( plugin.schema ) {
+    schema = JSON.parse(JSON.stringify(plugin.schema))
+  }
+  
   if (typeof plugin.uiSchema !== 'undefined') {
     uiSchema['configuration'] = JSON.parse(
       JSON.stringify(plugin.uiSchema)
