@@ -34,6 +34,7 @@ const unzipper = require('unzipper')
 const moment = require('moment')
 const Busboy = require('busboy')
 const ncp = require('ncp').ncp
+const ms = require('ms')
 
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
@@ -142,6 +143,11 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
   app.put(`${SERVERROUTESPREFIX}/security/config`, (req, res, next) => {
     if (app.securityStrategy.allowConfigure(req)) {
+      if (!ms(req.body.expiration)) {
+        res.status(400).send('Invalid Value For Session Timeout')
+        return
+      }
+
       let config = getSecurityConfig(app)
       config = app.securityStrategy.setConfig(config, req.body)
       saveSecurityConfig(app, config, err => {
