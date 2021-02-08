@@ -27,7 +27,7 @@ const {
 const { putPath } = require('../put')
 const skConfig = require('../config/config')
 const debug = require('debug')('signalk-server:interfaces:ws')
-const debugConnections = require('debug')(
+const debugConnection = require('debug')(
   'signalk-server:interfaces:ws:connections'
 )
 const Primus = require('primus')
@@ -166,15 +166,15 @@ module.exports = function(app) {
       }
 
       primus.on('connection', function(spark) {
-        let id
+        let principalId
         if (spark.request.skPrincipal) {
-          id = spark.request.skPrincipal.identifier
+          principalId = spark.request.skPrincipal.identifier
         }
 
-        debugConnections(
+        debugConnection(
           `${spark.id} connected ${JSON.stringify(spark.query)} ${
             spark.request.connection.remoteAddress
-          }:${id}`
+          }:${principalId}`
         )
 
         spark.sendMetaDeltas = spark.query.sendMeta === 'all'
@@ -248,10 +248,10 @@ module.exports = function(app) {
         }
 
         spark.on('end', function() {
-          debugConnections(
+          debugConnection(
             `${spark.id} end ${JSON.stringify(spark.query)} ${
               spark.request.connection.remoteAddress
-            }:${id}`
+            }:${principalId}`
           )
 
           unsubscribes.forEach(unsubscribe => unsubscribe())
