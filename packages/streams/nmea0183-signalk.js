@@ -34,7 +34,7 @@ const Parser = require('@signalk/nmea0183-signalk')
 const utils = require('@signalk/nmea0183-utilities')
 const debug = require('debug')('signalk:streams:nmea0183-signalk')
 const n2kToDelta = require('@signalk/n2k-signalk').toDelta
-const FromPgn = require('@canboat/canboatjs').FromPgn
+const canboat = require('@canboat/canboatjs')
 
 function Nmea0183ToSignalK (options) {
   Transform.call(this, {
@@ -42,11 +42,13 @@ function Nmea0183ToSignalK (options) {
   })
 
   this.parser = new Parser(options)
-  this.n2kParser = new FromPgn(options)
+  this.n2kParser = new canboat.FromPgn(options)
   this.n2kState = {}
+  this.didSetupN2KOut = false
 
   // Object on which to send 'sentence' events
   this.app = options.app
+  this.options = options
 
   // Prepare a list of events to send for each sentence received
   this.sentenceEvents = options.suppress0183event ? [] : ['nmea0183']
@@ -88,11 +90,14 @@ Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
       })
 
       let delta = null
-      if ( this.n2kParser.isN2KOver0183(sentence) ) {
-        const pgn = this.n2kParser.parseN2KOver0183(sentence)
-        if ( pgn ) {
-          delta = n2kToDelta(pgn, this.state, {sendMetaData: true})
+      
+      const pgn = this.n2kParser.parseN2KOver0183(sentence)
+      if ( pgn ) {
+        if ( !this.didSetupN2KOut ) {
+          setupN2KOut(this, sentence)
+          this.didSetupN2KOut = true
         }
+        delta = n2kToDelta(pgn, this.state, {sendMetaData: true})
       } else {
         delta = this.parser.parse(sentence)
       }
@@ -112,6 +117,20 @@ Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
   }
 
   done()
+}
+
+function setupN2KOut(that, sentence) {
+  let outEvent
+
+  outEvent = that.options.toStdout || that.options.outEvent
+  if ( outEvent ) {
+    if ( !Array.isArray(outEvent) ) {
+      outEvent = [outEvent]
+    }
+    if ( outEvent.length ) {
+      canboat.setupN2KOver0183Output(that.app, that.options, outEvent, sentence)
+    }
+  }
 }
 
 module.exports = Nmea0183ToSignalK
