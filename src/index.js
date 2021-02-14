@@ -35,6 +35,7 @@ const getExternalPort = ports.getExternalPort
 const DeltaChain = require('./deltachain')
 import { checkForNewServerVersion } from './modules'
 import { getToPreferredDelta } from './deltaPriority'
+import PropertyValues from './propertyvalues'
 
 const { StreamBundle } = require('./streambundle')
 const {
@@ -68,6 +69,8 @@ function Server(opts) {
   require('./put').start(app)
 
   app.signalk = new FullSignalK(app.selfId, app.selfType)
+
+  app.propertyValues = new PropertyValues()
 
   const deltachain = new DeltaChain(app.signalk.addDelta.bind(app.signalk))
   app.registerDeltaInputHandler = deltachain.register

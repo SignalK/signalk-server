@@ -23,6 +23,10 @@ import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
 import { SERVERROUTESPREFIX } from '../constants'
+import PropertyValues, {
+  PropertyValue,
+  PropertyValuesCallback
+} from '../propertyvalues'
 import { listAllSerialPorts, Ports } from '../serialports'
 
 // tslint:disable-next-line:no-var-requires
@@ -502,6 +506,18 @@ module.exports = (theApp: any) => {
       },
       setPluginError: (msg: string) => {
         app.setPluginError(plugin.id, msg)
+      },
+      emitPropertyValue(name: string, value: any) {
+        const propValues = app.propertyValues as PropertyValues // just for typechecking
+        propValues.emitPropertyValue({
+          timestamp: Date.now(),
+          setter: plugin.id,
+          name,
+          value
+        })
+      },
+      onPropertyValues(name: string, cb: PropertyValuesCallback) {
+        return (app.propertyValues as PropertyValues).onPropertyValues(name, cb)
       },
       getSerialPorts,
       supportsMetaDeltas: true,
