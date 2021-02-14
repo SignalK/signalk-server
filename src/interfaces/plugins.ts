@@ -17,16 +17,18 @@ import Debug from 'debug'
 import { Request, Response } from 'express'
 const debug = Debug('signalk:interfaces:plugins')
 // @ts-ignore
+import {
+  PluginServerAPI,
+  PropertyValue,
+  PropertyValues,
+  PropertyValuesCallback
+} from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
 import { SERVERROUTESPREFIX } from '../constants'
-import PropertyValues, {
-  PropertyValue,
-  PropertyValuesCallback
-} from '../propertyvalues'
 import { listAllSerialPorts, Ports } from '../serialports'
 
 // tslint:disable-next-line:no-var-requires
@@ -75,7 +77,7 @@ interface PluginInfo extends Plugin {
   statusMessage: () => string | void
 }
 
-export interface ServerAPI {
+export interface ServerAPI extends PluginServerAPI {
   getSelfPath: (path: string) => void
   getPath: (path: string) => void
   getMetadata: (path: string) => void

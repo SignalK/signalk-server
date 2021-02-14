@@ -35,7 +35,7 @@ const getExternalPort = ports.getExternalPort
 const DeltaChain = require('./deltachain')
 import { checkForNewServerVersion } from './modules'
 import { getToPreferredDelta } from './deltaPriority'
-import PropertyValues from './propertyvalues'
+import { PropertyValues } from '@signalk/server-api'
 
 const { StreamBundle } = require('./streambundle')
 const {

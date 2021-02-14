@@ -12,7 +12,7 @@ export type PropertyValuesCallback = (
   propValuesHistory: PropertyValue[]
 ) => void
 
-export default class PropertyValues {
+export class PropertyValues {
   streams: {
     [key: string]: {
       bus: Bus

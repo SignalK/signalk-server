@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import PropertyValues, { PropertyValue } from './propertyvalues'
+import{ PropertyValue, PropertyValues } from './propertyvalues'
 
 const setupTest = (done: () => any, startAt: number) => {
   const testValues = [
