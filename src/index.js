@@ -51,7 +51,10 @@ function Server(opts) {
   const bodyParser = require('body-parser')
   const app = express()
   app.use(require('compression')())
-  app.use(require('cors')())
+  app.use(require('cors')({
+    credentials: true,
+    origin: true //reflect Origin in request, required for credentials: include usage
+  }))
   app.use(bodyParser.json({ limit: FILEUPLOADSIZELIMIT }))
 
   this.app = app
