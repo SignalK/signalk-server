@@ -326,6 +326,7 @@ For example:
     }
   };
 ```
+JSON Schema approach works reasonably well for simple to medium complex configuration data. Some JSON schema constructs are not supported ([details](https://github.com/peterkelly/react-jsonschema-form-bs4/blob/v1.7.1-bs4/docs/index.md#json-schema-supporting-status)). The server supports also [custom plugin configuration components](https://github.com/SignalK/signalk-server/blob/master/WEBAPPS.md), bypassing the automatic configuration format generation.
 
 The configuration is passed in to the `plugin.start` function as the first argument:
 
