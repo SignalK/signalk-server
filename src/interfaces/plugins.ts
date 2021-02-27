@@ -479,8 +479,11 @@ module.exports = (theApp: any) => {
       getPath,
       putSelfPath,
       queryRequest,
-      error: (msg: string) => {
+      error: (msg: any) => {
         console.error(`${packageName}:${msg}`)
+        if ( msg instanceof Error ) {
+          console.error(msg.stack)
+        }
       },
       debug: require('debug')(packageName),
       registerDeltaInputHandler: (handler: any) => {
