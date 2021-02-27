@@ -27,6 +27,9 @@ const {
 const { putPath } = require('../put')
 const skConfig = require('../config/config')
 const debug = require('debug')('signalk-server:interfaces:ws')
+const debugConnection = require('debug')(
+  'signalk-server:interfaces:ws:connections'
+)
 const Primus = require('primus')
 
 const supportedQuerySubscribeValues = ['self', 'all']
@@ -163,10 +166,15 @@ module.exports = function(app) {
       }
 
       primus.on('connection', function(spark) {
-        debug(
+        let principalId
+        if (spark.request.skPrincipal) {
+          principalId = spark.request.skPrincipal.identifier
+        }
+
+        debugConnection(
           `${spark.id} connected ${JSON.stringify(spark.query)} ${
-            primusOptions.isPlayback
-          }`
+            spark.request.connection.remoteAddress
+          }:${principalId}`
         )
 
         spark.sendMetaDeltas = spark.query.sendMeta === 'all'
@@ -240,6 +248,12 @@ module.exports = function(app) {
         }
 
         spark.on('end', function() {
+          debugConnection(
+            `${spark.id} end ${JSON.stringify(spark.query)} ${
+              spark.request.connection.remoteAddress
+            }:${principalId}`
+          )
+
           unsubscribes.forEach(unsubscribe => unsubscribe())
 
           _.keys(pathSources).forEach(path => {
