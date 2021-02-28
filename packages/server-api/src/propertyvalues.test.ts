@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import{ PropertyValue, PropertyValues } from './propertyvalues'
+import { PropertyValue, PropertyValues } from './propertyvalues'
 
 const setupTest = (done: () => any, startAt: number) => {
   const testValues = [
@@ -39,4 +39,21 @@ describe('PropertyValues', () => {
     pv.emitPropertyValue(testValues[0])
     pv.onPropertyValues('foo', cb)
   })
+
+  it('emit throws after too many values', () => {
+    const pv = new PropertyValues()
+    for (let i = 1; i < PropertyValues.MAX_VALUES_COUNT; i++) {
+      pv.emitPropertyValue(newPropertyValue(i))
+    }
+    expect(() =>
+      pv.emitPropertyValue(newPropertyValue(PropertyValues.MAX_VALUES_COUNT))
+    ).to.throw()
+  })
+})
+
+const newPropertyValue = (value: any) => ({
+  timestamp: Date.now(),
+  setter: 'foobar',
+  name: 'aProperty',
+  value: value
 })
