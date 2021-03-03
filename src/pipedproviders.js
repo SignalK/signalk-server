@@ -44,7 +44,19 @@ module.exports = function(app) {
 
   function createPipeElement(providerId, elementConfig) {
     const options = elementConfig.options || {}
-    options.app = app
+
+    const { propertyValues, sanitizedApp } = app
+    const emitPropertyValue = (name, value) =>
+      propValues.emitPropertyValue({
+        timestamp: Date.now(),
+        setter: providerId,
+        name,
+        value
+      })
+    const onPropertyValues = (name, cb) =>
+      app.propertyValues.onPropertyValues(name, cb)
+    options.app = { emitPropertyValue, onPropertyValues, ...sanitizedApp }
+
     options.providerId = providerId
 
     if (elementConfig.optionMappings) {

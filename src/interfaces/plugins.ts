@@ -18,8 +18,7 @@ import { Request, Response } from 'express'
 const debug = Debug('signalk:interfaces:plugins')
 // @ts-ignore
 import {
-  PluginServerAPI,
-  PropertyValue,
+  PluginServerApp,
   PropertyValues,
   PropertyValuesCallback
 } from '@signalk/server-api'
@@ -77,7 +76,7 @@ interface PluginInfo extends Plugin {
   statusMessage: () => string | void
 }
 
-export interface ServerAPI extends PluginServerAPI {
+export interface ServerAPI extends PluginServerApp {
   getSelfPath: (path: string) => void
   getPath: (path: string) => void
   getMetadata: (path: string) => void
