@@ -31,13 +31,16 @@ const serverRoutesPrefix = '/skServer'
 
 module.exports = function(app) {
   const processors = {
-    n2k: msgs => {
+    n2k: (msgs, sendToServer) => {
       const n2kMapper = new N2kMapper({ app })
       const parser = new FromPgn()
       const n2kJson = []
       const deltas = msgs.map(msg => {
         const n2k = parser.parseString(msg)
         if (n2k) {
+          if ( sendToServer ) {
+            app.emit('N2KAnalyzerOut', n2k)
+          }
           n2kJson.push(n2k)
           return n2kMapper.toDelta(n2k)
         }
@@ -149,7 +152,7 @@ module.exports = function(app) {
       }
     } else {
       try {
-        const data = processors[type](msgs)
+        const data = processors[type](msgs, sendToServer)
 
         if (data.deltas) {
           data.deltas = data.deltas.filter(
