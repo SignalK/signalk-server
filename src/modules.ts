@@ -325,6 +325,13 @@ function getAuthor(thePackage: any) {
   )
 }
 
+function getKeywords(thePackage: any) {
+  const keywords = thePackage['keywords']
+  debug('%s keywords: %j', thePackage.name,  keywords)
+  return keywords
+}
+
+
 module.exports = {
   modulesWithKeyword,
   installModule,
@@ -334,5 +341,6 @@ module.exports = {
   getLatestServerVersion,
   checkForNewServerVersion,
   getAuthor,
+  getKeywords,
   restoreModules
 }

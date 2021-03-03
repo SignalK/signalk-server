@@ -1,6 +1,16 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import { Button, Card, CardHeader, CardBody } from 'reactstrap'
+import {
+  Button,
+  Card,
+  CardHeader,
+  CardBody,
+  Form,
+  FormGroup,
+  Col,
+  Input,
+  Label
+} from 'reactstrap'
 import ThisSession from './ThisSession'
 import AppsList from './AppsList'
 
@@ -20,6 +30,71 @@ const viewParams = {
 }
 
 class AppTable extends Component {
+  constructor (props) {
+    super(props)
+
+    let categorized = this.categorize('New/Updated')
+    
+    this.state = {
+      category: 'New/Updated',
+      categorized: categorized,
+      search: ''
+    }
+
+    this.handleCategoryChange = this.handleCategoryChange.bind(this)
+    this.handleSearch = this.handleSearch.bind(this)
+  }
+
+  categorize(category) {
+    const viewData = viewParams[this.props.match.params.view]
+    const apps = this.props.appStore[viewData.listName]
+    return category === 'All' ? apps :
+      apps.filter(app => app.categories.indexOf(category) !== -1)
+  }
+
+  componentDidUpdate() {
+    if ( !this.state.categorized || !this.state.categorized.length ) {
+      const categorized = this.categorize(this.state.category)
+      if ( categorized && categorized.length ) {
+        this.setState({categorized})
+      }
+    }
+  }
+
+  handleCategoryChange(event) {
+    let searchResults
+    let categorized = this.categorize(event.target.value)
+    
+    if ( this.state.search.length > 0 ) {
+      searchResults = this.searchApps(categorized, this.state.search)
+    }
+    
+    this.setState({
+      category: event.target.value,
+      categorized,
+      searchResults
+    })
+  }
+
+  searchApps(apps, searchString) {
+    return apps
+      .filter(app => {
+        return app.keywords.filter(k => k.includes(searchString)).length
+          || app.name.includes(searchString)
+          || (app.description && app.description.includes(searchString))
+      })
+  }
+
+  handleSearch(event) {
+    let searchResults = null
+    const search = event.target.value
+    if ( search.length !== 0 ) {
+      searchResults = this.searchApps(this.state.categorized, search)
+    }
+    
+    this.setState({search, searchResults})
+  }
+  
   render () {
     const viewData = viewParams[this.props.match.params.view]
     return (
@@ -40,8 +115,45 @@ class AppTable extends Component {
               <i className='fa fa-align-justify' /> {viewData.title}
             </CardHeader>
             <CardBody>
+              <Form
+                action=''
+                method='post'
+                encType='multipart/form-data'
+                className='form-horizontal'
+                onSubmit={e => { e.preventDefault()}}
+          >
+
+          <FormGroup row>
+          <Col xs='12' md='3'>
+          <Input
+            type='select'
+            value={this.state.category}
+            name='context'
+            onChange={this.handleCategoryChange}
+          >
+            {this.props.appStore.categories.sort().map(key => {
+              return (
+                  <option key={key} value={key}>{key}</option>
+              )
+            })}
+            <option key='All' value='All'>All</option>
+          </Input>
+          </Col>
+<Col xs='3' md='1'>
+            <Label htmlFor='select'>Search</Label>
+          </Col>
+          <Col xs='12' md='4'>
+            <Input
+              type='text'
+              name='search'
+              onChange={this.handleSearch}
+              value={this.state.search}
+            />
+          </Col>
+          </FormGroup>
+</Form>
               <AppsList
-                apps={this.props.appStore[viewData.listName]}
+                apps={this.state.searchResults || this.state.categorized}
                 storeAvailable={this.props.appStore.storeAvailable}
                 listName={viewData.listName}
               />

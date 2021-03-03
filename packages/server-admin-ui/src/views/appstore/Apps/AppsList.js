@@ -13,7 +13,7 @@ class AppsList extends Component {
   render () {
     return (
   <ul className='icons-list'>
-    {this.props.apps.map(app => (
+        {(this.props.apps || []).map(app => (
       <li key={app.name} style={{borderBottom: '1px solid #a4b7c1'}}>
         {mainIcon(app)}
         <div className='desc' style={{overflow: 'hidden', whiteSpace: 'nowrap', marginRight: '90px'}}>
