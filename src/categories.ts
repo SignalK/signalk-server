@@ -62,7 +62,8 @@ const categoriesMap: any = {
   'signalk-category-digital-switching': 'Digital Switching',
   'signalk-category-utility': 'Utility',
   'signalk-category-cloud': 'Cloud',
-  'signalk-category-weather': 'Weather'
+  'signalk-category-weather': 'Weather',
+  'signalk-category-depricated': 'Depricated'
 }
 
 const defaultCategories: any = {
@@ -209,7 +210,7 @@ const defaultCategories: any = {
   'signalk-kafka-gw': ['signalk-category-utility'],
   'signalk-simple-notifications': ['signalk-category-notifications'],
   'signalk-buddylist-plugin': ['signalk-category-utility'],
-  'signalk-raymarine-autopilot': ['signalk-category-hardware'],
+  'signalk-raymarine-autopilot': ['signalk-category-depricated'],
   'signalk-sealogs': ['signalk-category-cloud'],
   'flatten-vessel-data': ['signalk-category-utility'],
   'signalk-repl': ['signalk-category-utility'],
@@ -231,7 +232,7 @@ const defaultCategories: any = {
   'signalk-net-relay': ['signalk-category-utility'],
   'signalk-airmar-plugin': ['signalk-category-hardware'],
   'signalk-sbd': ['signalk-category-hardware'],
-  'signalk-victron-battery-monitor': ['signalk-category-hardware'],
+  'signalk-victron-battery-monitor': ['signalk-category-depricated'],
   'signalk-ifttt-notifications': ['signalk-category-notifications'],
   'signalk-raspberry-pi-1wire': ['signalk-category-hardware'],
   '@essense/instrument-config': [],
@@ -242,7 +243,7 @@ const defaultCategories: any = {
   'signalk-fixedstation': ['signalk-category-utility'],
   '@ib236/signalk-prometheus-exporter': ['signalk-category-utility'],
   'signalk-raspberry-pi-monitoring': ['signalk-category-hardware'],
-  'signalk-raspberry-pi-temperature': ['signalk-category-hardware'],
+  'signalk-raspberry-pi-temperature': ['signalk-category-depricated'],
   'signalk-windjs-plugin': ['signalk-category-weather'],
   'signalk-windjs': ['signalk-category-weather'],
   'signalk-barograph': ['signalk-category-weather'],
