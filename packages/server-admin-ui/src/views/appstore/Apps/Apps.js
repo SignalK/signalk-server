@@ -88,6 +88,7 @@ class AppTable extends Component {
         return app.keywords.filter(k => k.toLowerCase().includes(lowerCase)).length
           || app.name.toLowerCase().includes(lowerCase)
           || (app.description && app.description.toLowerCase().includes(lowerCase))
+          || app.author && app.author.toLowerCase().includes(lowerCase)
       })
   }
 
