@@ -39,7 +39,7 @@ class AppsList extends Component {
         </div>
         <div className='actions'>
 
-      {(this.props.listName !== 'installed' && (!app.installedVersion || app.version != app.installedVersion)) && (
+          {(this.props.listName !== 'installed' && (!app.installedVersion || (this.props.listName === 'updates' && app.version != app.installedVersion))) && (
             <Button
               color='link'
               className='text-muted'
@@ -49,7 +49,7 @@ class AppsList extends Component {
             </Button>
        )}
       
-      {(this.props.listName === 'installed') && (
+      {(this.props.listName !== 'updates' && app.installedVersion) && (
             <Button
               color='link'
               className='text-danger'
