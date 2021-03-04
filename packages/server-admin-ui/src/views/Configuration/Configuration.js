@@ -43,9 +43,7 @@ export default class PluginConfigurationList extends Component {
 
   toggleForm(clickedIndex, id) {
     const openedPluginId = this.props.match.params.pluginid === id ? '-' : id
-    console.log(openedPluginId)
     if ( this.props.match.params.pluginid === id ) {
-      console.log('remove')
       localStorage.removeItem(openPluginStorageKey)
     } else {
       localStorage.setItem(openPluginStorageKey, openedPluginId)
@@ -74,7 +72,6 @@ export default class PluginConfigurationList extends Component {
   }
 
   render () {
-    console.log('render')
     return (
         <Container>
         <Form
