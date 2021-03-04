@@ -26,14 +26,14 @@ function getCategories(thePackage: any) {
   let categories = keywords?.filter((keyword: string) => categoriesMap[keyword])
   if (!categories?.length) {
     categories = defaultCategories[thePackage.name]
-    if (!categories?.length) {
-      categories = ['Uncategorized']
-    }
   }
-  categories = categories
-    .map((category: any) => categoriesMap[category])
+  categories = categories?.map((category: any) => categoriesMap[category])
     .filter((category: string) => typeof category !== 'undefined')
 
+  if (!categories?.length) {
+    categories = ['Uncategorized']
+  }
+  
   if (thePackage.date) {
     const pDate = new Date(thePackage.date)
     if ((Date.now() - pDate.getTime()) / (1000 * 3600 * 24) < 30) {
@@ -47,7 +47,7 @@ function getCategories(thePackage: any) {
 }
 
 function getAvailableCategories() {
-  return Object.values(categoriesMap).concat(['Unknown', NEW_CATEGORY])
+  return Object.values(categoriesMap).concat(['Uncategorized', NEW_CATEGORY])
 }
 
 const categoriesMap: any = {
@@ -221,7 +221,6 @@ const defaultCategories: any = {
   'ca-reports': ['signalk-category-cloud'],
   'signalk-switch-automation': ['signalk-category-digital-switching'],
   'signalk-overboard-notifications': ['signalk-category-notifications'],
-  'signalk-n2k-switching-emulator': ['signalk-category-digital-switching'],
   'signalk-net-relay': ['signalk-category-utility'],
   'signalk-airmar-plugin': ['signalk-category-hardware'],
   'signalk-sbd': ['signalk-category-hardware'],
