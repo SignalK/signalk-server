@@ -82,11 +82,12 @@ class AppTable extends Component {
   }
 
   searchApps(apps, searchString) {
+    const lowerCase = searchString.toLowerCase()
     return apps
       .filter(app => {
-        return app.keywords.filter(k => k.includes(searchString)).length
-          || app.name.includes(searchString)
-          || (app.description && app.description.includes(searchString))
+        return app.keywords.filter(k => k.toLowerCase().includes(lowerCase)).length
+          || app.name.toLowerCase().includes(lowerCase)
+          || (app.description && app.description.toLowerCase().includes(lowerCase))
       })
   }
 
