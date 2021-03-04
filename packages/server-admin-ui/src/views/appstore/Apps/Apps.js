@@ -146,7 +146,7 @@ class AppTable extends Component {
             <option key='All' value='All'>All</option>
           </Input>
           </Col>
-<Col xs='3' md='1'>
+<Col xs='3' md='1' className={'col-form-label'}>
             <Label htmlFor='select'>Search</Label>
           </Col>
           <Col xs='12' md='4'>
