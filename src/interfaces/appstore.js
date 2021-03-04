@@ -292,7 +292,7 @@ module.exports = function(app) {
           addIfNotDuplicate(result.updates, pluginInfo)
         }
         addIfNotDuplicate(result.installed, pluginInfo)
-      } 
+      }
       addIfNotDuplicate(result.available, pluginInfo)
 
       return result
