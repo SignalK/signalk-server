@@ -484,7 +484,7 @@ module.exports = (theApp: any) => {
       queryRequest,
       error: (msg: any) => {
         console.error(`${packageName}:${msg}`)
-        if ( msg instanceof Error ) {
+        if (msg instanceof Error) {
           console.error(msg.stack)
         }
       },

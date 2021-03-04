@@ -14,34 +14,35 @@
  * limitations under the License.
 */
 
-
 import Debug from 'debug'
 const debug = Debug('signalk:categories')
+// tslint:disable-next-line:no-var-requires
 const { getKeywords } = require('./modules')
 
 const NEW_CATEGORY = 'New/Updated'
 
 function getCategories(thePackage: any) {
   const keywords = getKeywords(thePackage)
-  let categories = keywords?.filter((keyword:string) => categoriesMap[keyword])
-  if ( !categories?.length ) {
+  let categories = keywords?.filter((keyword: string) => categoriesMap[keyword])
+  if (!categories?.length) {
     categories = defaultCategories[thePackage.name]
-    if ( !categories?.length ) {
-      categories = [ 'Uncategorized' ]
+    if (!categories?.length) {
+      categories = ['Uncategorized']
     }
   }
-  categories = categories.map((category:any) => categoriesMap[category])
-    .filter((category:string) => typeof category !== 'undefined')
+  categories = categories
+    .map((category: any) => categoriesMap[category])
+    .filter((category: string) => typeof category !== 'undefined')
 
-  if ( thePackage.date ) {
+  if (thePackage.date) {
     const pDate = new Date(thePackage.date)
-    if ( (Date.now() - pDate.getTime()) / (1000 * 3600 * 24) < 30 ) {
-      //updated less than 30 days ago
+    if ((Date.now() - pDate.getTime()) / (1000 * 3600 * 24) < 30) {
+      // updated less than 30 days ago
       categories.push(NEW_CATEGORY)
     }
   }
 
-  debug('%s categories: %j', thePackage.name,  categories)
+  debug('%s categories: %j', thePackage.name, categories)
   return categories
 }
 
@@ -49,8 +50,7 @@ function getAvailableCategories() {
   return Object.values(categoriesMap).concat(['Unknown', NEW_CATEGORY])
 }
 
-
-const categoriesMap:any = {
+const categoriesMap: any = {
   'signalk-category-nmea-2000': 'MMEA 2000',
   'signalk-category-nmea-0183': 'NMEA 0183',
   'signalk-category-web-instruments': 'Web Instruments',
@@ -61,12 +61,12 @@ const categoriesMap:any = {
   'signalk-category-digital-switching': 'Digital Switching',
   'signalk-category-utility': 'Utility',
   'signalk-category-cloud': 'Cloud',
-  'signalk-category-weather': 'Weather',
+  'signalk-category-weather': 'Weather'
 }
 
-const defaultCategories:any = {
-  '@signalk/vedirect-serial-usb': [ 'signalk-category-hardware' ],
-  '@signalk/signalk-to-nmea0183': [ 'signalk-category-nmea-0183'],
+const defaultCategories: any = {
+  '@signalk/vedirect-serial-usb': ['signalk-category-hardware'],
+  '@signalk/signalk-to-nmea0183': ['signalk-category-nmea-0183'],
   '@meri-imperiumi/signalk-aws-iot': ['signalk-category-cloud'],
   'signalk-barometer-trend': ['signalk-category-weather'],
   '@signalk/calibration': ['signalk-category-utility'],
@@ -80,10 +80,19 @@ const defaultCategories:any = {
   '@meri-imperiumi/signalk-autostate': ['signalk-category-utility'],
   'signalk-empirbusnxt-plugin': ['signalk-category-hardware'],
   '@signalk/set-system-time': ['signalk-category-utility'],
-  'signalk-instrument-light-plugin': ['signalk-category-hardware', 'signalk-category-utility'],
+  'signalk-instrument-light-plugin': [
+    'signalk-category-hardware',
+    'signalk-category-utility'
+  ],
   'signalk-vessels-to-ais': ['signalk-category-ais'],
-  'signalk-sonoff-ewelink': ['signalk-category-hardware', 'signalk-category-digital-switching'],
-  'signalk-n2k-switching': ['signalk-category-hardware', 'signalk-category-digital-switching'],
+  'signalk-sonoff-ewelink': [
+    'signalk-category-hardware',
+    'signalk-category-digital-switching'
+  ],
+  'signalk-n2k-switching': [
+    'signalk-category-hardware',
+    'signalk-category-digital-switching'
+  ],
   '@signalk/tracks-plugin': ['signalk-category-utility'],
   'signalk-browser': ['signalk-category-web-instruments'],
   '@signalk/signalk-autopilot': ['signalk-category-hardware'],
@@ -91,15 +100,24 @@ const defaultCategories:any = {
   'sailracer-signalk-plugin': ['signalk-category-utility'],
   'signalk-n2k-virtual-switch': ['signalk-category-digital-switching'],
   'signalk-net-ais-plugin': ['signalk-category-ais'],
-  'signalk-shelly': ['signalk-category-hardware','signalk-category-digital-switching'],
+  'signalk-shelly': [
+    'signalk-category-hardware',
+    'signalk-category-digital-switching'
+  ],
   'signalk-noaa-weather': ['signalk-category-weather'],
   'signalk-scheduler': ['signalk-category-utility'],
   'signalk-renotifier': ['signalk-category-notifications'],
-  'sksim': ['signalk-category-utility'],
-  'signalk-raspberry-pi-bme280': ['signalk-category-hardware', 'signalk-category-weather'],
+  sksim: ['signalk-category-utility'],
+  'signalk-raspberry-pi-bme280': [
+    'signalk-category-hardware',
+    'signalk-category-weather'
+  ],
   'signalk-generic-pgn-parser': ['signalk-category-nmea-2000'],
   '@signalk/signalk-node-red': ['signalk-category-utility'],
-  'signalk-philips-hue': ['signalk-category-hardware', 'signalk-category-digital-switching'],
+  'signalk-philips-hue': [
+    'signalk-category-hardware',
+    'signalk-category-digital-switching'
+  ],
   'signalk-anchoralarm-plugin': ['signalk-category-notifications'],
   'signalk-raspberry-mcs': ['signalk-category-hardware'],
   'signalk-hour-meter': ['signalk-category-utility'],
@@ -114,13 +132,21 @@ const defaultCategories:any = {
   'signalk-speed-wind-averaging': ['signalk-category-weather'],
   '@codekilo/nmea0183-iec61121-450-server': ['signalk-category-nmea-0183'],
   'signalk-push-notifications': ['signalk-category-notifications'],
-  '@meri-imperiumi/signalk-audio-notifications': ['signalk-category-notifications'],
+  '@meri-imperiumi/signalk-audio-notifications': [
+    'signalk-category-notifications'
+  ],
   'signalk-netgear-lte-status': ['signalk-category-hardware'],
   'freeboard-sk-helper': ['signalk-category-chart-plotters'],
-  'sk-resources-fs': ['signalk-category-utility','signalk-category-chart-plotters'],
+  'sk-resources-fs': [
+    'signalk-category-utility',
+    'signalk-category-chart-plotters'
+  ],
   '@codekilo/signalk-modbus-client': ['signalk-category-utility'],
   'signalk-path-mapper': ['signalk-category-utility'],
-  '@oehoe83/signalk-raspberry-pi-bme680': ['signalk-category-hardware','signalk-category-weather'],
+  '@oehoe83/signalk-raspberry-pi-bme680': [
+    'signalk-category-hardware',
+    'signalk-category-weather'
+  ],
   '@codekilo/signalk-twilio-notifications': ['signalk-category-notifications'],
   'signalk-notification-injector': ['signalk-category-notifications'],
   'signalk-alarm-silencer': ['signalk-category-notifications'],
@@ -131,7 +157,7 @@ const defaultCategories:any = {
   'openweather-signalk': ['signalk-category-weather'],
   'rest-provider-signalk': ['signalk-category-utility'],
   '@signalk/zones': ['signalk-category-notifications'],
-  'signalk-ecowitt': ['signalk-category-hardware','signalk-category-weather'],
+  'signalk-ecowitt': ['signalk-category-hardware', 'signalk-category-weather'],
   'xdr-parser-plugin': ['signalk-category-nmea-0183'],
   'signalk-charlotte': ['signalk-category-cloud'],
   '@codekilo/signalk-notify': ['signalk-category-notifications'],
@@ -144,7 +170,10 @@ const defaultCategories:any = {
   'signalk-saillogger': ['signalk-category-cloud'],
   'signalk-fusion-stereo': ['signalk-category-hardware'],
   'signalk-nextion': ['signalk-category-hardware'],
-  'signalk-n2kais-to-nmea0183': ['signalk-category-nmea-0183','signalk-category-nmea-2000'],
+  'signalk-n2kais-to-nmea0183': [
+    'signalk-category-nmea-0183',
+    'signalk-category-nmea-2000'
+  ],
   'signalk-ttn-loramonitor': ['signalk-category-cloud'],
   'signalk-n2k-switching-translator': ['signalk-category-digital-switching'],
   'signalk-mqtt-home-asisstant': ['signalk-category-digital-switching'],
@@ -161,7 +190,10 @@ const defaultCategories:any = {
   'signalk-marinetraffic-api': ['signalk-category-ais'],
   '@signalk/simple-gpx': ['signalk-category-utility'],
   '@codekilo/signalk-iso19848': ['signalk-category-nmea-0183'],
-  'signalk-yd-alarm-button': ['signalk-category-hardware','signalk-category-notifications'],
+  'signalk-yd-alarm-button': [
+    'signalk-category-hardware',
+    'signalk-category-notifications'
+  ],
   'signalk-datadog': ['signalk-category-cloud'],
   'signalk-scientia-kraivio': ['signalk-category-utility'],
   'ais-forwarder': ['signalk-category-ais'],
@@ -177,7 +209,10 @@ const defaultCategories:any = {
   '@meri-imperiumi/signalk-stardate': ['signalk-category-weather'],
   'signalk-wilhelmsk-plugin': ['signalk-category-utility'],
   'signalk-server-shutdown': ['signalk-category-utility'],
-  'signalk-ruuvitag-plugin': ['signalk-category-hardware', 'signalk-category-weather'],
+  'signalk-ruuvitag-plugin': [
+    'signalk-category-hardware',
+    'signalk-category-weather'
+  ],
   'import-remote-data': ['signalk-category-utility'],
   'signalk-data-logger': ['signalk-category-utility'],
   'signalk-tank-monitor': ['signalk-category-utility'],
@@ -215,17 +250,23 @@ const defaultCategories:any = {
   '@signalk/sailgauge': ['signalk-category-web-instruments'],
   '@signalk/simplegauges': ['signalk-category-web-instruments'],
   'signalk-kindle-display': ['signalk-category-hardware'],
-  'skwiz': ['signalk-category-utility'],
+  skwiz: ['signalk-category-utility'],
   '@signalk/instrumentpanel': ['signalk-category-web-instruments'],
-  '@signalk/maptracker': ['signalk-category-web-instruments', 'signalk-category-ais'],
-  'gpxload': ['signalk-category-utility'],
+  '@signalk/maptracker': [
+    'signalk-category-web-instruments',
+    'signalk-category-ais'
+  ],
+  gpxload: ['signalk-category-utility'],
   '@digitalyacht/sk-on-kindle': ['signalk-category-hardware'],
   '@ib236/sailinstruments': ['signalk-category-web-instruments'],
   'tuktuk-chart-plotter': ['signalk-category-chart-plotters'],
   'signalk-lcars': ['signalk-category-web-instruments'],
-  'kgauge': ['signalk-category-web-instruments'],
-  '@signalk/vesselpositions': ['signalk-category-ais', 'signalk-category-web-instruments'],
-  'signalk-sbd-msg': ['signalk-category-hardware'],
+  kgauge: ['signalk-category-web-instruments'],
+  '@signalk/vesselpositions': [
+    'signalk-category-ais',
+    'signalk-category-web-instruments'
+  ],
+  'signalk-sbd-msg': ['signalk-category-hardware']
 }
 
 module.exports = {

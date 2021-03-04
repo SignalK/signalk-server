@@ -326,11 +326,10 @@ function getAuthor(thePackage: any) {
 }
 
 function getKeywords(thePackage: any) {
-  const keywords = thePackage['keywords']
-  debug('%s keywords: %j', thePackage.name,  keywords)
+  const keywords = thePackage.keywords
+  debug('%s keywords: %j', thePackage.name, keywords)
   return keywords
 }
-
 
 module.exports = {
   modulesWithKeyword,
