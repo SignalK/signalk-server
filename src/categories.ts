@@ -27,13 +27,14 @@ function getCategories(thePackage: any) {
   if (!categories?.length) {
     categories = defaultCategories[thePackage.name]
   }
-  categories = categories?.map((category: any) => categoriesMap[category])
+  categories = categories
+    ?.map((category: any) => categoriesMap[category])
     .filter((category: string) => typeof category !== 'undefined')
 
   if (!categories?.length) {
     categories = ['Uncategorized']
   }
-  
+
   if (thePackage.date) {
     const pDate = new Date(thePackage.date)
     if ((Date.now() - pDate.getTime()) / (1000 * 3600 * 24) < 30) {
@@ -90,7 +91,7 @@ const defaultCategories: any = {
     'signalk-category-digital-switching'
   ],
   'signalk-n2k-switching': [
-    'signalk-category-hardware',
+    'signalk-category-nmea-2000',
     'signalk-category-digital-switching'
   ],
   '@signalk/tracks-plugin': ['signalk-category-utility'],
@@ -98,7 +99,10 @@ const defaultCategories: any = {
   '@signalk/signalk-autopilot': ['signalk-category-hardware'],
   'signalk-tides-api': ['signalk-category-weather'],
   'sailracer-signalk-plugin': ['signalk-category-utility'],
-  'signalk-n2k-virtual-switch': ['signalk-category-digital-switching'],
+  'signalk-n2k-virtual-switch': [
+    'signalk-category-digital-switching',
+    'signalk-category-nmea-2000'
+  ],
   'signalk-net-ais-plugin': ['signalk-category-ais'],
   'signalk-shelly': [
     'signalk-category-hardware',
@@ -175,7 +179,10 @@ const defaultCategories: any = {
     'signalk-category-nmea-2000'
   ],
   'signalk-ttn-loramonitor': ['signalk-category-cloud'],
-  'signalk-n2k-switching-translator': ['signalk-category-digital-switching'],
+  'signalk-n2k-switching-translator': [
+    'signalk-category-digital-switching',
+    'signalk-category-nmea-2000'
+  ],
   'signalk-mqtt-home-asisstant': ['signalk-category-digital-switching'],
   '@signalk/sailsconfiguration': ['signalk-category-utility'],
   'signalk-triangle-tank-calculator': ['signalk-category-utility'],
