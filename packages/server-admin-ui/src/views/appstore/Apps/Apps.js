@@ -17,15 +17,18 @@ import AppsList from './AppsList'
 const viewParams = {
   apps: {
     listName: 'available',
-    title: 'Available Apps'
+    title: 'Available Apps',
+    defaultCategory: 'New/Updated'
   },
   installed: {
     listName: 'installed',
-    title: 'Installed Apps'
+    title: 'Installed Apps',
+    defaultCategory: 'All'
   },
   updates: {
     listName: 'updates',
-    title: 'Available Updates'
+    title: 'Available Updates',
+    defaultCategory: 'All'
   }
 }
 
@@ -33,10 +36,12 @@ class AppTable extends Component {
   constructor (props) {
     super(props)
 
-    let categorized = this.categorize('New/Updated')
+    const viewData = viewParams[this.props.match.params.view]
+
+    let categorized = this.categorize(viewData.defaultCategory)
     
     this.state = {
-      category: 'New/Updated',
+      category: viewData.defaultCategory,
       categorized: categorized,
       search: ''
     }
