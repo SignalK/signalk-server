@@ -8,8 +8,8 @@ const searchStorageKey = 'admin.v1.plugins.search'
 const openPluginStorageKey = 'admin.v1.plugins.openPlugin'
 
 export default class PluginConfigurationList extends Component {
-  constructor() {
-    super()
+  constructor(props) {
+    super(props)
     this.state = {
       plugins: [],
       search: localStorage.getItem(searchStorageKey) || '',
@@ -43,7 +43,13 @@ export default class PluginConfigurationList extends Component {
 
   toggleForm(clickedIndex, id) {
     const openedPluginId = this.props.match.params.pluginid === id ? '-' : id
-    localStorage.setItem(openPluginStorageKey, openedPluginId)  
+    console.log(openedPluginId)
+    if ( this.props.match.params.pluginid === id ) {
+      console.log('remove')
+      localStorage.removeItem(openPluginStorageKey)
+    } else {
+      localStorage.setItem(openPluginStorageKey, openedPluginId)
+    }
     this.props.history.replace(`/serverConfiguration/plugins/${openedPluginId}`)
   }
 
@@ -68,6 +74,7 @@ export default class PluginConfigurationList extends Component {
   }
 
   render () {
+    console.log('render')
     return (
         <Container>
         <Form

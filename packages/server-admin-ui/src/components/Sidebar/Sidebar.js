@@ -212,6 +212,7 @@ const mapStateToProps = state => {
     !state.loginStatus.authenticationRequired ||
     state.loginStatus.userLevel == 'admin'
   ) {
+    const openPlugin = localStorage.getItem('admin.v1.plugins.openPlugin')
     result.items.push.apply(result.items, [
       {
         name: 'Appstore',
@@ -249,7 +250,7 @@ const mapStateToProps = state => {
           },
           {
             name: 'Plugin Config',
-            url: '/serverConfiguration/plugins/-'
+            url: '/serverConfiguration/plugins/' + (openPlugin || '-')
           },
           {
             name: 'Server Log',
