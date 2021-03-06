@@ -197,6 +197,7 @@ function putPath(app, contextParam, path, body, req, requestId, updateCb) {
           }
 
           const actionResult = handler(context, path, body.value, reply => {
+            debug('got result: %j', reply)
             fixReply(reply)
             updateRequest(request.requestId, reply.state, reply)
               .then(() => undefined)
