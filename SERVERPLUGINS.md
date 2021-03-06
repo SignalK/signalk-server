@@ -67,7 +67,7 @@ You should also include at least one App Store category under keywords in your `
 - signalk-category-utility
 - signalk-category-cloud
 - signalk-category-weather
-- signalk-category-depricated
+- signalk-category-deprecated
 - signalk-category-hidden (won't show on the App Store)
 
 Plugins are normally installed in `node_modules` inside SignalK server's configuration directory (`$HOME/.signalk` by default). For development we can use `npm link` to link your module into the modules directory of the server. This way you can develop outside of the source tree of the server and publish your plugin separately.
