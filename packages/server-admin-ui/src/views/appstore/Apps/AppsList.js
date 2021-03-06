@@ -23,7 +23,7 @@ class AppsList extends Component {
             <i className='icon-info' />
           </a>
           <div className='title'>
-            <b>{app.name} {app.categories.indexOf('Depricated') !== -1 ? '(Depricated)' : ''}</b>
+            <b>{app.name} {app.categories.indexOf('Deprecated') !== -1 ? '(Deprecated)' : ''}</b>
           </div>
           <small>
             {app.description} by {app.author}

@@ -138,12 +138,11 @@ class AppTable extends Component {
             name='context'
             onChange={this.handleCategoryChange}
           >
-            {this.props.appStore.categories.sort().map(key => {
+            {this.props.appStore.categories.map(key => {
               return (
-                  <option key={key} value={key}>{key}</option>
+                  <option disabled={key == '---'} key={key} value={key}>{key}</option>
               )
             })}
-            <option key='All' value='All'>All</option>
           </Input>
           </Col>
 <Col xs='3' md='1' className={'col-form-label'}>

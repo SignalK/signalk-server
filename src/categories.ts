@@ -22,11 +22,15 @@ const { getKeywords } = require('./modules')
 const NEW_CATEGORY = 'New/Updated'
 
 function getCategories(thePackage: any) {
-
-  if ( defaultCategories[thePackage.name] && defaultCategories[thePackage.name].indexOf('signalk-category-deprecated') !== -1 ) {
+  if (
+    defaultCategories[thePackage.name] &&
+    defaultCategories[thePackage.name].indexOf(
+      'signalk-category-deprecated'
+    ) !== -1
+  ) {
     return ['Deprecated']
   }
-  
+
   const keywords = getKeywords(thePackage)
   let categories = keywords?.filter((keyword: string) => categoriesMap[keyword])
   if (!categories?.length) {
@@ -53,13 +57,17 @@ function getCategories(thePackage: any) {
 }
 
 function getAvailableCategories() {
-  return Object.values(categoriesMap).concat(['Uncategorized', NEW_CATEGORY])
+  let normal:any = Object.values(categoriesMap)
+  normal = normal.slice(0, normal.length - 2).sort() // take out Deprecated
+  return ['All', NEW_CATEGORY, '---']
+    .concat(normal)
+    .concat(['---', 'Uncategorized', 'Deprecated'])
 }
 
 const categoriesMap: any = {
-  'signalk-category-nmea-2000': 'MMEA 2000',
+  'signalk-category-nmea-2000': 'NMEA 2000',
   'signalk-category-nmea-0183': 'NMEA 0183',
-  'signalk-category-web-instruments': 'Web Instruments',
+  'signalk-category-instruments': 'Instruments',
   'signalk-category-chart-plotters': 'Chart Plotters',
   'signalk-category-hardware': 'Hardware Support',
   'signalk-category-ais': 'AIS',
