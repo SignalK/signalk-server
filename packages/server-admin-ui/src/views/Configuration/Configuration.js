@@ -1,20 +1,53 @@
 import React, { Component } from 'react'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
-import { Button, Container, Card, CardBody, CardHeader, Row, Col, Input, Label } from 'reactstrap'
+import { Button, Container, Card, CardBody, CardHeader, Row, Col, Input, Label, Form, FormGroup } from 'reactstrap'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
 import { Fragment } from 'react'
 
+const searchStorageKey = 'admin.v1.plugins.search'
+const openPluginStorageKey = 'admin.v1.plugins.openPlugin'
+
 export default class PluginConfigurationList extends Component {
-  constructor() {
-    super()
+  constructor(props) {
+    super(props)
     this.state = {
-      plugins: []
+      plugins: [],
+      search: localStorage.getItem(searchStorageKey) || '',
+      searchResults: null
     }
     this.lastOpenedPlugin = '--'
+    this.handleSearch = this.handleSearch.bind(this)
+  }
+
+  searchPlugins(plugins, searchString) {
+    const lowerCase = searchString.toLowerCase()
+    return plugins
+      .filter(plugin => {
+        return plugin.id.toLowerCase().includes(lowerCase) ||
+          plugin.packageName.toLowerCase().includes(lowerCase) ||
+          plugin.description && plugin.description.toLowerCase().includes(lowerCase) ||
+          plugin.name.toLowerCase().includes(lowerCase)
+      })
+  }
+
+  handleSearch(event) {
+    let searchResults = null
+    const search = event.target.value
+    if ( search.length !== 0 ) {
+      searchResults = this.searchPlugins(this.state.plugins, search)
+    }
+    
+    this.setState({search, searchResults})
+    localStorage.setItem(searchStorageKey, event.target.value)  
   }
 
   toggleForm(clickedIndex, id) {
     const openedPluginId = this.props.match.params.pluginid === id ? '-' : id
+    if ( this.props.match.params.pluginid === id ) {
+      localStorage.removeItem(openPluginStorageKey)
+    } else {
+      localStorage.setItem(openPluginStorageKey, openedPluginId)
+    }
     this.props.history.replace(`/serverConfiguration/plugins/${openedPluginId}`)
   }
 
@@ -25,7 +58,13 @@ export default class PluginConfigurationList extends Component {
       } else {
         throw new Error('/plugins request failed:' + response.status)
       }
-    }).then(plugins => this.setState({plugins}))
+    }).then(plugins => {
+      let searchResults
+      if ( this.state.search.length > 0 ) {
+        searchResults = this.searchPlugins(plugins, this.state.search)
+      }
+      this.setState({plugins, searchResults})
+    })
     .catch(error => {
       console.error (error)
       alert('Could not fetch plugins list')
@@ -34,9 +73,32 @@ export default class PluginConfigurationList extends Component {
 
   render () {
     return (
-      <Container>
-        {this.state.plugins.map((plugin, i) => {
-          const isOpen = this.props.match.params.pluginid === plugin.id
+        <Container>
+        <Form
+                action=''
+                method='post'
+                encType='multipart/form-data'
+                className='form-horizontal'
+                onSubmit={e => { e.preventDefault()}}
+          >
+
+          <FormGroup row>
+          <Col xs='3' md='1' className={'col-form-label'}>
+            <Label htmlFor='select'>Search</Label>
+          </Col>
+          <Col xs='12' md='4'>
+            <Input
+              type='text'
+              name='search'
+              onChange={this.handleSearch}
+              value={this.state.search}
+            />
+          </Col>
+          </FormGroup>
+</Form>
+        {(this.state.searchResults || this.state.plugins).map((plugin, i) => {
+          //const isOpen = this.props.match.params.pluginid === plugin.id
+          const isOpen = localStorage.getItem(openPluginStorageKey)  === plugin.id
           return (
             <PluginCard
               plugin={plugin}
