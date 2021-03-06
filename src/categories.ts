@@ -21,50 +21,61 @@ const { getKeywords } = require('./modules')
 
 const NEW_CATEGORY = 'New/Updated'
 
-function getCategories(thePackage: any) {
-  if (
-    defaultCategories[thePackage.name] &&
-    defaultCategories[thePackage.name].indexOf(
-      'signalk-category-deprecated'
-    ) !== -1
-  ) {
+const CAT_DEPRECATED = 'signalk-category-deprecated'
+
+const isDeprecated = (packageName: string) =>
+  DEFAULT_MODULE_CAT_KEYWORDS[packageName] &&
+  DEFAULT_MODULE_CAT_KEYWORDS[packageName].includes(CAT_DEPRECATED)
+
+interface NamedDated {
+  name: string
+  date: string
+}
+
+function getCategories(thePackage: NamedDated): string[] {
+  if (isDeprecated(thePackage.name)) {
     return ['Deprecated']
   }
 
-  const keywords = getKeywords(thePackage)
-  let categories = keywords?.filter((keyword: string) => categoriesMap[keyword])
-  if (!categories?.length) {
-    categories = defaultCategories[thePackage.name]
+  let categoryKeywords: string[] = getKeywords(thePackage).filter(
+    (keyword: string) => CAT_KEYWORDS_TO_NAMES[keyword]
+  )
+  if (categoryKeywords.length === 0) {
+    categoryKeywords = categoryKeywords.concat(
+      DEFAULT_MODULE_CAT_KEYWORDS[thePackage.name] || []
+    )
   }
-  categories = categories
-    ?.map((category: any) => categoriesMap[category])
-    .filter((category: string) => typeof category !== 'undefined')
+  const categoryNames = categoryKeywords.map(
+    category => CAT_KEYWORDS_TO_NAMES[category]
+  )
 
-  if (!categories?.length) {
-    categories = ['Uncategorized']
+  if (categoryNames.length === 0) {
+    categoryNames.push('Uncategorized')
   }
 
   if (thePackage.date) {
     const pDate = new Date(thePackage.date)
     if ((Date.now() - pDate.getTime()) / (1000 * 3600 * 24) < 30) {
       // updated less than 30 days ago
-      categories.push(NEW_CATEGORY)
+      categoryNames.push(NEW_CATEGORY)
     }
   }
 
-  debug('%s categories: %j', thePackage.name, categories)
-  return categories
+  debug('%s categories: %j', thePackage.name, categoryNames)
+  return categoryNames
 }
 
 function getAvailableCategories() {
-  let normal:any = Object.values(categoriesMap)
+  let normal: any = Object.values(CAT_KEYWORDS_TO_NAMES)
   normal = normal.slice(0, normal.length - 2).sort() // take out Deprecated
   return ['All', NEW_CATEGORY, '---']
     .concat(normal)
     .concat(['---', 'Uncategorized', 'Deprecated'])
 }
 
-const categoriesMap: any = {
+const CAT_KEYWORDS_TO_NAMES: {
+  [keyword: string]: string
+} = {
   'signalk-category-nmea-2000': 'NMEA 2000',
   'signalk-category-nmea-0183': 'NMEA 0183',
   'signalk-category-instruments': 'Instruments',
@@ -76,10 +87,12 @@ const categoriesMap: any = {
   'signalk-category-utility': 'Utility',
   'signalk-category-cloud': 'Cloud',
   'signalk-category-weather': 'Weather',
-  'signalk-category-deprecated': 'Deprecated'
+  CAT_DEPRECATED: 'Deprecated'
 }
 
-const defaultCategories: any = {
+const DEFAULT_MODULE_CAT_KEYWORDS: {
+  [key: string]: string[]
+} = {
   '@signalk/vedirect-serial-usb': ['signalk-category-hardware'],
   '@signalk/signalk-to-nmea0183': ['signalk-category-nmea-0183'],
   '@meri-imperiumi/signalk-aws-iot': ['signalk-category-cloud'],
@@ -223,7 +236,7 @@ const defaultCategories: any = {
   'signalk-kafka-gw': ['signalk-category-utility'],
   'signalk-simple-notifications': ['signalk-category-notifications'],
   'signalk-buddylist-plugin': ['signalk-category-utility'],
-  'signalk-raymarine-autopilot': ['signalk-category-deprecated'],
+  'signalk-raymarine-autopilot': [CAT_DEPRECATED],
   'signalk-sealogs': ['signalk-category-cloud'],
   'flatten-vessel-data': ['signalk-category-utility'],
   'signalk-repl': ['signalk-category-utility'],
@@ -245,7 +258,7 @@ const defaultCategories: any = {
   'signalk-net-relay': ['signalk-category-utility'],
   'signalk-airmar-plugin': ['signalk-category-hardware'],
   'signalk-sbd': ['signalk-category-hardware'],
-  'signalk-victron-battery-monitor': ['signalk-category-deprecated'],
+  'signalk-victron-battery-monitor': [CAT_DEPRECATED],
   'signalk-ifttt-notifications': ['signalk-category-notifications'],
   'signalk-raspberry-pi-1wire': ['signalk-category-hardware'],
   '@essense/instrument-config': [],
@@ -256,7 +269,7 @@ const defaultCategories: any = {
   'signalk-fixedstation': ['signalk-category-utility'],
   '@ib236/signalk-prometheus-exporter': ['signalk-category-utility'],
   'signalk-raspberry-pi-monitoring': ['signalk-category-hardware'],
-  'signalk-raspberry-pi-temperature': ['signalk-category-deprecated'],
+  'signalk-raspberry-pi-temperature': [CAT_DEPRECATED],
   'signalk-windjs-plugin': ['signalk-category-weather'],
   'signalk-windjs': ['signalk-category-weather'],
   'signalk-barograph': ['signalk-category-weather'],
