@@ -523,16 +523,16 @@ function processUpdates(app, pathSources, spark, msg) {
 }
 
 function handleValuesMeta(kp) {
-  if (kp.path && !this.spark.sentMetaData[kp.path]) {
+  if (kp.path && !this.spark.sentMetaData[this.context + '.' + kp.path]) {
     const split = kp.path.split('.')
     for (let i = split.length; i > 1; i--) {
       const path = split.slice(0, i).join('.')
-      if (this.spark.sentMetaData[path]) {
+      if (this.spark.sentMetaData[this.context + '.' + path]) {
         //stop backing up the path with first prefix that has already been handled
         break
       } else {
         //always set to true, even if there is no meta for the path
-        this.spark.sentMetaData[path] = true
+        this.spark.sentMetaData[this.context + '.' + path] = true
         let meta = getMetadata(this.context + '.' + path)
         if (meta) {
           this.spark.write({
