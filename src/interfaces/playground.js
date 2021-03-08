@@ -38,7 +38,7 @@ module.exports = function(app) {
       const deltas = msgs.map(msg => {
         const n2k = parser.parseString(msg)
         if (n2k) {
-          if ( sendToServer ) {
+          if (sendToServer) {
             app.emit('N2KAnalyzerOut', n2k)
           }
           n2kJson.push(n2k)
