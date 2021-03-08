@@ -22,9 +22,11 @@ const {
   isTheServerModule,
   findModulesWithKeyword,
   getLatestServerVersion,
-  getAuthor
+  getAuthor,
+  getKeywords
 } = require('../modules')
 const { SERVERROUTESPREFIX } = require('../constants')
+const { getCategories, getAvailableCategories } = require('../categories')
 
 const npmServerInstallLocations = [
   '/usr/bin/signalk-server',
@@ -185,6 +187,7 @@ module.exports = function(app) {
       installed: [],
       updates: [],
       installing: [],
+      categories: getAvailableCategories(),
       storeAvailable: true,
       isInDocker: process.env.IS_IN_DOCKER === 'true'
     }
@@ -250,6 +253,8 @@ module.exports = function(app) {
         version: version,
         description: plugin.package.description,
         author: getAuthor(plugin.package),
+        categories: getCategories(plugin.package),
+        keywords: getKeywords(plugin.package),
         npmUrl: getNpmUrl(plugin),
         isPlugin: plugin.package.keywords.some(
           v => v === 'signalk-node-server-plugin'
@@ -287,9 +292,8 @@ module.exports = function(app) {
           addIfNotDuplicate(result.updates, pluginInfo)
         }
         addIfNotDuplicate(result.installed, pluginInfo)
-      } else {
-        addIfNotDuplicate(result.available, pluginInfo)
       }
+      addIfNotDuplicate(result.available, pluginInfo)
 
       return result
     })

@@ -48,10 +48,27 @@ Then, add `signalk-node-server-plugin` keyword to `package.json`, so it looks so
   "author": "",
   "license": "ISC",
   "keywords": [
-    "signalk-node-server-plugin"
+    "signalk-node-server-plugin",
+    "signalk-category-ais"
   ]
 }
 ```
+
+You should also include at least one App Store category under keywords in your `package.json`. The available categories are:
+
+- signalk-category-nmea-2000
+- signalk-category-nmea-0183
+- signalk-category-web-instruments
+- signalk-category-chart-plotters
+- signalk-category-hardware
+- signalk-category-ais
+- signalk-category-notifications
+- signalk-category-digital-switching
+- signalk-category-utility
+- signalk-category-cloud
+- signalk-category-weather
+- signalk-category-deprecated
+- signalk-category-hidden (won't show on the App Store)
 
 Plugins are normally installed in `node_modules` inside SignalK server's configuration directory (`$HOME/.signalk` by default). For development we can use `npm link` to link your module into the modules directory of the server. This way you can develop outside of the source tree of the server and publish your plugin separately.
 

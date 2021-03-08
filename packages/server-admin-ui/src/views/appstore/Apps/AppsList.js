@@ -13,7 +13,9 @@ class AppsList extends Component {
   render () {
     return (
   <ul className='icons-list'>
-    {this.props.apps.map(app => (
+        {(this.props.apps || [])
+         .filter(app => app.keywords.indexOf('signalk-category-hidden') === -1)
+         .map(app => (
       <li key={app.name} style={{borderBottom: '1px solid #a4b7c1'}}>
         {mainIcon(app)}
         <div className='desc' style={{overflow: 'hidden', whiteSpace: 'nowrap', marginRight: '90px'}}>
@@ -21,7 +23,7 @@ class AppsList extends Component {
             <i className='icon-info' />
           </a>
           <div className='title'>
-            <b>{app.name}</b>
+            <b>{app.name} {app.categories.indexOf('Deprecated') !== -1 ? '(Deprecated)' : ''}</b>
           </div>
           <small>
             {app.description} by {app.author}
@@ -39,7 +41,7 @@ class AppsList extends Component {
         </div>
         <div className='actions'>
 
-      {(this.props.listName !== 'installed' && (!app.installedVersion || app.version != app.installedVersion)) && (
+          {(this.props.listName !== 'installed' && (!app.installedVersion || (this.props.listName === 'updates' && app.version != app.installedVersion))) && (
             <Button
               color='link'
               className='text-muted'
@@ -49,7 +51,7 @@ class AppsList extends Component {
             </Button>
        )}
       
-      {(this.props.listName === 'installed') && (
+      {(this.props.listName !== 'updates' && app.installedVersion) && (
             <Button
               color='link'
               className='text-danger'
