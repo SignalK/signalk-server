@@ -24,7 +24,8 @@ function CanboatJs (options) {
     objectMode: true
   })
 
-  this.fromPgn = new FromPgn(options, options.app.propertyValues)
+  const { emitPropertyValue, onPropertyValues } = options.app
+  this.fromPgn = new FromPgn({ emitPropertyValue, onPropertyValues, ...options })
 
   this.fromPgn.on('warning', (pgn, warning) => {
     debug(`[warning] ${pgn.pgn} ${warning}`)

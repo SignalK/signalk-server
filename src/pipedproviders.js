@@ -18,13 +18,32 @@ const deep = require('deep-get-set')
 const DevNull = require('dev-null-stream')
 const _ = require('lodash')
 
-module.exports = function(app) {
+module.exports = function (app) {
   function createPipedProvider(providerConfig) {
+    const { propertyValues, ...sanitizedApp } = app
+    const emitPropertyValue = (name, value) =>
+      propValues.emitPropertyValue({
+        timestamp: Date.now(),
+        setter: providerId,
+        name,
+        value
+      })
+    const onPropertyValues = (name, cb) =>
+      app.propertyValues.onPropertyValues(name, cb)
+    const appFacade = { emitPropertyValue, onPropertyValues, ...sanitizedApp }
+
     const result = {
       id: providerConfig.id,
       pipeElements: providerConfig.pipeElements.reduce((res, config) => {
         if (typeof config.enabled === 'undefined' || config.enabled) {
-          res.push(createPipeElement(providerConfig.id, config))
+          res.push(createPipeElement({
+            ...config,
+            options: {
+              providerId: providerConfig.id,
+              app: appFacade,
+              ...config.options
+             }
+          }))
         }
         return res
       }, [])
@@ -42,34 +61,18 @@ module.exports = function(app) {
     return result
   }
 
-  function createPipeElement(providerId, elementConfig) {
-    const options = elementConfig.options || {}
-
-    const { propertyValues, ...sanitizedApp } = app
-    const emitPropertyValue = (name, value) =>
-      propValues.emitPropertyValue({
-        timestamp: Date.now(),
-        setter: providerId,
-        name,
-        value
-      })
-    const onPropertyValues = (name, cb) =>
-      app.propertyValues.onPropertyValues(name, cb)
-    options.app = { emitPropertyValue, onPropertyValues, ...sanitizedApp }
-
-    options.providerId = providerId
-
+  function createPipeElement(elementConfig) {
     if (elementConfig.optionMappings) {
-      elementConfig.optionMappings.forEach(function(mapping) {
+      elementConfig.optionMappings.forEach(function (mapping) {
         if (deep(app, mapping.fromAppProperty)) {
-          options[mapping.toOption] = deep(app, mapping.fromAppProperty)
+          elementConfig.options[mapping.toOption] = deep(app, mapping.fromAppProperty)
         }
       })
     }
     const efectiveElementType = elementConfig.type.startsWith('providers/')
       ? elementConfig.type.replace('providers/', '@signalk/streams/')
       : elementConfig.type
-    return new (require(efectiveElementType))(options)
+    return new (require(efectiveElementType))(elementConfig.options)
   }
 
   function startProviders() {
