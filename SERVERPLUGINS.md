@@ -58,7 +58,7 @@ You should also include at least one App Store category under keywords in your `
 
 - signalk-category-nmea-2000
 - signalk-category-nmea-0183
-- signalk-category-web-instruments
+- signalk-category-instruments
 - signalk-category-chart-plotters
 - signalk-category-hardware
 - signalk-category-ais
