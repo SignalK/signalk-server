@@ -67,9 +67,9 @@
     "node": "10"
   },
   "dependencies": {
-    "@signalk/server-admin-ui": "1.37.x",
+    "@signalk/server-admin-ui": "1.38.x",
     "@signalk/signalk-schema": "1.5.1",
-    "@signalk/streams": "1.16.x",
+    "@signalk/streams": "1.17.x",
     "@types/debug": "^4.1.5",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
