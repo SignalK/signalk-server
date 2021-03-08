@@ -609,7 +609,12 @@ module.exports = function(app, config) {
 
   strategy.filterReadDelta = (principal, delta) => {
     const configuration = getConfiguration()
-    if (delta.updates && configuration.acls && configuration.acls.length) {
+    if (
+      delta.updates &&
+      configuration.acls &&
+      configuration.acls.length &&
+      principal
+    ) {
       const filtered = { ...delta }
       const context =
         delta.context === app.selfContext ? 'vessels.self' : delta.context

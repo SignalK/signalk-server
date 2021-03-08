@@ -77,6 +77,7 @@ describe('Security', () => {
     const securityConfig = {
       allowNewUserRegistration: true,
       allowDeviceAccessRequests: true,
+      allow_readonly: false,
       acls: [
         {
           context: 'vessels.self',
@@ -201,6 +202,39 @@ describe('Security', () => {
   it('admin request fails', async function () {
     const result = await fetch(`${url}/skServer/plugins`)
     result.status.should.equal(401)
+  })
+
+
+  it('websocket with no token returns only hello', async function() {
+    //send some data semisynchronously, so that there is data in the cache that
+    //should not appear
+    const writePromiser = new WsPromiser(
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none&metaDeltas=none&token=${writeToken}`
+    )
+    const msg = await writePromiser.nextMsg()
+    JSON.parse(msg)
+    await writePromiser.send(openNavigationDelta)
+
+    const result = new Promise((resolve, reject) => {
+      const ws = new WebSocket(`ws://0.0.0.0:${port}/signalk/v1/stream`)
+      let msgCount = 0
+      ws.on('message', msg => {
+        msgCount++
+        const parsed = JSON.parse(msg)
+        if (!parsed.self) {
+          reject(`ws returned non-hello data:${msg} with allow_readonly set to false`)
+        }
+      })
+      ws.on('connect', () => {
+        // send some data now that non-authenticated client is connected
+        writePromiser.send(openNavigationDelta)
+      })
+      setTimeout(() => {
+        msgCount > 1 && reject(`ws returned ${msgCount} messages, expected only hello with allow_readonly set to false`)
+        resolve()
+      }, 250)
+    })
+    return result
   })
 
   it('websockets acls work', async function () {
@@ -408,3 +442,4 @@ describe('Security', () => {
     json.length.should.equal(1)
   })
 })
+
