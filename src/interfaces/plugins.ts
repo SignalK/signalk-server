@@ -16,12 +16,12 @@
 import Debug from 'debug'
 import { Request, Response } from 'express'
 const debug = Debug('signalk:interfaces:plugins')
-// @ts-ignore
 import {
   PluginServerApp,
   PropertyValues,
   PropertyValuesCallback
 } from '@signalk/server-api'
+// @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
 import express from 'express'
 import fs from 'fs'
