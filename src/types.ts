@@ -13,7 +13,7 @@ export interface SecurityStrategy {
   isDummy: () => boolean
   allowReadOnly: () => boolean
   shouldFilterDeltas: () => boolean
-  filterReadDelta: (user: string, delta: any) => any
+  filterReadDelta: (user: any, delta: any) => any
 }
 
 interface Bus {

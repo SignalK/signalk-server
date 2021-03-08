@@ -192,11 +192,9 @@ export default class DeltaCache {
 
     deltas = deltas.map(toDelta)
 
-    if (user) {
-      deltas = deltas.filter((delta: Delta) => {
-        return this.app.securityStrategy.filterReadDelta(user, delta)
-      })
-    }
+    deltas = deltas.filter((delta: Delta) => {
+      return this.app.securityStrategy.filterReadDelta(user, delta)
+    })
 
     return deltas
   }
