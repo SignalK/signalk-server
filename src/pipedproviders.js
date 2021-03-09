@@ -30,7 +30,7 @@ module.exports = function (app) {
       })
     const onPropertyValues = (name, cb) =>
       app.propertyValues.onPropertyValues(name, cb)
-    const appFacade = { emitPropertyValue, onPropertyValues, ...sanitizedApp }
+    const appFacade = { emitPropertyValue, onPropertyValues, ...sanitizedApp, toJSON: () => 'appFacade' }
 
     const result = {
       id: providerConfig.id,
