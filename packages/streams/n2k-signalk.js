@@ -35,7 +35,8 @@ function ToSignalK (options) {
     })
   }
 
-  this.n2kMapper = new N2kMapper({...options, sendMetaData: true}, this.app.propertyValues)
+  const { emitPropertyValue, onPropertyValues } = options.app
+  this.n2kMapper = new N2kMapper({...options, sendMetaData: true, emitPropertyValue, onPropertyValues})
 
   this.n2kMapper.on('n2kOut', (pgn) => this.app.emit('nmea2000JsonOut', pgn))
 
