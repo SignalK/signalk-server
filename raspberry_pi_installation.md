@@ -11,11 +11,11 @@ Before we start make sure you have the following items...
 1. An 8GB or larger micro SD Card
 1. A Windows PC or Mac that can read micro SD Cards via a card reader or SD slot+adaptor
 
-First you need to install teh Raspbian operating system on to the micro SD Card but before you do that format the card using the SD Card foundations Formatting tool, which you can download from here...
+First you need to install the Raspbian operating system on to the micro SD Card. Before you do that, format the card using the SD Card foundations Formatting tool, which you can download from here...
 
 https://www.sdcard.org/downloads/formatter_4/
 
-There is a version for Windows or Mac OSX and after downloading the tool of choice, extract and run the Setup program. Once installed, run the program with the micro SD plugged in to a card reader or SD card slot on the computer. It is good practice to give the card a volume name such as "Signal_K" which will remind you what is on the card at a later date as one Linux distribution card looks much the same as another.
+There is a version for Windows or Mac OSX. After downloading the tool of choice, extract and run the Setup program. Once installed, run the program with the micro SD plugged in to a card reader or SD card slot on the computer. It is good practice to give the card a volume name such as "Signal_K" which will remind you what is on the card at a later date as one Linux distribution card looks much the same as another.
 
 ![SD Card Formatter](https://github.com/digitalyacht/ikommunicate/raw/master/RPi_How_To_Images/SD.Formatter.png)
 
@@ -27,7 +27,7 @@ Select the NOOBs option on the left hand side (not the NOOBs Lite) and click on 
 
 Once downloaded open the ZIP file and extract all files/folders to your blank and freshly formatted micro SD Card. Once the copy operation is complete, insert the micro SD Card in to the RPi with the unit powered down. With all of the cables and peripherals plugged in, power up your Raspberry Pi and follow the instructions that appear on the screen. With the latest "Jessie" release the amount of options you need to select are significantly reduced and the whole operation should only take 10-15mins.
 
-After everything has been configured you should be presented with the RPi Desktop and your Linux operating system is installed and running, just waiting for you to install Signal K.
+After everything has been configured, you should be presented with the RPi Desktop with the Linux operating system is installed and running, just waiting for you to install Signal K.
 
 ![Raspberry Pi Desktop](https://github.com/digitalyacht/ikommunicate/raw/master/RPi_How_To_Images/RPi_Desktop.png)
 
@@ -41,7 +41,7 @@ The RPi installation of Signal K can be broken down in to three distinct steps;
 
 ## Step 1 - Install the Dependencies
 
-Raspbian the Linux distribution for RPi is based on Debian which has a powerful installation tool called "apt", which we will use to install some of the dependencies and tools required. Before you use "apt" it is always recommended to update its index of repositories (websites that store Linux software) and to do that use the following command...
+Raspbian, the Linux distribution for RPi, is based on Debian, which has a powerful installation tool called "apt", which we will use to install some of the dependencies and tools required. Before you use "apt" it is always recommended to update its index of repositories (websites that store Linux software). To do that use the following command...
 
     $ sudo apt update
 
