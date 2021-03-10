@@ -205,7 +205,7 @@ The server can also automatically discover other Signal K devices and connect to
 
 HTTPS
 -----
-Https is enabled by default unless you disable it with `"ssl":true` in the [settings file](https://github.com/SignalK/signalk-server-node/blob/master/settings/aava-non-ssl-file-settings.json#L9). If no `ssl-key.pem` & `ssl-cert.pem` files are found under settings they will be created. If you need to configure a certificate chain add it in `ssl-chain.pem` under settings.
+Https is not enabled by default. To enable it, set `"ssl":true` in the [settings file](https://github.com/SignalK/signalk-server-node/blob/master/settings/aava-non-ssl-file-settings.json#L9). If no `ssl-key.pem` & `ssl-cert.pem` files are found under settings they will be created. If you need to configure a certificate chain add it in `ssl-chain.pem` under settings.
 
 By default the server listens to both http and https in the same port.
 
