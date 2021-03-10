@@ -556,7 +556,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
     const newVessel = req.body
 
-    function set(skPath, value) {
+    function setString(skPath, value) {
       _.set(
         data.vessels.self,
         skPath,
@@ -572,8 +572,8 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       }
     }
 
-    set('name', newVessel.name)
-    set('mmsi', newVessel.mmsi)
+    setString('name', newVessel.name)
+    setString('mmsi', newVessel.mmsi)
 
     if (newVessel.uuid && !self.mmsi) {
       set('uuid', newVessel.uuid)
@@ -608,7 +608,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
 
     if (newVessel.callsignVhf) {
-      set('communication.callsignVhf', newVessel.callsignVhf)
+      setString('communication.callsignVhf', newVessel.callsignVhf)
     } else {
       delete self.communication
     }
