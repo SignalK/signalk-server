@@ -24,14 +24,13 @@ function CanboatJs (options) {
     objectMode: true
   })
 
-  const { emitPropertyValue, onPropertyValues } = options.app
-  this.fromPgn = new FromPgn({ emitPropertyValue, onPropertyValues, ...options })
+  this.fromPgn = new FromPgn(options)
 
   this.fromPgn.on('warning', (pgn, warning) => {
     debug(`[warning] ${pgn.pgn} ${warning}`)
   })
 
-  this.fromPgn.on('error', (err) => {console.log(err)} )
+  this.fromPgn.on('error', (pgn, err) => {console.log(err)} )
 
   this.app = options.app
 }
