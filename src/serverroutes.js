@@ -596,13 +596,10 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     )
 
     if (newVessel.aisShipType) {
-      _.set(
-        data.vessels.self,
-        'design.aisShipType.value',
-        {
-          name: getAISShipTypeName(newVessel.aisShipType),
-          id: Number(newVessel.aisShipType)
-        })
+      _.set(data.vessels.self, 'design.aisShipType.value', {
+        name: getAISShipTypeName(newVessel.aisShipType),
+        id: Number(newVessel.aisShipType)
+      })
     } else {
       delete self.design.aisShipType
     }
