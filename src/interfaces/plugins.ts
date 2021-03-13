@@ -276,9 +276,6 @@ module.exports = (theApp: any) => {
         debug('Plugins disabled by configuration')
         options.enabled = false
       }
-      if (!options.configuration) {
-        options.configuration = {}
-      }
       debug(optionsAsString)
       return options
     } catch (e) {
