@@ -21,9 +21,39 @@ const debug = require('debug')('signalk-server:mdns')
 const dnssd = require('dnssd2')
 const ports = require('./ports')
 
-module.exports = function mdnsResponder(app) {
-  const config = app.config
+const registerWithRetries=function(mdns,type,retries){
+    let ad;
+    for (let i=0;i<retries;i++) {
+      if (i > 0) {
+        type.options.name = type.host + "-" + i;
+        console.log("retrying advertisement for " + type.type + " with name " + type.options.name);
+      }
+      else {
+        console.log("mdns register for "+type.type+":"+type.port);
+      }
+      try {
+        ad = new mdns.Advertisement(type.type, type.port, type.options)
+        ad.on('error', err => {
+          console.error("advertisement error for "+type.type+":"+type.port+": "+err+", retrying")
+          setTimeout(function(){
+            try{
+              ad.stop();
+            }catch (e){}
+            registerWithRetries(mdns,type,retries);
+          },3000)
+        })
+        ad.start()
+        break;
+      } catch (e) {
+        console.log("error in advertising", e);
+      }
+    }
+}
 
+
+
+module.exports = function mdnsResponder(app) {
+  const config = app.config;
   let mdns = dnssd
 
   try {
@@ -38,7 +68,6 @@ module.exports = function mdnsResponder(app) {
     debug('Mdns disabled by configuration')
     return
   }
-
   let txtRecord = {
     txtvers: '1',
     swname: config.name,
@@ -94,36 +123,12 @@ module.exports = function mdnsResponder(app) {
   if (host !== require('os').hostname()) {
     options.host = host
   }
-
   debug(options)
-
-  const ads = []
-  // tslint:disable-next-line: forin
-  for (const i in types) {
-    const type = types[i]
-    debug(
-      'Starting mDNS ad: ' +
-        type.type +
-        ' ' +
-        app.config.getExternalHostname() +
-        ':' +
-        type.port
-    )
-    const ad = new mdns.Advertisement(type.type, type.port, options)
-    ad.on('error', err => {
-      console.log(type.type.name)
-      console.error(err)
-    })
-    ad.start()
-    ads.push(ad)
+  for (const i in types){
+    types[i].options=Object.assign({},options);
+    types[i].host=host;
   }
-
-  return {
-    stop: function() {
-      ads.forEach(function(ad) {
-        debug('Stopping mDNS advertisement...')
-        ad.stop()
-      })
-    }
+  for (const i in types){
+    registerWithRetries(mdns,types[i],20);
   }
 }
