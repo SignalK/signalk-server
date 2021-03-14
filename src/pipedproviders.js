@@ -22,9 +22,9 @@ module.exports = function (app) {
   function createPipedProvider(providerConfig) {
     const { propertyValues, ...sanitizedApp } = app
     const emitPropertyValue = (name, value) =>
-      propValues.emitPropertyValue({
+      propertyValues.emitPropertyValue({
         timestamp: Date.now(),
-        setter: providerId,
+        setter: `provider:${providerConfig.id}`,
         name,
         value
       })
