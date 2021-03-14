@@ -27,7 +27,7 @@ const pigpioSeatalk = require('./pigpio-seatalk')
 function Simple (options) {
   Transform.call(this, { objectMode: true })
 
-  const { emitPropertyValue, onPropertyValues } = options.app  
+  const { emitPropertyValue, onPropertyValues } = options
   options = { ...options }
   options.subOptions = { ...options.subOptions, emitPropertyValue, onPropertyValues }
 

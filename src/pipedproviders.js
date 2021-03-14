@@ -41,7 +41,9 @@ module.exports = function (app) {
             options: {
               providerId: providerConfig.id,
               app: appFacade,
-              ...config.options
+              ...config.options,
+              emitPropertyValue,
+              onPropertyValues
              }
           }))
         }
@@ -62,6 +64,8 @@ module.exports = function (app) {
   }
 
   function createPipeElement(elementConfig) {
+    console.log('element')
+    console.log(Object.getOwnPropertyNames(elementConfig.options))
     if (elementConfig.optionMappings) {
       elementConfig.optionMappings.forEach(function (mapping) {
         if (deep(app, mapping.fromAppProperty)) {
