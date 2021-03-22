@@ -68,7 +68,7 @@
   },
   "dependencies": {
     "@signalk/server-admin-ui": "1.38.x",
-    "@signalk/server-api": "1.38.x",
+    "@signalk/server-api": "1.39.x",
     "@signalk/signalk-schema": "1.5.1",
     "@signalk/streams": "1.17.x",
     "@types/debug": "^4.1.5",
