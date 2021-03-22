@@ -16,6 +16,11 @@
 import Debug from 'debug'
 import { Request, Response } from 'express'
 const debug = Debug('signalk:interfaces:plugins')
+import {
+  PluginServerApp,
+  PropertyValues,
+  PropertyValuesCallback
+} from '@signalk/server-api'
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
 import express from 'express'
@@ -71,7 +76,7 @@ interface PluginInfo extends Plugin {
   statusMessage: () => string | void
 }
 
-export interface ServerAPI {
+export interface ServerAPI extends PluginServerApp {
   getSelfPath: (path: string) => void
   getPath: (path: string) => void
   getMetadata: (path: string) => void
@@ -502,6 +507,18 @@ module.exports = (theApp: any) => {
       },
       setPluginError: (msg: string) => {
         app.setPluginError(plugin.id, msg)
+      },
+      emitPropertyValue(name: string, value: any) {
+        const propValues = app.propertyValues as PropertyValues // just for typechecking
+        propValues.emitPropertyValue({
+          timestamp: Date.now(),
+          setter: plugin.id,
+          name,
+          value
+        })
+      },
+      onPropertyValues(name: string, cb: PropertyValuesCallback) {
+        return (app.propertyValues as PropertyValues).onPropertyValues(name, cb)
       },
       getSerialPorts,
       supportsMetaDeltas: true,

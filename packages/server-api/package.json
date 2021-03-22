@@ -1,0 +1,32 @@
+{
+  "name": "@signalk/server-api",
+  "version": "1.38.0",
+  "description": "signalk-server Typescript API for plugins etc with relevant implementation classes",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --declaration",
+    "watch": "tsc --watch",
+    "prepublishOnly": "npm run build",
+    "typedoc": "typedoc --out docs src",
+    "test": "mocha --require ts-node/register src/**/*.test.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SignalK/signalk-server.git"
+  },
+  "author": "teppo.kurki@iki.fi",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/chai": "^4.2.15",
+    "@types/mocha": "^8.2.0",
+    "chai": "^4.3.0",
+    "mocha": "^8.3.0",
+    "ts-node": "^9.1.1",
+    "typedoc": "^0.20.28",
+    "typescript": "^4.1.5"
+  },
+  "peerDependencies": {
+    "baconjs": "^1.0.1"
+  }
+}

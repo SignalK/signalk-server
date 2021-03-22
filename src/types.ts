@@ -16,8 +16,15 @@ export interface SecurityStrategy {
   filterReadDelta: (user: any, delta: any) => any
 }
 
-interface Bus {
+export interface Bus {
   onValue: (callback: (value: any) => any) => () => void
+  push: (v: any) => void
+  scan: (
+    a: any,
+    f: (a: any, b: any) => any | void
+  ) => {
+    toProperty: () => () => void
+  }
 }
 // inferred, to be improved
 export interface StreamBundle {

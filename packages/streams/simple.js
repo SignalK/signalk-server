@@ -27,6 +27,10 @@ const pigpioSeatalk = require('./pigpio-seatalk')
 function Simple (options) {
   Transform.call(this, { objectMode: true })
 
+  const { emitPropertyValue, onPropertyValues } = options
+  options = { ...options }
+  options.subOptions = { ...options.subOptions, emitPropertyValue, onPropertyValues }
+
   options.subOptions.providerId = options.providerId
   const dataType = options.subOptions.dataType || options.type
   if (!dataType) {
@@ -167,7 +171,7 @@ const dataTypeMapping = {
     return result.concat([new N2kToSignalK(options.subOptions)])
   },
   NMEA2000YD: options => {
-    const result = [new Ydwg02(options, options.subOptions.type === 'ydwg02-usb-canboatjs' ? 'usb' : 'network')]
+    const result = [new Ydwg02(options.subOptions, options.subOptions.type === 'ydwg02-usb-canboatjs' ? 'usb' : 'network')]
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
     }

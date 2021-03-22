@@ -30,7 +30,7 @@ function CanboatJs (options) {
     debug(`[warning] ${pgn.pgn} ${warning}`)
   })
 
-  this.fromPgn.on('error', (err) => {console.log(err)} )
+  this.fromPgn.on('error', (pgn, err) => {console.log(err)} )
 
   this.app = options.app
 }

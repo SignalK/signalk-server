@@ -68,6 +68,7 @@
   },
   "dependencies": {
     "@signalk/server-admin-ui": "1.38.x",
+    "@signalk/server-api": "1.38.x",
     "@signalk/signalk-schema": "1.5.1",
     "@signalk/streams": "1.17.x",
     "@types/debug": "^4.1.5",
@@ -130,8 +131,10 @@
   },
   "devDependencies": {
     "@signalk/github-create-release": "^1.0.0",
+    "@types/chai": "^4.2.15",
     "@types/express": "^4.17.1",
     "@types/lodash": "^4.14.139",
+    "@types/mocha": "^8.2.0",
     "@types/node-fetch": "^2.5.3",
     "@types/semver": "^7.1.0",
     "@types/serialport": "^8.0.1",

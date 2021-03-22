@@ -725,6 +725,38 @@ Use this instead of deprecated `setProviderError`
 This returs a Promise which will resolve to a [Ports](src/serialports.ts#21) object which contains information about the serial ports available on the machine.
 
 
+### PropertyValues
+```
+app.emitPropertyValue: (name: string, value: any) => void
+onPropertyValues: (
+  name: string,
+  callback: (propValuesHistory: PropertyValue[]) => void
+) => Unsubscribe
+```
+PropertyValues are a mechanism for passing configuration type values between different parties such as plugins and input connections running in the server process.
+
+A plugin can *emit*  values and register to listen for others emitting them. The difference between the PropertyValues mechanism and Event Emitters in NodeJs is that when you call `onPropertyValues` the callback will get immdediately called with an array of all previous values for the property name, starting with the initial value of `undefined`. If nothing has emitted any values for the property name the callback will be called with a value of `undefined`.
+
+A PropertyValue has the following structure:
+```
+interface PropertyValue {
+  timestamp: number // millis
+  setter: string // plugin id, server, provider id
+  name: string
+  value: any
+}
+```
+
+Note that the value can be also a function.
+
+This mechanism allows plugins to _offer_ extensions via _"Well Known Properties"_, for example 
+- additional [NMEA0183 sentence parsers for custom sentences](https://github.com/SignalK/nmea0183-signalk/pull/193) via `nmea0183sentenceParser`
+- additional PGN definitions for propietary or custom PGNs
+
+Code handling incoming PropertyValues should be fully reactive: even if all emitters emit during their startup there is no defined load / startup order and plugins may emit when activated and started. This means that depending on a PropertyValue being there when your code starts or arriving after your code has started is not possible.
+
+PropertyValues is not meant for data passing on a regular basis, as the total history makes it a potential memory leak. There is a safeguard against accidentally emitting regularly with an upper bound for values per property name. New values will be ignored if it is reached and emits logged as errors.
+
 ## Plugin configuration HTTP API
 
 ### `GET /plugins/`
