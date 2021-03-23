@@ -253,11 +253,12 @@ module.exports = (theApp: any) => {
     callback: (err: NodeJS.ErrnoException | null) => void
   ) {
     const config = JSON.parse(JSON.stringify(data))
-    fs.writeFile(
-      pathForPluginId(pluginId),
-      JSON.stringify(data, null, 2),
-      callback
-    )
+    try {
+      fs.writeFileSync(pathForPluginId(pluginId), JSON.stringify(data, null, 2))
+      callback(null)
+    } catch (err) {
+      callback(err)
+    }
   }
 
   function getPluginOptions(id: string) {
