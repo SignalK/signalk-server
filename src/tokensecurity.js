@@ -311,10 +311,17 @@ module.exports = function(app, config) {
           const payload = { id: user.username }
           const theExpiration = configuration.expiration || '1h'
           debug('jwt expiration: ' + theExpiration)
-          const token = jwt.sign(payload, configuration.secretKey, {
-            expiresIn: theExpiration
-          })
-          resolve({ statusCode: 200, token })
+          try {
+            const token = jwt.sign(payload, configuration.secretKey, {
+              expiresIn: theExpiration
+            })
+            resolve({ statusCode: 200, token })
+          } catch (err) {
+            resolve({
+              statusCode: 500,
+              message: 'Unable to sign token: ' + err.message
+            })
+          }
         } else {
           debug('password did not match')
           resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
@@ -322,7 +329,15 @@ module.exports = function(app, config) {
       })
     })
   }
-
+  
+  strategy.validateConfiguration = ( newConfiguration ) => {
+    const configuration = getConfiguration()
+    const theExpiration = newConfiguration.expiration || '1h'
+    jwt.sign('dummyPayload', configuration.secretKey, {
+      expiresIn: theExpiration
+    })
+  }
+  
   strategy.getAuthRequiredString = () => {
     return strategy.allowReadOnly() ? 'forwrite' : 'always'
   }

@@ -106,6 +106,8 @@ module.exports = function(app, config) {
 
     getAuthRequiredString: () => {
       return 'never'
-    }
+    },
+
+    validateConfiguration: (configuration) => {}
   }
 }
