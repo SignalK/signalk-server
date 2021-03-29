@@ -258,7 +258,43 @@ class ServerSettings extends Component {
                       files in Multiplexed format in this directory
                     </FormText>
                   </Col>
-              </FormGroup>
+                </FormGroup>
+                <FormGroup row>
+                  <Col md='2'>
+                    <Label>Keep only most recent logs</Label>
+                  </Col>
+                  <Col>
+                    <FormGroup check>
+                      <Label className='switch switch-text switch-primary'>
+                        <Input
+                          type='checkbox'
+                          name='keepMostRecentLogsOnly'
+                          id='keepMostRecentLogsOnly'
+                          className='switch-input'
+                          onChange={this.handleChange}
+                          checked={this.state.keepMostRecentLogsOnly}
+                        />
+                        <span
+                          className='switch-label'
+                          data-on='On'
+                          data-off='Off'
+                        />
+                        <span className='switch-handle' />
+                      </Label>
+                    </FormGroup>
+                  </Col>
+                  <Col>
+                    <Input
+                      type='text'
+                      name='logCountToKeep'
+                      onChange={this.handleChange}
+                      value={this.state.logCountToKeep}
+                    />
+                    <FormText color='muted'>
+                      How many hourly files to keep
+                    </FormText>
+                  </Col>
+                </FormGroup>
               </Form>
             </CardBody>
             <CardFooter>

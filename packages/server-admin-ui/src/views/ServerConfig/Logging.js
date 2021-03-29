@@ -70,8 +70,11 @@ class Settings extends Component {
               </CardBody>
               <CardFooter>
                 <small className='text-muted'>
-                  Click button to download each logfile
+                  Click button to download each logfile or
                 </small>
+                <a href={`${window.serverRoutesPrefix}/ziplogs`}>
+                  <Button className='m-2'>Get all logs in one ZIP file</Button>
+                </a>
               </CardFooter>
             </Card>
           </Col>

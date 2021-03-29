@@ -28,6 +28,53 @@ module.exports = {
   listLogFiles
 }
 
+class FileTimestampStreamWithDelete extends FileTimestampStream {
+  constructor(app, fullLogDir, filesToKeep, options){
+    super(options)
+    this.app = app
+    this.filesToKeep = filesToKeep
+    this.fullLogDir = fullLogDir
+    this.prevFilename = undefined
+  }
+
+  // This method of base class is called when new file name is contemplated
+  // So let's override it to check how many files are there and delete the oldest ones
+  newFilename() {
+    if (this.prevFilename !== this.currentFilename){ // Only do that after new file created
+      this.prevFilename = this.currentFilename
+      this.deleteOldFiles()
+    }
+    return super.newFilename()
+  }
+
+  deleteOldFiles(){
+    debug(`Checking for old log files`)
+    listLogFiles(this.app, (err, files) => {
+      if (err) {
+        console.error(err);
+      }else{
+        if (files.length > this.filesToKeep) {
+          const sortedFiles = files.sort();
+          const numToDelete =  files.length - this.filesToKeep;
+          debug(`Will delete ${numToDelete} files`)
+          for(let i = 0; i < numToDelete; i++){
+            const fileName = path.join(this.fullLogDir, sortedFiles[i])
+            debug(`Deleting ${fileName}`)
+            fs.unlink(fileName, (err) => {
+              if (err){
+                console.error(err)
+              }
+              else {
+                debug(`${fileName} was deleted`)
+              }
+            });
+          }
+        }
+      }
+    });
+  }
+}
+
 function getLogger (app, discriminator = '', logdir) {
   const fullLogdir = getFullLogDir(app, logdir)
 
@@ -36,10 +83,21 @@ function getLogger (app, discriminator = '', logdir) {
 
     debug(`logging to ${fileName}`)
 
-    loggers[fullLogdir] = new FileTimestampStream({
-      path: fileName
-    })
+    let fileTimestampStream
+    if (app.config.settings.keepMostRecentLogsOnly){  // Delete old logs
+      fileTimestampStream = new FileTimestampStreamWithDelete(
+        app, fullLogdir, app.config.settings.logCountToKeep,
+        { path: fileName }
+      )
+    }else{  // Don't delete any logs
+      fileTimestampStream = new FileTimestampStream(
+        { path: fileName }
+      )
+    }
+
+    loggers[fullLogdir] = fileTimestampStream
   }
+
   const logger = loggers[fullLogdir]
   logger.on('error', err => {
     console.error(`Error opening data logging file: ${err.message}`)
