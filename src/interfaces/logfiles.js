@@ -15,8 +15,10 @@
 */
 
 const debug = require('debug')('signalk:interfaces:logfiles')
+const moment = require('moment')
 const fs = require('fs')
 const path = require('path')
+const zip = require('express-easy-zip')
 const express = require('express')
 const { getFullLogDir, listLogFiles } = require('@signalk/streams/logging')
 import { SERVERROUTESPREFIX } from '../constants'
@@ -43,10 +45,21 @@ function mountApi(app) {
       res.json(files)
     })
   })
-  app.get('/logfiles/:filename', function(req, res, next) {
+  app.get(`${SERVERROUTESPREFIX}/logfiles/:filename`, function(req, res, next) {
     const sanitizedLogfile = path
       .join(getFullLogDir(app), req.params.filename)
       .replace(/\.\./g, '')
     res.sendFile(sanitizedLogfile)
+  })
+  app.get(`${SERVERROUTESPREFIX}/ziplogs`, function(req, res, next) {
+    const boatName = app.config.vesselName ? app.config.vesselName :
+      app.config.vesselMMSI ? app.config.vesselMMSI : ''
+    const sanitizedBoatName = boatName.replace(/\W/g,'_')
+    const zipFileName = `sk-logs-${sanitizedBoatName}-${moment().format('YYYY-MM-DD-HH-mm')}`
+
+    res.zip({
+      files: [{path: getFullLogDir(app), name: zipFileName}],
+      filename: zipFileName  + ".zip"
+    });
   })
 }
