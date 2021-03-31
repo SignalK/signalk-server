@@ -142,10 +142,9 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
   app.put(`${SERVERROUTESPREFIX}/security/config`, (req, res, next) => {
     if (app.securityStrategy.allowConfigure(req)) {
-
       try {
         app.securityStrategy.validateConfiguration(req.body)
-      } catch ( err ) {
+      } catch (err) {
         res.status(400).send(err.message)
         return
       }

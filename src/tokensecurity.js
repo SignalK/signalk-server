@@ -329,15 +329,15 @@ module.exports = function(app, config) {
       })
     })
   }
-  
-  strategy.validateConfiguration = ( newConfiguration ) => {
+
+  strategy.validateConfiguration = newConfiguration => {
     const configuration = getConfiguration()
     const theExpiration = newConfiguration.expiration || '1h'
     jwt.sign('dummyPayload', configuration.secretKey, {
       expiresIn: theExpiration
     })
   }
-  
+
   strategy.getAuthRequiredString = () => {
     return strategy.allowReadOnly() ? 'forwrite' : 'always'
   }

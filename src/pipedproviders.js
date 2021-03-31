@@ -18,7 +18,7 @@ const deep = require('deep-get-set')
 const DevNull = require('dev-null-stream')
 const _ = require('lodash')
 
-module.exports = function (app) {
+module.exports = function(app) {
   function createPipedProvider(providerConfig) {
     const { propertyValues, ...sanitizedApp } = app
     const emitPropertyValue = (name, value) =>
@@ -30,22 +30,29 @@ module.exports = function (app) {
       })
     const onPropertyValues = (name, cb) =>
       app.propertyValues.onPropertyValues(name, cb)
-    const appFacade = { emitPropertyValue, onPropertyValues, ...sanitizedApp, toJSON: () => 'appFacade' }
+    const appFacade = {
+      emitPropertyValue,
+      onPropertyValues,
+      ...sanitizedApp,
+      toJSON: () => 'appFacade'
+    }
 
     const result = {
       id: providerConfig.id,
       pipeElements: providerConfig.pipeElements.reduce((res, config) => {
         if (typeof config.enabled === 'undefined' || config.enabled) {
-          res.push(createPipeElement({
-            ...config,
-            options: {
-              providerId: providerConfig.id,
-              app: appFacade,
-              ...config.options,
-              emitPropertyValue,
-              onPropertyValues
-             }
-          }))
+          res.push(
+            createPipeElement({
+              ...config,
+              options: {
+                providerId: providerConfig.id,
+                app: appFacade,
+                ...config.options,
+                emitPropertyValue,
+                onPropertyValues
+              }
+            })
+          )
         }
         return res
       }, [])
@@ -65,9 +72,12 @@ module.exports = function (app) {
 
   function createPipeElement(elementConfig) {
     if (elementConfig.optionMappings) {
-      elementConfig.optionMappings.forEach(function (mapping) {
+      elementConfig.optionMappings.forEach(function(mapping) {
         if (deep(app, mapping.fromAppProperty)) {
-          elementConfig.options[mapping.toOption] = deep(app, mapping.fromAppProperty)
+          elementConfig.options[mapping.toOption] = deep(
+            app,
+            mapping.fromAppProperty
+          )
         }
       })
     }
