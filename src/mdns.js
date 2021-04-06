@@ -89,18 +89,15 @@ module.exports = function mdnsResponder(app) {
     txt: txtRecord
   }
 
-  const host = app.config.getExternalHostname()
+  const instanceName = getInstanceName(app.signalk)
 
+  const host = app.config.getExternalHostname()
   if (host !== require('os').hostname()) {
     options.host = host
   }
 
-  debug(options)
-
   const ads = []
-  // tslint:disable-next-line: forin
-  for (const i in types) {
-    const type = types[i]
+  types.forEach((type, i) => {
     debug(
       'Starting mDNS ad: ' +
         type.type +
@@ -109,14 +106,20 @@ module.exports = function mdnsResponder(app) {
         ':' +
         type.port
     )
-    const ad = new mdns.Advertisement(type.type, type.port, options)
+    let name
+    if (instanceName) {
+      name = toUtfMaxLength(i === 0 ? `SK ${instanceName}` : instanceName)
+    }
+    const optionsForType = { name, ...options }
+    debug(optionsForType)
+    const ad = new mdns.Advertisement(type.type, type.port, optionsForType)
     ad.on('error', err => {
       console.log(type.type.name)
       console.error(err)
     })
     ad.start()
     ads.push(ad)
-  }
+  })
 
   return {
     stop: function() {
@@ -126,4 +129,24 @@ module.exports = function mdnsResponder(app) {
       })
     }
   }
+}
+
+const AD_NAME_MAX_UTF_LENGTH = 63 - 3 //allow prefix 'SK ' for http
+
+function getInstanceName(signalk) {
+  const full = signalk.retrieve()
+  return _.get(full, `${_.get(full, 'self')}.name`)
+}
+
+function toUtfMaxLength(s) {
+  let result = s
+  while (utfLength(result) > AD_NAME_MAX_UTF_LENGTH) {
+    result = result.slice(0, result.length - 1)
+  }
+  return result
+}
+
+function utfLength(s) {
+  // tslint:disable-next-line:no-bitwise
+  return ~-encodeURI(s).split(/%..|./).length
 }
