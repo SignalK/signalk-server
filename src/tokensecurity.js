@@ -333,7 +333,7 @@ module.exports = function(app, config) {
   strategy.validateConfiguration = newConfiguration => {
     const configuration = getConfiguration()
     const theExpiration = newConfiguration.expiration || '1h'
-    jwt.sign('dummyPayload', configuration.secretKey, {
+    jwt.sign({ dummy: 'payload' }, configuration.secretKey, {
       expiresIn: theExpiration
     })
   }
