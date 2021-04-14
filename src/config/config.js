@@ -97,9 +97,6 @@ function load(app) {
       ],
       enabled: true
     })
-    if (app.argv['override-timestamps']) {
-      app.config.overrideTimestampWithNow = true
-    }
   }
 
   if (app.argv['sample-n2k-data']) {
@@ -122,9 +119,10 @@ function load(app) {
       ],
       enabled: true
     })
-    if (app.argv['override-timestamps']) {
-      app.config.overrideTimestampWithNow = true
-    }
+  }
+
+  if (app.argv['override-timestamps']) {
+    app.config.overrideTimestampWithNow = true
   }
 
   if (app.argv.securityenabled && !app.config.security) {
