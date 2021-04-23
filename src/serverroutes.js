@@ -21,12 +21,14 @@ const page = require('./page')
 const debug = require('debug')('signalk-server:serverroutes')
 const path = require('path')
 const _ = require('lodash')
+const units = require('@signalk/signalk-schema').units
 const skConfig = require('./config/config')
 const { getHttpPort, getSslPort } = require('./ports')
 const express = require('express')
 const { getAISShipTypeName } = require('@signalk/signalk-schema')
 const { queryRequest } = require('./requestResponse')
 const { listAllSerialPorts } = require('./serialports')
+const config = require('./config/config')
 const commandExists = require('command-exists')
 const { getAuthor, restoreModules } = require('./modules')
 const zip = require('express-easy-zip')
@@ -407,6 +409,22 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     })
 
     res.json(settings)
+  })
+
+  app.get(`${SERVERROUTESPREFIX}/baseDeltas`, (req, res, next) => {
+    const filename = config.getBaseDeltasPath(app)
+    const basedeltas = JSON.parse(fs.readFileSync(filename))
+    res.json(basedeltas)
+  })
+
+  app.get(`${SERVERROUTESPREFIX}/listUnits`, (req, res, next) => {
+    res.json(units)
+  })
+
+  app.put(`${SERVERROUTESPREFIX}/baseDeltas`, (req, res) => {
+    const filename = config.getBaseDeltasPath(app)
+    const response = fs.writeFileSync(filename, JSON.stringify(req.body, null, 2))
+    res.json(response)
   })
 
   if (app.securityStrategy.getUsers().length === 0) {

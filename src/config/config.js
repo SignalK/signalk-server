@@ -279,16 +279,20 @@ function sendBaseDeltas(app) {
   })
 }
 
+function readBaseDeltas(app) {
+  return app.config.baseDeltaEditor.deltas
+}
+
 function writeDefaultsFile(app, defaults, cb) {
   fs.writeFile(getDefaultsPath(app), JSON.stringify(defaults, null, 2), cb)
 }
 
-function writeBaseDeltasFileSync(app) {
-  app.config.baseDeltaEditor.saveSync(getBaseDeltasPath(app))
-}
-
 function writeBaseDeltasFile(app) {
   return app.config.baseDeltaEditor.save(getBaseDeltasPath(app))
+}
+
+function writeBaseDeltasFileSync(app) {
+  app.config.baseDeltaEditor.saveSync(getBaseDeltasPath(app))
 }
 
 function setSelfSettings(app) {
@@ -435,9 +439,11 @@ const pluginsPackageJsonTemplate = {
 module.exports = {
   load,
   getConfigDirectory,
+  getBaseDeltasPath,
   writeSettingsFile,
   writeDefaultsFile,
   readDefaultsFile,
   sendBaseDeltas,
+  readBaseDeltas,
   writeBaseDeltasFile
 }
