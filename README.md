@@ -47,7 +47,7 @@ npm run build
 
 Start the server with sample data:
 * NMEA0183 sample data: `bin/nmea-from-file`
-* NMEA2000 sample data: `bin/n2k-from-file-js`
+* NMEA2000 sample data: `bin/n2k-from-file`
 
 This will start the server with a sample configuration file and the server will start playing back data from a sample file under `samples/`. The data is available immediately via the REST interface at https://localhost:3000/signalk/v1/api/.
 
