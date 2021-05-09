@@ -166,7 +166,7 @@ class ServerSettings extends Component {
                       {Object.keys(this.state.options).map(name => {
                         return (
                           <div key={name}>
-                            <Label className='switch switch-text switch-primary'>
+                            <Label style={{marginRight: '15px'}} className='switch switch-text switch-primary'>
                               <Input
                                 type='checkbox'
                                 id={name}
@@ -181,8 +181,8 @@ class ServerSettings extends Component {
                                 data-off='Off'
                               />
                               <span className='switch-handle' />
-                            </Label>{' '}
-                            {name}
+                            </Label>
+                            <span style={{lineHeight: '23px'}}>{name}</span>
                           </div>
                         )
                       })}
@@ -196,10 +196,10 @@ class ServerSettings extends Component {
                   </Col>
                   <Col md={fieldColWidthMd}>
                     <FormGroup check>
-                      {Object.keys(this.state.interfaces).map(name => {
+                      {Object.keys(SettableInterfaces).map(name => {
                         return (
                           <div key={name}>
-                            <Label className='switch switch-text switch-primary'>
+                            <Label style={{marginRight: '15px'}} className='switch switch-text switch-primary'>
                               <Input
                                 type='checkbox'
                                 id={name}
@@ -214,8 +214,8 @@ class ServerSettings extends Component {
                                 data-off='Off'
                               />
                               <span className='switch-handle' />
-                            </Label>{' '}
-                            {name}
+                            </Label>
+                            <span style={{lineHeight: '24px'}}>{SettableInterfaces[name]}</span>
                           </div>
                         )
                       })}
@@ -314,6 +314,13 @@ class ServerSettings extends Component {
       )
     )
   }
+}
+
+const SettableInterfaces = {
+  'applicationData': 'Application Data Storage',
+  'logfiles': 'Data log files access',
+  'nmea-tcp': 'NMEA 0183 over TCP (10110)',
+  'tcp': 'Signal K over TCP (8375)'
 }
 
 const ReduxedSettings = connect()(ServerSettings)
