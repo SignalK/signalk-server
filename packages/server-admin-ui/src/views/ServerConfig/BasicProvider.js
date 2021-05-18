@@ -793,7 +793,7 @@ const NMEA0183 = props => {
            />
         </div>
       )}
-      {props.value.options.type === 'tcpserver' && (
+      {(props.value.options.type === 'tcpserver' || props.value.options.type === 'gpsd')&& (
         <div>
           <Suppress0183Checkbox
             value={props.value.options}
