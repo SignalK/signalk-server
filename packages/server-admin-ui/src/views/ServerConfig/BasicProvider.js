@@ -793,14 +793,12 @@ const NMEA0183 = props => {
            />
         </div>
       )}
-      {props.value.options.type === 'tcpserver' && (
-        <div>
-          <Suppress0183Checkbox
-            value={props.value.options}
-            onChange={props.onChange}
-          />
-        </div>
-      )}
+      <div>
+        <Suppress0183Checkbox
+          value={props.value.options}
+          onChange={props.onChange}
+        />
+      </div>
       {props.value.options.type === 'udp' && (
         <PortInput value={props.value.options} onChange={props.onChange} />
       )}
