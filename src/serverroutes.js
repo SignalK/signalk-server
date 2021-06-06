@@ -388,7 +388,8 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       },
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
-      keepMostRecentLogsOnly: app.config.settings.keepMostRecentLogsOnly || false,
+      keepMostRecentLogsOnly:
+        app.config.settings.keepMostRecentLogsOnly || false,
       logCountToKeep: app.config.settings.logCountToKeep || 24,
       runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true'
     }
@@ -511,13 +512,12 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
 
     if (!_.isUndefined(settings.keepMostRecentLogsOnly)) {
-      app.config.settings.keepMostRecentLogsOnly = settings.keepMostRecentLogsOnly
+      app.config.settings.keepMostRecentLogsOnly =
+        settings.keepMostRecentLogsOnly
     }
 
     if (!_.isUndefined(settings.logCountToKeep)) {
-      app.config.settings.logCountToKeep = Number(
-        settings.logCountToKeep
-      )
+      app.config.settings.logCountToKeep = Number(settings.logCountToKeep)
     }
 
     skConfig.writeSettingsFile(app, app.config.settings, err => {

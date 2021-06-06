@@ -67,7 +67,10 @@ function load(app) {
       let defaults = getFullDefaults(app)
       if (defaults) {
         convertOldDefaultsToDeltas(app.config.baseDeltaEditor, defaults)
-        if (typeof app.config.settings.useBaseDeltas == 'undefined' || app.config.settings.useBaseDeltas) {
+        if (
+          typeof app.config.settings.useBaseDeltas === 'undefined' ||
+          app.config.settings.useBaseDeltas
+        ) {
           writeBaseDeltasFileSync(app)
         } else {
           app.config.hasOldDefaults = true

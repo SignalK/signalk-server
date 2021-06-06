@@ -52,14 +52,19 @@ function mountApi(app) {
     res.sendFile(sanitizedLogfile)
   })
   app.get(`${SERVERROUTESPREFIX}/ziplogs`, function(req, res, next) {
-    const boatName = app.config.vesselName ? app.config.vesselName :
-      app.config.vesselMMSI ? app.config.vesselMMSI : ''
-    const sanitizedBoatName = boatName.replace(/\W/g,'_')
-    const zipFileName = `sk-logs-${sanitizedBoatName}-${moment().format('YYYY-MM-DD-HH-mm')}`
+    const boatName = app.config.vesselName
+      ? app.config.vesselName
+      : app.config.vesselMMSI
+      ? app.config.vesselMMSI
+      : ''
+    const sanitizedBoatName = boatName.replace(/\W/g, '_')
+    const zipFileName = `sk-logs-${sanitizedBoatName}-${moment().format(
+      'YYYY-MM-DD-HH-mm'
+    )}`
 
     res.zip({
-      files: [{path: getFullLogDir(app), name: zipFileName}],
-      filename: zipFileName  + ".zip"
-    });
+      files: [{ path: getFullLogDir(app), name: zipFileName }],
+      filename: zipFileName + '.zip'
+    })
   })
 }
