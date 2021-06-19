@@ -1,7 +1,23 @@
-Security
+Introduction
 ========
 
-To enable security, add a `security` section to your settings .json file and add any configuration that the specific security implementation requires. This can be done automatically under Security in the admin ui.
+The umbrella term *Security* in Signal K server refers to the difference between running an *unsecured server*, that everybody who has network access to it can access and alter at will, and a *secured server* that has one or more security restrictions enabled.
+
+The security options are related to
+* **authentication**: the users are authenticated, for example but not limited to username & password
+* **access control**: based on authentication we can grant / limit access to Signal K data and server configuration
+* **encryption**: is the network traffic protected against eavesdropping by using encryption
+* **active network interfaces**: which of the server's interfaces are configured and active, for example does it allow unsecured read/write of NMEA0183 data
+
+Enabling Security
+=======
+
+You can tell that a server does not have security turned on from not having `Login` option at the top right corner of the admin UI.
+
+You can enable security in several ways:
+- by accessing the Security settings pages in the admin UI
+- starting the server with the `--securityenabled` option
+- adding the following section in the settings file
 
 ```
 "security": {
@@ -9,11 +25,16 @@ To enable security, add a `security` section to your settings .json file and add
   }
 ```
 
+When security is enabled the admin UI will prompt you to create the admin account in the admin UI.
+
 Security configuration is stored in file called `security.json` which will be located in the configuration directory.
+
+Disabling Security / Lost Admin Credentials
+==========
 
 **In case you accidentally lose your admin credentials you can remove `security.json` and restart.**
 
-ACLs
+Access Control
 ====
 
 Access control lists allow fine grained control of access to specific data in SignalK. The acls are a list which allow specifiying controls for specifc contexts and it goes in the security.json file mentioned above.
