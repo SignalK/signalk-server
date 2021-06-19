@@ -110,7 +110,7 @@ const priorityPrefix = (a: ModuleData, b: ModuleData) =>
   getModuleSortName(a).localeCompare(getModuleSortName(b))
 
 // Searches for installed modules that contain `keyword`.
-function modulesWithKeyword(app: App, keyword: string) {
+export function modulesWithKeyword(app: App, keyword: string) {
   return _.uniqBy(
     // _.flatten since values are inside an array. [[modules...], [modules...]]
     _.flatten(
@@ -265,33 +265,58 @@ function findModulesWithKeyword(keyword: string) {
 }
 
 function doFetchDistTags() {
-  return fetch('http://registry.npmjs.org/-/package/signalk-server/dist-tags')
+  return fetch(
+    'http://registry.npmjs.org/-/package/signalk-server/dist-tags'
+  ).then(r => r.json())
 }
 
-function getLatestServerVersion(
+export interface ServerVersionInfo {
+  version: string
+  disttag: string
+  minimumNodeVersion: string
+}
+
+export function getLatestServerVersionInfo(
   currentVersion: string,
   distTags = doFetchDistTags
-): Promise<string> {
+): Promise<ServerVersionInfo> {
   return new Promise((resolve, reject) => {
     distTags()
-      .then(npmjsResults => npmjsResults.json())
       .then(npmjsParsed => {
         const prereleaseData = semver.prerelease(currentVersion)
         if (prereleaseData) {
           if (semver.satisfies(npmjsParsed.latest, `>${currentVersion}`)) {
-            resolve(npmjsParsed.latest)
+            return [npmjsParsed.latest, 'latest']
           } else {
-            resolve(npmjsParsed[prereleaseData[0]])
+            return [npmjsParsed[prereleaseData[0]], 'beta']
           }
         } else {
-          resolve(npmjsParsed.latest)
+          return [npmjsParsed.latest, 'latest']
         }
+      })
+      .then(([version, disttag]) => {
+        return fetch('https://registry.npmjs.org/signalk-server', {
+          headers: {
+            Accept: 'application/vnd.npm.install-v1+json'
+          }
+        })
+          .then(res => res.json())
+          .then(json => {
+            return json
+          })
+          .then(moduleMetadata => {
+            resolve({
+              version,
+              disttag,
+              minimumNodeVersion: `${moduleMetadata.versions[version].engines}`
+            })
+          })
       })
       .catch(reject)
   })
 }
 
-function checkForNewServerVersion(
+export function checkForNewServerVersion(
   currentVersion: string,
   serverUpgradeIsAvailable: (
     errMessage: string | void,
@@ -299,10 +324,10 @@ function checkForNewServerVersion(
   ) => any,
   getLatestServerVersionP: (
     version: string
-  ) => Promise<string> = getLatestServerVersion
+  ) => Promise<ServerVersionInfo> = getLatestServerVersionInfo
 ) {
   getLatestServerVersionP(currentVersion)
-    .then((version: string) => {
+    .then(({ version }) => {
       if (semver.satisfies(new SemVer(version), `>${currentVersion}`)) {
         serverUpgradeIsAvailable(undefined, version)
       }
@@ -342,7 +367,7 @@ module.exports = {
   removeModule,
   isTheServerModule,
   findModulesWithKeyword,
-  getLatestServerVersion,
+  getLatestServerVersionInfo,
   checkForNewServerVersion,
   getAuthor,
   getKeywords,
