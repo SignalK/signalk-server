@@ -21,7 +21,10 @@ module.exports = function(app) {
     app.config.environment = 'production'
     app.config.debug = false
 
-    app.use(require('morgan')('combined'))
+    // only log http traffic for status code 500 and above
+    app.use(require('morgan')('combined', {
+      skip: function (req, res) { return res.statusCode < 500 }
+    }))
     app.use(require('errorhandler')())
   }
 }
