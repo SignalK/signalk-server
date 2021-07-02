@@ -9,25 +9,25 @@ import SidebarHeader from './../SidebarHeader/SidebarHeader'
 import SidebarMinimizer from './../SidebarMinimizer/SidebarMinimizer'
 
 class Sidebar extends Component {
-  handleClick (e) {
+  handleClick(e) {
     e.preventDefault()
     e.target.parentElement.classList.toggle('open')
   }
 
-  activeRoute (routeName, props) {
+  activeRoute(routeName, props) {
     // return this.props.location.pathname.indexOf(routeName) > -1 ? 'nav-item nav-dropdown open' : 'nav-item nav-dropdown';
     return props.location.pathname.indexOf(routeName) > -1
       ? 'nav-item nav-dropdown open'
       : 'nav-item nav-dropdown'
   }
 
-  render () {
+  render() {
     const props = this.props
     const activeRoute = this.activeRoute
     const handleClick = this.handleClick
 
     // badge addon to NavItem
-    const badge = badge => {
+    const badge = (badge) => {
       if (badge) {
         const classes = classNames(badge.class)
         return (
@@ -39,13 +39,13 @@ class Sidebar extends Component {
     }
 
     // simple wrapper for nav-title item
-    const wrapper = item => {
+    const wrapper = (item) => {
       return item.wrapper && item.wrapper.element
         ? React.createElement(
-          item.wrapper.element,
-          item.wrapper.attributes,
-          item.name
-        )
+            item.wrapper.element,
+            item.wrapper.attributes,
+            item.name
+          )
         : item.name
     }
 
@@ -73,7 +73,7 @@ class Sidebar extends Component {
           'nav-link',
           item.variant ? `nav-link-${item.variant}` : ''
         ),
-        icon: classNames(item.icon)
+        icon: classNames(item.icon),
       }
       return navLink(item, key, classes)
     }
@@ -90,7 +90,7 @@ class Sidebar extends Component {
               {badge(item.badge)}
             </RsNavLink>
           ) : (
-            <NavLink to={url} className={classes.link} activeClassName='active'>
+            <NavLink to={url} className={classes.link} activeClassName="active">
               <i className={classes.icon} />
               {item.name}
               {badge(item.badge)}
@@ -105,14 +105,14 @@ class Sidebar extends Component {
       return (
         <li key={key} className={activeRoute(item.url, props)}>
           <a
-            className='nav-link nav-dropdown-toggle'
-            href='#'
+            className="nav-link nav-dropdown-toggle"
+            href="#"
             onClick={handleClick.bind(this)}
           >
             <i className={item.icon} />
             {item.name}
           </a>
-          <ul className='nav-dropdown-items'>{navList(item.children)}</ul>
+          <ul className="nav-dropdown-items">{navList(item.children)}</ul>
         </li>
       )
     }
@@ -122,25 +122,27 @@ class Sidebar extends Component {
       item.title
         ? title(item, idx)
         : item.divider
-          ? divider(item, idx)
-          : item.children ? navDropdown(item, idx) : navItem(item, idx)
+        ? divider(item, idx)
+        : item.children
+        ? navDropdown(item, idx)
+        : navItem(item, idx)
 
     // nav list
-    const navList = items => {
+    const navList = (items) => {
       return items.map((item, index) => navType(item, index))
     }
 
-    const isExternal = url => {
+    const isExternal = (url) => {
       const link = url ? url.substring(0, 4) : ''
       return link === 'http'
     }
 
     // sidebar-nav root
     return (
-      <div className='sidebar'>
+      <div className="sidebar">
         <SidebarHeader />
         <SidebarForm />
-        <nav className='sidebar-nav'>
+        <nav className="sidebar-nav">
           <Nav>{navList(props.items)}</Nav>
         </nav>
         <SidebarFooter />
@@ -150,7 +152,7 @@ class Sidebar extends Component {
   }
 }
 
-const mapStateToProps = state => {
+const mapStateToProps = (state) => {
   var appUpdates = state.appStore.updates.length
   var updatesBadge = null
   var availableBadge = null
@@ -161,30 +163,30 @@ const mapStateToProps = state => {
     updatesBadge = {
       variant: 'danger',
       text: `${appUpdates}`,
-      color: 'danger'
+      color: 'danger',
     }
   }
 
-  if ( state.accessRequests.length > 0 ) {
+  if (state.accessRequests.length > 0) {
     accessRequestsBadge = {
       variant: 'danger',
       text: `${state.accessRequests.length}`,
-      color: 'danger'
+      color: 'danger',
     }
   }
 
   if (!state.appStore.storeAvailable) {
     updatesBadge = availableBadge = {
       variant: 'danger',
-      text: 'OFFLINE'
+      text: 'OFFLINE',
     }
   }
 
-  if ( state.appStore.serverUpdate ) {
+  if (state.appStore.serverUpdate) {
     serverUpdateBadge = {
       variant: 'danger',
       text: state.appStore.serverUpdate,
-      color: 'danger'
+      color: 'danger',
     }
   }
 
@@ -193,19 +195,19 @@ const mapStateToProps = state => {
       {
         name: 'Dashboard',
         url: '/dashboard',
-        icon: 'icon-speedometer'
+        icon: 'icon-speedometer',
       },
       {
         name: 'Webapps',
         url: '/webapps',
-        icon: 'icon-grid'
+        icon: 'icon-grid',
       },
       {
         name: 'Data Browser',
         url: '/databrowser',
-        icon: 'icon-folder'
-      }
-    ]
+        icon: 'icon-folder',
+      },
+    ],
   }
 
   if (
@@ -222,18 +224,18 @@ const mapStateToProps = state => {
           {
             name: 'Available',
             url: '/appstore/apps',
-            badge: availableBadge
+            badge: availableBadge,
           },
           {
             name: 'Installed',
-            url: '/appstore/installed'
+            url: '/appstore/installed',
           },
           {
             name: 'Updates',
             url: '/appstore/updates',
-            badge: updatesBadge
-          }
-        ]
+            badge: updatesBadge,
+          },
+        ],
       },
       {
         name: 'Server',
@@ -242,35 +244,35 @@ const mapStateToProps = state => {
         children: [
           {
             name: 'Settings',
-            url: '/serverConfiguration/settings'
+            url: '/serverConfiguration/settings',
           },
           {
             name: 'Data Connections',
-            url: '/serverConfiguration/connections/-'
+            url: '/serverConfiguration/connections/-',
           },
           {
             name: 'Plugin Config',
-            url: '/serverConfiguration/plugins/' + (openPlugin || '-')
+            url: '/serverConfiguration/plugins/' + (openPlugin || '-'),
           },
           {
             name: 'Server Log',
-            url: '/serverConfiguration/log'
+            url: '/serverConfiguration/log',
           },
           {
             name: 'Update',
             url: '/serverConfiguration/update',
-            badge: serverUpdateBadge
+            badge: serverUpdateBadge,
           },
           {
             name: 'Data Fiddler',
-            url: '/serverConfiguration/datafiddler'
+            url: '/serverConfiguration/datafiddler',
           },
           {
             name: 'Backup/Restore',
-            url: '/serverConfiguration/backuprestore'
-          }
-        ]
-      }
+            url: '/serverConfiguration/backuprestore',
+          },
+        ],
+      },
     ])
   }
 
@@ -278,7 +280,7 @@ const mapStateToProps = state => {
     state.loginStatus.authenticationRequired === false ||
     state.loginStatus.userLevel == 'admin'
   ) {
-    var security =  {
+    var security = {
       name: 'Security',
       url: '/security',
       icon: 'icon-settings',
@@ -286,15 +288,15 @@ const mapStateToProps = state => {
       children: [
         {
           name: 'Settings',
-          url: '/security/settings'
+          url: '/security/settings',
         },
         {
           name: 'Users',
-          url: '/security/users'
-        }
-      ]
+          url: '/security/users',
+        },
+      ],
     }
-    if ( state.loginStatus.allowDeviceAccessRequests ) {
+    if (state.loginStatus.allowDeviceAccessRequests) {
       security.children.push({
         name: 'Devices',
         url: '/security/devices',
@@ -302,13 +304,13 @@ const mapStateToProps = state => {
     }
     if (
       state.loginStatus.allowNewUserRegistration ||
-        state.loginStatus.allowDeviceAccessRequests ) {
+      state.loginStatus.allowDeviceAccessRequests
+    ) {
       security.children.push({
         name: 'Access Requests',
         url: '/security/access/requests',
         badge: accessRequestsBadge,
       })
-
     }
     result.items.push(security)
   }
@@ -316,14 +318,14 @@ const mapStateToProps = state => {
   return result
 }
 
-const pluginMenuItems = plugins => {
+const pluginMenuItems = (plugins) => {
   return plugins
-    ? plugins.map(pluginData => {
-      return {
-        name: pluginData.name,
-        url: `/plugins/${pluginData.id}`
-      }
-    })
+    ? plugins.map((pluginData) => {
+        return {
+          name: pluginData.name,
+          url: `/plugins/${pluginData.id}`,
+        }
+      })
     : []
 }
 

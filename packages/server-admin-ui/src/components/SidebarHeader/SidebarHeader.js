@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 
 class SidebarHeader extends Component {
-  render () {
+  render() {
     return null
     // Uncomment following code lines to add Sidebar Header
     // return (
