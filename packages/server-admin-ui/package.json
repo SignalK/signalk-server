@@ -30,6 +30,7 @@
     "lodash.remove": "^4.7.0",
     "lodash.set": "^4.3.2",
     "node-sass": "^4.14.1",
+    "prettier": "^2.3.2",
     "react": "^16.13.1",
     "react-copy-to-clipboard": "^5.0.3",
     "react-dom": "^16.13.1",
@@ -54,6 +55,7 @@
     "prepublishOnly": "npm run clean && npm run build",
     "dev": "webpack --watch --mode development",
     "build": "webpack --mode=production",
+    "format": "prettier --write src/",
     "clean": "rimraf ./public",
     "bundle-analyzer": "webpack-bundle-analyzer --port 4200 public/stats.json"
   }
