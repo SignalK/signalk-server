@@ -31,6 +31,7 @@
     "lodash.set": "^4.3.2",
     "node-sass": "^4.14.1",
     "react": "^16.13.1",
+    "react-copy-to-clipboard": "^5.0.3",
     "react-dom": "^16.13.1",
     "react-html-parser": "^2.0.2",
     "react-json-tree": "^0.13.0",
