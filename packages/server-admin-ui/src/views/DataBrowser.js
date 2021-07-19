@@ -20,6 +20,7 @@ import {
   Table
 } from 'reactstrap'
 import moment from 'moment'
+import {CopyToClipboard} from 'react-copy-to-clipboard'
 
 const timestampFormat = 'MM/DD HH:mm:ss'
 
@@ -323,11 +324,22 @@ class DataBrowser extends Component {
 
                 return (
                   <tr key={key} >
-                    <td>{data.path}</td>
+                    <td> 
+                      <CopyToClipboardWithFade text={data.path} >
+                        <span>
+                          {data.path} <i className="far fa-copy"></i>
+                          </span>
+                      </CopyToClipboardWithFade>
+                    </td>
                     <td><pre className='text-primary' style={{"whiteSpace": "pre-wrap"}}>{formatted}</pre></td>
                     <td>{units}</td>
                     <td>{data.timestamp}</td>
-                    <td>{data.$source} {data.pgn || ''}{data.sentence || ''}</td>
+                    <td>
+                      <CopyToClipboardWithFade text={data.path} >
+                        {data.$source} <i className="far fa-copy"></i> 
+                      </CopyToClipboardWithFade>
+                      {' '}{data.pgn || ''}{data.sentence || ''} 
+                    </td>
                   </tr>
                 )
               })
@@ -379,6 +391,28 @@ class DataBrowser extends Component {
         </div>
       )
     
+  }
+}
+
+class CopyToClipboardWithFade extends Component {
+  constructor() {
+    super()
+    this.state = {
+      opacity: 1
+    }
+  }
+
+  render() {
+    const {opacity} = this.state
+    const onCopy = function() {
+      this.setState({opacity: 0.5})
+      setTimeout(() => {
+        this.setState({opacity: 1})
+      }, 500)
+    }.bind(this)
+    return <CopyToClipboard text={this.props.text} onCopy={onCopy}>
+      <span style={{opacity}}> {this.props.children}</span>
+    </CopyToClipboard>
   }
 }
 
