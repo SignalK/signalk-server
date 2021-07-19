@@ -18,17 +18,23 @@ export const SOURCEPRIOS_SAVE_FAILED_OVER = 'SOURCEPRIOS_SAVE_FAILED_OVER'
 
 function checkTimeouts(sourcePriorities) {
   return sourcePriorities.reduce((acc, prio, i) => {
-    const {timeout} = prio
+    const { timeout } = prio
     if (!acc) {
       return acc
     }
-    if (i === 0) {
+
+    if (i === 0 ) {
       return true
     }
-    if(Number(timeout) === Number.isNaN || timeout <= 0) {
+
+    const thisOne = Number(timeout)
+    if (Number.isNaN(thisOne) || thisOne <= 0) {
       return false
     }
-    return timeout > sourcePriorities[i-1].timeout
+    if (i === 1) {
+      return true
+    }
+    return thisOne > Number(sourcePriorities[i - 1].timeout)
   }, true)
 }
 
@@ -394,7 +400,7 @@ class SourcePriorities extends Component {
           {!this.props.saveState.timeoutsOk && <span style={{paddingLeft: '10px'}}>
 
             <Badge color='danger'>Error</Badge>
-            {'The timeout values need to be in ascending order, please fix.'}
+            {'The timeout values need to be numbers in ascending order, please fix.'}
           </span>}
         </CardFooter>
       </Card>
