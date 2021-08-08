@@ -70,6 +70,14 @@ You can start a local server on port 3000  with demo data with
 docker run --init -it --rm --name signalk-server --publish 3000:3000 --entrypoint /home/node/signalk/bin/signalk-server signalk/signalk-server --sample-nmea0183-data
 ```
 
+For real use you need to persist /home/node/.signalk where the server's configuration is stored, with for example
+
+```
+docker run -d --init  --name signalk-server -p 3000:3000 -v $(pwd):/home/node/.signalk signalk/signalk-server
+```
+This will run the server as background process and current directory as the settings directory. You will be prompted to create admin credentials the first time you you access the configuration admin web UI.
+
+
 Now what?
 ---------
 
