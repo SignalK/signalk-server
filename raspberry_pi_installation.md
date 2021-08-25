@@ -1,35 +1,12 @@
 # Getting Started
 
-This is being written whilst installing on a new RPi 3, but it should be applicable for earlier models.
+If you already have a Raspberry Pi up and running go direct to [Installing Signal K.](https://github.com/SignalK/signalk-server/blob/master/raspberry_pi_installation.md#installing-signal-k)
 
-Before we start make sure you have the following items...
+Instructions to install the operating system, Raspberry Pi OS, [is found here.](https://www.raspberrypi.org/documentation/computers/getting-started.html#setting-up-your-raspberry-pi)
 
-1. A network to connect the RPi to (via Wi-Fi or wire)
-1. An HDMI monitor or TV
-1. A USB mouse
-1. A USB keyboard
-1. An 8GB or larger micro SD Card
-1. A Windows PC or Mac that can read micro SD Cards via a card reader or SD slot+adaptor
+If you are familair with a "headless install" it's also possible since the GUI for Signal K is browser based.
 
-First you need to install the Raspbian operating system on to the micro SD Card. Before you do that, format the card using the SD Card foundations Formatting tool, which you can download from here...
-
-https://www.sdcard.org/downloads/formatter_4/
-
-There is a version for Windows or Mac OSX. After downloading the tool of choice, extract and run the Setup program. Once installed, run the program with the micro SD plugged in to a card reader or SD card slot on the computer. It is good practice to give the card a volume name such as "Signal_K" which will remind you what is on the card at a later date as one Linux distribution card looks much the same as another.
-
-![SD Card Formatter](https://github.com/digitalyacht/ikommunicate/raw/master/RPi_How_To_Images/SD.Formatter.png)
-
-Once your SD Card is properly formatted, we need to copy a Linux Operating System on to it. To make things easy the nice people at RaspberryPi.org have created a "NOOBs" distribution which can be downloaded from here....
-
-[https://www.raspberrypi.org/downloads/noobs/](https://www.raspberrypi.org/downloads/noobs/)
-
-Select the NOOBs option on the left hand side (not the NOOBs Lite) and click on the "Download Zip" button. It is quite a large file approximately 1GB, so make sure you have a fast internet connection i.e. don't leave it till you get down on the boat !
-
-Once downloaded open the ZIP file and extract all files/folders to your blank and freshly formatted micro SD Card. Once the copy operation is complete, insert the micro SD Card in to the RPi with the unit powered down. With all of the cables and peripherals plugged in, power up your Raspberry Pi and follow the instructions that appear on the screen. With the latest "Jessie" release the amount of options you need to select are significantly reduced and the whole operation should only take 10-15mins.
-
-After everything has been configured, you should be presented with the RPi Desktop with the Linux operating system is installed and running, just waiting for you to install Signal K.
-
-![Raspberry Pi Desktop](https://github.com/digitalyacht/ikommunicate/raw/master/RPi_How_To_Images/RPi_Desktop.png)
+After everything has been configured you should be presented with the RPi Desktop up and running, just waiting for you to install Signal K.
 
 # Installing Signal K
 
@@ -41,7 +18,7 @@ The RPi installation of Signal K can be broken down in to three distinct steps;
 
 ## Step 1 - Install the Dependencies
 
-Raspbian, the Linux distribution for RPi, is based on Debian, which has a powerful installation tool called "apt", which we will use to install some of the dependencies and tools required. Before you use "apt" it is always recommended to update its index of repositories (websites that store Linux software). To do that use the following command...
+Raspbian, the Linux distribution for RPi, is based on Debian, which has a powerful installation tool called "apt", which we will use to install some of the dependencies and tools required. Before you use "apt" it is always recommended to update its index of repositories (websites that store Linux software). To do that use the following command in a terminal session...
 
     $ sudo apt update
 
@@ -255,11 +232,11 @@ Additional information and how to uninstall apps is found [here](https://github.
 
 ## Additional software
 
-[Raspberry as an bridged access point](https://www.raspberrypi.org/documentation/configuration/wireless/access-point-bridged.md)
+[Raspberry as an bridged access point](https://www.raspberrypi.org/documentation/computers/configuration.html#setting-up-a-bridged-wireless-access-point)
 
 [Backup to a bootable SD card](https://pysselilivet.blogspot.com/2017/11/rpi-clone-raspberry-boot-disk.html)
 
-[Simple AIS receiver setup](https://pysselilivet.blogspot.com/2018/06/ais-reciever-for-raspberry.html)
+[Simple AIS receiver setup](https://pysselilivet.blogspot.com/2020/05/ais-reciever-for-raspberry-pi-2-channel.html)
 
 [Temperature measure using 1-wire sensor, Node Red and plugins](https://pysselilivet.blogspot.com/2018/07/signalk-measuring-temperature.html)
 
