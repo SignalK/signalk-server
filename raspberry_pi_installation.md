@@ -4,7 +4,7 @@ If you already have a Raspberry Pi up and running go direct to [Installing Signa
 
 Instructions to install the operating system, Raspberry Pi OS, [is found here.](https://www.raspberrypi.org/documentation/computers/getting-started.html#setting-up-your-raspberry-pi)
 
-If you are familair with a "headless install" it's also possible since the GUI for Signal K is browser based.
+If you are familiar with a "headless install", with Raspberry Pi OS Lite, it's also possible since the GUI for Signal K is browser based.
 
 After everything has been configured you should be presented with the RPi Desktop up and running, just waiting for you to install Signal K.
 
@@ -85,7 +85,7 @@ An excelent way to be familiar with the Signal K data format is to click on "Dat
 
 The differense from what you see on your monitor and what is displayed in the picture is that a filter is applied in the "Search" field. This will just show paths including the "nav" word.
 
-Since you have managed to get to this part of the guide, you now have a good understanding of what Signal K is all about and in particular the Node Server. We have been using the server's demo NMEA file, but Node Server can also read NMEA0183 data via an [NMEA to USB adaptor cable](http://digitalyachtamerica.com/product/usb-nmea-adaptor/), a [3rd party NMEA2000 gateway](http://www.actisense.com/product/nmea-2000-to-pc-interface-ngt-1/) or both NMEA0183 and NMEA2000 via the [iKommunicate gateway](http://ikommunicate.com).
+Since you have managed to get to this part of the guide, you now have a good understanding of what Signal K is all about and in particular the Node Server. We have been using the server's demo NMEA file, but Node Server can also read NMEA0183 data via an [NMEA to USB adaptor cable](http://digitalyachtamerica.com/product/usb-nmea-adaptor/), a [3rd party NMEA2000 gateway](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions#how-do-i-integrate-with-nmea2000-can-bus) or both NMEA0183 and NMEA2000 via the [iKommunicate gateway](http://ikommunicate.com).
 
 ## Step 3 - your own setup and running automatically as daemon
 
