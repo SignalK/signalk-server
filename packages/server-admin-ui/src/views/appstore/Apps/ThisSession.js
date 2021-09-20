@@ -11,22 +11,22 @@ import {
   Pagination,
   PaginationItem,
   PaginationLink,
-  Progress
+  Progress,
 } from 'reactstrap'
 
 class ThisSession extends Component {
-  render () {
+  render() {
     var thisSessionApps = this.props.installingApps
     if (thisSessionApps && thisSessionApps.length) {
       return (
         <div>
           <Card>
             <CardHeader>
-              <i className='fa fa-align-justify' /> Installed This Session
+              <i className="fa fa-align-justify" /> Installed This Session
               (restart required)
             </CardHeader>
             <CardBody>
-              <Table responsive bordered striped size='sm'>
+              <Table responsive bordered striped size="sm">
                 <thead>
                   <tr>
                     <th>Status</th>
@@ -38,17 +38,17 @@ class ThisSession extends Component {
                   </tr>
                 </thead>
                 <tbody>
-          {thisSessionApps.map(app => {
+                  {thisSessionApps.map((app) => {
                     var status
                     var progress = ''
-                    if ((app.isInstalling || app.isRemoving) || app.isWaiting) {
+                    if (app.isInstalling || app.isRemoving || app.isWaiting) {
                       status = app.isRemove ? 'Removing' : 'Installing'
                       progress = (
                         <Progress
-                          className='progress-sm'
+                          className="progress-sm"
                           animated
-                          color='success'
-                          value='100'
+                          color="success"
+                          value="100"
                         />
                       )
                     } else if (app.installFailed) {

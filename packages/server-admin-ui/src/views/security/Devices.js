@@ -15,22 +15,22 @@ import {
   FormGroup,
   FormText,
   Table,
-  Row
+  Row,
 } from 'reactstrap'
 import EnableSecurity from './EnableSecurity'
 
-export function fetchSecurityDevices () {
+export function fetchSecurityDevices() {
   fetch(`${window.serverRoutesPrefix}/security/devices`, {
-    credentials: 'include'
+    credentials: 'include',
   })
-    .then(response => response.json())
-    .then(data => {
+    .then((response) => response.json())
+    .then((data) => {
       this.setState({ devices: data })
     })
 }
 
 class Devices extends Component {
-  constructor (props) {
+  constructor(props) {
     super(props)
     this.state = {
       devices: [],
@@ -43,74 +43,80 @@ class Devices extends Component {
     this.deleteDevice = this.deleteDevice.bind(this)
   }
 
-  componentDidMount () {
+  componentDidMount() {
     if (this.props.loginStatus.authenticationRequired) {
       this.fetchSecurityDevices()
     }
   }
 
-  handleDeviceChange (event) {
+  handleDeviceChange(event) {
     const value =
       event.target.type === 'checkbox'
         ? event.target.checked
         : event.target.value
     this.state.selectedDevice[event.target.name] = value
     this.setState({
-      selectedDevice: this.state.selectedDevice
+      selectedDevice: this.state.selectedDevice,
     })
   }
 
-  handleApply (event) {
+  handleApply(event) {
     event.preventDefault()
 
     var payload = {
       permissions: this.state.selectedDevice.permissions || 'readonly',
-      description: this.state.selectedDevice.description
+      description: this.state.selectedDevice.description,
     }
 
-    fetch(`${window.serverRoutesPrefix}/security/devices/${this.state.selectedDevice.clientId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload),
-      credentials: 'include'
-    })
-      .then(response => response.text())
-      .then(response => {
+    fetch(
+      `${window.serverRoutesPrefix}/security/devices/${this.state.selectedDevice.clientId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        credentials: 'include',
+      }
+    )
+      .then((response) => response.text())
+      .then((response) => {
         this.setState({
           selectedDevice: null,
-          selectedIndex: -1
+          selectedIndex: -1,
         })
         alert(response)
         this.fetchSecurityDevices()
       })
   }
 
-  deleteDevice (event) {
-    fetch(`${window.serverRoutesPrefix}/security/devices/${this.state.selectedDevice.clientId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include'
-    })
-      .then(response => response.text())
-      .then(response => {
+  deleteDevice(event) {
+    fetch(
+      `${window.serverRoutesPrefix}/security/devices/${this.state.selectedDevice.clientId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      }
+    )
+      .then((response) => response.text())
+      .then((response) => {
         this.setState({
           selectedDevice: null,
-          selectedIndex: -1
+          selectedIndex: -1,
         })
         alert(response)
         this.fetchSecurityDevices()
       })
   }
 
-  deviceClicked (device, index) {
+  deviceClicked(device, index) {
     this.setState(
       {
         selectedDevice: JSON.parse(JSON.stringify(device)),
-        selectedIndex: index
+        selectedIndex: index,
       },
       () => {
         this.refs['selectedDevice'].scrollIntoView()
@@ -118,12 +124,12 @@ class Devices extends Component {
     )
   }
 
-  handleCancel (event) {
+  handleCancel(event) {
     this.setState({ selectedDevice: null })
   }
-  render () {
+  render() {
     return (
-      <div className='animated fadeIn'>
+      <div className="animated fadeIn">
         {this.props.loginStatus.authenticationRequired === false && (
           <EnableSecurity />
         )}
@@ -131,10 +137,11 @@ class Devices extends Component {
           <div>
             <Card>
               <CardHeader>
-                <i className='fa fa-align-justify' />Devices
+                <i className="fa fa-align-justify" />
+                Devices
               </CardHeader>
               <CardBody>
-                <Table hover responsive bordered striped size='sm'>
+                <Table hover responsive bordered striped size="sm">
                   <thead>
                     <tr>
                       <th>Client ID</th>
@@ -147,11 +154,7 @@ class Devices extends Component {
                       return (
                         <tr
                           key={device.clientId}
-                          onClick={this.deviceClicked.bind(
-                            this,
-                            device,
-                            index
-                          )}
+                          onClick={this.deviceClicked.bind(this, device, index)}
                         >
                           <td>{device.clientId}</td>
                           <td>{device.description}</td>
@@ -162,90 +165,94 @@ class Devices extends Component {
                   </tbody>
                 </Table>
               </CardBody>
-              <CardFooter>
-              </CardFooter>
+              <CardFooter></CardFooter>
             </Card>
 
             {this.state.selectedDevice && (
-              <div ref='selectedDevice'>
+              <div ref="selectedDevice">
                 <Card>
                   <CardHeader>
-                    <i className='fa fa-align-justify' />Device
+                    <i className="fa fa-align-justify" />
+                    Device
                   </CardHeader>
                   <CardBody>
                     <FormGroup row>
-                      <Col md='2'>
-                        <Label htmlFor='clientId'>Client ID</Label>
+                      <Col md="2">
+                        <Label htmlFor="clientId">Client ID</Label>
                       </Col>
-                      <Col xs='12' md='9'>
+                      <Col xs="12" md="9">
                         <Label>{this.state.selectedDevice.clientId}</Label>
                       </Col>
                     </FormGroup>
                     <FormGroup row>
-                      <Col md='2'>
-                        <Label htmlFor='description'>Description</Label>
+                      <Col md="2">
+                        <Label htmlFor="description">Description</Label>
                       </Col>
-                      <Col xs='12' md='9'>
-                      <Input
-                        size='60'
-                        style={{ width: 'auto' }}
-                        type='text'
-                        name='description'
-                        onChange={this.handleDeviceChange}
-                        value={this.state.selectedDevice.description}
-                      />
+                      <Col xs="12" md="9">
+                        <Input
+                          size="60"
+                          style={{ width: 'auto' }}
+                          type="text"
+                          name="description"
+                          onChange={this.handleDeviceChange}
+                          value={this.state.selectedDevice.description}
+                        />
                       </Col>
                     </FormGroup>
                     <FormGroup row>
-                      <Col md='2'>
-                        <Label htmlFor='select'>Permissions</Label>
+                      <Col md="2">
+                        <Label htmlFor="select">Permissions</Label>
                       </Col>
-                      <Col xs='12' md='2'>
-                {!this.state.selectedDevice.requestedPermissions && (
-                        <Input
-                          type='select'
-                          name='permissions'
-                          value={this.state.selectedDevice.permissions}
-                          onChange={this.handleDeviceChange}
-                        >
-                          <option value='readonly'>Read Only</option>
-                          <option value='readwrite'>Read/Write</option>
-                          <option value='admin'>Admin</option>
-                </Input>
-                )}
-              {this.state.selectedDevice.requestedPermissions && (
-                  <Label>{convertPermissions(this.state.selectedDevice.permissions)}</Label>
-              )}
+                      <Col xs="12" md="2">
+                        {!this.state.selectedDevice.requestedPermissions && (
+                          <Input
+                            type="select"
+                            name="permissions"
+                            value={this.state.selectedDevice.permissions}
+                            onChange={this.handleDeviceChange}
+                          >
+                            <option value="readonly">Read Only</option>
+                            <option value="readwrite">Read/Write</option>
+                            <option value="admin">Admin</option>
+                          </Input>
+                        )}
+                        {this.state.selectedDevice.requestedPermissions && (
+                          <Label>
+                            {convertPermissions(
+                              this.state.selectedDevice.permissions
+                            )}
+                          </Label>
+                        )}
                       </Col>
                     </FormGroup>
                   </CardBody>
                   <CardFooter>
                     <Row>
-                      <Col xs='4' md='1'>
+                      <Col xs="4" md="1">
                         <Button
-                          size='sm'
-                          color='primary'
+                          size="sm"
+                          color="primary"
                           onClick={this.handleApply}
                         >
-                          <i className='fa fa-dot-circle-o' /> Apply
+                          <i className="fa fa-dot-circle-o" /> Apply
                         </Button>
                       </Col>
-                      <Col xs='4' md='1'>
+                      <Col xs="4" md="1">
                         <Button
-                          size='sm'
-                          color='secondary'
+                          size="sm"
+                          color="secondary"
                           onClick={this.handleCancel}
                         >
-                          <i className='fa fa-ban' /> Cancel
+                          <i className="fa fa-ban" /> Cancel
                         </Button>
                       </Col>
-                      <Col xs='4' md='10' className='text-right'>
+                      <Col xs="4" md="10" className="text-right">
                         <Button
-                          size='sm'
-                          color='danger'
+                          size="sm"
+                          color="danger"
                           onClick={this.deleteDevice}
                         >
-                          <i className='fa fa-ban' /> Delete
+                          <i className="fa fa-ban" /> Delete
                         </Button>
                       </Col>
                     </Row>
@@ -264,7 +271,7 @@ const mapStateToProps = ({ securityDevices }) => ({ securityDevices })
 
 export default connect(mapStateToProps)(Devices)
 
-function convertPermissions (type) {
+function convertPermissions(type) {
   if (type == 'readonly') {
     return 'Read Only'
   } else if (type == 'readwrite') {
