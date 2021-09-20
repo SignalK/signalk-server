@@ -1,15 +1,12 @@
 import React, { Component } from 'react'
 import Form from 'react-jsonschema-form-bs4'
 
-
-export default ({plugin, onSubmit}) => {
+export default ({ plugin, onSubmit }) => {
   const schema = JSON.parse(JSON.stringify(plugin.schema))
   var uiSchema = {}
 
   if (typeof plugin.uiSchema !== 'undefined') {
-    uiSchema['configuration'] = JSON.parse(
-      JSON.stringify(plugin.uiSchema)
-    )
+    uiSchema['configuration'] = JSON.parse(JSON.stringify(plugin.uiSchema))
   }
 
   const topSchema = {
@@ -20,9 +17,9 @@ export default ({plugin, onSubmit}) => {
         title: ' ',
         description: schema.description,
         type: 'object',
-        properties: schema.properties
-      }
-    }
+        properties: schema.properties,
+      },
+    },
   }
 
   if (plugin.statusMessage) {
@@ -35,8 +32,13 @@ export default ({plugin, onSubmit}) => {
       schema={topSchema}
       uiSchema={uiSchema}
       formData={plugin.data || {}}
-      onSubmit={submitData => {
-        onSubmit({...submitData.formData, enabled, enableLogging, enableDebug} )
+      onSubmit={(submitData) => {
+        onSubmit({
+          ...submitData.formData,
+          enabled,
+          enableLogging,
+          enableDebug,
+        })
       }}
     />
   )

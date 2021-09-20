@@ -2,9 +2,7 @@ import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
-
 class Footer extends Component {
-
   constructor(props) {
     super(props)
   }
@@ -12,9 +10,9 @@ class Footer extends Component {
   render() {
     const { name, mmsi, uuid } = this.props.vesselInfo
     return (
-      <footer className='app-footer'>
+      <footer className="app-footer">
         <span>
-          <a href='https://github.com/SignalK/signalk-server-node/'>
+          <a href="https://github.com/SignalK/signalk-server-node/">
             Signal K Server
           </a>
         </span>
@@ -25,29 +23,27 @@ class Footer extends Component {
         )}
         {typeof this.props.appStore.serverUpdate !== 'undefined' && (
           <span>
-            <Link to='/serverConfiguration/update'>
+            <Link to="/serverConfiguration/update">
               &nbsp;(version {this.props.appStore.serverUpdate} is available)
-          </Link>
+            </Link>
           </span>
         )}
         {this.props.loginStatus.status === 'loggedIn' && (
-          <span className='ml-auto'>
+          <span className="ml-auto">
             Logged in as {this.props.loginStatus.username}
           </span>
         )}
-
         &nbsp;- {name || mmsi || uuid}
       </footer>
     )
   }
 }
 
-export default connect(({
-  loginStatus,
-  serverSpecification,
-  appStore,
-  vesselInfo }) => ({
+export default connect(
+  ({ loginStatus, serverSpecification, appStore, vesselInfo }) => ({
     loginStatus,
     serverSpecification,
     appStore,
-    vesselInfo }))(Footer)
+    vesselInfo,
+  })
+)(Footer)

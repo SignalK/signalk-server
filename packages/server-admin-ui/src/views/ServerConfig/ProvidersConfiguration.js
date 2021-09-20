@@ -21,55 +21,61 @@ import {
   NavLink,
   TabContent,
   TabPane,
-  Row
+  Row,
 } from 'reactstrap'
 
 import BasicProvider from './BasicProvider'
 import SourcePriorities from './SourcePriorities'
 import set from 'lodash.set'
 
-function fetchProviders () {
+function fetchProviders() {
   fetch(`${window.serverRoutesPrefix}/providers`, {
-    credentials: 'include'
+    credentials: 'include',
   })
-    .then(response => response.json())
-    .then(data => {
+    .then((response) => response.json())
+    .then((data) => {
       let selectedProvider = undefined
       let selectedIndex = undefined
       if (this.state.selectedProviderId) {
-        selectedProvider = data.find(provider => provider.id === this.state.selectedProviderId)
-        selectedIndex = data.findIndex(provider => provider.id === this.state.selectedProviderId)
+        selectedProvider = data.find(
+          (provider) => provider.id === this.state.selectedProviderId
+        )
+        selectedIndex = data.findIndex(
+          (provider) => provider.id === this.state.selectedProviderId
+        )
       }
       if (selectedProvider) {
         selectedProvider.originalId = selectedProvider.id
       }
       this.setState({
         providers: data,
-        selectedProvider: selectedProvider ? JSON.parse(JSON.stringify(selectedProvider)) : undefined,
-        selectedIndex: selectedIndex
-       })
+        selectedProvider: selectedProvider
+          ? JSON.parse(JSON.stringify(selectedProvider))
+          : undefined,
+        selectedIndex: selectedIndex,
+      })
     })
 }
 
-function runDiscovery () {
+function runDiscovery() {
   fetch(`${window.serverRoutesPrefix}/runDiscovery`, {
     method: 'PUT',
-    credentials: 'include'
+    credentials: 'include',
   })
 }
 
-function onRowSelect (row, isSelected, e) {
+function onRowSelect(row, isSelected, e) {
   // if column index is 2, will not trigger selection
   if (e.target.cellIndex === 2) return false
 }
 
 class ProvidersConfiguration extends Component {
-  constructor (props) {
+  constructor(props) {
     super(props)
     this.state = {
       activeTab: '1',
       providers: [],
-      selectedProviderId: this.props.match.params.providerId
+      selectedProviderId: this.props.match.params.providerId,
     }
 
     this.fetchProviders = fetchProviders.bind(this)
@@ -84,12 +90,12 @@ class ProvidersConfiguration extends Component {
     this.handleDelete = this.handleDelete.bind(this)
   }
 
-  componentDidMount () {
+  componentDidMount() {
     this.fetchProviders()
     this.runDiscovery()
   }
 
-  handleProviderChange (event, type) {
+  handleProviderChange(event, type) {
     var value =
       event.target.type === 'checkbox'
         ? event.target.checked
@@ -99,17 +105,17 @@ class ProvidersConfiguration extends Component {
     }
     set(this.state.selectedProvider, event.target.name, value)
     this.setState({
-      selectedProvider: this.state.selectedProvider
+      selectedProvider: this.state.selectedProvider,
     })
   }
 
   handleProviderPropChange(event) {
     this.setState({
-      selectedProvider: this.state.selectedProvider
+      selectedProvider: this.state.selectedProvider,
     })
   }
 
-  handleAddProvider (event) {
+  handleAddProvider(event) {
     var newProvider = {
       type: 'NMEA2000',
       logging: false,
@@ -117,12 +123,12 @@ class ProvidersConfiguration extends Component {
       id: '',
       enabled: true,
       options: {},
-      editable: true
+      editable: true,
     }
     this.setState(
       {
         selectedProvider: JSON.parse(JSON.stringify(newProvider)),
-        selectedIndex: this.state.providers.length - 1
+        selectedIndex: this.state.providers.length - 1,
       },
       () => {
         this.refs['selectedProvider'].scrollIntoView()
@@ -130,7 +136,7 @@ class ProvidersConfiguration extends Component {
     )
   }
 
-  handleApply (event) {
+  handleApply(event) {
     var isNew = this.state.selectedProvider.isNew
     var wasDiscovered = this.state.selectedProvider.wasDiscovered
 
@@ -142,13 +148,13 @@ class ProvidersConfiguration extends Component {
     fetch(`${window.serverRoutesPrefix}/providers/${id && !isNew ? id : ''}`, {
       method: isNew ? 'POST' : 'PUT',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(this.state.selectedProvider),
-      credentials: 'include'
+      credentials: 'include',
     })
-      .then(response => {
-        if ( response.ok ) {
+      .then((response) => {
+        if (response.ok) {
           var provider = JSON.parse(JSON.stringify(this.state.selectedProvider))
           delete provider.isNew
           delete provider.wasDiscovered
@@ -158,57 +164,63 @@ class ProvidersConfiguration extends Component {
           } else {
             this.state.providers[this.state.selectedIndex] = provider
           }
-          if ( wasDiscovered ) {
+          if (wasDiscovered) {
             this.props.discoveredProviders.splice(this.state.selectedIndex, 1)
           }
-          this.setState({
-            providers: this.state.providers,
-            //discoveredProviders: this.state.discoveredProviders,
-            selectedProvider: null,
-            selectedIndex: -1
-          }, () => {
-            this.props.history.push('/serverConfiguration/connections/-')
-          })
+          this.setState(
+            {
+              providers: this.state.providers,
+              //discoveredProviders: this.state.discoveredProviders,
+              selectedProvider: null,
+              selectedIndex: -1,
+            },
+            () => {
+              this.props.history.push('/serverConfiguration/connections/-')
+            }
+          )
         }
         return response.text()
       })
-      .then(text => {
+      .then((text) => {
         alert(text)
       })
   }
 
-  handleCancel (event) {
+  handleCancel(event) {
     this.setState({ selectedProvider: null })
   }
 
-  handleDelete (event) {
-    fetch(`${window.serverRoutesPrefix}/providers/${this.state.selectedProvider.id}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include'
-    })
-      .then(response => response.text())
-      .then(response => {
+  handleDelete(event) {
+    fetch(
+      `${window.serverRoutesPrefix}/providers/${this.state.selectedProvider.id}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      }
+    )
+      .then((response) => response.text())
+      .then((response) => {
         this.state.providers.splice(this.state.selectedIndex, 1)
         this.setState({
           providers: this.state.providers,
           selectedProvider: null,
-          selectedIndex: -1
+          selectedIndex: -1,
         })
         alert(response)
       })
   }
 
-  providerClicked (provider, index) {
+  providerClicked(provider, index) {
     this.setState(
       {
         selectedProvider: {
           ...JSON.parse(JSON.stringify(provider)),
-          originalId: provider.id
+          originalId: provider.id,
         },
-        selectedIndex: index
+        selectedIndex: index,
       },
       () => {
         this.refs['selectedProvider'].scrollIntoView()
@@ -216,69 +228,72 @@ class ProvidersConfiguration extends Component {
     )
   }
 
-  toggle (tab) {
+  toggle(tab) {
     if (this.state.activeTab !== tab) {
       this.setState({
-        activeTab: tab
+        activeTab: tab,
       })
     }
   }
 
-  render () {
+  render() {
     return (
-        <div className='animated fadeIn'>
-        {this.props.discoveredProviders && this.props.discoveredProviders.length > 0 && (
-        <Card>
-        <CardHeader>Discovered Connections</CardHeader>
-          <CardBody>
-            <Table hover responsive bordered striped size='sm'>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Data Type</th>
-                  <th>Enabled</th>
-                  <th>Logging</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(this.props.discoveredProviders || []).map((provider, index) => {
-                  return (
-                    <tr
-                      onClick={this.providerClicked.bind(
-                        this,
-                        provider,
-                        index
-                      )}
-                      key={provider.id}
-                    >
-                      <td>{provider.id}</td>
-                      <td>
-                        <ProviderType provider={provider} />
-                      </td>
-                      <td>
-                        <ApplicableStatus
-                          applicable={provider.editable}
-                          toggle={provider.enabled}
-                        />
-                      </td>
-                      <td>
-                        <ApplicableStatus
-                          applicable={provider.editable}
-                          toggle={provider.logging}
-                        />
-                      </td>
+      <div className="animated fadeIn">
+        {this.props.discoveredProviders &&
+          this.props.discoveredProviders.length > 0 && (
+            <Card>
+              <CardHeader>Discovered Connections</CardHeader>
+              <CardBody>
+                <Table hover responsive bordered striped size="sm">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Data Type</th>
+                      <th>Enabled</th>
+                      <th>Logging</th>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </Table>
-          </CardBody>
-        </Card>
-        )}
+                  </thead>
+                  <tbody>
+                    {(this.props.discoveredProviders || []).map(
+                      (provider, index) => {
+                        return (
+                          <tr
+                            onClick={this.providerClicked.bind(
+                              this,
+                              provider,
+                              index
+                            )}
+                            key={provider.id}
+                          >
+                            <td>{provider.id}</td>
+                            <td>
+                              <ProviderType provider={provider} />
+                            </td>
+                            <td>
+                              <ApplicableStatus
+                                applicable={provider.editable}
+                                toggle={provider.enabled}
+                              />
+                            </td>
+                            <td>
+                              <ApplicableStatus
+                                applicable={provider.editable}
+                                toggle={provider.logging}
+                              />
+                            </td>
+                          </tr>
+                        )
+                      }
+                    )}
+                  </tbody>
+                </Table>
+              </CardBody>
+            </Card>
+          )}
         <Card>
-        <CardHeader>Connections</CardHeader>
+          <CardHeader>Connections</CardHeader>
           <CardBody>
-            <Table hover responsive bordered striped size='sm'>
+            <Table hover responsive bordered striped size="sm">
               <thead>
                 <tr>
                   <th>ID</th>
@@ -291,11 +306,7 @@ class ProvidersConfiguration extends Component {
                 {(this.state.providers || []).map((provider, index) => {
                   return (
                     <tr
-                      onClick={this.providerClicked.bind(
-                        this,
-                        provider,
-                        index
-                      )}
+                      onClick={this.providerClicked.bind(this, provider, index)}
                       key={provider.id}
                     >
                       <td>{provider.id}</td>
@@ -321,14 +332,14 @@ class ProvidersConfiguration extends Component {
             </Table>
           </CardBody>
           <CardFooter>
-            <Button size='sm' color='primary' onClick={this.handleAddProvider}>
-              <i className='fa fa-plus-circle' /> Add
+            <Button size="sm" color="primary" onClick={this.handleAddProvider}>
+              <i className="fa fa-plus-circle" /> Add
             </Button>
           </CardFooter>
         </Card>
 
         {this.state.selectedProvider && (
-          <div ref='selectedProvider' style={{ scrollMarginTop:'54px' }}>
+          <div ref="selectedProvider" style={{ scrollMarginTop: '54px' }}>
             <Card>
               <CardBody>
                 {this.state.selectedProvider.editable ? (
@@ -339,55 +350,55 @@ class ProvidersConfiguration extends Component {
                   />
                 ) : (
                   <Input
-                    type='textarea'
-                    name='json'
-                    id='json'
-                    rows='20'
+                    type="textarea"
+                    name="json"
+                    id="json"
+                    rows="20"
                     value={this.state.selectedProvider.json}
-                    readOnly='true'
+                    readOnly="true"
                   />
                 )}
               </CardBody>
               <CardFooter>
                 {this.state.selectedProvider.editable ? (
                   <Row>
-                    <Col xs='4' md='1'>
+                    <Col xs="4" md="1">
                       <Button
-                        size='sm'
-                        color='primary'
+                        size="sm"
+                        color="primary"
                         onClick={this.handleApply}
                       >
-                        <i className='fa fa-dot-circle-o' /> Apply
+                        <i className="fa fa-dot-circle-o" /> Apply
                       </Button>
                     </Col>
-                    <Col xs='4' md='1'>
+                    <Col xs="4" md="1">
                       <Button
-                        size='sm'
-                        color='secondary'
+                        size="sm"
+                        color="secondary"
                         onClick={this.handleCancel}
                       >
-                        <i className='fa fa-ban' /> Cancel
+                        <i className="fa fa-ban" /> Cancel
                       </Button>
                     </Col>
-                    <Col xs='4' md='10' className='text-right'>
+                    <Col xs="4" md="10" className="text-right">
                       <Button
-                        size='sm'
-                        color='danger'
+                        size="sm"
+                        color="danger"
                         onClick={this.handleDelete}
                       >
-                        <i className='fa fa-ban' /> Delete
+                        <i className="fa fa-ban" /> Delete
                       </Button>
                     </Col>
                   </Row>
                 ) : (
                   <Row>
-                    <Col xs='4' md='12' className='text-right'>
+                    <Col xs="4" md="12" className="text-right">
                       <Button
-                        size='sm'
-                        color='danger'
+                        size="sm"
+                        color="danger"
                         onClick={this.handleDelete}
                       >
-                        <i className='fa fa-ban' /> Delete
+                        <i className="fa fa-ban" /> Delete
                       </Button>
                     </Col>
                   </Row>
@@ -397,17 +408,17 @@ class ProvidersConfiguration extends Component {
           </div>
         )}
 
-        <SourcePriorities/>
+        <SourcePriorities />
       </div>
     )
   }
 }
 
-const ApplicableStatus = props => (
+const ApplicableStatus = (props) => (
   <div>{props.applicable ? (props.toggle ? 'Yes' : 'No') : 'N/A'}</div>
 )
 
-const ProviderType = props => (
+const ProviderType = (props) => (
   <div>
     {props.provider.type}
     {props.provider.type === 'FileStream'
@@ -415,6 +426,6 @@ const ProviderType = props => (
       : ''}
   </div>
 )
-const mapStateToProps = ({ discoveredProviders  }) => ({ discoveredProviders })
+const mapStateToProps = ({ discoveredProviders }) => ({ discoveredProviders })
 
 export default connect(mapStateToProps)(ProvidersConfiguration)

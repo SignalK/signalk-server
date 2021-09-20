@@ -11,97 +11,96 @@ import {
   Input,
   InputGroup,
   InputGroupAddon,
-  HelpBlock
+  HelpBlock,
 } from 'reactstrap'
 import { connect } from 'react-redux'
 import { login, enableSecurity, fetchLoginStatus } from '../../actions'
 import Login from './Login'
 
 class EnableSecurity extends Component {
-  constructor (props) {
+  constructor(props) {
     super(props)
     this.state = {
       enabling: false,
-      errorMessage: null
+      errorMessage: null,
     }
     this.handleInputChange = this.handleInputChange.bind(this)
     this.handleClick = this.handleClick.bind(this)
   }
 
-  handleClick (event) {
+  handleClick(event) {
     const { dispatch } = this.props
     this.setState({ enabling: true })
     enableSecurity(
       dispatch,
       this.state.username,
       this.state.password,
-      error => {
+      (error) => {
         fetchLoginStatus(dispatch)
         this.setState({
           enabling: false,
-          errorMessage: error
+          errorMessage: error,
         })
       }
     )
   }
 
-  handleInputChange (event) {
+  handleInputChange(event) {
     this.setState({ [event.target.name]: event.target.value })
   }
 
-  render () {
+  render() {
     return (
-        <div>
+      <div>
         {this.props.loginStatus.authenticationRequired &&
-         !this.props.loginStatus.noUsers && (
-           <Login />
-         )}
+          !this.props.loginStatus.noUsers && <Login />}
         {(this.props.loginStatus.authenticationRequired === false ||
-         this.props.loginStatus.noUsers === true) && (
+          this.props.loginStatus.noUsers === true) && (
           <Container>
-            <Row className='justify-content-center'>
-              <Col md='8'>
+            <Row className="justify-content-center">
+              <Col md="8">
                 <CardGroup>
-                  <Card className='p-4'>
+                  <Card className="p-4">
                     <CardBody>
                       {this.props.loginStatus.securityWasEnabled &&
-                       this.props.loginStatus.authenticationRequired == false && (
-                        <p className='text-danger'>
-                          Security has been enabled, please restart the server
-                        </p>
-                      )}
+                        this.props.loginStatus.authenticationRequired ==
+                          false && (
+                          <p className="text-danger">
+                            Security has been enabled, please restart the server
+                          </p>
+                        )}
                       {!this.props.loginStatus.securityWasEnabled && (
                         <div>
                           <h1>Enable Security</h1>
-                          <p className='text-muted'>Create an admin account</p>
-                          <InputGroup className='mb-3'>
+                          <p className="text-muted">Create an admin account</p>
+                          <InputGroup className="mb-3">
                             <InputGroupAddon>
-                              <i className='icon-user' />
+                              <i className="icon-user" />
                             </InputGroupAddon>
                             <Input
-                              type='text'
-                              name='username'
-                              placeholder='Username'
+                              type="text"
+                              name="username"
+                              placeholder="Username"
                               onChange={this.handleInputChange}
                             />
                           </InputGroup>
-                          <InputGroup className='mb-4'>
+                          <InputGroup className="mb-4">
                             <InputGroupAddon>
-                              <i className='icon-lock' />
+                              <i className="icon-lock" />
                             </InputGroupAddon>
                             <Input
-                              type='password'
-                              name='password'
-                              placeholder='Password'
+                              type="password"
+                              name="password"
+                              placeholder="Password"
                               onChange={this.handleInputChange}
                             />
                           </InputGroup>
                           <Row>
-                            <Col xs='6'>
+                            <Col xs="6">
                               <Button
                                 onClick={this.handleClick}
-                                color='primary'
-                                className='px-4'
+                                color="primary"
+                                className="px-4"
                               >
                                 <i
                                   className={
@@ -113,8 +112,8 @@ class EnableSecurity extends Component {
                                 Enable
                               </Button>
                             </Col>
-                            <Col xs='6' className='text-right'>
-                              <p className='text-danger'>
+                            <Col xs="6" className="text-right">
+                              <p className="text-danger">
                                 {this.state.errorMessage}
                               </p>
                             </Col>

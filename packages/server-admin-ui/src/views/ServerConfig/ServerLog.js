@@ -9,18 +9,18 @@ import {
   Col,
   Label,
   FormGroup,
-  FormText
+  FormText,
 } from 'reactstrap'
 
 class ServerLogs extends Component {
-  constructor (props) {
+  constructor(props) {
     super(props)
     this.state = {
       hasData: true,
       webSocket: null,
       didSubScribe: false,
       pause: false,
-      debugKeys: []
+      debugKeys: [],
     }
 
     this.handleDebug = this.handleDebug.bind(this)
@@ -29,8 +29,13 @@ class ServerLogs extends Component {
   }
 
   subscribeToLogsIfNeeded() {
-    if ( !this.state.pause && this.props.webSocket && (this.props.webSocket != this.state.webSocket ||  this.state.didSubScribe === false) ) {
-      const sub = { "context": "vessels.self", "subscribe": [ { "path": "log" } ] }
+    if (
+      !this.state.pause &&
+      this.props.webSocket &&
+      (this.props.webSocket != this.state.webSocket ||
+        this.state.didSubScribe === false)
+    ) {
+      const sub = { context: 'vessels.self', subscribe: [{ path: 'log' }] }
       this.props.webSocket.send(JSON.stringify(sub))
       this.state.webSocket = this.props.webSocket
       this.state.didSubScribe = true
@@ -38,24 +43,23 @@ class ServerLogs extends Component {
   }
 
   unsubscribeToLogs() {
-    if ( this.props.webSocket ) {
-      const sub = { "context": "vessels.self", "unsubscribe": [ { "path": "log" } ] }
+    if (this.props.webSocket) {
+      const sub = { context: 'vessels.self', unsubscribe: [{ path: 'log' }] }
       this.props.webSocket.send(JSON.stringify(sub))
       this.state.didSubScribe = false
     }
   }
 
   fetchDebugKeys() {
-    fetch(`${window.serverRoutesPrefix}/debugKeys`, {
-      credentials: 'include'
+    fetch(`${window.serverRoutesPrefix}/debugKeys`, {
+      credentials: 'include',
     })
-      .then(response => response.json())
-      .then(debugKeys => {
+      .then((response) => response.json())
+      .then((debugKeys) => {
         this.setState({ debugKeys: debugKeys.sort() })
       })
-
   }
-  
+
   componentDidMount() {
     this.subscribeToLogsIfNeeded()
     this.fetchDebugKeys()
@@ -64,160 +68,172 @@ class ServerLogs extends Component {
   componentDidUpdate() {
     this.subscribeToLogsIfNeeded()
   }
-  
-  componentWillUnmount () {
+
+  componentWillUnmount() {
     this.unsubscribeToLogs()
   }
 
-  handleDebug (event) {
+  handleDebug(event) {
     this.doHandleDebug(event.target.value)
   }
 
   handleDebugCheckbox(value, enabled) {
-    const keysToSend = this.props.log.debugEnabled.length > 0 ? this.props.log.debugEnabled.split(',') : []
+    const keysToSend =
+      this.props.log.debugEnabled.length > 0
+        ? this.props.log.debugEnabled.split(',')
+        : []
     if (enabled) {
       keysToSend.push(value)
     } else {
-      _.remove(keysToSend, v => v === value)
+      _.remove(keysToSend, (v) => v === value)
     }
     this.doHandleDebug(keysToSend.toString())
   }
 
-  doHandleDebug (value) {
+  doHandleDebug(value) {
     fetch(`${window.serverRoutesPrefix}/debug`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({ value }),
-      credentials: 'include'
-    })
-      .then(response => response.text())
+      credentials: 'include',
+    }).then((response) => response.text())
   }
 
-  handleRememberDebug (event) {
+  handleRememberDebug(event) {
     fetch(`${window.serverRoutesPrefix}/rememberDebug`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({ value: event.target.checked }),
-      credentials: 'include'
-    })
-      .then(response => response.text())
+      credentials: 'include',
+    }).then((response) => response.text())
   }
 
-  handlePause (event) {
+  handlePause(event) {
     this.state.pause = event.target.checked
     this.setState(this.state)
-    if ( this.state.pause ) {
+    if (this.state.pause) {
       this.unsubscribeToLogs()
     } else {
       this.subscribeToLogsIfNeeded()
     }
   }
 
-  render () {
+  render() {
     const activeDebugKeys = this.props.log.debugEnabled.split(',')
     return (
       this.state.hasData && (
-        <div className='animated fadeIn'>
+        <div className="animated fadeIn">
           <Card>
             <CardBody>
               <Form
-                action=''
-                method='post'
-                encType='multipart/form-data'
-                className='form-horizontal'
-                onSubmit={e => { e.preventDefault()}}
+                action=""
+                method="post"
+                encType="multipart/form-data"
+                className="form-horizontal"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                }}
               >
                 <FormGroup row>
-
-                  <Col xs='1' md='1'>
-                    <Label htmlFor='select'>Debug</Label>
+                  <Col xs="1" md="1">
+                    <Label htmlFor="select">Debug</Label>
                   </Col>
 
-                  <Col xs='6' md='6'>
+                  <Col xs="6" md="6">
                     <Input
-                      type='text'
-                      name='debug'
+                      type="text"
+                      name="debug"
                       onChange={this.handleDebug}
-                        value={this.props.log.debugEnabled}
+                      value={this.props.log.debugEnabled}
                     />
-                    <FormText color='muted' style={{marginBottom: '15px'}}>
-                      Enter the appropriate debug keys to enable debug logging. Multiple entries should be separated by a comma.
-                      For example: <code>signalk-server*,signalk-provider-tcp</code>. You can also activate individual debug keys on the right.
+                    <FormText color="muted" style={{ marginBottom: '15px' }}>
+                      Enter the appropriate debug keys to enable debug logging.
+                      Multiple entries should be separated by a comma. For
+                      example: <code>signalk-server*,signalk-provider-tcp</code>
+                      . You can also activate individual debug keys on the
+                      right.
                     </FormText>
-                    <Label className='switch switch-text switch-primary'>
+                    <Label className="switch switch-text switch-primary">
                       <Input
-                        type='checkbox'
+                        type="checkbox"
                         id="Enabled"
-                        name='debug'
-                        className='switch-input'
+                        name="debug"
+                        className="switch-input"
                         onChange={this.handleRememberDebug}
                         checked={this.props.log.rememberDebug}
                       />
                       <span
-                        className='switch-label'
-                        data-on='Yes'
-                        data-off='No'
+                        className="switch-label"
+                        data-on="Yes"
+                        data-off="No"
                       />
-                      <span className='switch-handle' />
-                    </Label> Remember debug setting
+                      <span className="switch-handle" />
+                    </Label>{' '}
+                    Remember debug setting
                   </Col>
 
-                  <Col xs='5' md='5'>
-                    <div style={{
-                      overflow: 'scroll',
-                      maxHeight: '30vh',
-                      borderStyle: 'solid',
-                      borderWidth: '0.5px',
-                      borderColor: 'lightgray',
-                      padding: '8px'
-                    }}>
-                      {this.state.debugKeys.map((key, i) =>
+                  <Col xs="5" md="5">
+                    <div
+                      style={{
+                        overflow: 'scroll',
+                        maxHeight: '30vh',
+                        borderStyle: 'solid',
+                        borderWidth: '0.5px',
+                        borderColor: 'lightgray',
+                        padding: '8px',
+                      }}
+                    >
+                      {this.state.debugKeys.map((key, i) => (
                         <div key={i}>
-                          <Label className='switch switch-text switch-primary'>
+                          <Label className="switch switch-text switch-primary">
                             <Input
-                              type='checkbox'
+                              type="checkbox"
                               id={key}
                               name={key}
-                              className='switch-input'
+                              className="switch-input"
                               onChange={(e) => {
-                                this.handleDebugCheckbox(key, activeDebugKeys.indexOf(key) === -1)
+                                this.handleDebugCheckbox(
+                                  key,
+                                  activeDebugKeys.indexOf(key) === -1
+                                )
                               }}
                               checked={activeDebugKeys.indexOf(key) >= 0}
                             />
                             <span
-                              className='switch-label'
-                              data-on='Yes'
-                              data-off='No'
+                              className="switch-label"
+                              data-on="Yes"
+                              data-off="No"
                             />
-                            <span className='switch-handle' />
-                          </Label>{' '}{key}
+                            <span className="switch-handle" />
+                          </Label>{' '}
+                          {key}
                         </div>
-                      )}
+                      ))}
                     </div>
                   </Col>
                 </FormGroup>
 
                 <div>
                   Pause the log window
-                  <Label className='switch switch-text switch-primary'>
+                  <Label className="switch switch-text switch-primary">
                     <Input
-                      type='checkbox'
+                      type="checkbox"
                       id="Pause"
-                      name='pause'
-                      className='switch-input'
+                      name="pause"
+                      className="switch-input"
                       onChange={this.handlePause}
                       checked={this.state.pause}
                     />
                     <span
-                      className='switch-label'
-                      data-on='Yes'
-                      data-off='No'
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
                     />
-                    <span className='switch-handle' />
+                    <span className="switch-handle" />
                   </Label>
                 </div>
 
@@ -238,12 +254,26 @@ class LogList extends Component {
 
   render() {
     return (
-        <div style={{'overflowY': 'scroll', 'maxHeight': '60vh', border: '1px solid', padding: '5px', 'fontFamily': 'monospace'}} >
-      {this.props.value.entries && this.props.value.entries.map((logEntry, index) => {
-            return <PureLogRow key={logEntry.i} log={logEntry.d}/>
-        })
-      }
-      <div ref={(el) => { this.end = el}}>&nbsp;</div>
+      <div
+        style={{
+          overflowY: 'scroll',
+          maxHeight: '60vh',
+          border: '1px solid',
+          padding: '5px',
+          fontFamily: 'monospace',
+        }}
+      >
+        {this.props.value.entries &&
+          this.props.value.entries.map((logEntry, index) => {
+            return <PureLogRow key={logEntry.i} log={logEntry.d} />
+          })}
+        <div
+          ref={(el) => {
+            this.end = el
+          }}
+        >
+          &nbsp;
+        </div>
       </div>
     )
   }
@@ -251,8 +281,13 @@ class LogList extends Component {
 
 class PureLogRow extends React.PureComponent {
   render() {
-    return <span>{ ReactHtmlParser(this.props.log) }<br/></span>
+    return (
+      <span>
+        {ReactHtmlParser(this.props.log)}
+        <br />
+      </span>
+    )
   }
 }
 
-export default connect(({log, webSocket}) => ({log, webSocket}))(ServerLogs)
+export default connect(({ log, webSocket }) => ({ log, webSocket }))(ServerLogs)

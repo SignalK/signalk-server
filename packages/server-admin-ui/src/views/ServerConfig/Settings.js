@@ -16,24 +16,24 @@ import {
   FormGroup,
   FormText,
   Table,
-  Progress
+  Progress,
 } from 'reactstrap'
 
 import VesselConfiguration from './VesselConfiguration'
 import LogFiles from './Logging'
 
-function fetchSettings () {
+function fetchSettings() {
   fetch(`${window.serverRoutesPrefix}/settings`, {
-    credentials: 'include'
+    credentials: 'include',
   })
-    .then(response => response.json())
-    .then(data => {
+    .then((response) => response.json())
+    .then((data) => {
       this.setState({ ...data, hasData: true })
     })
 }
 
 class ServerSettings extends Component {
-  constructor (props) {
+  constructor(props) {
     super(props)
     this.state = {
       hasData: false,
@@ -45,11 +45,11 @@ class ServerSettings extends Component {
     this.handleSaveSettings = this.handleSaveSettings.bind(this)
   }
 
-  componentDidMount () {
+  componentDidMount() {
     this.fetchSettings()
   }
- 
-  handleChange (event) {
+
+  handleChange(event) {
     const value =
       event.target.type === 'checkbox'
         ? event.target.checked
@@ -57,7 +57,7 @@ class ServerSettings extends Component {
     this.setState({ [event.target.name]: value })
   }
 
-  handleOptionChange (event) {
+  handleOptionChange(event) {
     const value =
       event.target.type === 'checkbox'
         ? event.target.checked
@@ -66,7 +66,7 @@ class ServerSettings extends Component {
     this.setState({ options: this.state.options })
   }
 
-  handleInterfaceChange (event) {
+  handleInterfaceChange(event) {
     const value =
       event.target.type === 'checkbox'
         ? event.target.checked
@@ -75,82 +75,85 @@ class ServerSettings extends Component {
     this.setState({ interfaces: this.state.interfaces })
   }
 
-  handleSaveSettings () {
+  handleSaveSettings() {
     fetch(`${window.serverRoutesPrefix}/settings`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(this.state),
-      credentials: 'include'
+      credentials: 'include',
     })
-      .then(response => response.text())
-      .then(response => {
+      .then((response) => response.text())
+      .then((response) => {
         alert(response)
       })
   }
 
-  render () {
+  render() {
     const fieldColWidthMd = 10
     return (
       this.state.hasData && (
-          <div className='animated fadeIn'>
+        <div className="animated fadeIn">
           <Card>
             <CardHeader>
-              <i className='fa fa-align-justify' /><strong>Server Settings</strong>
+              <i className="fa fa-align-justify" />
+              <strong>Server Settings</strong>
             </CardHeader>
             <CardBody>
               <Form
-                action=''
-                method='post'
-                encType='multipart/form-data'
-                className='form-horizontal'
+                action=""
+                method="post"
+                encType="multipart/form-data"
+                className="form-horizontal"
               >
-              {!this.state.runFromSystemd && (
-                <FormGroup row>
-                  <Col md='2'>
-                    <Label htmlFor='port'>HTTP Port</Label>
-                  </Col>
-                  <Col xs='12' md={fieldColWidthMd}>
-                    <Input
-                      size='5'
-                      style={{ width: 'auto' }}
-                      type='text'
-                      name='port'
-                      onChange={this.handleChange}
-                      value={this.state.port}
-                    />
-                    <FormText color='muted'>
-                      Saving a new value here will not have effect if overridden
-                      by environment variable PORT
-                    </FormText>
-                  </Col>
-                </FormGroup>
+                {!this.state.runFromSystemd && (
+                  <FormGroup row>
+                    <Col md="2">
+                      <Label htmlFor="port">HTTP Port</Label>
+                    </Col>
+                    <Col xs="12" md={fieldColWidthMd}>
+                      <Input
+                        size="5"
+                        style={{ width: 'auto' }}
+                        type="text"
+                        name="port"
+                        onChange={this.handleChange}
+                        value={this.state.port}
+                      />
+                      <FormText color="muted">
+                        Saving a new value here will not have effect if
+                        overridden by environment variable PORT
+                      </FormText>
+                    </Col>
+                  </FormGroup>
                 )}
                 {this.state.runFromSystemd && (
                   <FormGroup row>
-                  <Col xs='12' md={fieldColWidthMd}>
-                  <FormText>
-                    The server was started by systemd, run signalk-server-setup to change ports and ssl configuration.
-                    </FormText>
-                  </Col>
+                    <Col xs="12" md={fieldColWidthMd}>
+                      <FormText>
+                        The server was started by systemd, run
+                        signalk-server-setup to change ports and ssl
+                        configuration.
+                      </FormText>
+                    </Col>
                   </FormGroup>
                 )}
                 {this.state.options.ssl && !this.state.runFromSystemd && (
                   <FormGroup row>
-                    <Col md='2'>
-                      <Label htmlFor='sslport'>SSL Port</Label>
+                    <Col md="2">
+                      <Label htmlFor="sslport">SSL Port</Label>
                     </Col>
-                    <Col xs='12' md={fieldColWidthMd}>
+                    <Col xs="12" md={fieldColWidthMd}>
                       <Input
-                        size='5'
+                        size="5"
                         style={{ width: 'auto' }}
-                        type='text'
-                        name='sslport'
+                        type="text"
+                        name="sslport"
                         onChange={this.handleChange}
                         value={this.state.sslport}
                       />
-                      <FormText color='muted'>
+                      <FormText color="muted">
                         Saving a new value here will not have effect if
                         overridden by environment variable SSLPORT
                       </FormText>
@@ -158,31 +161,34 @@ class ServerSettings extends Component {
                   </FormGroup>
                 )}
                 <FormGroup row>
-                  <Col md='2'>
+                  <Col md="2">
                     <Label>Options</Label>
                   </Col>
                   <Col md={fieldColWidthMd}>
                     <FormGroup check>
-                      {Object.keys(this.state.options).map(name => {
+                      {Object.keys(this.state.options).map((name) => {
                         return (
                           <div key={name}>
-                            <Label style={{marginRight: '15px'}} className='switch switch-text switch-primary'>
+                            <Label
+                              style={{ marginRight: '15px' }}
+                              className="switch switch-text switch-primary"
+                            >
                               <Input
-                                type='checkbox'
+                                type="checkbox"
                                 id={name}
                                 name={name}
-                                className='switch-input'
+                                className="switch-input"
                                 onChange={this.handleOptionChange}
                                 checked={this.state.options[name]}
                               />
                               <span
-                                className='switch-label'
-                                data-on='On'
-                                data-off='Off'
+                                className="switch-label"
+                                data-on="On"
+                                data-off="Off"
                               />
-                              <span className='switch-handle' />
+                              <span className="switch-handle" />
                             </Label>
-                            <span style={{lineHeight: '23px'}}>{name}</span>
+                            <span style={{ lineHeight: '23px' }}>{name}</span>
                           </div>
                         )
                       })}
@@ -191,31 +197,36 @@ class ServerSettings extends Component {
                 </FormGroup>
 
                 <FormGroup row>
-                  <Col md='2'>
+                  <Col md="2">
                     <Label>Interfaces</Label>
                   </Col>
                   <Col md={fieldColWidthMd}>
                     <FormGroup check>
-                      {Object.keys(SettableInterfaces).map(name => {
+                      {Object.keys(SettableInterfaces).map((name) => {
                         return (
                           <div key={name}>
-                            <Label style={{marginRight: '15px'}} className='switch switch-text switch-primary'>
+                            <Label
+                              style={{ marginRight: '15px' }}
+                              className="switch switch-text switch-primary"
+                            >
                               <Input
-                                type='checkbox'
+                                type="checkbox"
                                 id={name}
                                 name={name}
-                                className='switch-input'
+                                className="switch-input"
                                 onChange={this.handleInterfaceChange}
                                 checked={this.state.interfaces[name]}
                               />
                               <span
-                                className='switch-label'
-                                data-on='On'
-                                data-off='Off'
+                                className="switch-label"
+                                data-on="On"
+                                data-off="Off"
                               />
-                              <span className='switch-handle' />
+                              <span className="switch-handle" />
                             </Label>
-                            <span style={{lineHeight: '24px'}}>{SettableInterfaces[name]}</span>
+                            <span style={{ lineHeight: '24px' }}>
+                              {SettableInterfaces[name]}
+                            </span>
                           </div>
                         )
                       })}
@@ -223,74 +234,75 @@ class ServerSettings extends Component {
                   </Col>
                 </FormGroup>
                 <FormGroup row>
-                  <Col md='2'>
-                    <Label htmlFor='pruneContextsMinutes'>
-                    Maximum age of inactive vessels' data
+                  <Col md="2">
+                    <Label htmlFor="pruneContextsMinutes">
+                      Maximum age of inactive vessels' data
                     </Label>
                   </Col>
-                  <Col xs='12' md={fieldColWidthMd}>
+                  <Col xs="12" md={fieldColWidthMd}>
                     <Input
-                      type='text'
-                      name='pruneContextsMinutes'
+                      type="text"
+                      name="pruneContextsMinutes"
                       onChange={this.handleChange}
                       value={this.state.pruneContextsMinutes}
                     />
-                     <FormText color='muted'>
-                      Vessels that have not been updated after this many minutes will be removed
+                    <FormText color="muted">
+                      Vessels that have not been updated after this many minutes
+                      will be removed
                     </FormText>
                   </Col>
                 </FormGroup>
                 <FormGroup row>
-                  <Col md='2'>
-                    <Label htmlFor='loggingDirectory'>
+                  <Col md="2">
+                    <Label htmlFor="loggingDirectory">
                       Data Logging Directory
                     </Label>
                   </Col>
-                  <Col xs='12' md={fieldColWidthMd}>
+                  <Col xs="12" md={fieldColWidthMd}>
                     <Input
-                      type='text'
-                      name='loggingDirectory'
+                      type="text"
+                      name="loggingDirectory"
                       onChange={this.handleChange}
                       value={this.state.loggingDirectory}
                     />
-                    <FormText color='muted'>
+                    <FormText color="muted">
                       Connections that have logging enabled create hourly log
                       files in Multiplexed format in this directory
                     </FormText>
                   </Col>
                 </FormGroup>
                 <FormGroup row>
-                  <Col md='2'>
+                  <Col md="2">
                     <Label>Keep only most recent logs</Label>
                   </Col>
                   <Col>
                     <FormGroup check>
-                      <Label className='switch switch-text switch-primary'>
+                      <Label className="switch switch-text switch-primary">
                         <Input
-                          type='checkbox'
-                          name='keepMostRecentLogsOnly'
-                          id='keepMostRecentLogsOnly'
-                          className='switch-input'
+                          type="checkbox"
+                          name="keepMostRecentLogsOnly"
+                          id="keepMostRecentLogsOnly"
+                          className="switch-input"
                           onChange={this.handleChange}
                           checked={this.state.keepMostRecentLogsOnly}
                         />
                         <span
-                          className='switch-label'
-                          data-on='On'
-                          data-off='Off'
+                          className="switch-label"
+                          data-on="On"
+                          data-off="Off"
                         />
-                        <span className='switch-handle' />
+                        <span className="switch-handle" />
                       </Label>
                     </FormGroup>
                   </Col>
                   <Col>
                     <Input
-                      type='text'
-                      name='logCountToKeep'
+                      type="text"
+                      name="logCountToKeep"
                       onChange={this.handleChange}
                       value={this.state.logCountToKeep}
                     />
-                    <FormText color='muted'>
+                    <FormText color="muted">
                       How many hourly files to keep
                     </FormText>
                   </Col>
@@ -299,13 +311,13 @@ class ServerSettings extends Component {
             </CardBody>
             <CardFooter>
               <Button
-                size='sm'
-                color='primary'
+                size="sm"
+                color="primary"
                 onClick={this.handleSaveSettings}
               >
-                <i className='fa fa-dot-circle-o' /> Save
+                <i className="fa fa-dot-circle-o" /> Save
               </Button>{' '}
-              <Badge color='danger' className='float-right'>
+              <Badge color="danger" className="float-right">
                 Restart Required
               </Badge>
             </CardFooter>
@@ -317,21 +329,23 @@ class ServerSettings extends Component {
 }
 
 const SettableInterfaces = {
-  'applicationData': 'Application Data Storage',
-  'logfiles': 'Data log files access',
+  applicationData: 'Application Data Storage',
+  logfiles: 'Data log files access',
   'nmea-tcp': 'NMEA 0183 over TCP (10110)',
-  'tcp': 'Signal K over TCP (8375)'
+  tcp: 'Signal K over TCP (8375)',
 }
 
 const ReduxedSettings = connect()(ServerSettings)
 
 class Settings extends Component {
   render() {
-    return <div>
-      <VesselConfiguration/>
-      <ReduxedSettings/>
-      <LogFiles/>
+    return (
+      <div>
+        <VesselConfiguration />
+        <ReduxedSettings />
+        <LogFiles />
       </div>
+    )
   }
 }
 

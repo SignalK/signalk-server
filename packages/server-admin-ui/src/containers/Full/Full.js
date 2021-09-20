@@ -32,86 +32,101 @@ import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
 import {
   fetchLoginStatus,
   fetchAllData,
-  openServerEventsConnection
+  openServerEventsConnection,
 } from '../../actions'
 
 class Full extends Component {
-  componentDidMount () {
+  componentDidMount() {
     const { dispatch } = this.props
     fetchAllData(dispatch)
     openServerEventsConnection(dispatch)
   }
 
-  render () {
-    const suppressPadding = this.props.location.pathname.indexOf('/e/') === 0 ? {padding: '0px'} : {}
+  render() {
+    const suppressPadding =
+      this.props.location.pathname.indexOf('/e/') === 0
+        ? { padding: '0px' }
+        : {}
     return (
-      <div className='app'>
+      <div className="app">
         <Header />
-        <div className='app-body'>
+        <div className="app-body">
           <Sidebar {...this.props} />
-          <main className='main'>
+          <main className="main">
             <Container fluid style={suppressPadding}>
               <Switch>
                 <Route
-                  path='/dashboard'
-                  name='Dashboard'
+                  path="/dashboard"
+                  name="Dashboard"
                   component={loginOrOriginal(Dashboard, true)}
                 />
                 <Route
-                  path='/webapps'
-                  name='Webapps'
+                  path="/webapps"
+                  name="Webapps"
                   component={loginOrOriginal(Webapps, true)}
                 />
                 <Route
-                  path='/e/:moduleId'
-                  name='Embedded Webapps'
+                  path="/e/:moduleId"
+                  name="Embedded Webapps"
                   component={loginOrOriginal(Embedded, true)}
                 />
                 <Route
-                  path='/databrowser'
-                  name='DataBrowser'
+                  path="/databrowser"
+                  name="DataBrowser"
                   component={loginOrOriginal(DataBrowser, true)}
-                 />
+                />
                 <Route
-                  path='/serverConfiguration/datafiddler'
-                  name='DataFiddler'
+                  path="/serverConfiguration/datafiddler"
+                  name="DataFiddler"
                   component={loginOrOriginal(Playground, true)}
                 />
                 <Route
-                  path='/appstore/:view'
+                  path="/appstore/:view"
                   component={loginOrOriginal(Apps)}
                 />
                 <Route
-                  path='/serverConfiguration/plugins/:pluginid'
+                  path="/serverConfiguration/plugins/:pluginid"
                   component={loginOrOriginal(Configuration)}
                 />
                 <Route
-                  path='/serverConfiguration/settings'
+                  path="/serverConfiguration/settings"
                   component={loginOrOriginal(Settings)}
                 />
                 <Route
-                  path='/serverConfiguration/backuprestore'
+                  path="/serverConfiguration/backuprestore"
                   component={loginOrOriginal(BackupRestore)}
                 />
                 <Route
-                  path='/serverConfiguration/connections/:providerId'
+                  path="/serverConfiguration/connections/:providerId"
                   component={loginOrOriginal(ProvidersConfiguration)}
                 />
                 <Route
-                  path='/serverConfiguration/log'
+                  path="/serverConfiguration/log"
                   component={loginOrOriginal(ServerLog)}
                 />
                 <Route
-                  path='/serverConfiguration/update'
+                  path="/serverConfiguration/update"
                   component={loginOrOriginal(ServerUpdate)}
                 />
-                <Route path='/security/settings' component={loginOrOriginal(SecuritySettings)} />
-                <Route path='/security/users' component={loginOrOriginal(Users)} />
-                <Route path='/security/devices' component={loginOrOriginal(Devices)} />
-                <Route path='/security/access/requests' component={loginOrOriginal(AccessRequests)} />
-                <Route path='/login' component={Login} />
-                <Route path='/register' component={Register} />
-                <Redirect from='/' to='/dashboard' />
+                <Route
+                  path="/security/settings"
+                  component={loginOrOriginal(SecuritySettings)}
+                />
+                <Route
+                  path="/security/users"
+                  component={loginOrOriginal(Users)}
+                />
+                <Route
+                  path="/security/devices"
+                  component={loginOrOriginal(Devices)}
+                />
+                <Route
+                  path="/security/access/requests"
+                  component={loginOrOriginal(AccessRequests)}
+                />
+                <Route path="/login" component={Login} />
+                <Route path="/register" component={Register} />
+                <Redirect from="/" to="/dashboard" />
               </Switch>
             </Container>
           </main>
@@ -127,7 +142,7 @@ export default connect()(Full)
 
 const loginOrOriginal = (BaseComponent, componentSupportsReadOnly) => {
   class Restricted extends Component {
-    render () {
+    render() {
       if (loginRequired(this.props.loginStatus, componentSupportsReadOnly)) {
         return <Login />
       } else {
@@ -138,7 +153,7 @@ const loginOrOriginal = (BaseComponent, componentSupportsReadOnly) => {
   return connect(({ loginStatus }) => ({ loginStatus }))(withRouter(Restricted))
 }
 
-function loginRequired (loginStatus, componentSupportsReadOnly) {
+function loginRequired(loginStatus, componentSupportsReadOnly) {
   // component works with read only access and
   // server loginStatus allows read only access
   if (componentSupportsReadOnly && loginStatus.readOnlyAccess) {
