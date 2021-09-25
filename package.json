@@ -64,7 +64,7 @@
   ],
   "license": "Apache-2.0",
   "engines": {
-    "node": "10"
+    "node": ">=10"
   },
   "dependencies": {
     "@signalk/server-admin-ui": "1.39.x",
