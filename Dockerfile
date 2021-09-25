@@ -1,5 +1,5 @@
 ARG IMAGE_BASE=node
-FROM $IMAGE_BASE:10
+FROM $IMAGE_BASE:16
 
 #COPY requires one valid argument, second can be nonexistent
 COPY empty_file tmp*/qemu-arm-stati[c] /usr/bin/
