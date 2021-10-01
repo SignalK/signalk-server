@@ -39,6 +39,7 @@ const ncp = require('ncp').ncp
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
 import { SERVERROUTESPREFIX } from './constants'
+import { mountSwaggerUi } from './api/swagger'
 
 module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   let securityWasEnabled
@@ -51,6 +52,9 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       res.sendFile(logopath)
     )
   }
+
+  // mount before the main /admin
+  mountSwaggerUi(app, '/admin/openapi')
 
   app.get('/admin/', (req, res) => {
     fs.readFile(
