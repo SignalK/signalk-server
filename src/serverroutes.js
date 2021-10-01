@@ -38,6 +38,7 @@ const ncp = require('ncp').ncp
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
 import { SERVERROUTESPREFIX } from './constants'
+import { mountApiDocs } from './apidocs/apidocs'
 
 module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   let securityWasEnabled
@@ -976,4 +977,6 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       })
     })
   })
+
+  mountApiDocs(app)
 }
