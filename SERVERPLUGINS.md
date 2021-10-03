@@ -11,7 +11,7 @@ Plugins
 - are installed, activated/disabled and configured from the server admin UI
 - start in disabled state - you need to enable them after install
 - can be webapps as well: a webapp's `/public/` directory is mounted under server's root under module id http://yourserver/moduleid
-- are npm modules that become available to the server when they are published to the npm repository with the `signalk-node-server-plugin` keyword
+- are npm modules that become available to the server when they are published in the [npm repository](https://www.npmjs.com/) with the `signalk-node-server-plugin` keyword
 
 
 The plugin module must export a single `function(app)` that must return an object with the following:
