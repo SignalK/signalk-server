@@ -22,6 +22,7 @@ if (typeof [].includes !== 'function') {
 const express = require('express')
 const _ = require('lodash')
 const debug = require('debug')('signalk-server')
+const openApiDebug = require('debug')('signalk-server:openapi')
 const DeltaCache = require('./deltacache')
 const path = require('path')
 const http = require('http')
@@ -64,6 +65,15 @@ function Server(opts) {
   app.version = '0.0.1'
 
   startSecurity(app, opts ? opts.securityConfig : null)
+
+  app.setRootDoc = (openApiRootDoc) => {
+    openApiDebug(`Setting root doc as ${JSON.stringify(openApiRootDoc)}`)
+    app.openApiRootDoc = openApiRootDoc
+  }
+  app.addPaths = (paths) => {
+    openApiDebug(`Add openAPI paths ${JSON.stringify(paths)}`)
+    app.openApiRootDoc.paths = {...paths, ...app.openApiRootDoc.paths}
+  }
 
   require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
   require('./put').start(app)

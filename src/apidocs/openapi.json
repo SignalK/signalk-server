@@ -1,12 +1,14 @@
 {
-    "openapi":"3.0.2",
-    "info": {
-        "title":"API Title",
-        "version":"1.0"
-    },
-    "servers": [
-        {"url":"https://api.server.test/v1"}
-    ],
-    "paths": {
+  "openapi": "3.0.2",
+  "info": {
+    "title": "Signal K http API (incomplete)",
+    "version": "1.x",
+    "description": ""
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/signalk/v1/api/"
     }
+  ],
+  "paths": {}
 }

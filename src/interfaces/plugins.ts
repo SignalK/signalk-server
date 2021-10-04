@@ -29,6 +29,7 @@ import _ from 'lodash'
 import path from 'path'
 import { SERVERROUTESPREFIX } from '../constants'
 import { listAllSerialPorts, Ports } from '../serialports'
+import { OpenAPIPathsHandler } from '../apidocs/apidocs'
 
 // tslint:disable-next-line:no-var-requires
 const modulesWithKeyword = require('../modules').modulesWithKeyword
@@ -69,6 +70,7 @@ interface PluginInfo extends Plugin {
   id: string
   schema: () => void | object
   uiSchema: () => void | object
+  openApiPaths?: () => object
   version: string
   description: string
   state: string
@@ -657,6 +659,11 @@ module.exports = (theApp: any) => {
       plugin.registerWithRouter(router)
     }
     app.use(backwardsCompat('/plugins/' + plugin.id), router)
+
+    const openApiPathsHandler = app as OpenAPIPathsHandler
+    if (typeof plugin.openApiPaths === 'function') {
+      openApiPathsHandler.addPaths(plugin.openApiPaths())
+    }
 
     if (typeof plugin.signalKApiRoutes === 'function') {
       app.use('/signalk/v1/api', plugin.signalKApiRoutes(express.Router()))
