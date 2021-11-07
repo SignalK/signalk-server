@@ -31,6 +31,11 @@ module.exports = {
     app.deRegisterActionHandler = deRegisterActionHandler
 
     app.put(apiPathPrefix + '*', function(req, res, next) {
+      // ** ignore resources paths **
+      if(req.path.split('/')[4]==='resources') {
+        next()
+        return
+      } 
       let path = String(req.path).replace(apiPathPrefix, '')
 
       const value = req.body
