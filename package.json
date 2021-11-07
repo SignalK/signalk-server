@@ -96,6 +96,7 @@
     "figlet": "^1.2.0",
     "file-timestamp-stream": "^2.1.2",
     "flatmap": "0.0.3",
+    "geojson-validation": "^1.0.2",
     "geolib": "3.2.2",
     "get-installed-path": "^4.0.8",
     "inquirer": "^7.0.0",
