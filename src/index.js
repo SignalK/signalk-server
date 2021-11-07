@@ -37,6 +37,8 @@ import { checkForNewServerVersion } from './modules'
 import { getToPreferredDelta } from './deltaPriority'
 import { PropertyValues } from '@signalk/server-api'
 
+import { Resources } from './api/resources'
+
 const { StreamBundle } = require('./streambundle')
 const {
   startSecurity,
@@ -67,6 +69,10 @@ function Server(opts) {
 
   require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
   require('./put').start(app)
+
+  // ** initialise resources API **
+  app.resourcesApi= new Resources()
+  app.resourcesApi.start(app)
 
   app.signalk = new FullSignalK(app.selfId, app.selfType)
 
