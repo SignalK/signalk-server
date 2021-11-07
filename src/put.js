@@ -32,10 +32,17 @@ module.exports = {
 
     app.put(apiPathPrefix + '*', function(req, res, next) {
       // ** ignore resources paths **
+<<<<<<< HEAD
       if (req.path.split('/')[4] === 'resources') {
         next()
         return
       }
+=======
+      if(req.path.split('/')[4]==='resources') {
+        next()
+        return
+      } 
+>>>>>>> Add Signal K standard resource path handling
       let path = String(req.path).replace(apiPathPrefix, '')
 
       const value = req.body
