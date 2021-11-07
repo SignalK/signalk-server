@@ -568,7 +568,7 @@ export class Resources {
     }
 
     public checkForProviders(rescan:boolean= false) {
-        if(rescan || Object.keys(this.resProvider).length==0) { 
+        if(rescan || Object.keys(this.resProvider).length===0) { 
             debug('** Checking for providers....')
             this.resProvider= {}  
             this.resourceTypes.forEach( (rt:string)=> {
@@ -627,7 +627,7 @@ export class Resources {
         // check for other plugins servicing paths under ./resources
         this.server._router.stack.forEach((i:any)=> {
             if(i.route && i.route.path && typeof i.route.path==='string') {
-                if(i.route.path.indexOf(`${SIGNALK_API_PATH}/resources`)!=-1) {
+                if(i.route.path.indexOf(`${SIGNALK_API_PATH}/resources`)!==-1) {
                     let r= i.route.path.split('/')
                     if( r.length>5 && !(r[5] in resPaths) ) { 
                         resPaths[r[5]]= `Path containing ${r[5]} resources (provided by plug-in)`
