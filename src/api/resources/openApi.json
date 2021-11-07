@@ -1,0 +1,830 @@
+{
+    "openapi": "3.0.2",
+    "info": {
+        "version": "1.0.0",
+        "title": "Signal K Resources API"
+    },
+    
+    "paths": {
+
+        "/resources": {
+            "get": {
+                "tags": ["resources"],
+                "summary": "List available resource types"
+
+            }
+        },
+
+        "/resources/{resourceClass}": {
+            "get": {
+                "tags": ["resources"],
+                "summary": "Retrieve resources",
+                "parameters": [
+                    {
+                        "name": "resourceClass",
+                        "in": "path",
+                        "description": "resource class",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["routes", "waypoints", "notes", "regions", "charts"],
+                            "example": "waypoints"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Maximum number of records to return",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "minimum": 1,
+                            "example": 100
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "radius",
+                        "description": "Limit results to resources that fall within a square area, centered around the vessel's position, the edges of which are the sepecified distance in meters from the vessel.",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32",
+                            "minimum": 100,
+                            "example": 2000 
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "geohash",
+                        "description": "limit results to resources that fall within an area sepecified by the geohash.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "bbox",
+                        "description": "Limit results to resources that fall within the bounded area defined as lower left and upper right x,y coordinates x1,y1,x2,y2",
+                        "style": "form",
+                        "explode": false,
+                        "schema": {
+                            "type": "array",
+                            "minItems": 4,
+                            "maxItems": 4,
+                            "items": {
+                                "type": "number",
+                                "format": "float",
+                                "example": [135.5,-25.2,138.1,-28.0]
+                            }
+                        }
+                    }
+                ],  
+                "responses": {
+                    "200": {
+                        "description": "List of resources identified by their UUID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "List of Signal K resources",
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/resources/routes/": {
+            "post": {
+                "tags": ["resources/routes"],
+                "summary": "Add a new Route",
+                "requestBody": {
+                    "description": "Route details",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Signal K Route resource",
+                                "required": ["feature"],
+                                "properties": {
+                                    "name": { 
+                                        "type": "string",
+                                        "description": "Route's common name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "A description of the route"
+                                    },
+                                    "distance": {
+                                        "description": "Total distance from start to end",
+                                        "type": "number"
+                                    },
+                                    "start": {
+                                        "description": "The waypoint UUID at the start of the route",
+                                        "type": "string",
+                                        "pattern": "/resources/waypoints/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                                    },
+                                    "end": {
+                                        "description": "The waypoint UUID at the end of the route",
+                                        "type": "string",
+                                        "pattern": "/resources//waypoints/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                                    },
+                                    "feature": {
+                                        "type": "object",
+                                        "title": "Feature",
+                                        "description": "A GeoJSON feature object which describes a route",
+                                        "properties": {
+                                            "geometry": {
+                                                "type": {
+                                                    "type": "string",
+                                                    "enum": ["LineString"]
+                                                },
+                                                "coordinates": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "array",
+                                                        "maxItems": 3,
+                                                        "minItems": 2,
+                                                        "items": {
+                                                            "type": "number"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "properties": {
+                                                "description": "Additional feature properties",
+                                                "type": "object",
+                                                "additionalProperties": true
+                                            },
+                                            "id": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/resources/routes/{id}": {
+            "parameters": {
+                "name": "id",
+                "in": "path",
+                "description": "route id",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                }
+            },
+              
+            "get": {
+                "tags": ["resources/routes"],
+                "summary": "Retrieve route with supplied id"
+            },
+
+            "put": {
+                "tags": ["resources/routes"],
+                "summary": "Add / update a new Route with supplied id",
+                "requestBody": {
+                    "description": "Route details",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Signal K Route resource",
+                                "required": ["feature"],
+                                "properties": {
+                                    "name": { 
+                                        "type": "string",
+                                        "description": "Route's common name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "A description of the route"
+                                    },
+                                    "distance": {
+                                        "description": "Total distance from start to end",
+                                        "type": "number"
+                                    },
+                                    "start": {
+                                        "description": "The waypoint UUID at the start of the route",
+                                        "type": "string",
+                                        "pattern": "/resources/waypoints/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                                    },
+                                    "end": {
+                                        "description": "The waypoint UUID at the end of the route",
+                                        "type": "string",
+                                        "pattern": "/resources/waypoints/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                                    },
+                                    "feature": {
+                                        "type": "object",
+                                        "title": "Feature",
+                                        "description": "A GeoJSON feature object which describes a route",
+                                        "properties": {
+                                            "geometry": {
+                                                "type": {
+                                                    "type": "string",
+                                                    "enum": ["LineString"]
+                                                },
+                                                "coordinates": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "array",
+                                                        "maxItems": 3,
+                                                        "minItems": 2,
+                                                        "items": {
+                                                            "type": "number"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "properties": {
+                                                "description": "Additional feature properties",
+                                                "type": "object",
+                                                "additionalProperties": true
+                                            },
+                                            "id": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                            }
+                        }
+                    }
+                }
+            },
+      
+            "delete": {
+                "tags": ["resources/routes"],
+                "summary": "Remove Route with supplied id"
+            }
+
+        },
+
+        "/resources/waypoints/": {
+            "post": {
+                "tags": ["resources/waypoints"],
+                "summary": "Add a new Waypoint",
+                "requestBody": {
+                    "description": "Waypoint details",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Signal K Waypoint resource",
+                                "required": ["feature"],
+                                "properties": {
+                                    "position": {
+                                        "description": "The waypoint position",
+                                        "type": "object",
+                                        "required": [
+                                            "latitude",
+                                            "longitude"
+                                        ],
+                                        "properties": {
+                                            "latitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            },
+                                            "longitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            },
+                                            "altitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            }
+                                        }
+                                    },
+                                    "feature": {
+                                        "type": "object",
+                                        "title": "Feature",
+                                        "description": "A GeoJSON feature object which describes a waypoint",
+                                        "properties": {
+                                            "geometry": {
+                                                "type": "object",
+                                                "description": "GeoJSon geometry",
+                                                "properties": {
+                                                    "type": {
+                                                        "type": "string",
+                                                        "enum": ["Point"]
+                                                    }
+                                                },
+                                                "coordinates": {
+                                                    "type": "array",
+                                                    "maxItems": 3,
+                                                    "minItems": 2,
+                                                    "items": {
+                                                        "type": "number"
+                                                    }
+                                                }
+                                            },
+                                            "properties": {
+                                                "description": "Additional feature properties",
+                                                "type": "object",
+                                                "additionalProperties": true
+                                            },
+                                            "id": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/resources/waypoints/{id}": {
+            "parameters": {
+                "name": "id",
+                "in": "path",
+                "description": "waypoint id",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                }
+            },
+              
+            "get": {
+                "tags": ["resources/waypoints"],
+                "summary": "Retrieve waypoint with supplied id"
+            },
+
+            "put": {
+                "tags": ["resources/waypoints"],
+                "summary": "Add / update a new Waypoint with supplied id",
+                "requestBody": {
+                    "description": "Waypoint details",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Signal K Waypoint resource",
+                                "required": ["feature"],
+                                "properties": {
+                                    "position": {
+                                        "description": "The waypoint position",
+                                        "type": "object",
+                                        "required": [
+                                            "latitude",
+                                            "longitude"
+                                        ],
+                                        "properties": {
+                                            "latitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            },
+                                            "longitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            },
+                                            "altitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            }
+                                        }
+                                    },
+                                    "feature": {
+                                        "type": "object",
+                                        "title": "Feature",
+                                        "description": "A GeoJSON feature object which describes a waypoint",
+                                        "properties": {
+                                            "geometry": {
+                                                "type": "object",
+                                                "description": "GeoJSon geometry",
+                                                "properties": {
+                                                    "type": {
+                                                        "type": "string",
+                                                        "enum": ["Point"]
+                                                    }
+                                                },
+                                                "coordinates": {
+                                                    "type": "array",
+                                                    "maxItems": 3,
+                                                    "minItems": 2,
+                                                    "items": {
+                                                        "type": "number"
+                                                    }
+                                                }
+                                            },
+                                            "properties": {
+                                                "description": "Additional feature properties",
+                                                "type": "object",
+                                                "additionalProperties": true
+                                            },
+                                            "id": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+      
+            "delete": {
+                "tags": ["resources/waypoints"],
+                "summary": "Remove Waypoint with supplied id"
+            }
+
+        },
+
+        "/resources/notes/": {
+            "post": {
+                "tags": ["resources/notes"],
+                "summary": "Add a new Note",
+                "requestBody": {
+                    "description": "Note details",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Signal K Note resource",
+                                "required": ["feature"],
+                                "properties": {
+                                    "title": { 
+                                        "type": "string",
+                                        "description": "Common Note name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "A description of the note"
+                                    },
+                                    "position": {
+                                        "description": "Position related to note. Alternative to region or geohash.",
+                                        "type": "object",
+                                        "required": [
+                                            "latitude",
+                                            "longitude"
+                                        ],
+                                        "properties": {
+                                            "latitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            },
+                                            "longitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            },
+                                            "altitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            }
+                                        }
+                                    },
+                                    "region": {
+                                        "description": "Pointer / path to Region related to note (e.g. /resources/routes/{uuid}. Alternative to position or geohash",
+                                            "type": "string",
+                                            "pattern": "/resources/regions/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                                    },
+                                    "geohash": {
+                                        "description": "Area related to note. Alternative to region or position",
+                                        "type": "string"
+                                    },
+                                    "mimeType": {
+                                        "description": "MIME type of the note",
+                                        "type": "string"
+                                    },
+                                    "url": {
+                                        "description": "Location of the note content",
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/resources/notes/{id}": {
+            "parameters": {
+                "name": "id",
+                "in": "path",
+                "description": "note id",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                }
+            },
+              
+            "get": {
+                "tags": ["resources/notes"],
+                "summary": "Retrieve Note with supplied id"
+            },
+
+            "put": {
+                "tags": ["resources/notes"],
+                "summary": "Add / update a new Note with supplied id",
+                "requestBody": {
+                    "description": "Note details",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Signal K Note resource",
+                                "required": ["feature"],
+                                "properties": {
+                                    "title": { 
+                                        "type": "string",
+                                        "description": "Common Note name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "A description of the note"
+                                    },
+                                    "position": {
+                                        "description": "Position related to note. Alternative to region or geohash.",
+                                        "type": "object",
+                                        "required": [
+                                            "latitude",
+                                            "longitude"
+                                        ],
+                                        "properties": {
+                                            "latitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            },
+                                            "longitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            },
+                                            "altitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            }
+                                        }
+                                    },
+                                    "region": {
+                                        "description": "Pointer / path to Region related to note (e.g. /resources/routes/{uuid}. Alternative to position or geohash",
+                                            "type": "string",
+                                            "pattern": "/resources/regions/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                                    },
+                                    "geohash": {
+                                        "description": "Area related to note. Alternative to region or position",
+                                        "type": "string"
+                                    },
+                                    "mimeType": {
+                                        "description": "MIME type of the note",
+                                        "type": "string"
+                                    },
+                                    "url": {
+                                        "description": "Location of the note content",
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+      
+            "delete": {
+                "tags": ["resources/notes"],
+                "summary": "Remove Note with supplied id"
+            }
+
+        },
+
+        "/resources/regions/": {
+            "post": {
+                "tags": ["resources/regions"],
+                "summary": "Add a new Regkion",
+                "requestBody": {
+                    "description": "Region details",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Signal K Region resource",
+                                "required": ["feature"],
+                                "properties": {
+                                    "geohash": {
+                                        "description": "geohash of the approximate boundary of this region",
+                                        "type": "string"
+                                    },
+                                    "feature": {
+                                        "type": "object",
+                                        "title": "Feature",
+                                        "description": "A Geo JSON feature object which describes the regions boundary",
+                                        "properties": {
+                                            "geometry": {
+                                                "oneOf": [
+                                                    {
+                                                        "type": "object",
+                                                        "description": "GeoJSon geometry",
+                                                        "properties": {
+                                                            "type": {
+                                                                "type": "string",
+                                                                "enum": ["Polygon"]
+                                                            },
+                                                            "coordinates": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "array",
+                                                                        "maxItems": 3,
+                                                                        "minItems": 2,
+                                                                        "items": {
+                                                                            "type": "number"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    {
+                                                        "type": "object",
+                                                        "description": "GeoJSon geometry",
+                                                        "properties": {
+                                                            "type": {
+                                                                "type": "string",
+                                                                "enum": ["MultiPolygon"]
+                                                            },
+                                                            "coordinates": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                            "type": "array",
+                                                                            "maxItems": 3,
+                                                                            "minItems": 2,
+                                                                            "items": {
+                                                                                "type": "number"
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            "properties": {
+                                                "description": "Additional feature properties",
+                                                "type": "object",
+                                                "additionalProperties": true
+                                            },
+                                            "id": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/resources/regions/{id}": {
+            "parameters": {
+                "name": "id",
+                "in": "path",
+                "description": "region id",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                }
+            },
+              
+            "get": {
+                "tags": ["resources/regions"],
+                "summary": "Retrieve Region with supplied id"
+            },
+
+            "put": {
+                "tags": ["resources/regions"],
+                "summary": "Add / update a new Region with supplied id",
+                "requestBody": {
+                    "description": "Region details",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Signal K Region resource",
+                                "required": ["feature"],
+                                "properties": {
+                                    "geohash": {
+                                        "description": "geohash of the approximate boundary of this region",
+                                        "type": "string"
+                                    },
+                                    "feature": {
+                                        "type": "object",
+                                        "title": "Feature",
+                                        "description": "A Geo JSON feature object which describes the regions boundary",
+                                        "properties": {
+                                            "geometry": {
+                                                "oneOf": [
+                                                    {
+                                                        "type": "object",
+                                                        "description": "GeoJSon geometry",
+                                                        "properties": {
+                                                            "type": {
+                                                                "type": "string",
+                                                                "enum": ["Polygon"]
+                                                            },
+                                                            "coordinates": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "array",
+                                                                        "maxItems": 3,
+                                                                        "minItems": 2,
+                                                                        "items": {
+                                                                            "type": "number"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    {
+                                                        "type": "object",
+                                                        "description": "GeoJSon geometry",
+                                                        "properties": {
+                                                            "type": {
+                                                                "type": "string",
+                                                                "enum": ["MultiPolygon"]
+                                                            },
+                                                            "coordinates": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                            "type": "array",
+                                                                            "maxItems": 3,
+                                                                            "minItems": 2,
+                                                                            "items": {
+                                                                                "type": "number"
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            "properties": {
+                                                "description": "Additional feature properties",
+                                                "type": "object",
+                                                "additionalProperties": true
+                                            },
+                                            "id": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+      
+            "delete": {
+                "tags": ["resources/regions"],
+                "summary": "Remove Region with supplied id"
+            }
+
+        }
+                
+    }
+
+}
+ 
