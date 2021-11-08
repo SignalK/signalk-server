@@ -136,7 +136,7 @@ export const reduceSourcePriorities = (state, action) => {
 }
 
 function fetchSourceRefs(path, cb) {
-  fetch(`/signalk/v1/api/vessels/self/${path.replace('.', '/')}`, {
+  fetch(`/signalk/v1/api/vessels/self/${path.replace(/\./g, '/')}`, {
     credentials: 'include',
   })
     .then((response) => response.json())
