@@ -10,8 +10,22 @@
         "/resources": {
             "get": {
                 "tags": ["resources"],
-                "summary": "List available resource types"
-
+                "summary": "List available resource types",
+                "responses": {
+                    "default": {
+                        "description": "List of available resource types",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -43,8 +57,8 @@
                         }
                     },
                     {
+                        "name": "distance",
                         "in": "query",
-                        "name": "radius",
                         "description": "Limit results to resources that fall within a square area, centered around the vessel's position, the edges of which are the sepecified distance in meters from the vessel.",
                         "schema": {
                             "type": "integer",
@@ -55,16 +69,8 @@
                     },
                     {
                         "in": "query",
-                        "name": "geohash",
-                        "description": "limit results to resources that fall within an area sepecified by the geohash.",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "in": "query",
                         "name": "bbox",
-                        "description": "Limit results to resources that fall within the bounded area defined as lower left and upper right x,y coordinates x1,y1,x2,y2",
+                        "description": "Limit results to resources that fall within the bounded area defined as lower left (south west) and upper right (north east) coordinates [swlon,swlat,nelon,nelat]",
                         "style": "form",
                         "explode": false,
                         "schema": {
@@ -140,18 +146,21 @@
                                         "description": "A GeoJSON feature object which describes a route",
                                         "properties": {
                                             "geometry": {
-                                                "type": {
-                                                    "type": "string",
-                                                    "enum": ["LineString"]
-                                                },
-                                                "coordinates": {
-                                                    "type": "array",
-                                                    "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "type": {
+                                                        "type": "string",
+                                                        "enum": ["LineString"]
+                                                    },
+                                                    "coordinates": {
                                                         "type": "array",
-                                                        "maxItems": 3,
-                                                        "minItems": 2,
                                                         "items": {
-                                                            "type": "number"
+                                                            "type": "array",
+                                                            "maxItems": 3,
+                                                            "minItems": 2,
+                                                            "items": {
+                                                                "type": "number"
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -171,7 +180,8 @@
                             }
                         }
                     }
-                }
+                },
+                "responses": {}
             }
         },
 
@@ -189,7 +199,8 @@
               
             "get": {
                 "tags": ["resources/routes"],
-                "summary": "Retrieve route with supplied id"
+                "summary": "Retrieve route with supplied id",
+                "responses": {}
             },
 
             "put": {
@@ -233,18 +244,21 @@
                                         "description": "A GeoJSON feature object which describes a route",
                                         "properties": {
                                             "geometry": {
-                                                "type": {
-                                                    "type": "string",
-                                                    "enum": ["LineString"]
-                                                },
-                                                "coordinates": {
-                                                    "type": "array",
-                                                    "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "type": {
+                                                        "type": "string",
+                                                        "enum": ["LineString"]
+                                                    },
+                                                    "coordinates": {
                                                         "type": "array",
-                                                        "maxItems": 3,
-                                                        "minItems": 2,
                                                         "items": {
-                                                            "type": "number"
+                                                            "type": "array",
+                                                            "maxItems": 3,
+                                                            "minItems": 2,
+                                                            "items": {
+                                                                "type": "number"
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -264,12 +278,14 @@
                             }
                         }
                     }
-                }
+                },
+                "responses": {}
             },
       
             "delete": {
                 "tags": ["resources/routes"],
-                "summary": "Remove Route with supplied id"
+                "summary": "Remove Route with supplied id",
+                "responses": {}
             }
 
         },
@@ -317,19 +333,22 @@
                                         "properties": {
                                             "geometry": {
                                                 "type": "object",
-                                                "description": "GeoJSon geometry",
                                                 "properties": {
-                                                    "type": {
-                                                        "type": "string",
-                                                        "enum": ["Point"]
-                                                    }
-                                                },
-                                                "coordinates": {
-                                                    "type": "array",
-                                                    "maxItems": 3,
-                                                    "minItems": 2,
-                                                    "items": {
-                                                        "type": "number"
+                                                    "type": "object",
+                                                    "description": "GeoJSon geometry",
+                                                    "properties": {
+                                                        "type": {
+                                                            "type": "string",
+                                                            "enum": ["Point"]
+                                                        }
+                                                    },
+                                                    "coordinates": {
+                                                        "type": "array",
+                                                        "maxItems": 3,
+                                                        "minItems": 2,
+                                                        "items": {
+                                                            "type": "number"
+                                                        }
                                                     }
                                                 }
                                             },
@@ -347,7 +366,8 @@
                             }
                         }
                     }
-                }
+                },
+                "responses": {}
             }
         },
 
@@ -365,7 +385,8 @@
               
             "get": {
                 "tags": ["resources/waypoints"],
-                "summary": "Retrieve waypoint with supplied id"
+                "summary": "Retrieve waypoint with supplied id",
+                "responses": {}
             },
 
             "put": {
@@ -410,19 +431,22 @@
                                         "properties": {
                                             "geometry": {
                                                 "type": "object",
-                                                "description": "GeoJSon geometry",
                                                 "properties": {
-                                                    "type": {
-                                                        "type": "string",
-                                                        "enum": ["Point"]
-                                                    }
-                                                },
-                                                "coordinates": {
-                                                    "type": "array",
-                                                    "maxItems": 3,
-                                                    "minItems": 2,
-                                                    "items": {
-                                                        "type": "number"
+                                                    "type": "object",
+                                                    "description": "GeoJSon geometry",
+                                                    "properties": {
+                                                        "type": {
+                                                            "type": "string",
+                                                            "enum": ["Point"]
+                                                        }
+                                                    },
+                                                    "coordinates": {
+                                                        "type": "array",
+                                                        "maxItems": 3,
+                                                        "minItems": 2,
+                                                        "items": {
+                                                            "type": "number"
+                                                        }
                                                     }
                                                 }
                                             },
@@ -440,12 +464,14 @@
                             }
                         }
                     }
-                }
+                },
+                "responses": {}
             },
       
             "delete": {
                 "tags": ["resources/waypoints"],
-                "summary": "Remove Waypoint with supplied id"
+                "summary": "Remove Waypoint with supplied id",
+                "responses": {}
             }
 
         },
@@ -533,7 +559,8 @@
               
             "get": {
                 "tags": ["resources/notes"],
-                "summary": "Retrieve Note with supplied id"
+                "summary": "Retrieve Note with supplied id",
+                "responses": {}
             },
 
             "put": {
@@ -600,12 +627,14 @@
                             }
                         }
                     }
-                }
+                },
+                "responses": {}
             },
       
             "delete": {
                 "tags": ["resources/notes"],
-                "summary": "Remove Note with supplied id"
+                "summary": "Remove Note with supplied id",
+                "responses": {}
             }
 
         },
@@ -634,42 +663,18 @@
                                         "description": "A Geo JSON feature object which describes the regions boundary",
                                         "properties": {
                                             "geometry": {
-                                                "oneOf": [
-                                                    {
-                                                        "type": "object",
-                                                        "description": "GeoJSon geometry",
-                                                        "properties": {
-                                                            "type": {
-                                                                "type": "string",
-                                                                "enum": ["Polygon"]
-                                                            },
-                                                            "coordinates": {
-                                                                "type": "array",
-                                                                "items": {
-                                                                    "type": "array",
-                                                                    "items": {
-                                                                        "type": "array",
-                                                                        "maxItems": 3,
-                                                                        "minItems": 2,
-                                                                        "items": {
-                                                                            "type": "number"
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    },
-                                                    {
-                                                        "type": "object",
-                                                        "description": "GeoJSon geometry",
-                                                        "properties": {
-                                                            "type": {
-                                                                "type": "string",
-                                                                "enum": ["MultiPolygon"]
-                                                            },
-                                                            "coordinates": {
-                                                                "type": "array",
-                                                                "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "oneOf": [
+                                                        {
+                                                            "type": "object",
+                                                            "description": "GeoJSon geometry",
+                                                            "properties": {
+                                                                "type": {
+                                                                    "type": "string",
+                                                                    "enum": ["Polygon"]
+                                                                },
+                                                                "coordinates": {
                                                                     "type": "array",
                                                                     "items": {
                                                                         "type": "array",
@@ -684,9 +689,36 @@
                                                                     }
                                                                 }
                                                             }
+                                                        },
+                                                        {
+                                                            "type": "object",
+                                                            "description": "GeoJSon geometry",
+                                                            "properties": {
+                                                                "type": {
+                                                                    "type": "string",
+                                                                    "enum": ["MultiPolygon"]
+                                                                },
+                                                                "coordinates": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                            "type": "array",
+                                                                            "items": {
+                                                                                "type": "array",
+                                                                                "maxItems": 3,
+                                                                                "minItems": 2,
+                                                                                "items": {
+                                                                                    "type": "number"
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
                                                         }
-                                                    }
-                                                ]
+                                                    ]
+                                                }
                                             },
                                             "properties": {
                                                 "description": "Additional feature properties",
@@ -702,7 +734,8 @@
                             }
                         }
                     }
-                }
+                },
+                "responses": {}
             }
         },
 
@@ -720,7 +753,8 @@
               
             "get": {
                 "tags": ["resources/regions"],
-                "summary": "Retrieve Region with supplied id"
+                "summary": "Retrieve Region with supplied id",
+                "responses": {}
             },
 
             "put": {
@@ -746,42 +780,18 @@
                                         "description": "A Geo JSON feature object which describes the regions boundary",
                                         "properties": {
                                             "geometry": {
-                                                "oneOf": [
-                                                    {
-                                                        "type": "object",
-                                                        "description": "GeoJSon geometry",
-                                                        "properties": {
-                                                            "type": {
-                                                                "type": "string",
-                                                                "enum": ["Polygon"]
-                                                            },
-                                                            "coordinates": {
-                                                                "type": "array",
-                                                                "items": {
-                                                                    "type": "array",
-                                                                    "items": {
-                                                                        "type": "array",
-                                                                        "maxItems": 3,
-                                                                        "minItems": 2,
-                                                                        "items": {
-                                                                            "type": "number"
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    },
-                                                    {
-                                                        "type": "object",
-                                                        "description": "GeoJSon geometry",
-                                                        "properties": {
-                                                            "type": {
-                                                                "type": "string",
-                                                                "enum": ["MultiPolygon"]
-                                                            },
-                                                            "coordinates": {
-                                                                "type": "array",
-                                                                "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "oneOf": [
+                                                        {
+                                                            "type": "object",
+                                                            "description": "GeoJSon geometry",
+                                                            "properties": {
+                                                                "type": {
+                                                                    "type": "string",
+                                                                    "enum": ["Polygon"]
+                                                                },
+                                                                "coordinates": {
                                                                     "type": "array",
                                                                     "items": {
                                                                         "type": "array",
@@ -796,9 +806,36 @@
                                                                     }
                                                                 }
                                                             }
+                                                        },
+                                                        {
+                                                            "type": "object",
+                                                            "description": "GeoJSon geometry",
+                                                            "properties": {
+                                                                "type": {
+                                                                    "type": "string",
+                                                                    "enum": ["MultiPolygon"]
+                                                                },
+                                                                "coordinates": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                            "type": "array",
+                                                                            "items": {
+                                                                                "type": "array",
+                                                                                "maxItems": 3,
+                                                                                "minItems": 2,
+                                                                                "items": {
+                                                                                    "type": "number"
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
                                                         }
-                                                    }
-                                                ]
+                                                    ]
+                                                }
                                             },
                                             "properties": {
                                                 "description": "Additional feature properties",
@@ -814,14 +851,367 @@
                             }
                         }
                     }
-                }
+                },
+                "responses": {}
             },
       
             "delete": {
                 "tags": ["resources/regions"],
-                "summary": "Remove Region with supplied id"
+                "summary": "Remove Region with supplied id",
+                "responses": {}
             }
 
+        },
+
+        "/resources/setWaypoint": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Add / update a Waypoint",
+                "requestBody": {
+                    "description": "Waypoint attributes",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["position"],
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+                                        "description": "Waypoint identifier"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Waypoint name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "Textual description of the waypoint"
+                                    },
+                                    "position": {
+                                        "description": "The waypoint position",
+                                        "type": "object",
+                                        "required": [
+                                            "latitude",
+                                            "longitude"
+                                        ],
+                                        "properties": {
+                                            "latitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            },
+                                            "longitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {}
+            }
+        },
+
+        "/resources/deleteWaypoint": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Remove a Waypoint",
+                "requestBody": {
+                    "description": "Waypoint identifier",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["id"],
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+                                        "description": "Waypoint identifier"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {}
+            }
+        },
+
+        "/resources/setRoute": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Add / update a Route",
+                "requestBody": {
+                    "description": "Note attributes",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["position"],
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+                                        "description": "Route identifier"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Route name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "Textual description of the route"
+                                    },
+                                    "points": {
+                                        "description": "Route points",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "required": [
+                                                "latitude",
+                                                "longitude"
+                                            ],
+                                            "properties": {
+                                                "latitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "longitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {}
+            }
+        },
+
+        "/resources/deleteRoute": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Remove a Route",
+                "requestBody": {
+                    "description": "Route identifier",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["id"],
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+                                        "description": "Route identifier"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {}
+            }
+        },
+
+        "/resources/setNote": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Add / update a Note",
+                "requestBody": {
+                    "description": "Note attributes",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["position"],
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+                                        "description": "Note identifier"
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "description": "Note's common name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": " Textual description of the note"
+                                    },
+                                    "oneOf":[
+                                        {
+                                            "position": {
+                                                "description": "Position related to note. Alternative to region or geohash",
+                                                "type": "object",
+                                                "required": [
+                                                    "latitude",
+                                                    "longitude"
+                                                ],
+                                                "properties": {
+                                                    "latitude": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "longitude": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    }
+                                                }
+                                            },
+                                            "geohash": {
+                                                "type": "string",
+                                                "description": "Position related to note. Alternative to region or position"
+                                            },
+                                            "region": {
+                                                "type": "string",
+                                                "description": "Region related to note. A pointer to a region UUID. Alternative to position or geohash",
+                                                "example": "/resources/regions/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+                                            }
+                                        }
+                                    ],
+                                    "mimeType": {
+                                      "type": "string",
+                                      "description": "MIME type of the note"
+                                    },
+                                    "url": {
+                                      "type": "string",
+                                      "description": "Location of the note contents"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {}
+            }
+        },
+
+        "/resources/deleteNote": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Remove a Note",
+                "requestBody": {
+                    "description": "Note identifier",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["id"],
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+                                        "description": "Note identifier"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {}
+            }
+        },
+
+        "/resources/setRegion": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Add / update a Region",
+                "requestBody": {
+                    "description": "Region attributes",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["position"],
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+                                        "description": "Region identifier"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Region name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "Textual description of region"
+                                    },
+                                    "geohash": {
+                                        "type": "string",
+                                        "description": "Area related to region. Alternative to points."
+                                    },
+                                    "points": {
+                                        "description": "Region boundary points",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "required": [
+                                                "latitude",
+                                                "longitude"
+                                            ],
+                                            "properties": {
+                                                "latitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "longitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {}
+            }
+        },
+
+        "/resources/deleteRegion": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Remove a Region",
+                "requestBody": {
+                    "description": "Region identifier",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["id"],
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+                                        "description": "Region identifier"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {}
+            }
         }
                 
     }
