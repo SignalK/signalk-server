@@ -1,4 +1,3 @@
-//import { GeoHash, GeoBounds } from './geo';
 import geoJSON from 'geojson-validation';
 
 export const validate= {
