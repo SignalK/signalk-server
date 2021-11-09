@@ -1,10 +1,8 @@
-import { getDistance } from 'geolib'
+import { getDistance, isValidCoordinate } from 'geolib'
 import ngeohash from 'ngeohash'
-import geolib from 'geolib'
 
 // ** build resource item **
 export const buildResource= (resType:string, data:any):any=> {
-    console.log(`** resType: ${resType}, data: ${JSON.stringify(data)}`)
     if(resType==='routes') { return buildRoute(data) }
     if(resType==='waypoints') { return buildWaypoint(data) }
     if(resType==='notes') { return buildNote(data) }
@@ -12,7 +10,7 @@ export const buildResource= (resType:string, data:any):any=> {
 }
 
 // ** build route
-const buildRoute= (rData:any):any=> {   
+const buildRoute= (rData:any):any=> { 
     let rte:any= {
         feature: {
             type: 'Feature',
@@ -31,22 +29,27 @@ const buildRoute= (rData:any):any=> {
         rte.description= rData.description
         rte.feature.properties.description= rData.description 
     }
+    if(typeof rData.attributes !== 'undefined') { 
+        Object.assign(rte.feature.properties, rData.attributes)
+    }
+
     if(typeof rData.points === 'undefined') { return null }
     if(!Array.isArray(rData.points)) { return null }
     let isValid:boolean= true;
     rData.points.forEach( (p:any)=> {
-        if(!geolib.isValidCoordinate(p)) { isValid= false }
+        if(!isValidCoordinate(p)) { isValid= false }
     })
     if(!isValid) { return null }
     rData.points.forEach( (p:any)=> {
         rte.feature.geometry.coordinates.push([p.longitude, p.latitude])
     })
-    rte.distance= 0
-    for(let i=0; i<rData.length; i++) {
-        if(i==0) { continue }
-        rte.distance+= getDistance(rData[i-1], rData[i])
-    }
 
+    rte.distance= 0
+    for(let i=0; i<rData.points.length; i++) {
+        if(i!==0) { 
+            rte.distance= rte.distance + getDistance(rData.points[i-1], rData.points[i])
+        }
+    }
     return rte
 }
 
@@ -72,8 +75,12 @@ const buildWaypoint= (rData:any):any=> {
     if(typeof rData.description !== 'undefined') { 
         wpt.feature.properties.description= rData.description 
     }
+    if(typeof rData.attributes !== 'undefined') { 
+        Object.assign(wpt.feature.properties, rData.attributes)
+    }
+
     if(typeof rData.position === 'undefined') { return null }
-    if(!geolib.isValidCoordinate(rData.position)) { return  null }
+    if(!isValidCoordinate(rData.position)) { return  null }
     
     wpt.position= rData.position
     wpt.feature.geometry.coordinates= [rData.position.longitude, rData.position.latitude]
@@ -97,7 +104,7 @@ const buildNote= (rData:any):any=> {
          && typeof rData.geohash === 'undefined') { return null }
 
     if(typeof rData.position !== 'undefined') {
-        if(!geolib.isValidCoordinate(rData.position)) { return  null }
+        if(!isValidCoordinate(rData.position)) { return  null }
         note.position= rData.position
     }
     if(typeof rData.region !== 'undefined') {
@@ -136,6 +143,10 @@ const buildRegion= (rData:any):any=> {
     if(typeof rData.description !== 'undefined') { 
         reg.feature.properties.description= rData.description 
     }
+    if(typeof rData.attributes !== 'undefined') { 
+        Object.assign(reg.feature.properties, rData.attributes)
+    }
+
     if(typeof rData.points=== 'undefined' && rData.geohash=== 'undefined') { return null }
     if(typeof rData.geohash!== 'undefined') {
         reg.geohash= rData.geohash
@@ -154,7 +165,7 @@ const buildRegion= (rData:any):any=> {
         if(!Array.isArray(rData.points)) { return null }
         let isValid:boolean= true;
         rData.points.forEach( (p:any)=> {
-            if(!geolib.isValidCoordinate(p)) { isValid= false }
+            if(!isValidCoordinate(p)) { isValid= false }
         })
         if(!isValid) { return null }
         rData.points.forEach( (p:any)=> {
