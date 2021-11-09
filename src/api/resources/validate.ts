@@ -147,6 +147,7 @@ const validateChart = (r: any): boolean => {
 =======
 >>>>>>> add API endpoint processing
 import geoJSON from 'geojson-validation';
+import { isValidCoordinate } from 'geolib'
 
 export const validate= {
     resource: (type:string, value:any):boolean=> {
@@ -178,9 +179,6 @@ export const validate= {
 
 // ** validate route data
 const validateRoute= (r:any):boolean=> {   
-    //if(typeof r.name === 'undefined') { return false }
-    //if(typeof r.description === 'undefined') { return false }
-    if(typeof r.distance === 'undefined' || typeof r.distance !=='number') { return false }
     if(r.start) {
         let l= r.start.split('/')
         if(!validate.uuid(l[l.length-1])) { return false }
@@ -202,12 +200,9 @@ const validateRoute= (r:any):boolean=> {
 // ** validate waypoint data
 const validateWaypoint= (r:any):boolean=> { 
     if(typeof r.position === 'undefined') { return false } 
-    if(typeof r.position.latitude === 'undefined' || typeof r.position.longitude === 'undefined') { 
+    if(!isValidCoordinate(r.position)) { 
         return false 
     }
-    if(typeof r.position.latitude !== 'number' || typeof r.position.longitude !== 'number') { 
-        return false 
-    } 
     try {
         if(!r.feature || !geoJSON.valid(r.feature)) { 
             return false
@@ -222,12 +217,9 @@ const validateWaypoint= (r:any):boolean=> {
 const validateNote= (r:any):boolean=> {  
     if(!r.region && !r.position && !r.geohash ) { return false } 
     if(typeof r.position!== 'undefined') {
-        if(typeof r.position.latitude === 'undefined' || typeof r.position.longitude === 'undefined') { 
+        if(!isValidCoordinate(r.position)) { 
             return false 
         }
-        if(typeof r.position.latitude !== 'number' || typeof r.position.longitude !== 'number') { 
-            return false 
-        } 
     }
     if(r.region) {
         let l= r.region.split('/')
