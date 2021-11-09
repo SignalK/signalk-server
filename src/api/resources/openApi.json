@@ -18,8 +18,12 @@
 =======
                 "summary": "List available resource types",
                 "responses": {
+<<<<<<< HEAD
                     "default": {
 >>>>>>> addressed comments re parameters
+=======
+                    "200": {
+>>>>>>> add API definitions
                         "description": "List of available resource types",
                         "content": {
                             "application/json": {
@@ -271,8 +275,23 @@
                 }
 =======
                 },
+<<<<<<< HEAD
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+>>>>>>> add API definitions
             }
         },
 
@@ -314,8 +333,27 @@
 >>>>>>> add OpenApi definition file
 =======
                 "summary": "Retrieve route with supplied id",
+<<<<<<< HEAD
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+                "responses": {
+                    "200": {
+                        "description": "List of resources identified by their UUID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "List of Signal K resources",
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+>>>>>>> add API definitions
             },
 
             "put": {
@@ -440,8 +478,23 @@
                 }
 =======
                 },
+<<<<<<< HEAD
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+>>>>>>> add API definitions
             },
       
             "delete": {
@@ -466,8 +519,23 @@
 >>>>>>> add OpenApi definition file
 =======
                 "summary": "Remove Route with supplied id",
+<<<<<<< HEAD
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+>>>>>>> add API definitions
             }
 
         },
@@ -602,8 +670,23 @@
                 }
 =======
                 },
+<<<<<<< HEAD
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+>>>>>>> add API definitions
             }
         },
 
@@ -645,8 +728,27 @@
 >>>>>>> add OpenApi definition file
 =======
                 "summary": "Retrieve waypoint with supplied id",
+<<<<<<< HEAD
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+                "responses": {
+                    "200": {
+                        "description": "List of resources identified by their UUID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "List of Signal K resources",
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+>>>>>>> add API definitions
             },
 
             "put": {
@@ -778,8 +880,23 @@
                 }
 =======
                 },
+<<<<<<< HEAD
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+>>>>>>> add API definitions
             },
       
             "delete": {
@@ -804,8 +921,23 @@
 >>>>>>> add OpenApi definition file
 =======
                 "summary": "Remove Waypoint with supplied id",
+<<<<<<< HEAD
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+>>>>>>> add API definitions
             }
 
         },
@@ -876,6 +1008,9 @@
                         }
                     }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> add API definitions
                 },
                 "responses": {
                     "200": {
@@ -888,8 +1023,11 @@
                             }
                         }
                     }
+<<<<<<< HEAD
 =======
 >>>>>>> add OpenApi definition file
+=======
+>>>>>>> add API definitions
                 }
             }
         },
@@ -932,8 +1070,27 @@
 >>>>>>> add OpenApi definition file
 =======
                 "summary": "Retrieve Note with supplied id",
+<<<<<<< HEAD
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+                "responses": {
+                    "200": {
+                        "description": "List of resources identified by their UUID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "List of Signal K resources",
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+>>>>>>> add API definitions
             },
 
             "put": {
@@ -1019,8 +1176,23 @@
                 }
 =======
                 },
+<<<<<<< HEAD
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+>>>>>>> add API definitions
             },
       
             "delete": {
@@ -1045,8 +1217,23 @@
 >>>>>>> add OpenApi definition file
 =======
                 "summary": "Remove Note with supplied id",
+<<<<<<< HEAD
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+>>>>>>> add API definitions
             }
 
         },
@@ -1253,8 +1440,23 @@
                 }
 =======
                 },
+<<<<<<< HEAD
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+>>>>>>> add API definitions
             }
         },
 
@@ -1291,6 +1493,7 @@
                         }
                     }
                 }
+<<<<<<< HEAD
 =======
                 "summary": "Retrieve Region with supplied id"
 >>>>>>> add OpenApi definition file
@@ -1298,6 +1501,8 @@
                 "summary": "Retrieve Region with supplied id",
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+>>>>>>> add API definitions
             },
 
             "put": {
@@ -1497,8 +1702,23 @@
                 }
 =======
                 },
+<<<<<<< HEAD
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+>>>>>>> add API definitions
             },
       
             "delete": {
@@ -1550,6 +1770,7 @@
                                         "type": "string",
                                         "description": "A description of the chart"
                                     },
+<<<<<<< HEAD
                                     "tilemapUrl": {
                                         "type": "string",
                                         "description": "A url to the tilemap of the chart for use in TMS chartplotting apps",
@@ -1603,6 +1824,30 @@
                                                     "type": "number",
                                                     "format": "float"
                                                 }
+=======
+                                    "attributes": {
+                                        "type": "object",
+                                        "description": "Additional attributes as name:value pairs.",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "position": {
+                                        "description": "The waypoint position",
+                                        "type": "object",
+                                        "required": [
+                                            "latitude",
+                                            "longitude"
+                                        ],
+                                        "properties": {
+                                            "latitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            },
+                                            "longitude": {
+                                                "type": "number",
+                                                "format": "float"
+>>>>>>> add API definitions
                                             }
                                         }
                                     },
@@ -1678,8 +1923,26 @@
                             }
                         }
                     }
+<<<<<<< HEAD
                 }
             },
+=======
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+>>>>>>> add API definitions
 
             "put": {
                 "tags": ["resources/charts"],
@@ -1708,6 +1971,7 @@
                                         "type": "string",
                                         "description": "A description of the chart"
                                     },
+<<<<<<< HEAD
                                     "tilemapUrl": {
                                         "type": "string",
                                         "description": "A url to the tilemap of the chart for use in TMS chartplotting apps",
@@ -1739,6 +2003,17 @@
                                         }
                                     },
                                     "bounds": {
+=======
+                                    "attributes": {
+                                        "type": "object",
+                                        "description": "Additional attributes as name:value pairs.",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "points": {
+                                        "description": "Route points",
+>>>>>>> add API definitions
                                         "type": "array",
                                         "description": "The bounds of the chart. An array containing the position of the upper left corner, and the lower right corner. Useful when the chart isn't inherently geo-referenced.",
                                         "items": {
@@ -1803,6 +2078,7 @@
                         }
                     }
                 }
+<<<<<<< HEAD
             },
       
             "delete": {
@@ -1824,6 +2100,8 @@
                 "summary": "Remove Region with supplied id",
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+>>>>>>> add API definitions
             }
 
         },
@@ -2266,6 +2544,7 @@
                         }
                     }
                 }
+<<<<<<< HEAD
             }
         },
 
@@ -2480,6 +2759,8 @@
 =======
                 "responses": {}
 >>>>>>> addressed comments re parameters
+=======
+>>>>>>> add API definitions
             }
         },
 
@@ -2556,7 +2837,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -2583,7 +2875,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -2612,6 +2915,13 @@
                                     "description": {
                                         "type": "string",
                                         "description": "Textual description of region"
+                                    },
+                                    "attributes": {
+                                        "type": "object",
+                                        "description": "Additional attributes as name:value pairs.",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
                                     },
                                     "geohash": {
                                         "type": "string",
@@ -2643,7 +2953,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -2670,7 +2991,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
 >>>>>>> addressed comments re parameters
         }
