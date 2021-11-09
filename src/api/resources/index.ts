@@ -203,21 +203,21 @@ export class Resources {
             req.method= 'DELETE'
         }
         if(req.apiMethod?.indexOf('set')!==-1) {
-            if(!req.body.value?.id) { 
+            if(!req.body.id) { 
                 req.method= 'POST' 
             }
             else { 
-                req.resourceId= req.body.value.id 
+                req.resourceId= req.body.id 
             }
-            req.body.value= buildResource(req.resourceType, req.body.value) ?? {}
+            req.body= { value: buildResource(req.resourceType, req.body) ?? {} }
         }
-        console.log(req)
         return req
     }
 
     // ** action an in-scope resource request **
     private async execResourceRequest (req:ResourceRequest):Promise<any> {
-
+        debug('********* execute request *************')
+        debug(req)
         if(req.method==='GET') {
             let retVal: any
             if(!req.resourceId) {
