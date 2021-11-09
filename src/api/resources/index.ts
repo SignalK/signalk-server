@@ -526,6 +526,7 @@ export class Resources {
   }
 =======
 import { validate } from './validate'
+import { buildResource } from './resources'
 
 const debug = Debug('signalk:resources')
 
@@ -534,7 +535,8 @@ interface ResourceRequest {
     body: any
     query: {[key:string]: any}
     resourceType: string
-    resourceId: string
+    resourceId: string,
+    apiMethod?: string | null
 }
 
 interface ResourceProvider {
@@ -546,6 +548,17 @@ interface ResourceProvider {
 
 const SIGNALK_API_PATH= `/signalk/v1/api`
 const UUID_PREFIX= 'urn:mrn:signalk:uuid:'
+
+const API_METHODS= [
+    'setWaypoint',
+    'deleteWaypoint',
+    'setRoute',
+    'deleteRoute',
+    'setNote',
+    'deleteNote',
+    'setRegion',
+    'deleteRegion'
+]
 
 export class Resources {
 
@@ -639,7 +652,7 @@ export class Resources {
     }
 
     // ** parse api path request and return ResourceRequest object **
-    private parseResourceRequest(req:any): ResourceRequest | undefined {
+    private parseResourceRequest(req:any):ResourceRequest | undefined {
         debug('** req.originalUrl:', req.originalUrl)
         debug('** req.method:', req.method)
         debug('** req.body:', req.body)
@@ -650,16 +663,35 @@ export class Resources {
         let resId= p.length>1 ? p[1] : ''
         debug('** resType:', resType)
         debug('** resId:', resId)
+        
+        let apiMethod= (API_METHODS.includes(resType)) ? resType : null
+        if(apiMethod) {
+            if(apiMethod.toLowerCase().indexOf('waypoint')!==-1) {
+                resType= 'waypoints'
+            }
+            if(apiMethod.toLowerCase().indexOf('route')!==-1) {
+                resType= 'routes'
+            }
+            if(apiMethod.toLowerCase().indexOf('note')!==-1) {
+                resType= 'notes'
+            }
+            if(apiMethod.toLowerCase().indexOf('region')!==-1) {
+                resType= 'regions'
+            }
+        }
 
         this.checkForProviders()
+        let retReq= {
+            method: req.method,
+            body: req.body,
+            query: req.query,
+            resourceType: resType,
+            resourceId: resId,
+            apiMethod: apiMethod
+        }
+
         if(this.resourceTypes.includes(resType) && this.resProvider[resType]) {
-            return {
-                method: req.method,
-                body: req.body,
-                query: req.query,
-                resourceType: resType,
-                resourceId: resId
-            }
+            return retReq
         }
         else { 
             debug('Invalid resource type or no provider for this type!')
@@ -676,9 +708,40 @@ export class Resources {
         if(!this.resProvider) { 
             return {statusCode: 501, message: `No Provider`} 
         }
+        
         if(!this.resourceTypes.includes(req.resourceType) || !this.resProvider[req.resourceType]) {
             return {statusCode: 501, message: `No Provider`} 
         }
+
+        // check for API method request
+        if(req.apiMethod && API_METHODS.includes(req.apiMethod)) {
+            debug(`API Method (${req.apiMethod})`)
+            req= this.transformApiRequest(req)
+        }
+
+        return await this.execResourceRequest(req)
+    }
+
+    // ** transform API request to ResourceRequest **
+    private transformApiRequest(req: ResourceRequest):ResourceRequest {
+        if(req.apiMethod?.indexOf('delete')!==-1) {
+            req.method= 'DELETE'
+        }
+        if(req.apiMethod?.indexOf('set')!==-1) {
+            if(!req.body.value?.id) { 
+                req.method= 'POST' 
+            }
+            else { 
+                req.resourceId= req.body.value.id 
+            }
+            req.body.value= buildResource(req.resourceType, req.body.value) ?? {}
+        }
+        console.log(req)
+        return req
+    }
+
+    // ** action an in-scope resource request **
+    private async execResourceRequest (req:ResourceRequest):Promise<any> {
 
         if(req.method==='GET') {
             let retVal: any

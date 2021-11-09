@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import geoJSON from 'geojson-validation'
 import { isValidCoordinate } from 'geolib'
 
@@ -143,6 +144,8 @@ const validateChart = (r: any): boolean => {
 }
 =======
 //import { GeoHash, GeoBounds } from './geo';
+=======
+>>>>>>> add API endpoint processing
 import geoJSON from 'geojson-validation';
 
 export const validate= {
