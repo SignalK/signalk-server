@@ -12,7 +12,7 @@
                 "tags": ["resources"],
                 "summary": "List available resource types",
                 "responses": {
-                    "default": {
+                    "200": {
                         "description": "List of available resource types",
                         "content": {
                             "application/json": {
@@ -181,7 +181,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -200,7 +211,22 @@
             "get": {
                 "tags": ["resources/routes"],
                 "summary": "Retrieve route with supplied id",
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "List of resources identified by their UUID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "List of Signal K resources",
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             },
 
             "put": {
@@ -279,13 +305,35 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             },
       
             "delete": {
                 "tags": ["resources/routes"],
                 "summary": "Remove Route with supplied id",
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
         },
@@ -367,7 +415,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -386,7 +445,22 @@
             "get": {
                 "tags": ["resources/waypoints"],
                 "summary": "Retrieve waypoint with supplied id",
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "List of resources identified by their UUID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "List of Signal K resources",
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             },
 
             "put": {
@@ -465,13 +539,35 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             },
       
             "delete": {
                 "tags": ["resources/waypoints"],
                 "summary": "Remove Waypoint with supplied id",
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
         },
@@ -541,6 +637,18 @@
                             }
                         }
                     }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -560,7 +668,22 @@
             "get": {
                 "tags": ["resources/notes"],
                 "summary": "Retrieve Note with supplied id",
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "List of resources identified by their UUID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "List of Signal K resources",
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             },
 
             "put": {
@@ -628,13 +751,35 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             },
       
             "delete": {
                 "tags": ["resources/notes"],
                 "summary": "Remove Note with supplied id",
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
         },
@@ -735,7 +880,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -754,7 +910,22 @@
             "get": {
                 "tags": ["resources/regions"],
                 "summary": "Retrieve Region with supplied id",
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "List of resources identified by their UUID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "List of Signal K resources",
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             },
 
             "put": {
@@ -852,13 +1023,35 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             },
       
             "delete": {
                 "tags": ["resources/regions"],
                 "summary": "Remove Region with supplied id",
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
         },
@@ -889,6 +1082,13 @@
                                         "type": "string",
                                         "description": "Textual description of the waypoint"
                                     },
+                                    "attributes": {
+                                        "type": "object",
+                                        "description": "Additional attributes as name:value pairs.",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
+                                    },
                                     "position": {
                                         "description": "The waypoint position",
                                         "type": "object",
@@ -912,7 +1112,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -939,7 +1150,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -969,6 +1191,13 @@
                                         "type": "string",
                                         "description": "Textual description of the route"
                                     },
+                                    "attributes": {
+                                        "type": "object",
+                                        "description": "Additional attributes as name:value pairs.",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
+                                    },
                                     "points": {
                                         "description": "Route points",
                                         "type": "array",
@@ -995,7 +1224,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -1022,7 +1262,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -1096,7 +1347,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -1123,7 +1385,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -1152,6 +1425,13 @@
                                     "description": {
                                         "type": "string",
                                         "description": "Textual description of region"
+                                    },
+                                    "attributes": {
+                                        "type": "object",
+                                        "description": "Additional attributes as name:value pairs.",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
                                     },
                                     "geohash": {
                                         "type": "string",
@@ -1183,7 +1463,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -1210,7 +1501,18 @@
                         }
                     }
                 },
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
                 
