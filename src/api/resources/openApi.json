@@ -11,9 +11,15 @@
             "get": {
                 "tags": ["resources"],
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "summary": "List available resource types",
                 "responses": {
                     "200": {
+=======
+                "summary": "List available resource types",
+                "responses": {
+                    "default": {
+>>>>>>> addressed comments re parameters
                         "description": "List of available resource types",
                         "content": {
                             "application/json": {
@@ -27,6 +33,7 @@
                         }
                     }
                 }
+<<<<<<< HEAD
             }
         },
 
@@ -34,6 +41,8 @@
 =======
                 "summary": "List available resource types"
 
+=======
+>>>>>>> addressed comments re parameters
             }
         },
 
@@ -73,12 +82,17 @@
                     },
                     {
 <<<<<<< HEAD
+<<<<<<< HEAD
                         "name": "distance",
                         "in": "query",
 =======
                         "in": "query",
                         "name": "radius",
 >>>>>>> add OpenApi definition file
+=======
+                        "name": "distance",
+                        "in": "query",
+>>>>>>> addressed comments re parameters
                         "description": "Limit results to resources that fall within a square area, centered around the vessel's position, the edges of which are the sepecified distance in meters from the vessel.",
                         "schema": {
                             "type": "integer",
@@ -94,17 +108,13 @@
                         "description": "Limit results to resources that fall within the bounded area defined as lower left (south west) and upper right (north east) coordinates [swlon,swlat,nelon,nelat]",
 =======
                         "in": "query",
-                        "name": "geohash",
-                        "description": "limit results to resources that fall within an area sepecified by the geohash.",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "in": "query",
                         "name": "bbox",
+<<<<<<< HEAD
                         "description": "Limit results to resources that fall within the bounded area defined as lower left and upper right x,y coordinates x1,y1,x2,y2",
 >>>>>>> add OpenApi definition file
+=======
+                        "description": "Limit results to resources that fall within the bounded area defined as lower left (south west) and upper right (north east) coordinates [swlon,swlat,nelon,nelat]",
+>>>>>>> addressed comments re parameters
                         "style": "form",
                         "explode": false,
                         "schema": {
@@ -181,6 +191,9 @@
                                         "properties": {
                                             "geometry": {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> addressed comments re parameters
                                                 "type": "object",
                                                 "properties": {
                                                     "type": {
@@ -188,6 +201,7 @@
                                                         "enum": ["LineString"]
                                                     },
                                                     "coordinates": {
+<<<<<<< HEAD
                                                         "type": "array",
                                                         "items": {
                                                             "type": "array",
@@ -204,12 +218,21 @@
                                                 "coordinates": {
                                                     "type": "array",
                                                     "items": {
+=======
+>>>>>>> addressed comments re parameters
                                                         "type": "array",
-                                                        "maxItems": 3,
-                                                        "minItems": 2,
                                                         "items": {
+<<<<<<< HEAD
                                                             "type": "number"
 >>>>>>> add OpenApi definition file
+=======
+                                                            "type": "array",
+                                                            "maxItems": 3,
+                                                            "minItems": 2,
+                                                            "items": {
+                                                                "type": "number"
+                                                            }
+>>>>>>> addressed comments re parameters
                                                         }
                                                     }
                                                 }
@@ -230,6 +253,7 @@
                         }
                     }
 <<<<<<< HEAD
+<<<<<<< HEAD
                 },
                 "responses": {
                     "200": {
@@ -245,6 +269,10 @@
 =======
 >>>>>>> add OpenApi definition file
                 }
+=======
+                },
+                "responses": {}
+>>>>>>> addressed comments re parameters
             }
         },
 
@@ -262,6 +290,7 @@
               
             "get": {
                 "tags": ["resources/routes"],
+<<<<<<< HEAD
 <<<<<<< HEAD
                 "summary": "Retrieve route with supplied id",
                 "responses": {
@@ -283,6 +312,10 @@
 =======
                 "summary": "Retrieve route with supplied id"
 >>>>>>> add OpenApi definition file
+=======
+                "summary": "Retrieve route with supplied id",
+                "responses": {}
+>>>>>>> addressed comments re parameters
             },
 
             "put": {
@@ -327,6 +360,9 @@
                                         "properties": {
                                             "geometry": {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> addressed comments re parameters
                                                 "type": "object",
                                                 "properties": {
                                                     "type": {
@@ -334,6 +370,7 @@
                                                         "enum": ["LineString"]
                                                     },
                                                     "coordinates": {
+<<<<<<< HEAD
                                                         "type": "array",
                                                         "items": {
                                                             "type": "array",
@@ -350,12 +387,21 @@
                                                 "coordinates": {
                                                     "type": "array",
                                                     "items": {
+=======
+>>>>>>> addressed comments re parameters
                                                         "type": "array",
-                                                        "maxItems": 3,
-                                                        "minItems": 2,
                                                         "items": {
+<<<<<<< HEAD
                                                             "type": "number"
 >>>>>>> add OpenApi definition file
+=======
+                                                            "type": "array",
+                                                            "maxItems": 3,
+                                                            "minItems": 2,
+                                                            "items": {
+                                                                "type": "number"
+                                                            }
+>>>>>>> addressed comments re parameters
                                                         }
                                                     }
                                                 }
@@ -376,6 +422,7 @@
                         }
                     }
 <<<<<<< HEAD
+<<<<<<< HEAD
                 },
                 "responses": {
                     "200": {
@@ -391,10 +438,15 @@
 =======
 >>>>>>> add OpenApi definition file
                 }
+=======
+                },
+                "responses": {}
+>>>>>>> addressed comments re parameters
             },
       
             "delete": {
                 "tags": ["resources/routes"],
+<<<<<<< HEAD
 <<<<<<< HEAD
                 "summary": "Remove Route with supplied id",
                 "responses": {
@@ -412,6 +464,10 @@
 =======
                 "summary": "Remove Route with supplied id"
 >>>>>>> add OpenApi definition file
+=======
+                "summary": "Remove Route with supplied id",
+                "responses": {}
+>>>>>>> addressed comments re parameters
             }
 
         },
@@ -460,6 +516,7 @@
                                             "geometry": {
                                                 "type": "object",
 <<<<<<< HEAD
+<<<<<<< HEAD
                                                 "properties": {
                                                     "type": "object",
                                                     "description": "GeoJSon geometry",
@@ -491,6 +548,24 @@
                                                     "items": {
                                                         "type": "number"
 >>>>>>> add OpenApi definition file
+=======
+                                                "properties": {
+                                                    "type": "object",
+                                                    "description": "GeoJSon geometry",
+                                                    "properties": {
+                                                        "type": {
+                                                            "type": "string",
+                                                            "enum": ["Point"]
+                                                        }
+                                                    },
+                                                    "coordinates": {
+                                                        "type": "array",
+                                                        "maxItems": 3,
+                                                        "minItems": 2,
+                                                        "items": {
+                                                            "type": "number"
+                                                        }
+>>>>>>> addressed comments re parameters
                                                     }
                                                 }
                                             },
@@ -509,6 +584,7 @@
                         }
                     }
 <<<<<<< HEAD
+<<<<<<< HEAD
                 },
                 "responses": {
                     "200": {
@@ -524,6 +600,10 @@
 =======
 >>>>>>> add OpenApi definition file
                 }
+=======
+                },
+                "responses": {}
+>>>>>>> addressed comments re parameters
             }
         },
 
@@ -541,6 +621,7 @@
               
             "get": {
                 "tags": ["resources/waypoints"],
+<<<<<<< HEAD
 <<<<<<< HEAD
                 "summary": "Retrieve waypoint with supplied id",
                 "responses": {
@@ -562,6 +643,10 @@
 =======
                 "summary": "Retrieve waypoint with supplied id"
 >>>>>>> add OpenApi definition file
+=======
+                "summary": "Retrieve waypoint with supplied id",
+                "responses": {}
+>>>>>>> addressed comments re parameters
             },
 
             "put": {
@@ -607,6 +692,7 @@
                                             "geometry": {
                                                 "type": "object",
 <<<<<<< HEAD
+<<<<<<< HEAD
                                                 "properties": {
                                                     "type": "object",
                                                     "description": "GeoJSon geometry",
@@ -638,6 +724,24 @@
                                                     "items": {
                                                         "type": "number"
 >>>>>>> add OpenApi definition file
+=======
+                                                "properties": {
+                                                    "type": "object",
+                                                    "description": "GeoJSon geometry",
+                                                    "properties": {
+                                                        "type": {
+                                                            "type": "string",
+                                                            "enum": ["Point"]
+                                                        }
+                                                    },
+                                                    "coordinates": {
+                                                        "type": "array",
+                                                        "maxItems": 3,
+                                                        "minItems": 2,
+                                                        "items": {
+                                                            "type": "number"
+                                                        }
+>>>>>>> addressed comments re parameters
                                                     }
                                                 }
                                             },
@@ -656,6 +760,7 @@
                         }
                     }
 <<<<<<< HEAD
+<<<<<<< HEAD
                 },
                 "responses": {
                     "200": {
@@ -671,10 +776,15 @@
 =======
 >>>>>>> add OpenApi definition file
                 }
+=======
+                },
+                "responses": {}
+>>>>>>> addressed comments re parameters
             },
       
             "delete": {
                 "tags": ["resources/waypoints"],
+<<<<<<< HEAD
 <<<<<<< HEAD
                 "summary": "Remove Waypoint with supplied id",
                 "responses": {
@@ -692,6 +802,10 @@
 =======
                 "summary": "Remove Waypoint with supplied id"
 >>>>>>> add OpenApi definition file
+=======
+                "summary": "Remove Waypoint with supplied id",
+                "responses": {}
+>>>>>>> addressed comments re parameters
             }
 
         },
@@ -795,6 +909,7 @@
             "get": {
                 "tags": ["resources/notes"],
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "summary": "Retrieve Note with supplied id",
                 "responses": {
                     "200": {
@@ -815,6 +930,10 @@
 =======
                 "summary": "Retrieve Note with supplied id"
 >>>>>>> add OpenApi definition file
+=======
+                "summary": "Retrieve Note with supplied id",
+                "responses": {}
+>>>>>>> addressed comments re parameters
             },
 
             "put": {
@@ -882,6 +1001,7 @@
                         }
                     }
 <<<<<<< HEAD
+<<<<<<< HEAD
                 },
                 "responses": {
                     "200": {
@@ -897,10 +1017,15 @@
 =======
 >>>>>>> add OpenApi definition file
                 }
+=======
+                },
+                "responses": {}
+>>>>>>> addressed comments re parameters
             },
       
             "delete": {
                 "tags": ["resources/notes"],
+<<<<<<< HEAD
 <<<<<<< HEAD
                 "summary": "Remove Note with supplied id",
                 "responses": {
@@ -918,6 +1043,10 @@
 =======
                 "summary": "Remove Note with supplied id"
 >>>>>>> add OpenApi definition file
+=======
+                "summary": "Remove Note with supplied id",
+                "responses": {}
+>>>>>>> addressed comments re parameters
             }
 
         },
@@ -951,6 +1080,9 @@
                                         "properties": {
                                             "geometry": {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> addressed comments re parameters
                                                 "type": "object",
                                                 "properties": {
                                                     "oneOf": [
@@ -963,6 +1095,7 @@
                                                                     "enum": ["Polygon"]
                                                                 },
                                                                 "coordinates": {
+<<<<<<< HEAD
                                                                     "type": "array",
                                                                     "items": {
                                                                         "type": "array",
@@ -986,19 +1119,31 @@
                                                             "coordinates": {
                                                                 "type": "array",
                                                                 "items": {
+=======
+>>>>>>> addressed comments re parameters
                                                                     "type": "array",
                                                                     "items": {
                                                                         "type": "array",
-                                                                        "maxItems": 3,
-                                                                        "minItems": 2,
                                                                         "items": {
+<<<<<<< HEAD
                                                                             "type": "number"
 >>>>>>> add OpenApi definition file
+=======
+                                                                            "type": "array",
+                                                                            "maxItems": 3,
+                                                                            "minItems": 2,
+                                                                            "items": {
+                                                                                "type": "number"
+                                                                            }
+>>>>>>> addressed comments re parameters
                                                                         }
                                                                     }
                                                                 }
                                                             }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> addressed comments re parameters
                                                         },
                                                         {
                                                             "type": "object",
@@ -1009,6 +1154,7 @@
                                                                     "enum": ["MultiPolygon"]
                                                                 },
                                                                 "coordinates": {
+<<<<<<< HEAD
 =======
                                                         }
                                                     },
@@ -1024,11 +1170,14 @@
                                                                 "type": "array",
                                                                 "items": {
 >>>>>>> add OpenApi definition file
+=======
+>>>>>>> addressed comments re parameters
                                                                     "type": "array",
                                                                     "items": {
                                                                         "type": "array",
                                                                         "items": {
                                                                             "type": "array",
+<<<<<<< HEAD
 <<<<<<< HEAD
                                                                             "items": {
                                                                                 "type": "array",
@@ -1043,6 +1192,15 @@
                                                                             "items": {
                                                                                 "type": "number"
 >>>>>>> add OpenApi definition file
+=======
+                                                                            "items": {
+                                                                                "type": "array",
+                                                                                "maxItems": 3,
+                                                                                "minItems": 2,
+                                                                                "items": {
+                                                                                    "type": "number"
+                                                                                }
+>>>>>>> addressed comments re parameters
                                                                             }
                                                                         }
                                                                     }
@@ -1050,12 +1208,17 @@
                                                             }
                                                         }
 <<<<<<< HEAD
+<<<<<<< HEAD
                                                     ]
                                                 }
 =======
                                                     }
                                                 ]
 >>>>>>> add OpenApi definition file
+=======
+                                                    ]
+                                                }
+>>>>>>> addressed comments re parameters
                                             },
                                             "properties": {
                                                 "description": "Additional feature properties",
@@ -1072,6 +1235,7 @@
                         }
                     }
 <<<<<<< HEAD
+<<<<<<< HEAD
                 },
                 "responses": {
                     "200": {
@@ -1087,6 +1251,10 @@
 =======
 >>>>>>> add OpenApi definition file
                 }
+=======
+                },
+                "responses": {}
+>>>>>>> addressed comments re parameters
             }
         },
 
@@ -1104,6 +1272,7 @@
               
             "get": {
                 "tags": ["resources/regions"],
+<<<<<<< HEAD
 <<<<<<< HEAD
                 "summary": "Retrieve Region with supplied id",
                 "responses": {
@@ -1125,6 +1294,10 @@
 =======
                 "summary": "Retrieve Region with supplied id"
 >>>>>>> add OpenApi definition file
+=======
+                "summary": "Retrieve Region with supplied id",
+                "responses": {}
+>>>>>>> addressed comments re parameters
             },
 
             "put": {
@@ -1151,6 +1324,9 @@
                                         "properties": {
                                             "geometry": {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> addressed comments re parameters
                                                 "type": "object",
                                                 "properties": {
                                                     "oneOf": [
@@ -1163,6 +1339,7 @@
                                                                     "enum": ["Polygon"]
                                                                 },
                                                                 "coordinates": {
+<<<<<<< HEAD
                                                                     "type": "array",
                                                                     "items": {
                                                                         "type": "array",
@@ -1186,19 +1363,31 @@
                                                             "coordinates": {
                                                                 "type": "array",
                                                                 "items": {
+=======
+>>>>>>> addressed comments re parameters
                                                                     "type": "array",
                                                                     "items": {
                                                                         "type": "array",
-                                                                        "maxItems": 3,
-                                                                        "minItems": 2,
                                                                         "items": {
+<<<<<<< HEAD
                                                                             "type": "number"
 >>>>>>> add OpenApi definition file
+=======
+                                                                            "type": "array",
+                                                                            "maxItems": 3,
+                                                                            "minItems": 2,
+                                                                            "items": {
+                                                                                "type": "number"
+                                                                            }
+>>>>>>> addressed comments re parameters
                                                                         }
                                                                     }
                                                                 }
                                                             }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> addressed comments re parameters
                                                         },
                                                         {
                                                             "type": "object",
@@ -1209,6 +1398,7 @@
                                                                     "enum": ["MultiPolygon"]
                                                                 },
                                                                 "coordinates": {
+<<<<<<< HEAD
 =======
                                                         }
                                                     },
@@ -1224,11 +1414,14 @@
                                                                 "type": "array",
                                                                 "items": {
 >>>>>>> add OpenApi definition file
+=======
+>>>>>>> addressed comments re parameters
                                                                     "type": "array",
                                                                     "items": {
                                                                         "type": "array",
                                                                         "items": {
                                                                             "type": "array",
+<<<<<<< HEAD
 <<<<<<< HEAD
                                                                             "items": {
                                                                                 "type": "array",
@@ -1243,6 +1436,15 @@
                                                                             "items": {
                                                                                 "type": "number"
 >>>>>>> add OpenApi definition file
+=======
+                                                                            "items": {
+                                                                                "type": "array",
+                                                                                "maxItems": 3,
+                                                                                "minItems": 2,
+                                                                                "items": {
+                                                                                    "type": "number"
+                                                                                }
+>>>>>>> addressed comments re parameters
                                                                             }
                                                                         }
                                                                     }
@@ -1250,12 +1452,17 @@
                                                             }
                                                         }
 <<<<<<< HEAD
+<<<<<<< HEAD
                                                     ]
                                                 }
 =======
                                                     }
                                                 ]
 >>>>>>> add OpenApi definition file
+=======
+                                                    ]
+                                                }
+>>>>>>> addressed comments re parameters
                                             },
                                             "properties": {
                                                 "description": "Additional feature properties",
@@ -1272,6 +1479,7 @@
                         }
                     }
 <<<<<<< HEAD
+<<<<<<< HEAD
                 },
                 "responses": {
                     "200": {
@@ -1287,10 +1495,15 @@
 =======
 >>>>>>> add OpenApi definition file
                 }
+=======
+                },
+                "responses": {}
+>>>>>>> addressed comments re parameters
             },
       
             "delete": {
                 "tags": ["resources/regions"],
+<<<<<<< HEAD
 <<<<<<< HEAD
                 "summary": "Remove Region with supplied id",
                 "responses": {
@@ -1607,6 +1820,10 @@
                         }
                     }
                 }
+=======
+                "summary": "Remove Region with supplied id",
+                "responses": {}
+>>>>>>> addressed comments re parameters
             }
 
         },
@@ -1637,6 +1854,7 @@
                                         "type": "string",
                                         "description": "Textual description of the waypoint"
                                     },
+<<<<<<< HEAD
                                     "attributes": {
                                         "type": "object",
                                         "description": "Additional attributes as name:value pairs.",
@@ -1644,6 +1862,8 @@
                                             "type": "string"
                                         }
                                     },
+=======
+>>>>>>> addressed comments re parameters
                                     "position": {
                                         "description": "The waypoint position",
                                         "type": "object",
@@ -1667,6 +1887,7 @@
                         }
                     }
                 },
+<<<<<<< HEAD
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1679,6 +1900,9 @@
                         }
                     }
                 }
+=======
+                "responses": {}
+>>>>>>> addressed comments re parameters
             }
         },
 
@@ -1705,6 +1929,7 @@
                         }
                     }
                 },
+<<<<<<< HEAD
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1717,6 +1942,9 @@
                         }
                     }
                 }
+=======
+                "responses": {}
+>>>>>>> addressed comments re parameters
             }
         },
 
@@ -1746,6 +1974,7 @@
                                         "type": "string",
                                         "description": "Textual description of the route"
                                     },
+<<<<<<< HEAD
                                     "attributes": {
                                         "type": "object",
                                         "description": "Additional attributes as name:value pairs.",
@@ -1753,6 +1982,8 @@
                                             "type": "string"
                                         }
                                     },
+=======
+>>>>>>> addressed comments re parameters
                                     "points": {
                                         "description": "Route points",
                                         "type": "array",
@@ -1779,6 +2010,7 @@
                         }
                     }
                 },
+<<<<<<< HEAD
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1791,6 +2023,9 @@
                         }
                     }
                 }
+=======
+                "responses": {}
+>>>>>>> addressed comments re parameters
             }
         },
 
@@ -1817,6 +2052,7 @@
                         }
                     }
                 },
+<<<<<<< HEAD
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2241,9 +2477,202 @@
             }
 =======
                 "summary": "Remove Region with supplied id"
+=======
+                "responses": {}
+>>>>>>> addressed comments re parameters
             }
+        },
 
+<<<<<<< HEAD
 >>>>>>> add OpenApi definition file
+=======
+        "/resources/setNote": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Add / update a Note",
+                "requestBody": {
+                    "description": "Note attributes",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["position"],
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+                                        "description": "Note identifier"
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "description": "Note's common name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": " Textual description of the note"
+                                    },
+                                    "oneOf":[
+                                        {
+                                            "position": {
+                                                "description": "Position related to note. Alternative to region or geohash",
+                                                "type": "object",
+                                                "required": [
+                                                    "latitude",
+                                                    "longitude"
+                                                ],
+                                                "properties": {
+                                                    "latitude": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "longitude": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    }
+                                                }
+                                            },
+                                            "geohash": {
+                                                "type": "string",
+                                                "description": "Position related to note. Alternative to region or position"
+                                            },
+                                            "region": {
+                                                "type": "string",
+                                                "description": "Region related to note. A pointer to a region UUID. Alternative to position or geohash",
+                                                "example": "/resources/regions/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+                                            }
+                                        }
+                                    ],
+                                    "mimeType": {
+                                      "type": "string",
+                                      "description": "MIME type of the note"
+                                    },
+                                    "url": {
+                                      "type": "string",
+                                      "description": "Location of the note contents"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {}
+            }
+        },
+
+        "/resources/deleteNote": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Remove a Note",
+                "requestBody": {
+                    "description": "Note identifier",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["id"],
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+                                        "description": "Note identifier"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {}
+            }
+        },
+
+        "/resources/setRegion": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Add / update a Region",
+                "requestBody": {
+                    "description": "Region attributes",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["position"],
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+                                        "description": "Region identifier"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Region name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "Textual description of region"
+                                    },
+                                    "geohash": {
+                                        "type": "string",
+                                        "description": "Area related to region. Alternative to points."
+                                    },
+                                    "points": {
+                                        "description": "Region boundary points",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "required": [
+                                                "latitude",
+                                                "longitude"
+                                            ],
+                                            "properties": {
+                                                "latitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "longitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {}
+            }
+        },
+
+        "/resources/deleteRegion": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Remove a Region",
+                "requestBody": {
+                    "description": "Region identifier",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["id"],
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+                                        "description": "Region identifier"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {}
+            }
+>>>>>>> addressed comments re parameters
         }
                 
     }
