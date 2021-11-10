@@ -322,7 +322,7 @@ describe('Subscriptions', _ => {
           context: 'vessels.*',
           subscribe: [
             {
-              path: 'name'
+              path: ''
             }
           ]
         })

@@ -37,31 +37,14 @@ StreamBundle.prototype.pushDelta = function(delta) {
   function processIems(update, items, isMeta) {
     if (items) {
       items.forEach(pathValue => {
-        let outgoingPath = pathValue.path
-        /*
-        if (isMeta) {
-          outgoingPath = outgoingPath + '.meta'
-        }*/
-        var paths =
-          pathValue.path === ''
-            ? getPathsFromObjectValue(pathValue.value)
-            : [outgoingPath]
-        /*
-          For values with empty path and object value we enumerate all the paths in the object
-          and push the original delta's value to all those buses, so that subscriptionmanager
-          can track hits also for paths of naked values (no path, just object value) and when
-          regenerating the outgoing delta will use the unmodified, original delta pathvalue.
-        */
-        paths.forEach(path => {
-          that.push(path, {
-            path: outgoingPath,
-            value: pathValue.value,
-            context: delta.context,
-            source: update.source,
-            $source: update.$source,
-            timestamp: update.timestamp,
-            isMeta: isMeta
-          })
+        that.push(pathValue.path, {
+          path: pathValue.path,
+          value: pathValue.value,
+          context: delta.context,
+          source: update.source,
+          $source: update.$source,
+          timestamp: update.timestamp,
+          isMeta: isMeta
         })
       }, that)
     }
