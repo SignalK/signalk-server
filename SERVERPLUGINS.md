@@ -26,6 +26,8 @@ To get started with SignalK plugin development, you can follow this  guide.
 
 _Note: For plugins acting as a provider for one or more of the SignalK resource types listed in the specification (`routes`, `waypoints`, `notes`, `regions` or `charts`) please refer to __[RESOURCE_PROVIDER_PLUGINS.md](./RESOURCE_PROVIDER_PLUGINS.md)__ for additional details._
 
+_Note: For plugins acting as a `provider` for one or more of the resource types listed in the Signal K specification (e.g. routes, waypoints, notes, regions or charts) there are additional requirementss which are detailed in __[RESOURCE_PROVIDER_PLUGINS.md](./RESOURCE_PROVIDER_PLUGINS.md)__._
+
 ### Project setup
 
 First, create a new directory and initialize a new module:
