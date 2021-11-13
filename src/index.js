@@ -25,7 +25,7 @@ const debug = require('debug')('signalk-server')
 const DeltaCache = require('./deltacache')
 const path = require('path')
 const http = require('http')
-const spdy = require('spdy')
+const https = require('https')
 const { FullSignalK, getSourceId } = require('@signalk/signalk-schema')
 const SubscriptionManager = require('./subscriptionmanager')
 const ports = require('./ports')
@@ -392,7 +392,7 @@ function createServer(app, cb) {
         cb(err)
       } else {
         debug('Starting server to serve both http and https')
-        cb(null, spdy.createServer(options, app))
+        cb(null, https.createServer(options, app))
       }
     })
     return

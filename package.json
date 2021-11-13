@@ -64,7 +64,7 @@
   ],
   "license": "Apache-2.0",
   "engines": {
-    "node": "10"
+    "node": ">=10"
   },
   "dependencies": {
     "@signalk/server-admin-ui": "1.39.x",
@@ -112,7 +112,6 @@
     "pem": "^1.14.3",
     "primus": "^7.0.0",
     "semver": "^7.1.1",
-    "spdy": "^4.0.0",
     "split": "^1.0.0",
     "stat-mode": "^1.0.0",
     "unzipper": "^0.10.10",
