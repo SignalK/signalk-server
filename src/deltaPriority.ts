@@ -55,10 +55,16 @@ const toPrecedences = (sourcePrioritiesMap: {
     new Map<Path, PathPrecedences>()
   )
 
+export type ToPreferredDelta = (
+  delta: any,
+  now: Date,
+  selfContext: string
+) => any
+
 export const getToPreferredDelta = (
   sourcePrioritiesData: SourcePrioritiesData,
   unknownSourceTimeout: number = 10000
-) => {
+): ToPreferredDelta => {
   if (!sourcePrioritiesData) {
     debug('No priorities data')
     return (delta: any, now: Date, selfContext: string) => delta

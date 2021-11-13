@@ -291,7 +291,7 @@ function getLatestServerVersion(
   })
 }
 
-function checkForNewServerVersion(
+export function checkForNewServerVersion(
   currentVersion: string,
   serverUpgradeIsAvailable: (
     errMessage: string | void,

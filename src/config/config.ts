@@ -15,8 +15,8 @@
 */
 'use strict'
 
-import path from 'path'
 import Debug from 'debug'
+import path from 'path'
 import DeltaEditor from '../deltaeditor'
 const debug = Debug('signalk-server:config')
 import fs from 'fs'
@@ -26,7 +26,7 @@ import { v4 as uuidv4 } from 'uuid'
 
 let disableWriteSettings = false
 
-interface Config {
+export interface Config {
   configPath: string
   getExternalHostname: () => string
   getExternalPort: (config: Config) => number
@@ -47,7 +47,7 @@ interface Config {
   settings: {
     useBaseDeltas?: boolean
     pipedProviders: any[]
-    interfaces?: object
+    interfaces?: { [ifaceName: string]: boolean }
     security?: any
     ssl?: boolean
     wsCompression?: boolean
@@ -55,11 +55,13 @@ interface Config {
     proxy_host?: string
     proxy_port?: number
     hostname?: string
+    pruneContextsMinutes?: number
+    mdns?: boolean
   }
   defaults: object
 }
 
-interface ConfigApp {
+export interface ConfigApp {
   argv: any
   env: any
   config: Config
@@ -69,7 +71,7 @@ interface ConfigApp {
   selfContext: string
 }
 
-function load(app: ConfigApp) {
+export function load(app: ConfigApp) {
   app.argv = require('minimist')(process.argv.slice(2))
 
   const config = (app.config = app.config || {})
@@ -317,7 +319,7 @@ function setBaseDeltas(app: ConfigApp) {
   return true
 }
 
-function sendBaseDeltas(app: ConfigApp) {
+export function sendBaseDeltas(app: ConfigApp) {
   const copy = JSON.parse(JSON.stringify(app.config.baseDeltaEditor.deltas))
   copy.forEach((delta: any) => {
     app.handleMessage('defaults', delta)
