@@ -24,7 +24,7 @@ The plugin module must export a single `function(app)` that must return an objec
 
 To get started with SignalK plugin development, you can follow the following guide.
 
-_Note: For plugins acting as a `provider` for one or more of the resource types listed in the Signal K specification (e.g. routes, waypoints, notes, regions or charts) there are additional requirementss which are detailed in __[RESOURCE_PROVIDER_PLUGINS.md](./RESOURCE_PROVIDER_PLUGINS.md)__._
+_Note: For plugins acting as a provider for one or more of the resource types listed in the Signal K specification (e.g. routes, waypoints, notes, regions or charts) refer to __[RESOURCE_PROVIDER_PLUGINS.md](./RESOURCE_PROVIDER_PLUGINS.md)__ for details.
 
 ### Project setup
 
@@ -701,6 +701,41 @@ app.registerDeltaInputHandler((delta, next) => {
   next(delta)
 })
 ```
+
+### `app.resourcesApi.register(provider)`
+
+If a plugin wants to act as a resource provider, it will need to register its provider methods during startup using this function.
+
+See [`RESOURCE_PROVIDER_PLUGINS.md`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
+
+
+```javascript
+plugin.start = function(options) {
+  ...
+  // plugin_provider is the plugin's `ResourceProvider` interface.
+  app.resourcesApi.register(plugin_provider);
+}
+
+```
+
+
+
+### `app.resourcesApi.unRegister(resource_types)`
+
+When a resource provider plugin is disabled it will need to un-register its provider methods for the resource types it manages. This should be done in the plugin's `stop()` function.
+
+See [`RESOURCE_PROVIDER_PLUGINS.md`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
+
+
+```javascript
+plugin.stop = function(options) {
+  // resource_types example: ['routes',waypoints']
+  app.resourcesApi.unRegister(resource_types);
+  ...
+}
+
+```
+
 
 ### `app.setPluginStatus(msg)`
 

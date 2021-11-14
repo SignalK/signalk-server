@@ -4,31 +4,34 @@
 
 This document should be read in conjunction with [SERVERPLUGINS.md](./SERVERPLUGINS.md) as it contains additional information regarding the development of plugins that facilitate the storage and retrieval of resource data (e.g. routes, waypoints, notes, regions and charts).
 
-The Signal K Node server will handle all requests to the following paths:
+Resource storage and retrieval is de-coupled from core server function to provide the flexibility to implement the appropriate resource storage solution for specific Signal K implementations.
 
-`/signalk/v1/api/resources`
-`/signalk/v1/api/resources/routes`
-`/signalk/v1/api/resources/waypoints`
-`/signalk/v1/api/resources/notes`
-`/signalk/v1/api/resources/regions`
-`/signalk/v1/api/resources/charts`
+The Signal K Node server will pass requests made to the following paths  to registered resource providers:
+- `/signalk/v1/api/resources`
+- `/signalk/v1/api/resources/routes`
+- `/signalk/v1/api/resources/waypoints`
+- `/signalk/v1/api/resources/notes`
+- `/signalk/v1/api/resources/regions`
+- `/signalk/v1/api/resources/charts`
 
-This means all requests (GET, PUT, POST and DELETE) are captured and any supplied data is validated prior to being dispatched for processing.
+Resource providers will receive request data via a `ResourceProvider` interface which they implement. It is the responsibility of the resource provider to persist resource data in storage (PUT, POST), retrieve the requested resources (GET) and remove resource entries (DELETE).
 
-The server itself has no built-in functionality to save or retrieve resource data from storage, this is the responsibility of a `resource provider plugin`.
+Resource data passed to the resource provider plugin has been validated by the server and can be considered ready for storage.
 
-If there are no registered providers for the resource type for which the request is made, then no action is taken.
-
-This architecture de-couples the resource storage from core server function to provide flexibility to implement the appropriate storage solution for the various resource types for your Signal K implementation.
 
 ## Resource Providers
 
 A `resource provider plugin` is responsible for the storage and retrieval of resource data.
-This allows the method for persisting resource data to be tailored to the Signal K implementation e.g. the local file system,  a database service, cloud service, etc.
 
-It is similar to any other Server Plugin except that it implements the __resourceProvider__ interface.
+It should implement the necessary functions to:
+- Persist each resource with its associated id
+- Retrieve an individual resource with the supplied id
+- Retrieve a list of resources that match the supplied qery criteria.
 
-```JAVASCRIPT
+Data is passed to and from the plugin via the methods defined in the  __resourceProvider__ interface which the plugin must implement.
+
+_Definition: `resourceProvider` interface._
+```javascript
 resourceProvider: {
   types: [],
   methods: {
@@ -40,50 +43,130 @@ resourceProvider: {
 }
 ```
 
-This interface exposes the following information to the server enabling it to direct requests to the plugin:
-- `types`: The resource types for which requests should be directed to the plugin. These can be one or all of `routes, waypoints, notes, regions, charts`.
-- `methods`: The methods to which the server dispatches requests. The plugin will implement these methods to perform the necessary save or retrieval operation. 
+This interface is used by the server to direct requests to the plugin. 
+
+It contains the following attributes:
+- `types`: An array containing the names of the resource types the plugin is a provider for.  Names of the resource types are: `routes, waypoints, notes, regions, charts`.
+
+- `methods`: The methods to which the server dispatches requests. The plugin will implement these methods to perform the necessary save or retrieval operation. Each method returns a promise containing either resource data or `null` if an error is encountered.
 
 _Example: Plugin acting as resource provider for routes & waypoints._
-```JAVASCRIPT
-let plugin= {
+```javascript
+module.exports = function (app) {
+  let plugin= {
     id: 'mypluginid',
     name: 'My Resource Providerplugin',
-    start: (options, restart)=> { ... },
-    stop: ()=> { ... },
     resourceProvider: {
-        types: ['routes','waypoints'],
-        methods: {
-            listResources: (type, params)=> { 
-              return Promise.resolve() { ... }; 
-            },
-            getResource: (type:string, id:string)=> {
-              return Promise.resolve() { ... }; 
-            } ,
-            setResource: (type:string, id:string, value:any)=> { 
-              return Promise.resolve() { ... }; 
-            },
-            deleteResource: (type:string, id:string)=> {
-              return Promise.resolve() { ... }; ; 
-            }
+      types: ['routes','waypoints'],
+      methods: {
+        listResources: (type, params)=> { 
+          return Promise.resolve() { ... }; 
+        },
+        getResource: (type:string, id:string)=> {
+          return Promise.resolve() { ... }; 
+        } ,
+        setResource: (type:string, id:string, value:any)=> { 
+          return Promise.resolve() { ... }; 
+        },
+        deleteResource: (type:string, id:string)=> {
+          return Promise.resolve() { ... }; ; 
         }
+      }
+    },
+    start: (options, restart)=> { 
+      ... 
+      app.resourceApi.register(this.resourceProvider);
+    },
+    stop: ()=> { 
+      app.resourceApi.unRegister(this.resourceProvider.types);
+      ... 
     }
+  }
 }
 ```
 
-### Methods:
-
-The Server will dispatch requests to `/signalk/v1/api/resources/<resource_type>` to the methods defined in the resourceProvider interface.
-
-Each method must have a signature as defined in the interface and return a `Promise` containing the resource data or `null` if the operation was unsuccessful. 
-
 ---
-`GET` requests that are not for a specific resource will be dispatched to the `listResources` method passing the resource type and query data as parameters.
 
-Returns: Object listing resources by id.
+### Plugin Startup - Registering the Resource Provider:
+
+To register your plugin as a resource provider the server's `resourcesApi.register()` function should be called within the plugin `start()` function passing the  `resourceProvider` interface.
+
+This registers the resource types and the methods with the server so they are called when requests to resource paths are made.
+
+_Example:_
+```javascript
+module.exports = function (app) {
+  let plugin= {
+    id: 'mypluginid',
+    name: 'My Resource Providerplugin',
+    resourceProvider: {
+      types: ['routes','waypoints'],
+      methods: {
+        listResources: (type, params)=> { 
+          return Promise.resolve() { ... }; 
+        },
+        getResource: (type:string, id:string)=> {
+          return Promise.resolve() { ... }; 
+        } ,
+        setResource: (type:string, id:string, value:any)=> { 
+          return Promise.resolve() { ... }; 
+        },
+        deleteResource: (type:string, id:string)=> {
+          return Promise.resolve() { ... }; ; 
+        }
+      }
+    }
+  }
+
+  plugin.start = function(options) {
+    ...
+    app.resourcesApi.register(plugin.resourceProvider);
+  }
+}
+```
+---
+
+### Plugin Stop - Un-registering the Resource Provider:
+
+When a resource provider plugin is disabled / stopped it should un-register as a provider so resource requests are not directed to  it. This is done by calling the server's `resourcesApi.unRegister()` function passing `resourceProvider.types` within the plugin's `stop()` function.
+
+_Example:_
+```javascript
+module.exports = function (app) {
+  let plugin= {
+    id: 'mypluginid',
+    name: 'My Resource Providerplugin',
+    resourceProvider: {
+      types: ['routes','waypoints'],
+      methods: { ... }
+    }
+  }
+
+  plugin.stop = function(options) {
+    ...
+    app.resourcesApi.unRegister(plugin.resourceProvider.types);
+  }
+}
+```
+---
+
+### Operation:
+
+The Server will dispatch requests made to `/signalk/v1/api/resources/<resource_type>` to the plugin's `resourceProvider.methods` for each resource type listed in `resourceProvider.types`.
+
+Each method defined in the plugin must have a signature as specified in the interface. Each method returns a `Promise` containing the resource data or `null` if an error occurrred. 
+
+
+### __List Resources:__
+
+`GET` requests that are not for a specific resource will be dispatched to the `listResources` method passing the resource type and any query data as parameters.
+
+It is the responsibility of the resource provider plugin to filter the resources returned as per the supplied query parameters.
+
+`listResources()` should return a JSON object listing resources by id.
 
 _Example: List all routes._
-```JAVASCRIPT
+```javascript
 GET /signalk/v1/api/resources/routes
 
 listResources('routes', {})
@@ -96,11 +179,11 @@ returns {
 }
 ```
 
-_Example: List routes within the bounded area._
-```JAVASCRIPT
-GET /signalk/v1/api/resources/routes?bbox=5.4,25.7,6.9,31.2
+_Example: List waypoints within the bounded area._
+```javascript
+GET /signalk/v1/api/resources/waypoints?bbox=5.4,25.7,6.9,31.2
 
-listResources('routes', {bbox: '5.4,25.7,6.9,31.2'})
+listResources('waypoints', {bbox: '5.4,25.7,6.9,31.2'})
 
 returns {
   "resource_id1": { ... },
@@ -108,85 +191,66 @@ returns {
 }
 ```
 
+### __Get specific resource:__
+
 `GET` requests for a specific resource will be dispatched to the `getResource` method passing the resource type and id as parameters.
 
-Returns: Object containing resourcesdata.
+`getResource()` should returns a JSON object containing the resource data.
 
 _Example: Retrieve route._
-```JAVASCRIPT
+```javascript
 GET /signalk/v1/api/resources/routes/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a
 
 getResource('routes', 'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a')
 
 returns {
-  "name": "route name",
-  ...
+  "name": "Name of the route",
+  "description": "Description of the route",
+  "distance": 18345,
   "feature": { ... }
 }
 ```
----
 
-`PUT` requests for a specific resource will be dispatched to the `setResource` method passing the resource type, id and resource data as parameters.
+### __Saving Resources:__
 
-Returns: `true` on success, `null` on failure.
+`PUT` requests to a path containing the resource id are used to store data associated with the resource id. These will be dispatched to the `setResource` method passing the resource type, id and data as parameters.
 
-_Example: Update route data._
-```JAVASCRIPT
-PUT /signalk/v1/api/resources/routes/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a {resource data}
+`setResource() ` returns `true` on success and `null` on failure.
+
+_Example: Update / add waypoint with the supplied id._
+```javascript
+PUT /signalk/v1/api/resources/waypoints/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a {<resource_data>}
+
+setResource('waypoints', 'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a', <waypoint_data>)
+
+returns true | null 
+```
+
+`POST` requests to a resource path that do not contina the resource id will be dispatched to the `setResource` method passing the resource type, an id (generated by the server) and resource data as parameters.
+
+`setResource() ` returns `true` on success and `null` on failure.
+
+_Example: New route record._
+```javascript
+POST /signalk/v1/api/resources/routes {<resource_data>}
 
 setResource('routes', 'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a', <resource_data>)
+
+returns true | null 
 ```
 
-`POST` requests will be dispatched to the `setResource` method passing the resource type, a generated id and resource data as parameters.
+### __Deleting Resources:__
 
-Returns: `true` on success, `null` on failure.
+`DELETE` requests to a path containing the resource id will be dispatched to the `deleteResource` method passing the resource type and id as parameters.
 
-_Example: New route._
-```JAVASCRIPT
-POST /signalk/v1/api/resources/routes/ {resource data}
+`deleteResource()` returns `true` on success, `null` on failure.
 
-setResource('routes', 'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a', <resource_data>)
-```
----
+_Example: Delete region with supplied id._
+```javascript
+DELETE /signalk/v1/api/resources/regions/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a
 
-`DELETE` requests for a specific resource will be dispatched to the `deleteResource` method passing the resource type and id as parameters.
+deleteResource('regions', 'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a')
 
-Returns: `true` on success, `null` on failure.
-
-_Example: Delete route._
-```JAVASCRIPT
-DELETE /signalk/v1/api/resources/routes/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a {resource data}
-
-deleteResource('routes', 'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a')
-```
----
-
-### Plugin Startup:
-
-If your plugin provides the ability for the user to choose which resource types are handled, then the plugin will need to notify the server that the `types` attribute of the `resourceProvider` interface has been modified.
-
-The server exposes `resourcesApi` which has the following method:
-```JAVASCRIPT
-checkForProviders(rescan:boolean)
-```
-which can be called within the plugin `start()` function with `rescan= true`.
-
-This will cause the server to `rescan` for resource providers and register the new list of resource types being handled. 
-
-_Example:_
-```JAVASCRIPT
-module.exports = function (app) {
-  let plugin= {
-      id: 'mypluginid',
-      name: 'My Resource Providerplugin',
-      start: (options, restart)=> {
-        ...
-        setTimeout( ()=> { app.resourcesApi.checkForProviders(true) }, 1000)
-        ...
-      },
-      stop: ()=> { ... },
-      ...
-  }
-}
+returns true | null 
 ```
 
