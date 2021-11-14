@@ -15,6 +15,11 @@ interface ResourceRequest {
 }
 
 interface ResourceProvider {
+    types: Array<string>
+    methods: ResourceProviderMethods
+}
+
+interface ResourceProviderMethods {
     listResources: (type:string, query: {[key:string]:any})=> Promise<any>
     getResource: (type:string, id:string)=> Promise<any>
     setResource: (type:string, id:string, value:{[key:string]:any})=> Promise<any>
@@ -46,16 +51,22 @@ export class Resources {
         'charts'
     ]
 
-    resProvider: {[key:string]: any}= {}
+    resProvider: {[key:string]: ResourceProviderMethods | null}= {}
     server: any
 
-    public start(app:any) {
+    constructor(app:any) { 
+        this.start(app)
+    }
+
+    // ** initialise resourcesApi **
+    private start(app:any) {
         debug(`** Initialise ${SIGNALK_API_PATH}/resources path handler **`)
         this.server= app
         this.initResourceRoutes()
     }
 
-    public register(provider:any) {
+    // ** register resource provider **
+    public register(provider:ResourceProvider) {
         debug(`** Registering provider(s)....${provider?.types}`)
         if(!provider ) { return }
         if(provider.types && !Array.isArray(provider.types)) { return }
@@ -67,6 +78,7 @@ export class Resources {
         debug(this.resProvider)
     }
 
+    // ** un-register resource provider for the supplied types **
     public unRegister(resourceTypes:string[]) {
         debug(`** Un-registering provider(s)....${resourceTypes}`)
         if(!Array.isArray(resourceTypes)) { return }
@@ -76,19 +88,15 @@ export class Resources {
             }
         })
         debug(JSON.stringify(this.resProvider))
+
+        /** scan plugins in case there is more than one plugin that can service
+         * a particular resource type. **/
+        debug('** RESCANNING **')
+        this.checkForProviders()
+        debug(JSON.stringify(this.resProvider))
     }
 
-    public checkForProviders(rescan:boolean= false) {
-        if(rescan || Object.keys(this.resProvider).length===0) { 
-            debug(`** Checking for providers....(rescan=${rescan})`)
-            this.resProvider= {}  
-            this.resourceTypes.forEach( (rt:string)=> {
-                this.resProvider[rt]= this.getResourceProviderFor(rt)
-            })
-            debug(this.resProvider)
-        }
-    }
-
+    // ** return resource with supplied type and id **
     public getResource(type:string, id:string) {
         debug(`** getResource(${type}, ${id})`)
         return this.actionResourceRequest({
@@ -100,6 +108,20 @@ export class Resources {
         })
     }
 
+    /** Scan plugins for resource providers and register them 
+     *  rescan= false: only add providers for types where no provider is registered
+     *  rescan= true: clear providers for all types prior to commencing scan.
+    **/
+    private checkForProviders(rescan:boolean= false) {
+        if(rescan) { this.resProvider= {} } 
+        debug(`** Checking for providers....(rescan=${rescan})`)
+        this.resProvider= {}  
+        this.resourceTypes.forEach( (rt:string)=> {
+            this.resProvider[rt]= this.getResourceProviderFor(rt)
+        })
+        debug(this.resProvider)
+        
+    }
 
     // ** initialise handler for in-scope resource types **
     private initResourceRoutes() {
@@ -127,7 +149,7 @@ export class Resources {
         })
     }
 
-    // ** return all paths serviced under ./resources *8
+    // ** return all paths serviced under SIGNALK_API_PATH/resources **
     private getResourcePaths(): {[key:string]:any} {
         let resPaths:{[key:string]:any}= {}
         Object.entries(this.resProvider).forEach( (p:any)=> {
@@ -241,7 +263,7 @@ export class Resources {
         if(req.method==='GET') {
             let retVal: any
             if(!req.resourceId) {
-                retVal= await this.resProvider[req.resourceType].listResources(req.resourceType, req.query)
+                retVal= await this.resProvider[req.resourceType]?.listResources(req.resourceType, req.query)
                 return (retVal) ?
                     retVal :
                     {statusCode: 404, message: `Error retrieving resources!` }
@@ -249,7 +271,7 @@ export class Resources {
             if(!validate.uuid(req.resourceId)) {
                 return {statusCode: 406, message: `Invalid resource id provided (${req.resourceId})` }
             }
-            retVal= await this.resProvider[req.resourceType].getResource(req.resourceType, req.resourceId)
+            retVal= await this.resProvider[req.resourceType]?.getResource(req.resourceType, req.resourceId)
             return (retVal) ?
                 retVal :
                 {statusCode: 404, message: `Resource not found (${req.resourceId})!` }
@@ -266,7 +288,7 @@ export class Resources {
                 req.method==='DELETE' || 
                 (req.method==='PUT' && typeof req.body.value!=='undefined' && req.body.value==null) 
             ) {
-                let retVal= await this.resProvider[req.resourceType].deleteResource(req.resourceType, req.resourceId)
+                let retVal= await this.resProvider[req.resourceType]?.deleteResource(req.resourceType, req.resourceId)
                 if(retVal){
                     this.sendDelta(req.resourceType, req.resourceId, null)
                     return {statusCode: 200, message: `Resource (${req.resourceId}) deleted.`}
@@ -289,7 +311,7 @@ export class Resources {
             }
             if(req.method==='POST') {
                 let id= UUID_PREFIX + uuidv4()
-                let retVal= await this.resProvider[req.resourceType].setResource(req.resourceType, id, req.body.value)
+                let retVal= await this.resProvider[req.resourceType]?.setResource(req.resourceType, id, req.body.value)
                 if(retVal){
                     this.sendDelta(req.resourceType, id, req.body.value)
                     return {statusCode: 200, message: `Resource (${id}) saved.`}  
@@ -302,7 +324,7 @@ export class Resources {
                 if(!req.resourceId) {
                     return {statusCode: 406, message: `No resource id provided!` }
                 }
-                let retVal= await this.resProvider[req.resourceType].setResource(req.resourceType, req.resourceId, req.body.value)
+                let retVal= await this.resProvider[req.resourceType]?.setResource(req.resourceType, req.resourceId, req.body.value)
                 if(retVal){
                     this.sendDelta(req.resourceType, req.resourceId, req.body.value)
                     return {statusCode: 200, message: `Resource (${req.resourceId}) updated.`}  
@@ -314,6 +336,7 @@ export class Resources {
         }
     }
 
+    // ** send delta message with resource  PUT, POST, DELETE action result
     private sendDelta(type:string, id:string, value:any):void {
         debug(`** Sending Delta: resources.${type}.${id}`)
         this.server.handleMessage('signalk-resources', {
@@ -330,10 +353,10 @@ export class Resources {
         })
     }
 
-    // ** get reference to installed resource provider (plug-in). returns null if none found 
-    private getResourceProviderFor(resType:string): ResourceProvider | null {
+    // ** Get provider methods for supplied resource type. Returns null if none found **
+    private getResourceProviderFor(resType:string): ResourceProviderMethods | null {
         if(!this.server.plugins) { return null}
-        let pSource: ResourceProvider | null= null
+        let pSource: ResourceProviderMethods | null= null
         this.server.plugins.forEach((plugin:any)=> {
             if(typeof plugin.resourceProvider !== 'undefined') {
                 pSource= plugin.resourceProvider.types.includes(resType) ?
