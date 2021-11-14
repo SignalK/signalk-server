@@ -34,6 +34,7 @@ const getSecondaryPort = ports.getSecondaryPort
 const getExternalPort = ports.getExternalPort
 import { PropertyValues } from '@signalk/server-api'
 import { Request, Response } from 'express'
+import { SelfIdentity, ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { Config, ConfigApp } from './config/config'
 import DeltaCache from './deltacache'
 import DeltaChain from './deltachain'
@@ -57,28 +58,8 @@ interface ServerOptions {
   securityConfig: any
 }
 
-interface TheApp {
-  started: boolean
-  interfaces: { [key: string]: any }
-  intervals: NodeJS.Timeout[]
-  providers: any[]
-  server: any
-  redirectServer?: any
-  emit: any
-  on: any
-  signalk: any
-  config: Config
-  deltaCache: DeltaCache
-  getProviderStatus: () => any
-  handleMessage: (id: string, data: any) => void
-  lastServerEvents: { [key: string]: any }
-  clients: number
-  selfType: string
-  selfId: string
-}
-
 class Server {
-  app: TheApp
+  app: ServerApp & SelfIdentity & WithConfig & SignalKMessageHub
   constructor(opts: ServerOptions) {
     const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
     const bodyParser = require('body-parser')
@@ -542,7 +523,7 @@ function startRedirectToSsl(
   })
 }
 
-function startMdns(app: TheApp) {
+function startMdns(app: ServerApp & WithConfig) {
   if (_.isUndefined(app.config.settings.mdns) || app.config.settings.mdns) {
     debug(`Starting interface 'mDNS'`)
     try {
@@ -555,7 +536,7 @@ function startMdns(app: TheApp) {
   }
 }
 
-function startInterfaces(app: TheApp) {
+function startInterfaces(app: ServerApp & WithConfig) {
   debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
   const availableInterfaces = require('./interfaces')
   _.forIn(availableInterfaces, (theInterface: any, name: string) => {

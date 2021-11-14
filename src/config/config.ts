@@ -17,6 +17,7 @@
 
 import Debug from 'debug'
 import path from 'path'
+import { SelfIdentity, SignalKMessageHub, WithConfig } from '../app'
 import DeltaEditor from '../deltaeditor'
 const debug = Debug('signalk-server:config')
 import fs from 'fs'
@@ -27,11 +28,11 @@ import { v4 as uuidv4 } from 'uuid'
 let disableWriteSettings = false
 
 export interface Config {
-  configPath: string
   getExternalHostname: () => string
   getExternalPort: (config: Config) => number
   port: number
   appPath: string
+  configPath: string
   name: string
   author: string
   contributors: string[]
@@ -61,14 +62,9 @@ export interface Config {
   defaults: object
 }
 
-export interface ConfigApp {
+export interface ConfigApp extends WithConfig, SelfIdentity, SignalKMessageHub {
   argv: any
   env: any
-  config: Config
-  handleMessage: (id: string, delta: any) => void
-  selfType: string
-  selfId: string
-  selfContext: string
 }
 
 export function load(app: ConfigApp) {

@@ -23,6 +23,8 @@ const debug = Debug('signalk:modules')
 import _ from 'lodash'
 import path from 'path'
 import semver, { SemVer } from 'semver'
+import { WithConfig } from './app'
+import { Config } from './config/config'
 
 interface ModuleData {
   module: string
@@ -39,14 +41,16 @@ interface NpmModuleData {
   package: NpmPackageData
 }
 
-interface Config {
+interface PersonInPackage {
   name: string
-  appPath: string
-  configPath: string
+  email: string
 }
 
-interface App {
-  config: Config
+export interface Package {
+  name: string
+  author?: PersonInPackage
+  contributors?: PersonInPackage[]
+  dependencies: { [key: string]: any }
 }
 
 function findModulesInDir(dir: string, keyword: string): ModuleData[] {
@@ -93,9 +97,9 @@ function findModulesInDir(dir: string, keyword: string): ModuleData[] {
 }
 
 // Extract unique directory paths from app object.
-function getModulePaths(app: App) {
+function getModulePaths(config: Config) {
   // appPath is the app working directory.
-  const { appPath, configPath } = app.config
+  const { appPath, configPath } = config
   return (appPath === configPath
     ? [appPath]
     : [configPath, appPath]
@@ -110,11 +114,11 @@ const priorityPrefix = (a: ModuleData, b: ModuleData) =>
   getModuleSortName(a).localeCompare(getModuleSortName(b))
 
 // Searches for installed modules that contain `keyword`.
-function modulesWithKeyword(app: App, keyword: string) {
+function modulesWithKeyword(app: WithConfig, keyword: string) {
   return _.uniqBy(
     // _.flatten since values are inside an array. [[modules...], [modules...]]
     _.flatten(
-      getModulePaths(app).map(pathOption =>
+      getModulePaths(app.config).map(pathOption =>
         findModulesInDir(pathOption, keyword)
       )
     ),
@@ -122,7 +126,7 @@ function modulesWithKeyword(app: App, keyword: string) {
   ).sort(priorityPrefix)
 }
 function installModule(
-  app: App,
+  app: WithConfig,
   name: string,
   version: string,
   onData: () => any,
@@ -133,7 +137,7 @@ function installModule(
 }
 
 function removeModule(
-  app: App,
+  app: WithConfig,
   name: string,
   version: any,
   onData: () => any,
@@ -144,7 +148,7 @@ function removeModule(
 }
 
 function restoreModules(
-  app: App,
+  app: WithConfig,
   onData: () => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any
@@ -153,7 +157,7 @@ function restoreModules(
 }
 
 function runNpm(
-  app: App,
+  app: WithConfig,
   name: any,
   version: any,
   command: string,
@@ -207,7 +211,7 @@ function runNpm(
   })
 }
 
-function isTheServerModule(moduleName: string, app: App) {
+function isTheServerModule(moduleName: string, app: WithConfig) {
   return moduleName === app.config.name
 }
 
@@ -312,7 +316,7 @@ export function checkForNewServerVersion(
     })
 }
 
-function getAuthor(thePackage: any) {
+function getAuthor(thePackage: Package): string {
   debug(thePackage.name + ' author: ' + thePackage.author)
   return (
     (thePackage.author && (thePackage.author.name || thePackage.author.email)) +
