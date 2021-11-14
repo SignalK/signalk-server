@@ -702,6 +702,30 @@ app.registerDeltaInputHandler((delta, next) => {
 })
 ```
 
+### `app.resourcesApi.getResource(resource_type, resource_id)`
+
+Retrieve resource data for the supplied resource type and id.
+
+ data for  the full path of the directory where the plugin can persist its internal data, like data files.If a plugin wants to act as a resource provider, it will need to register its provider methods during startup using this function.
+
+
+
+```javascript
+let myRoute= app.resourcesApi.getResource('routes', 'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a');
+```
+Will return the route resource data or `null` if a route with the supplied id cannot be found.
+
+_Example:_
+```json
+{
+  "name": "Name of the route",
+  "description": "Description of the route",
+  "distance": 18345,
+  "feature": { ... }
+}
+
+```
+
 ### `app.resourcesApi.register(provider)`
 
 If a plugin wants to act as a resource provider, it will need to register its provider methods during startup using this function.
@@ -717,8 +741,6 @@ plugin.start = function(options) {
 }
 
 ```
-
-
 
 ### `app.resourcesApi.unRegister(resource_types)`
 
