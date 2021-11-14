@@ -114,11 +114,11 @@ const priorityPrefix = (a: ModuleData, b: ModuleData) =>
   getModuleSortName(a).localeCompare(getModuleSortName(b))
 
 // Searches for installed modules that contain `keyword`.
-function modulesWithKeyword(app: WithConfig, keyword: string) {
+function modulesWithKeyword(config: Config, keyword: string) {
   return _.uniqBy(
     // _.flatten since values are inside an array. [[modules...], [modules...]]
     _.flatten(
-      getModulePaths(app.config).map(pathOption =>
+      getModulePaths(config).map(pathOption =>
         findModulesInDir(pathOption, keyword)
       )
     ),
@@ -126,38 +126,38 @@ function modulesWithKeyword(app: WithConfig, keyword: string) {
   ).sort(priorityPrefix)
 }
 function installModule(
-  app: WithConfig,
+  config: Config,
   name: string,
   version: string,
   onData: () => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {
-  runNpm(app, name, version, 'install', onData, onErr, onClose)
+  runNpm(config, name, version, 'install', onData, onErr, onClose)
 }
 
 function removeModule(
-  app: WithConfig,
+  config: Config,
   name: string,
   version: any,
   onData: () => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {
-  runNpm(app, name, null, 'remove', onData, onErr, onClose)
+  runNpm(config, name, null, 'remove', onData, onErr, onClose)
 }
 
 function restoreModules(
-  app: WithConfig,
+  config: Config,
   onData: () => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {
-  runNpm(app, null, null, 'remove', onData, onErr, onClose)
+  runNpm(config, null, null, 'remove', onData, onErr, onClose)
 }
 
 function runNpm(
-  app: WithConfig,
+  config: Config,
   name: any,
   version: any,
   command: string,
@@ -178,7 +178,7 @@ function runNpm(
 
   debug(`${command}: ${packageString}`)
 
-  if (isTheServerModule(name, app)) {
+  if (isTheServerModule(name, config)) {
     if (process.platform === 'win32') {
       npm = spawn(
         'cmd',
@@ -193,7 +193,7 @@ function runNpm(
       )
     }
   } else {
-    opts.cwd = app.config.configPath
+    opts.cwd = config.configPath
 
     if (process.platform === 'win32') {
       npm = spawn('cmd', ['/c', `npm --save ${command} ${packageString}`], opts)
@@ -211,8 +211,8 @@ function runNpm(
   })
 }
 
-function isTheServerModule(moduleName: string, app: WithConfig) {
-  return moduleName === app.config.name
+function isTheServerModule(moduleName: string, config: Config) {
+  return moduleName === config.name
 }
 
 function findModulesWithKeyword(keyword: string) {
