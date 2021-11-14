@@ -580,9 +580,32 @@ export class Resources {
         this.initResourceRoutes()
     }
 
+    public register(provider:any) {
+        debug(`** Registering provider(s)....${provider?.types}`)
+        if(!provider ) { return }
+        if(provider.types && !Array.isArray(provider.types)) { return }
+        provider.types.forEach( (i:string)=>{
+            if(!this.resProvider[i]) {
+                this.resProvider[i]= provider.methods
+            }
+        })
+        debug(this.resProvider)
+    }
+
+    public unRegister(resourceTypes:string[]) {
+        debug(`** Un-registering provider(s)....${resourceTypes}`)
+        if(!Array.isArray(resourceTypes)) { return }
+        resourceTypes.forEach( (i:string)=>{
+            if(this.resProvider[i]) {
+                delete this.resProvider[i]
+            }
+        })
+        debug(JSON.stringify(this.resProvider))
+    }
+
     public checkForProviders(rescan:boolean= false) {
         if(rescan || Object.keys(this.resProvider).length===0) { 
-            debug('** Checking for providers....')
+            debug(`** Checking for providers....(rescan=${rescan})`)
             this.resProvider= {}  
             this.resourceTypes.forEach( (rt:string)=> {
                 this.resProvider[rt]= this.getResourceProviderFor(rt)
@@ -593,7 +616,6 @@ export class Resources {
 
     public getResource(type:string, id:string) {
         debug(`** getResource(${type}, ${id})`)
-        this.checkForProviders()
         return this.actionResourceRequest({
             method: 'GET',
             body: {},
@@ -607,7 +629,6 @@ export class Resources {
     // ** initialise handler for in-scope resource types **
     private initResourceRoutes() {
         this.server.get(`${SIGNALK_API_PATH}/resources`, (req:any, res:any) => {
-            this.checkForProviders()
             // list all serviced paths under resources
             res.json(this.getResourcePaths())
         })
@@ -680,7 +701,6 @@ export class Resources {
             }
         }
 
-        this.checkForProviders()
         let retReq= {
             method: req.method,
             body: req.body,
