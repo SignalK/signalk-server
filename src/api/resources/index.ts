@@ -614,8 +614,7 @@ export class Resources {
         })
         debug(JSON.stringify(this.resProvider))
 
-        /** scan plugins in case there is more than one plugin that can service
-         * a particular resource type. **/
+        //** scan plugins in case there is more than one plugin that can service a particular resource type. **
         debug('** RESCANNING **')
         this.checkForProviders()
         debug(JSON.stringify(this.resProvider))
@@ -633,10 +632,9 @@ export class Resources {
         })
     }
 
-    /** Scan plugins for resource providers and register them 
-     *  rescan= false: only add providers for types where no provider is registered
-     *  rescan= true: clear providers for all types prior to commencing scan.
-    **/
+    // Scan plugins for resource providers and register them 
+    // rescan= false: only add providers for types where no provider is registered
+    // rescan= true: clear providers for all types prior to commencing scan.
     private checkForProviders(rescan:boolean= false) {
         if(rescan) { this.resProvider= {} } 
         debug(`** Checking for providers....(rescan=${rescan})`)
