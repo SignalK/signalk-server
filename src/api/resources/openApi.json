@@ -50,13 +50,18 @@
             }
         },
 
+<<<<<<< HEAD
         "/resources/{resourceClass}": {
 >>>>>>> add OpenApi definition file
+=======
+        "/resources/{resourceType}": {
+>>>>>>> OpenApi descriptions
             "get": {
                 "tags": ["resources"],
                 "summary": "Retrieve resources",
                 "parameters": [
                     {
+<<<<<<< HEAD
 <<<<<<< HEAD
                         "name": "resourceType",
                         "in": "path",
@@ -66,6 +71,11 @@
                         "in": "path",
                         "description": "resource class",
 >>>>>>> add OpenApi definition file
+=======
+                        "name": "resourceType",
+                        "in": "path",
+                        "description": "Type of resources to retrieve. Valid values are: routes, waypoints, notes, regions, charts",
+>>>>>>> OpenApi descriptions
                         "required": true,
                         "schema": {
                             "type": "string",
@@ -107,6 +117,7 @@
                     },
                     {
 <<<<<<< HEAD
+<<<<<<< HEAD
                         "name": "bbox",
                         "in": "query",
                         "description": "Limit results to resources that fall within the bounded area defined as lower left (south west) and upper right (north east) coordinates [swlon,swlat,nelon,nelat]",
@@ -117,6 +128,10 @@
                         "description": "Limit results to resources that fall within the bounded area defined as lower left and upper right x,y coordinates x1,y1,x2,y2",
 >>>>>>> add OpenApi definition file
 =======
+=======
+                        "name": "bbox",
+                        "in": "query",
+>>>>>>> OpenApi descriptions
                         "description": "Limit results to resources that fall within the bounded area defined as lower left (south west) and upper right (north east) coordinates [swlon,swlat,nelon,nelat]",
 >>>>>>> addressed comments re parameters
                         "style": "form",
