@@ -29,15 +29,15 @@
             }
         },
 
-        "/resources/{resourceClass}": {
+        "/resources/{resourceType}": {
             "get": {
                 "tags": ["resources"],
                 "summary": "Retrieve resources",
                 "parameters": [
                     {
-                        "name": "resourceClass",
+                        "name": "resourceType",
                         "in": "path",
-                        "description": "resource class",
+                        "description": "Type of resources to retrieve. Valid values are: routes, waypoints, notes, regions, charts",
                         "required": true,
                         "schema": {
                             "type": "string",
@@ -68,8 +68,8 @@
                         }
                     },
                     {
-                        "in": "query",
                         "name": "bbox",
+                        "in": "query",
                         "description": "Limit results to resources that fall within the bounded area defined as lower left (south west) and upper right (north east) coordinates [swlon,swlat,nelon,nelat]",
                         "style": "form",
                         "explode": false,
