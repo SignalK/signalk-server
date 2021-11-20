@@ -726,7 +726,7 @@ _Example:_
 
 ```
 
-### `app.resourcesApi.register(provider)`
+### `app.resourcesApi.register(pluginId, provider)`
 
 If a plugin wants to act as a resource provider, it will need to register its provider methods during startup using this function.
 
@@ -734,12 +734,20 @@ See [`RESOURCE_PROVIDER_PLUGINS.md`](./RESOURCE_PROVIDER_PLUGINS.md) for details
 
 
 ```javascript
-plugin.start = function(options) {
-  ...
-  // plugin_provider is the plugin's `ResourceProvider` interface.
-  app.resourcesApi.register(plugin_provider);
-}
-
+module.exports = function (app) {
+  let plugin= {
+    id: 'mypluginid',
+    name: 'My Resource Providerplugin',
+    resourceProvider: {
+      types: ['routes','waypoints'],
+      methods: { ... }
+    }
+    start: function(options) {
+      ...
+      app.resourcesApi.register(this.id, this.resourceProvider);
+    }
+    ...
+  }
 ```
 
 ### `app.resourcesApi.unRegister(resource_types)`
