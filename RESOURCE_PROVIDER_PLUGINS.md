@@ -78,7 +78,7 @@ module.exports = function (app) {
       app.resourceApi.register(this.id, this.resourceProvider);
     },
     stop: ()=> { 
-      app.resourceApi.unRegister(this.id, this.resourceProvider.types);
+      app.resourceApi.unRegister(this.id);
       ... 
     }
   }
@@ -87,7 +87,7 @@ module.exports = function (app) {
 
 ---
 
-### Plugin Startup - Registering the Resource Provider:
+## Plugin Startup - Registering the Resource Provider:
 
 To register your plugin as a resource provider the server's `resourcesApi.register()` function should be called within the plugin `start()` function passing the `resourceProvider` interface.
 
@@ -126,9 +126,9 @@ module.exports = function (app) {
 ```
 ---
 
-### Plugin Stop - Un-registering the Resource Provider:
+## Plugin Stop - Un-registering the Resource Provider:
 
-When a resource provider plugin is disabled it should un-register as a provider so resource requests are not directed to it. This is done by calling the server's `resourcesApi.unRegister()` function passing `resourceProvider.types` within the plugin's `stop()` function.
+When a resource provider plugin is disabled it should un-register as a provider so resource requests are not directed to it. This is done by calling the server's `resourcesApi.unRegister()` function passing the `plugin.id` within the plugin's `stop()` function.
 
 _Example:_
 ```javascript
@@ -137,24 +137,30 @@ module.exports = function (app) {
     id: 'mypluginid',
     name: 'My Resource Providerplugin',
     resourceProvider: {
-      types: ['routes','waypoints'],
+      types: [ ... ],
       methods: { ... }
     }
   }
 
   plugin.stop = function(options) {
+    app.resourcesApi.unRegister(plugin.id);
     ...
-    app.resourcesApi.unRegister(plugin.id, plugin.resourceProvider.types);
   }
 }
 ```
 ---
 
-### Operation:
+## Operation:
 
-The Server will dispatch requests made to `/signalk/v1/api/resources/<resource_type>` to the plugin's `resourceProvider.methods` for each resource type listed in `resourceProvider.types`.
+The Server will dispatch requests made to:
+-  `/signalk/v1/api/resources/<resource_type>` 
 
-Each method defined in the plugin must have a signature as specified in the interface. Each method returns a `Promise` containing the resource data or `null` if an error occurrred. 
+OR 
+- the `resources API` endpoints
+
+to the plugin's `resourceProvider.methods` for each of the resource types listed in `resourceProvider.types`.
+
+Each method defined in `resourceProvider.methods` must have a signature as specified in the __resourceProvider interface__. Each method returns a `Promise` containing the resultant resource data or `null` if an error occurrred or the operation is incomplete. 
 
 
 ### __List Resources:__
@@ -191,7 +197,7 @@ returns {
 }
 ```
 
-### __Get specific resource:__
+### __Retrieve a specific resource:__
 
 `GET` requests for a specific resource will be dispatched to the `getResource` method passing the resource type and id as parameters.
 

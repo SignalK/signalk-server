@@ -726,7 +726,7 @@ _Example:_
 
 ```
 
-### `app.resourcesApi.register(pluginId, provider)`
+### `app.resourcesApi.register(pluginId, resourceProvider)`
 
 If a plugin wants to act as a resource provider, it will need to register its provider methods during startup using this function.
 
@@ -751,7 +751,7 @@ module.exports = function (app) {
 }
 ```
 
-### `app.resourcesApi.unRegister(pluginId, resource_types)`
+### `app.resourcesApi.unRegister(pluginId)`
 
 When a resource provider plugin is disabled it will need to un-register its provider methods for all of the resource types it manages. This should be done in the plugin's `stop()` function.
 
@@ -769,7 +769,7 @@ module.exports = function (app) {
     }
     ...
     stop: function(options) {
-      app.resourcesApi.unRegister(this.id, this.resourceProvider.types);
+      app.resourcesApi.unRegister(this.id);
       ...
     }
   }
