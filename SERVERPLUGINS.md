@@ -748,22 +748,32 @@ module.exports = function (app) {
     }
     ...
   }
+}
 ```
 
-### `app.resourcesApi.unRegister(resource_types)`
+### `app.resourcesApi.unRegister(pluginId, resource_types)`
 
-When a resource provider plugin is disabled it will need to un-register its provider methods for the resource types it manages. This should be done in the plugin's `stop()` function.
+When a resource provider plugin is disabled it will need to un-register its provider methods for all of the resource types it manages. This should be done in the plugin's `stop()` function.
 
 See [`RESOURCE_PROVIDER_PLUGINS.md`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
 
 
 ```javascript
-plugin.stop = function(options) {
-  // resource_types example: ['routes',waypoints']
-  app.resourcesApi.unRegister(resource_types);
-  ...
+module.exports = function (app) {
+  let plugin= {
+    id: 'mypluginid',
+    name: 'My Resource Providerplugin',
+    resourceProvider: {
+      types: ['routes','waypoints'],
+      methods: { ... }
+    }
+    ...
+    stop: function(options) {
+      app.resourcesApi.unRegister(this.id, this.resourceProvider.types);
+      ...
+    }
+  }
 }
-
 ```
 
 
