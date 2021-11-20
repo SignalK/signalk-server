@@ -339,7 +339,7 @@ module.exports = function (app) {
     },
     start: (options, restart)=> { 
       ... 
-      app.resourceApi.register(this.resourceProvider);
+      app.resourceApi.register(this.id, this.resourceProvider);
     },
     stop: ()=> { 
       app.resourceApi.unRegister(this.resourceProvider.types);
@@ -384,7 +384,7 @@ module.exports = function (app) {
 
   plugin.start = function(options) {
     ...
-    app.resourcesApi.register(plugin.resourceProvider);
+    app.resourcesApi.register(plugin.id, plugin.resourceProvider);
   }
 }
 ```
