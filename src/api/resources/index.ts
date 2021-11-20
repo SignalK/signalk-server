@@ -796,7 +796,11 @@ export class Resources {
             ) {
                 let retVal= await this.resProvider[req.resourceType]?.deleteResource(req.resourceType, req.resourceId)
                 if(retVal){
-                    this.sendDelta(req.resourceType, req.resourceId, null)
+                    this.sendDelta(
+                        this.resProvider[req.resourceType]?.pluginId as string, 
+                        req.resourceType, req.resourceId, 
+                        null
+                    )
                     return {statusCode: 200, message: `Resource (${req.resourceId}) deleted.`}
                 }
                 else {
@@ -819,7 +823,12 @@ export class Resources {
                 let id= UUID_PREFIX + uuidv4()
                 let retVal= await this.resProvider[req.resourceType]?.setResource(req.resourceType, id, req.body.value)
                 if(retVal){
-                    this.sendDelta(req.resourceType, id, req.body.value)
+                    this.sendDelta(
+                        this.resProvider[req.resourceType]?.pluginId as string,
+                        req.resourceType, 
+                        id, 
+                        req.body.value
+                    )
                     return {statusCode: 200, message: `Resource (${id}) saved.`}  
                 }
                 else {
@@ -832,7 +841,12 @@ export class Resources {
                 }
                 let retVal= await this.resProvider[req.resourceType]?.setResource(req.resourceType, req.resourceId, req.body.value)
                 if(retVal){
-                    this.sendDelta(req.resourceType, req.resourceId, req.body.value)
+                    this.sendDelta(
+                        this.resProvider[req.resourceType]?.pluginId as string,
+                        req.resourceType, 
+                        req.resourceId, 
+                        req.body.value
+                    )
                     return {statusCode: 200, message: `Resource (${req.resourceId}) updated.`}  
                 }
                 else {
@@ -843,9 +857,9 @@ export class Resources {
     }
 
     // ** send delta message with resource  PUT, POST, DELETE action result
-    private sendDelta(type:string, id:string, value:any):void {
+    private sendDelta(providerId:string, type:string, id:string, value:any):void {
         debug(`** Sending Delta: resources.${type}.${id}`)
-        this.server.handleMessage('signalk-resources', {
+        this.server.handleMessage(providerId, {
             updates: [ 
                 {
                     values: [
