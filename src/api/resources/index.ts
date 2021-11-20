@@ -20,6 +20,7 @@ interface ResourceProvider {
 }
 
 interface ResourceProviderMethods {
+    pluginId: string
     listResources: (type:string, query: {[key:string]:any})=> Promise<any>
     getResource: (type:string, id:string)=> Promise<any>
     setResource: (type:string, id:string, value:{[key:string]:any})=> Promise<any>
@@ -66,12 +67,13 @@ export class Resources {
     }
 
     // ** register resource provider **
-    public register(provider:ResourceProvider) {
+    public register(pluginId:string, provider:ResourceProvider) {
         debug(`** Registering provider(s)....${provider?.types}`)
         if(!provider ) { return }
         if(provider.types && !Array.isArray(provider.types)) { return }
         provider.types.forEach( (i:string)=>{
             if(!this.resProvider[i]) {
+                provider.methods.pluginId= pluginId
                 this.resProvider[i]= provider.methods
             }
         })
