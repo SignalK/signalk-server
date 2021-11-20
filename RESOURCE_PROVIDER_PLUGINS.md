@@ -73,12 +73,12 @@ module.exports = function (app) {
         }
       }
     },
-    start: (options, restart)=> { 
+    start: (options)=> { 
       ... 
       app.resourceApi.register(this.id, this.resourceProvider);
     },
     stop: ()=> { 
-      app.resourceApi.unRegister(this.resourceProvider.types);
+      app.resourceApi.unRegister(this.id, this.resourceProvider.types);
       ... 
     }
   }
@@ -89,7 +89,7 @@ module.exports = function (app) {
 
 ### Plugin Startup - Registering the Resource Provider:
 
-To register your plugin as a resource provider the server's `resourcesApi.register()` function should be called within the plugin `start()` function passing the  `resourceProvider` interface.
+To register your plugin as a resource provider the server's `resourcesApi.register()` function should be called within the plugin `start()` function passing the `resourceProvider` interface.
 
 This registers the resource types and the methods with the server so they are called when requests to resource paths are made.
 
@@ -128,7 +128,7 @@ module.exports = function (app) {
 
 ### Plugin Stop - Un-registering the Resource Provider:
 
-When a resource provider plugin is disabled / stopped it should un-register as a provider so resource requests are not directed to  it. This is done by calling the server's `resourcesApi.unRegister()` function passing `resourceProvider.types` within the plugin's `stop()` function.
+When a resource provider plugin is disabled it should un-register as a provider so resource requests are not directed to it. This is done by calling the server's `resourcesApi.unRegister()` function passing `resourceProvider.types` within the plugin's `stop()` function.
 
 _Example:_
 ```javascript
@@ -144,7 +144,7 @@ module.exports = function (app) {
 
   plugin.stop = function(options) {
     ...
-    app.resourcesApi.unRegister(plugin.resourceProvider.types);
+    app.resourcesApi.unRegister(plugin.id, plugin.resourceProvider.types);
   }
 }
 ```
