@@ -606,14 +606,15 @@ export class Resources {
     }
 
     // ** un-register resource provider for the supplied types **
-    public unRegister(pluginId:string, resourceTypes:string[]) {
-        debug(`** Un-registering ${pluginId} provider(s)....${resourceTypes}`)
-        if(!Array.isArray(resourceTypes)) { return }
-        resourceTypes.forEach( (i:string)=>{
-            if(this.resProvider[i] && this.resProvider[i]?.pluginId===pluginId) {
+    public unRegister(pluginId:string) {
+        if(!pluginId) { return }
+        debug(`** Un-registering ${pluginId} resource provider(s)....`)
+        for( let i in this.resProvider ) {
+            if(this.resProvider[i]?.pluginId===pluginId) {
+                debug(`** Un-registering ${i}....`)
                 delete this.resProvider[i]
             }
-        })
+        }
         debug(JSON.stringify(this.resProvider))
     }
 
