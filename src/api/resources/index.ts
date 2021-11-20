@@ -606,19 +606,14 @@ export class Resources {
     }
 
     // ** un-register resource provider for the supplied types **
-    public unRegister(resourceTypes:string[]) {
-        debug(`** Un-registering provider(s)....${resourceTypes}`)
+    public unRegister(pluginId:string, resourceTypes:string[]) {
+        debug(`** Un-registering ${pluginId} provider(s)....${resourceTypes}`)
         if(!Array.isArray(resourceTypes)) { return }
         resourceTypes.forEach( (i:string)=>{
-            if(this.resProvider[i]) {
+            if(this.resProvider[i] && this.resProvider[i]?.pluginId===pluginId) {
                 delete this.resProvider[i]
             }
         })
-        debug(JSON.stringify(this.resProvider))
-
-        //** scan plugins in case there is more than one plugin that can service a particular resource type. **
-        debug('** RESCANNING **')
-        this.checkForProviders()
         debug(JSON.stringify(this.resProvider))
     }
 
@@ -632,20 +627,6 @@ export class Resources {
             resourceType: type,
             resourceId: id
         })
-    }
-
-    // Scan plugins for resource providers and register them 
-    // rescan= false: only add providers for types where no provider is registered
-    // rescan= true: clear providers for all types prior to commencing scan.
-    private checkForProviders(rescan:boolean= false) {
-        if(rescan) { this.resProvider= {} } 
-        debug(`** Checking for providers....(rescan=${rescan})`)
-        this.resProvider= {}  
-        this.resourceTypes.forEach( (rt:string)=> {
-            this.resProvider[rt]= this.getResourceProviderFor(rt)
-        })
-        debug(this.resProvider)
-        
     }
 
     // ** initialise handler for in-scope resource types **
@@ -878,6 +859,7 @@ export class Resources {
         })
     }
 
+<<<<<<< HEAD
     // ** Get provider methods for supplied resource type. Returns null if none found **
     private getResourceProviderFor(resType:string): ResourceProviderMethods | null {
         if(!this.server.plugins) { return null}
@@ -894,4 +876,6 @@ export class Resources {
     }
 
 >>>>>>> Add Signal K standard resource path handling
+=======
+>>>>>>> add pluginId to unRegister function
 }

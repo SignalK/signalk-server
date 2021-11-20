@@ -813,18 +813,26 @@ module.exports = function (app) {
     }
     ...
   }
+}
 ```
 
-### `app.resourcesApi.unRegister(resource_types)`
+### `app.resourcesApi.unRegister(pluginId, resource_types)`
 
+<<<<<<< HEAD
 When a resource provider plugin is disabled it will need to un-register its provider methods for the resource types it manages. This should be done in the plugin's `stop()` function.
 >>>>>>> Add register / unregister
+=======
+When a resource provider plugin is disabled it will need to un-register its provider methods for all of the resource types it manages. This should be done in the plugin's `stop()` function.
+>>>>>>> add pluginId to unRegister function
 
 See [`RESOURCE_PROVIDER_PLUGINS.md`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
 
 
 ```javascript
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> add pluginId to unRegister function
 module.exports = function (app) {
   let plugin= {
     id: 'mypluginid',
@@ -835,6 +843,7 @@ module.exports = function (app) {
     }
     ...
     stop: function(options) {
+<<<<<<< HEAD
       app.resourcesApi.unRegister(this.id);
       // do plugin shutdown
     }
@@ -848,6 +857,13 @@ plugin.stop = function(options) {
 }
 
 >>>>>>> Add register / unregister
+=======
+      app.resourcesApi.unRegister(this.id, this.resourceProvider.types);
+      ...
+    }
+  }
+}
+>>>>>>> add pluginId to unRegister function
 ```
 
 
