@@ -543,8 +543,10 @@ interface ResourceRequest {
   apiMethod?: string | null
 }
 
+type SignalKResourceType= 'routes' | 'waypoints' |'notes' |'regions' |'charts'
+
 interface ResourceProvider {
-  types: string[]
+  types: SignalKResourceType[]
   methods: ResourceProviderMethods
 }
 
@@ -578,8 +580,8 @@ export class Resources {
   resProvider: { [key: string]: ResourceProviderMethods | null } = {}
   server: any
 
-  // ** in-scope resource types **
-  private resourceTypes: string[] = [
+  // in-scope resource types
+  private resourceTypes: SignalKResourceType[] = [
     'routes',
     'waypoints',
     'notes',
@@ -591,7 +593,7 @@ export class Resources {
     this.start(app)
   }
 
-  // ** register resource provider **
+  // register plugin with supplied id as resource provider
   register(pluginId: string, provider: ResourceProvider) {
     debug(`** Registering provider(s)....${provider?.types}`)
     if (!provider) {
@@ -609,22 +611,22 @@ export class Resources {
     debug(this.resProvider)
   }
 
-  // ** un-register resource provider for the supplied types **
+  // un-register plugin with supplied id as resource provider
   unRegister(pluginId: string) {
     if (!pluginId) {
       return
     }
     debug(`** Un-registering ${pluginId} resource provider(s)....`)
-    for (const i in this.resProvider) {
-      if (this.resProvider[i]?.pluginId === pluginId) {
-        debug(`** Un-registering ${i}....`)
-        delete this.resProvider[i]
+    for (const resourceType in this.resProvider) {
+      if (this.resProvider[resourceType]?.pluginId === pluginId) {
+        debug(`** Un-registering ${resourceType}....`)
+        delete this.resProvider[resourceType]
       }
     }
     debug(JSON.stringify(this.resProvider))
   }
 
-  // ** return resource with supplied type and id **
+  // Return resource with supplied type and id
   getResource(type: string, id: string) {
     debug(`** getResource(${type}, ${id})`)
     return this.actionResourceRequest({
@@ -636,17 +638,17 @@ export class Resources {
     })
   }
 
-  // ** initialise resourcesApi **
+  // initialise resourcesApi
   private start(app: any) {
     debug(`** Initialise ${SIGNALK_API_PATH}/resources path handler **`)
     this.server = app
     this.initResourceRoutes()
   }
 
-  // ** initialise handler for in-scope resource types **
+  // initialise handler for in-scope resource types
   private initResourceRoutes() {
+    // list all serviced paths under resources
     this.server.get(`${SIGNALK_API_PATH}/resources`, (req: any, res: any) => {
-      // list all serviced paths under resources
       res.json(this.getResourcePaths())
     })
     this.server.use(
@@ -670,7 +672,7 @@ export class Resources {
     )
   }
 
-  // ** return all paths serviced under SIGNALK_API_PATH/resources **
+  // return all paths serviced under SIGNALK_API_PATH/resources
   private getResourcePaths(): { [key: string]: any } {
     const resPaths: { [key: string]: any } = {}
     Object.entries(this.resProvider).forEach((p: any) => {
@@ -694,7 +696,7 @@ export class Resources {
     return resPaths
   }
 
-  // ** parse api path request and return ResourceRequest object **
+  // parse api path request and return ResourceRequest object
   private parseResourceRequest(req: any): ResourceRequest | undefined {
     debug('** req.originalUrl:', req.originalUrl)
     debug('** req.method:', req.method)
@@ -744,7 +746,7 @@ export class Resources {
     }
   }
 
-  // ** action an in-scope resource request **
+  // action an in-scope resource request
   private async actionResourceRequest(req: ResourceRequest): Promise<any> {
     debug('********* action request *************')
     debug(req)
@@ -770,7 +772,7 @@ export class Resources {
     return await this.execResourceRequest(req)
   }
 
-  // ** transform API request to ResourceRequest **
+  // transform API request to ResourceRequest
   private transformApiRequest(req: ResourceRequest): ResourceRequest {
     if (req.apiMethod?.indexOf('delete') !== -1) {
       req.method = 'DELETE'
@@ -786,7 +788,7 @@ export class Resources {
     return req
   }
 
-  // ** action an in-scope resource request **
+  // action an in-scope resource request
   private async execResourceRequest(req: ResourceRequest): Promise<any> {
     debug('********* execute request *************')
     debug(req)
@@ -860,14 +862,14 @@ export class Resources {
     }
 
     if (req.method === 'POST' || req.method === 'PUT') {
-      // check for supplied value
       if (typeof req.body.value === 'undefined' || req.body.value == null) {
         return { statusCode: 406, message: `No resource data supplied!` }
       }
-      // validate supplied request data
+
       if (!validate.resource(req.resourceType, req.body.value)) {
         return { statusCode: 406, message: `Invalid resource data supplied!` }
       }
+
       if (req.method === 'POST') {
         const id = UUID_PREFIX + uuidv4()
         const retVal = await this.resProvider[req.resourceType]?.setResource(
@@ -919,6 +921,7 @@ export class Resources {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     // ** Get provider methods for supplied resource type. Returns null if none found **
     private getResourceProviderFor(resType:string): ResourceProviderMethods | null {
         if(!this.server.plugins) { return null}
@@ -939,6 +942,9 @@ export class Resources {
 >>>>>>> add pluginId to unRegister function
 =======
   // ** send delta message with resource  PUT, POST, DELETE action result
+=======
+  // Send delta message. Used by resource  PUT, POST, DELETE actions
+>>>>>>> specify SignalKResourceType
   private sendDelta(
     providerId: string,
     type: string,
