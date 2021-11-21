@@ -71,7 +71,7 @@ function Server(opts) {
   require('./put').start(app)
 
   // ** initialise resources API **
-  app.resourcesApi= new Resources(app)
+  app.resourcesApi = new Resources(app)
 
   app.signalk = new FullSignalK(app.selfId, app.selfType)
 
