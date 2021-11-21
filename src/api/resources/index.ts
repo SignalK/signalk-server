@@ -161,8 +161,12 @@ export class Resources {
         let p= req.params[0].split('/')
         let resType= (typeof req.params[0]!=='undefined') ? p[0] : ''
         let resId= p.length>1 ? p[1] : ''
+        let resAttrib= p.length>2 ? p.slice(2) : []
+        req.query.resAttrib= resAttrib
         debug('** resType:', resType)
         debug('** resId:', resId)
+        debug('** resAttrib:', resAttrib)
+        debug('** req.params + attribs:', req.query)
         
         let apiMethod= (API_METHODS.includes(resType)) ? resType : null
         if(apiMethod) {
