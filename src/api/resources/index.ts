@@ -3,20 +3,9 @@ import { v4 as uuidv4 } from 'uuid'
 import { buildResource } from './resources'
 import { validate } from './validate'
 
-const debug = Debug('signalk:resources')
+/*export type SignalKResourceType= 'routes' | 'waypoints' |'notes' |'regions' |'charts'
 
-interface ResourceRequest {
-  method: 'GET' | 'PUT' | 'POST' | 'DELETE'
-  body: any
-  query: { [key: string]: any }
-  resourceType: string
-  resourceId: string
-  apiMethod?: string | null
-}
-
-type SignalKResourceType= 'routes' | 'waypoints' |'notes' |'regions' |'charts'
-
-interface ResourceProvider {
+export interface ResourceProvider {
   types: SignalKResourceType[]
   methods: ResourceProviderMethods
 }
@@ -31,6 +20,19 @@ interface ResourceProviderMethods {
     value: { [key: string]: any }
   ) => Promise<any>
   deleteResource: (type: string, id: string) => Promise<any>
+}*/
+
+import { SignalKResourceType, ResourceProvider, ResourceProviderMethods } from '@signalk/server-api'
+
+const debug = Debug('signalk:resources')
+
+interface ResourceRequest {
+  method: 'GET' | 'PUT' | 'POST' | 'DELETE'
+  body: any
+  query: { [key: string]: any }
+  resourceType: string
+  resourceId: string
+  apiMethod?: string | null
 }
 
 const SIGNALK_API_PATH = `/signalk/v1/api`
@@ -48,8 +50,8 @@ const API_METHODS = [
 ]
 
 export class Resources {
-  resProvider: { [key: string]: ResourceProviderMethods | null } = {}
-  server: any
+  private resProvider: { [key: string]: ResourceProviderMethods | null } = {}
+  private server: any
 
   // in-scope resource types
   private resourceTypes: SignalKResourceType[] = [
@@ -200,7 +202,7 @@ export class Resources {
       }
     }
 
-    const retReq = {
+    const retReq:any = {
       method: req.method,
       body: req.body,
       query: req.query,
@@ -228,7 +230,7 @@ export class Resources {
     }
 
     if (
-      !this.resourceTypes.includes(req.resourceType) ||
+      !this.resourceTypes.includes(req.resourceType as SignalKResourceType) ||
       !this.resProvider[req.resourceType]
     ) {
       return { statusCode: 501, message: `No Provider` }
