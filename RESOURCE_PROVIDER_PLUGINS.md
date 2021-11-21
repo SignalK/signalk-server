@@ -431,6 +431,16 @@ Each method defined in `resourceProvider.methods` must have a signature as speci
 
 `GET` requests that are not for a specific resource will be dispatched to the `listResources` method passing the resource type and any query data as parameters.
 
+Query parameters are passed as an object conatining `key | value` pairs.
+
+_Example: GET /signalk/v1/api/resources/waypoints?bbox=5.4,25.7,6.9,31.2&distance=30000_
+```javascript
+query= {
+  bbox: '5.4,25.7,6.9,31.2',
+  distance: 30000
+}
+```
+
 It is the responsibility of the resource provider plugin to filter the resources returned as per the supplied query parameters.
 
 `listResources()` should return a JSON object listing resources by id.
@@ -471,13 +481,40 @@ _Example: Retrieve route._
 ```javascript
 GET /signalk/v1/api/resources/routes/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a
 
-getResource('routes', 'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a')
+getResource(
+  'routes', 
+  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
+  {}
+)
+```
 
-returns {
+_Returns the result:_
+```json
+{
   "name": "Name of the route",
   "description": "Description of the route",
   "distance": 18345,
   "feature": { ... }
+}
+```
+
+A request for a resource attribute will pass the attibute path as an array in the query object with the key `resAttrib`.
+
+_Example: Get waypoint geometry._
+```javascript
+GET /signalk/v1/api/resources/waypoints/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a/feature/geometry
+
+getResource(
+  'waypoints',
+  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
+  { resAttrib: ['feature','geometry'] }
+)
+```
+_Returns the value of `geometry` attribute of the waypoint._
+```json
+{
+  "type": "Point",
+  "coordinates": [70.4,6.45] 
 }
 ```
 
