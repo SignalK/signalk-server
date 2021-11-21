@@ -4,6 +4,7 @@ import { SignalKResourceType } from '@signalk/server-api'
 import { getDistance, isValidCoordinate } from 'geolib'
 import ngeohash from 'ngeohash'
 
+<<<<<<< HEAD
 export const buildResource = (resType: SignalKResourceType, data: any): any => {
   if (resType === 'routes') {
     return buildRoute(data)
@@ -227,6 +228,9 @@ import { getDistance, isValidCoordinate } from 'geolib'
 import ngeohash from 'ngeohash'
 
 // ** build resource item **
+=======
+
+>>>>>>> chore: return value descriptions to show a Promise
 export const buildResource = (resType: string, data: any): any => {
   if (resType === 'routes') {
     return buildRoute(data)
@@ -242,7 +246,6 @@ export const buildResource = (resType: string, data: any): any => {
   }
 }
 
-// ** build route
 const buildRoute = (rData: any): any => {
   const rte: any = {
     feature: {
@@ -295,7 +298,7 @@ const buildRoute = (rData: any): any => {
   return rte
 }
 
-// ** build waypoint
+
 const buildWaypoint = (rData: any): any => {
   const wpt: any = {
     position: {
@@ -337,7 +340,7 @@ const buildWaypoint = (rData: any): any => {
   return wpt
 }
 
-// ** build note
+
 const buildNote = (rData: any): any => {
   const note: any = {}
   if (typeof rData.title !== 'undefined') {
@@ -378,7 +381,7 @@ const buildNote = (rData: any): any => {
   return note
 }
 
-// ** build region
+
 const buildRegion = (rData: any): any => {
   const reg: any = {
     feature: {
@@ -432,10 +435,19 @@ const buildRegion = (rData: any): any => {
       return null
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
     
     return reg
 >>>>>>> add API endpoint processing
 =======
+=======
+    if (
+      rData.points[0].latitude !== rData.points[rData.points.length-1].latitude && 
+      rData.points[0].longitude !== rData.points[rData.points.length-1].longitude
+    ) {
+      rData.points.push( rData.points[0])
+    }
+>>>>>>> chore: return value descriptions to show a Promise
     coords = rData.points.map((p: any) => {
       return [p.longitude, p.latitude]
     })
