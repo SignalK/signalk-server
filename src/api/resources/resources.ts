@@ -1,5 +1,8 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> fix type
 import { SignalKResourceType } from '@signalk/server-api'
 import { getDistance, isValidCoordinate } from 'geolib'
 import ngeohash from 'ngeohash'
@@ -230,8 +233,12 @@ import ngeohash from 'ngeohash'
 // ** build resource item **
 =======
 
+<<<<<<< HEAD
 >>>>>>> chore: return value descriptions to show a Promise
 export const buildResource = (resType: string, data: any): any => {
+=======
+export const buildResource = (resType: SignalKResourceType, data: any): any => {
+>>>>>>> fix type
   if (resType === 'routes') {
     return buildRoute(data)
   }
