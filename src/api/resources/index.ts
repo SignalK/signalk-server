@@ -3,7 +3,11 @@ import { v4 as uuidv4 } from 'uuid'
 import { buildResource } from './resources'
 import { validate } from './validate'
 
-import { SignalKResourceType, ResourceProvider, ResourceProviderMethods } from '@signalk/server-api'
+import {
+  ResourceProvider,
+  ResourceProviderMethods,
+  SignalKResourceType
+} from '@signalk/server-api'
 import { Application, Handler, NextFunction, Request, Response } from 'express'
 
 const debug = Debug('signalk:resources')
@@ -33,7 +37,7 @@ const API_METHODS = [
 
 // FIXME use types from https://github.com/SignalK/signalk-server/pull/1358
 interface ResourceApplication extends Application {
-  handleMessage: any
+  handleMessage: (id: string, data: any) => void
 }
 export class Resources {
   private resProvider: { [key: string]: ResourceProviderMethods | null } = {}
@@ -84,15 +88,12 @@ export class Resources {
     debug(JSON.stringify(this.resProvider))
   }
 
-  getResource(type: SignalKResourceType, id: string) {
-    debug(`** getResource(${type}, ${id})`)
-    return this.actionResourceRequest({
-      method: 'GET',
-      body: {},
-      query: {},
-      resourceType: type,
-      resourceId: id
-    })
+  getResource(resType: SignalKResourceType, resId: string) {
+    debug(`** getResource(${resType}, ${resId})`)
+    if (!this.checkForProvider(resType)) {
+      return Promise.reject(new Error(`No provider for ${resType}`))
+    }
+    return this.resProvider[resType]?.getResource(resType, resId)
   }
 
   private start(app: any) {
@@ -103,66 +104,265 @@ export class Resources {
 
   private initResourceRoutes() {
     // list all serviced paths under resources
-    this.server.get(`${SIGNALK_API_PATH}/resources`, (req: Request, res: Response) => {
-      res.json(this.getResourcePaths())
-    })
-
     this.server.get(
-      `${SIGNALK_API_PATH}/resources/:resourceType/:resourceId/*`,
-      async (req: any, res: any, next: any) => {
-        const result = this.parseResourceRequest(req)
-        if (result) {
-          const ar = await this.actionResourceRequest(result)
-          if (typeof ar.statusCode !== 'undefined') {
-            debug(`${JSON.stringify(ar)}`)
-            res.status = ar.statusCode
-            res.send(ar.message)
-          } else {
-            res.json(ar)
-          }
-        } else {
-          debug('** No provider found... calling next()...')
-          next()
-        }
+      `${SIGNALK_API_PATH}/resources`,
+      (req: Request, res: Response) => {
+        res.json(this.getResourcePaths())
       }
     )
 
-    this.server.use(
+    // facilitate retrieval of a specific resource
+    this.server.get(
       `${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`,
-      async (req: any, res: any, next: any) => {
-        const result = this.parseResourceRequest(req)
-        if (result) {
-          const ar = await this.actionResourceRequest(result)
-          if (typeof ar.statusCode !== 'undefined') {
-            debug(`${JSON.stringify(ar)}`)
-            res.status = ar.statusCode
-            res.send(ar.message)
-          } else {
-            res.json(ar)
-          }
-        } else {
+      async (req: Request, res: Response, next: NextFunction) => {
+        debug(`** GET ${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`)
+        if (
+          !this.checkForProvider(req.params.resourceType as SignalKResourceType)
+        ) {
           debug('** No provider found... calling next()...')
           next()
+          return
+        }
+        if (!validate.uuid(req.params.resourceId)) {
+          res
+            .status(406)
+            .send(`Invalid resource id provided (${req.params.resourceId})`)
+          return
+        }
+        const retVal = await this.resProvider[
+          req.params.resourceType
+        ]?.getResource(req.params.resourceType, req.params.resourceId)
+        if (retVal) {
+          res.json(retVal)
+        } else {
+          res.status(404).send(`Resource not found! (${req.params.resourceId})`)
         }
       }
     )
 
-    this.server.use(
+    // facilitate retrieval of a collection of resource entries
+    this.server.get(
       `${SIGNALK_API_PATH}/resources/:resourceType`,
       async (req: Request, res: Response, next: NextFunction) => {
-        const result = this.parseResourceRequest(req)
-        if (result) {
-          const ar = await this.actionResourceRequest(result)
-          if (typeof ar.statusCode !== 'undefined') {
-            debug(`${JSON.stringify(ar)}`)
-            res.status = ar.statusCode
-            res.send(ar.message)
-          } else {
-            res.json(ar)
-          }
-        } else {
+        debug(`** GET ${SIGNALK_API_PATH}/resources/:resourceType`)
+        if (
+          !this.checkForProvider(req.params.resourceType as SignalKResourceType)
+        ) {
           debug('** No provider found... calling next()...')
           next()
+          return
+        }
+        const retVal = await this.resProvider[
+          req.params.resourceType
+        ]?.listResources(req.params.resourceType, req.query)
+        if (retVal) {
+          res.json(retVal)
+        } else {
+          res.status(404).send(`Error retrieving resources!`)
+        }
+      }
+    )
+
+    // facilitate creation of new resource entry of supplied type
+    this.server.post(
+      `${SIGNALK_API_PATH}/resources/:resourceType`,
+      async (req: Request, res: Response, next: NextFunction) => {
+        debug(`** POST ${SIGNALK_API_PATH}/resources/:resourceType`)
+        if (
+          !this.checkForProvider(req.params.resourceType as SignalKResourceType)
+        ) {
+          debug('** No provider found... calling next()...')
+          next()
+          return
+        }
+        if (!validate.resource(req.params.resourceType, req.body.value)) {
+          res.status(406).send(`Invalid resource data supplied!`)
+          return
+        }
+        const id = UUID_PREFIX + uuidv4()
+        const retVal = await this.resProvider[
+          req.params.resourceType
+        ]?.setResource(req.params.resourceType, id, req.body.value)
+        if (retVal) {
+          this.server.handleMessage(
+            this.resProvider[req.params.resourceType]?.pluginId as string,
+            this.buildDeltaMsg(
+              req.params.resourceType as SignalKResourceType,
+              id,
+              req.body.value
+            )
+          )
+          res
+            .status(200)
+            .send(`New ${req.params.resourceType} resource (${id}) saved.`)
+        } else {
+          res
+            .status(404)
+            .send(`Error saving ${req.params.resourceType} resource (${id})!`)
+        }
+      }
+    )
+
+    // facilitate creation / update of resource entry at supplied id
+    this.server.put(
+      `${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`,
+      async (req: Request, res: Response, next: NextFunction) => {
+        debug(`** PUT ${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`)
+        if (
+          !this.checkForProvider(req.params.resourceType as SignalKResourceType)
+        ) {
+          debug('** No provider found... calling next()...')
+          next()
+          return
+        }
+        if (!validate.resource(req.params.resourceType, req.body.value)) {
+          res.status(406).send(`Invalid resource data supplied!`)
+          return
+        }
+        const retVal = await this.resProvider[
+          req.params.resourceType
+        ]?.setResource(
+          req.params.resourceType,
+          req.params.resourceId,
+          req.body.value
+        )
+        if (retVal) {
+          this.server.handleMessage(
+            this.resProvider[req.params.resourceType]?.pluginId as string,
+            this.buildDeltaMsg(
+              req.params.resourceType as SignalKResourceType,
+              req.params.resourceId,
+              req.body.value
+            )
+          )
+          res
+            .status(200)
+            .send(
+              `${req.params.resourceType} resource (${req.params.resourceId}) saved.`
+            )
+        } else {
+          res
+            .status(404)
+            .send(
+              `Error saving ${req.params.resourceType} resource (${req.params.resourceId})!`
+            )
+        }
+      }
+    )
+
+    // facilitate deletion of specific of resource entry at supplied id
+    this.server.delete(
+      `${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`,
+      async (req: Request, res: Response, next: NextFunction) => {
+        debug(
+          `** DELETE ${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`
+        )
+        if (
+          !this.checkForProvider(req.params.resourceType as SignalKResourceType)
+        ) {
+          debug('** No provider found... calling next()...')
+          next()
+          return
+        }
+        if (!validate.uuid(req.params.resourceId)) {
+          res
+            .status(406)
+            .send(`Invalid resource id provided (${req.params.resourceId})`)
+          return
+        }
+        const retVal = await this.resProvider[
+          req.params.resourceType
+        ]?.deleteResource(req.params.resourceType, req.params.resourceId)
+        if (retVal) {
+          this.server.handleMessage(
+            this.resProvider[req.params.resourceType]?.pluginId as string,
+            this.buildDeltaMsg(
+              req.params.resourceType as SignalKResourceType,
+              req.params.resourceId,
+              null
+            )
+          )
+          res.status(200).send(`Resource (${req.params.resourceId}) deleted.`)
+        } else {
+          res
+            .status(400)
+            .send(`Error deleting resource (${req.params.resourceId})!`)
+        }
+      }
+    )
+
+    // facilitate API requests
+    this.server.put(
+      `${SIGNALK_API_PATH}/resources/:apiFunction`,
+      async (req: Request, res: Response, next: NextFunction) => {
+        debug(`** PUT ${SIGNALK_API_PATH}/resources/:apiFunction`)
+
+        // check for valid API method request
+        if (!API_METHODS.includes(req.params.apiFunction)) {
+          res.status(501).send(`Invalid API method ${req.params.apiFunction}!`)
+          return
+        }
+        let resType: SignalKResourceType = 'waypoints'
+        if (req.params.apiFunction.toLowerCase().indexOf('waypoint') !== -1) {
+          resType = 'waypoints'
+        }
+        if (req.params.apiFunction.toLowerCase().indexOf('route') !== -1) {
+          resType = 'routes'
+        }
+        if (req.params.apiFunction.toLowerCase().indexOf('note') !== -1) {
+          resType = 'notes'
+        }
+        if (req.params.apiFunction.toLowerCase().indexOf('region') !== -1) {
+          resType = 'regions'
+        }
+        if (!this.checkForProvider(resType)) {
+          res.status(501).send(`No provider for ${resType}!`)
+          return
+        }
+        let resId: string = ''
+        let resValue: any = null
+
+        if (req.params.apiFunction.toLowerCase().indexOf('set') !== -1) {
+          resValue = buildResource(resType, req.body)
+          if (!resValue) {
+            res.status(406).send(`Invalid resource data supplied!`)
+            return
+          }
+          if (!req.body.id) {
+            resId = UUID_PREFIX + uuidv4()
+          } else {
+            if (!validate.uuid(req.body.id)) {
+              res.status(406).send(`Invalid resource id supplied!`)
+              return
+            }
+            resId = req.body.id
+          }
+        }
+        if (req.params.apiFunction.toLowerCase().indexOf('delete') !== -1) {
+          resValue = null
+          if (!req.body.id) {
+            res.status(406).send(`No resource id supplied!`)
+            return
+          }
+          if (!validate.uuid(req.body.id)) {
+            res.status(406).send(`Invalid resource id supplied!`)
+            return
+          }
+          resId = req.body.id
+        }
+        const retVal = await this.resProvider[resType]?.setResource(
+          resType,
+          resId,
+          resValue
+        )
+        if (retVal) {
+          this.server.handleMessage(
+            this.resProvider[resType]?.pluginId as string,
+            this.buildDeltaMsg(resType, resId, resValue)
+          )
+          res.status(200).send(`SUCCESS: ${req.params.apiFunction} complete.`)
+        } else {
+          res.status(404).send(`ERROR: ${req.params.apiFunction} incomplete!`)
         }
       }
     )
@@ -191,242 +391,28 @@ export class Resources {
     return resPaths
   }
 
-
-  private parseResourceRequest(req: Request): ResourceRequest | undefined {
-    debug('********* parse request *************')
-    debug('** req.method:', req.method)
-    debug('** req.body:', req.body)
-    debug('** req.query:', req.query)
-    debug('** req.params:', req.params)
-
-    const resReq:any = {
-      method: req.method,
-      body: req.body,
-      query: req.query,
-      resourceType: req.params.resourceType ?? null,
-      resourceId: req.params.resourceId ?? null,
-      apiMethod: API_METHODS.includes(req.params.resourceType) ? req.params.resourceType : null
-    }
-
-    if (resReq.apiMethod) {
-      if (resReq.apiMethod.toLowerCase().indexOf('waypoint') !== -1) {
-        resReq.resourceType = 'waypoints'
-      }
-      if (resReq.apiMethod.toLowerCase().indexOf('route') !== -1) {
-        resReq.resourceType = 'routes'
-      }
-      if (resReq.apiMethod.toLowerCase().indexOf('note') !== -1) {
-        resReq.resourceType = 'notes'
-      }
-      if (resReq.apiMethod.toLowerCase().indexOf('region') !== -1) {
-        resReq.resourceType = 'regions'
-      }
-    } else {
-      const resAttrib = req.params['0'] ? req.params['0'].split('/') : []
-      req.query.attrib = resAttrib
-    }
-
-    debug('** resReq:', resReq)
-
-    if (
-      this.resourceTypes.includes(resReq.resourceType) && 
-      this.resProvider[resReq.resourceType]
-    ) {
-      return resReq
-    } else {
-      debug('Invalid resource type or no provider for this type!')
-      return undefined
-    }
+  private checkForProvider(resType: SignalKResourceType): boolean {
+    return this.resourceTypes.includes(resType) && this.resProvider[resType]
+      ? true
+      : false
   }
 
-  private async actionResourceRequest(req: ResourceRequest): Promise<any> {
-    debug('********* action request *************')
-    debug(req)
-
-    // check for registered resource providers
-    if (!this.resProvider) {
-      return { statusCode: 501, message: `No Provider` }
-    }
-
-    if (
-      !this.resourceTypes.includes(req.resourceType) ||
-      !this.resProvider[req.resourceType]
-    ) {
-      return { statusCode: 501, message: `No Provider` }
-    }
-
-    // check for API method request
-    if (req.apiMethod && API_METHODS.includes(req.apiMethod)) {
-      debug(`API Method (${req.apiMethod})`)
-      req = this.transformApiRequest(req)
-    }
-
-    return await this.execResourceRequest(req)
-  }
-
-  private transformApiRequest(req: ResourceRequest): ResourceRequest {
-    if (req.apiMethod?.indexOf('delete') !== -1) {
-      req.method = 'DELETE'
-    }
-    if (req.apiMethod?.indexOf('set') !== -1) {
-      if (!req.body.id) {
-        req.method = 'POST'
-      } else {
-        req.resourceId = req.body.id
-      }
-      req.body = { value: buildResource(req.resourceType, req.body) ?? {} }
-    }
-    return req
-  }
-
-  private async execResourceRequest(req: ResourceRequest): Promise<any> {
-    debug('********* execute request *************')
-    debug(req)
-    if (req.method === 'GET') {
-      let retVal: any
-      if (!req.resourceId) {
-        retVal = await this.resProvider[req.resourceType]?.listResources(
-          req.resourceType,
-          req.query
-        )
-        return retVal
-          ? retVal
-          : { statusCode: 404, message: `Error retrieving resources!` }
-      }
-      if (!validate.uuid(req.resourceId)) {
-        return {
-          statusCode: 406,
-          message: `Invalid resource id provided (${req.resourceId})`
-        }
-      }
-      retVal = await this.resProvider[req.resourceType]?.getResource(
-        req.resourceType,
-        req.resourceId
-      )
-      return retVal
-        ? retVal
-        : {
-            statusCode: 404,
-            message: `Resource not found (${req.resourceId})!`
-          }
-    }
-
-    if (req.method === 'DELETE' || req.method === 'PUT') {
-      if (!req.resourceId) {
-        return { statusCode: 406, value: `No resource id provided!` }
-      }
-      if (!validate.uuid(req.resourceId)) {
-        return {
-          statusCode: 406,
-          message: `Invalid resource id provided (${req.resourceId})!`
-        }
-      }
-      if (
-        req.method === 'DELETE' ||
-        (req.method === 'PUT' &&
-          typeof req.body.value !== 'undefined' &&
-          req.body.value == null)
-      ) {
-        const retVal = await this.resProvider[req.resourceType]?.deleteResource(
-          req.resourceType,
-          req.resourceId
-        )
-        if (retVal) {
-          this.sendDelta(
-            this.resProvider[req.resourceType]?.pluginId as string,
-            req.resourceType,
-            req.resourceId,
-            null
-          )
-          return {
-            statusCode: 200,
-            message: `Resource (${req.resourceId}) deleted.`
-          }
-        } else {
-          return {
-            statusCode: 400,
-            message: `Error deleting resource (${req.resourceId})!`
-          }
-        }
-      }
-    }
-
-    if (req.method === 'POST' || req.method === 'PUT') {
-      if (typeof req.body.value === 'undefined' || req.body.value == null) {
-        return { statusCode: 406, message: `No resource data supplied!` }
-      }
-
-      if (!validate.resource(req.resourceType, req.body.value)) {
-        return { statusCode: 406, message: `Invalid resource data supplied!` }
-      }
-
-      if (req.method === 'POST') {
-        const id = UUID_PREFIX + uuidv4()
-        const retVal = await this.resProvider[req.resourceType]?.setResource(
-          req.resourceType,
-          id,
-          req.body.value
-        )
-        if (retVal) {
-          this.sendDelta(
-            this.resProvider[req.resourceType]?.pluginId as string,
-            req.resourceType,
-            id,
-            req.body.value
-          )
-          return { statusCode: 200, message: `Resource (${id}) saved.` }
-        } else {
-          return { statusCode: 400, message: `Error saving resource (${id})!` }
-        }
-      }
-      if (req.method === 'PUT') {
-        if (!req.resourceId) {
-          return { statusCode: 406, message: `No resource id provided!` }
-        }
-        const retVal = await this.resProvider[req.resourceType]?.setResource(
-          req.resourceType,
-          req.resourceId,
-          req.body.value
-        )
-        if (retVal) {
-          this.sendDelta(
-            this.resProvider[req.resourceType]?.pluginId as string,
-            req.resourceType,
-            req.resourceId,
-            req.body.value
-          )
-          return {
-            statusCode: 200,
-            message: `Resource (${req.resourceId}) updated.`
-          }
-        } else {
-          return {
-            statusCode: 400,
-            message: `Error updating resource (${req.resourceId})!`
-          }
-        }
-      }
-    }
-  }
-
-  private sendDelta(
-    providerId: string,
-    type: string,
-    id: string,
-    value: any
-  ): void {
-    debug(`** Sending Delta: resources.${type}.${id}`)
-    this.server.handleMessage(providerId, {
+  private buildDeltaMsg(
+    resType: SignalKResourceType,
+    resid: string,
+    resValue: any
+  ): any {
+    return {
       updates: [
         {
           values: [
             {
-              path: `resources.${type}.${id}`,
-              value
+              path: `resources.${resType}.${resid}`,
+              value: resValue
             }
           ]
         }
       ]
-    })
+    }
   }
 }
