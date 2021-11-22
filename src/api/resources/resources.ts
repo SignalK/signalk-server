@@ -8,6 +8,7 @@ import { getDistance, isValidCoordinate } from 'geolib'
 import ngeohash from 'ngeohash'
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 export const buildResource = (resType: SignalKResourceType, data: any): any => {
   if (resType === 'routes') {
     return buildRoute(data)
@@ -237,6 +238,8 @@ import ngeohash from 'ngeohash'
 >>>>>>> chore: return value descriptions to show a Promise
 export const buildResource = (resType: string, data: any): any => {
 =======
+=======
+>>>>>>> chore: lint
 export const buildResource = (resType: SignalKResourceType, data: any): any => {
 >>>>>>> fix type
   if (resType === 'routes') {
@@ -305,7 +308,6 @@ const buildRoute = (rData: any): any => {
   return rte
 }
 
-
 const buildWaypoint = (rData: any): any => {
   const wpt: any = {
     position: {
@@ -347,7 +349,6 @@ const buildWaypoint = (rData: any): any => {
   return wpt
 }
 
-
 const buildNote = (rData: any): any => {
   const note: any = {}
   if (typeof rData.title !== 'undefined') {
@@ -387,7 +388,6 @@ const buildNote = (rData: any): any => {
 
   return note
 }
-
 
 const buildRegion = (rData: any): any => {
   const reg: any = {
@@ -449,10 +449,12 @@ const buildRegion = (rData: any): any => {
 =======
 =======
     if (
-      rData.points[0].latitude !== rData.points[rData.points.length-1].latitude && 
-      rData.points[0].longitude !== rData.points[rData.points.length-1].longitude
+      rData.points[0].latitude !==
+        rData.points[rData.points.length - 1].latitude &&
+      rData.points[0].longitude !==
+        rData.points[rData.points.length - 1].longitude
     ) {
-      rData.points.push( rData.points[0])
+      rData.points.push(rData.points[0])
     }
 >>>>>>> chore: return value descriptions to show a Promise
     coords = rData.points.map((p: any) => {
