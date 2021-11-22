@@ -1,8 +1,9 @@
+import { SignalKResourceType } from '@signalk/server-api'
 import { getDistance, isValidCoordinate } from 'geolib'
 import ngeohash from 'ngeohash'
 
 
-export const buildResource = (resType: string, data: any): any => {
+export const buildResource = (resType: SignalKResourceType, data: any): any => {
   if (resType === 'routes') {
     return buildRoute(data)
   }
