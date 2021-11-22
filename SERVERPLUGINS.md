@@ -704,6 +704,9 @@ app.registerDeltaInputHandler((delta, next) => {
 
 Retrieve resource data for the supplied resource type and id.
 
+This method invokes the `registered Resource Provider` for the supplied `resource_type` and returns a __resovled Promise__ containing the route resource data if successful or 
+a __rejected Promise__ containing an Error object if unsuccessful.
+
  data for  the full path of the directory where the plugin can persist its internal data, like data files.If a plugin wants to act as a resource provider, it will need to register its provider methods during startup using this function.
 
 
@@ -711,9 +714,7 @@ Retrieve resource data for the supplied resource type and id.
 ```javascript
 let myRoute= app.resourcesApi.getResource('routes', 'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a');
 ```
-Will return the route resource data or `null` if a route with the supplied id cannot be found.
-
-_Example:_
+_Returns resolved Promise containing:_
 ```json
 {
   "name": "Name of the route",
