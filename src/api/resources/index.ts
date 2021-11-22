@@ -4,6 +4,7 @@ import { buildResource } from './resources'
 import { validate } from './validate'
 
 import { SignalKResourceType, ResourceProvider, ResourceProviderMethods } from '@signalk/server-api'
+import { Application, Handler, NextFunction, Request, Response } from 'express'
 
 const debug = Debug('signalk:resources')
 
@@ -30,9 +31,13 @@ const API_METHODS = [
   'deleteRegion'
 ]
 
+// FIXME use types from https://github.com/SignalK/signalk-server/pull/1358
+interface ResourceApplication extends Application {
+  handleMessage: any
+}
 export class Resources {
   private resProvider: { [key: string]: ResourceProviderMethods | null } = {}
-  private server: any
+  private server: ResourceApplication
 
   // in-scope resource types
   private resourceTypes: SignalKResourceType[] = [
@@ -43,7 +48,8 @@ export class Resources {
     'charts'
   ]
 
-  constructor(app: any) {
+  constructor(app: ResourceApplication) {
+    this.server = app
     this.start(app)
   }
 
@@ -97,7 +103,7 @@ export class Resources {
 
   private initResourceRoutes() {
     // list all serviced paths under resources
-    this.server.get(`${SIGNALK_API_PATH}/resources`, (req: any, res: any) => {
+    this.server.get(`${SIGNALK_API_PATH}/resources`, (req: Request, res: Response) => {
       res.json(this.getResourcePaths())
     })
 
@@ -143,7 +149,7 @@ export class Resources {
 
     this.server.use(
       `${SIGNALK_API_PATH}/resources/:resourceType`,
-      async (req: any, res: any, next: any) => {
+      async (req: Request, res: Response, next: NextFunction) => {
         const result = this.parseResourceRequest(req)
         if (result) {
           const ar = await this.actionResourceRequest(result)
@@ -185,7 +191,8 @@ export class Resources {
     return resPaths
   }
 
-  private parseResourceRequest(req: any): ResourceRequest | undefined {
+
+  private parseResourceRequest(req: Request): ResourceRequest | undefined {
     debug('********* parse request *************')
     debug('** req.method:', req.method)
     debug('** req.body:', req.body)
