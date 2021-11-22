@@ -2,7 +2,6 @@ import { SignalKResourceType } from '@signalk/server-api'
 import { getDistance, isValidCoordinate } from 'geolib'
 import ngeohash from 'ngeohash'
 
-
 export const buildResource = (resType: SignalKResourceType, data: any): any => {
   if (resType === 'routes') {
     return buildRoute(data)
@@ -70,7 +69,6 @@ const buildRoute = (rData: any): any => {
   return rte
 }
 
-
 const buildWaypoint = (rData: any): any => {
   const wpt: any = {
     position: {
@@ -112,7 +110,6 @@ const buildWaypoint = (rData: any): any => {
   return wpt
 }
 
-
 const buildNote = (rData: any): any => {
   const note: any = {}
   if (typeof rData.title !== 'undefined') {
@@ -152,7 +149,6 @@ const buildNote = (rData: any): any => {
 
   return note
 }
-
 
 const buildRegion = (rData: any): any => {
   const reg: any = {
@@ -207,10 +203,12 @@ const buildRegion = (rData: any): any => {
       return null
     }
     if (
-      rData.points[0].latitude !== rData.points[rData.points.length-1].latitude && 
-      rData.points[0].longitude !== rData.points[rData.points.length-1].longitude
+      rData.points[0].latitude !==
+        rData.points[rData.points.length - 1].latitude &&
+      rData.points[0].longitude !==
+        rData.points[rData.points.length - 1].longitude
     ) {
-      rData.points.push( rData.points[0])
+      rData.points.push(rData.points[0])
     }
     coords = rData.points.map((p: any) => {
       return [p.longitude, p.latitude]
