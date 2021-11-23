@@ -696,7 +696,7 @@ export class Resources {
           next()
           return
         }
-        if (!validate.resource(req.params.resourceType, req.body.value)) {
+        if (!validate.resource(req.params.resourceType, req.body)) {
           res.status(406).send(`Invalid resource data supplied!`)
           return
         }
@@ -704,14 +704,14 @@ export class Resources {
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
-          ]?.setResource(req.params.resourceType, id, req.body.value)
+          ]?.setResource(req.params.resourceType, id, req.body)
           
           this.server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
             this.buildDeltaMsg(
               req.params.resourceType as SignalKResourceType,
               id,
-              req.body.value
+              req.body
             )
           )
           res
@@ -737,7 +737,7 @@ export class Resources {
           next()
           return
         }
-        if (!validate.resource(req.params.resourceType, req.body.value)) {
+        if (!validate.resource(req.params.resourceType, req.body)) {
           res.status(406).send(`Invalid resource data supplied!`)
           return
         }
@@ -747,7 +747,7 @@ export class Resources {
           ]?.setResource(
             req.params.resourceType,
             req.params.resourceId,
-            req.body.value
+            req.body
           )
         
           this.server.handleMessage(
@@ -755,7 +755,7 @@ export class Resources {
             this.buildDeltaMsg(
               req.params.resourceType as SignalKResourceType,
               req.params.resourceId,
-              req.body.value
+              req.body
             )
           )
           res
