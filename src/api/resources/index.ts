@@ -541,15 +541,6 @@ import { Application, Handler, NextFunction, Request, Response } from 'express'
 
 const debug = Debug('signalk:resources')
 
-interface ResourceRequest {
-  method: 'GET' | 'PUT' | 'POST' | 'DELETE'
-  body: any
-  query: { [key: string]: any }
-  resourceType: SignalKResourceType
-  resourceId: string
-  apiMethod?: string | null
-}
-
 const SIGNALK_API_PATH = `/signalk/v1/api`
 const UUID_PREFIX = 'urn:mrn:signalk:uuid:'
 
@@ -564,10 +555,10 @@ const API_METHODS = [
   'deleteRegion'
 ]
 
-// FIXME use types from https://github.com/SignalK/signalk-server/pull/1358
 interface ResourceApplication extends Application {
   handleMessage: (id: string, data: any) => void
 }
+
 export class Resources {
   private resProvider: { [key: string]: ResourceProviderMethods | null } = {}
   private server: ResourceApplication
@@ -658,14 +649,15 @@ export class Resources {
             .send(`Invalid resource id provided (${req.params.resourceId})`)
           return
         }
-        const retVal = await this.resProvider[
-          req.params.resourceType
-        ]?.getResource(req.params.resourceType, req.params.resourceId)
-        if (retVal) {
-          res.json(retVal)
-        } else {
+        try {
+          const retVal = await this.resProvider[
+            req.params.resourceType
+          ]?.getResource(req.params.resourceType, req.params.resourceId)
+            res.json(retVal)
+        } catch (err) {
           res.status(404).send(`Resource not found! (${req.params.resourceId})`)
         }
+
       }
     )
 
@@ -681,12 +673,12 @@ export class Resources {
           next()
           return
         }
-        const retVal = await this.resProvider[
-          req.params.resourceType
-        ]?.listResources(req.params.resourceType, req.query)
-        if (retVal) {
-          res.json(retVal)
-        } else {
+        try {
+          const retVal = await this.resProvider[
+            req.params.resourceType
+          ]?.listResources(req.params.resourceType, req.query)
+            res.json(retVal)
+        } catch (err) {
           res.status(404).send(`Error retrieving resources!`)
         }
       }
@@ -709,10 +701,11 @@ export class Resources {
           return
         }
         const id = UUID_PREFIX + uuidv4()
-        const retVal = await this.resProvider[
-          req.params.resourceType
-        ]?.setResource(req.params.resourceType, id, req.body.value)
-        if (retVal) {
+        try {
+          const retVal = await this.resProvider[
+            req.params.resourceType
+          ]?.setResource(req.params.resourceType, id, req.body.value)
+          
           this.server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
             this.buildDeltaMsg(
@@ -724,11 +717,11 @@ export class Resources {
           res
             .status(200)
             .send(`New ${req.params.resourceType} resource (${id}) saved.`)
-        } else {
+        } catch (err) {
           res
             .status(404)
             .send(`Error saving ${req.params.resourceType} resource (${id})!`)
-        }
+        } 
       }
     )
 
@@ -748,14 +741,15 @@ export class Resources {
           res.status(406).send(`Invalid resource data supplied!`)
           return
         }
-        const retVal = await this.resProvider[
-          req.params.resourceType
-        ]?.setResource(
-          req.params.resourceType,
-          req.params.resourceId,
-          req.body.value
-        )
-        if (retVal) {
+        try {
+          const retVal = await this.resProvider[
+            req.params.resourceType
+          ]?.setResource(
+            req.params.resourceType,
+            req.params.resourceId,
+            req.body.value
+          )
+        
           this.server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
             this.buildDeltaMsg(
@@ -769,7 +763,7 @@ export class Resources {
             .send(
               `${req.params.resourceType} resource (${req.params.resourceId}) saved.`
             )
-        } else {
+          } catch (err) {
           res
             .status(404)
             .send(
@@ -799,10 +793,11 @@ export class Resources {
             .send(`Invalid resource id provided (${req.params.resourceId})`)
           return
         }
-        const retVal = await this.resProvider[
-          req.params.resourceType
-        ]?.deleteResource(req.params.resourceType, req.params.resourceId)
-        if (retVal) {
+        try {
+          const retVal = await this.resProvider[
+            req.params.resourceType
+          ]?.deleteResource(req.params.resourceType, req.params.resourceId)
+ 
           this.server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
             this.buildDeltaMsg(
@@ -812,7 +807,7 @@ export class Resources {
             )
           )
           res.status(200).send(`Resource (${req.params.resourceId}) deleted.`)
-        } else {
+        } catch (err) {
           res
             .status(400)
             .send(`Error deleting resource (${req.params.resourceId})!`)
@@ -879,18 +874,19 @@ export class Resources {
           }
           resId = req.body.id
         }
-        const retVal = await this.resProvider[resType]?.setResource(
-          resType,
-          resId,
-          resValue
-        )
-        if (retVal) {
+
+        try {
+          const retVal = await this.resProvider[resType]?.setResource(
+            resType,
+            resId,
+            resValue
+          )
           this.server.handleMessage(
             this.resProvider[resType]?.pluginId as string,
             this.buildDeltaMsg(resType, resId, resValue)
           )
           res.status(200).send(`SUCCESS: ${req.params.apiFunction} complete.`)
-        } else {
+        } catch (err) {
           res.status(404).send(`ERROR: ${req.params.apiFunction} incomplete!`)
         }
       }
