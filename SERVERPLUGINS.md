@@ -22,9 +22,9 @@ The plugin module must export a single `function(app)` that must return an objec
 
 ## Getting Started with Plugin Development
 
-To get started with SignalK plugin development, you can follow the following guide.
+To get started with SignalK plugin development, you can follow this  guide.
 
-_Note: For plugins acting as a provider for one or more of the resource types listed in the Signal K specification (e.g. routes, waypoints, notes, regions or charts) refer to __[RESOURCE_PROVIDER_PLUGINS.md](./RESOURCE_PROVIDER_PLUGINS.md)__ for details.
+_Note: For plugins acting as a provider for one or more of the SignalK resource types listed in the specification (`routes`, `waypoints`, `notes`, `regions` or `charts`) please refer to __[RESOURCE_PROVIDER_PLUGINS.md](./RESOURCE_PROVIDER_PLUGINS.md)__ for additional details._
 
 ### Project setup
 
@@ -704,28 +704,29 @@ app.registerDeltaInputHandler((delta, next) => {
 
 ### `app.resourcesApi.getResource(resource_type, resource_id)`
 
-Retrieve resource data for the supplied resource type and id.
+Retrieve resource data for the supplied SignalK resource type and resource id.
 
-This method invokes the `registered Resource Provider` for the supplied `resource_type` and returns a __resovled Promise__ containing the route resource data if successful or 
-a __rejected Promise__ containing an Error object if unsuccessful.
-
- data for  the full path of the directory where the plugin can persist its internal data, like data files.If a plugin wants to act as a resource provider, it will need to register its provider methods during startup using this function.
+_Valid resource types are `routes`, `waypoints`, `notes`, `regions` & `charts`._
 
 
+This method invokes the `registered Resource Provider` for the supplied `resource_type` and returns a `resovled` __Promise__ containing the resource data if successful or 
+a `rejected` __Promise__ containing an __Error__ object if unsuccessful.
 
+_Example:_
 ```javascript
-let myRoute= app.resourcesApi.getResource('routes', 'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a');
-```
-_Returns resolved Promise containing:_
-```json
-{
-  "name": "Name of the route",
-  "description": "Description of the route",
-  "distance": 18345,
-  "feature": { ... }
-}
+let resource= app.resourcesApi.getResource('routes', 'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a');
 
+resource.then ( (data)=> {
+  // route data
+  console.log(data);
+  ...
+}).catch (error) { 
+  // handle error
+  console.log(error.message);
+  ...
+}
 ```
+
 
 ### `app.resourcesApi.register(pluginId, resourceProvider)`
 
@@ -744,7 +745,7 @@ module.exports = function (app) {
       methods: { ... }
     }
     start: function(options) {
-      ...
+      // do plugin start up
       app.resourcesApi.register(this.id, this.resourceProvider);
     }
     ...
@@ -771,7 +772,7 @@ module.exports = function (app) {
     ...
     stop: function(options) {
       app.resourcesApi.unRegister(this.id);
-      ...
+      // do plugin shutdown
     }
   }
 }
