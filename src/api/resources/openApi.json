@@ -1257,10 +1257,14 @@
             "post": {
                 "tags": ["resources/regions"],
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "summary": "Add a new Region",
 =======
                 "summary": "Add a new Regkion",
 >>>>>>> add OpenApi definition file
+=======
+                "summary": "Add a new Region",
+>>>>>>> add charts API methods
                 "requestBody": {
                     "description": "Region details",
                     "required": true,
@@ -1761,6 +1765,311 @@
             "post": {
                 "tags": ["resources/charts"],
                 "summary": "Add a new Chart",
+<<<<<<< HEAD
+=======
+                "requestBody": {
+                    "description": "Chart details",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Signal K Chart resource",
+                                "required": ["feature"],
+                                "properties": {
+                                    "name": {
+                                        "description": "Chart common name",
+                                        "example":"NZ615 Marlborough Sounds",
+                                        "type": "string"
+                                    },
+                                    "identifier": {
+                                        "type": "string",
+                                        "description": "Chart number",
+                                        "example":"NZ615"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "A description of the chart"
+                                    },
+                                    "tilemapUrl": {
+                                        "type": "string",
+                                        "description": "A url to the tilemap of the chart for use in TMS chartplotting apps",
+                                        "example":"http://{server}:8080/mapcache/NZ615"
+                                    },
+                                    "region": {
+                                        "type": "string",
+                                        "description": "Region related to note. A pointer to a region UUID. Alternative to geohash"
+                                    },
+                                    "geohash": {
+                                        "description": "Position related to chart. Alternative to region",
+                                        "type": "string"
+                                    },
+                                    "chartUrl": {
+                                        "type": "string",
+                                        "description": "A url to the chart file's storage location",
+                                        "example":"file:///home/pi/freeboard/mapcache/NZ615"
+                                    },
+                                    "scale": {
+                                        "type": "integer",
+                                        "description": "The scale of the chart, the larger number from 1:200000"
+                                    },
+                                    "chartLayers": {
+                                        "type": "array",
+                                        "description": "If the chart format is WMS, the layers enabled for the chart.",
+                                        "items": {
+                                            "type": "string",
+                                            "description": "Identifier for the layer."
+                                        }
+                                    },
+                                    "bounds": {
+                                        "type": "array",
+                                        "description": "The bounds of the chart. An array containing the position of the upper left corner, and the lower right corner. Useful when the chart isn't inherently geo-referenced.",
+                                        "items": {
+                                            "description": "Position of a corner of the chart",
+                                            "type": "object",
+                                            "required": [
+                                                "latitude",
+                                                "longitude"
+                                            ],
+                                            "properties": {
+                                                "latitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "longitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "altitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "chartFormat": {
+                                        "type": "string",
+                                        "description": "The format of the chart",
+                                        "enum": [
+                                            "gif",
+                                            "geotiff",
+                                            "kap",
+                                            "png",
+                                            "jpg",
+                                            "kml",
+                                            "wkt",
+                                            "topojson",
+                                            "geojson",
+                                            "gpx",
+                                            "tms",
+                                            "wms",
+                                            "S-57",
+                                            "S-63",
+                                            "svg",
+                                            "other"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/resources/charts/{id}": {
+            "parameters": {
+                "name": "id",
+                "in": "path",
+                "description": "Chart id",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "pattern": "(^[A-Za-z0-9_-]{8,}$)"
+                }
+            },
+              
+            "get": {
+                "tags": ["resources/charts"],
+                "summary": "Retrieve Chart with supplied id",
+                "responses": {
+                    "200": {
+                        "description": "List of resources identified by their UUID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "description": "List of Signal K resources",
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+
+            "put": {
+                "tags": ["resources/charts"],
+                "summary": "Add / update a new Chart with supplied id",
+                "requestBody": {
+                    "description": "Chart details",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Signal K Chart resource",
+                                "required": ["feature"],
+                                "properties": {
+                                    "name": {
+                                        "description": "Chart common name",
+                                        "example":"NZ615 Marlborough Sounds",
+                                        "type": "string"
+                                    },
+                                    "identifier": {
+                                        "type": "string",
+                                        "description": "Chart number",
+                                        "example":"NZ615"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "A description of the chart"
+                                    },
+                                    "tilemapUrl": {
+                                        "type": "string",
+                                        "description": "A url to the tilemap of the chart for use in TMS chartplotting apps",
+                                        "example":"http://{server}:8080/mapcache/NZ615"
+                                    },
+                                    "region": {
+                                        "type": "string",
+                                        "description": "Region related to note. A pointer to a region UUID. Alternative to geohash"
+                                    },
+                                    "geohash": {
+                                        "description": "Position related to chart. Alternative to region",
+                                        "type": "string"
+                                    },
+                                    "chartUrl": {
+                                        "type": "string",
+                                        "description": "A url to the chart file's storage location",
+                                        "example":"file:///home/pi/freeboard/mapcache/NZ615"
+                                    },
+                                    "scale": {
+                                        "type": "integer",
+                                        "description": "The scale of the chart, the larger number from 1:200000"
+                                    },
+                                    "chartLayers": {
+                                        "type": "array",
+                                        "description": "If the chart format is WMS, the layers enabled for the chart.",
+                                        "items": {
+                                            "type": "string",
+                                            "description": "Identifier for the layer."
+                                        }
+                                    },
+                                    "bounds": {
+                                        "type": "array",
+                                        "description": "The bounds of the chart. An array containing the position of the upper left corner, and the lower right corner. Useful when the chart isn't inherently geo-referenced.",
+                                        "items": {
+                                            "description": "Position of a corner of the chart",
+                                            "type": "object",
+                                            "required": [
+                                                "latitude",
+                                                "longitude"
+                                            ],
+                                            "properties": {
+                                                "latitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "longitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "altitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "chartFormat": {
+                                        "type": "string",
+                                        "description": "The format of the chart",
+                                        "enum": [
+                                            "gif",
+                                            "geotiff",
+                                            "kap",
+                                            "png",
+                                            "jpg",
+                                            "kml",
+                                            "wkt",
+                                            "topojson",
+                                            "geojson",
+                                            "gpx",
+                                            "tms",
+                                            "wms",
+                                            "S-57",
+                                            "S-63",
+                                            "svg",
+                                            "other"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+      
+            "delete": {
+                "tags": ["resources/charts"],
+                "summary": "Remove Chart with supplied id",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        },
+
+        "/resources/setWaypoint": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Add / update a Waypoint",
+>>>>>>> add charts API methods
                 "requestBody": {
                     "description": "Chart details",
                     "required": true,
@@ -3019,7 +3328,180 @@
                     }
                 }
             }
+<<<<<<< HEAD
 >>>>>>> addressed comments re parameters
+=======
+        },
+
+        "/resources/setChart": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Add / update a Chart",
+                "requestBody": {
+                    "description": "Chart attributes",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Signal K Chart resource",
+                                "required": ["identifier","tilemapUrl","chartUrl","chartFormat"],
+                                "properties": {
+                                    "name": {
+                                        "description": "Chart common name",
+                                        "example":"NZ615 Marlborough Sounds",
+                                        "type": "string"
+                                    },
+                                    "identifier": {
+                                        "type": "string",
+                                        "description": "Chart number",
+                                        "example":"NZ615"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "A description of the chart"
+                                    },
+                                    "oneOf": [
+                                        {
+                                            "tilemapUrl": {
+                                                "type": "string",
+                                                "description": "A url to the tilemap of the chart for use in TMS chartplotting apps",
+                                                "example":"http://{server}:8080/mapcache/NZ615"
+                                            }
+                                        },
+                                        {
+                                            "chartUrl": {
+                                                "type": "string",
+                                                "description": "A url to the chart file's storage location",
+                                                "example":"file:///home/pi/freeboard/mapcache/NZ615"
+                                            }
+                                        }
+                                    ],
+                                    "region": {
+                                        "type": "string",
+                                        "description": "Region related to note. A pointer to a region UUID. Alternative to geohash"
+                                    },
+                                    "geohash": {
+                                        "description": "Position related to chart. Alternative to region",
+                                        "type": "string"
+                                    },
+                                    "scale": {
+                                        "type": "integer",
+                                        "description": "The scale of the chart, the larger number from 1:200000"
+                                    },
+                                    "chartLayers": {
+                                        "type": "array",
+                                        "description": "If the chart format is WMS, the layers enabled for the chart.",
+                                        "items": {
+                                            "type": "string",
+                                            "description": "Identifier for the layer."
+                                        }
+                                    },
+                                    "bounds": {
+                                        "type": "array",
+                                        "description": "The bounds of the chart. An array containing the position of the upper left corner, and the lower right corner. Useful when the chart isn't inherently geo-referenced.",
+                                        "items": {
+                                            "description": "Position of a corner of the chart",
+                                            "type": "object",
+                                            "required": [
+                                                "latitude",
+                                                "longitude"
+                                            ],
+                                            "properties": {
+                                                "latitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "longitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "altitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "chartFormat": {
+                                        "type": "string",
+                                        "description": "The format of the chart",
+                                        "enum": [
+                                            "gif",
+                                            "geotiff",
+                                            "kap",
+                                            "png",
+                                            "jpg",
+                                            "kml",
+                                            "wkt",
+                                            "topojson",
+                                            "geojson",
+                                            "gpx",
+                                            "tms",
+                                            "wms",
+                                            "S-57",
+                                            "S-63",
+                                            "svg",
+                                            "other"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/resources/deleteChart": {
+            "put": {
+                "tags": ["resources/api"],
+                "summary": "Remove a Chart",
+                "requestBody": {
+                    "description": "Chart identifier",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["id"],
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "pattern": "(^[A-Za-z0-9_-]{8,}$)",
+                                        "description": "Chart identifier"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+>>>>>>> add charts API methods
         }
                 
     }
