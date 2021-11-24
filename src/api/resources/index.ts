@@ -647,11 +647,10 @@ export class Resources {
           const retVal = await this.resProvider[
             req.params.resourceType
           ]?.getResource(req.params.resourceType, req.params.resourceId)
-            res.json(retVal)
+          res.json(retVal)
         } catch (err) {
           res.status(404).send(`Resource not found! (${req.params.resourceId})`)
         }
-
       }
     )
 
@@ -671,7 +670,7 @@ export class Resources {
           const retVal = await this.resProvider[
             req.params.resourceType
           ]?.listResources(req.params.resourceType, req.query)
-            res.json(retVal)
+          res.json(retVal)
         } catch (err) {
           res.status(404).send(`Error retrieving resources!`)
         }
@@ -702,12 +701,23 @@ export class Resources {
           res.status(406).send(`Invalid resource data supplied!`)
           return
         }
-        const id = UUID_PREFIX + uuidv4()
+        if (!validate.resource(req.params.resourceType, req.body)) {
+          res.status(406).send(`Invalid resource data supplied!`)
+          return
+        }
+
+        let id: string
+        if (req.params.resourceType === 'charts') {
+          id = req.body.identifier
+        } else {
+          id = UUID_PREFIX + uuidv4()
+        } 
+
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
           ]?.setResource(req.params.resourceType, id, req.body)
-          
+
           this.server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
             this.buildDeltaMsg(
@@ -723,7 +733,7 @@ export class Resources {
           res
             .status(404)
             .send(`Error saving ${req.params.resourceType} resource (${id})!`)
-        } 
+        }
       }
     )
 
@@ -739,6 +749,23 @@ export class Resources {
           next()
           return
         }
+<<<<<<< HEAD
+=======
+
+        let isValidId: boolean
+        if (req.params.resourceType === 'charts') {
+          isValidId = validate.chartId(req.params.resourceId)
+        } else {
+          isValidId = validate.uuid(req.params.resourceId)
+        }
+        if (isValidId) {
+          res
+            .status(406)
+            .send(`Invalid resource id provided (${req.params.resourceId})`)
+          return
+        }
+
+>>>>>>> add  chartId test &  require  alignment with spec.
         if (!validate.resource(req.params.resourceType, req.body)) {
           res.status(406).send(`Invalid resource data supplied!`)
           return
@@ -751,7 +778,7 @@ export class Resources {
             req.params.resourceId,
             req.body
           )
-        
+
           this.server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
             this.buildDeltaMsg(
@@ -765,7 +792,7 @@ export class Resources {
             .send(
               `${req.params.resourceType} resource (${req.params.resourceId}) saved.`
             )
-          } catch (err) {
+        } catch (err) {
           res
             .status(404)
             .send(
@@ -789,12 +816,12 @@ export class Resources {
           next()
           return
         }
-        
+
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
           ]?.deleteResource(req.params.resourceType, req.params.resourceId)
- 
+
           this.server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
             this.buildDeltaMsg(

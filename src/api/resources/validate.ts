@@ -25,6 +25,7 @@ export const validate = {
       case 'charts':
         return validateChart(value)
         break
+<<<<<<< HEAD
       default:
         return true
     }
@@ -171,21 +172,28 @@ export const validate = {
       case 'regions':
         return validateRegion(value)
         break
+=======
+>>>>>>> add  chartId test &  require  alignment with spec.
       default:
         return true
     }
   },
 
-  // ** returns true if id is a valid Signal K UUID **
+  // returns true if id is a valid Signal K UUID
   uuid: (id: string): boolean => {
     const uuid = RegExp(
       '^urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$'
     )
     return uuid.test(id)
+  },
+
+  // returns true if id is a valid Signal K Chart resource id
+  chartId: (id: string): boolean => {
+    const uuid = RegExp('(^[A-Za-z0-9_-]{8,}$)')
+    return uuid.test(id)
   }
 }
 
-// ** validate route data
 const validateRoute = (r: any): boolean => {
   if (r.start) {
     const l = r.start.split('/')
@@ -212,7 +220,6 @@ const validateRoute = (r: any): boolean => {
   return true
 }
 
-// ** validate waypoint data
 const validateWaypoint = (r: any): boolean => {
   if (typeof r.position === 'undefined') {
     return false
@@ -233,7 +240,7 @@ const validateWaypoint = (r: any): boolean => {
   return true
 }
 
-// ** validate note data
+// validate note data
 const validateNote = (r: any): boolean => {
   if (!r.region && !r.position && !r.geohash) {
     return false
@@ -252,7 +259,6 @@ const validateNote = (r: any): boolean => {
   return true
 }
 
-// ** validate region data
 const validateRegion = (r: any): boolean => {
   if (!r.geohash && !r.feature) {
     return false
@@ -275,7 +281,22 @@ const validateRegion = (r: any): boolean => {
   return true
 }
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 >>>>>>> Add Signal K standard resource path handling
 =======
 >>>>>>> chore: linted
+=======
+
+const validateChart = (r: any): boolean => {
+  if (!r.name || !r.identifier || !r.chartFormat) {
+    return false
+  }
+
+  if (!r.tilemapUrl && !r.chartUrl) {
+    return false
+  }
+
+  return true
+}
+>>>>>>> add  chartId test &  require  alignment with spec.
