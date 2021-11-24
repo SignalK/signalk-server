@@ -643,12 +643,6 @@ export class Resources {
           next()
           return
         }
-        if (!validate.uuid(req.params.resourceId)) {
-          res
-            .status(406)
-            .send(`Invalid resource id provided (${req.params.resourceId})`)
-          return
-        }
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
@@ -695,6 +689,14 @@ export class Resources {
           debug('** No provider found... calling next()...')
           next()
           return
+        }
+        if (req.params.resourceType !== 'charts') {
+          if(!validate.uuid(req.params.resourceId)) {
+            res
+              .status(406)
+              .send(`Invalid resource id provided (${req.params.resourceId})`)
+            return
+          }
         }
         if (!validate.resource(req.params.resourceType, req.body)) {
           res.status(406).send(`Invalid resource data supplied!`)
@@ -787,12 +789,7 @@ export class Resources {
           next()
           return
         }
-        if (!validate.uuid(req.params.resourceId)) {
-          res
-            .status(406)
-            .send(`Invalid resource id provided (${req.params.resourceId})`)
-          return
-        }
+        
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
