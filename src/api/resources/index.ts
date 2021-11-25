@@ -160,7 +160,11 @@ export class Resources {
           return
         }
 
-        if (this.signalkResTypes.includes(req.params.resourceType as SignalKResourceType)) {
+        if (
+          this.signalkResTypes.includes(
+            req.params.resourceType as SignalKResourceType
+          )
+        ) {
           if (!validate.resource(req.params.resourceType, req.body)) {
             res.status(406).send(`Invalid resource data supplied!`)
             return
@@ -172,7 +176,7 @@ export class Resources {
           id = req.body.identifier
         } else {
           id = UUID_PREFIX + uuidv4()
-        } 
+        }
 
         try {
           const retVal = await this.resProvider[
@@ -211,7 +215,11 @@ export class Resources {
           return
         }
 
-        if (this.signalkResTypes.includes(req.params.resourceType as SignalKResourceType)) {
+        if (
+          this.signalkResTypes.includes(
+            req.params.resourceType as SignalKResourceType
+          )
+        ) {
           let isValidId: boolean
           if (req.params.resourceType === 'charts') {
             isValidId = validate.chartId(req.params.resourceId)
@@ -380,8 +388,10 @@ export class Resources {
 
   private getResourcePaths(): { [key: string]: any } {
     const resPaths: { [key: string]: any } = {}
-    for( let i in this.resProvider) {
-      resPaths[i] = `Path containing ${i.slice(-1)==='s' ? i.slice(0, i.length-1) : i} resources (provided by ${this.resProvider[i]?.pluginId})`
+    for (const i in this.resProvider) {
+      resPaths[i] = `Path containing ${
+        i.slice(-1) === 's' ? i.slice(0, i.length - 1) : i
+      } resources (provided by ${this.resProvider[i]?.pluginId})`
     }
     return resPaths
   }
@@ -390,8 +400,8 @@ export class Resources {
     debug(`** checkForProvider(${resType})`)
     debug(this.resProvider[resType])
 
-    if(this.resProvider[resType]) {
-      if(
+    if (this.resProvider[resType]) {
+      if (
         !this.resProvider[resType]?.listResources ||
         !this.resProvider[resType]?.getResource ||
         !this.resProvider[resType]?.setResource ||
@@ -399,14 +409,13 @@ export class Resources {
         typeof this.resProvider[resType]?.listResources !== 'function' ||
         typeof this.resProvider[resType]?.getResource !== 'function' ||
         typeof this.resProvider[resType]?.setResource !== 'function' ||
-        typeof this.resProvider[resType]?.deleteResource !== 'function' ) 
-      {
+        typeof this.resProvider[resType]?.deleteResource !== 'function'
+      ) {
         return false
       } else {
         return true
       }
-    }
-    else {
+    } else {
       return false
     }
   }
