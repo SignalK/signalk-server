@@ -563,8 +563,7 @@ export class Resources {
   private resProvider: { [key: string]: ResourceProviderMethods | null } = {}
   private server: ResourceApplication
 
-  // in-scope resource types
-  private resourceTypes: SignalKResourceType[] = [
+  private signalkResTypes: SignalKResourceType[] = [
     'routes',
     'waypoints',
     'notes',
@@ -689,6 +688,7 @@ export class Resources {
           next()
           return
         }
+<<<<<<< HEAD
         if (req.params.resourceType !== 'charts') {
           if(!validate.uuid(req.params.resourceId)) {
             res
@@ -704,6 +704,14 @@ export class Resources {
         if (!validate.resource(req.params.resourceType, req.body)) {
           res.status(406).send(`Invalid resource data supplied!`)
           return
+=======
+
+        if (this.signalkResTypes.includes(req.params.resourceType as SignalKResourceType)) {
+          if (!validate.resource(req.params.resourceType, req.body)) {
+            res.status(406).send(`Invalid resource data supplied!`)
+            return
+          }
+>>>>>>> allow registering  custom resource types
         }
 
         let id: string
@@ -752,24 +760,33 @@ export class Resources {
 <<<<<<< HEAD
 =======
 
-        let isValidId: boolean
-        if (req.params.resourceType === 'charts') {
-          isValidId = validate.chartId(req.params.resourceId)
-        } else {
-          isValidId = validate.uuid(req.params.resourceId)
-        }
-        if (isValidId) {
-          res
-            .status(406)
-            .send(`Invalid resource id provided (${req.params.resourceId})`)
-          return
-        }
+        if (this.signalkResTypes.includes(req.params.resourceType as SignalKResourceType)) {
+          let isValidId: boolean
+          if (req.params.resourceType === 'charts') {
+            isValidId = validate.chartId(req.params.resourceId)
+          } else {
+            isValidId = validate.uuid(req.params.resourceId)
+          }
+          if (isValidId) {
+            res
+              .status(406)
+              .send(`Invalid resource id provided (${req.params.resourceId})`)
+            return
+          }
 
+<<<<<<< HEAD
 >>>>>>> add  chartId test &  require  alignment with spec.
         if (!validate.resource(req.params.resourceType, req.body)) {
           res.status(406).send(`Invalid resource data supplied!`)
           return
+=======
+          if (!validate.resource(req.params.resourceType, req.body)) {
+            res.status(406).send(`Invalid resource data supplied!`)
+            return
+          }
+>>>>>>> allow registering  custom resource types
         }
+
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
@@ -919,31 +936,35 @@ export class Resources {
 
   private getResourcePaths(): { [key: string]: any } {
     const resPaths: { [key: string]: any } = {}
-    Object.entries(this.resProvider).forEach((p: any) => {
-      if (p[1]) {
-        resPaths[p[0]] = `Path containing ${p[0]}, each named with a UUID`
-      }
-    })
-    // check for other plugins servicing paths under ./resources
-    this.server._router.stack.forEach((i: any) => {
-      if (i.route && i.route.path && typeof i.route.path === 'string') {
-        if (i.route.path.indexOf(`${SIGNALK_API_PATH}/resources`) !== -1) {
-          const r = i.route.path.split('/')
-          if (r.length > 5 && !(r[5] in resPaths)) {
-            resPaths[
-              r[5]
-            ] = `Path containing ${r[5]} resources (provided by plug-in)`
-          }
-        }
-      }
-    })
+    for( let i in this.resProvider) {
+      resPaths[i] = `Path containing ${i.slice(-1)==='s' ? i.slice(0, i.length-1) : i} resources (provided by ${this.resProvider[i]?.pluginId})`
+    }
     return resPaths
   }
 
   private checkForProvider(resType: SignalKResourceType): boolean {
-    return this.resourceTypes.includes(resType) && this.resProvider[resType]
-      ? true
-      : false
+    debug(`** checkForProvider(${resType})`)
+    debug(this.resProvider[resType])
+
+    if(this.resProvider[resType]) {
+      if(
+        !this.resProvider[resType]?.listResources ||
+        !this.resProvider[resType]?.getResource ||
+        !this.resProvider[resType]?.setResource ||
+        !this.resProvider[resType]?.deleteResource ||
+        typeof this.resProvider[resType]?.listResources !== 'function' ||
+        typeof this.resProvider[resType]?.getResource !== 'function' ||
+        typeof this.resProvider[resType]?.setResource !== 'function' ||
+        typeof this.resProvider[resType]?.deleteResource !== 'function' ) 
+      {
+        return false
+      } else {
+        return true
+      }
+    }
+    else {
+      return false
+    }
   }
 
 <<<<<<< HEAD
