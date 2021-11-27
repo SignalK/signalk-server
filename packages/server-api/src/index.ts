@@ -6,6 +6,7 @@ export { PropertyValue, PropertyValues, PropertyValuesCallback } from './propert
 
 export type SignalKResourceType= 'routes' | 'waypoints' |'notes' |'regions' |'charts'
 <<<<<<< HEAD
+<<<<<<< HEAD
 export type ResourceTypes= SignalKResourceType[] | string[]
 
 export interface ResourceProviderMethods {
@@ -15,6 +16,12 @@ export interface ResourceProviderMethods {
 export interface ResourceProviderMethods {
   pluginId: string
 >>>>>>> add ResourceProvider types to server-api
+=======
+export type ResourceTypes= SignalKResourceType[] | string[]
+
+export interface ResourceProviderMethods {
+  pluginId?: string
+>>>>>>> update types
   listResources: (type: string, query: { [key: string]: any }) => Promise<any>
   getResource: (type: string, id: string) => Promise<any>
   setResource: (
@@ -27,10 +34,14 @@ export interface ResourceProviderMethods {
 
 export interface ResourceProvider {
 <<<<<<< HEAD
+<<<<<<< HEAD
   types: ResourceTypes
 =======
   types: SignalKResourceType[]
 >>>>>>> add ResourceProvider types to server-api
+=======
+  types: ResourceTypes
+>>>>>>> update types
   methods: ResourceProviderMethods
 }
 
