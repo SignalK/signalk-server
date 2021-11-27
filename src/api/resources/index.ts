@@ -389,9 +389,12 @@ export class Resources {
   private getResourcePaths(): { [key: string]: any } {
     const resPaths: { [key: string]: any } = {}
     for (const i in this.resProvider) {
-      resPaths[i] = `Path containing ${
-        i.slice(-1) === 's' ? i.slice(0, i.length - 1) : i
-      } resources (provided by ${this.resProvider[i]?.pluginId})`
+      resPaths[i] = {
+        description: `Path containing ${
+          i.slice(-1) === 's' ? i.slice(0, i.length - 1) : i
+        } resources`,
+        $source: this.resProvider[i]?.pluginId
+      }
     }
     return resPaths
   }
