@@ -360,7 +360,7 @@ module.exports = function(app) {
     const fn = isRemove ? removeModule : installModule
 
     fn(
-      app,
+      app.config,
       module,
       version,
       output => {
