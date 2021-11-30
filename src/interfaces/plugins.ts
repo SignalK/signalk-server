@@ -295,7 +295,7 @@ module.exports = (theApp: any) => {
   function startPlugins(app: any) {
     app.plugins = []
     app.pluginsMap = {}
-    modulesWithKeyword(app, 'signalk-node-server-plugin').forEach(
+    modulesWithKeyword(app.config, 'signalk-node-server-plugin').forEach(
       (moduleData: any) => {
         registerPlugin(
           app,

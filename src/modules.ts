@@ -23,6 +23,8 @@ const debug = Debug('signalk:modules')
 import _ from 'lodash'
 import path from 'path'
 import semver, { SemVer } from 'semver'
+import { WithConfig } from './app'
+import { Config } from './config/config'
 
 interface ModuleData {
   module: string
@@ -39,14 +41,16 @@ interface NpmModuleData {
   package: NpmPackageData
 }
 
-interface Config {
+interface PersonInPackage {
   name: string
-  appPath: string
-  configPath: string
+  email: string
 }
 
-interface App {
-  config: Config
+export interface Package {
+  name: string
+  author?: PersonInPackage
+  contributors?: PersonInPackage[]
+  dependencies: { [key: string]: any }
 }
 
 function findModulesInDir(dir: string, keyword: string): ModuleData[] {
@@ -93,9 +97,9 @@ function findModulesInDir(dir: string, keyword: string): ModuleData[] {
 }
 
 // Extract unique directory paths from app object.
-function getModulePaths(app: App) {
+function getModulePaths(config: Config) {
   // appPath is the app working directory.
-  const { appPath, configPath } = app.config
+  const { appPath, configPath } = config
   return (appPath === configPath
     ? [appPath]
     : [configPath, appPath]
@@ -110,11 +114,11 @@ const priorityPrefix = (a: ModuleData, b: ModuleData) =>
   getModuleSortName(a).localeCompare(getModuleSortName(b))
 
 // Searches for installed modules that contain `keyword`.
-function modulesWithKeyword(app: App, keyword: string) {
+function modulesWithKeyword(config: Config, keyword: string) {
   return _.uniqBy(
     // _.flatten since values are inside an array. [[modules...], [modules...]]
     _.flatten(
-      getModulePaths(app).map(pathOption =>
+      getModulePaths(config).map(pathOption =>
         findModulesInDir(pathOption, keyword)
       )
     ),
@@ -122,38 +126,38 @@ function modulesWithKeyword(app: App, keyword: string) {
   ).sort(priorityPrefix)
 }
 function installModule(
-  app: App,
+  config: Config,
   name: string,
   version: string,
   onData: () => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {
-  runNpm(app, name, version, 'install', onData, onErr, onClose)
+  runNpm(config, name, version, 'install', onData, onErr, onClose)
 }
 
 function removeModule(
-  app: App,
+  config: Config,
   name: string,
   version: any,
   onData: () => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {
-  runNpm(app, name, null, 'remove', onData, onErr, onClose)
+  runNpm(config, name, null, 'remove', onData, onErr, onClose)
 }
 
 function restoreModules(
-  app: App,
+  config: Config,
   onData: () => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {
-  runNpm(app, null, null, 'remove', onData, onErr, onClose)
+  runNpm(config, null, null, 'remove', onData, onErr, onClose)
 }
 
 function runNpm(
-  app: App,
+  config: Config,
   name: any,
   version: any,
   command: string,
@@ -174,7 +178,7 @@ function runNpm(
 
   debug(`${command}: ${packageString}`)
 
-  if (isTheServerModule(name, app)) {
+  if (isTheServerModule(name, config)) {
     if (process.platform === 'win32') {
       npm = spawn(
         'cmd',
@@ -189,7 +193,7 @@ function runNpm(
       )
     }
   } else {
-    opts.cwd = app.config.configPath
+    opts.cwd = config.configPath
 
     if (process.platform === 'win32') {
       npm = spawn('cmd', ['/c', `npm --save ${command} ${packageString}`], opts)
@@ -207,8 +211,8 @@ function runNpm(
   })
 }
 
-function isTheServerModule(moduleName: string, app: App) {
-  return moduleName === app.config.name
+function isTheServerModule(moduleName: string, config: Config) {
+  return moduleName === config.name
 }
 
 function findModulesWithKeyword(keyword: string) {
@@ -291,7 +295,7 @@ function getLatestServerVersion(
   })
 }
 
-function checkForNewServerVersion(
+export function checkForNewServerVersion(
   currentVersion: string,
   serverUpgradeIsAvailable: (
     errMessage: string | void,
@@ -312,7 +316,7 @@ function checkForNewServerVersion(
     })
 }
 
-function getAuthor(thePackage: any) {
+function getAuthor(thePackage: Package): string {
   debug(thePackage.name + ' author: ' + thePackage.author)
   return (
     (thePackage.author && (thePackage.author.name || thePackage.author.email)) +

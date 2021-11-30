@@ -15,20 +15,60 @@
 */
 'use strict'
 
-const path = require('path')
-const express = require('express')
-const debug = require('debug')('signalk-server:config')
-const _ = require('lodash')
-const fs = require('fs')
-const { v4: uuidv4 } = require('uuid')
-const semver = require('semver')
-const DeltaEditor = require('../deltaeditor')
+import Debug from 'debug'
+import path from 'path'
+import { SelfIdentity, SignalKMessageHub, WithConfig } from '../app'
+import DeltaEditor from '../deltaeditor'
+const debug = Debug('signalk-server:config')
+import fs from 'fs'
+import _ from 'lodash'
+import semver from 'semver'
+import { v4 as uuidv4 } from 'uuid'
 
 let disableWriteSettings = false
 
-function load(app) {
-  app.__argv = process.argv.slice(2)
-  app.argv = require('minimist')(app.__argv)
+export interface Config {
+  getExternalHostname: () => string
+  getExternalPort: (config: Config) => number
+  port: number
+  appPath: string
+  configPath: string
+  name: string
+  author: string
+  contributors: string[]
+  version: string
+  description: string
+  vesselName: string
+  vesselUUID: string
+  vesselMMSI: string
+  baseDeltaEditor: DeltaEditor
+  hasOldDefaults: boolean
+  overrideTimestampWithNow: boolean
+  security: boolean
+  settings: {
+    useBaseDeltas?: boolean
+    pipedProviders: any[]
+    interfaces?: { [ifaceName: string]: boolean }
+    security?: any
+    ssl?: boolean
+    wsCompression?: boolean
+    landingPage?: string
+    proxy_host?: string
+    proxy_port?: number
+    hostname?: string
+    pruneContextsMinutes?: number
+    mdns?: boolean
+  }
+  defaults: object
+}
+
+export interface ConfigApp extends WithConfig, SelfIdentity, SignalKMessageHub {
+  argv: any
+  env: any
+}
+
+export function load(app: ConfigApp) {
+  app.argv = require('minimist')(process.argv.slice(2))
 
   const config = (app.config = app.config || {})
   const env = (app.env = process.env)
@@ -64,12 +104,12 @@ function load(app) {
   } else {
     readSettingsFile(app)
     if (!setBaseDeltas(app)) {
-      let defaults = getFullDefaults(app)
+      const defaults = getFullDefaults(app)
       if (defaults) {
         convertOldDefaultsToDeltas(app.config.baseDeltaEditor, defaults)
         if (
-          typeof app.config.settings.useBaseDeltas === 'undefined' ||
-          app.config.settings.useBaseDeltas
+          typeof (app.config.settings as any).useBaseDeltas === 'undefined' ||
+          (app.config.settings as any).useBaseDeltas
         ) {
           writeBaseDeltasFileSync(app)
         } else {
@@ -153,7 +193,7 @@ function load(app) {
   require('./production')(app)
 }
 
-function checkPackageVersion(name, pkg, appPath) {
+function checkPackageVersion(name: string, pkg: any, appPath: string) {
   const expected = pkg.dependencies[name]
   let modulePackageJsonPath = path.join(
     appPath,
@@ -175,7 +215,7 @@ function checkPackageVersion(name, pkg, appPath) {
 }
 
 // Establish what the config directory path is.
-function getConfigDirectory({ argv, config, env }) {
+function getConfigDirectory({ argv, config, env }: any) {
   // Possible paths in order of priority.
   const configPaths = [
     env.SIGNALK_NODE_CONDFIG_DIR,
@@ -193,7 +233,7 @@ function getConfigDirectory({ argv, config, env }) {
 }
 
 // Create directories and set app.config.configPath.
-function setConfigDirectory(app) {
+function setConfigDirectory(app: ConfigApp) {
   app.config.configPath = getConfigDirectory(app)
   if (app.config.configPath !== app.config.appPath) {
     if (!fs.existsSync(app.config.configPath)) {
@@ -219,7 +259,7 @@ function setConfigDirectory(app) {
   }
 }
 
-function getDefaultsPath(app) {
+function getDefaultsPath(app: ConfigApp) {
   const defaultsFile =
     app.config.configPath !== app.config.appPath
       ? 'defaults.json'
@@ -227,7 +267,7 @@ function getDefaultsPath(app) {
   return path.join(app.config.configPath, defaultsFile)
 }
 
-function getBaseDeltasPath(app) {
+function getBaseDeltasPath(app: ConfigApp) {
   const defaultsFile =
     app.config.configPath !== app.config.appPath
       ? 'baseDeltas.json'
@@ -235,20 +275,20 @@ function getBaseDeltasPath(app) {
   return path.join(app.config.configPath, defaultsFile)
 }
 
-function readDefaultsFile(app) {
+function readDefaultsFile(app: ConfigApp) {
   const defaultsPath = getDefaultsPath(app)
   const data = fs.readFileSync(defaultsPath)
-  return JSON.parse(data)
+  return JSON.parse(data.toString())
 }
 
-function getFullDefaults(app) {
+function getFullDefaults(app: ConfigApp) {
   const defaultsPath = getDefaultsPath(app)
   try {
-    let defaults = readDefaultsFile(app)
+    const defaults = readDefaultsFile(app)
     debug(`Found defaults at ${defaultsPath.toString()}`)
     return defaults
   } catch (e) {
-    if (e.code && e.code === 'ENOENT') {
+    if ((e as any)?.code === 'ENOENT') {
       return undefined
     } else {
       console.error(`unable to parse ${defaultsPath.toString()}`)
@@ -259,13 +299,13 @@ function getFullDefaults(app) {
   return undefined
 }
 
-function setBaseDeltas(app) {
+function setBaseDeltas(app: ConfigApp) {
   const defaultsPath = getBaseDeltasPath(app)
   try {
     app.config.baseDeltaEditor.load(defaultsPath)
     debug(`Found default deltas at ${defaultsPath.toString()}`)
   } catch (e) {
-    if (e.code && e.code === 'ENOENT') {
+    if ((e as any)?.code === 'ENOENT') {
       debug(`No default deltas found at ${defaultsPath.toString()}`)
       return
     } else {
@@ -275,29 +315,29 @@ function setBaseDeltas(app) {
   return true
 }
 
-function sendBaseDeltas(app) {
-  let copy = JSON.parse(JSON.stringify(app.config.baseDeltaEditor.deltas))
-  copy.forEach(delta => {
+export function sendBaseDeltas(app: ConfigApp) {
+  const copy = JSON.parse(JSON.stringify(app.config.baseDeltaEditor.deltas))
+  copy.forEach((delta: any) => {
     app.handleMessage('defaults', delta)
   })
 }
 
-function writeDefaultsFile(app, defaults, cb) {
+function writeDefaultsFile(app: ConfigApp, defaults: any, cb: any) {
   fs.writeFile(getDefaultsPath(app), JSON.stringify(defaults, null, 2), cb)
 }
 
-function writeBaseDeltasFileSync(app) {
+function writeBaseDeltasFileSync(app: ConfigApp) {
   app.config.baseDeltaEditor.saveSync(getBaseDeltasPath(app))
 }
 
-function writeBaseDeltasFile(app) {
+function writeBaseDeltasFile(app: ConfigApp) {
   return app.config.baseDeltaEditor.save(getBaseDeltasPath(app))
 }
 
-function setSelfSettings(app) {
-  var name = app.config.baseDeltaEditor.getSelfValue('name')
-  var mmsi = app.config.baseDeltaEditor.getSelfValue('mmsi')
-  var uuid = app.config.baseDeltaEditor.getSelfValue('uuid')
+function setSelfSettings(app: ConfigApp) {
+  const name = app.config.baseDeltaEditor.getSelfValue('name')
+  const mmsi = app.config.baseDeltaEditor.getSelfValue('mmsi')
+  let uuid = app.config.baseDeltaEditor.getSelfValue('uuid')
 
   if (mmsi && !_.isString(mmsi)) {
     throw new Error(`invalid mmsi: ${mmsi}`)
@@ -328,11 +368,13 @@ function setSelfSettings(app) {
   app.selfContext = 'vessels.' + app.selfId
 }
 
-function readSettingsFile(app) {
+function readSettingsFile(app: ConfigApp) {
   const settings = getSettingsFilename(app)
   if (!app.argv.s && !fs.existsSync(settings)) {
     console.log('Settings file does not exist, using empty settings')
-    app.config.settings = {}
+    app.config.settings = {
+      pipedProviders: []
+    }
   } else {
     debug('Using settings file: ' + settings)
     app.config.settings = require(settings)
@@ -345,7 +387,7 @@ function readSettingsFile(app) {
   }
 }
 
-function writeSettingsFile(app, settings, cb) {
+function writeSettingsFile(app: ConfigApp, settings: any, cb: any) {
   if (!disableWriteSettings) {
     const settingsPath = getSettingsFilename(app)
     fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), cb)
@@ -354,7 +396,7 @@ function writeSettingsFile(app, settings, cb) {
   }
 }
 
-function getSettingsFilename(app) {
+function getSettingsFilename(app: ConfigApp) {
   if (process.env.SIGNALK_NODE_SETTINGS) {
     debug(
       'Settings filename was set in environment SIGNALK_NODE_SETTINGS, overriding all other options'
@@ -366,7 +408,7 @@ function getSettingsFilename(app) {
   return path.join(app.config.configPath, settingsFile)
 }
 
-function getExternalHostname(config) {
+function getExternalHostname(config: Config) {
   if (process.env.EXTERNALHOST) {
     return process.env.EXTERNALHOST
   }
@@ -382,7 +424,7 @@ function getExternalHostname(config) {
   }
 }
 
-function getExternalPort(config) {
+function getExternalPort(config: Config): any {
   if (process.env.EXTERNALPORT) {
     return process.env.EXTERNALPORT
   }
@@ -394,26 +436,29 @@ function getExternalPort(config) {
   return ''
 }
 
-function scanDefaults(deltaEditor, vpath, item) {
-  _.keys(item).forEach(key => {
-    let value = item[key]
+function scanDefaults(deltaEditor: DeltaEditor, vpath: string, item: any) {
+  _.keys(item).forEach((key: string) => {
+    const value = item[key]
     if (key === 'meta') {
       deltaEditor.setMeta('vessels.self', vpath, value)
     } else if (key === 'value') {
       deltaEditor.setSelfValue(vpath, value)
     } else if (_.isObject(value)) {
-      let childPath = vpath.length > 0 ? `${vpath}.${key}` : key
+      const childPath = vpath.length > 0 ? `${vpath}.${key}` : key
       scanDefaults(deltaEditor, childPath, value)
     }
   })
 }
 
-function convertOldDefaultsToDeltas(deltaEditor, defaults) {
-  let deltas = []
-  let self = _.get(defaults, 'vessels.self')
+function convertOldDefaultsToDeltas(
+  deltaEditor: DeltaEditor,
+  defaults: object
+) {
+  const deltas: any[] = []
+  const self: any = _.get(defaults, 'vessels.self')
   if (self) {
-    _.keys(self).forEach(key => {
-      let value = self[key]
+    _.keys(self).forEach((key: any) => {
+      const value = self[key]
       if (!_.isString(value)) {
         scanDefaults(deltaEditor, key, value)
       } else {

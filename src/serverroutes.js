@@ -865,7 +865,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
           sendRestoreStatus('Installing Plugins', '', 1)
 
           restoreModules(
-            app,
+            app.config,
             output => {
               sendRestoreStatus('Installing Plugins', `${output}`, 1)
               console.log(`stdout: ${output}`)

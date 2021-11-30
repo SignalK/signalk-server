@@ -51,7 +51,7 @@ describe('modulesWithKeyword', () => {
       JSON.stringify(fakeInstalledModulePackageJson)
     )
 
-    const moduleList = modulesWithKeyword(app, 'signalk-webapp')
+    const moduleList = modulesWithKeyword(app.config, 'signalk-webapp')
     chai.expect(_.map(moduleList, 'module')).to.eql(expectedModules)
     chai.expect(moduleList[0].location).to.not.eql(tempNodeModules)
     chai

@@ -48,7 +48,7 @@ module.exports = function(app) {
 
 function mountWebModules(app, keyword) {
   debug(`mountWebModules:${keyword}`)
-  const modules = modulesWithKeyword(app, keyword)
+  const modules = modulesWithKeyword(app.config, keyword)
   modules.forEach(moduleData => {
     let webappPath = path.join(moduleData.location, moduleData.module)
     if (fs.existsSync(webappPath + '/public/')) {
