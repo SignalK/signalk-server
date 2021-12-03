@@ -1,16 +1,22 @@
 import Debug from 'debug'
+import { Application, NextFunction, Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid'
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 import { buildResource } from './resources'
 import { validate } from './validate'
 
+=======
+>>>>>>> add charts API methods
 import {
   ResourceProvider,
   ResourceProviderMethods,
   SignalKResourceType
 } from '@signalk/server-api'
-import { Application, Handler, NextFunction, Request, Response } from 'express'
+
+import { buildResource } from './resources'
+import { validate } from './validate'
 
 const debug = Debug('signalk:resources')
 
@@ -25,7 +31,9 @@ const API_METHODS = [
   'setNote',
   'deleteNote',
   'setRegion',
-  'deleteRegion'
+  'deleteRegion',
+  'setChart',
+  'deleteChart'
 ]
 
 interface ResourceApplication extends Application {
@@ -355,6 +363,9 @@ export class Resources {
         }
         if (req.params.apiFunction.toLowerCase().indexOf('region') !== -1) {
           resType = 'regions'
+        }
+        if (req.params.apiFunction.toLowerCase().indexOf('charts') !== -1) {
+          resType = 'charts'
         }
         if (!this.checkForProvider(resType)) {
           res.status(501).send(`No provider for ${resType}!`)
