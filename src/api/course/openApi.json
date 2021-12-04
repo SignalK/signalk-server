@@ -112,8 +112,11 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "description": "Sets previousPoint value to current vessel location"
 =======
+=======
+>>>>>>> init courseApi
 =======
 >>>>>>> init courseApi
                 "description": "Sets previousPoint value to current vessel location",
@@ -140,6 +143,7 @@
                     }
                 }
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> init courseApi
 =======
                 "description": "Sets previousPoint value to current vessel location"
@@ -149,6 +153,8 @@
 =======
                 "description": "Sets previousPoint value to current vessel location"
 >>>>>>> chore: lint
+=======
+>>>>>>> init courseApi
             }
         },
 
@@ -222,8 +228,11 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
 =======
+=======
+>>>>>>> init courseApi
 =======
 >>>>>>> init courseApi
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null",
@@ -250,6 +259,7 @@
                     }
                 }
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> init courseApi
 =======
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
@@ -259,6 +269,8 @@
 =======
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
 >>>>>>> chore: lint
+=======
+>>>>>>> init courseApi
             }
         },
 
@@ -353,8 +365,11 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
 =======
+=======
+>>>>>>> init courseApi
 =======
 >>>>>>> init courseApi
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null",
@@ -381,6 +396,7 @@
                     }
                 }
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> init courseApi
 =======
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
@@ -390,6 +406,8 @@
 =======
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
 >>>>>>> chore: lint
+=======
+>>>>>>> init courseApi
             }
         },
 
