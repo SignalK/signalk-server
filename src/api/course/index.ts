@@ -1,15 +1,26 @@
+
+import {
+  ResourceProvider,
+  ResourceProviderMethods,
+  SignalKResourceType
+} from '@signalk/server-api'
 import Debug from 'debug'
 import { Application, Request, Response } from 'express'
+import { v4 as uuidv4 } from 'uuid'
 
 const debug = Debug('signalk:courseApi')
 
 const SIGNALK_API_PATH: string = `/signalk/v1/api`
 const COURSE_API_PATH: string = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
 
+const UUID_PREFIX: string = 'urn:mrn:signalk:uuid:'
+
+const API_METHODS: string[] = []
+
 interface CourseApplication extends Application {
   handleMessage: (id: string, data: any) => void
   getSelfPath: (path: string) => any
-  registerPutHandler: (context:string, path:string, cb:any) => any
+
   resourcesApi: {
     getResource: (resourceType: string, resourceId: string) => any
   }
@@ -102,26 +113,12 @@ export class CourseApi {
       }
     )
 
-    // 
-    if(this.server.registerPutHandler) {
-      debug('** Registering PUT Action Handler(s) **')    
-      this.server.registerPutHandler(
-          'vessels.self',
-          'navigation.course.*',
-          this.handleCourseApiPut
-      ); 
-    }
-
     // restart / arrivalCircle
     this.server.put(
       `${COURSE_API_PATH}/:action`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/:action`)
         if (req.params.restart) {
-          //test for active destination
-          if (!this.courseInfo.nextPoint.position) {
-            return
-          }
           // set previousPoint to vessel position
           const position: any = this.server.getSelfPath('navigation.position')
           if (position && position.value) {
@@ -273,12 +270,6 @@ export class CourseApi {
         res.status(200).send(`OK`)
       }
     )
-  }
-
-  private handleCourseApiPut(context:string, path:string, value:any, cb:any) {
-
-    debug('** PUT handler **')
-    return undefined
   }
 
   private async activateRoute(route: ActiveRoute): Promise<boolean> {
