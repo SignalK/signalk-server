@@ -110,8 +110,11 @@
                 "summary": "Restart course calculations",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "description": "Sets previousPoint value to current vessel location"
 =======
+=======
+>>>>>>> init courseApi
                 "description": "Sets previousPoint value to current vessel location",
                 "requestBody": {
                     "description": "Restart payload",
@@ -135,10 +138,13 @@
                         }
                     }
                 }
+<<<<<<< HEAD
 >>>>>>> init courseApi
 =======
                 "description": "Sets previousPoint value to current vessel location"
 >>>>>>> chore: lint
+=======
+>>>>>>> init courseApi
             }
         },
 
@@ -210,8 +216,11 @@
                 "summary": "Clear destination",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
 =======
+=======
+>>>>>>> init courseApi
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null",
                 "requestBody": {
                     "description": "Delete payload",
@@ -235,10 +244,13 @@
                         }
                     }
                 }
+<<<<<<< HEAD
 >>>>>>> init courseApi
 =======
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
 >>>>>>> chore: lint
+=======
+>>>>>>> init courseApi
             }
         },
 
@@ -331,8 +343,11 @@
                 "summary": "Clear active route",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
 =======
+=======
+>>>>>>> init courseApi
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null",
                 "requestBody": {
                     "description": "Delete payload",
@@ -356,10 +371,13 @@
                         }
                     }
                 }
+<<<<<<< HEAD
 >>>>>>> init courseApi
 =======
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
 >>>>>>> chore: lint
+=======
+>>>>>>> init courseApi
             }
         },
 
