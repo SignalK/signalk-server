@@ -46,6 +46,7 @@ import SubscriptionManager from './subscriptionmanager'
 import { Delta } from './types'
 const debug = createDebug('signalk-server')
 
+import { CourseApi } from './api/course'
 import { Resources } from './api/resources'
 
 // tslint:disable-next-line: no-var-requires
@@ -79,6 +80,7 @@ class Server {
     require('./put').start(app)
 
     app.resourcesApi = new Resources(app)
+    const courseApi = new CourseApi(app)
 
     app.signalk = new FullSignalK(app.selfId, app.selfType)
 

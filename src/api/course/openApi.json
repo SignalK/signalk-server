@@ -1,0 +1,413 @@
+{
+    "openapi": "3.0.2",
+    "info": {
+        "version": "1.0.0",
+        "title": "Signal K Course API"
+    },
+    
+    "paths": {
+
+        "/vessels/self/navigation/course/": {
+            "get": {
+                "tags": ["course"],
+                "summary": "Get course information",
+                "responses": {
+                    "default": {
+                        "description": "Course data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "activeRoute": {
+                                            "type": "object",
+                                            "properties": {
+                                                "href": {
+                                                    "type": "string",
+                                                    "example": "/resources/routes/urn:mrn:signalk:uuid:0d95e282-3e1f-4521-8c30-8288addbdb69"
+                                                },
+                                                "startTime": {
+                                                    "type": "string",
+                                                    "example": "2021-10-23T05:17:20.065Z"
+                                                },
+                                                "pointIndex": {
+                                                    "type": "number",
+                                                    "format": "int64",
+                                                    "example": 2
+                                                },
+                                                "reverse": {
+                                                    "type": "boolean",
+                                                    "default": false
+                                                }
+                                            }
+                                        },
+                                        "nextPoint": {
+                                            "type": "object",
+                                            "properties": {
+                                                "href": {
+                                                    "type": "string",
+                                                    "example": "/resources/waypoints/urn:mrn:signalk:uuid:0d95e282-3e1f-4521-8c30-8288addbdbab"
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "example": "RoutePoint"
+                                                },
+                                                "position": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "latitude": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        },
+                                                        "longitude": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        }
+                                                    },
+                                                    "example": {"latitude":-29.5,"longitude":137.5}
+                                                }
+                                            }
+                                        },
+                                        "previousPoint": {
+                                            "type": "object",
+                                            "properties": {
+                                                "href": {
+                                                    "type": "string",
+                                                    "example": null
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "example": "Location"
+                                                },
+                                                "position": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "latitude": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        },
+                                                        "longitude": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        }
+                                                    },
+                                                    "example": {"longitude":29.821001582434413,"latitude":70.7014589462524}
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/vessels/self/navigation/course/restart": {
+            "put": {
+                "tags": ["course"],
+                "summary": "Restart course calculations",
+                "description": "Sets previousPoint value to current vessel location",
+                "requestBody": {
+                    "description": "Restart payload",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["value"],
+                                "properties": {
+                                    "value": {
+                                        "type": "object",
+                                        "default": null
+                                    },
+                                    "source": {
+                                        "type": "string",
+                                        "example": "freeboard-sk"
+                                    }  
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/vessels/self/navigation/course/destination": {
+            "put": {
+                "tags": ["course/destination"],
+                "summary": "Set destination",
+                "description": "Set destination path from supplied details",
+                "requestBody": {
+                    "description": "Destination details",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["value"],
+                                "properties": {
+                                    "value": {
+                                        "type": "object",
+                                        "properties": {
+                                            "position": {              
+                                                "type": "object",
+                                                "description": "Destination position",
+                                                "required": [
+                                                    "latitude",
+                                                    "longitude"
+                                                ],
+                                                "properties": {
+                                                    "latitude": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "longitude": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    }
+                                                },
+                                                "example": {"latitude":-29.5,"longitude":137.5}
+                                            },
+                                            "href": {
+                                                "type": "string",
+                                                "description": "A reference (URL) to an object (under /resources) this point is related to",
+                                                "example": "/resources/waypoints/urn:mrn:signalk:uuid:3dd34dcc-36bf-4d61-ba80-233799b25672"
+                                            },
+                                            "type": {
+                                                "type": "string",
+                                                "description": "Type of point",
+                                                "example": "POI"
+                                            },
+                                            "arrivalCircle": {
+                                                "type": "number",
+                                                "format": "float",
+                                                "example": 500
+                                            }
+                                        }
+                                    },
+                                    "source": {
+                                        "type": "string",
+                                        "example": "freeboard-sk"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": ["course/destination"],
+                "summary": "Clear destination",
+                "description": "Sets activeRoute, nextPoint & previousPoint values to null",
+                "requestBody": {
+                    "description": "Delete payload",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["value"],
+                                "properties": {
+                                    "value": {
+                                        "type": "object",
+                                        "default": null
+                                    },
+                                    "source": {
+                                        "type": "string",
+                                        "example": "freeboard-sk"
+                                    }  
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/vessels/self/navigation/course/arrivalCircle": {
+            "put": {
+                "tags": ["course"],
+                "summary": "Set arrival circle radius (m)",
+                "description": "Sets an arrival circle radius (in meters)",
+                "requestBody": {
+                    "description": "Arrival circle payload",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["value"],
+                                "properties": {
+                                    "value": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 500
+                                    },
+                                    "source": {
+                                        "type": "string",
+                                        "example": "freeboard-sk"
+                                    }  
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/vessels/self/navigation/course/activeRoute": {
+            "put": {
+                "tags": ["course/activeRoute"],
+                "summary": "Set active route",
+                "description": "Sets activeRoute path and sets nextPoint to first point in the route",
+                "requestBody": {
+                    "description": "Active route details",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["value"],
+                                "properties": {
+                                    "value": {
+                                        "type": "object",
+                                        "properties": {
+                                            "href": {
+                                                "type": "string",
+                                                "description": "Path to route resource",
+                                                "example": "/resources/routes/urn:mrn:signalk:uuid:3dd34dcc-36bf-4d61-ba80-233799b25672"
+                                            },
+                                            "pointIndex": {              
+                                                "type": "number",
+                                                "format": "int64",
+                                                "description": "Zero based index of route point to use as destination",
+                                                "default": 0,
+                                                "minimum": 0,
+                                                "example": 2
+                                            },
+                                            "reverse": {              
+                                                "type": "boolean",
+                                                "default": false,
+                                                "description": "If true performs operations on route points in reverse order",
+                                                "example": 2
+                                            },
+                                            "arrivalCircle": {
+                                                "type": "number",
+                                                "format": "float",
+                                                "example": 500
+                                            }
+                                        }
+                                    },
+                                    "source": {
+                                        "type": "string",
+                                        "example": "freeboard-sk"
+                                    } 
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": ["course/activeRoute"],
+                "summary": "Clear active route",
+                "description": "Sets activeRoute, nextPoint & previousPoint values to null",
+                "requestBody": {
+                    "description": "Delete payload",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["value"],
+                                "properties": {
+                                    "value": {
+                                        "type": "object",
+                                        "default": null
+                                    },
+                                    "source": {
+                                        "type": "string",
+                                        "example": "freeboard-sk"
+                                    }  
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/vessels/self/navigation/course/activeRoute/nextPoint": {
+            "put": {
+                "tags": ["course/activeRoute"],
+                "summary": "Increment / decrement point in route as destination",
+                "description": "Increment / decrement point in the route as destination", 
+                "requestBody": {
+                    "description": "Increment / decrement",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["value"],
+                                "properties": {
+                                    "value": {
+                                        "type": "number",
+                                        "description": "increment (1) / decrement (-1) index of point in route to use as destination",
+                                        "enum": [-1,1],
+                                        "example": -1
+                                    },
+                                    "source": {
+                                        "type": "string",
+                                        "example": "freeboard-sk"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/vessels/self/navigation/course/activeRoute/pointIndex": {
+            "put": {
+                "tags": ["course/activeRoute"],
+                "summary": "Set point in route as destination",
+                "description": "Sets the specified point in the route as destination", 
+                "requestBody": {
+                    "description": "Next point index",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["value"],
+                                "properties": {
+                                    "value": {
+                                        "type": "number",
+                                        "description": "Index of point in route to use as destination",
+                                        "minimum": 0,
+                                        "example": 2
+                                    },
+                                    "source": {
+                                        "type": "string",
+                                        "example": "freeboard-sk"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+                
+    }
+
+}
+    
+
+
+
+  
