@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import Debug from 'debug'
 import { Application, Request, Response } from 'express'
 =======
@@ -16,6 +17,17 @@ import { v4 as uuidv4 } from 'uuid'
 import Debug from 'debug'
 import { Application, Request, Response } from 'express'
 >>>>>>> update detlas
+=======
+
+import {
+  ResourceProvider,
+  ResourceProviderMethods,
+  SignalKResourceType
+} from '@signalk/server-api'
+import Debug from 'debug'
+import { Application, Request, Response } from 'express'
+import { v4 as uuidv4 } from 'uuid'
+>>>>>>> init courseApi
 
 const debug = Debug('signalk:courseApi')
 
@@ -33,9 +45,14 @@ const API_METHODS: string[] = []
 =======
 >>>>>>> update detlas
 
+const UUID_PREFIX: string = 'urn:mrn:signalk:uuid:'
+
+const API_METHODS: string[] = []
+
 interface CourseApplication extends Application {
   handleMessage: (id: string, data: any) => void
   getSelfPath: (path: string) => any
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   securityStrategy: {
@@ -51,6 +68,9 @@ interface CourseApplication extends Application {
 =======
   registerPutHandler: (context:string, path:string, cb:any) => any
 >>>>>>> update detlas
+=======
+
+>>>>>>> init courseApi
   resourcesApi: {
     getResource: (resourceType: string, resourceId: string) => any
   }
@@ -169,6 +189,7 @@ export class CourseApi {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     this.server.put(
       `${COURSE_API_PATH}/restart`,
       async (req: Request, res: Response) => {
@@ -196,16 +217,14 @@ export class CourseApi {
     }
 
 >>>>>>> update detlas
+=======
+>>>>>>> init courseApi
     // restart / arrivalCircle
     this.server.put(
       `${COURSE_API_PATH}/:action`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/:action`)
         if (req.params.restart) {
-          //test for active destination
-          if (!this.courseInfo.nextPoint.position) {
-            return
-          }
           // set previousPoint to vessel position
 >>>>>>> init courseApi
           const position: any = this.server.getSelfPath('navigation.position')
@@ -491,12 +510,6 @@ export class CourseApi {
 >>>>>>> init courseApi
       }
     )
-  }
-
-  private handleCourseApiPut(context:string, path:string, value:any, cb:any) {
-
-    debug('** PUT handler **')
-    return undefined
   }
 
   private async activateRoute(route: ActiveRoute): Promise<boolean> {
