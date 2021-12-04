@@ -11,6 +11,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import Debug from 'debug'
 import { Application, Request, Response } from 'express'
 =======
@@ -100,6 +101,10 @@ import { Application, Request, Response } from 'express'
 >>>>>>> update detlas
 =======
 >>>>>>> init courseApi
+=======
+import Debug from 'debug'
+import { Application, Request, Response } from 'express'
+>>>>>>> update detlas
 
 const debug = Debug('signalk:courseApi')
 
@@ -112,6 +117,7 @@ const COURSE_API_PATH: string = `${SIGNALK_API_PATH}/vessels/self/navigation/cou
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 const DELTA_INTERVAL: number = 30000
 =======
@@ -144,10 +150,13 @@ const UUID_PREFIX: string = 'urn:mrn:signalk:uuid:'
 
 const API_METHODS: string[] = []
 >>>>>>> init courseApi
+=======
+>>>>>>> update detlas
 
 interface CourseApplication extends Application {
   handleMessage: (id: string, data: any) => void
   getSelfPath: (path: string) => any
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -242,6 +251,9 @@ interface CourseApplication extends Application {
 >>>>>>> enable put processing
 =======
 >>>>>>> init courseApi
+=======
+  registerPutHandler: (context:string, path:string, cb:any) => any
+>>>>>>> update detlas
   resourcesApi: {
     getResource: (resourceType: string, resourceId: string) => any
   }
@@ -264,6 +276,7 @@ interface Destination extends DestinationBase {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> init courseApi
@@ -277,6 +290,8 @@ interface Destination extends DestinationBase {
 =======
 
 >>>>>>> init courseApi
+=======
+>>>>>>> update detlas
 interface ActiveRoute extends DestinationBase {
   pointIndex?: number
   reverse?: boolean
@@ -458,10 +473,13 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> enable put processing
 =======
 =======
+=======
+>>>>>>> update detlas
 =======
 >>>>>>> update detlas
 =======
@@ -478,6 +496,7 @@ export class CourseApi {
       ); 
     }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -664,12 +683,18 @@ export class CourseApi {
           // set previousPoint to vessel position
 >>>>>>> init courseApi
 =======
+=======
+>>>>>>> update detlas
     // restart / arrivalCircle
     this.server.put(
       `${COURSE_API_PATH}/:action`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/:action`)
         if (req.params.restart) {
+          //test for active destination
+          if (!this.courseInfo.nextPoint.position) {
+            return
+          }
           // set previousPoint to vessel position
 >>>>>>> init courseApi
           const position: any = this.server.getSelfPath('navigation.position')
@@ -1579,6 +1604,12 @@ export class CourseApi {
 >>>>>>> init courseApi
       }
     )
+  }
+
+  private handleCourseApiPut(context:string, path:string, value:any, cb:any) {
+
+    debug('** PUT handler **')
+    return undefined
   }
 
   private async activateRoute(route: ActiveRoute): Promise<boolean> {
@@ -2528,6 +2559,9 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> update detlas
 =======
 >>>>>>> update detlas
 =======
@@ -2545,6 +2579,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       path: `${navPath[0]}.activeRoute.href`,
 =======
 =======
@@ -2791,6 +2826,8 @@ export class CourseApi {
       path: `${navPath[1]}.previousPoint.type`,
 >>>>>>> chore: lint
 =======
+=======
+>>>>>>> update detlas
       path: `${root[0]}.activeRoute.href`,
       value: this.courseInfo.activeRoute.href
     })
