@@ -15,7 +15,7 @@ It also defines the schema for the following __Common__ resource types:
 - regions
 - charts
 
-each of with its own path under the root `resources` path _(e.g. `/signalk/v1/api/resources/routes`)_.
+each with its own path under the root `resources` path _(e.g. `/signalk/v1/api/resources/routes`)_.
 
 It should also be noted that the `/signalk/v1/api/resources` path can also host other types of resource data which can be grouped within a __Custom__ path name _(e.g. `/signalk/v1/api/resources/fishingZones`)_.
 

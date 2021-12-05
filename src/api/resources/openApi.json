@@ -1358,7 +1358,7 @@
 
         },
 
-        "/resources/setWaypoint": {
+        "/resources/set/waypoint/{id}": {
             "put": {
                 "tags": ["resources/api"],
                 "summary": "Add / update a Waypoint",
@@ -1371,11 +1371,6 @@
                                 "type": "object",
                                 "required": ["position"],
                                 "properties": {
-                                    "id": {
-                                        "type": "string",
-                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-                                        "description": "Waypoint identifier"
-                                    },
                                     "name": {
                                         "type": "string",
                                         "description": "Waypoint name"
@@ -1429,45 +1424,7 @@
             }
         },
 
-        "/resources/deleteWaypoint": {
-            "put": {
-                "tags": ["resources/api"],
-                "summary": "Remove a Waypoint",
-                "requestBody": {
-                    "description": "Waypoint identifier",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["id"],
-                                "properties": {
-                                    "id": {
-                                        "type": "string",
-                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-                                        "description": "Waypoint identifier"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "text/plain": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/resources/setRoute": {
+        "/resources/set/route/{id}": {
             "put": {
                 "tags": ["resources/api"],
                 "summary": "Add / update a Route",
@@ -1480,11 +1437,6 @@
                                 "type": "object",
                                 "required": ["position"],
                                 "properties": {
-                                    "id": {
-                                        "type": "string",
-                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-                                        "description": "Route identifier"
-                                    },
                                     "name": {
                                         "type": "string",
                                         "description": "Route name"
@@ -1541,45 +1493,7 @@
             }
         },
 
-        "/resources/deleteRoute": {
-            "put": {
-                "tags": ["resources/api"],
-                "summary": "Remove a Route",
-                "requestBody": {
-                    "description": "Route identifier",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["id"],
-                                "properties": {
-                                    "id": {
-                                        "type": "string",
-                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-                                        "description": "Route identifier"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "text/plain": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/resources/setNote": {
+        "/resources/set/note/{id}": {
             "put": {
                 "tags": ["resources/api"],
                 "summary": "Add / update a Note",
@@ -1592,11 +1506,6 @@
                                 "type": "object",
                                 "required": ["position"],
                                 "properties": {
-                                    "id": {
-                                        "type": "string",
-                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-                                        "description": "Note identifier"
-                                    },
                                     "title": {
                                         "type": "string",
                                         "description": "Note's common name"
@@ -1664,45 +1573,7 @@
             }
         },
 
-        "/resources/deleteNote": {
-            "put": {
-                "tags": ["resources/api"],
-                "summary": "Remove a Note",
-                "requestBody": {
-                    "description": "Note identifier",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["id"],
-                                "properties": {
-                                    "id": {
-                                        "type": "string",
-                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-                                        "description": "Note identifier"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "text/plain": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/resources/setRegion": {
+        "/resources/set/region/{id}": {
             "put": {
                 "tags": ["resources/api"],
                 "summary": "Add / update a Region",
@@ -1715,11 +1586,6 @@
                                 "type": "object",
                                 "required": ["position"],
                                 "properties": {
-                                    "id": {
-                                        "type": "string",
-                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-                                        "description": "Region identifier"
-                                    },
                                     "name": {
                                         "type": "string",
                                         "description": "Region name"
@@ -1780,45 +1646,7 @@
             }
         },
 
-        "/resources/deleteRegion": {
-            "put": {
-                "tags": ["resources/api"],
-                "summary": "Remove a Region",
-                "requestBody": {
-                    "description": "Region identifier",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["id"],
-                                "properties": {
-                                    "id": {
-                                        "type": "string",
-                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-                                        "description": "Region identifier"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "text/plain": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/resources/setChart": {
+        "/resources/set/chart/{id}": {
             "put": {
                 "tags": ["resources/api"],
                 "summary": "Add / update a Chart",
@@ -1864,7 +1692,7 @@
                                     ],
                                     "region": {
                                         "type": "string",
-                                        "description": "Region related to note. A pointer to a region UUID. Alternative to geohash"
+                                        "description": "Region related to chart. A pointer to a region UUID. Alternative to geohash"
                                     },
                                     "geohash": {
                                         "description": "Position related to chart. Alternative to region",
@@ -1929,44 +1757,6 @@
                                             "svg",
                                             "other"
                                         ]
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "text/plain": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/resources/deleteChart": {
-            "put": {
-                "tags": ["resources/api"],
-                "summary": "Remove a Chart",
-                "requestBody": {
-                    "description": "Chart identifier",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["id"],
-                                "properties": {
-                                    "id": {
-                                        "type": "string",
-                                        "pattern": "(^[A-Za-z0-9_-]{8,}$)",
-                                        "description": "Chart identifier"
                                     }
                                 }
                             }
