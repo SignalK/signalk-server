@@ -2065,7 +2065,7 @@
 
         },
 
-        "/resources/setWaypoint": {
+        "/resources/set/waypoint/{id}": {
             "put": {
                 "tags": ["resources/api"],
                 "summary": "Add / update a Waypoint",
@@ -2217,6 +2217,7 @@
             }
         },
 
+<<<<<<< HEAD
         "/resources/charts/{id}": {
             "parameters": {
                 "name": "id",
@@ -2268,6 +2269,9 @@
         },
 >>>>>>> add API definitions
 
+=======
+        "/resources/set/route/{id}": {
+>>>>>>> chore: update docs
             "put": {
                 "tags": ["resources/charts"],
                 "summary": "Add / update a new Chart with supplied id",
@@ -2430,6 +2434,7 @@
 
         },
 
+<<<<<<< HEAD
         "/resources/setWaypoint": {
             "put": {
                 "tags": ["resources/api"],
@@ -3092,6 +3097,9 @@
 >>>>>>> add OpenApi definition file
 =======
         "/resources/setNote": {
+=======
+        "/resources/set/note/{id}": {
+>>>>>>> chore: update docs
             "put": {
                 "tags": ["resources/api"],
                 "summary": "Add / update a Note",
@@ -3104,11 +3112,6 @@
                                 "type": "object",
                                 "required": ["position"],
                                 "properties": {
-                                    "id": {
-                                        "type": "string",
-                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-                                        "description": "Note identifier"
-                                    },
                                     "title": {
                                         "type": "string",
                                         "description": "Note's common name"
@@ -3176,45 +3179,7 @@
             }
         },
 
-        "/resources/deleteNote": {
-            "put": {
-                "tags": ["resources/api"],
-                "summary": "Remove a Note",
-                "requestBody": {
-                    "description": "Note identifier",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["id"],
-                                "properties": {
-                                    "id": {
-                                        "type": "string",
-                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-                                        "description": "Note identifier"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "text/plain": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/resources/setRegion": {
+        "/resources/set/region/{id}": {
             "put": {
                 "tags": ["resources/api"],
                 "summary": "Add / update a Region",
@@ -3227,11 +3192,6 @@
                                 "type": "object",
                                 "required": ["position"],
                                 "properties": {
-                                    "id": {
-                                        "type": "string",
-                                        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-                                        "description": "Region identifier"
-                                    },
                                     "name": {
                                         "type": "string",
                                         "description": "Region name"
@@ -3292,6 +3252,7 @@
             }
         },
 
+<<<<<<< HEAD
         "/resources/deleteRegion": {
             "put": {
                 "tags": ["resources/api"],
@@ -3334,6 +3295,9 @@
         },
 
         "/resources/setChart": {
+=======
+        "/resources/set/chart/{id}": {
+>>>>>>> chore: update docs
             "put": {
                 "tags": ["resources/api"],
                 "summary": "Add / update a Chart",
@@ -3379,7 +3343,7 @@
                                     ],
                                     "region": {
                                         "type": "string",
-                                        "description": "Region related to note. A pointer to a region UUID. Alternative to geohash"
+                                        "description": "Region related to chart. A pointer to a region UUID. Alternative to geohash"
                                     },
                                     "geohash": {
                                         "description": "Position related to chart. Alternative to region",
@@ -3463,6 +3427,7 @@
                     }
                 }
             }
+<<<<<<< HEAD
         },
 
         "/resources/deleteChart": {
@@ -3502,6 +3467,8 @@
                 }
             }
 >>>>>>> add charts API methods
+=======
+>>>>>>> chore: update docs
         }
                 
     }
