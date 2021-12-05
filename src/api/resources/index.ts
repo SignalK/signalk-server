@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import Debug from 'debug'
 import { Application, NextFunction, Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid'
@@ -9,11 +10,16 @@ import { validate } from './validate'
 
 =======
 >>>>>>> add charts API methods
+=======
+>>>>>>> add securityStrategy test
 import {
   ResourceProvider,
   ResourceProviderMethods,
   SignalKResourceType
 } from '@signalk/server-api'
+import Debug from 'debug'
+import { Application, NextFunction, Request, Response } from 'express'
+import { v4 as uuidv4 } from 'uuid'
 
 import { buildResource } from './resources'
 import { validate } from './validate'
@@ -23,21 +29,16 @@ const debug = Debug('signalk:resources')
 const SIGNALK_API_PATH = `/signalk/v1/api`
 const UUID_PREFIX = 'urn:mrn:signalk:uuid:'
 
-const API_METHODS = [
-  'setWaypoint',
-  'deleteWaypoint',
-  'setRoute',
-  'deleteRoute',
-  'setNote',
-  'deleteNote',
-  'setRegion',
-  'deleteRegion',
-  'setChart',
-  'deleteChart'
-]
-
 interface ResourceApplication extends Application {
   handleMessage: (id: string, data: any) => void
+  securityStrategy: {
+    shouldAllowPut: (
+      req: any,
+      context: string,
+      source: any,
+      path: string
+    ) => boolean
+  }
 }
 
 export class Resources {
@@ -102,6 +103,15 @@ export class Resources {
     this.initResourceRoutes()
   }
 
+  private updateAllowed(): boolean {
+    return this.server.securityStrategy.shouldAllowPut(
+      this.server,
+      'vessels.self',
+      null,
+      'resources'
+    )
+  }
+
   private initResourceRoutes() {
     // list all serviced paths under resources
     this.server.get(
@@ -162,6 +172,7 @@ export class Resources {
       `${SIGNALK_API_PATH}/resources/:resourceType`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** POST ${SIGNALK_API_PATH}/resources/:resourceType`)
+
         if (
           !this.checkForProvider(req.params.resourceType as SignalKResourceType)
         ) {
@@ -170,6 +181,10 @@ export class Resources {
           return
         }
 
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
         if (
           this.signalkResTypes.includes(
             req.params.resourceType as SignalKResourceType
@@ -231,6 +246,10 @@ export class Resources {
           return
         }
 
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
         if (
           this.signalkResTypes.includes(
             req.params.resourceType as SignalKResourceType
@@ -302,6 +321,10 @@ export class Resources {
           return
         }
 
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
@@ -342,38 +365,66 @@ export class Resources {
 =======
     // facilitate API requests
     this.server.put(
-      `${SIGNALK_API_PATH}/resources/:apiFunction`,
-      async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** PUT ${SIGNALK_API_PATH}/resources/:apiFunction`)
+      `${SIGNALK_API_PATH}/resources/set/:resourceType`,
+      async (req: Request, res: Response) => {
+        debug(`** PUT ${SIGNALK_API_PATH}/resources/set/:resourceType`)
 
-        // check for valid API method request
-        if (!API_METHODS.includes(req.params.apiFunction)) {
-          res.status(501).send(`Invalid API method ${req.params.apiFunction}!`)
+        if (!this.updateAllowed()) {
+          res.status(403)
           return
         }
-        let resType: SignalKResourceType = 'waypoints'
-        if (req.params.apiFunction.toLowerCase().indexOf('waypoint') !== -1) {
-          resType = 'waypoints'
-        }
-        if (req.params.apiFunction.toLowerCase().indexOf('route') !== -1) {
-          resType = 'routes'
-        }
-        if (req.params.apiFunction.toLowerCase().indexOf('note') !== -1) {
-          resType = 'notes'
-        }
-        if (req.params.apiFunction.toLowerCase().indexOf('region') !== -1) {
-          resType = 'regions'
-        }
-        if (req.params.apiFunction.toLowerCase().indexOf('charts') !== -1) {
-          resType = 'charts'
-        }
-        if (!this.checkForProvider(resType)) {
-          res.status(501).send(`No provider for ${resType}!`)
+
+        const apiData = this.processApiRequest(req)
+
+        if (!this.checkForProvider(apiData.type)) {
+          res.status(501).send(`No provider for ${apiData.type}!`)
           return
         }
-        let resId: string = ''
-        let resValue: any = null
+        if (!apiData.value) {
+          res.status(406).send(`Invalid resource data supplied!`)
+          return
+        }
+        if (apiData.type === 'charts') {
+          if (!validate.chartId(apiData.id)) {
+            res.status(406).send(`Invalid chart resource id supplied!`)
+            return
+          }
+        } else {
+          if (!validate.uuid(apiData.id)) {
+            res.status(406).send(`Invalid resource id supplied!`)
+            return
+          }
+        }
 
+        try {
+          const retVal = await this.resProvider[apiData.type]?.setResource(
+            apiData.type,
+            apiData.id,
+            apiData.value
+          )
+          this.server.handleMessage(
+            this.resProvider[apiData.type]?.pluginId as string,
+            this.buildDeltaMsg(apiData.type, apiData.id, apiData.value)
+          )
+          res.status(200).send(`SUCCESS: ${req.params.resourceType} complete.`)
+        } catch (err) {
+          res.status(404).send(`ERROR: ${req.params.resourceType} incomplete!`)
+        }
+      }
+    )
+    this.server.put(
+      `${SIGNALK_API_PATH}/resources/set/:resourceType/:resourceId`,
+      async (req: Request, res: Response) => {
+        debug(
+          `** PUT ${SIGNALK_API_PATH}/resources/set/:resourceType/:resourceId`
+        )
+
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
+
+<<<<<<< HEAD
         if (req.params.apiFunction.toLowerCase().indexOf('set') !== -1) {
           resValue = buildResource(resType, req.body)
           if (!resValue) {
@@ -920,36 +971,76 @@ export class Resources {
             }
             resId = req.body.id
           }
+=======
+        const apiData = this.processApiRequest(req)
+
+        if (!this.checkForProvider(apiData.type)) {
+          res.status(501).send(`No provider for ${apiData.type}!`)
+          return
         }
-        if (req.params.apiFunction.toLowerCase().indexOf('delete') !== -1) {
-          resValue = null
-          if (!req.body.id) {
-            res.status(406).send(`No resource id supplied!`)
+        if (!apiData.value) {
+          res.status(406).send(`Invalid resource data supplied!`)
+          return
+>>>>>>> add securityStrategy test
+        }
+        if (apiData.type === 'charts') {
+          if (!validate.chartId(apiData.id)) {
+            res.status(406).send(`Invalid chart resource id supplied!`)
             return
           }
-          if (!validate.uuid(req.body.id)) {
+        } else {
+          if (!validate.uuid(apiData.id)) {
             res.status(406).send(`Invalid resource id supplied!`)
             return
           }
-          resId = req.body.id
         }
 
         try {
-          const retVal = await this.resProvider[resType]?.setResource(
-            resType,
-            resId,
-            resValue
+          const retVal = await this.resProvider[apiData.type]?.setResource(
+            apiData.type,
+            apiData.id,
+            apiData.value
           )
           this.server.handleMessage(
-            this.resProvider[resType]?.pluginId as string,
-            this.buildDeltaMsg(resType, resId, resValue)
+            this.resProvider[apiData.type]?.pluginId as string,
+            this.buildDeltaMsg(apiData.type, apiData.id, apiData.value)
           )
-          res.status(200).send(`SUCCESS: ${req.params.apiFunction} complete.`)
+          res.status(200).send(`SUCCESS: ${req.params.resourceType} complete.`)
         } catch (err) {
-          res.status(404).send(`ERROR: ${req.params.apiFunction} incomplete!`)
+          res.status(404).send(`ERROR: ${req.params.resourceType} incomplete!`)
         }
       }
     )
+  }
+
+  private processApiRequest(req: Request) {
+    let resType: SignalKResourceType = 'waypoints'
+    if (req.params.resourceType.toLowerCase() === 'waypoint') {
+      resType = 'waypoints'
+    }
+    if (req.params.resourceType.toLowerCase() === 'route') {
+      resType = 'routes'
+    }
+    if (req.params.resourceType.toLowerCase() === 'note') {
+      resType = 'notes'
+    }
+    if (req.params.resourceType.toLowerCase() === 'region') {
+      resType = 'regions'
+    }
+    if (req.params.resourceType.toLowerCase() === 'charts') {
+      resType = 'charts'
+    }
+
+    const resId: string = req.params.resourceId
+      ? req.params.resourceId
+      : UUID_PREFIX + uuidv4()
+    const resValue: any = buildResource(resType, req.body)
+
+    return {
+      type: resType,
+      id: resId,
+      value: resValue
+    }
   }
 
   private getResourcePaths(): { [key: string]: any } {
