@@ -32,40 +32,16 @@ module.exports = {
 
     app.put(apiPathPrefix + '*', function(req, res, next) {
       // ** ignore resources paths **
-<<<<<<< HEAD
-<<<<<<< HEAD
       if (req.path.split('/')[4] === 'resources') {
         next()
         return
       }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-      if(req.path.split('/')[4]==='resources') {
-        next()
-        return
-      } 
->>>>>>> Add Signal K standard resource path handling
-=======
-      if (req.path.split('/')[4] === 'resources') {
-        next()
-        return
-      }
->>>>>>> chore: linted
-=======
-=======
->>>>>>> enable put processing
-
       // ** ignore course paths **
       if (req.path.indexOf('/navigation/course') !== -1) {
         next()
         return
       }
-
-<<<<<<< HEAD
->>>>>>> enable put processing
-=======
->>>>>>> enable put processing
+      
       let path = String(req.path).replace(apiPathPrefix, '')
 
       const value = req.body
