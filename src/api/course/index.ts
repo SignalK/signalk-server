@@ -9,7 +9,14 @@ const COURSE_API_PATH: string = `${SIGNALK_API_PATH}/vessels/self/navigation/cou
 interface CourseApplication extends Application {
   handleMessage: (id: string, data: any) => void
   getSelfPath: (path: string) => any
-  registerPutHandler: (context:string, path:string, cb:any) => any
+  securityStrategy: {
+    shouldAllowPut: (
+      req: any,
+      context: string,
+      source: any,
+      path: string
+    ) => boolean
+  }
   resourcesApi: {
     getResource: (resourceType: string, resourceId: string) => any
   }
@@ -92,6 +99,15 @@ export class CourseApi {
     this.initResourceRoutes()
   }
 
+  private updateAllowed(): boolean {
+    return this.server.securityStrategy.shouldAllowPut(
+      this.server,
+      'vessels.self',
+      null,
+      'resources'
+    )
+  }
+
   private initResourceRoutes() {
     // return current course information
     this.server.get(
@@ -102,43 +118,43 @@ export class CourseApi {
       }
     )
 
-    // 
-    if(this.server.registerPutHandler) {
-      debug('** Registering PUT Action Handler(s) **')    
-      this.server.registerPutHandler(
-          'vessels.self',
-          'navigation.course.*',
-          this.handleCourseApiPut
-      ); 
-    }
-
-    // restart / arrivalCircle
     this.server.put(
-      `${COURSE_API_PATH}/:action`,
+      `${COURSE_API_PATH}/restart`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/:action`)
-        if (req.params.restart) {
-          //test for active destination
-          if (!this.courseInfo.nextPoint.position) {
-            return
-          }
-          // set previousPoint to vessel position
-          const position: any = this.server.getSelfPath('navigation.position')
-          if (position && position.value) {
-            this.courseInfo.previousPoint.position = position.value
-            this.emitCourseInfo()
-            res.status(200).send(`Course restarted.`)
-          } else {
-            res.status(406).send(`Vessel position unavailable!`)
-          }
+        debug(`** PUT ${COURSE_API_PATH}/restart`)
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
         }
-        if (req.params.arrivalCircle) {
-          if (this.setArrivalCircle(req.params.arrivalCircle)) {
-            this.emitCourseInfo()
-            res.status(200).send(`Destination set successfully.`)
-          } else {
-            res.status(406).send(`Invalid Data`)
-          }
+        if (!this.courseInfo.nextPoint.position) {
+          res.status(406).send(`No active destination!`)
+          return
+        }
+        // set previousPoint to vessel position
+        const position: any = this.server.getSelfPath('navigation.position')
+        if (position && position.value) {
+          this.courseInfo.previousPoint.position = position.value
+          this.emitCourseInfo()
+          res.status(200)
+        } else {
+          res.status(406).send(`Vessel position unavailable!`)
+        }
+      }
+    )
+
+    this.server.put(
+      `${COURSE_API_PATH}/arrivalCircle`,
+      async (req: Request, res: Response) => {
+        debug(`** PUT ${COURSE_API_PATH}/arrivalCircle`)
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
+        if (this.setArrivalCircle(req.body.value)) {
+          this.emitCourseInfo()
+          res.status(200)
+        } else {
+          res.status(406).send(`Invalid Data`)
         }
       }
     )
@@ -148,6 +164,10 @@ export class CourseApi {
       `${COURSE_API_PATH}/destination`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/destination`)
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
         if (!req.body.value) {
           res.status(406).send(`Invalid Data`)
           return
@@ -155,7 +175,7 @@ export class CourseApi {
         const result = await this.setDestination(req.body.value)
         if (result) {
           this.emitCourseInfo()
-          res.status(200).send(`Destination set successfully.`)
+          res.status(200)
         } else {
           this.clearDestination()
           this.emitCourseInfo()
@@ -169,22 +189,29 @@ export class CourseApi {
       `${COURSE_API_PATH}/destination`,
       async (req: Request, res: Response) => {
         debug(`** DELETE ${COURSE_API_PATH}/destination`)
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
         this.clearDestination()
         this.emitCourseInfo()
-        res.status(200).send(`Destination cleared.`)
+        res.status(200)
       }
     )
 
-    // set / clear activeRoute
+    // set activeRoute
     this.server.put(
       `${COURSE_API_PATH}/activeRoute`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/activeRoute`)
-
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
         const result = await this.activateRoute(req.body.value)
         if (result) {
           this.emitCourseInfo()
-          res.status(200).send(`Active route set.`)
+          res.status(200)
         } else {
           this.clearDestination()
           this.emitCourseInfo()
@@ -192,14 +219,19 @@ export class CourseApi {
         }
       }
     )
+
+    // clear activeRoute /destination
     this.server.delete(
       `${COURSE_API_PATH}/activeRoute`,
       async (req: Request, res: Response) => {
         debug(`** DELETE ${COURSE_API_PATH}/activeRoute`)
-
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
         this.clearDestination()
         this.emitCourseInfo()
-        res.status(200).send(`Active route cleared.`)
+        res.status(200)
       }
     )
 
@@ -207,6 +239,11 @@ export class CourseApi {
       `${COURSE_API_PATH}/activeRoute/:action`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/activeRoute`)
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
+        // fetch route data
         if (!this.courseInfo.activeRoute.href) {
           res.status(406).send(`Invalid Data`)
           return
@@ -217,7 +254,7 @@ export class CourseApi {
           return
         }
 
-        if (req.params.nextPoint) {
+        if (req.params.action === 'nextPoint') {
           if (
             typeof req.body.value === 'number' &&
             (req.body.value === 1 || req.body.value === -1)
@@ -230,7 +267,7 @@ export class CourseApi {
             res.status(406).send(`Invalid Data`)
           }
         }
-        if (req.params.pointIndex) {
+        if (req.params.action === 'pointIndex') {
           if (typeof req.body.value === 'number') {
             this.courseInfo.activeRoute.pointIndex = this.parsePointIndex(
               req.body.value,
@@ -241,7 +278,7 @@ export class CourseApi {
           }
         }
 
-        // set nextPoint
+        // set new destination
         this.courseInfo.nextPoint.position = this.getRoutePoint(
           rte,
           this.courseInfo.activeRoute.pointIndex
@@ -267,15 +304,9 @@ export class CourseApi {
         }
         this.courseInfo.previousPoint.href = null
 
-        res.status(200).send(`OK`)
+        res.status(200)
       }
     )
-  }
-
-  private handleCourseApiPut(context:string, path:string, value:any, cb:any) {
-
-    debug('** PUT handler **')
-    return undefined
   }
 
   private async activateRoute(route: ActiveRoute): Promise<boolean> {
