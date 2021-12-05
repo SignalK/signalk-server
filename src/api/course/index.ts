@@ -57,14 +57,21 @@ interface CourseApplication extends Application {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   securityStrategy: {
     shouldAllowPut: (
       req: Application,
+=======
+  securityStrategy: {
+    shouldAllowPut: (
+      req: any,
+>>>>>>> enable put processing
       context: string,
       source: any,
       path: string
     ) => boolean
   }
+<<<<<<< HEAD
 =======
 >>>>>>> init courseApi
 =======
@@ -76,6 +83,8 @@ interface CourseApplication extends Application {
 =======
   registerPutHandler: (context:string, path:string, cb:any) => any
 >>>>>>> update detlas
+=======
+>>>>>>> enable put processing
   resourcesApi: {
     getResource: (resourceType: string, resourceId: string) => any
   }
@@ -182,6 +191,15 @@ export class CourseApi {
 >>>>>>> init courseApi
   }
 
+  private updateAllowed(): boolean {
+    return this.server.securityStrategy.shouldAllowPut(
+      this.server,
+      'vessels.self',
+      null,
+      'resources'
+    )
+  }
+
   private initResourceRoutes() {
     // return current course information
     this.server.get(
@@ -196,12 +214,19 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> enable put processing
     this.server.put(
       `${COURSE_API_PATH}/restart`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/restart`)
         if (!this.updateAllowed()) {
+<<<<<<< HEAD
           res.status(403).send('Unauthorised')
+=======
+          res.status(403)
+>>>>>>> enable put processing
           return
         }
         if (!this.courseInfo.nextPoint.position) {
@@ -209,6 +234,7 @@ export class CourseApi {
           return
         }
         // set previousPoint to vessel position
+<<<<<<< HEAD
         try {
 =======
 =======
@@ -231,9 +257,23 @@ export class CourseApi {
 =======
 >>>>>>> update detlas
     // restart / arrivalCircle
+=======
+        const position: any = this.server.getSelfPath('navigation.position')
+        if (position && position.value) {
+          this.courseInfo.previousPoint.position = position.value
+          this.emitCourseInfo()
+          res.status(200)
+        } else {
+          res.status(406).send(`Vessel position unavailable!`)
+        }
+      }
+    )
+
+>>>>>>> enable put processing
     this.server.put(
-      `${COURSE_API_PATH}/:action`,
+      `${COURSE_API_PATH}/arrivalCircle`,
       async (req: Request, res: Response) => {
+<<<<<<< HEAD
         debug(`** PUT ${COURSE_API_PATH}/:action`)
         if (req.params.restart) {
           //test for active destination
@@ -283,6 +323,18 @@ export class CourseApi {
             res.status(406).send(`Invalid Data`)
           }
 >>>>>>> init courseApi
+=======
+        debug(`** PUT ${COURSE_API_PATH}/arrivalCircle`)
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
+        if (this.setArrivalCircle(req.body.value)) {
+          this.emitCourseInfo()
+          res.status(200)
+        } else {
+          res.status(406).send(`Invalid Data`)
+>>>>>>> enable put processing
         }
       }
     )
@@ -293,6 +345,7 @@ export class CourseApi {
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/destination`)
 <<<<<<< HEAD
+<<<<<<< HEAD
         if (!this.updateAllowed()) {
           res.status(403).send('Unauthorised')
           return
@@ -300,6 +353,12 @@ export class CourseApi {
 =======
 
 >>>>>>> init courseApi
+=======
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
+>>>>>>> enable put processing
         if (!req.body.value) {
           res.status(406).send(`Invalid Data`)
           return
@@ -308,10 +367,14 @@ export class CourseApi {
         if (result) {
           this.emitCourseInfo()
 <<<<<<< HEAD
+<<<<<<< HEAD
           res.status(200).send('OK')
 =======
           res.status(200).send(`Destination set successfully.`)
 >>>>>>> init courseApi
+=======
+          res.status(200)
+>>>>>>> enable put processing
         } else {
           this.clearDestination()
           this.emitCourseInfo()
@@ -326,6 +389,7 @@ export class CourseApi {
       async (req: Request, res: Response) => {
         debug(`** DELETE ${COURSE_API_PATH}/destination`)
 <<<<<<< HEAD
+<<<<<<< HEAD
         if (!this.updateAllowed()) {
           res.status(403).send('Unauthorised')
           return
@@ -338,18 +402,29 @@ export class CourseApi {
 
     // set activeRoute
 =======
+=======
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
+>>>>>>> enable put processing
         this.clearDestination()
         this.emitCourseInfo()
-        res.status(200).send(`Destination cleared.`)
+        res.status(200)
       }
     )
 
+<<<<<<< HEAD
     // set / clear activeRoute
 >>>>>>> init courseApi
+=======
+    // set activeRoute
+>>>>>>> enable put processing
     this.server.put(
       `${COURSE_API_PATH}/activeRoute`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/activeRoute`)
+<<<<<<< HEAD
 <<<<<<< HEAD
         if (!this.updateAllowed()) {
           res.status(403).send('Unauthorised')
@@ -366,6 +441,16 @@ export class CourseApi {
           this.emitCourseInfo()
           res.status(200).send(`Active route set.`)
 >>>>>>> init courseApi
+=======
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
+        const result = await this.activateRoute(req.body.value)
+        if (result) {
+          this.emitCourseInfo()
+          res.status(200)
+>>>>>>> enable put processing
         } else {
           this.clearDestination()
           this.emitCourseInfo()
@@ -374,19 +459,28 @@ export class CourseApi {
       }
     )
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     // clear activeRoute /destination
 =======
 >>>>>>> init courseApi
+=======
+
+    // clear activeRoute /destination
+>>>>>>> enable put processing
     this.server.delete(
       `${COURSE_API_PATH}/activeRoute`,
       async (req: Request, res: Response) => {
         debug(`** DELETE ${COURSE_API_PATH}/activeRoute`)
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> enable put processing
         if (!this.updateAllowed()) {
           res.status(403)
           return
         }
+<<<<<<< HEAD
         this.clearDestination()
         this.emitCourseInfo()
         res.status(200).send('OK')
@@ -396,6 +490,11 @@ export class CourseApi {
         this.emitCourseInfo()
         res.status(200).send(`Active route cleared.`)
 >>>>>>> init courseApi
+=======
+        this.clearDestination()
+        this.emitCourseInfo()
+        res.status(200)
+>>>>>>> enable put processing
       }
     )
 
@@ -403,6 +502,7 @@ export class CourseApi {
       `${COURSE_API_PATH}/activeRoute/:action`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/activeRoute`)
+<<<<<<< HEAD
 <<<<<<< HEAD
         if (!this.updateAllowed()) {
           res.status(403).send('Unauthorised')
@@ -412,14 +512,24 @@ export class CourseApi {
 =======
 
 >>>>>>> init courseApi
+=======
+        if (!this.updateAllowed()) {
+          res.status(403)
+          return
+        }
+        // fetch route data
+>>>>>>> enable put processing
         if (!this.courseInfo.activeRoute.href) {
           res.status(406).send(`Invalid Data`)
           return
         }
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> init courseApi
+=======
+>>>>>>> enable put processing
         const rte = await this.getRoute(this.courseInfo.activeRoute.href)
         if (!rte) {
           res.status(406).send(`Invalid Data`)
@@ -427,10 +537,14 @@ export class CourseApi {
         }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         if (req.params.action === 'nextPoint') {
 =======
         if (req.params.nextPoint) {
 >>>>>>> init courseApi
+=======
+        if (req.params.action === 'nextPoint') {
+>>>>>>> enable put processing
           if (
             typeof req.body.value === 'number' &&
             (req.body.value === 1 || req.body.value === -1)
@@ -449,8 +563,12 @@ export class CourseApi {
 =======
           }
         }
+<<<<<<< HEAD
         if (req.params.pointIndex) {
 >>>>>>> init courseApi
+=======
+        if (req.params.action === 'pointIndex') {
+>>>>>>> enable put processing
           if (typeof req.body.value === 'number') {
             this.courseInfo.activeRoute.pointIndex = this.parsePointIndex(
               req.body.value,
@@ -472,7 +590,7 @@ export class CourseApi {
           }
         }
 
-        // set nextPoint
+        // set new destination
         this.courseInfo.nextPoint.position = this.getRoutePoint(
           rte,
           this.courseInfo.activeRoute.pointIndex
@@ -521,16 +639,14 @@ export class CourseApi {
         res.status(200).send('OK')
 =======
 
+<<<<<<< HEAD
         res.status(200).send(`OK`)
 >>>>>>> init courseApi
+=======
+        res.status(200)
+>>>>>>> enable put processing
       }
     )
-  }
-
-  private handleCourseApiPut(context:string, path:string, value:any, cb:any) {
-
-    debug('** PUT handler **')
-    return undefined
   }
 
   private async activateRoute(route: ActiveRoute): Promise<boolean> {
