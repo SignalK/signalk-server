@@ -38,6 +38,7 @@ module.exports = {
         next()
         return
       }
+<<<<<<< HEAD
 =======
       if(req.path.split('/')[4]==='resources') {
         next()
@@ -50,6 +51,15 @@ module.exports = {
         return
       }
 >>>>>>> chore: linted
+=======
+
+      // ** ignore course paths **
+      if (req.path.indexOf('/navigation/course') !== -1) {
+        next()
+        return
+      }
+
+>>>>>>> enable put processing
       let path = String(req.path).replace(apiPathPrefix, '')
 
       const value = req.body
