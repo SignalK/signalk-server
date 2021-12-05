@@ -41,7 +41,6 @@ module.exports = {
         next()
         return
       }
-      
       let path = String(req.path).replace(apiPathPrefix, '')
 
       const value = req.body
