@@ -35,6 +35,13 @@ module.exports = {
         next()
         return
       }
+
+      // ** ignore course paths **
+      if (req.path.indexOf('/navigation/course') !== -1) {
+        next()
+        return
+      }
+
       let path = String(req.path).replace(apiPathPrefix, '')
 
       const value = req.body
