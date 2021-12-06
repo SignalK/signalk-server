@@ -168,7 +168,7 @@ export class Resources {
     )
 
     // facilitate creation of new resource entry of supplied type
-    this.server.post(
+    this.server.put(
       `${SIGNALK_API_PATH}/resources/:resourceType`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** POST ${SIGNALK_API_PATH}/resources/:resourceType`)
@@ -1014,6 +1014,7 @@ export class Resources {
   }
 
   private processApiRequest(req: Request) {
+
     let resType: SignalKResourceType = 'waypoints'
     if (req.params.resourceType.toLowerCase() === 'waypoint') {
       resType = 'waypoints'
@@ -1031,10 +1032,13 @@ export class Resources {
       resType = 'charts'
     }
 
+    const resValue: any = buildResource(resType, req.body)
+
     const resId: string = req.params.resourceId
       ? req.params.resourceId
-      : UUID_PREFIX + uuidv4()
-    const resValue: any = buildResource(resType, req.body)
+      : resType = 'charts'
+        ? resValue.identifier
+        : UUID_PREFIX + uuidv4()
 
     return {
       type: resType,
