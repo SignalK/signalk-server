@@ -91,8 +91,6 @@ To create / update a route entry the body of the PUT request must contain data i
   name: 'route name',
   description: 'description of the route',
   attributes: {
-    attribute1: 'attribute1 value',
-    attribute2: 258,
     ...
   },
   points: [
@@ -153,8 +151,6 @@ To create / update a waypoint entry the body of the PUT request must contain dat
   name: 'waypoint name',
   description: 'description of the waypoint',
   attributes: {
-    attribute1: 'attribute1 value',
-    attribute2: 258,
     ...
   },
   position: {
@@ -201,8 +197,6 @@ To create / update a region entry the body of the PUT request must contain data 
   name: 'region name',
   description: 'description of the region',
   attributes: {
-    attribute1: 'attribute1 value',
-    attribute2: 258,
     ...
   },
   points: [
@@ -211,20 +205,14 @@ To create / update a region entry the body of the PUT request must contain data 
     {latitude: -39.367,longitude: 134.7467},
     {latitude: -39.567,longitude: 134.4467},
     {latitude: -38.567,longitude: 135.9467}
-  ],
-  geohash: 'gbsuv'
+  ]
 }
 ```
 where:
 - name: is text detailing the name of the region
 - description (optional): is text describing the region
 - attributes (optional): object containing key | value pairs of attributes associated with the region
-
-and either:
-- points: is an array of points (latitude and longitude) defining a polygon. _Note: first and last point in the array must be the same!_
-
-OR
-- geohash: a value defining a bounded area _e.g. 'gbsuv'_
+- points: is an array of points (latitude and longitude) defining an area.
 
 
 _Example: Create new region entry (with server generated id)_
@@ -247,7 +235,13 @@ _Example: Create new region entry (with supplied id)_
 HTTP PUT 'http://hostname:3000/signalk/v1/api/resources/set/region/urn:mrn:signalk:uuid:94052456-65fa-48ce-a85d-41b78a9d2111' {
   name: 'region name',
   description: 'description of the region',
-  geohash: 'gbsuv'
+  points: [
+    {latitude: -38.567,longitude: 135.9467},
+    {latitude: -38.967,longitude: 135.2467},
+    {latitude: -39.367,longitude: 134.7467},
+    {latitude: -39.567,longitude: 134.4467},
+    {latitude: -38.567,longitude: 135.9467}
+  ]
 }
 ```
 
@@ -270,8 +264,7 @@ To create / update a note entry the body of the PUT request must contain data in
     latitude: -38.567,
     longitude: 135.9467
   },
-  geohash: 'gbsuv',
-  region: '/resources/regions/urn:mrn:signalk:uuid:35052456-65fa-48ce-a85d-41b78a9d2a61'
+  href: 'reference to resource entry'
 }
 ```
 where:
@@ -285,10 +278,7 @@ and either:
 - position: the latitude and longitude associated with the note
 
 OR
-- geohash: a value defining a bounded area associated with the note _e.g. 'gbsuv'_
-
-OR
-- region: text containing a reference to a region resource associated with the note _e.g. '/resources/regions/urn:mrn:signalk:uuid:35052456-65fa-48ce-a85d-41b78a9d2a61'_
+- href: text containing a reference to a resource associated with the note _e.g. '/resources/regions/urn:mrn:signalk:uuid:35052456-65fa-48ce-a85d-41b78a9d2a61'_
 
 
 _Example: Create new note entry (with server generated id)_
@@ -310,7 +300,7 @@ _Example: Create new note entry (with supplied id)_
 HTTP PUT 'http://hostname:3000/signalk/v1/api/resources/set/note/urn:mrn:signalk:uuid:94052456-65fa-48ce-a85d-41b78a9d2111' {
   title: 'note title',
   description: 'text containing brief description',
-  region: '/resources/regions/urn:mrn:signalk:uuid:35052456-65fa-48ce-a85d-41b78a9d2a61'
+  href: '/resources/regions/urn:mrn:signalk:uuid:35052456-65fa-48ce-a85d-41b78a9d2a61'
 }
 ```
 
