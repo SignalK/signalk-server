@@ -1,6 +1,5 @@
 import { SignalKResourceType } from '@signalk/server-api'
-import { getDistance, isValidCoordinate } from 'geolib'
-import ngeohash from 'ngeohash'
+import { getDistance, getLatitude, isValidCoordinate } from 'geolib'
 
 export const buildResource = (resType: SignalKResourceType, data: any): any => {
   if (resType === 'routes') {
@@ -15,6 +14,10 @@ export const buildResource = (resType: SignalKResourceType, data: any): any => {
   if (resType === 'regions') {
     return buildRegion(data)
   }
+  if (resType === 'charts') {
+    return buildChart(data)
+  }
+  return null
 }
 
 const buildRoute = (rData: any): any => {
@@ -122,8 +125,7 @@ const buildNote = (rData: any): any => {
   }
   if (
     typeof rData.position === 'undefined' &&
-    typeof rData.region === 'undefined' &&
-    typeof rData.geohash === 'undefined'
+    typeof rData.href === 'undefined'
   ) {
     return null
   }
@@ -134,11 +136,8 @@ const buildNote = (rData: any): any => {
     }
     note.position = rData.position
   }
-  if (typeof rData.region !== 'undefined') {
-    note.region = rData.region
-  }
-  if (typeof rData.geohash !== 'undefined') {
-    note.geohash = rData.geohash
+  if (typeof rData.href !== 'undefined') {
+    note.region = rData.href
   }
   if (typeof rData.url !== 'undefined') {
     note.url = rData.url
@@ -173,48 +172,96 @@ const buildRegion = (rData: any): any => {
     Object.assign(reg.feature.properties, rData.attributes)
   }
 
-  if (typeof rData.points === 'undefined' && rData.geohash === 'undefined') {
+  if (typeof rData.points !== 'undefined') {
     return null
   }
-  if (typeof rData.geohash !== 'undefined') {
-    reg.geohash = rData.geohash
-
-    const bounds = ngeohash.decode_bbox(rData.geohash)
-    coords = [
-      [bounds[1], bounds[0]],
-      [bounds[3], bounds[0]],
-      [bounds[3], bounds[2]],
-      [bounds[1], bounds[2]],
-      [bounds[1], bounds[0]]
-    ]
-    reg.feature.geometry.coordinates.push(coords)
+  if (!Array.isArray(rData.points)) {
+    return null
   }
-  if (typeof rData.points !== 'undefined' && coords.length === 0) {
-    if (!Array.isArray(rData.points)) {
-      return null
+  let isValid: boolean = true
+  rData.points.forEach((p: any) => {
+    if (!isValidCoordinate(p)) {
+      isValid = false
     }
-    let isValid: boolean = true
-    rData.points.forEach((p: any) => {
-      if (!isValidCoordinate(p)) {
-        isValid = false
-      }
-    })
-    if (!isValid) {
-      return null
-    }
-    if (
-      rData.points[0].latitude !==
-        rData.points[rData.points.length - 1].latitude &&
-      rData.points[0].longitude !==
-        rData.points[rData.points.length - 1].longitude
-    ) {
-      rData.points.push(rData.points[0])
-    }
-    coords = rData.points.map((p: any) => {
-      return [p.longitude, p.latitude]
-    })
-    reg.feature.geometry.coordinates.push(coords)
+  })
+  if (!isValid) {
+    return null
   }
-
+  if (
+    rData.points[0].latitude !==
+      rData.points[rData.points.length - 1].latitude &&
+    rData.points[0].longitude !==
+      rData.points[rData.points.length - 1].longitude
+  ) {
+    rData.points.push(rData.points[0])
+  }
+  coords = rData.points.map((p: any) => {
+    return [p.longitude, p.latitude]
+  })
+  reg.feature.geometry.coordinates.push(coords)
+  
   return reg
+}
+
+const buildChart = (rData: any): any => {
+  const chart: any = {
+    identifier: '',
+    name: '',
+    description: '',
+    minzoom: 1,
+    maxzoom: 28,
+    type: 'tilelayer',
+    format: 'png',
+    tilemapUrl: '',
+    chartLayers: [],
+    scale: 250000,
+    bounds: [-180,-90,180,90]
+  }
+
+  if (typeof rData.identifier === 'undefined') {
+    return null
+  } else {
+    chart.identifier = rData.identifier
+  }
+  if (typeof rData.url === 'undefined') {
+    return null
+  } else {
+    chart.tilemapUrl = rData.url
+  }
+  if (typeof rData.name !== 'undefined') {
+    chart.name = rData.name
+  } else {
+    chart.name = rData.identifier
+  }
+  if (typeof rData.description !== 'undefined') {
+    chart.description = rData.description
+  }
+  if (typeof rData.minZoom === 'number') {
+    chart.minzoom = rData.minZoom
+  }
+  if (typeof rData.maxZoom === 'number') {
+    chart.maxzoom = rData.maxZoom
+  }
+  if (typeof rData.serverType !== 'undefined') {
+    chart.type = rData.serverType
+  }
+  if (typeof rData.format !== 'undefined') {
+    chart.format = rData.format
+  }
+  if (typeof rData.layers !== 'undefined' && Array.isArray(rData.layers)) {
+    chart.chartLayers = rData.layers
+  }
+  if (typeof rData.scale === 'number') {
+    chart.scale = rData.scale
+  }
+  if (typeof rData.bounds !== 'undefined' && Array.isArray(rData.bounds)) {
+    chart.bounds = [
+      rData.bounds[0].longitude, 
+      rData.bounds[0].latitude,
+      rData.bounds[1].longitude, 
+      rData.bounds[1].latitude
+    ]
+  }
+  
+  return chart
 }
