@@ -113,6 +113,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "description": "Sets previousPoint value to current vessel location"
 =======
 =======
@@ -155,6 +156,9 @@
 >>>>>>> chore: lint
 =======
 >>>>>>> init courseApi
+=======
+                "description": "Sets previousPoint value to current vessel location"
+>>>>>>> chore: lint
             }
         },
 
@@ -229,6 +233,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
 =======
 =======
@@ -271,6 +276,9 @@
 >>>>>>> chore: lint
 =======
 >>>>>>> init courseApi
+=======
+                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
+>>>>>>> chore: lint
             }
         },
 
@@ -366,6 +374,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
 =======
 =======
@@ -408,6 +417,9 @@
 >>>>>>> chore: lint
 =======
 >>>>>>> init courseApi
+=======
+                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
+>>>>>>> chore: lint
             }
         },
 
