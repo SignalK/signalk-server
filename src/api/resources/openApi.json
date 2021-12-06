@@ -105,7 +105,7 @@
         },
 
         "/resources/routes/": {
-            "post": {
+            "put": {
                 "tags": ["resources/routes"],
                 "summary": "Add a new Route",
                 "requestBody": {
@@ -339,7 +339,7 @@
         },
 
         "/resources/waypoints/": {
-            "post": {
+            "put": {
                 "tags": ["resources/waypoints"],
                 "summary": "Add a new Waypoint",
                 "requestBody": {
@@ -573,7 +573,7 @@
         },
 
         "/resources/notes/": {
-            "post": {
+            "put": {
                 "tags": ["resources/notes"],
                 "summary": "Add a new Note",
                 "requestBody": {
@@ -785,7 +785,7 @@
         },
 
         "/resources/regions/": {
-            "post": {
+            "put": {
                 "tags": ["resources/regions"],
                 "summary": "Add a new Region",
                 "requestBody": {
@@ -1057,7 +1057,7 @@
         },
 
         "/resources/charts/": {
-            "post": {
+            "put": {
                 "tags": ["resources/charts"],
                 "summary": "Add a new Chart",
                 "requestBody": {
@@ -1504,7 +1504,7 @@
                         "application/json": {
                             "schema": {
                                 "type": "object",
-                                "required": ["position"],
+                                "required": ["title"],
                                 "properties": {
                                     "title": {
                                         "type": "string",
@@ -1533,10 +1533,6 @@
                                                         "format": "float"
                                                     }
                                                 }
-                                            },
-                                            "geohash": {
-                                                "type": "string",
-                                                "description": "Position related to note. Alternative to region or position"
                                             },
                                             "region": {
                                                 "type": "string",
@@ -1601,10 +1597,6 @@
                                             "type": "string"
                                         }
                                     },
-                                    "geohash": {
-                                        "type": "string",
-                                        "description": "Area related to region. Alternative to points."
-                                    },
                                     "points": {
                                         "description": "Region boundary points",
                                         "type": "array",
@@ -1658,51 +1650,32 @@
                             "schema": {
                                 "type": "object",
                                 "description": "Signal K Chart resource",
-                                "required": ["identifier","tilemapUrl","chartUrl","chartFormat"],
+                                "required": ["identifier", "tilemapUrl"],
                                 "properties": {
-                                    "name": {
-                                        "description": "Chart common name",
-                                        "example":"NZ615 Marlborough Sounds",
-                                        "type": "string"
-                                    },
                                     "identifier": {
                                         "type": "string",
                                         "description": "Chart number",
                                         "example":"NZ615"
                                     },
+                                    "name": {
+                                        "description": "Chart common name",
+                                        "example":"NZ615 Marlborough Sounds",
+                                        "type": "string"
+                                    },
                                     "description": {
                                         "type": "string",
                                         "description": "A description of the chart"
                                     },
-                                    "oneOf": [
-                                        {
-                                            "tilemapUrl": {
-                                                "type": "string",
-                                                "description": "A url to the tilemap of the chart for use in TMS chartplotting apps",
-                                                "example":"http://{server}:8080/mapcache/NZ615"
-                                            }
-                                        },
-                                        {
-                                            "chartUrl": {
-                                                "type": "string",
-                                                "description": "A url to the chart file's storage location",
-                                                "example":"file:///home/pi/freeboard/mapcache/NZ615"
-                                            }
-                                        }
-                                    ],
-                                    "region": {
+                                    "tilemapUrl": {
                                         "type": "string",
-                                        "description": "Region related to chart. A pointer to a region UUID. Alternative to geohash"
-                                    },
-                                    "geohash": {
-                                        "description": "Position related to chart. Alternative to region",
-                                        "type": "string"
+                                        "description": "A url to the tilemap of the chart for use in TMS chartplotting apps",
+                                        "example":"http://{server}:8080/mapcache/NZ615"
                                     },
                                     "scale": {
                                         "type": "integer",
                                         "description": "The scale of the chart, the larger number from 1:200000"
                                     },
-                                    "chartLayers": {
+                                    "layers": {
                                         "type": "array",
                                         "description": "If the chart format is WMS, the layers enabled for the chart.",
                                         "items": {
@@ -1712,7 +1685,7 @@
                                     },
                                     "bounds": {
                                         "type": "array",
-                                        "description": "The bounds of the chart. An array containing the position of the upper left corner, and the lower right corner. Useful when the chart isn't inherently geo-referenced.",
+                                        "description": "The bounding rectangle of the chart defined by the position of the lower left corner, and the upper right corner.",
                                         "items": {
                                             "description": "Position of a corner of the chart",
                                             "type": "object",
@@ -1728,34 +1701,24 @@
                                                 "longitude": {
                                                     "type": "number",
                                                     "format": "float"
-                                                },
-                                                "altitude": {
-                                                    "type": "number",
-                                                    "format": "float"
                                                 }
                                             }
                                         }
                                     },
-                                    "chartFormat": {
+                                    "format": {
                                         "type": "string",
                                         "description": "The format of the chart",
                                         "enum": [
-                                            "gif",
-                                            "geotiff",
-                                            "kap",
                                             "png",
-                                            "jpg",
-                                            "kml",
-                                            "wkt",
-                                            "topojson",
-                                            "geojson",
-                                            "gpx",
-                                            "tms",
-                                            "wms",
-                                            "S-57",
-                                            "S-63",
-                                            "svg",
-                                            "other"
+                                            "jpg"                                            
+                                        ]
+                                    },
+                                    "serverType": {
+                                        "type": "string",
+                                        "description": "Chart server type",
+                                        "enum": [
+                                            "tilelayer",
+                                            "WMS"                                            
                                         ]
                                     }
                                 }
