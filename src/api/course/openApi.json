@@ -109,6 +109,7 @@
                 "tags": ["course"],
                 "summary": "Restart course calculations",
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "description": "Sets previousPoint value to current vessel location"
 =======
                 "description": "Sets previousPoint value to current vessel location",
@@ -135,6 +136,9 @@
                     }
                 }
 >>>>>>> init courseApi
+=======
+                "description": "Sets previousPoint value to current vessel location"
+>>>>>>> chore: lint
             }
         },
 
@@ -205,6 +209,7 @@
                 "tags": ["course/destination"],
                 "summary": "Clear destination",
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
 =======
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null",
@@ -231,6 +236,9 @@
                     }
                 }
 >>>>>>> init courseApi
+=======
+                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
+>>>>>>> chore: lint
             }
         },
 
@@ -322,6 +330,7 @@
                 "tags": ["course/activeRoute"],
                 "summary": "Clear active route",
 <<<<<<< HEAD
+<<<<<<< HEAD
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null"
 =======
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null",
@@ -348,6 +357,9 @@
                     }
                 }
 >>>>>>> init courseApi
+=======
+                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
+>>>>>>> chore: lint
             }
         },
 
