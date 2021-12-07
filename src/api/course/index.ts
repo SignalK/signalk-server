@@ -131,6 +131,8 @@ const API_METHODS: string[] = []
 =======
 >>>>>>> update detlas
 
+const DELTA_INTERVAL: number = 30000 
+
 interface CourseApplication extends Application {
   handleMessage: (id: string, data: any) => void
   getSelfPath: (path: string) => any
@@ -326,6 +328,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     setInterval(() => {
       if (this.courseInfo.nextPoint.position) {
         this.emitCourseInfo()
@@ -369,11 +372,14 @@ export class CourseApi {
 =======
 >>>>>>> init courseApi
 =======
+=======
+>>>>>>> add 30sec delta interval
     setInterval( ()=> {
       if(this.courseInfo.nextPoint.position) {
         this.emitCourseInfo()
       }
     }, DELTA_INTERVAL)
+<<<<<<< HEAD
 >>>>>>> add 30sec delta interval
   }
 
@@ -386,6 +392,8 @@ export class CourseApi {
     )
 =======
 >>>>>>> init courseApi
+=======
+>>>>>>> add 30sec delta interval
   }
 
   private updateAllowed(): boolean {
@@ -461,6 +469,7 @@ export class CourseApi {
         debug(`** PUT ${COURSE_API_PATH}/restart`)
         if (!this.updateAllowed()) {
 <<<<<<< HEAD
+<<<<<<< HEAD
           res.status(403).send('Unauthorised')
 =======
           res.status(403)
@@ -512,6 +521,9 @@ export class CourseApi {
 =======
           res.status(403).send('Unauthorised')
 >>>>>>> add 30sec delta interval
+=======
+          res.status(403).send('Unauthorised')
+>>>>>>> add 30sec delta interval
           return
         }
         if (!this.courseInfo.nextPoint.position) {
@@ -560,12 +572,16 @@ export class CourseApi {
             this.courseInfo.previousPoint.position = position.value
             this.emitCourseInfo()
 <<<<<<< HEAD
+<<<<<<< HEAD
             res.status(200).send('OK')
           }
         } catch (err) {
 >>>>>>> chore: lint
 =======
             res.status(200)
+=======
+            res.status(200).send('OK')
+>>>>>>> add 30sec delta interval
           }
         } catch (err) {
 >>>>>>> chore: lint
@@ -697,13 +713,13 @@ export class CourseApi {
 =======
         debug(`** PUT ${COURSE_API_PATH}/arrivalCircle`)
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).send('Unauthorised')
           return
         }
         if (this.isValidArrivalCircle(req.body.value)) {
           this.courseInfo.nextPoint.arrivalCircle = req.body.value
           this.emitCourseInfo()
-          res.status(200)
+          res.status(200).send('OK')
         } else {
           res.status(406).send(`Invalid Data`)
 >>>>>>> enable put processing
@@ -748,7 +764,7 @@ export class CourseApi {
 >>>>>>> init courseApi
 =======
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).send('Unauthorised')
           return
         }
 >>>>>>> enable put processing
@@ -767,6 +783,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
           res.status(200).send('OK')
 =======
           res.status(200).send(`Destination set successfully.`)
@@ -792,6 +809,9 @@ export class CourseApi {
 =======
           res.status(200)
 >>>>>>> enable put processing
+=======
+          res.status(200).send('OK')
+>>>>>>> add 30sec delta interval
         } else {
           this.clearDestination()
           this.emitCourseInfo()
@@ -860,13 +880,13 @@ export class CourseApi {
 =======
 =======
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).send('Unauthorised')
           return
         }
 >>>>>>> enable put processing
         this.clearDestination()
         this.emitCourseInfo()
-        res.status(200)
+        res.status(200).send('OK')
       }
     )
 
@@ -943,14 +963,18 @@ export class CourseApi {
 >>>>>>> init courseApi
 =======
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).send('Unauthorised')
           return
         }
         const result = await this.activateRoute(req.body.value)
         if (result) {
           this.emitCourseInfo()
+<<<<<<< HEAD
           res.status(200)
 >>>>>>> enable put processing
+=======
+          res.status(200).send('OK')
+>>>>>>> add 30sec delta interval
         } else {
           this.clearDestination()
           this.emitCourseInfo()
@@ -1038,6 +1062,7 @@ export class CourseApi {
         this.clearDestination()
         this.emitCourseInfo()
 <<<<<<< HEAD
+<<<<<<< HEAD
         res.status(200)
 >>>>>>> enable put processing
 =======
@@ -1050,6 +1075,9 @@ export class CourseApi {
         this.emitCourseInfo()
         res.status(200)
 >>>>>>> enable put processing
+=======
+        res.status(200).send('OK')
+>>>>>>> add 30sec delta interval
       }
     )
 
@@ -1173,6 +1201,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> add 30sec delta interval
 =======
@@ -1200,6 +1229,9 @@ export class CourseApi {
         if (req.params.action === 'pointIndex') {
 >>>>>>> enable put processing
 =======
+=======
+            return
+>>>>>>> add 30sec delta interval
           }
         }
 <<<<<<< HEAD
@@ -1220,11 +1252,15 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> add 30sec delta interval
             return
 =======
 >>>>>>> init courseApi
+=======
+            return
+>>>>>>> add 30sec delta interval
           }
         }
 
@@ -1290,6 +1326,7 @@ export class CourseApi {
               this.courseInfo.previousPoint.position = position.value
               this.courseInfo.previousPoint.type = `VesselPosition`
             } else {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1338,6 +1375,13 @@ export class CourseApi {
 >>>>>>> add 30sec delta interval
 =======
 >>>>>>> init courseApi
+=======
+              res.status(406).send(`Invalid Data`)
+              return false
+            }
+          } catch (err) {
+            res.status(406).send(`Invalid Data`)
+>>>>>>> add 30sec delta interval
             return false
           }
         } else {
@@ -1376,6 +1420,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         res.status(200).send('OK')
 =======
 
@@ -1407,6 +1452,9 @@ export class CourseApi {
 =======
         res.status(200)
 >>>>>>> enable put processing
+=======
+        res.status(200).send('OK')
+>>>>>>> add 30sec delta interval
       }
     )
   }
@@ -1433,6 +1481,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     const newCourse: any = {}
     Object.assign(newCourse, this.courseInfo)
 
@@ -1441,6 +1490,10 @@ export class CourseApi {
 =======
     const newDest: any = {}
     Object.assign(newDest, this.courseInfo)
+=======
+    const newCourse: any = {}
+    Object.assign(newCourse, this.courseInfo)
+>>>>>>> add 30sec delta interval
 =======
     const newCourse: any = {}
     Object.assign(newCourse, this.courseInfo)
@@ -1648,34 +1701,34 @@ export class CourseApi {
 
 >>>>>>> chore: lint
     // set activeroute
-    newDest.activeRoute.href = route.href
+    newCourse.activeRoute.href = route.href
 
     if (this.isValidArrivalCircle(route.arrivalCircle as number)) {
-      newDest.nextPoint.arrivalCircle = route.arrivalCircle
+      newCourse.nextPoint.arrivalCircle = route.arrivalCircle
     }
 
-    newDest.activeRoute.startTime = new Date().toISOString()
+    newCourse.activeRoute.startTime = new Date().toISOString()
 
     if (typeof route.reverse === 'boolean') {
-      newDest.activeRoute.reverse = route.reverse
+      newCourse.activeRoute.reverse = route.reverse
     }
 
-    newDest.activeRoute.pointIndex = this.parsePointIndex(
+    newCourse.activeRoute.pointIndex = this.parsePointIndex(
       route.pointIndex as number,
       rte
     )
 
     // set nextPoint
-    newDest.nextPoint.position = this.getRoutePoint(
+    newCourse.nextPoint.position = this.getRoutePoint(
       rte,
-      newDest.activeRoute.pointIndex,
-      newDest.activeRoute.reverse
+      newCourse.activeRoute.pointIndex,
+      newCourse.activeRoute.reverse
     )
-    newDest.nextPoint.type = `RoutePoint`
-    newDest.nextPoint.href = null
+    newCourse.nextPoint.type = `RoutePoint`
+    newCourse.nextPoint.href = null
 
     // set previousPoint
-    if (newDest.activeRoute.pointIndex === 0) {
+    if (newCourse.activeRoute.pointIndex === 0) {
       try {
         const position: any = this.server.getSelfPath('navigation.position')
         if (position && position.value) {
@@ -1688,32 +1741,32 @@ export class CourseApi {
         return false
       }
     } else {
-      newDest.previousPoint.position = this.getRoutePoint(
+      newCourse.previousPoint.position = this.getRoutePoint(
         rte,
-        newDest.activeRoute.pointIndex - 1,
-        newDest.activeRoute.reverse
+        newCourse.activeRoute.pointIndex - 1,
+        newCourse.activeRoute.reverse
       )
-      newDest.previousPoint.type = `RoutePoint`
+      newCourse.previousPoint.type = `RoutePoint`
     }
-    newDest.previousPoint.href = null
+    newCourse.previousPoint.href = null
 
-    this.courseInfo = newDest
+    this.courseInfo = newCourse
     return true
   }
 
   private async setDestination(dest: any): Promise<boolean> {
-    const newDest: any = {}
-    Object.assign(newDest, this.courseInfo)
+    const newCourse: any = {}
+    Object.assign(newCourse, this.courseInfo)
 
     // set nextPoint
     if (this.isValidArrivalCircle(dest.arrivalCircle)) {
-      newDest.nextPoint.arrivalCircle = dest.arrivalCircle
+      newCourse.nextPoint.arrivalCircle = dest.arrivalCircle
     }
 
-    newDest.nextPoint.type = typeof dest.type !== 'undefined' ? dest.type : null
+    newCourse.nextPoint.type = typeof dest.type !== 'undefined' ? dest.type : null
 
     if (dest.href) {
-      newDest.href = dest.href
+      newCourse.href = dest.href
       const href = this.parseHref(dest.href)
       if (href) {
 <<<<<<< HEAD
@@ -1762,7 +1815,7 @@ export class CourseApi {
 >>>>>>> init courseApi
 =======
           if (r.position && typeof r.position?.latitude !== 'undefined') {
-            newDest.nextPoint.position = r.position
+            newCourse.nextPoint.position = r.position
           } else {
             return false
 >>>>>>> chore: lint
@@ -1780,6 +1833,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       newCourse.nextPoint.href = null
       if (typeof dest.position.latitude !== 'undefined') {
         newCourse.nextPoint.position = dest.position
@@ -1823,6 +1877,11 @@ export class CourseApi {
       if (typeof dest.position.latitude !== 'undefined') {
         newDest.nextPoint.position = dest.position
 >>>>>>> chore: lint
+=======
+      newCourse.nextPoint.href = null
+      if (typeof dest.position.latitude !== 'undefined') {
+        newCourse.nextPoint.position = dest.position
+>>>>>>> add 30sec delta interval
       } else {
         return false
       }
@@ -1917,22 +1976,26 @@ export class CourseApi {
     try {
       const position: any = this.server.getSelfPath('navigation.position')
       if (position && position.value) {
-        newDest.previousPoint.position = position.value
-        newDest.previousPoint.type = `VesselPosition`
+        newCourse.previousPoint.position = position.value
+        newCourse.previousPoint.type = `VesselPosition`
       } else {
         return false
       }
-      newDest.previousPoint.href = null
+      newCourse.previousPoint.href = null
     } catch (err) {
 >>>>>>> chore: lint
       return false
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> init courseApi
 =======
     this.courseInfo = newDest
 >>>>>>> chore: lint
+=======
+    this.courseInfo = newCourse
+>>>>>>> add 30sec delta interval
     return true
   }
 
