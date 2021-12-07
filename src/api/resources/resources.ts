@@ -206,7 +206,7 @@ const buildRegion = (rData: any): any => {
     return [p.longitude, p.latitude]
   })
   reg.feature.geometry.coordinates.push(coords)
-  
+
   return reg
 =======
 import { getDistance } from 'geolib'
@@ -463,7 +463,7 @@ const buildChart = (rData: any): any => {
     tilemapUrl: '',
     chartLayers: [],
     scale: 250000,
-    bounds: [-180,-90,180,90]
+    bounds: [-180, -90, 180, 90]
   }
 
   if (typeof rData.identifier === 'undefined') {
@@ -504,12 +504,12 @@ const buildChart = (rData: any): any => {
   }
   if (typeof rData.bounds !== 'undefined' && Array.isArray(rData.bounds)) {
     chart.bounds = [
-      rData.bounds[0].longitude, 
+      rData.bounds[0].longitude,
       rData.bounds[0].latitude,
-      rData.bounds[1].longitude, 
+      rData.bounds[1].longitude,
       rData.bounds[1].latitude
     ]
   }
-  
+
   return chart
 }

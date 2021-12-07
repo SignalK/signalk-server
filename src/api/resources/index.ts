@@ -1014,7 +1014,6 @@ export class Resources {
   }
 
   private processApiRequest(req: Request) {
-
     let resType: SignalKResourceType = 'waypoints'
     if (req.params.resourceType.toLowerCase() === 'waypoint') {
       resType = 'waypoints'
@@ -1036,9 +1035,7 @@ export class Resources {
 
     const resId: string = req.params.resourceId
       ? req.params.resourceId
-      : resType = 'charts'
-        ? resValue.identifier
-        : UUID_PREFIX + uuidv4()
+      : (resType = 'charts' ? resValue.identifier : UUID_PREFIX + uuidv4())
 
     return {
       type: resType,
@@ -1050,11 +1047,13 @@ export class Resources {
   private getResourcePaths(): { [key: string]: any } {
     const resPaths: { [key: string]: any } = {}
     for (const i in this.resProvider) {
-      resPaths[i] = {
-        description: `Path containing ${
-          i.slice(-1) === 's' ? i.slice(0, i.length - 1) : i
-        } resources`,
-        $source: this.resProvider[i]?.pluginId
+      if (this.resProvider.hasOwnProperty(i)) {
+        resPaths[i] = {
+          description: `Path containing ${
+            i.slice(-1) === 's' ? i.slice(0, i.length - 1) : i
+          } resources`,
+          $source: this.resProvider[i]?.pluginId
+        }
       }
     }
     return resPaths
