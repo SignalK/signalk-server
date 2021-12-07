@@ -6,6 +6,8 @@ const debug = Debug('signalk:courseApi')
 const SIGNALK_API_PATH: string = `/signalk/v1/api`
 const COURSE_API_PATH: string = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
 
+const DELTA_INTERVAL: number = 30000 
+
 interface CourseApplication extends Application {
   handleMessage: (id: string, data: any) => void
   getSelfPath: (path: string) => any
@@ -97,6 +99,11 @@ export class CourseApi {
     debug(`** Initialise ${COURSE_API_PATH} path handler **`)
     this.server = app
     this.initResourceRoutes()
+    setInterval( ()=> {
+      if(this.courseInfo.nextPoint.position) {
+        this.emitCourseInfo()
+      }
+    }, DELTA_INTERVAL)
   }
 
   private updateAllowed(): boolean {
@@ -123,7 +130,7 @@ export class CourseApi {
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/restart`)
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).send('Unauthorised')
           return
         }
         if (!this.courseInfo.nextPoint.position) {
@@ -136,7 +143,7 @@ export class CourseApi {
           if (position && position.value) {
             this.courseInfo.previousPoint.position = position.value
             this.emitCourseInfo()
-            res.status(200)
+            res.status(200).send('OK')
           }
         } catch (err) {
           res.status(406).send(`Vessel position unavailable!`)
@@ -149,13 +156,13 @@ export class CourseApi {
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/arrivalCircle`)
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).send('Unauthorised')
           return
         }
         if (this.isValidArrivalCircle(req.body.value)) {
           this.courseInfo.nextPoint.arrivalCircle = req.body.value
           this.emitCourseInfo()
-          res.status(200)
+          res.status(200).send('OK')
         } else {
           res.status(406).send(`Invalid Data`)
         }
@@ -168,7 +175,7 @@ export class CourseApi {
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/destination`)
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).send('Unauthorised')
           return
         }
         if (!req.body.value) {
@@ -178,7 +185,7 @@ export class CourseApi {
         const result = await this.setDestination(req.body.value)
         if (result) {
           this.emitCourseInfo()
-          res.status(200)
+          res.status(200).send('OK')
         } else {
           this.clearDestination()
           this.emitCourseInfo()
@@ -193,12 +200,12 @@ export class CourseApi {
       async (req: Request, res: Response) => {
         debug(`** DELETE ${COURSE_API_PATH}/destination`)
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).send('Unauthorised')
           return
         }
         this.clearDestination()
         this.emitCourseInfo()
-        res.status(200)
+        res.status(200).send('OK')
       }
     )
 
@@ -208,13 +215,13 @@ export class CourseApi {
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/activeRoute`)
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).send('Unauthorised')
           return
         }
         const result = await this.activateRoute(req.body.value)
         if (result) {
           this.emitCourseInfo()
-          res.status(200)
+          res.status(200).send('OK')
         } else {
           this.clearDestination()
           this.emitCourseInfo()
@@ -234,7 +241,7 @@ export class CourseApi {
         }
         this.clearDestination()
         this.emitCourseInfo()
-        res.status(200)
+        res.status(200).send('OK')
       }
     )
 
@@ -243,7 +250,7 @@ export class CourseApi {
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/activeRoute`)
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).send('Unauthorised')
           return
         }
         // fetch active route data
@@ -268,6 +275,7 @@ export class CourseApi {
             )
           } else {
             res.status(406).send(`Invalid Data`)
+            return
           }
         }
         if (req.params.action === 'pointIndex') {
@@ -278,6 +286,7 @@ export class CourseApi {
             )
           } else {
             res.status(406).send(`Invalid Data`)
+            return
           }
         }
 
@@ -298,9 +307,11 @@ export class CourseApi {
               this.courseInfo.previousPoint.position = position.value
               this.courseInfo.previousPoint.type = `VesselPosition`
             } else {
+              res.status(406).send(`Invalid Data`)
               return false
             }
           } catch (err) {
+            res.status(406).send(`Invalid Data`)
             return false
           }
         } else {
@@ -312,8 +323,7 @@ export class CourseApi {
           this.courseInfo.previousPoint.type = `RoutePoint`
         }
         this.courseInfo.previousPoint.href = null
-
-        res.status(200)
+        res.status(200).send('OK')
       }
     )
   }
@@ -333,38 +343,38 @@ export class CourseApi {
       return false
     }
 
-    const newDest: any = {}
-    Object.assign(newDest, this.courseInfo)
+    const newCourse: any = {}
+    Object.assign(newCourse, this.courseInfo)
 
     // set activeroute
-    newDest.activeRoute.href = route.href
+    newCourse.activeRoute.href = route.href
 
     if (this.isValidArrivalCircle(route.arrivalCircle as number)) {
-      newDest.nextPoint.arrivalCircle = route.arrivalCircle
+      newCourse.nextPoint.arrivalCircle = route.arrivalCircle
     }
 
-    newDest.activeRoute.startTime = new Date().toISOString()
+    newCourse.activeRoute.startTime = new Date().toISOString()
 
     if (typeof route.reverse === 'boolean') {
-      newDest.activeRoute.reverse = route.reverse
+      newCourse.activeRoute.reverse = route.reverse
     }
 
-    newDest.activeRoute.pointIndex = this.parsePointIndex(
+    newCourse.activeRoute.pointIndex = this.parsePointIndex(
       route.pointIndex as number,
       rte
     )
 
     // set nextPoint
-    newDest.nextPoint.position = this.getRoutePoint(
+    newCourse.nextPoint.position = this.getRoutePoint(
       rte,
-      newDest.activeRoute.pointIndex,
-      newDest.activeRoute.reverse
+      newCourse.activeRoute.pointIndex,
+      newCourse.activeRoute.reverse
     )
-    newDest.nextPoint.type = `RoutePoint`
-    newDest.nextPoint.href = null
+    newCourse.nextPoint.type = `RoutePoint`
+    newCourse.nextPoint.href = null
 
     // set previousPoint
-    if (newDest.activeRoute.pointIndex === 0) {
+    if (newCourse.activeRoute.pointIndex === 0) {
       try {
         const position: any = this.server.getSelfPath('navigation.position')
         if (position && position.value) {
@@ -377,32 +387,32 @@ export class CourseApi {
         return false
       }
     } else {
-      newDest.previousPoint.position = this.getRoutePoint(
+      newCourse.previousPoint.position = this.getRoutePoint(
         rte,
-        newDest.activeRoute.pointIndex - 1,
-        newDest.activeRoute.reverse
+        newCourse.activeRoute.pointIndex - 1,
+        newCourse.activeRoute.reverse
       )
-      newDest.previousPoint.type = `RoutePoint`
+      newCourse.previousPoint.type = `RoutePoint`
     }
-    newDest.previousPoint.href = null
+    newCourse.previousPoint.href = null
 
-    this.courseInfo = newDest
+    this.courseInfo = newCourse
     return true
   }
 
   private async setDestination(dest: any): Promise<boolean> {
-    const newDest: any = {}
-    Object.assign(newDest, this.courseInfo)
+    const newCourse: any = {}
+    Object.assign(newCourse, this.courseInfo)
 
     // set nextPoint
     if (this.isValidArrivalCircle(dest.arrivalCircle)) {
-      newDest.nextPoint.arrivalCircle = dest.arrivalCircle
+      newCourse.nextPoint.arrivalCircle = dest.arrivalCircle
     }
 
-    newDest.nextPoint.type = typeof dest.type !== 'undefined' ? dest.type : null
+    newCourse.nextPoint.type = typeof dest.type !== 'undefined' ? dest.type : null
 
     if (dest.href) {
-      newDest.href = dest.href
+      newCourse.href = dest.href
       const href = this.parseHref(dest.href)
       if (href) {
         // fetch waypoint resource details
@@ -412,7 +422,7 @@ export class CourseApi {
             href.id
           )
           if (r.position && typeof r.position?.latitude !== 'undefined') {
-            newDest.nextPoint.position = r.position
+            newCourse.nextPoint.position = r.position
           } else {
             return false
           }
@@ -421,9 +431,9 @@ export class CourseApi {
         }
       }
     } else if (dest.position) {
-      newDest.nextPoint.href = null
+      newCourse.nextPoint.href = null
       if (typeof dest.position.latitude !== 'undefined') {
-        newDest.nextPoint.position = dest.position
+        newCourse.nextPoint.position = dest.position
       } else {
         return false
       }
@@ -435,17 +445,17 @@ export class CourseApi {
     try {
       const position: any = this.server.getSelfPath('navigation.position')
       if (position && position.value) {
-        newDest.previousPoint.position = position.value
-        newDest.previousPoint.type = `VesselPosition`
+        newCourse.previousPoint.position = position.value
+        newCourse.previousPoint.type = `VesselPosition`
       } else {
         return false
       }
-      newDest.previousPoint.href = null
+      newCourse.previousPoint.href = null
     } catch (err) {
       return false
     }
 
-    this.courseInfo = newDest
+    this.courseInfo = newCourse
     return true
   }
 
