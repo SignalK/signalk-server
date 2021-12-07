@@ -170,6 +170,8 @@ const API_METHODS: string[] = []
 =======
 >>>>>>> update detlas
 
+const DELTA_INTERVAL: number = 30000 
+
 interface CourseApplication extends Application {
   handleMessage: (id: string, data: any) => void
   getSelfPath: (path: string) => any
@@ -403,6 +405,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     setInterval(() => {
       if (this.courseInfo.nextPoint.position) {
         this.emitCourseInfo()
@@ -483,6 +486,13 @@ export class CourseApi {
     )
 =======
 >>>>>>> init courseApi
+=======
+    setInterval( ()=> {
+      if(this.courseInfo.nextPoint.position) {
+        this.emitCourseInfo()
+      }
+    }, DELTA_INTERVAL)
+>>>>>>> add 30sec delta interval
   }
 
   private updateAllowed(): boolean {
@@ -573,6 +583,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
           res.status(403).send('Unauthorised')
 =======
           res.status(403)
@@ -637,6 +648,9 @@ export class CourseApi {
 =======
           res.status(403).send('Unauthorised')
 >>>>>>> add 30sec delta interval
+=======
+          res.status(403).send('Unauthorised')
+>>>>>>> add 30sec delta interval
           return
         }
         if (!this.courseInfo.nextPoint.position) {
@@ -690,12 +704,16 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             res.status(200).send('OK')
           }
         } catch (err) {
 >>>>>>> chore: lint
 =======
             res.status(200)
+=======
+            res.status(200).send('OK')
+>>>>>>> add 30sec delta interval
 =======
             res.status(200).send('OK')
 >>>>>>> add 30sec delta interval
@@ -880,13 +898,13 @@ export class CourseApi {
 =======
         debug(`** PUT ${COURSE_API_PATH}/arrivalCircle`)
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).send('Unauthorised')
           return
         }
         if (this.isValidArrivalCircle(req.body.value)) {
           this.courseInfo.nextPoint.arrivalCircle = req.body.value
           this.emitCourseInfo()
-          res.status(200)
+          res.status(200).send('OK')
         } else {
           res.status(406).send(`Invalid Data`)
 >>>>>>> enable put processing
@@ -942,7 +960,7 @@ export class CourseApi {
 >>>>>>> init courseApi
 =======
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).send('Unauthorised')
           return
         }
 >>>>>>> enable put processing
@@ -964,6 +982,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
           res.status(200).send('OK')
 =======
           res.status(200).send(`Destination set successfully.`)
@@ -998,6 +1017,9 @@ export class CourseApi {
 =======
           res.status(200)
 >>>>>>> enable put processing
+=======
+          res.status(200).send('OK')
+>>>>>>> add 30sec delta interval
         } else {
           this.clearDestination()
           this.emitCourseInfo()
@@ -1046,10 +1068,22 @@ export class CourseApi {
           res.status(403).send('Unauthorised')
           return
         }
+<<<<<<< HEAD
 >>>>>>> enable put processing
         this.clearDestination()
         this.emitCourseInfo()
         res.status(200).send('OK')
+=======
+        const result = await this.activateRoute(req.body.value)
+        if (result) {
+          this.emitCourseInfo()
+          res.status(200).send('OK')
+        } else {
+          this.clearDestination()
+          this.emitCourseInfo()
+          res.status(406).send(`Invalid Data`)
+        }
+>>>>>>> add 30sec delta interval
       }
     )
 
@@ -1385,7 +1419,7 @@ export class CourseApi {
 =======
 >>>>>>> enable put processing
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).send('Unauthorised')
           return
         }
 <<<<<<< HEAD
@@ -1482,6 +1516,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> add 30sec delta interval
 =======
@@ -1510,6 +1545,9 @@ export class CourseApi {
         if (req.params.action === 'pointIndex') {
 >>>>>>> enable put processing
 =======
+=======
+            return
+>>>>>>> add 30sec delta interval
 =======
             return
 >>>>>>> add 30sec delta interval
@@ -1543,6 +1581,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> add 30sec delta interval
             return
@@ -1597,6 +1636,9 @@ export class CourseApi {
           this.courseInfo.activeRoute.pointIndex
 >>>>>>> init courseApi
 =======
+=======
+            return
+>>>>>>> add 30sec delta interval
           }
         }
 
@@ -1634,6 +1676,7 @@ export class CourseApi {
               this.courseInfo.previousPoint.position = position.value
               this.courseInfo.previousPoint.type = `VesselPosition`
             } else {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1701,6 +1744,13 @@ export class CourseApi {
             }
           } catch (err) {
 >>>>>>> chore: lint
+=======
+              res.status(406).send(`Invalid Data`)
+              return false
+            }
+          } catch (err) {
+            res.status(406).send(`Invalid Data`)
+>>>>>>> add 30sec delta interval
             return false
           }
         } else {
@@ -1750,6 +1800,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         res.status(200).send('OK')
 =======
 
@@ -1792,6 +1843,9 @@ export class CourseApi {
 =======
         res.status(200)
 >>>>>>> enable put processing
+=======
+        res.status(200).send('OK')
+>>>>>>> add 30sec delta interval
       }
     )
   }
@@ -1821,6 +1875,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     const newCourse: any = {}
     Object.assign(newCourse, this.courseInfo)
 
@@ -1829,6 +1884,10 @@ export class CourseApi {
 =======
     const newDest: any = {}
     Object.assign(newDest, this.courseInfo)
+=======
+    const newCourse: any = {}
+    Object.assign(newCourse, this.courseInfo)
+>>>>>>> add 30sec delta interval
 =======
     const newCourse: any = {}
     Object.assign(newCourse, this.courseInfo)
@@ -1902,8 +1961,12 @@ export class CourseApi {
       newCourse.nextPoint.arrivalCircle = dest.arrivalCircle
     }
 
+<<<<<<< HEAD
     newCourse.nextPoint.type =
       typeof dest.type !== 'undefined' ? dest.type : null
+=======
+    newCourse.nextPoint.type = typeof dest.type !== 'undefined' ? dest.type : null
+>>>>>>> add 30sec delta interval
 
     if (dest.href) {
       newCourse.href = dest.href
@@ -1912,6 +1975,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
         // fetch waypoint resource details
+<<<<<<< HEAD
 =======
 =======
     const newDest: any = {}
@@ -1919,6 +1983,32 @@ export class CourseApi {
 =======
     const newCourse: any = {}
     Object.assign(newCourse, this.courseInfo)
+>>>>>>> add 30sec delta interval
+=======
+        try {
+          const r = await this.server.resourcesApi.getResource(
+            href.type,
+            href.id
+          )
+          if (r.position && typeof r.position?.latitude !== 'undefined') {
+            newCourse.nextPoint.position = r.position
+          } else {
+            return false
+          }
+        } catch (err) {
+          return false
+        }
+      }
+    } else if (dest.position) {
+      newCourse.nextPoint.href = null
+      if (typeof dest.position.latitude !== 'undefined') {
+        newCourse.nextPoint.position = dest.position
+      } else {
+        return false
+      }
+    } else {
+      return false
+    }
 >>>>>>> add 30sec delta interval
 
 >>>>>>> chore: lint
@@ -2450,22 +2540,26 @@ export class CourseApi {
     try {
       const position: any = this.server.getSelfPath('navigation.position')
       if (position && position.value) {
-        newDest.previousPoint.position = position.value
-        newDest.previousPoint.type = `VesselPosition`
+        newCourse.previousPoint.position = position.value
+        newCourse.previousPoint.type = `VesselPosition`
       } else {
         return false
       }
-      newDest.previousPoint.href = null
+      newCourse.previousPoint.href = null
     } catch (err) {
 >>>>>>> chore: lint
       return false
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> init courseApi
 =======
     this.courseInfo = newDest
 >>>>>>> chore: lint
+=======
+    this.courseInfo = newCourse
+>>>>>>> add 30sec delta interval
     return true
   }
 
