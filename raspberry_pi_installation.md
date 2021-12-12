@@ -41,7 +41,7 @@ A Signal K Server is the central hub of a Signal K system; reading and convertin
 
 Install the Node Server using npm
 
-    $ sudo npm install -g --unsafe-perm signalk-server
+    $ sudo npm install -g signalk-server
     
 ### Step 2.1 OPTIONAL test the server with sample data
 
@@ -286,7 +286,7 @@ Click on update and the installation will start
 
 If below version 1.8.0 use this command instead
 
-    $ sudo npm install --unsafe-perm -g signalk-server
+    $ sudo npm install -g signalk-server
 
 ![server_during_update](https://user-images.githubusercontent.com/16189982/51401178-71a9e400-1b4a-11e9-86b9-1148442ba59c.png)
 

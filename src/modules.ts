@@ -180,17 +180,9 @@ function runNpm(
 
   if (isTheServerModule(name, config)) {
     if (process.platform === 'win32') {
-      npm = spawn(
-        'cmd',
-        ['/c', `npm ${command} -g --unsafe-perm ${packageString} `],
-        opts
-      )
+      npm = spawn('cmd', ['/c', `npm ${command} -g ${packageString} `], opts)
     } else {
-      npm = spawn(
-        'sudo',
-        ['npm', command, '-g', '--unsafe-perm', packageString],
-        opts
-      )
+      npm = spawn('sudo', ['npm', command, '-g', packageString], opts)
     }
   } else {
     opts.cwd = config.configPath

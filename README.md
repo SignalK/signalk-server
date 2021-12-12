@@ -26,7 +26,7 @@ Prerequisites
 
 ## Use: Install from npm
 
-    $ sudo npm install -g --unsafe-perm signalk-server
+    $ sudo npm install -g signalk-server
 
 Now you can start the server with sample data:
 * NMEA0183 sample data: `signalk-server --sample-nmea0183-data`
