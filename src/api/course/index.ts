@@ -170,7 +170,7 @@ const API_METHODS: string[] = []
 =======
 >>>>>>> update detlas
 
-const DELTA_INTERVAL: number = 30000 
+const DELTA_INTERVAL: number = 30000
 
 interface CourseApplication extends Application {
   handleMessage: (id: string, data: any) => void
@@ -406,6 +406,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     setInterval(() => {
       if (this.courseInfo.nextPoint.position) {
         this.emitCourseInfo()
@@ -489,6 +490,10 @@ export class CourseApi {
 =======
     setInterval( ()=> {
       if(this.courseInfo.nextPoint.position) {
+=======
+    setInterval(() => {
+      if (this.courseInfo.nextPoint.position) {
+>>>>>>> chore: lint
         this.emitCourseInfo()
       }
     }, DELTA_INTERVAL)
@@ -1962,11 +1967,16 @@ export class CourseApi {
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     newCourse.nextPoint.type =
       typeof dest.type !== 'undefined' ? dest.type : null
 =======
     newCourse.nextPoint.type = typeof dest.type !== 'undefined' ? dest.type : null
 >>>>>>> add 30sec delta interval
+=======
+    newCourse.nextPoint.type =
+      typeof dest.type !== 'undefined' ? dest.type : null
+>>>>>>> chore: lint
 
     if (dest.href) {
       newCourse.href = dest.href
