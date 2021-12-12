@@ -10,6 +10,22 @@ export interface HelloMessage {
   timestamp: Date
 }
 
+<<<<<<< HEAD
+=======
+export interface SecurityStrategy {
+  isDummy: () => boolean
+  allowReadOnly: () => boolean
+  shouldFilterDeltas: () => boolean
+  filterReadDelta: (user: any, delta: any) => any
+  shouldAllowPut: (
+    req: any,
+    context: string,
+    source: any,
+    path: string
+  ) => boolean
+}
+
+>>>>>>> refactor: tweak types
 export interface Bus {
   onValue: (callback: (value: any) => any) => () => void
   push: (v: any) => void
