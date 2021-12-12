@@ -6,7 +6,7 @@ const debug = Debug('signalk:courseApi')
 const SIGNALK_API_PATH: string = `/signalk/v1/api`
 const COURSE_API_PATH: string = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
 
-const DELTA_INTERVAL: number = 30000 
+const DELTA_INTERVAL: number = 30000
 
 interface CourseApplication extends Application {
   handleMessage: (id: string, data: any) => void
@@ -99,8 +99,8 @@ export class CourseApi {
     debug(`** Initialise ${COURSE_API_PATH} path handler **`)
     this.server = app
     this.initResourceRoutes()
-    setInterval( ()=> {
-      if(this.courseInfo.nextPoint.position) {
+    setInterval(() => {
+      if (this.courseInfo.nextPoint.position) {
         this.emitCourseInfo()
       }
     }, DELTA_INTERVAL)
@@ -409,7 +409,8 @@ export class CourseApi {
       newCourse.nextPoint.arrivalCircle = dest.arrivalCircle
     }
 
-    newCourse.nextPoint.type = typeof dest.type !== 'undefined' ? dest.type : null
+    newCourse.nextPoint.type =
+      typeof dest.type !== 'undefined' ? dest.type : null
 
     if (dest.href) {
       newCourse.href = dest.href
