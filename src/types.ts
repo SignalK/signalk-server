@@ -14,6 +14,12 @@ export interface SecurityStrategy {
   allowReadOnly: () => boolean
   shouldFilterDeltas: () => boolean
   filterReadDelta: (user: any, delta: any) => any
+  shouldAllowPut: (
+    req: any,
+    context: string,
+    source: any,
+    path: string
+  ) => boolean
 }
 
 export interface Bus {

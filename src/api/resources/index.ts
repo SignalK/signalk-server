@@ -6,6 +6,7 @@ import {
 import Debug from 'debug'
 import { Application, NextFunction, Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid'
+import { WithSecurityStrategy, WithSignalK } from '../../app'
 
 import { buildResource } from './resources'
 import { validate } from './validate'
@@ -15,17 +16,10 @@ const debug = Debug('signalk:resources')
 const SIGNALK_API_PATH = `/signalk/v1/api`
 const UUID_PREFIX = 'urn:mrn:signalk:uuid:'
 
-interface ResourceApplication extends Application {
-  handleMessage: (id: string, data: any) => void
-  securityStrategy: {
-    shouldAllowPut: (
-      req: any,
-      context: string,
-      source: any,
-      path: string
-    ) => boolean
-  }
-}
+interface ResourceApplication
+  extends Application,
+    WithSignalK,
+    WithSecurityStrategy {}
 
 export class Resources {
   private resProvider: { [key: string]: ResourceProviderMethods | null } = {}

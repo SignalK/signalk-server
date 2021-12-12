@@ -1,6 +1,8 @@
 import { FullSignalK } from '@signalk/signalk-schema'
+import { EventEmitter } from 'events'
 import { Config } from './config/config'
 import DeltaCache from './deltacache'
+import { SecurityStrategy } from './types'
 
 export interface ServerApp {
   started: boolean
@@ -15,15 +17,19 @@ export interface ServerApp {
   clients: number
 }
 
-export interface SignalKMessageHub {
-  emit: any
-  on: any
+export interface WithSignalK {
   signalk: FullSignalK
   handleMessage: (id: string, data: any) => void
 }
 
+export interface SignalKMessageHub extends EventEmitter, WithSignalK {}
+
 export interface WithConfig {
   config: Config
+}
+
+export interface WithSecurityStrategy {
+  securityStrategy: SecurityStrategy
 }
 
 export interface SelfIdentity {
