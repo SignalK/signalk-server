@@ -62,8 +62,22 @@ export class Resources {
     }
     provider.types.forEach((i: string) => {
       if (!this.resProvider[i]) {
-        provider.methods.pluginId = pluginId
-        this.resProvider[i] = provider.methods
+        if (
+          !provider.methods.listResources ||
+          !provider.methods.getResource ||
+          !provider.methods.setResource ||
+          !provider.methods.deleteResource ||
+          typeof provider.methods.listResources !== 'function' ||
+          typeof provider.methods.getResource !== 'function' ||
+          typeof provider.methods.setResource !== 'function' ||
+          typeof provider.methods.deleteResource !== 'function'
+        ) {
+          console.error(`Error: Could not register Resource Provider for ${i.toUpperCase()} due to missing provider methods!`)
+          return
+        } else {
+          provider.methods.pluginId = pluginId
+          this.resProvider[i] = provider.methods
+        }
       }
     })
     debug(this.resProvider)
@@ -1056,25 +1070,7 @@ export class Resources {
   private checkForProvider(resType: SignalKResourceType): boolean {
     debug(`** checkForProvider(${resType})`)
     debug(this.resProvider[resType])
-
-    if (this.resProvider[resType]) {
-      if (
-        !this.resProvider[resType]?.listResources ||
-        !this.resProvider[resType]?.getResource ||
-        !this.resProvider[resType]?.setResource ||
-        !this.resProvider[resType]?.deleteResource ||
-        typeof this.resProvider[resType]?.listResources !== 'function' ||
-        typeof this.resProvider[resType]?.getResource !== 'function' ||
-        typeof this.resProvider[resType]?.setResource !== 'function' ||
-        typeof this.resProvider[resType]?.deleteResource !== 'function'
-      ) {
-        return false
-      } else {
-        return true
-      }
-    } else {
-      return false
-    }
+    return (this.resProvider[resType]) ? true : false
   }
 
 <<<<<<< HEAD
