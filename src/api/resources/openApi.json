@@ -105,7 +105,7 @@
         },
 
         "/resources/routes/": {
-            "put": {
+            "post": {
                 "tags": ["resources/routes"],
                 "summary": "Add a new Route",
                 "requestBody": {
@@ -339,7 +339,7 @@
         },
 
         "/resources/waypoints/": {
-            "put": {
+            "post": {
                 "tags": ["resources/waypoints"],
                 "summary": "Add a new Waypoint",
                 "requestBody": {
@@ -573,7 +573,7 @@
         },
 
         "/resources/notes/": {
-            "put": {
+            "post": {
                 "tags": ["resources/notes"],
                 "summary": "Add a new Note",
                 "requestBody": {
@@ -785,7 +785,7 @@
         },
 
         "/resources/regions/": {
-            "put": {
+            "post": {
                 "tags": ["resources/regions"],
                 "summary": "Add a new Region",
                 "requestBody": {
@@ -1057,7 +1057,7 @@
         },
 
         "/resources/charts/": {
-            "put": {
+            "post": {
                 "tags": ["resources/charts"],
                 "summary": "Add a new Chart",
                 "requestBody": {
@@ -1358,6 +1358,72 @@
 
         },
 
+        "/resources/set/waypoint": {
+            "post": {
+                "tags": ["resources/api"],
+                "summary": "Add / update a Waypoint",
+                "requestBody": {
+                    "description": "Waypoint attributes",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["position"],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Waypoint name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "Textual description of the waypoint"
+                                    },
+                                    "attributes": {
+                                        "type": "object",
+                                        "description": "Additional attributes as name:value pairs.",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "position": {
+                                        "description": "The waypoint position",
+                                        "type": "object",
+                                        "required": [
+                                            "latitude",
+                                            "longitude"
+                                        ],
+                                        "properties": {
+                                            "latitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            },
+                                            "longitude": {
+                                                "type": "number",
+                                                "format": "float"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
         "/resources/set/waypoint/{id}": {
             "put": {
                 "tags": ["resources/api"],
@@ -1401,6 +1467,75 @@
                                             "longitude": {
                                                 "type": "number",
                                                 "format": "float"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/resources/set/route": {
+            "post": {
+                "tags": ["resources/api"],
+                "summary": "Add / update a Route",
+                "requestBody": {
+                    "description": "Note attributes",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["position"],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Route name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "Textual description of the route"
+                                    },
+                                    "attributes": {
+                                        "type": "object",
+                                        "description": "Additional attributes as name:value pairs.",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "points": {
+                                        "description": "Route points",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "required": [
+                                                "latitude",
+                                                "longitude"
+                                            ],
+                                            "properties": {
+                                                "latitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "longitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                }
                                             }
                                         }
                                     }
@@ -1472,6 +1607,82 @@
                                                 }
                                             }
                                         }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/resources/set/note": {
+            "post": {
+                "tags": ["resources/api"],
+                "summary": "Add / update a Note",
+                "requestBody": {
+                    "description": "Note attributes",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["title"],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "description": "Note's common name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": " Textual description of the note"
+                                    },
+                                    "oneOf":[
+                                        {
+                                            "position": {
+                                                "description": "Position related to note. Alternative to region or geohash",
+                                                "type": "object",
+                                                "required": [
+                                                    "latitude",
+                                                    "longitude"
+                                                ],
+                                                "properties": {
+                                                    "latitude": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "longitude": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    }
+                                                }
+                                            },
+                                            "region": {
+                                                "type": "string",
+                                                "description": "Region related to note. A pointer to a region UUID. Alternative to position or geohash",
+                                                "example": "/resources/regions/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+                                            }
+                                        }
+                                    ],
+                                    "mimeType": {
+                                      "type": "string",
+                                      "description": "MIME type of the note"
+                                    },
+                                    "url": {
+                                      "type": "string",
+                                      "description": "Location of the note contents"
                                     }
                                 }
                             }
@@ -1569,6 +1780,75 @@
             }
         },
 
+        "/resources/set/region": {
+            "post": {
+                "tags": ["resources/api"],
+                "summary": "Add / update a Region",
+                "requestBody": {
+                    "description": "Region attributes",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["position"],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Region name"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "Textual description of region"
+                                    },
+                                    "attributes": {
+                                        "type": "object",
+                                        "description": "Additional attributes as name:value pairs.",
+                                        "additionalProperties": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "points": {
+                                        "description": "Region boundary points",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "required": [
+                                                "latitude",
+                                                "longitude"
+                                            ],
+                                            "properties": {
+                                                "latitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "longitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
         "/resources/set/region/{id}": {
             "put": {
                 "tags": ["resources/api"],
@@ -1617,6 +1897,109 @@
                                                 }
                                             }
                                         }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/resources/set/chart": {
+            "post": {
+                "tags": ["resources/api"],
+                "summary": "Add / update a Chart",
+                "requestBody": {
+                    "description": "Chart attributes",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "description": "Signal K Chart resource",
+                                "required": ["identifier", "tilemapUrl"],
+                                "properties": {
+                                    "identifier": {
+                                        "type": "string",
+                                        "description": "Chart number",
+                                        "example":"NZ615"
+                                    },
+                                    "name": {
+                                        "description": "Chart common name",
+                                        "example":"NZ615 Marlborough Sounds",
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "description": "A description of the chart"
+                                    },
+                                    "tilemapUrl": {
+                                        "type": "string",
+                                        "description": "A url to the tilemap of the chart for use in TMS chartplotting apps",
+                                        "example":"http://{server}:8080/mapcache/NZ615"
+                                    },
+                                    "scale": {
+                                        "type": "integer",
+                                        "description": "The scale of the chart, the larger number from 1:200000"
+                                    },
+                                    "layers": {
+                                        "type": "array",
+                                        "description": "If the chart format is WMS, the layers enabled for the chart.",
+                                        "items": {
+                                            "type": "string",
+                                            "description": "Identifier for the layer."
+                                        }
+                                    },
+                                    "bounds": {
+                                        "type": "array",
+                                        "description": "The bounding rectangle of the chart defined by the position of the lower left corner, and the upper right corner.",
+                                        "items": {
+                                            "description": "Position of a corner of the chart",
+                                            "type": "object",
+                                            "required": [
+                                                "latitude",
+                                                "longitude"
+                                            ],
+                                            "properties": {
+                                                "latitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "longitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "format": {
+                                        "type": "string",
+                                        "description": "The format of the chart",
+                                        "enum": [
+                                            "png",
+                                            "jpg"                                            
+                                        ]
+                                    },
+                                    "serverType": {
+                                        "type": "string",
+                                        "description": "Chart server type",
+                                        "enum": [
+                                            "tilelayer",
+                                            "WMS"                                            
+                                        ]
                                     }
                                 }
                             }
@@ -1739,7 +2122,7 @@
                     }
                 }
             }
-        }
+        }        
                 
     }
 

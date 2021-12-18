@@ -162,7 +162,7 @@ export class Resources {
     )
 
     // facilitate creation of new resource entry of supplied type
-    this.server.put(
+    this.server.post(
       `${SIGNALK_API_PATH}/resources/:resourceType`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** POST ${SIGNALK_API_PATH}/resources/:resourceType`)
@@ -336,7 +336,7 @@ export class Resources {
     )
 
     // facilitate API requests
-    this.server.put(
+    this.server.post(
       `${SIGNALK_API_PATH}/resources/set/:resourceType`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${SIGNALK_API_PATH}/resources/set/:resourceType`)
@@ -369,7 +369,7 @@ export class Resources {
         }
 
         try {
-          const retVal = await this.resProvider[apiData.type]?.setResource(
+          await this.resProvider[apiData.type]?.setResource(
             apiData.type,
             apiData.id,
             apiData.value
@@ -419,7 +419,7 @@ export class Resources {
         }
 
         try {
-          const retVal = await this.resProvider[apiData.type]?.setResource(
+          await this.resProvider[apiData.type]?.setResource(
             apiData.type,
             apiData.id,
             apiData.value
