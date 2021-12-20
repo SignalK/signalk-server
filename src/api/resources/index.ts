@@ -249,7 +249,7 @@ export class Resources {
           } else {
             isValidId = validate.uuid(req.params.resourceId)
           }
-          if (isValidId) {
+          if (!isValidId) {
             res
               .status(406)
               .send(`Invalid resource id provided (${req.params.resourceId})`)
@@ -339,14 +339,15 @@ export class Resources {
     this.server.post(
       `${SIGNALK_API_PATH}/resources/set/:resourceType`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${SIGNALK_API_PATH}/resources/set/:resourceType`)
+        debug(`** POST ${SIGNALK_API_PATH}/resources/set/:resourceType`)
 
         if (!this.updateAllowed()) {
           res.status(403)
           return
         }
 
-        const apiData = this.processApiRequest(req)
+        let apiData = this.processApiRequest(req)
+        debug(apiData)
 
         if (!this.checkForProvider(apiData.type)) {
           res.status(501).send(`No provider for ${apiData.type}!`)
@@ -378,9 +379,9 @@ export class Resources {
             this.resProvider[apiData.type]?.pluginId as string,
             this.buildDeltaMsg(apiData.type, apiData.id, apiData.value)
           )
-          res.status(200).send(`SUCCESS: ${req.params.resourceType} complete.`)
+          res.status(200).send(`SUCCESS: New ${req.params.resourceType} resource created.`)
         } catch (err) {
-          res.status(404).send(`ERROR: ${req.params.resourceType} incomplete!`)
+          res.status(404).send(`ERROR: Could not create ${req.params.resourceType} resource!`)
         }
       }
     )
@@ -428,43 +429,44 @@ export class Resources {
             this.resProvider[apiData.type]?.pluginId as string,
             this.buildDeltaMsg(apiData.type, apiData.id, apiData.value)
           )
-          res.status(200).send(`SUCCESS: ${req.params.resourceType} complete.`)
+          res.status(200).send(`SUCCESS: ${req.params.resourceType} resource updated.`)
         } catch (err) {
-          res.status(404).send(`ERROR: ${req.params.resourceType} incomplete!`)
+          res.status(404).send(`ERROR: ${req.params.resourceType} resource could not be updated!`)
         }
       }
     )
   }
 
   private processApiRequest(req: Request) {
-    let resType: SignalKResourceType = 'waypoints'
+    let apiReq: any = {
+      type: undefined,
+      id: undefined,
+      value: undefined
+    }
+
     if (req.params.resourceType.toLowerCase() === 'waypoint') {
-      resType = 'waypoints'
+      apiReq.type = 'waypoints'
     }
     if (req.params.resourceType.toLowerCase() === 'route') {
-      resType = 'routes'
+      apiReq.type = 'routes'
     }
     if (req.params.resourceType.toLowerCase() === 'note') {
-      resType = 'notes'
+      apiReq.type = 'notes'
     }
     if (req.params.resourceType.toLowerCase() === 'region') {
-      resType = 'regions'
+      apiReq.type = 'regions'
     }
     if (req.params.resourceType.toLowerCase() === 'charts') {
-      resType = 'charts'
+      apiReq.type = 'charts'
     }
 
-    const resValue: any = buildResource(resType, req.body)
+    apiReq.value = buildResource(apiReq.type, req.body)
 
-    const resId: string = req.params.resourceId
+    apiReq.id = req.params.resourceId
       ? req.params.resourceId
-      : (resType = 'charts' ? resValue.identifier : UUID_PREFIX + uuidv4())
+      : (apiReq.type === 'charts' ? apiReq.value.identifier : UUID_PREFIX + uuidv4())
 
-    return {
-      type: resType,
-      id: resId,
-      value: resValue
-    }
+    return apiReq
   }
 
   private getResourcePaths(): { [key: string]: any } {
