@@ -165,5 +165,6 @@
     "hooks": {
       "pre-commit": "lint-staged"
     }
-  }
+  },
+  "funding": "https://opencollective.com/signalk"
 }
