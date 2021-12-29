@@ -192,7 +192,28 @@ module.exports = (theApp: any) => {
 
       Promise.all([
         Promise.resolve(
-          typeof plugin.schema === 'function' ? plugin.schema() : plugin.schema
+          typeof plugin.schema === 'function'
+            ? (() => {
+                try {
+                  return plugin.schema()
+                } catch (e) {
+                  console.error(e)
+                  // return a fake schema to inform the user
+                  // downside is that saving this may overwrite an existing configuration
+                  return {
+                    type: 'object',
+                    required: ['error'],
+                    properties: {
+                      error: {
+                        title:
+                          'Error loading plugin configuration schema, check server log',
+                        type: 'string'
+                      }
+                    }
+                  }
+                }
+              })()
+            : plugin.schema
         ),
         Promise.resolve(
           typeof plugin.uiSchema === 'function'
