@@ -1,5 +1,8 @@
 import Debug from 'debug'
 import { Application, Request, Response } from 'express'
+import path from 'path'
+import { WithConfig, WithSecurityStrategy, WithSignalK } from '../../app'
+import { Store } from '../store'
 
 const debug = Debug('signalk:courseApi')
 
@@ -8,17 +11,15 @@ const COURSE_API_PATH: string = `${SIGNALK_API_PATH}/vessels/self/navigation/cou
 
 const DELTA_INTERVAL: number = 30000
 
+interface CourseApplication
+  extends Application,
+    WithConfig,
+    WithSignalK,
+    WithSecurityStrategy {}
+
 interface CourseApplication extends Application {
-  handleMessage: (id: string, data: any) => void
+  // handleMessage: (id: string, data: any) => void
   getSelfPath: (path: string) => any
-  securityStrategy: {
-    shouldAllowPut: (
-      req: Application,
-      context: string,
-      source: any,
-      path: string
-    ) => boolean
-  }
   resourcesApi: {
     getResource: (resourceType: string, resourceId: string) => any
   }
@@ -90,20 +91,46 @@ export class CourseApi {
     }
   }
 
+  private store: Store
+
   constructor(app: CourseApplication) {
     this.server = app
-    this.start(app)
+    this.store = new Store(path.join(app.config.configPath, 'api/course'))
+    this.start(app).catch(error => {
+      console.log(error)
+    })
   }
 
-  private start(app: any) {
+  private async start(app: any) {
     debug(`** Initialise ${COURSE_API_PATH} path handler **`)
     this.server = app
     this.initResourceRoutes()
+
+    try {
+      const storeData = await this.store.read()
+      this.courseInfo = this.validateCourseInfo(storeData)
+    } catch (error) {
+      debug('** No persisted course data (using default) **')
+      this.store.write(this.courseInfo).catch(error => {
+        console.log(error)
+      })
+    }
+    debug(this.courseInfo)
+
     setInterval(() => {
       if (this.courseInfo.nextPoint.position) {
-        this.emitCourseInfo()
+        this.emitCourseInfo(true)
       }
     }, DELTA_INTERVAL)
+  }
+
+  private validateCourseInfo(info: CourseInfo) {
+    if (info.activeRoute && info.nextPoint && info.previousPoint) {
+      return info
+    } else {
+      debug(`** Error: Loaded course data is invalid!! (using default) **`)
+      return this.courseInfo
+    }
   }
 
   private updateAllowed(): boolean {
@@ -634,7 +661,12 @@ export class CourseApi {
     }
   }
 
-  private emitCourseInfo() {
+  private emitCourseInfo(noSave: boolean = false) {
     this.server.handleMessage('courseApi', this.buildDeltaMsg())
+    if (!noSave) {
+      this.store.write(this.courseInfo).catch(error => {
+        console.log(error)
+      })
+    }
   }
 }
