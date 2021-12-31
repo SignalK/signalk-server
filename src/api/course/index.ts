@@ -16,6 +16,7 @@
 <<<<<<< HEAD
 import Debug from 'debug'
 import { Application, Request, Response } from 'express'
+<<<<<<< HEAD
 =======
 import {
   ResourceProvider,
@@ -122,6 +123,11 @@ import { v4 as uuidv4 } from 'uuid'
 import Debug from 'debug'
 import { Application, Request, Response } from 'express'
 >>>>>>> update detlas
+=======
+import path from 'path'
+import { WithConfig, WithSecurityStrategy, WithSignalK } from '../../app'
+import { Store } from '../store'
+>>>>>>> persist courseInfo to settings file
 
 const debug = Debug('signalk:courseApi')
 
@@ -172,9 +178,16 @@ const API_METHODS: string[] = []
 
 const DELTA_INTERVAL: number = 30000
 
+interface CourseApplication
+  extends Application,
+    WithConfig,
+    WithSignalK,
+    WithSecurityStrategy {}
+
 interface CourseApplication extends Application {
-  handleMessage: (id: string, data: any) => void
+  // handleMessage: (id: string, data: any) => void
   getSelfPath: (path: string) => any
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -294,6 +307,8 @@ interface CourseApplication extends Application {
 >>>>>>> update detlas
 =======
 >>>>>>> enable put processing
+=======
+>>>>>>> persist courseInfo to settings file
   resourcesApi: {
     getResource: (resourceType: string, resourceId: string) => any
   }
@@ -386,12 +401,17 @@ export class CourseApi {
     }
   }
 
+  private store: Store
+
   constructor(app: CourseApplication) {
     this.server = app
-    this.start(app)
+    this.store = new Store(path.join(app.config.configPath, 'api/course'))
+    this.start(app).catch(error => {
+      console.log(error)
+    })
   }
 
-  private start(app: any) {
+  private async start(app: any) {
     debug(`** Initialise ${COURSE_API_PATH} path handler **`)
     this.server = app
     this.initResourceRoutes()
@@ -407,6 +427,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     setInterval(() => {
       if (this.courseInfo.nextPoint.position) {
         this.emitCourseInfo()
@@ -495,9 +516,35 @@ export class CourseApi {
       if (this.courseInfo.nextPoint.position) {
 >>>>>>> chore: lint
         this.emitCourseInfo()
+=======
+
+    try {
+      const storeData = await this.store.read()
+      this.courseInfo = this.validateCourseInfo(storeData)
+    } catch (error) {
+      debug('** No persisted course data (using default) **')
+      this.store.write(this.courseInfo).catch(error => {
+        console.log(error)
+      })
+    }
+    debug(this.courseInfo)
+
+    setInterval(() => {
+      if (this.courseInfo.nextPoint.position) {
+        this.emitCourseInfo(true)
+>>>>>>> persist courseInfo to settings file
       }
     }, DELTA_INTERVAL)
 >>>>>>> add 30sec delta interval
+  }
+
+  private validateCourseInfo(info: CourseInfo) {
+    if (info.activeRoute && info.nextPoint && info.previousPoint) {
+      return info
+    } else {
+      debug(`** Error: Loaded course data is invalid!! (using default) **`)
+      return this.courseInfo
+    }
   }
 
   private updateAllowed(): boolean {
@@ -3318,7 +3365,12 @@ export class CourseApi {
     }
   }
 
-  private emitCourseInfo() {
+  private emitCourseInfo(noSave: boolean = false) {
     this.server.handleMessage('courseApi', this.buildDeltaMsg())
+    if (!noSave) {
+      this.store.write(this.courseInfo).catch(error => {
+        console.log(error)
+      })
+    }
   }
 }
