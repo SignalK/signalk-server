@@ -1024,13 +1024,18 @@ export class CourseApi {
           res.status(403).send('Unauthorised')
           return
         }
+<<<<<<< HEAD
 >>>>>>> enable put processing
         if (!req.body.value) {
           debug(`** Error: req.body.value is null || undefined!`)
+=======
+        if (!req.body) {
+          debug(`** Error: req.body is null || undefined!`)
+>>>>>>> align openApi.json
           res.status(406).send(`Invalid Data`)
           return
         }
-        const result = await this.setDestination(req.body.value)
+        const result = await this.setDestination(req.body)
         if (result) {
           this.emitCourseInfo()
 <<<<<<< HEAD
@@ -1280,7 +1285,7 @@ export class CourseApi {
           res.status(403).send('Unauthorised')
           return
         }
-        const result = await this.activateRoute(req.body.value)
+        const result = await this.activateRoute(req.body)
         if (result) {
           this.emitCourseInfo()
 <<<<<<< HEAD

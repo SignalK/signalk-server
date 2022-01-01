@@ -184,46 +184,40 @@
                         "application/json": {
                             "schema": {
                                 "type": "object",
-                                "required": ["value"],
                                 "properties": {
-                                    "value": {
+                                    "position": {              
                                         "type": "object",
+                                        "description": "Destination position",
+                                        "required": [
+                                            "latitude",
+                                            "longitude"
+                                        ],
                                         "properties": {
-                                            "position": {              
-                                                "type": "object",
-                                                "description": "Destination position",
-                                                "required": [
-                                                    "latitude",
-                                                    "longitude"
-                                                ],
-                                                "properties": {
-                                                    "latitude": {
-                                                        "type": "number",
-                                                        "format": "float"
-                                                    },
-                                                    "longitude": {
-                                                        "type": "number",
-                                                        "format": "float"
-                                                    }
-                                                },
-                                                "example": {"latitude":-29.5,"longitude":137.5}
-                                            },
-                                            "href": {
-                                                "type": "string",
-                                                "description": "A reference (URL) to an object (under /resources) this point is related to",
-                                                "example": "/resources/waypoints/urn:mrn:signalk:uuid:3dd34dcc-36bf-4d61-ba80-233799b25672"
-                                            },
-                                            "type": {
-                                                "type": "string",
-                                                "description": "Type of point",
-                                                "example": "POI"
-                                            },
-                                            "arrivalCircle": {
+                                            "latitude": {
                                                 "type": "number",
-                                                "format": "float",
-                                                "example": 500
+                                                "format": "float"
+                                            },
+                                            "longitude": {
+                                                "type": "number",
+                                                "format": "float"
                                             }
-                                        }
+                                        },
+                                        "example": {"latitude":-29.5,"longitude":137.5}
+                                    },
+                                    "href": {
+                                        "type": "string",
+                                        "description": "A reference (URL) to an object (under /resources) this point is related to",
+                                        "example": "/resources/waypoints/urn:mrn:signalk:uuid:3dd34dcc-36bf-4d61-ba80-233799b25672"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "description": "Type of point",
+                                        "example": "POI"
+                                    },
+                                    "arrivalCircle": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 500
                                     }
                                 }
                             }
@@ -337,36 +331,30 @@
                         "application/json": {
                             "schema": {
                                 "type": "object",
-                                "required": ["value"],
                                 "properties": {
-                                    "value": {
-                                        "type": "object",
-                                        "properties": {
-                                            "href": {
-                                                "type": "string",
-                                                "description": "Path to route resource",
-                                                "example": "/resources/routes/urn:mrn:signalk:uuid:3dd34dcc-36bf-4d61-ba80-233799b25672"
-                                            },
-                                            "pointIndex": {              
-                                                "type": "number",
-                                                "format": "int64",
-                                                "description": "Zero based index of route point to use as destination",
-                                                "default": 0,
-                                                "minimum": 0,
-                                                "example": 2
-                                            },
-                                            "reverse": {              
-                                                "type": "boolean",
-                                                "default": false,
-                                                "description": "If true performs operations on route points in reverse order",
-                                                "example": 2
-                                            },
-                                            "arrivalCircle": {
-                                                "type": "number",
-                                                "format": "float",
-                                                "example": 500
-                                            }
-                                        }
+                                    "href": {
+                                        "type": "string",
+                                        "description": "Path to route resource",
+                                        "example": "/resources/routes/urn:mrn:signalk:uuid:3dd34dcc-36bf-4d61-ba80-233799b25672"
+                                    },
+                                    "pointIndex": {              
+                                        "type": "number",
+                                        "format": "int64",
+                                        "description": "Zero based index of route point to use as destination",
+                                        "default": 0,
+                                        "minimum": 0,
+                                        "example": 2
+                                    },
+                                    "reverse": {              
+                                        "type": "boolean",
+                                        "default": false,
+                                        "description": "If true performs operations on route points in reverse order",
+                                        "example": 2
+                                    },
+                                    "arrivalCircle": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 500
                                     }
                                 }
                             }
