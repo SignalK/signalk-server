@@ -164,10 +164,6 @@
                                                 "example": 500
                                             }
                                         }
-                                    },
-                                    "source": {
-                                        "type": "string",
-                                        "example": "freeboard-sk"
                                     }
                                 }
                             }
@@ -200,11 +196,7 @@
                                         "type": "number",
                                         "format": "float",
                                         "example": 500
-                                    },
-                                    "source": {
-                                        "type": "string",
-                                        "example": "freeboard-sk"
-                                    }  
+                                    } 
                                 }
                             }
                         }
@@ -255,11 +247,7 @@
                                                 "example": 500
                                             }
                                         }
-                                    },
-                                    "source": {
-                                        "type": "string",
-                                        "example": "freeboard-sk"
-                                    } 
+                                    }
                                 }
                             }
                         }
@@ -292,10 +280,6 @@
                                         "description": "increment (1) / decrement (-1) index of point in route to use as destination",
                                         "enum": [-1,1],
                                         "example": -1
-                                    },
-                                    "source": {
-                                        "type": "string",
-                                        "example": "freeboard-sk"
                                     }
                                 }
                             }
@@ -324,10 +308,6 @@
                                         "description": "Index of point in route to use as destination",
                                         "minimum": 0,
                                         "example": 2
-                                    },
-                                    "source": {
-                                        "type": "string",
-                                        "example": "freeboard-sk"
                                     }
                                 }
                             }

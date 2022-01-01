@@ -2,6 +2,7 @@ import Debug from 'debug'
 import { Application, Request, Response } from 'express'
 import path from 'path'
 import { WithConfig, WithSecurityStrategy, WithSignalK } from '../../app'
+import _ from 'lodash'
 import { Store } from '../store'
 
 const debug = Debug('signalk:courseApi')
@@ -18,8 +19,6 @@ interface CourseApplication
     WithSecurityStrategy {}
 
 interface CourseApplication extends Application {
-  // handleMessage: (id: string, data: any) => void
-  getSelfPath: (path: string) => any
   resourcesApi: {
     getResource: (resourceType: string, resourceId: string) => any
   }
@@ -93,6 +92,10 @@ export class CourseApi {
 
   private store: Store
 
+  private getVesselPosition() {
+    return _.get( (this.server.signalk as any).self, 'navigation.position')
+  }
+
   constructor(app: CourseApplication) {
     this.server = app
     this.store = new Store(path.join(app.config.configPath, 'api/course'))
@@ -116,6 +119,7 @@ export class CourseApi {
       })
     }
     debug(this.courseInfo)
+    this.emitCourseInfo(true)
 
     setInterval(() => {
       if (this.courseInfo.nextPoint.position) {
@@ -166,7 +170,7 @@ export class CourseApi {
         }
         // set previousPoint to vessel position
         try {
-          const position: any = this.server.getSelfPath('navigation.position')
+          const position: any = this.getVesselPosition()
           if (position && position.value) {
             this.courseInfo.previousPoint.position = position.value
             this.emitCourseInfo()
@@ -206,6 +210,7 @@ export class CourseApi {
           return
         }
         if (!req.body.value) {
+          debug(`** Error: req.body.value is null || undefined!`)
           res.status(406).send(`Invalid Data`)
           return
         }
@@ -329,7 +334,7 @@ export class CourseApi {
         // set previousPoint
         if (this.courseInfo.activeRoute.pointIndex === 0) {
           try {
-            const position: any = this.server.getSelfPath('navigation.position')
+            const position: any = this.getVesselPosition()
             if (position && position.value) {
               this.courseInfo.previousPoint.position = position.value
               this.courseInfo.previousPoint.type = `VesselPosition`
@@ -403,7 +408,7 @@ export class CourseApi {
     // set previousPoint
     if (newCourse.activeRoute.pointIndex === 0) {
       try {
-        const position: any = this.server.getSelfPath('navigation.position')
+        const position: any = this.getVesselPosition()
         if (position && position.value) {
           this.courseInfo.previousPoint.position = position.value
           this.courseInfo.previousPoint.type = `VesselPosition`
@@ -440,7 +445,6 @@ export class CourseApi {
       typeof dest.type !== 'undefined' ? dest.type : null
 
     if (dest.href) {
-      newCourse.href = dest.href
       const href = this.parseHref(dest.href)
       if (href) {
         // fetch waypoint resource details
@@ -451,6 +455,8 @@ export class CourseApi {
           )
           if (r.position && typeof r.position?.latitude !== 'undefined') {
             newCourse.nextPoint.position = r.position
+            newCourse.nextPoint.href = dest.href
+            newCourse.nextPoint.type = 'Waypoint'
           } else {
             return false
           }
@@ -460,9 +466,11 @@ export class CourseApi {
       }
     } else if (dest.position) {
       newCourse.nextPoint.href = null
+      newCourse.nextPoint.type = 'Location'
       if (typeof dest.position.latitude !== 'undefined') {
         newCourse.nextPoint.position = dest.position
       } else {
+        debug(`** Error: position.latitude is undefined!`)
         return false
       }
     } else {
@@ -471,15 +479,17 @@ export class CourseApi {
 
     // set previousPoint
     try {
-      const position: any = this.server.getSelfPath('navigation.position')
+      const position: any = this.getVesselPosition()
       if (position && position.value) {
         newCourse.previousPoint.position = position.value
         newCourse.previousPoint.type = `VesselPosition`
+        newCourse.previousPoint.href = null
       } else {
+        debug(`** Error: navigation.position.value is undefined! (${position})`)
         return false
       }
-      newCourse.previousPoint.href = null
     } catch (err) {
+      debug(`** Error: unable to retrieve navigation.position! (${err})`)
       return false
     }
 
