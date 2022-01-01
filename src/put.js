@@ -31,13 +31,14 @@ module.exports = {
     app.deRegisterActionHandler = deRegisterActionHandler
 
     app.put(apiPathPrefix + '*', function(req, res, next) {
-      // ** ignore resources paths **
+      // ** ignore resources API paths **
       if (req.path.split('/')[4] === 'resources') {
         next()
         return
       }
-      // ** ignore course paths **
-      if (req.path.indexOf('/navigation/course') !== -1) {
+
+      // ** ignore course API paths **
+      if (req.path.indexOf('/navigation/course/') !== -1) {
         next()
         return
       }

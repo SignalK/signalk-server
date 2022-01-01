@@ -126,6 +126,7 @@ import { Application, Request, Response } from 'express'
 =======
 import path from 'path'
 import { WithConfig, WithSecurityStrategy, WithSignalK } from '../../app'
+import _ from 'lodash'
 import { Store } from '../store'
 >>>>>>> persist courseInfo to settings file
 
@@ -185,6 +186,7 @@ interface CourseApplication
     WithSecurityStrategy {}
 
 interface CourseApplication extends Application {
+<<<<<<< HEAD
   // handleMessage: (id: string, data: any) => void
   getSelfPath: (path: string) => any
 <<<<<<< HEAD
@@ -309,6 +311,8 @@ interface CourseApplication extends Application {
 >>>>>>> enable put processing
 =======
 >>>>>>> persist courseInfo to settings file
+=======
+>>>>>>> add getVesselPosition
   resourcesApi: {
     getResource: (resourceType: string, resourceId: string) => any
   }
@@ -402,6 +406,10 @@ export class CourseApi {
   }
 
   private store: Store
+
+  private getVesselPosition() {
+    return _.get( (this.server.signalk as any).self, 'navigation.position')
+  }
 
   constructor(app: CourseApplication) {
     this.server = app
@@ -528,6 +536,7 @@ export class CourseApi {
       })
     }
     debug(this.courseInfo)
+    this.emitCourseInfo(true)
 
     setInterval(() => {
       if (this.courseInfo.nextPoint.position) {
@@ -749,7 +758,7 @@ export class CourseApi {
 =======
 >>>>>>> chore: lint
         try {
-          const position: any = this.server.getSelfPath('navigation.position')
+          const position: any = this.getVesselPosition()
           if (position && position.value) {
             this.courseInfo.previousPoint.position = position.value
             this.emitCourseInfo()
@@ -1017,6 +1026,7 @@ export class CourseApi {
         }
 >>>>>>> enable put processing
         if (!req.body.value) {
+          debug(`** Error: req.body.value is null || undefined!`)
           res.status(406).send(`Invalid Data`)
           return
         }
@@ -1723,7 +1733,7 @@ export class CourseApi {
 =======
 >>>>>>> chore: lint
           try {
-            const position: any = this.server.getSelfPath('navigation.position')
+            const position: any = this.getVesselPosition()
             if (position && position.value) {
               this.courseInfo.previousPoint.position = position.value
               this.courseInfo.previousPoint.type = `VesselPosition`
@@ -1980,7 +1990,7 @@ export class CourseApi {
     // set previousPoint
     if (newCourse.activeRoute.pointIndex === 0) {
       try {
-        const position: any = this.server.getSelfPath('navigation.position')
+        const position: any = this.getVesselPosition()
         if (position && position.value) {
           this.courseInfo.previousPoint.position = position.value
           this.courseInfo.previousPoint.type = `VesselPosition`
@@ -2026,7 +2036,6 @@ export class CourseApi {
 >>>>>>> chore: lint
 
     if (dest.href) {
-      newCourse.href = dest.href
       const href = this.parseHref(dest.href)
       if (href) {
 <<<<<<< HEAD
@@ -2049,6 +2058,8 @@ export class CourseApi {
           )
           if (r.position && typeof r.position?.latitude !== 'undefined') {
             newCourse.nextPoint.position = r.position
+            newCourse.nextPoint.href = dest.href
+            newCourse.nextPoint.type = 'Waypoint'
           } else {
             return false
           }
@@ -2058,9 +2069,11 @@ export class CourseApi {
       }
     } else if (dest.position) {
       newCourse.nextPoint.href = null
+      newCourse.nextPoint.type = 'Location'
       if (typeof dest.position.latitude !== 'undefined') {
         newCourse.nextPoint.position = dest.position
       } else {
+        debug(`** Error: position.latitude is undefined!`)
         return false
       }
     } else {
@@ -2068,9 +2081,27 @@ export class CourseApi {
     }
 >>>>>>> add 30sec delta interval
 
+<<<<<<< HEAD
 >>>>>>> chore: lint
     // set activeroute
     newCourse.activeRoute.href = route.href
+=======
+    // set previousPoint
+    try {
+      const position: any = this.getVesselPosition()
+      if (position && position.value) {
+        newCourse.previousPoint.position = position.value
+        newCourse.previousPoint.type = `VesselPosition`
+        newCourse.previousPoint.href = null
+      } else {
+        debug(`** Error: navigation.position.value is undefined! (${position})`)
+        return false
+      }
+    } catch (err) {
+      debug(`** Error: unable to retrieve navigation.position! (${err})`)
+      return false
+    }
+>>>>>>> add getVesselPosition
 
     if (this.isValidArrivalCircle(route.arrivalCircle as number)) {
       newCourse.nextPoint.arrivalCircle = route.arrivalCircle
