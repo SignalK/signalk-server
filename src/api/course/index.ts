@@ -127,8 +127,12 @@ import { Application, Request, Response } from 'express'
 import path from 'path'
 import { WithConfig, WithSecurityStrategy, WithSignalK } from '../../app'
 import _ from 'lodash'
+<<<<<<< HEAD
 import { Store } from '../store'
 >>>>>>> persist courseInfo to settings file
+=======
+import { Store } from '../../serverstate/store'
+>>>>>>> move `store.ts` to serverstate` folder
 
 const debug = Debug('signalk:courseApi')
 
@@ -777,12 +781,17 @@ export class CourseApi {
 >>>>>>> add 30sec delta interval
 =======
             res.status(200).send('OK')
+<<<<<<< HEAD
 >>>>>>> add 30sec delta interval
           }
         } catch (err) {
 >>>>>>> chore: lint
 =======
             res.status(200)
+=======
+          } else {
+            res.status(406).send(`Vessel position unavailable!`)
+>>>>>>> move `store.ts` to serverstate` folder
           }
         } catch (err) {
 >>>>>>> chore: lint
