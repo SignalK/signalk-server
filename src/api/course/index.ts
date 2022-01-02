@@ -3,7 +3,7 @@ import { Application, Request, Response } from 'express'
 import path from 'path'
 import { WithConfig, WithSecurityStrategy, WithSignalK } from '../../app'
 import _ from 'lodash'
-import { Store } from '../store'
+import { Store } from '../../serverstate/store'
 
 const debug = Debug('signalk:courseApi')
 
@@ -175,6 +175,8 @@ export class CourseApi {
             this.courseInfo.previousPoint.position = position.value
             this.emitCourseInfo()
             res.status(200).send('OK')
+          } else {
+            res.status(406).send(`Vessel position unavailable!`)
           }
         } catch (err) {
           res.status(406).send(`Vessel position unavailable!`)
