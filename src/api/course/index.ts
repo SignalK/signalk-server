@@ -417,7 +417,7 @@ export class CourseApi {
 
   constructor(app: CourseApplication) {
     this.server = app
-    this.store = new Store(path.join(app.config.configPath, 'api/course'))
+    this.store = new Store(path.join(app.config.configPath, 'serverstate/course'))
     this.start(app).catch(error => {
       console.log(error)
     })
@@ -535,9 +535,6 @@ export class CourseApi {
       this.courseInfo = this.validateCourseInfo(storeData)
     } catch (error) {
       debug('** No persisted course data (using default) **')
-      this.store.write(this.courseInfo).catch(error => {
-        console.log(error)
-      })
     }
     debug(this.courseInfo)
     this.emitCourseInfo(true)
