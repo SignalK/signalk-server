@@ -1791,6 +1791,16 @@ export class CourseApi {
 >>>>>>> add 30sec delta interval
           }
         }
+        // reverse direction from current point
+        if (req.params.action === 'reverse') {
+          if (typeof req.body.pointIndex === 'number') {
+            this.courseInfo.activeRoute.pointIndex = req.body.pointIndex
+          } else {
+            this.courseInfo.activeRoute.pointIndex = this.calcReversedIndex()
+          }
+          this.courseInfo.activeRoute.reverse = !this.courseInfo.activeRoute
+            .reverse
+        }
 
         if (req.params.action === 'refresh') {
           this.courseInfo.activeRoute.pointTotal =
@@ -2033,6 +2043,14 @@ export class CourseApi {
         res.status(200).json(Responses.ok)
 >>>>>>> regresstion testing fixes
       }
+    )
+  }
+
+  private calcReversedIndex(): number {
+    return (
+      this.courseInfo.activeRoute.pointTotal -
+      1 -
+      this.courseInfo.activeRoute.pointIndex
     )
   }
 

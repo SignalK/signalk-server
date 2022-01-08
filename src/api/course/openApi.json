@@ -496,6 +496,33 @@
                 "summary": "Refresh route details.",
                 "description": "Use after active route is modified to refresh pointIndex and pointsTotal values."
             }
+        },
+
+        "/vessels/self/navigation/course/activeRoute/reverse": {
+            "put": {
+                "tags": ["course/activeRoute"],
+                "summary": "Reverse direction of route",
+                "description": "Reverse direction of route from current point or from supplied pointIndex.", 
+                "requestBody": {
+                    "description": "Reverse route",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "pointIndex": {
+                                        "type": "number",
+                                        "description": "Index of point in route to use as destination",
+                                        "minimum": 0,
+                                        "example": 2
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
                 
     }
