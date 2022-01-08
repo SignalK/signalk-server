@@ -22,6 +22,7 @@ import { Application, NextFunction, Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid'
 import { WithSecurityStrategy, WithSignalK } from '../../app'
 
+import { Responses } from '../responses'
 import { buildResource } from './resources'
 import { validate } from './validate'
 
@@ -72,7 +73,9 @@ export class Resources {
           typeof provider.methods.setResource !== 'function' ||
           typeof provider.methods.deleteResource !== 'function'
         ) {
-          console.error(`Error: Could not register Resource Provider for ${i.toUpperCase()} due to missing provider methods!`)
+          console.error(
+            `Error: Could not register Resource Provider for ${i.toUpperCase()} due to missing provider methods!`
+          )
           return
         } else {
           provider.methods.pluginId = pluginId
@@ -147,7 +150,11 @@ export class Resources {
           ]?.getResource(req.params.resourceType, req.params.resourceId)
           res.json(retVal)
         } catch (err) {
-          res.status(404).send(`Resource not found! (${req.params.resourceId})`)
+          res.status(404).json({
+            state: 'FAILED',
+            statusCode: 404,
+            message: `Resource not found! (${req.params.resourceId})`
+          })
         }
       }
     )
@@ -170,7 +177,11 @@ export class Resources {
           ]?.listResources(req.params.resourceType, req.query)
           res.json(retVal)
         } catch (err) {
-          res.status(404).send(`Error retrieving resources!`)
+          res.status(404).json({
+            state: 'FAILED',
+            statusCode: 404,
+            message: `Error retrieving resources!`
+          })
         }
       }
     )
@@ -190,7 +201,7 @@ export class Resources {
         }
 
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).json(Responses.unauthorised)
           return
         }
         if (
@@ -200,7 +211,7 @@ export class Resources {
         ) {
 <<<<<<< HEAD
           if (!validate.resource(req.params.resourceType, req.body)) {
-            res.status(406).send(`Invalid resource data supplied!`)
+            res.status(406).json(Responses.invalid)
             return
           }
         }
@@ -225,13 +236,17 @@ export class Resources {
               req.body
             )
           )
-          res
-            .status(200)
-            .send(`New ${req.params.resourceType} resource (${id}) saved.`)
+          res.status(200).json({
+            state: 'COMPLETED',
+            statusCode: 200,
+            message: `New ${req.params.resourceType} resource (${id}) saved.`
+          })
         } catch (err) {
-          res
-            .status(404)
-            .send(`Error saving ${req.params.resourceType} resource (${id})!`)
+          res.status(404).json({
+            state: 'FAILED',
+            statusCode: 404,
+            message: `Error saving ${req.params.resourceType} resource (${id})!`
+          })
         }
       }
     )
@@ -255,7 +270,7 @@ export class Resources {
         }
 
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).json(Responses.unauthorised)
           return
         }
         if (
@@ -270,14 +285,18 @@ export class Resources {
             isValidId = validate.uuid(req.params.resourceId)
           }
           if (!isValidId) {
-            res
-              .status(406)
-              .send(`Invalid resource id provided (${req.params.resourceId})`)
+            res.status(406).json({
+              state: 'FAILED',
+              statusCode: 406,
+              message: `Invalid resource id provided (${req.params.resourceId})`
+            })
             return
           }
 
+          debug('req.body')
+          debug(req.body)
           if (!validate.resource(req.params.resourceType, req.body)) {
-            res.status(406).send(`Invalid resource data supplied!`)
+            res.status(406).json(Responses.invalid)
             return
           }
         }
@@ -299,17 +318,17 @@ export class Resources {
               req.body
             )
           )
-          res
-            .status(200)
-            .send(
-              `${req.params.resourceType} resource (${req.params.resourceId}) saved.`
-            )
+          res.status(200).json({
+            state: 'COMPLETED',
+            statusCode: 200,
+            message: `${req.params.resourceType} resource (${req.params.resourceId}) saved.`
+          })
         } catch (err) {
-          res
-            .status(404)
-            .send(
-              `Error saving ${req.params.resourceType} resource (${req.params.resourceId})!`
-            )
+          res.status(404).json({
+            state: 'FAILED',
+            statusCode: 404,
+            message: `Error saving ${req.params.resourceType} resource (${req.params.resourceId})!`
+          })
         }
       }
     )
@@ -330,7 +349,7 @@ export class Resources {
         }
 
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).json(Responses.unauthorised)
           return
         }
         try {
@@ -346,11 +365,17 @@ export class Resources {
               null
             )
           )
-          res.status(200).send(`Resource (${req.params.resourceId}) deleted.`)
+          res.status(200).json({
+            state: 'COMPLETED',
+            statusCode: 200,
+            message: `Resource (${req.params.resourceId}) deleted.`
+          })
         } catch (err) {
-          res
-            .status(400)
-            .send(`Error deleting resource (${req.params.resourceId})!`)
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: `Error deleting resource (${req.params.resourceId})!`
+          })
         }
       }
     )
@@ -378,29 +403,41 @@ export class Resources {
         debug(`** POST ${SIGNALK_API_PATH}/resources/set/:resourceType`)
 
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).json(Responses.unauthorised)
           return
         }
 
-        let apiData = this.processApiRequest(req)
+        const apiData = this.processApiRequest(req)
         debug(apiData)
 
         if (!this.checkForProvider(apiData.type)) {
-          res.status(501).send(`No provider for ${apiData.type}!`)
+          res.status(501).json({
+            state: 'FAILED',
+            statusCode: 501,
+            message: `No provider for ${apiData.type}!`
+          })
           return
         }
         if (!apiData.value) {
-          res.status(406).send(`Invalid resource data supplied!`)
+          res.status(406).json(Responses.invalid)
           return
         }
         if (apiData.type === 'charts') {
           if (!validate.chartId(apiData.id)) {
-            res.status(406).send(`Invalid chart resource id supplied!`)
+            res.status(406).json({
+              state: 'FAILED',
+              statusCode: 406,
+              message: `Invalid chart resource id supplied!`
+            })
             return
           }
         } else {
           if (!validate.uuid(apiData.id)) {
-            res.status(406).send(`Invalid resource id supplied!`)
+            res.status(406).json({
+              state: 'FAILED',
+              statusCode: 406,
+              message: `Invalid resource id supplied!`
+            })
             return
           }
         }
@@ -415,9 +452,17 @@ export class Resources {
             this.resProvider[apiData.type]?.pluginId as string,
             this.buildDeltaMsg(apiData.type, apiData.id, apiData.value)
           )
-          res.status(200).send(`SUCCESS: New ${req.params.resourceType} resource created.`)
+          res.status(200).json({
+            state: 'COMPLETED',
+            statusCode: 200,
+            message: `SUCCESS: New ${req.params.resourceType} resource created.`
+          })
         } catch (err) {
-          res.status(404).send(`ERROR: Could not create ${req.params.resourceType} resource!`)
+          res.status(404).json({
+            state: 'FAILED',
+            statusCode: 404,
+            message: `ERROR: Could not create ${req.params.resourceType} resource!`
+          })
         }
       }
     )
@@ -429,7 +474,7 @@ export class Resources {
         )
 
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).json(Responses.unauthorised)
           return
         }
 
@@ -984,22 +1029,34 @@ export class Resources {
         const apiData = this.processApiRequest(req)
 
         if (!this.checkForProvider(apiData.type)) {
-          res.status(501).send(`No provider for ${apiData.type}!`)
+          res.status(501).json({
+            state: 'FAILED',
+            statusCode: 501,
+            message: `No provider for ${apiData.type}!`
+          })
           return
         }
         if (!apiData.value) {
-          res.status(406).send(`Invalid resource data supplied!`)
+          res.status(406).json(Responses.invalid)
           return
 >>>>>>> add securityStrategy test
         }
         if (apiData.type === 'charts') {
           if (!validate.chartId(apiData.id)) {
-            res.status(406).send(`Invalid chart resource id supplied!`)
+            res.status(406).json({
+              state: 'FAILED',
+              statusCode: 406,
+              message: `Invalid chart resource id supplied!`
+            })
             return
           }
         } else {
           if (!validate.uuid(apiData.id)) {
-            res.status(406).send(`Invalid resource id supplied!`)
+            res.status(406).json({
+              state: 'FAILED',
+              statusCode: 406,
+              message: `Invalid resource id supplied!`
+            })
             return
           }
         }
@@ -1014,16 +1071,24 @@ export class Resources {
             this.resProvider[apiData.type]?.pluginId as string,
             this.buildDeltaMsg(apiData.type, apiData.id, apiData.value)
           )
-          res.status(200).send(`SUCCESS: ${req.params.resourceType} resource updated.`)
+          res.status(200).json({
+            state: 'COMPLETED',
+            statusCode: 200,
+            message: `SUCCESS: ${req.params.resourceType} resource updated.`
+          })
         } catch (err) {
-          res.status(404).send(`ERROR: ${req.params.resourceType} resource could not be updated!`)
+          res.status(404).json({
+            state: 'FAILED',
+            statusCode: 404,
+            message: `ERROR: ${req.params.resourceType} resource could not be updated!`
+          })
         }
       }
     )
   }
 
   private processApiRequest(req: Request) {
-    let apiReq: any = {
+    const apiReq: any = {
       type: undefined,
       id: undefined,
       value: undefined
@@ -1049,7 +1114,9 @@ export class Resources {
 
     apiReq.id = req.params.resourceId
       ? req.params.resourceId
-      : (apiReq.type === 'charts' ? apiReq.value.identifier : UUID_PREFIX + uuidv4())
+      : apiReq.type === 'charts'
+      ? apiReq.value.identifier
+      : UUID_PREFIX + uuidv4()
 
     return apiReq
   }
@@ -1072,7 +1139,7 @@ export class Resources {
   private checkForProvider(resType: SignalKResourceType): boolean {
     debug(`** checkForProvider(${resType})`)
     debug(this.resProvider[resType])
-    return (this.resProvider[resType]) ? true : false
+    return this.resProvider[resType] ? true : false
   }
 
 <<<<<<< HEAD

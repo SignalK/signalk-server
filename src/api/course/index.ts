@@ -17,6 +17,7 @@
 import Debug from 'debug'
 import { Application, Request, Response } from 'express'
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 import {
   ResourceProvider,
@@ -133,6 +134,13 @@ import { Store } from '../store'
 =======
 import { Store } from '../../serverstate/store'
 >>>>>>> move `store.ts` to serverstate` folder
+=======
+import _ from 'lodash'
+import path from 'path'
+import { WithConfig, WithSecurityStrategy, WithSignalK } from '../../app'
+import { Store } from '../../serverstate/store'
+import { Responses } from '../responses'
+>>>>>>> regresstion testing fixes
 
 const debug = Debug('signalk:courseApi')
 
@@ -371,6 +379,7 @@ interface CourseInfo {
     href: string | null
     startTime: string | null
     pointIndex: number
+    pointTotal: number
     reverse: boolean
   }
   nextPoint: {
@@ -394,6 +403,7 @@ export class CourseApi {
       href: null,
       startTime: null,
       pointIndex: 0,
+      pointTotal: 0,
       reverse: false
     },
     nextPoint: {
@@ -411,21 +421,24 @@ export class CourseApi {
 
   private store: Store
 
-  private getVesselPosition() {
-    return _.get( (this.server.signalk as any).self, 'navigation.position')
-  }
-
   constructor(app: CourseApplication) {
     this.server = app
-    this.store = new Store(path.join(app.config.configPath, 'serverstate/course'))
+    this.store = new Store(
+      path.join(app.config.configPath, 'serverstate/course')
+    )
     this.start(app).catch(error => {
       console.log(error)
     })
   }
 
+  private getVesselPosition() {
+    return _.get((this.server.signalk as any).self, 'navigation.position')
+  }
+
   private async start(app: any) {
     debug(`** Initialise ${COURSE_API_PATH} path handler **`)
     this.server = app
+<<<<<<< HEAD
     this.initResourceRoutes()
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -529,6 +542,9 @@ export class CourseApi {
 >>>>>>> chore: lint
         this.emitCourseInfo()
 =======
+=======
+    this.initCourseRoutes()
+>>>>>>> regresstion testing fixes
 
     try {
       const storeData = await this.store.read()
@@ -566,7 +582,7 @@ export class CourseApi {
     )
   }
 
-  private initResourceRoutes() {
+  private initCourseRoutes() {
     // return current course information
     this.server.get(
       `${COURSE_API_PATH}`,
@@ -646,6 +662,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
           res.status(403).send('Unauthorised')
 =======
           res.status(403)
@@ -713,10 +730,17 @@ export class CourseApi {
 =======
           res.status(403).send('Unauthorised')
 >>>>>>> add 30sec delta interval
+=======
+          res.status(403).json(Responses.unauthorised)
+>>>>>>> regresstion testing fixes
           return
         }
         if (!this.courseInfo.nextPoint.position) {
-          res.status(406).send(`No active destination!`)
+          res.status(406).json({
+            state: 'FAILED',
+            statusCode: 406,
+            message: `No active destination!`
+          })
           return
         }
         // set previousPoint to vessel position
@@ -767,6 +791,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             res.status(200).send('OK')
           }
         } catch (err) {
@@ -793,6 +818,22 @@ export class CourseApi {
         } catch (err) {
 >>>>>>> chore: lint
           res.status(406).send(`Vessel position unavailable!`)
+=======
+            res.status(200).json(Responses.ok)
+          } else {
+            res.status(406).json({
+              state: 'FAILED',
+              statusCode: 406,
+              message: `Vessel position unavailable!`
+            })
+          }
+        } catch (err) {
+          res.status(406).json({
+            state: 'FAILED',
+            statusCode: 406,
+            message: `Vessel position unavailable!`
+          })
+>>>>>>> regresstion testing fixes
         }
       }
     )
@@ -965,16 +1006,20 @@ export class CourseApi {
 =======
         debug(`** PUT ${COURSE_API_PATH}/arrivalCircle`)
         if (!this.updateAllowed()) {
-          res.status(403).send('Unauthorised')
+          res.status(403).json(Responses.unauthorised)
           return
         }
         if (this.isValidArrivalCircle(req.body.value)) {
           this.courseInfo.nextPoint.arrivalCircle = req.body.value
           this.emitCourseInfo()
-          res.status(200).send('OK')
+          res.status(200).json(Responses.ok)
         } else {
+<<<<<<< HEAD
           res.status(406).send(`Invalid Data`)
 >>>>>>> enable put processing
+=======
+          res.status(406).json(Responses.invalid)
+>>>>>>> regresstion testing fixes
         }
       }
     )
@@ -1027,7 +1072,7 @@ export class CourseApi {
 >>>>>>> init courseApi
 =======
         if (!this.updateAllowed()) {
-          res.status(403).send('Unauthorised')
+          res.status(403).json(Responses.unauthorised)
           return
         }
 <<<<<<< HEAD
@@ -1037,8 +1082,12 @@ export class CourseApi {
 =======
         if (!req.body) {
           debug(`** Error: req.body is null || undefined!`)
+<<<<<<< HEAD
 >>>>>>> align openApi.json
           res.status(406).send(`Invalid Data`)
+=======
+          res.status(406).json(Responses.invalid)
+>>>>>>> regresstion testing fixes
           return
         }
         const result = await this.setDestination(req.body)
@@ -1056,6 +1105,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
           res.status(200).send('OK')
 =======
           res.status(200).send(`Destination set successfully.`)
@@ -1093,10 +1143,13 @@ export class CourseApi {
 =======
           res.status(200).send('OK')
 >>>>>>> add 30sec delta interval
+=======
+          res.status(200).json(Responses.ok)
+>>>>>>> regresstion testing fixes
         } else {
           this.clearDestination()
           this.emitCourseInfo()
-          res.status(406).send(`Invalid Data`)
+          res.status(406).json(Responses.invalid)
         }
       }
     )
@@ -1122,13 +1175,13 @@ export class CourseApi {
 >>>>>>> init courseApi
 =======
         if (!this.updateAllowed()) {
-          res.status(403).send('Unauthorised')
+          res.status(403).json(Responses.unauthorised)
           return
         }
 >>>>>>> enable put processing
         this.clearDestination()
         this.emitCourseInfo()
-        res.status(200).send('OK')
+        res.status(200).json(Responses.ok)
       }
     )
 
@@ -1288,12 +1341,13 @@ export class CourseApi {
 >>>>>>> init courseApi
 =======
         if (!this.updateAllowed()) {
-          res.status(403).send('Unauthorised')
+          res.status(403).json(Responses.unauthorised)
           return
         }
         const result = await this.activateRoute(req.body)
         if (result) {
           this.emitCourseInfo()
+<<<<<<< HEAD
 <<<<<<< HEAD
           res.status(200)
 >>>>>>> enable put processing
@@ -1312,10 +1366,13 @@ export class CourseApi {
           this.emitCourseInfo()
           res.status(200)
 >>>>>>> enable put processing
+=======
+          res.status(200).json(Responses.ok)
+>>>>>>> regresstion testing fixes
         } else {
           this.clearDestination()
           this.emitCourseInfo()
-          res.status(406).send(`Invalid Data`)
+          res.status(406).json(Responses.invalid)
         }
       }
     )
@@ -1374,7 +1431,7 @@ export class CourseApi {
 =======
 >>>>>>> enable put processing
         if (!this.updateAllowed()) {
-          res.status(403)
+          res.status(403).json(Responses.unauthorised)
           return
         }
 <<<<<<< HEAD
@@ -1426,6 +1483,7 @@ export class CourseApi {
 =======
         this.clearDestination()
         this.emitCourseInfo()
+<<<<<<< HEAD
         res.status(200)
 >>>>>>> enable put processing
 =======
@@ -1438,12 +1496,16 @@ export class CourseApi {
         this.emitCourseInfo()
         res.status(200)
 >>>>>>> enable put processing
+=======
+        res.status(200).json(Responses.ok)
+>>>>>>> regresstion testing fixes
       }
     )
 
     this.server.put(
       `${COURSE_API_PATH}/activeRoute/:action`,
       async (req: Request, res: Response) => {
+<<<<<<< HEAD
         debug(`** PUT ${COURSE_API_PATH}/activeRoute`)
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1491,8 +1553,11 @@ export class CourseApi {
 =======
 =======
 >>>>>>> enable put processing
+=======
+        debug(`** PUT ${COURSE_API_PATH}/activeRoute/${req.params.action}`)
+>>>>>>> regresstion testing fixes
         if (!this.updateAllowed()) {
-          res.status(403).send('Unauthorised')
+          res.status(403).json(Responses.unauthorised)
           return
         }
 <<<<<<< HEAD
@@ -1509,7 +1574,7 @@ export class CourseApi {
         // fetch route data
 >>>>>>> enable put processing
         if (!this.courseInfo.activeRoute.href) {
-          res.status(406).send(`Invalid Data`)
+          res.status(406).json(Responses.invalid)
           return
         }
 <<<<<<< HEAD
@@ -1535,7 +1600,7 @@ export class CourseApi {
 >>>>>>> enable put processing
         const rte = await this.getRoute(this.courseInfo.activeRoute.href)
         if (!rte) {
-          res.status(406).send(`Invalid Data`)
+          res.status(406).json(Responses.invalid)
           return
         }
 
@@ -1581,6 +1646,7 @@ export class CourseApi {
               rte
             )
           } else {
+<<<<<<< HEAD
             res.status(406).send(`Invalid Data`)
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1622,14 +1688,21 @@ export class CourseApi {
             return
 >>>>>>> add 30sec delta interval
 =======
+=======
+            res.status(406).json(Responses.invalid)
+>>>>>>> regresstion testing fixes
             return
 >>>>>>> add 30sec delta interval
           }
         }
 <<<<<<< HEAD
+<<<<<<< HEAD
         if (req.params.pointIndex) {
 >>>>>>> init courseApi
 =======
+=======
+
+>>>>>>> regresstion testing fixes
         if (req.params.action === 'pointIndex') {
 >>>>>>> enable put processing
 =======
@@ -1646,6 +1719,7 @@ export class CourseApi {
               rte
             )
           } else {
+<<<<<<< HEAD
             res.status(406).send(`Invalid Data`)
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1710,9 +1784,34 @@ export class CourseApi {
 >>>>>>> init courseApi
 =======
 =======
+=======
+            res.status(406).json(Responses.invalid)
+>>>>>>> regresstion testing fixes
             return
 >>>>>>> add 30sec delta interval
           }
+        }
+
+        if (req.params.action === 'refresh') {
+          this.courseInfo.activeRoute.pointTotal =
+            rte.feature.geometry.coordinates.length
+          let idx: number = -1
+          for (let i = 0; i < rte.feature.geometry.coordinates.length; i++) {
+            if (
+              rte.feature.geometry.coordinates[i][0] ===
+                this.courseInfo.nextPoint.position?.longitude &&
+              rte.feature.geometry.coordinates[i][1] ===
+                this.courseInfo.nextPoint.position?.latitude
+            ) {
+              idx = i
+            }
+          }
+          if (idx !== -1) {
+            this.courseInfo.activeRoute.pointIndex = idx
+          }
+          this.emitCourseInfo()
+          res.status(200).json(Responses.ok)
+          return
         }
 
         // set new destination
@@ -1749,6 +1848,7 @@ export class CourseApi {
               this.courseInfo.previousPoint.position = position.value
               this.courseInfo.previousPoint.type = `VesselPosition`
             } else {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1824,6 +1924,14 @@ export class CourseApi {
           } catch (err) {
             res.status(406).send(`Invalid Data`)
 >>>>>>> add 30sec delta interval
+=======
+              res.status(406).json(Responses.invalid)
+              return false
+            }
+          } catch (err) {
+            console.log(`** Error: unable to retrieve vessel position!`)
+            res.status(406).json(Responses.invalid)
+>>>>>>> regresstion testing fixes
             return false
           }
         } else {
@@ -1874,6 +1982,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         res.status(200).send('OK')
 =======
 
@@ -1919,6 +2028,10 @@ export class CourseApi {
 =======
         res.status(200).send('OK')
 >>>>>>> add 30sec delta interval
+=======
+        this.emitCourseInfo()
+        res.status(200).json(Responses.ok)
+>>>>>>> regresstion testing fixes
       }
     )
   }
@@ -1929,9 +2042,11 @@ export class CourseApi {
     if (route.href) {
       rte = await this.getRoute(route.href)
       if (!rte) {
+        console.log(`** Could not retrieve route information for ${route.href}`)
         return false
       }
       if (!Array.isArray(rte.feature?.geometry?.coordinates)) {
+        debug(`** Invalid route coordinate data! (${route.href})`)
         return false
       }
     } else {
@@ -1988,6 +2103,7 @@ export class CourseApi {
       route.pointIndex as number,
       rte
     )
+    newCourse.activeRoute.pointTotal = rte.feature.geometry.coordinates.length
 
     // set nextPoint
     newCourse.nextPoint.position = this.getRoutePoint(
@@ -2006,6 +2122,7 @@ export class CourseApi {
           this.courseInfo.previousPoint.position = position.value
           this.courseInfo.previousPoint.type = `VesselPosition`
         } else {
+          console.log(`** Error: unable to retrieve vessel position!`)
           return false
         }
       } catch (err) {
@@ -2072,9 +2189,13 @@ export class CourseApi {
             newCourse.nextPoint.href = dest.href
             newCourse.nextPoint.type = 'Waypoint'
           } else {
+            debug(`** Invalid waypoint coordinate data! (${dest.href})`)
             return false
           }
         } catch (err) {
+          console.log(
+            `** Could not retrieve waypoint information for ${dest.href}`
+          )
           return false
         }
       }
@@ -2093,10 +2214,20 @@ export class CourseApi {
 >>>>>>> add 30sec delta interval
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> chore: lint
     // set activeroute
     newCourse.activeRoute.href = route.href
 =======
+=======
+    // clear activeRoute values
+    newCourse.activeRoute.href = null
+    newCourse.activeRoute.startTime = null
+    newCourse.activeRoute.pointindex = 0
+    newCourse.activeRoute.pointTotal = 0
+    newCourse.activeRoute.reverse = false
+
+>>>>>>> regresstion testing fixes
     // set previousPoint
     try {
       const position: any = this.getVesselPosition()
@@ -2109,11 +2240,12 @@ export class CourseApi {
         return false
       }
     } catch (err) {
-      debug(`** Error: unable to retrieve navigation.position! (${err})`)
+      console.log(`** Error: unable to retrieve vessel position!`)
       return false
     }
 >>>>>>> add getVesselPosition
 
+<<<<<<< HEAD
     if (this.isValidArrivalCircle(route.arrivalCircle as number)) {
       newCourse.nextPoint.arrivalCircle = route.arrivalCircle
     }
@@ -2659,6 +2791,9 @@ export class CourseApi {
 =======
     this.courseInfo = newCourse
 >>>>>>> add 30sec delta interval
+=======
+    this.courseInfo = newCourse
+>>>>>>> regresstion testing fixes
     return true
   }
 
@@ -2666,6 +2801,10 @@ export class CourseApi {
     this.courseInfo.activeRoute.href = null
     this.courseInfo.activeRoute.startTime = null
     this.courseInfo.activeRoute.pointIndex = 0
+<<<<<<< HEAD
+=======
+    this.courseInfo.activeRoute.pointTotal = 0
+>>>>>>> regresstion testing fixes
     this.courseInfo.activeRoute.reverse = false
     this.courseInfo.nextPoint.href = null
     this.courseInfo.nextPoint.type = null
@@ -2675,6 +2814,7 @@ export class CourseApi {
     this.courseInfo.previousPoint.position = null
   }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -2752,13 +2892,18 @@ export class CourseApi {
 =======
 >>>>>>> init courseApi
 =======
+=======
+>>>>>>> regresstion testing fixes
   private isValidArrivalCircle(value: number): boolean {
     return typeof value === 'number' && value >= 0
   }
 
   private parsePointIndex(index: number, rte: any): number {
     if (typeof index !== 'number' || !rte) {
+<<<<<<< HEAD
 >>>>>>> chore: lint
+=======
+>>>>>>> regresstion testing fixes
       return 0
     }
     if (!rte.feature?.geometry?.coordinates) {
@@ -2954,9 +3099,11 @@ export class CourseApi {
       try {
         return await this.server.resourcesApi.getResource(h.type, h.id)
       } catch (err) {
+        debug(`** Unable to fetch resource: ${h.type}, ${h.id}`)
         return undefined
       }
     } else {
+      debug(`** Unable to parse href: ${href}`)
       return undefined
     }
   }

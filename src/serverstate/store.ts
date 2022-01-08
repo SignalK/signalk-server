@@ -10,17 +10,22 @@ export class Store {
     this.filePath = filePath
     this.fileName = fileName
     this.init().catch(error => {
-      console.log(`Could not initialise ${path.join(this.filePath, this.fileName)}`)
+      console.log(
+        `Could not initialise ${path.join(this.filePath, this.fileName)}`
+      )
       console.log(error)
     })
   }
 
   async read(): Promise<any> {
     try {
-      const data = await readFile(path.join(this.filePath, this.fileName), 'utf8')
+      const data = await readFile(
+        path.join(this.filePath, this.fileName),
+        'utf8'
+      )
       return JSON.parse(data)
     } catch (error) {
-      throw(error)
+      throw error
     }
   }
 
