@@ -35,6 +35,11 @@
                                                     "format": "int64",
                                                     "example": 2
                                                 },
+                                                "pointTotal": {
+                                                    "type": "number",
+                                                    "format": "int64",
+                                                    "example": 9
+                                                },
                                                 "reverse": {
                                                     "type": "boolean",
                                                     "default": false
@@ -302,6 +307,14 @@
                         }
                     }
                 }
+            }
+        },
+
+        "/vessels/self/navigation/course/activeRoute/refresh": {
+            "put": {
+                "tags": ["course/activeRoute"],
+                "summary": "Refresh route details.",
+                "description": "Use after active route is modified to refresh pointIndex and pointsTotal values."
             }
         }
                 
