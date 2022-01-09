@@ -2241,7 +2241,7 @@ export class CourseApi {
     // clear activeRoute values
     newCourse.activeRoute.href = null
     newCourse.activeRoute.startTime = null
-    newCourse.activeRoute.pointindex = 0
+    newCourse.activeRoute.pointIndex = 0
     newCourse.activeRoute.pointTotal = 0
     newCourse.activeRoute.reverse = false
 
