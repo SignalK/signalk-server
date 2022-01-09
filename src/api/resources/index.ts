@@ -114,9 +114,9 @@ export class Resources {
     this.initResourceRoutes()
   }
 
-  private updateAllowed(): boolean {
+  private updateAllowed(req: Request): boolean {
     return this.server.securityStrategy.shouldAllowPut(
-      this.server,
+      req,
       'vessels.self',
       null,
       'resources'
@@ -200,7 +200,7 @@ export class Resources {
           return
         }
 
-        if (!this.updateAllowed()) {
+        if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -269,7 +269,7 @@ export class Resources {
           return
         }
 
-        if (!this.updateAllowed()) {
+        if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -348,7 +348,7 @@ export class Resources {
           return
         }
 
-        if (!this.updateAllowed()) {
+        if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -402,7 +402,7 @@ export class Resources {
       async (req: Request, res: Response) => {
         debug(`** POST ${SIGNALK_API_PATH}/resources/set/:resourceType`)
 
-        if (!this.updateAllowed()) {
+        if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -473,7 +473,7 @@ export class Resources {
           `** PUT ${SIGNALK_API_PATH}/resources/set/:resourceType/:resourceId`
         )
 
-        if (!this.updateAllowed()) {
+        if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
