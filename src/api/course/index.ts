@@ -437,6 +437,7 @@ export class CourseApi {
 
   private async start(app: any) {
     debug(`** Initialise ${COURSE_API_PATH} path handler **`)
+<<<<<<< HEAD
     this.server = app
 <<<<<<< HEAD
     this.initResourceRoutes()
@@ -543,6 +544,8 @@ export class CourseApi {
         this.emitCourseInfo()
 =======
 =======
+=======
+>>>>>>> chore: this.server is initialised in constructor
     this.initCourseRoutes()
 >>>>>>> regresstion testing fixes
 
