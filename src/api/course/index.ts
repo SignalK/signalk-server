@@ -573,9 +573,9 @@ export class CourseApi {
     }
   }
 
-  private updateAllowed(): boolean {
+  private updateAllowed(request: Request): boolean {
     return this.server.securityStrategy.shouldAllowPut(
-      this.server,
+      request,
       'vessels.self',
       null,
       'navigation.course'
@@ -657,6 +657,7 @@ export class CourseApi {
       `${COURSE_API_PATH}/restart`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/restart`)
+<<<<<<< HEAD
         if (!this.updateAllowed()) {
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -731,6 +732,9 @@ export class CourseApi {
           res.status(403).send('Unauthorised')
 >>>>>>> add 30sec delta interval
 =======
+=======
+        if (!this.updateAllowed(req)) {
+>>>>>>> fix: updateAllowed(request) is required
           res.status(403).json(Responses.unauthorised)
 >>>>>>> regresstion testing fixes
           return
@@ -1005,7 +1009,7 @@ export class CourseApi {
 >>>>>>> init courseApi
 =======
         debug(`** PUT ${COURSE_API_PATH}/arrivalCircle`)
-        if (!this.updateAllowed()) {
+        if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -1037,6 +1041,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if (!this.updateAllowed()) {
           res.status(403).send('Unauthorised')
           return
@@ -1072,6 +1077,9 @@ export class CourseApi {
 >>>>>>> init courseApi
 =======
         if (!this.updateAllowed()) {
+=======
+        if (!this.updateAllowed(req)) {
+>>>>>>> fix: updateAllowed(request) is required
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -1167,6 +1175,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if (!this.updateAllowed()) {
           res.status(403).send('Unauthorised')
           return
@@ -1175,6 +1184,9 @@ export class CourseApi {
 >>>>>>> init courseApi
 =======
         if (!this.updateAllowed()) {
+=======
+        if (!this.updateAllowed(req)) {
+>>>>>>> fix: updateAllowed(request) is required
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -1188,10 +1200,19 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
     // set activeRoute
+<<<<<<< HEAD
 =======
 =======
         if (!this.updateAllowed()) {
           res.status(403).send('Unauthorised')
+=======
+    this.server.put(
+      `${COURSE_API_PATH}/activeRoute`,
+      async (req: Request, res: Response) => {
+        debug(`** PUT ${COURSE_API_PATH}/activeRoute`)
+        if (!this.updateAllowed(req)) {
+          res.status(403).json(Responses.unauthorised)
+>>>>>>> fix: updateAllowed(request) is required
           return
         }
 <<<<<<< HEAD
@@ -1214,6 +1235,7 @@ export class CourseApi {
     )
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     // set / clear activeRoute
 >>>>>>> init courseApi
 =======
@@ -1229,6 +1251,15 @@ export class CourseApi {
 =======
         if (!this.updateAllowed()) {
           res.status(403).send('Unauthorised')
+=======
+    // clear activeRoute /destination
+    this.server.delete(
+      `${COURSE_API_PATH}/activeRoute`,
+      async (req: Request, res: Response) => {
+        debug(`** DELETE ${COURSE_API_PATH}/activeRoute`)
+        if (!this.updateAllowed(req)) {
+          res.status(403).json(Responses.unauthorised)
+>>>>>>> fix: updateAllowed(request) is required
           return
         }
 >>>>>>> enable put processing
@@ -1239,6 +1270,7 @@ export class CourseApi {
     )
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     // set / clear activeRoute
 >>>>>>> init courseApi
 =======
@@ -1248,6 +1280,14 @@ export class CourseApi {
 =======
         if (!this.updateAllowed()) {
           res.status(403)
+=======
+    this.server.put(
+      `${COURSE_API_PATH}/activeRoute/:action`,
+      async (req: Request, res: Response) => {
+        debug(`** PUT ${COURSE_API_PATH}/activeRoute/${req.params.action}`)
+        if (!this.updateAllowed(req)) {
+          res.status(403).json(Responses.unauthorised)
+>>>>>>> fix: updateAllowed(request) is required
           return
         }
 >>>>>>> enable put processing
