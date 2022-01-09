@@ -2304,8 +2304,12 @@ export class CourseApi {
       return 0
     }
     if (index > rte.feature?.geometry?.coordinates.length - 1) {
+<<<<<<< HEAD
       return rte.feature?.geometry?.coordinates.length -1
 >>>>>>> chore: update OpenApi responses
+=======
+      return rte.feature?.geometry?.coordinates.length - 1
+>>>>>>> style: linter fix
     }
 =======
           this.courseInfo.activeRoute.pointIndex,
