@@ -63,7 +63,7 @@ export type ToPreferredDelta = (
 
 export const getToPreferredDelta = (
   sourcePrioritiesData: SourcePrioritiesData,
-  unknownSourceTimeout: number = 10000
+  unknownSourceTimeout = 10000
 ): ToPreferredDelta => {
   if (!sourcePrioritiesData) {
     debug('No priorities data')

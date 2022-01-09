@@ -3,7 +3,8 @@ const TSRULES = {
   'member-access': [true, 'no-public'],
   'interface-name': false,
   'max-classes-per-file': false,
-  'no-any': false
+  'no-any': false,
+  'no-inferrable-types': true
 }
 
 const UNIVERSAL_RULES = {
