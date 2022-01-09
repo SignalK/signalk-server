@@ -128,9 +128,9 @@ export class CourseApi {
     }
   }
 
-  private updateAllowed(): boolean {
+  private updateAllowed(request: Request): boolean {
     return this.server.securityStrategy.shouldAllowPut(
-      this.server,
+      request,
       'vessels.self',
       null,
       'navigation.course'
@@ -151,7 +151,7 @@ export class CourseApi {
       `${COURSE_API_PATH}/restart`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/restart`)
-        if (!this.updateAllowed()) {
+        if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -191,7 +191,7 @@ export class CourseApi {
       `${COURSE_API_PATH}/arrivalCircle`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/arrivalCircle`)
-        if (!this.updateAllowed()) {
+        if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -210,7 +210,7 @@ export class CourseApi {
       `${COURSE_API_PATH}/destination`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/destination`)
-        if (!this.updateAllowed()) {
+        if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -236,7 +236,7 @@ export class CourseApi {
       `${COURSE_API_PATH}/destination`,
       async (req: Request, res: Response) => {
         debug(`** DELETE ${COURSE_API_PATH}/destination`)
-        if (!this.updateAllowed()) {
+        if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -251,7 +251,7 @@ export class CourseApi {
       `${COURSE_API_PATH}/activeRoute`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/activeRoute`)
-        if (!this.updateAllowed()) {
+        if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -272,7 +272,7 @@ export class CourseApi {
       `${COURSE_API_PATH}/activeRoute`,
       async (req: Request, res: Response) => {
         debug(`** DELETE ${COURSE_API_PATH}/activeRoute`)
-        if (!this.updateAllowed()) {
+        if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -286,7 +286,7 @@ export class CourseApi {
       `${COURSE_API_PATH}/activeRoute/:action`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/activeRoute/${req.params.action}`)
-        if (!this.updateAllowed()) {
+        if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
