@@ -482,12 +482,12 @@ export class CourseApi {
     return true
   }
 
-  private async setDestination(dest: any): Promise<boolean> {
+  private async setDestination(dest: Destination): Promise<boolean> {
     const newCourse: CourseInfo = {...this.courseInfo}
 
     // set nextPoint
     if (this.isValidArrivalCircle(dest.arrivalCircle)) {
-      newCourse.nextPoint.arrivalCircle = dest.arrivalCircle
+      newCourse.nextPoint.arrivalCircle = dest.arrivalCircle as number
     }
 
     newCourse.nextPoint.type =
@@ -571,7 +571,7 @@ export class CourseApi {
     this.courseInfo.previousPoint.position = null
   }
 
-  private isValidArrivalCircle(value: number): boolean {
+  private isValidArrivalCircle(value: number | undefined): boolean {
     return typeof value === 'number' && value >= 0
   }
 
