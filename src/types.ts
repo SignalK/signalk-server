@@ -1,4 +1,5 @@
 import { FullSignalK } from '@signalk/signalk-schema'
+import { Request } from 'express'
 import SubscriptionManager from './subscriptionmanager'
 
 export interface HelloMessage {
@@ -15,7 +16,7 @@ export interface SecurityStrategy {
   shouldFilterDeltas: () => boolean
   filterReadDelta: (user: any, delta: any) => any
   shouldAllowPut: (
-    req: any,
+    req: Request,
     context: string,
     source: any,
     path: string
