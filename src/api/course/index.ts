@@ -603,7 +603,7 @@ export class CourseApi {
       return 0
     }
     if (index > rte.feature?.geometry?.coordinates.length - 1) {
-      return rte.feature?.geometry?.coordinates.length
+      return rte.feature?.geometry?.coordinates.length -1
     }
     return index
   }

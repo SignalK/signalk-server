@@ -113,7 +113,34 @@
             "put": {
                 "tags": ["course"],
                 "summary": "Restart course calculations",
-                "description": "Sets previousPoint value to current vessel location"
+                "description": "Sets previousPoint value to current vessel location",
+                "responses": {
+                    "default": {
+                        "description": "Default response format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -168,12 +195,66 @@
                             }
                         }
                     }
+                },
+                "responses": {
+                    "default": {
+                        "description": "Default response format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             },
             "delete": {
                 "tags": ["course/destination"],
                 "summary": "Clear destination",
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
+                "description": "Sets activeRoute, nextPoint & previousPoint values to null",
+                "responses": {
+                    "default": {
+                        "description": "Default response format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -196,6 +277,33 @@
                                         "format": "float",
                                         "example": 500
                                     } 
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "default": {
+                        "description": "Default response format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -245,12 +353,66 @@
                             }
                         }
                     }
+                },
+                "responses": {
+                    "default": {
+                        "description": "Default response format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             },
             "delete": {
                 "tags": ["course/activeRoute"],
                 "summary": "Clear active route",
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
+                "description": "Sets activeRoute, nextPoint & previousPoint values to null",
+                "responses": {
+                    "default": {
+                        "description": "Default response format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -273,6 +435,33 @@
                                         "description": "increment (1) / decrement (-1) index of point in route to use as destination",
                                         "enum": [-1,1],
                                         "example": -1
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "default": {
+                        "description": "Default response format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
                                     }
                                 }
                             }
@@ -306,6 +495,33 @@
                             }
                         }
                     }
+                },
+                "responses": {
+                    "default": {
+                        "description": "Default response format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -314,7 +530,34 @@
             "put": {
                 "tags": ["course/activeRoute"],
                 "summary": "Refresh route details.",
-                "description": "Use after active route is modified to refresh pointIndex and pointsTotal values."
+                "description": "Use after active route is modified to refresh pointIndex and pointsTotal values.",
+                "responses": {
+                    "default": {
+                        "description": "Default response format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
 
@@ -336,6 +579,33 @@
                                         "description": "Index of point in route to use as destination",
                                         "minimum": 0,
                                         "example": 2
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "default": {
+                        "description": "Default response format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
                                     }
                                 }
                             }

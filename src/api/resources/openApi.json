@@ -182,12 +182,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -306,12 +321,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -323,12 +353,27 @@
                 "tags": ["resources/routes"],
                 "summary": "Remove Route with supplied id",
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -416,12 +461,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -540,12 +600,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -557,12 +632,27 @@
                 "tags": ["resources/waypoints"],
                 "summary": "Remove Waypoint with supplied id",
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -639,12 +729,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -752,12 +857,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -769,12 +889,27 @@
                 "tags": ["resources/notes"],
                 "summary": "Remove Note with supplied id",
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -881,12 +1016,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1024,12 +1174,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1041,12 +1206,27 @@
                 "tags": ["resources/regions"],
                 "summary": "Remove Region with supplied id",
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1168,12 +1348,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1326,12 +1521,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1343,12 +1553,27 @@
                 "tags": ["resources/charts"],
                 "summary": "Remove Chart with supplied id",
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1410,12 +1635,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1476,12 +1716,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1545,12 +1800,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1614,12 +1884,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1690,12 +1975,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1766,12 +2066,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1835,12 +2150,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1904,12 +2234,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -2007,12 +2352,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -2110,12 +2470,27 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "default": {
+                        "description": "Default response format",
                         "content": {
-                            "text/plain": {
+                            "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "description": "Signal K response",
+                                    "required": ["statusCode", "status", "message"],
+                                    "properties": {
+                                        "statusCode": {
+                                            "type": "number",
+                                            "format": "int64"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": ["COMPLETED", "FAILED"]
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
