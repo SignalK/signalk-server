@@ -4,7 +4,8 @@ const TSRULES = {
   'interface-name': false,
   'max-classes-per-file': false,
   'no-any': false,
-  'no-inferrable-types': true
+  'no-inferrable-types': true,
+  'prefer-object-spread': true
 }
 
 const UNIVERSAL_RULES = {

@@ -425,14 +425,13 @@ export class CourseApi {
       return false
     }
 
-    const newCourse: any = {}
-    Object.assign(newCourse, this.courseInfo)
+    const newCourse: CourseInfo = {...this.courseInfo}
 
     // set activeroute
     newCourse.activeRoute.href = route.href
 
     if (this.isValidArrivalCircle(route.arrivalCircle as number)) {
-      newCourse.nextPoint.arrivalCircle = route.arrivalCircle
+      newCourse.nextPoint.arrivalCircle = route.arrivalCircle as number
     }
 
     newCourse.activeRoute.startTime = new Date().toISOString()
@@ -485,8 +484,7 @@ export class CourseApi {
   }
 
   private async setDestination(dest: any): Promise<boolean> {
-    const newCourse: any = {}
-    Object.assign(newCourse, this.courseInfo)
+    const newCourse: CourseInfo = {...this.courseInfo}
 
     // set nextPoint
     if (this.isValidArrivalCircle(dest.arrivalCircle)) {
