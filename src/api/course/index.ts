@@ -2082,6 +2082,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     const newCourse: any = {}
     Object.assign(newCourse, this.courseInfo)
 
@@ -2102,13 +2103,16 @@ export class CourseApi {
     const newCourse: any = {}
     Object.assign(newCourse, this.courseInfo)
 >>>>>>> add 30sec delta interval
+=======
+    const newCourse: CourseInfo = {...this.courseInfo}
+>>>>>>> refactor: prefer object spread over Object.assign
 
 >>>>>>> chore: lint
     // set activeroute
     newCourse.activeRoute.href = route.href
 
     if (this.isValidArrivalCircle(route.arrivalCircle as number)) {
-      newCourse.nextPoint.arrivalCircle = route.arrivalCircle
+      newCourse.nextPoint.arrivalCircle = route.arrivalCircle as number
     }
 
     newCourse.activeRoute.startTime = new Date().toISOString()
@@ -2161,8 +2165,7 @@ export class CourseApi {
   }
 
   private async setDestination(dest: any): Promise<boolean> {
-    const newCourse: any = {}
-    Object.assign(newCourse, this.courseInfo)
+    const newCourse: CourseInfo = {...this.courseInfo}
 
     // set nextPoint
     if (this.isValidArrivalCircle(dest.arrivalCircle)) {
