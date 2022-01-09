@@ -17,9 +17,7 @@ interface CourseApplication
   extends Application,
     WithConfig,
     WithSignalK,
-    WithSecurityStrategy {}
-
-interface CourseApplication extends Application {
+    WithSecurityStrategy {
   resourcesApi: {
     getResource: (resourceType: string, resourceId: string) => any
   }
