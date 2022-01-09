@@ -200,6 +200,7 @@ interface CourseApplication
   extends Application,
     WithConfig,
     WithSignalK,
+<<<<<<< HEAD
     WithSecurityStrategy {}
 
 interface CourseApplication extends Application {
@@ -330,6 +331,9 @@ interface CourseApplication extends Application {
 >>>>>>> persist courseInfo to settings file
 =======
 >>>>>>> add getVesselPosition
+=======
+    WithSecurityStrategy {
+>>>>>>> fix: double definition of CourseApplication
   resourcesApi: {
     getResource: (resourceType: string, resourceId: string) => any
   }
