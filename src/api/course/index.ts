@@ -100,7 +100,6 @@ export class CourseApi {
 
   private async start(app: any) {
     debug(`** Initialise ${COURSE_API_PATH} path handler **`)
-    this.server = app
     this.initCourseRoutes()
 
     try {
