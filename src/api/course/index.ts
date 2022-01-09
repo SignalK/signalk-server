@@ -2264,8 +2264,48 @@ export class CourseApi {
 >>>>>>> add getVesselPosition
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     if (this.isValidArrivalCircle(route.arrivalCircle as number)) {
       newCourse.nextPoint.arrivalCircle = route.arrivalCircle
+=======
+    this.courseInfo = newCourse
+    return true
+  }
+
+  private clearDestination() {
+    this.courseInfo.activeRoute.href = null
+    this.courseInfo.activeRoute.startTime = null
+    this.courseInfo.activeRoute.pointIndex = 0
+    this.courseInfo.activeRoute.pointTotal = 0
+    this.courseInfo.activeRoute.reverse = false
+    this.courseInfo.nextPoint.href = null
+    this.courseInfo.nextPoint.type = null
+    this.courseInfo.nextPoint.position = null
+    this.courseInfo.previousPoint.href = null
+    this.courseInfo.previousPoint.type = null
+    this.courseInfo.previousPoint.position = null
+  }
+
+  private isValidArrivalCircle(value: number): boolean {
+    return typeof value === 'number' && value >= 0
+  }
+
+  private parsePointIndex(index: number, rte: any): number {
+    if (typeof index !== 'number' || !rte) {
+      return 0
+    }
+    if (!rte.feature?.geometry?.coordinates) {
+      return 0
+    }
+    if (!Array.isArray(rte.feature?.geometry?.coordinates)) {
+      return 0
+    }
+    if (index < 0) {
+      return 0
+    }
+    if (index > rte.feature?.geometry?.coordinates.length - 1) {
+      return rte.feature?.geometry?.coordinates.length -1
+>>>>>>> chore: update OpenApi responses
     }
 =======
           this.courseInfo.activeRoute.pointIndex,
