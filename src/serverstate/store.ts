@@ -3,10 +3,10 @@ import { access, mkdir, readFile, writeFile } from 'fs/promises'
 import path from 'path'
 
 export class Store {
-  private filePath: string = ''
-  private fileName: string = ''
+  private filePath = ''
+  private fileName = ''
 
-  constructor(filePath: string, fileName: string = 'settings.json') {
+  constructor(filePath: string, fileName = 'settings.json') {
     this.filePath = filePath
     this.fileName = fileName
     this.init().catch(error => {

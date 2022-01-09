@@ -49,7 +49,7 @@ const buildRoute = (rData: any): any => {
   if (!Array.isArray(rData.points)) {
     return null
   }
-  let isValid: boolean = true
+  let isValid = true
   rData.points.forEach((p: any) => {
     if (!isValidCoordinate(p)) {
       isValid = false
@@ -178,7 +178,7 @@ const buildRegion = (rData: any): any => {
   if (!Array.isArray(rData.points)) {
     return null
   }
-  let isValid: boolean = true
+  let isValid = true
   rData.points.forEach((p: any) => {
     if (!isValidCoordinate(p)) {
       isValid = false

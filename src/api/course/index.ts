@@ -8,10 +8,10 @@ import { Responses } from '../responses'
 
 const debug = Debug('signalk:courseApi')
 
-const SIGNALK_API_PATH: string = `/signalk/v1/api`
-const COURSE_API_PATH: string = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
+const SIGNALK_API_PATH = `/signalk/v1/api`
+const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
 
-const DELTA_INTERVAL: number = 30000
+const DELTA_INTERVAL = 30000
 
 interface CourseApplication
   extends Application,
@@ -352,7 +352,7 @@ export class CourseApi {
         if (req.params.action === 'refresh') {
           this.courseInfo.activeRoute.pointTotal =
             rte.feature.geometry.coordinates.length
-          let idx: number = -1
+          let idx = -1
           for (let i = 0; i < rte.feature.geometry.coordinates.length; i++) {
             if (
               rte.feature.geometry.coordinates[i][0] ===
@@ -748,7 +748,7 @@ export class CourseApi {
     }
   }
 
-  private emitCourseInfo(noSave: boolean = false) {
+  private emitCourseInfo(noSave = false) {
     this.server.handleMessage('courseApi', this.buildDeltaMsg())
     if (!noSave) {
       this.store.write(this.courseInfo).catch(error => {
