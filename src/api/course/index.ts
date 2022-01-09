@@ -139,6 +139,7 @@ import _ from 'lodash'
 import path from 'path'
 import { WithConfig, WithSecurityStrategy, WithSignalK } from '../../app'
 import { Store } from '../../serverstate/store'
+import { Position } from '../../types'
 import { Responses } from '../responses'
 >>>>>>> regresstion testing fixes
 
@@ -344,11 +345,7 @@ interface DestinationBase {
   arrivalCircle?: number
 }
 interface Destination extends DestinationBase {
-  position?: {
-    latitude: number
-    longitude: number
-    altitude?: number
-  }
+  position?: Position
   type?: string
 }
 <<<<<<< HEAD
@@ -375,12 +372,6 @@ interface Destination extends DestinationBase {
 interface ActiveRoute extends DestinationBase {
   pointIndex?: number
   reverse?: boolean
-}
-
-interface Position {
-  latitude: number
-  longitude: number
-  altitude?: number
 }
 
 interface CourseInfo {

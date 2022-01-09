@@ -91,4 +91,5 @@ export type Value = object | number | string | null
 export interface Position {
   latitude: number
   longitude: number
+  altitude?: number
 }
