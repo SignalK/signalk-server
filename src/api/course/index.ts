@@ -13,8 +13,6 @@ const debug = Debug('signalk:courseApi')
 const SIGNALK_API_PATH = `/signalk/v1/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
 
-const DELTA_INTERVAL = 30000
-
 interface CourseApplication
   extends Application,
     WithConfig,
@@ -111,12 +109,6 @@ export class CourseApi {
     }
     debug(this.courseInfo)
     this.emitCourseInfo(true)
-
-    setInterval(() => {
-      if (this.courseInfo.nextPoint.position) {
-        this.emitCourseInfo(true)
-      }
-    }, DELTA_INTERVAL)
   }
 
   private validateCourseInfo(info: CourseInfo) {
