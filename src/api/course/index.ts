@@ -196,8 +196,6 @@ const SIGNALK_API_PATH = `/signalk/v1/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
 >>>>>>> style: no-inferrable-types
 
-const DELTA_INTERVAL = 30000
-
 interface CourseApplication
   extends Application,
     WithConfig,
@@ -558,6 +556,7 @@ export class CourseApi {
     }
     debug(this.courseInfo)
     this.emitCourseInfo(true)
+<<<<<<< HEAD
 
     setInterval(() => {
       if (this.courseInfo.nextPoint.position) {
@@ -566,6 +565,8 @@ export class CourseApi {
       }
     }, DELTA_INTERVAL)
 >>>>>>> add 30sec delta interval
+=======
+>>>>>>> removed periodic delta transmission
   }
 
   private validateCourseInfo(info: CourseInfo) {
