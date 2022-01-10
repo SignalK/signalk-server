@@ -1,5 +1,6 @@
 import geoJSON from 'geojson-validation'
 import { isValidCoordinate } from 'geolib'
+import { Chart, Note, Region, Route, Waypoint } from '../resources/types'
 
 export const validate = {
   resource: (type: string, value: any): boolean => {
@@ -42,7 +43,7 @@ export const validate = {
   }
 }
 
-const validateRoute = (r: any): boolean => {
+const validateRoute = (r: Route): boolean => {
   if (r.start) {
     const l = r.start.split('/')
     if (!validate.uuid(l[l.length - 1])) {
@@ -68,7 +69,7 @@ const validateRoute = (r: any): boolean => {
   return true
 }
 
-const validateWaypoint = (r: any): boolean => {
+const validateWaypoint = (r: Waypoint): boolean => {
   if (typeof r.position === 'undefined') {
     return false
   }
@@ -89,7 +90,7 @@ const validateWaypoint = (r: any): boolean => {
 }
 
 // validate note data
-const validateNote = (r: any): boolean => {
+const validateNote = (r: Note): boolean => {
   if (!r.region && !r.position && !r.geohash) {
     return false
   }
@@ -107,7 +108,7 @@ const validateNote = (r: any): boolean => {
   return true
 }
 
-const validateRegion = (r: any): boolean => {
+const validateRegion = (r: Region): boolean => {
   if (!r.geohash && !r.feature) {
     return false
   }
@@ -129,7 +130,7 @@ const validateRegion = (r: any): boolean => {
   return true
 }
 
-const validateChart = (r: any): boolean => {
+const validateChart = (r: Chart): boolean => {
   if (!r.name || !r.identifier || !r.chartFormat) {
     return false
   }

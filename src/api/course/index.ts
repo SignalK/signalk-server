@@ -5,6 +5,7 @@ import path from 'path'
 import { WithConfig, WithSecurityStrategy, WithSignalK } from '../../app'
 import { Store } from '../../serverstate/store'
 import { Position } from '../../types'
+import { Route } from '../resources/types'
 import { Responses } from '../responses'
 
 const debug = Debug('signalk:courseApi')
@@ -424,7 +425,7 @@ export class CourseApi {
       return false
     }
 
-    const newCourse: CourseInfo = {...this.courseInfo}
+    const newCourse: CourseInfo = { ...this.courseInfo }
 
     // set activeroute
     newCourse.activeRoute.href = route.href
@@ -483,7 +484,7 @@ export class CourseApi {
   }
 
   private async setDestination(dest: Destination): Promise<boolean> {
-    const newCourse: CourseInfo = {...this.courseInfo}
+    const newCourse: CourseInfo = { ...this.courseInfo }
 
     // set nextPoint
     if (this.isValidArrivalCircle(dest.arrivalCircle)) {
@@ -502,7 +503,10 @@ export class CourseApi {
             href.type,
             href.id
           )
-          if (r.position && typeof r.position?.latitude !== 'undefined') {
+          if (
+            typeof r.position?.latitude !== 'undefined' &&
+            typeof r.position?.longitude !== 'undefined'
+          ) {
             newCourse.nextPoint.position = r.position
             newCourse.nextPoint.href = dest.href
             newCourse.nextPoint.type = 'Waypoint'
@@ -516,6 +520,9 @@ export class CourseApi {
           )
           return false
         }
+      } else {
+        debug(`** Invalid href! (${dest.href})`)
+        return false
       }
     } else if (dest.position) {
       newCourse.nextPoint.href = null
@@ -625,7 +632,7 @@ export class CourseApi {
     }
   }
 
-  private async getRoute(href: string): Promise<any> {
+  private async getRoute(href: string): Promise<Route | undefined> {
     const h = this.parseHref(href)
     if (h) {
       try {
@@ -647,9 +654,21 @@ export class CourseApi {
       'navigation.courseRhumbline'
     ]
 
+    let course = null
+    if (this.courseInfo.activeRoute.href) {
+      course = this.courseInfo
+    } else if (this.courseInfo.nextPoint.position) {
+      course = {
+        nextPoint: this.courseInfo.nextPoint,
+        previousPoint: this.courseInfo.previousPoint
+      }
+    }
+
+    debug(course)
+
     values.push({
       path: `navigation.course`,
-      value: this.courseInfo
+      value: course
     })
 
     values.push({
