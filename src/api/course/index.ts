@@ -140,6 +140,7 @@ import path from 'path'
 import { WithConfig, WithSecurityStrategy, WithSignalK } from '../../app'
 import { Store } from '../../serverstate/store'
 import { Position } from '../../types'
+import { Route } from '../resources/types'
 import { Responses } from '../responses'
 >>>>>>> regresstion testing fixes
 
@@ -2126,6 +2127,7 @@ export class CourseApi {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     const newCourse: any = {}
     Object.assign(newCourse, this.courseInfo)
 
@@ -2149,6 +2151,9 @@ export class CourseApi {
 =======
     const newCourse: CourseInfo = {...this.courseInfo}
 >>>>>>> refactor: prefer object spread over Object.assign
+=======
+    const newCourse: CourseInfo = { ...this.courseInfo }
+>>>>>>> review updates 1
 
 >>>>>>> chore: lint
     // set activeroute
@@ -2208,7 +2213,7 @@ export class CourseApi {
   }
 
   private async setDestination(dest: Destination): Promise<boolean> {
-    const newCourse: CourseInfo = {...this.courseInfo}
+    const newCourse: CourseInfo = { ...this.courseInfo }
 
     // set nextPoint
     if (this.isValidArrivalCircle(dest.arrivalCircle)) {
@@ -2248,7 +2253,10 @@ export class CourseApi {
             href.type,
             href.id
           )
-          if (r.position && typeof r.position?.latitude !== 'undefined') {
+          if (
+            typeof r.position?.latitude !== 'undefined' &&
+            typeof r.position?.longitude !== 'undefined'
+          ) {
             newCourse.nextPoint.position = r.position
             newCourse.nextPoint.href = dest.href
             newCourse.nextPoint.type = 'Waypoint'
@@ -2262,6 +2270,9 @@ export class CourseApi {
           )
           return false
         }
+      } else {
+        debug(`** Invalid href! (${dest.href})`)
+        return false
       }
     } else if (dest.position) {
       newCourse.nextPoint.href = null
@@ -2394,6 +2405,7 @@ export class CourseApi {
       newCourse.activeRoute.reverse = route.reverse
     }
 
+<<<<<<< HEAD
     newCourse.activeRoute.pointIndex = this.parsePointIndex(
       route.pointIndex as number,
       rte
@@ -3202,6 +3214,9 @@ export class CourseApi {
   }
 
   private async getRoute(href: string): Promise<any> {
+=======
+  private async getRoute(href: string): Promise<Route | undefined> {
+>>>>>>> review updates 1
     const h = this.parseHref(href)
     if (h) {
       try {
@@ -3263,6 +3278,18 @@ export class CourseApi {
       'navigation.courseRhumbline'
     ]
 
+    let course = null
+    if (this.courseInfo.activeRoute.href) {
+      course = this.courseInfo
+    } else if (this.courseInfo.nextPoint.position) {
+      course = {
+        nextPoint: this.courseInfo.nextPoint,
+        previousPoint: this.courseInfo.previousPoint
+      }
+    }
+
+    debug(course)
+
     values.push({
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -3281,7 +3308,7 @@ export class CourseApi {
 =======
 >>>>>>> update detlas
       path: `navigation.course`,
-      value: this.courseInfo
+      value: course
     })
 
     values.push({
