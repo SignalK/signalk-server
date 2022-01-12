@@ -7,6 +7,17 @@ export { PropertyValue, PropertyValues, PropertyValuesCallback } from './propert
 export type SignalKResourceType= 'routes' | 'waypoints' |'notes' |'regions' |'charts'
 export type ResourceTypes= SignalKResourceType[] | string[]
 
+export interface ResourcesApi {
+  register: (pluginId: string, provider: ResourceProvider) => void;
+  unRegister: (pluginId: string) => void;
+  getResource: (resType: SignalKResourceType, resId: string) => any;
+}
+
+export interface ResourceProvider {
+  types: ResourceTypes
+  methods: ResourceProviderMethods
+}
+
 export interface ResourceProviderMethods {
   pluginId?: string
   listResources: (type: string, query: { [key: string]: any }) => Promise<any>
@@ -19,10 +30,6 @@ export interface ResourceProviderMethods {
   deleteResource: (type: string, id: string) => Promise<any>
 }
 
-export interface ResourceProvider {
-  types: ResourceTypes
-  methods: ResourceProviderMethods
-}
 
 type Unsubscribe = () => {}
 export interface PropertyValuesEmitter {
@@ -75,5 +82,5 @@ export interface Plugin {
   registerWithRouter?: (router: IRouter) => void
   signalKApiRoutes?: (router: IRouter) => IRouter
   enabledByDefault?: boolean
-  resourceProvider: ResourceProvider
+  resourceProvider?: ResourceProvider
 }
