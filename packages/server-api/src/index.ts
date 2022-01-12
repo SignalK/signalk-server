@@ -5,23 +5,21 @@ export { PropertyValue, PropertyValues, PropertyValuesCallback } from './propert
 
 
 export type SignalKResourceType= 'routes' | 'waypoints' |'notes' |'regions' |'charts'
-<<<<<<< HEAD
-<<<<<<< HEAD
 export type ResourceTypes= SignalKResourceType[] | string[]
+
+export interface ResourcesApi {
+  register: (pluginId: string, provider: ResourceProvider) => void;
+  unRegister: (pluginId: string) => void;
+  getResource: (resType: SignalKResourceType, resId: string) => any;
+}
+
+export interface ResourceProvider {
+  types: ResourceTypes
+  methods: ResourceProviderMethods
+}
 
 export interface ResourceProviderMethods {
   pluginId?: string
-=======
-
-export interface ResourceProviderMethods {
-  pluginId: string
->>>>>>> add ResourceProvider types to server-api
-=======
-export type ResourceTypes= SignalKResourceType[] | string[]
-
-export interface ResourceProviderMethods {
-  pluginId?: string
->>>>>>> update types
   listResources: (type: string, query: { [key: string]: any }) => Promise<any>
   getResource: (type: string, id: string) => Promise<any>
   setResource: (
@@ -30,19 +28,6 @@ export interface ResourceProviderMethods {
     value: { [key: string]: any }
   ) => Promise<any>
   deleteResource: (type: string, id: string) => Promise<any>
-}
-
-export interface ResourceProvider {
-<<<<<<< HEAD
-<<<<<<< HEAD
-  types: ResourceTypes
-=======
-  types: SignalKResourceType[]
->>>>>>> add ResourceProvider types to server-api
-=======
-  types: ResourceTypes
->>>>>>> update types
-  methods: ResourceProviderMethods
 }
 
 type Unsubscribe = () => {}
@@ -96,5 +81,5 @@ export interface Plugin {
   registerWithRouter?: (router: IRouter) => void
   signalKApiRoutes?: (router: IRouter) => IRouter
   enabledByDefault?: boolean
-  resourceProvider: ResourceProvider
+  resourceProvider?: ResourceProvider
 }
