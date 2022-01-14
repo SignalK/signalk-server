@@ -28,6 +28,7 @@ import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
 import { SERVERROUTESPREFIX } from '../constants'
+import { DeltaInputHandler } from '../deltachain'
 import { listAllSerialPorts, Ports } from '../serialports'
 
 // tslint:disable-next-line:no-var-requires
@@ -90,9 +91,7 @@ export interface ServerAPI extends PluginServerApp {
   queryRequest: (requestId: string) => Promise<any>
   error: (msg: string) => void
   debug: (msg: string) => void
-  registerDeltaInputHandler: (
-    handler: (delta: object, next: (delta: object) => void) => void
-  ) => void
+  registerDeltaInputHandler: (handler: DeltaInputHandler) => void
   setProviderStatus: (msg: string) => void
   handleMessage: (id: string, msg: any) => void
   setProviderError: (msg: string) => void
