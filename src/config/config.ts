@@ -58,6 +58,8 @@ export interface Config {
     hostname?: string
     pruneContextsMinutes?: number
     mdns?: boolean
+    sslport?: number
+    port?: number
   }
   defaults: object
 }
