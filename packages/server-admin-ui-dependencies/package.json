@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-admin-ui-dependencies",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "UI dependencies of the admin UI exposed to plugins that expose federated components",
   "main": "index.js",
   "author": "teppo.kurki@iki.fi",
@@ -18,7 +18,7 @@
     "react-select": "^3.1.0",
     "reactstrap": "^5.0.0",
     "redux": "^3.7.2",
-    "redux-thunk": "^2.3.0",
+    "redux-thunk": "2.3.0",
     "simple-line-icons": "^2.5.5"
   }
 }
