@@ -120,7 +120,7 @@ function handleSubscribeRows(
   user?: string
 ) {
   rows.reduce((acc, subscribeRow) => {
-    if (subscribeRow.path) {
+    if (subscribeRow.path !== undefined) {
       handleSubscribeRow(
         app,
         subscribeRow,
@@ -210,6 +210,9 @@ function handleSubscribeRow(
 }
 
 function pathMatcher(path: string) {
+  if (path === '') {
+    return () => true
+  }
   const pattern = path.replace('.', '\\.').replace('*', '.*')
   const matcher = new RegExp('^' + pattern + '$')
   return (aPath: string) => matcher.test(aPath)
