@@ -23,27 +23,24 @@ import Debug from 'debug'
 import express from 'express'
 import _ from 'lodash'
 const debug = Debug('signalk-server')
+import { PropertyValues } from '@signalk/server-api'
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
+import { Request, Response } from 'express'
 import http from 'http'
 import https from 'https'
 import path from 'path'
-import ports from './ports'
-import SubscriptionManager from './subscriptionmanager'
-const getPrimaryPort = ports.getPrimaryPort
-const getSecondaryPort = ports.getSecondaryPort
-const getExternalPort = ports.getExternalPort
-import { PropertyValues } from '@signalk/server-api'
-import { Request, Response } from 'express'
 import { SelfIdentity, ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { Config, ConfigApp } from './config/config'
 import DeltaCache from './deltacache'
 import DeltaChain from './deltachain'
 import { getToPreferredDelta, ToPreferredDelta } from './deltaPriority'
 import { checkForNewServerVersion } from './modules'
+import SubscriptionManager from './subscriptionmanager'
 import { Delta } from './types'
 
 import { load, sendBaseDeltas } from './config/config'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
+import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
 import {
   getCertificateOptions,
   getSecurityConfig,
