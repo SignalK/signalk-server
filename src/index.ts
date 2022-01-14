@@ -32,7 +32,7 @@ import path from 'path'
 import { SelfIdentity, ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { Config, ConfigApp } from './config/config'
 import DeltaCache from './deltacache'
-import DeltaChain from './deltachain'
+import DeltaChain, { DeltaInputHandler } from './deltachain'
 import { getToPreferredDelta, ToPreferredDelta } from './deltaPriority'
 import { checkForNewServerVersion } from './modules'
 import SubscriptionManager from './subscriptionmanager'
@@ -83,7 +83,8 @@ class Server {
     app.propertyValues = new PropertyValues()
 
     const deltachain = new DeltaChain(app.signalk.addDelta.bind(app.signalk))
-    app.registerDeltaInputHandler = deltachain.register
+    app.registerDeltaInputHandler = (handler: DeltaInputHandler) =>
+      deltachain.register(handler)
 
     app.providerStatus = {}
 
