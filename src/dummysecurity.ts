@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
- /* tslint:disable */
- 
-module.exports = function(app, config) {
+/* tslint:disable */
+
+export default function() {
   return {
     getConfiguration: () => {
       return {}
     },
 
-    allowRestart: req => {
+    allowRestart: (_req: any) => {
       return false
     },
 
-    allowConfigure: req => {
+    allowConfigure: (_req: any) => {
       return false
     },
 
-    getLoginStatus: req => {
+    getLoginStatus: (_req: any) => {
       return {
         status: 'notLoggedIn',
         readOnlyAccess: false,
@@ -38,45 +38,66 @@ module.exports = function(app, config) {
       }
     },
 
-    getConfig: config => {
-      return config
+    getConfig: (_config: any) => {
+      return _config
     },
 
-    setConfig: (config, newConfig) => {},
+    setConfig: (_config: any, _newConfig: any) => {},
 
-    getUsers: config => {
+    getUsers: (_config: any) => {
       return []
     },
 
-    updateUser: (config, username, updates, callback) => {},
+    updateUser: (
+      _config: any,
+      _username: any,
+      _updates: any,
+      _callback: any
+    ) => {},
 
-    addUser: (config, user, callback) => {},
+    addUser: (_config: any, _user: any, _callback: any) => {},
 
-    setPassword: (config, username, password, callback) => {},
+    setPassword: (
+      _config: any,
+      _username: any,
+      _password: any,
+      _callback: any
+    ) => {},
 
-    deleteUser: (config, username, callback) => {},
+    deleteUser: (_config: any, _username: any, _callback: any) => {},
 
-    shouldAllowWrite: function(req, delta) {
+    shouldAllowWrite: function(_req: any, _delta: any) {
       return true
     },
 
-    shouldAllowPut: function(req, context, source, path) {
+    shouldAllowPut: function(
+      _req: any,
+      _context: any,
+      _source: any,
+      _path: any
+    ) {
       return true
     },
 
-    filterReadDelta: (user, delta) => {
+    filterReadDelta: (_user: any, delta: any) => {
       return delta
     },
 
-    verifyWS: spark => {},
+    verifyWS: (_spark: any) => {},
 
-    authorizeWS: req => {},
+    authorizeWS: (_req: any) => {},
 
     anyACLs: () => {
       return false
     },
 
-    checkACL: (id, context, path, source, operation) => {
+    checkACL: (
+      _id: any,
+      _context: any,
+      _path: any,
+      _source: any,
+      _operation: any
+    ) => {
       return true
     },
 
@@ -97,7 +118,7 @@ module.exports = function(app, config) {
     addAdminWriteMiddleware: () => {},
 
     addWriteMiddleware: () => {},
-    
+
     allowReadOnly: () => {
       return true
     },
@@ -108,6 +129,10 @@ module.exports = function(app, config) {
       return 'never'
     },
 
-    validateConfiguration: (configuration) => {}
+    validateConfiguration: (_configuration: any) => {},
+
+    configFromArguments: false,
+    securityConfig: undefined,
+    requestAccess: () => undefined
   }
 }

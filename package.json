@@ -136,6 +136,7 @@
     "@types/lodash": "^4.14.139",
     "@types/mocha": "^8.2.0",
     "@types/node-fetch": "^2.5.3",
+    "@types/pem": "^1.9.6",
     "@types/semver": "^7.1.0",
     "@types/serialport": "^8.0.1",
     "@types/split": "^1.0.0",

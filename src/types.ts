@@ -1,4 +1,5 @@
 import { FullSignalK } from '@signalk/signalk-schema'
+import { SecurityStrategy } from './security'
 import SubscriptionManager from './subscriptionmanager'
 
 export interface HelloMessage {
@@ -7,13 +8,6 @@ export interface HelloMessage {
   self: string
   roles: string[]
   timestamp: Date
-}
-
-export interface SecurityStrategy {
-  isDummy: () => boolean
-  allowReadOnly: () => boolean
-  shouldFilterDeltas: () => boolean
-  filterReadDelta: (user: any, delta: any) => any
 }
 
 export interface Bus {
