@@ -254,8 +254,8 @@ class Server {
     const app = this.app
 
     const eventDebugs: { [key: string]: Debug.Debugger } = {}
-    const emit = app.emit
-    app.emit = (eventName: string) => {
+    const expressAppEmit = app.emit.bind(app)
+    app.emit = (eventName: string, ...args: any[]) => {
       if (eventName !== 'serverlog') {
         let eventDebug = eventDebugs[eventName]
         if (!eventDebug) {
@@ -264,10 +264,10 @@ class Server {
           )
         }
         if (eventDebug.enabled) {
-          eventDebug([...arguments].slice(1))
+          eventDebug([...args].slice(1))
         }
       }
-      emit.apply(app, arguments)
+      expressAppEmit(eventName, ...args)
     }
 
     this.app.intervals = []
