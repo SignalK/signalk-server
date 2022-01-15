@@ -55,7 +55,7 @@
   },
   "scripts": {
     "prepublishOnly": "npm run clean && npm run build",
-    "dev": "webpack --watch --mode development",
+    "watch": "webpack --watch --mode development",
     "build": "webpack --mode=production",
     "format": "prettier --write src/",
     "clean": "rimraf ./public",
