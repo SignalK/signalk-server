@@ -15,7 +15,15 @@
  */
 
 var Transform = require('stream').Transform
-const AWS = require('aws-sdk')
+/*
+  aws-sdk is not included in dependencies because of the
+  persistent deprecation warnings caused by its transitive
+  dependencies. This feature is not in wide use, especially
+  not in signalk-server where people encounter the scary looking
+  deprecation warnings.
+  Known to work with ^2.413.0
+*/
+const AWS = require('aws-sdk') 
 const debug = require('debug')('signalk:streams:s3-provider')
 
 function S3Provider ({ bucket, prefix }) {
