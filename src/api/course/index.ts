@@ -3,10 +3,11 @@ import { Application, Request, Response } from 'express'
 import _ from 'lodash'
 import path from 'path'
 import { WithConfig, WithSecurityStrategy, WithSignalK } from '../../app'
-import { Store } from '../../serverstate/store'
 import { Position } from '../../types'
+
+import { Store } from '../../serverstate/store'
 import { Route } from '../resources/types'
-import { Responses } from '../responses'
+import { Responses } from '../'
 
 const debug = Debug('signalk:courseApi')
 

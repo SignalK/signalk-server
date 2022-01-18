@@ -8,11 +8,11 @@ import { Application, NextFunction, Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid'
 import { WithSecurityStrategy, WithSignalK } from '../../app'
 
-import { Responses } from '../responses'
+import { Responses } from '../'
 import { buildResource } from './resources'
 import { validate } from './validate'
 
-const debug = Debug('signalk:resources')
+const debug = Debug('signalk:resourcesApi')
 
 const SIGNALK_API_PATH = `/signalk/v1/api`
 const UUID_PREFIX = 'urn:mrn:signalk:uuid:'
