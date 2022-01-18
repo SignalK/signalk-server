@@ -4,7 +4,7 @@
 =======
 >>>>>>> fix type
 import { SignalKResourceType } from '@signalk/server-api'
-import { getDistance, getLatitude, isValidCoordinate } from 'geolib'
+import { getDistance, isValidCoordinate } from 'geolib'
 
 <<<<<<< HEAD
 <<<<<<< HEAD
