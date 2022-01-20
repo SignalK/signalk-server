@@ -264,7 +264,7 @@ class Server {
           )
         }
         if (eventDebug.enabled) {
-          eventDebug([...args].slice(1))
+          eventDebug(args)
         }
       }
       expressAppEmit(eventName, ...args)
