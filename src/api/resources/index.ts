@@ -239,7 +239,7 @@ export class Resources {
           res.status(200).json({
             state: 'COMPLETED',
             statusCode: 200,
-            message: `New ${req.params.resourceType} resource (${id}) saved.`
+            message: id
           })
         } catch (err) {
           res.status(404).json({
@@ -321,7 +321,7 @@ export class Resources {
           res.status(200).json({
             state: 'COMPLETED',
             statusCode: 200,
-            message: `${req.params.resourceType} resource (${req.params.resourceId}) saved.`
+            message: req.params.resourceId
           })
         } catch (err) {
           res.status(404).json({
@@ -368,7 +368,7 @@ export class Resources {
           res.status(200).json({
             state: 'COMPLETED',
             statusCode: 200,
-            message: `Resource (${req.params.resourceId}) deleted.`
+            message: req.params.resourceId
           })
         } catch (err) {
           res.status(400).json({
@@ -455,7 +455,7 @@ export class Resources {
           res.status(200).json({
             state: 'COMPLETED',
             statusCode: 200,
-            message: `SUCCESS: New ${req.params.resourceType} resource created.`
+            message: apiData.id
           })
         } catch (err) {
           res.status(404).json({
@@ -1074,13 +1074,13 @@ export class Resources {
           res.status(200).json({
             state: 'COMPLETED',
             statusCode: 200,
-            message: `SUCCESS: ${req.params.resourceType} resource updated.`
+            message: apiData.id
           })
         } catch (err) {
           res.status(404).json({
             state: 'FAILED',
             statusCode: 404,
-            message: `ERROR: ${req.params.resourceType} resource could not be updated!`
+            message: `ERROR: ${req.params.resourceType}/${apiData.id} could not be updated!`
           })
         }
       }
