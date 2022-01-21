@@ -6,6 +6,8 @@
 >>>>>>> chore: Updated documentation
 _This document should be read in conjunction with [SERVERPLUGINS.md](./SERVERPLUGINS.md) as it contains additional information regarding the development of plugins that facilitate the storage and retrieval of resource data._
 
+To see an example of a resource provider plugin see [resources-provider-plugin](https://github.com/SignalK/resources-provider-plugin/)
+
 ---
 
 <<<<<<< HEAD
