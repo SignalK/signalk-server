@@ -42,7 +42,8 @@ const { pgnToActisenseSerialFormat } = require('@canboat/canboatjs')
 function Execute (options) {
   Transform.call(this, {})
   this.options = options
-  this.debug = options.debug || require('debug')('signalk:streams:execute')
+  const createDebug = options.createDebug || require('debug')
+  this.debug = options.debug || createDebug('signalk:streams:execute')
 }
 
 require('util').inherits(Execute, Transform)

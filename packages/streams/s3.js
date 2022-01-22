@@ -23,8 +23,7 @@ var Transform = require('stream').Transform
   deprecation warnings.
   Known to work with ^2.413.0
 */
-const AWS = require('aws-sdk') 
-const debug = require('debug')('signalk:streams:s3-provider')
+const AWS = require('aws-sdk')
 
 function S3Provider ({ bucket, prefix }) {
   Transform.call(this, {

@@ -15,7 +15,6 @@
  */
 
 const Transform = require('stream').Transform
-const debug = require('debug')('signalk:streams:n2k-analyzer')
 
 function N2KAnalyzer (options) {
   Transform.call(this, {
@@ -68,7 +67,7 @@ N2KAnalyzer.prototype.pipe = function (pipeTo) {
 }
 
 N2KAnalyzer.prototype.end = function () {
-  debug('end, killing child analyzer process')
+  console.log('end, killing child analyzer process')
   this.analyzerProcess.kill()
   this.pipeTo.end()
 }

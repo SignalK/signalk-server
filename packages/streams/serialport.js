@@ -62,7 +62,6 @@ const child_process = require('child_process')
 const shellescape = require('any-shell-escape')
 const SerialPort = require('serialport')
 const isArray = require('lodash').isArray
-const debug = require('debug')('signalk:streams:serialport')
 const isBuffer = require('lodash').isBuffer
 
 function SerialStream (options) {
@@ -79,11 +78,16 @@ function SerialStream (options) {
   this.maxPendingWrites = options.maxPendingWrites || 5
   this.start()
   this.isFirstError = true
+
+  const createDebug = options.createDebug || require('debug')
+  this.debug = createDebug('signalk:streams:serialport')
 }
 
 require('util').inherits(SerialStream, Transform)
 
 SerialStream.prototype.start = function () {
+  const that = this
+
   if (this.serial !== null) {
     this.serial.unpipe(this)
     this.serial.removeAllListeners()
@@ -125,7 +129,7 @@ SerialStream.prototype.start = function () {
       if (this.isFirstError) {
         console.log(x.message)
       }
-      debug(x.message)
+      this.debug(x.message)
       this.isFirstError = false
       this.scheduleReconnect()
     }.bind(this)
@@ -141,7 +145,6 @@ SerialStream.prototype.start = function () {
     }.bind(this)
   )
 
-  const that = this
   let pendingWrites = 0
   const stdOutEvent = this.options.toStdout
   if (stdOutEvent) {
@@ -152,10 +155,10 @@ SerialStream.prototype.start = function () {
 
       that.options.app.on(event, d => {
         if (pendingWrites > that.maxPendingWrites) {
-          debug('Buffer overflow, not writing:' + d)
+          that.debug('Buffer overflow, not writing:' + d)
           return
         }
-        debug('Writing:' + d)
+        that.debug('Writing:' + d)
         if ( isBuffer(d) ) {
           that.serial.write(d)
         } else {
@@ -182,7 +185,7 @@ SerialStream.prototype.scheduleReconnect = function () {
   const msg = `Not connected (retry delay ${(
     this.reconnectDelay / 1000
   ).toFixed(0)} s)`
-  debug(msg)
+  this.debug(msg)
   this.options.app.setProviderStatus(this.options.providerId, msg)
   setTimeout(this.start.bind(this), this.reconnectDelay)
 }
