@@ -17,7 +17,8 @@
 'use strict'
 
 const _ = require('lodash')
-const debug = require('debug')('signalk-server:mdns')
+import { createDebug } from './debug'
+const debug = createDebug('signalk-server:mdns')
 const dnssd = require('dnssd2')
 const ports = require('./ports')
 

@@ -26,10 +26,9 @@ const {
 } = require('../requestResponse')
 const { putPath } = require('../put')
 const skConfig = require('../config/config')
-const debug = require('debug')('signalk-server:interfaces:ws')
-const debugConnection = require('debug')(
-  'signalk-server:interfaces:ws:connections'
-)
+import { createDebug } from '../debug'
+const debug = createDebug('signalk-server:interfaces:ws')
+const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
 const Primus = require('primus')
 
 const supportedQuerySubscribeValues = ['self', 'all']

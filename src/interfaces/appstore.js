@@ -14,7 +14,8 @@
  * limitations under the License.
 */
 
-const debug = require('debug')('signalk:interfaces:appstore')
+import { createDebug } from '../debug'
+const debug = createDebug('signalk:interfaces:appstore')
 const _ = require('lodash')
 const compareVersions = require('compare-versions')
 const { installModule, removeModule } = require('../modules')

@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid')
-const debug = require('debug')('signalk-server:requestResponse')
+import { createDebug } from './debug'
+const debug = createDebug('signalk-server:requestResponse')
 const _ = require('lodash')
 
 const requests = {}

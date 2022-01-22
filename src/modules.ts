@@ -15,16 +15,14 @@
 */
 
 import { spawn } from 'child_process'
-import Debug from 'debug'
 import fs from 'fs'
-import fetch from 'node-fetch'
-import { Response } from 'node-fetch'
-const debug = Debug('signalk:modules')
 import _ from 'lodash'
+import fetch, { Response } from 'node-fetch'
 import path from 'path'
 import semver, { SemVer } from 'semver'
-import { WithConfig } from './app'
 import { Config } from './config/config'
+import { createDebug } from './debug'
+const debug = createDebug('signalk:modules')
 
 interface ModuleData {
   module: string

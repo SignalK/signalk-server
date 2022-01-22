@@ -14,8 +14,8 @@
  * limitations under the License.
 */
 
-import Debug from 'debug'
-const debug = Debug('signalk:categories')
+import { createDebug } from './debug'
+const debug = createDebug('signalk:categories')
 // tslint:disable-next-line:no-var-requires
 const { getKeywords } = require('./modules')
 

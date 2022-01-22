@@ -14,7 +14,8 @@
  * limitations under the License.
 */
 
-const debug = require('debug')('signalk:interfaces:logfiles')
+import { createDebug } from '../debug'
+const debug = createDebug('signalk:interfaces:logfiles')
 const moment = require('moment')
 const fs = require('fs')
 const path = require('path')

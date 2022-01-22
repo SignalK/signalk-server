@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import Debug from 'debug'
-const debug = Debug('signalk-server:deltacache')
+import { createDebug } from './debug'
+const debug = createDebug('signalk-server:deltacache')
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import _, { isUndefined } from 'lodash'
 import { toDelta } from './streambundle'

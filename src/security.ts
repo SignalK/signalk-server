@@ -14,7 +14,6 @@
  * limitations under the License.
 */
 
-import Debug from 'debug'
 import {
   chmodSync,
   existsSync,
@@ -29,8 +28,9 @@ import path from 'path'
 import pem from 'pem'
 import { Mode } from 'stat-mode'
 import { WithConfig } from './app'
+import { createDebug } from './debug'
 import dummysecurity from './dummysecurity'
-const debug = Debug('signalk-server:security')
+const debug = createDebug('signalk-server:security')
 
 export interface WithSecurityStrategy {
   securityStrategy: SecurityStrategy

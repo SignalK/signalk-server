@@ -1,5 +1,5 @@
-import Debug from 'debug'
-const debug = Debug('signalk-server:sourcepriorities')
+import { createDebug } from './debug'
+const debug = createDebug('signalk-server:sourcepriorities')
 
 type Brand<K, T> = K & { __brand: T }
 

@@ -14,7 +14,8 @@
  * limitations under the License.
 */
 
-const debug = require('debug')('signalk-server:interfaces:rest')
+const { createDebug } = require('../debug')
+const debug = createDebug('signalk-server:interfaces:rest')
 const express = require('express')
 const { getMetadata, getUnits } = require('@signalk/signalk-schema')
 const ports = require('../ports')

@@ -14,7 +14,8 @@
  * limitations under the License.
 */
 
-const debug = require('debug')('signalk:interfaces:webapps')
+import { createDebug } from '../debug'
+const debug = createDebug('signalk:interfaces:webapps')
 const fs = require('fs')
 const path = require('path')
 const express = require('express')
