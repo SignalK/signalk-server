@@ -18,7 +18,8 @@ const fs = require('fs')
 const os = require('os')
 const readdir = require('util').promisify(fs.readdir)
 const page = require('./page')
-const debug = require('debug')('signalk-server:serverroutes')
+import { createDebug, listKnownDebugs } from './debug'
+const debug = createDebug('signalk-server:serverroutes')
 const path = require('path')
 const _ = require('lodash')
 const skConfig = require('./config/config')
@@ -760,7 +761,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   })
 
   app.get(`${SERVERROUTESPREFIX}/debugKeys`, (req, res) => {
-    res.json(_.uniq(require('debug').instances.map(i => i.namespace)))
+    res.json(listKnownDebugs())
   })
 
   app.post(`${SERVERROUTESPREFIX}/rememberDebug`, (req, res) => {

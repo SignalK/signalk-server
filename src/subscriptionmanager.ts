@@ -15,13 +15,13 @@
  */
 
 import Bacon from 'baconjs'
-import Debug from 'debug'
 import { isPointWithinRadius } from 'geolib'
 import _, { forOwn, get, isString } from 'lodash'
-const debug = Debug('signalk-server:subscriptionmanager')
+import { createDebug } from './debug'
 import DeltaCache from './deltacache'
 import { toDelta } from './streambundle'
 import { ContextMatcher, Position, Unsubscribes, WithContext } from './types'
+const debug = createDebug('signalk-server:subscriptionmanager')
 
 interface BusesMap {
   [key: string]: any

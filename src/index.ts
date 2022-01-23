@@ -19,27 +19,22 @@ if (typeof [].includes !== 'function') {
   process.exit(-1)
 }
 
-import Debug from 'debug'
-import express from 'express'
-import _ from 'lodash'
-const debug = Debug('signalk-server')
 import { PropertyValues } from '@signalk/server-api'
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
-import { Request, Response } from 'express'
+import { Debugger } from 'debug'
+import express, { Request, Response } from 'express'
 import http from 'http'
 import https from 'https'
+import _ from 'lodash'
 import path from 'path'
 import { SelfIdentity, ServerApp, SignalKMessageHub, WithConfig } from './app'
-import { Config, ConfigApp } from './config/config'
+import { ConfigApp, load, sendBaseDeltas } from './config/config'
+import { createDebug } from './debug'
 import DeltaCache from './deltacache'
 import DeltaChain, { DeltaInputHandler } from './deltachain'
 import { getToPreferredDelta, ToPreferredDelta } from './deltaPriority'
-import { checkForNewServerVersion } from './modules'
-import SubscriptionManager from './subscriptionmanager'
-import { Delta } from './types'
-
-import { load, sendBaseDeltas } from './config/config'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
+import { checkForNewServerVersion } from './modules'
 import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
 import {
   getCertificateOptions,
@@ -47,6 +42,9 @@ import {
   saveSecurityConfig,
   startSecurity
 } from './security.js'
+import SubscriptionManager from './subscriptionmanager'
+import { Delta } from './types'
+const debug = createDebug('signalk-server')
 
 // tslint:disable-next-line: no-var-requires
 const { StreamBundle } = require('./streambundle')
@@ -253,13 +251,13 @@ class Server {
     const self = this
     const app = this.app
 
-    const eventDebugs: { [key: string]: Debug.Debugger } = {}
+    const eventDebugs: { [key: string]: Debugger } = {}
     const expressAppEmit = app.emit.bind(app)
     app.emit = (eventName: string, ...args: any[]) => {
       if (eventName !== 'serverlog') {
         let eventDebug = eventDebugs[eventName]
         if (!eventDebug) {
-          eventDebugs[eventName] = eventDebug = Debug(
+          eventDebugs[eventName] = eventDebug = createDebug(
             `signalk-server:events:${eventName}`
           )
         }

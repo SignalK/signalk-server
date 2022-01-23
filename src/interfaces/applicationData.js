@@ -15,7 +15,8 @@
  */
 
 const _ = require('lodash')
-const debug = require('debug')('signalk-server:interfaces:applicationData')
+import { createDebug } from '../debug'
+const debug = createDebug('signalk-server:interfaces:applicationData')
 const fs = require('fs')
 const path = require('path')
 const jsonpatch = require('json-patch')

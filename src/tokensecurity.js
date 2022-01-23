@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-const debug = require('debug')('signalk-server:tokensecurity')
+import { createDebug } from './debug'
+const debug = createDebug('signalk-server:tokensecurity')
 const util = require('util')
 const jwt = require('jsonwebtoken')
 const _ = require('lodash')

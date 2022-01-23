@@ -567,6 +567,8 @@ Log debug messages. This is the debug method from the [debug module](https://www
 
 `app.debug()` can take any type and will serialize it before outputting.
 
+*Do not use `debug` directly*. Using the debug function provided by the server makes sure that the plugin taps into the server's debug logging system, including the helper switches in Admin UI's Server Log page.
+
 ### `app.savePluginOptions(options, callback)`
 
 Save changes to the plugin's options.

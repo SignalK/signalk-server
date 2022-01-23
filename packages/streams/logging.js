@@ -16,7 +16,7 @@
 
 const { FileTimestampStream } = require('file-timestamp-stream')
 const path = require('path')
-const debug = require('debug')('signalk:streams:logging')
+let debug = require('debug')('signalk:streams:logging')
 const fs = require('fs')
 
 const filenamePattern = /skserver\-raw\_\d\d\d\d\-\d\d\-\d\dT\d\d\.log/
@@ -35,6 +35,7 @@ class FileTimestampStreamWithDelete extends FileTimestampStream {
     this.filesToKeep = filesToKeep
     this.fullLogDir = fullLogDir
     this.prevFilename = undefined
+    debug = (options.createDebug || require('debug'))('signalk:streams:logging')
   }
 
   // This method of base class is called when new file name is contemplated

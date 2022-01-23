@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { createDebug } from './debug'
 const deep = require('deep-get-set')
 const DevNull = require('dev-null-stream')
 const _ = require('lodash')
@@ -84,7 +85,10 @@ module.exports = function(app) {
     const efectiveElementType = elementConfig.type.startsWith('providers/')
       ? elementConfig.type.replace('providers/', '@signalk/streams/')
       : elementConfig.type
-    return new (require(efectiveElementType))(elementConfig.options)
+    return new (require(efectiveElementType))({
+      ...elementConfig.options,
+      createDebug
+    })
   }
 
   function startProviders() {

@@ -13,9 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-import Debug from 'debug'
-import { Request, Response } from 'express'
-const debug = Debug('signalk:interfaces:plugins')
 import {
   PluginServerApp,
   PropertyValues,
@@ -23,13 +20,15 @@ import {
 } from '@signalk/server-api'
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
-import express from 'express'
+import express, { Request, Response } from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
 import { SERVERROUTESPREFIX } from '../constants'
+import { createDebug } from '../debug'
 import { DeltaInputHandler } from '../deltachain'
 import { listAllSerialPorts, Ports } from '../serialports'
+const debug = createDebug('signalk:interfaces:plugins')
 
 // tslint:disable-next-line:no-var-requires
 const modulesWithKeyword = require('../modules').modulesWithKeyword
@@ -511,7 +510,7 @@ module.exports = (theApp: any) => {
           console.error(msg.stack)
         }
       },
-      debug: require('debug')(packageName),
+      debug: createDebug(packageName),
       registerDeltaInputHandler: (handler: any) => {
         onStopHandlers[plugin.id].push(app.registerDeltaInputHandler(handler))
       },

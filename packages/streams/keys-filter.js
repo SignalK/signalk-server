@@ -1,13 +1,14 @@
 'use strict'
 
 const Transform = require('stream').Transform
-const debug = require('debug')('signalk:streams:keys-filter')
 
 function ToSignalK (options) {
   Transform.call(this, {
     objectMode: true
   })
 
+  const createDebug = options.createDebug || require('debug')
+  this.debug = createDebug('signalk:streams:keys-filter')
   this.exclude = options.excludeMatchingPaths
 }
 
@@ -25,7 +26,7 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
       delta = JSON.parse(chunk)
       string = true
     } catch (e) {
-      debug(`Error parsing chunk: ${e.message}`)
+      this.debug(`Error parsing chunk: ${e.message}`)
     }
   }
 

@@ -15,14 +15,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * 2020-06-24 Original Python code from @Thomas-GeDaD https://github.com/Thomas-GeDaD/Seatalk1-Raspi-reader
  * and finetuned by @MatsA
  *
  */
 
 const Execute = require('./execute')
-const debug = require('debug')('signalk:streams:pigpio-seatalk')
 
 const cmd = `
 import pigpio, time, signal, sys
@@ -79,13 +78,13 @@ if __name__ == "__main__":
                 print ("exit")
 `
 
-function PigpioSeatalk (options) {
-  Execute.call(this, {debug})
+function PigpioSeatalk(options) {
+  const createDebug = options.createDebug || require('debug')
+  Execute.call(this, { debug: createDebug('signalk:streams:pigpio-seatalk') })
   this.options = options
   this.options.command = `python -u -c '${cmd}' ${options.gpio} ${options.gpioInvert} `
 }
 
 require('util').inherits(PigpioSeatalk, Execute)
-
 
 module.exports = PigpioSeatalk

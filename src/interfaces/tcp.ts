@@ -13,12 +13,11 @@
  * limitations under the License.
  */
 
-import Debug from 'debug'
-import { values } from 'lodash'
 import { createServer, Server, Socket } from 'net'
 import split from 'split'
-const debug = Debug('signalk-server:interfaces:tcp:signalk')
+import { createDebug } from '../debug'
 import { Interface, SignalKServer, Unsubscribes } from '../types'
+const debug = createDebug('signalk-server:interfaces:tcp:signalk')
 
 interface SocketWithId extends Socket {
   id?: number

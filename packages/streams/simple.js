@@ -1,7 +1,6 @@
 const Transform = require('stream').Transform
 const Writable = require('stream').Writable
 const _ = require('lodash')
-const debug = require('debug')('signalk:simple')
 const N2kAnalyzer = require('./n2kAnalyzer')
 const FromJson = require('./from_json')
 const MultiplexedLog = require('./multiplexedlog')
@@ -27,9 +26,14 @@ const pigpioSeatalk = require('./pigpio-seatalk')
 function Simple (options) {
   Transform.call(this, { objectMode: true })
 
-  const { emitPropertyValue, onPropertyValues } = options
+  const { emitPropertyValue, onPropertyValues, createDebug } = options
   options = { ...options }
-  options.subOptions = { ...options.subOptions, emitPropertyValue, onPropertyValues }
+  options.subOptions = {
+    ...options.subOptions,
+    emitPropertyValue,
+    onPropertyValues,
+    createDebug
+  }
 
   options.subOptions.providerId = options.providerId
   const dataType = options.subOptions.dataType || options.type

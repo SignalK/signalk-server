@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-const debug = require('debug')('signalk-server:discovery')
+import { createDebug } from './debug'
+const debug = createDebug('signalk-server:discovery')
 const canboatjs = require('@canboat/canboatjs')
 const dgram = require('dgram')
 const mdns = require('mdns-js')

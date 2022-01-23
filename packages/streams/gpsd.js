@@ -32,7 +32,6 @@
 
 const Transform = require('stream').Transform
 const gpsd = require('node-gpsd')
-const debug = require('debug')('signalk:streams:gpsd')
 
 function Gpsd (options) {
   Transform.call(this, {
@@ -45,12 +44,14 @@ function Gpsd (options) {
   function setProviderStatus(msg) {
     options.app.setProviderStatus(options.providerId, msg)
   }
-  
+
+  const createDebug = options.createDebug || require('debug')
+
   this.listener = new gpsd.Listener({
     port,
     hostname,
     logger: {
-      info: debug,
+      info: createDebug('signalk:streams:gpsd'),
       warn: console.warn,
       error: (msg) => {
         options.app.setProviderError(options.providerId, `${hostname}:${port}: ` + msg)

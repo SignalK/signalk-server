@@ -15,15 +15,15 @@
 */
 'use strict'
 
-import Debug from 'debug'
-import path from 'path'
-import { SelfIdentity, SignalKMessageHub, WithConfig } from '../app'
-import DeltaEditor from '../deltaeditor'
-const debug = Debug('signalk-server:config')
 import fs from 'fs'
 import _ from 'lodash'
+import path from 'path'
 import semver from 'semver'
 import { v4 as uuidv4 } from 'uuid'
+import { SelfIdentity, SignalKMessageHub, WithConfig } from '../app'
+import { createDebug } from '../debug'
+import DeltaEditor from '../deltaeditor'
+const debug = createDebug('signalk-server:config')
 
 let disableWriteSettings = false
 

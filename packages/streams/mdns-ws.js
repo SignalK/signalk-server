@@ -18,8 +18,6 @@ const Transform = require('stream').Transform
 
 const SignalK = require('@signalk/client')
 
-const debug = require('debug')('signalk:streams:mdns-ws')
-const dataDebug = require('debug')('signalk:streams:mdns-ws-data')
 
 const WebSocket = require('ws')
 
@@ -33,6 +31,10 @@ function MdnsWs (options) {
   this.remoteServers = {}
   this.remoteServers[this.selfHost + ':' + this.selfPort] = {}
   const deltaStreamBehaviour = options.subscription ? 'none' : 'all'
+
+  const createDebug = options.createDebug || require('debug')
+  this.debug = createDebug('signalk:streams:mdns-ws')
+  this.dataDebug = createDebug('signalk:streams:mdns-ws-data')
   debug(`deltaStreamBehaviour:${deltaStreamBehaviour}`)
 
   this.handleContext = () => { }
@@ -92,7 +94,7 @@ MdnsWs.prototype.connect = function (client) {
       setProviderStatus(that, that.options.providerId, `ws connection connected to ${client.options.hostname}:${client.options.port}`)
       if (this.options.selfHandling === 'useRemoteSelf') {
         client.API().then(api => api.get('/self')).then(selfFromServer => {
-          debug(`Mapping context ${selfFromServer} to self (empty context)`)
+          that.debug(`Mapping context ${selfFromServer} to self (empty context)`)
           this.handleContext = (delta) => {
             if (delta.context === selfFromServer) {
               delete delta.context
@@ -115,7 +117,7 @@ MdnsWs.prototype.connect = function (client) {
           parsed = [ parsed ]
         }
         parsed.forEach((sub, idx) => {
-          debug('sending subscription %j', sub)
+          that.debug('sending subscription %j', sub)
           client.subscribe(sub, String(idx))
         })
       }
@@ -127,7 +129,7 @@ MdnsWs.prototype.connect = function (client) {
   client.on('delta', (data) => {
     if (data && data.updates) {
       that.handleContext(data)
-      if (dataDebug.enabled) { dataDebug(JSON.stringify(data)) }
+      if (that.dataDebug.enabled) { that.dataDebug(JSON.stringify(data)) }
       data.updates.forEach(function (update) {
         update['$source'] = `${that.options.providerId}.${client.options.hostname}:${client.options.port}`
       })

@@ -16,7 +16,6 @@
 
 const Transform = require('stream').Transform
 const FromPgn = require('@canboat/canboatjs').FromPgn
-const debug = require('debug')('signalk:streams:canboatjs')
 const _ = require('lodash')
 
 function CanboatJs (options) {
@@ -25,6 +24,9 @@ function CanboatJs (options) {
   })
 
   this.fromPgn = new FromPgn(options)
+  const createDebug = options.createDebug || require('debug')
+  const debug = createDebug('signalk:streams:nmea0183-signalk')
+
 
   this.fromPgn.on('warning', (pgn, warning) => {
     debug(`[warning] ${pgn.pgn} ${warning}`)
