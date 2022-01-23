@@ -23,9 +23,9 @@ so that throughput rate is real time. Aimed at canboat analyzer output
 rate control
 */
 
-function TimestampThrottle (options) {
+function TimestampThrottle(options) {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   })
   this.lastMsgMillis = new Date().getTime()
   this.getMilliseconds =
@@ -55,7 +55,7 @@ TimestampThrottle.prototype._transform = function (msg, encoding, done) {
   }
 }
 
-function getMilliseconds (msg) {
+function getMilliseconds(msg) {
   // 2014-08-15-16:00:00.083
   return moment(msg.timestamp, 'YYYY-MM-DD-HH:mm:ss.SSS').valueOf()
 }

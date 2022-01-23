@@ -21,7 +21,7 @@
 
 const Transform = require('stream').Transform
 
-function TcpServer (options) {
+function TcpServer(options) {
   Transform.call(this)
   this.options = options
 }
@@ -29,7 +29,7 @@ function TcpServer (options) {
 require('util').inherits(TcpServer, Transform)
 
 TcpServer.prototype.pipe = function (pipeTo) {
-  this.options.app.on('tcpserver0183data', d => this.write(d))
+  this.options.app.on('tcpserver0183data', (d) => this.write(d))
   Transform.prototype.pipe.call(this, pipeTo)
 }
 

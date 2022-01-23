@@ -18,12 +18,11 @@ const Transform = require('stream').Transform
 
 const SignalK = require('@signalk/client')
 
-
 const WebSocket = require('ws')
 
-function MdnsWs (options) {
+function MdnsWs(options) {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   })
   this.options = options
   this.selfHost = options.app.config.getExternalHostname() + '.'
@@ -32,12 +31,12 @@ function MdnsWs (options) {
   this.remoteServers[this.selfHost + ':' + this.selfPort] = {}
   const deltaStreamBehaviour = options.subscription ? 'none' : 'all'
 
-  const createDebug = options.createDebug || require('debug')
+  const createDebug = options.createDebug || require('debug')
   this.debug = createDebug('signalk:streams:mdns-ws')
   this.dataDebug = createDebug('signalk:streams:mdns-ws-data')
   debug(`deltaStreamBehaviour:${deltaStreamBehaviour}`)
 
-  this.handleContext = () => { }
+  this.handleContext = () => {}
   if (options.selfHandling === 'manualSelf') {
     if (options.remoteSelf) {
       debug(`Using manual remote self ${options.remoteSelf}`)
@@ -47,12 +46,14 @@ function MdnsWs (options) {
         }
       }
     } else {
-      console.error('Manual self handling speficied but no remoteSelf configured')
+      console.error(
+        'Manual self handling speficied but no remoteSelf configured'
+      )
     }
   }
 
   if (options.ignoreServers) {
-    options.ignoreServers.forEach(s => {
+    options.ignoreServers.forEach((s) => {
       this.remoteServers[s] = {}
     })
   }
@@ -64,18 +65,21 @@ function MdnsWs (options) {
       reconnect: true,
       autoConnect: false,
       deltaStreamBehaviour,
-      rejectUnauthorized: !(options.selfsignedcert === true)
+      rejectUnauthorized: !(options.selfsignedcert === true),
     })
     this.connect(this.signalkClient)
   } else {
-    this.options.app.setProviderError(this.options.providerId, 'This connection is deprecated and must be deleted')
+    this.options.app.setProviderError(
+      this.options.providerId,
+      'This connection is deprecated and must be deleted'
+    )
     return
   }
 }
 
 require('util').inherits(MdnsWs, Transform)
 
-function setProviderStatus (that, providerId, message, isError) {
+function setProviderStatus(that, providerId, message, isError) {
   if (!isError) {
     that.options.app.setProviderStatus(providerId, message)
     console.log(message)
@@ -91,30 +95,46 @@ MdnsWs.prototype.connect = function (client) {
   client
     .connect()
     .then(() => {
-      setProviderStatus(that, that.options.providerId, `ws connection connected to ${client.options.hostname}:${client.options.port}`)
+      setProviderStatus(
+        that,
+        that.options.providerId,
+        `ws connection connected to ${client.options.hostname}:${client.options.port}`
+      )
       if (this.options.selfHandling === 'useRemoteSelf') {
-        client.API().then(api => api.get('/self')).then(selfFromServer => {
-          that.debug(`Mapping context ${selfFromServer} to self (empty context)`)
-          this.handleContext = (delta) => {
-            if (delta.context === selfFromServer) {
-              delete delta.context
+        client
+          .API()
+          .then((api) => api.get('/self'))
+          .then((selfFromServer) => {
+            that.debug(
+              `Mapping context ${selfFromServer} to self (empty context)`
+            )
+            this.handleContext = (delta) => {
+              if (delta.context === selfFromServer) {
+                delete delta.context
+              }
             }
-          }
-        }).catch(err => {
-          console.error('Error retrieving self from remote server')
-          console.error(err)
-        })
+          })
+          .catch((err) => {
+            console.error('Error retrieving self from remote server')
+            console.error(err)
+          })
       }
-      that.remoteServers[client.options.hostname + ':' + client.options.port] = client
-      if ( that.options.subscription ) {
-        let parsed 
+      that.remoteServers[client.options.hostname + ':' + client.options.port] =
+        client
+      if (that.options.subscription) {
+        let parsed
         try {
           parsed = JSON.parse(that.options.subscription)
-        } catch ( ex ) {
-          setProviderStatus(that, that.options.providerId, `unable to parse subscription json: ${that.options.subscription}: ${ex.message}`, true)
+        } catch (ex) {
+          setProviderStatus(
+            that,
+            that.options.providerId,
+            `unable to parse subscription json: ${that.options.subscription}: ${ex.message}`,
+            true
+          )
         }
-        if ( !Array.isArray(parsed) ) {
-          parsed = [ parsed ]
+        if (!Array.isArray(parsed)) {
+          parsed = [parsed]
         }
         parsed.forEach((sub, idx) => {
           that.debug('sending subscription %j', sub)
@@ -122,19 +142,23 @@ MdnsWs.prototype.connect = function (client) {
         })
       }
     })
-    .catch(err => {
+    .catch((err) => {
       setProviderStatus(that, that.options.providerId, err.message, true)
     })
-  
+
   client.on('delta', (data) => {
     if (data && data.updates) {
       that.handleContext(data)
-      if (that.dataDebug.enabled) { that.dataDebug(JSON.stringify(data)) }
+      if (that.dataDebug.enabled) {
+        that.dataDebug(JSON.stringify(data))
+      }
       data.updates.forEach(function (update) {
-        update['$source'] = `${that.options.providerId}.${client.options.hostname}:${client.options.port}`
+        update[
+          '$source'
+        ] = `${that.options.providerId}.${client.options.hostname}:${client.options.port}`
       })
     }
-    
+
     that.push(data)
   })
 }

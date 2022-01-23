@@ -37,7 +37,7 @@ const path = require('path')
 const PassThrough = require('stream').PassThrough
 const fs = require('fs')
 
-function EndIgnoringPassThrough () {
+function EndIgnoringPassThrough() {
   PassThrough.call(this)
 }
 
@@ -72,7 +72,7 @@ FileStream.prototype.startStream = function () {
   }
 
   this.filestream = require('fs').createReadStream(filename)
-  this.filestream.on('error', err => {
+  this.filestream.on('error', (err) => {
     console.error(err.message)
     this.keepRunning = false
   })

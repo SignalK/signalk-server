@@ -39,10 +39,10 @@
 const Transform = require('stream').Transform
 const { pgnToActisenseSerialFormat } = require('@canboat/canboatjs')
 
-function Execute (options) {
+function Execute(options) {
   Transform.call(this, {})
   this.options = options
-  const createDebug = options.createDebug || require('debug')
+  const createDebug = options.createDebug || require('debug')
   this.debug = options.debug || createDebug('signalk:streams:execute')
 }
 
@@ -53,7 +53,7 @@ Execute.prototype._transform = function (chunk, encoding, done) {
   this.analyzerProcess.stdin.write(chunk.toString())
   done()
 }
-function start (command, that) {
+function start(command, that) {
   that.debug(`starting |${command}|`)
   if (process.platform === 'win32') {
     that.childProcess = require('child_process').spawn('cmd', ['/c', command])
@@ -76,7 +76,7 @@ function start (command, that) {
     that.push(data)
   })
 
-  that.childProcess.on('close', code => {
+  that.childProcess.on('close', (code) => {
     const msg = `|${command}| exited with ${code}`
     // that.options.app.setProviderError(that.options.providerId, msg)
     console.error(msg)
@@ -107,7 +107,9 @@ Execute.prototype.pipe = function (pipeTo) {
   start(this.options.command, this)
 
   const stdOutEvent = this.options.toChildProcess || 'toChildProcess'
-  this.debug('Using event ' + stdOutEvent + " for output to child process's stdin")
+  this.debug(
+    'Using event ' + stdOutEvent + " for output to child process's stdin"
+  )
   const that = this
   that.options.app.on(stdOutEvent, function (d) {
     try {
@@ -118,7 +120,7 @@ Execute.prototype.pipe = function (pipeTo) {
   })
 
   if (stdOutEvent === 'nmea2000out') {
-    that.options.app.on('nmea2000JsonOut', pgn => {
+    that.options.app.on('nmea2000JsonOut', (pgn) => {
       that.childProcess.stdin.write(pgnToActisenseSerialFormat(pgn) + '\r\n')
     })
     that.options.app.emit('nmea2000OutAvailable')

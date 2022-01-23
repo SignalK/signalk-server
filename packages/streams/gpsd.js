@@ -33,11 +33,11 @@
 const Transform = require('stream').Transform
 const gpsd = require('node-gpsd')
 
-function Gpsd (options) {
+function Gpsd(options) {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   })
-  
+
   const port = options.port || 2947
   const hostname = options.hostname || options.host || 'localhost'
 
@@ -45,7 +45,7 @@ function Gpsd (options) {
     options.app.setProviderStatus(options.providerId, msg)
   }
 
-  const createDebug = options.createDebug || require('debug')
+  const createDebug = options.createDebug || require('debug')
 
   this.listener = new gpsd.Listener({
     port,
@@ -54,14 +54,17 @@ function Gpsd (options) {
       info: createDebug('signalk:streams:gpsd'),
       warn: console.warn,
       error: (msg) => {
-        options.app.setProviderError(options.providerId, `${hostname}:${port}: ` + msg)
-      }
+        options.app.setProviderError(
+          options.providerId,
+          `${hostname}:${port}: ` + msg
+        )
+      },
     },
-    parse: false
+    parse: false,
   })
 
   setProviderStatus(`Connecting to ${hostname}:${port}`)
-  
+
   this.listener.connect(function () {
     setProviderStatus(`Connected to ${hostname}:${port}`)
   })
@@ -73,7 +76,7 @@ function Gpsd (options) {
 
   this.listener.watch({
     class: 'WATCH',
-    nmea: true
+    nmea: true,
   })
 }
 

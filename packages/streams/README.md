@@ -6,9 +6,9 @@ The code is not compiled and is not more effective, but allows using the streams
 
 ## Development
 
-* Install dev packages with `npm i`.
-* Edit files with `/src`.
-* `npm link`
-* `cd ../../`
-* `npm link @signalk/streams`
-* Restart signalk `npm start`
+- Install dev packages with `npm i`.
+- Edit files with `/src`.
+- `npm link`
+- `cd ../../`
+- `npm link @signalk/streams`
+- Restart signalk `npm start`

@@ -20,22 +20,22 @@ const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
 
 require('util').inherits(ToSignalK, Transform)
 
-function ToSignalK (options) {
+function ToSignalK(options) {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   })
   const n2kOutEvent = 'nmea2000JsonOut'
   this.sourceMeta = {}
   this.notifications = {}
   this.options = options
   this.app = options.app
-  if ( options.filters && options.filtersEnabled ) {
-    this.filters = options.filters.filter(f => {
+  if (options.filters && options.filtersEnabled) {
+    this.filters = options.filters.filter((f) => {
       return (f.source && f.source.length) || (f.pgn && f.pgn.length)
     })
   }
 
-  this.n2kMapper = new N2kMapper({...options, sendMetaData: true})
+  this.n2kMapper = new N2kMapper({ ...options, sendMetaData: true })
 
   this.n2kMapper.on('n2kOut', (pgn) => this.app.emit('nmea2000JsonOut', pgn))
 
@@ -43,7 +43,7 @@ function ToSignalK (options) {
     const existing = this.sourceMeta[n2k.src] || {}
     this.sourceMeta[n2k.src] = {
       ...existing,
-      ...meta
+      ...meta,
     }
     const delta = {
       context: this.app.selfContext,
@@ -54,21 +54,24 @@ function ToSignalK (options) {
             label: this.options.providerId,
             type: 'NMEA2000',
             pgn: Number(n2k.pgn),
-            src: n2k.src.toString()
+            src: n2k.src.toString(),
           },
           timestamp:
             n2k.timestamp.substring(0, 10) +
             'T' +
             n2k.timestamp.substring(11, n2k.timestamp.length),
-          values: []
-        }
-      ]
+          values: [],
+        },
+      ],
     }
-    this.app.deltaCache.setSourceDelta(`${this.options.providerId}.${n2k.src}`, delta)
+    this.app.deltaCache.setSourceDelta(
+      `${this.options.providerId}.${n2k.src}`,
+      delta
+    )
   })
 
   this.n2kMapper.on('n2kSourceMetadataTimeout', (pgn, src) => {
-    if ( pgn == 60928 ) {
+    if (pgn == 60928) {
       console.warn(`n2k-signalk: unable to detect can name for src ${src}`)
       this.sourceMeta[src].unknowCanName = true
     }
@@ -76,86 +79,110 @@ function ToSignalK (options) {
 
   this.n2kMapper.on('n2kSourceChanged', (src, from, to) => {
     console.warn(`n2k-signalk: address ${src} changed from ${from} ${to}`)
-    if ( this.sourceMeta[src] ) {
+    if (this.sourceMeta[src]) {
       delete this.sourceMeta[src]
     }
   })
 
-  if ( this.app.isNmea2000OutAvailable ) {
+  if (this.app.isNmea2000OutAvailable) {
     this.n2kMapper.n2kOutIsAvailable(this.app, n2kOutEvent)
   } else {
     this.app.on('nmea2000OutAvailable', () =>
-                this.n2kMapper.n2kOutIsAvailable(this.app, n2kOutEvent))
+      this.n2kMapper.n2kOutIsAvailable(this.app, n2kOutEvent)
+    )
   }
 }
 
-ToSignalK.prototype.isFiltered = function(source) {
-  return this.filters && this.filters.find(filter => {
-    const sFilter = this.options.useCanName ? source.canName : source.src
-    return (!filter.source || filter.source.length === 0 || filter.source == sFilter) && (!filter.pgn || filter.pgn.length === 0 || filter.pgn == source.pgn)
-  })
+ToSignalK.prototype.isFiltered = function (source) {
+  return (
+    this.filters &&
+    this.filters.find((filter) => {
+      const sFilter = this.options.useCanName ? source.canName : source.src
+      return (
+        (!filter.source ||
+          filter.source.length === 0 ||
+          filter.source == sFilter) &&
+        (!filter.pgn || filter.pgn.length === 0 || filter.pgn == source.pgn)
+      )
+    })
+  )
 }
 
 ToSignalK.prototype._transform = function (chunk, encoding, done) {
   try {
     const delta = this.n2kMapper.toDelta(chunk)
-    
-    const src = Number(chunk.src)
-    if ( !this.sourceMeta[src] ) {
-      this.sourceMeta[src] = {}
-    } 
 
-    if (delta && delta.updates[0].values.length > 0 && !this.isFiltered(delta.updates[0].source) ) {
-      if ( !this.options.useCanName ) {
+    const src = Number(chunk.src)
+    if (!this.sourceMeta[src]) {
+      this.sourceMeta[src] = {}
+    }
+
+    if (
+      delta &&
+      delta.updates[0].values.length > 0 &&
+      !this.isFiltered(delta.updates[0].source)
+    ) {
+      if (!this.options.useCanName) {
         delete delta.updates[0].source.canName
       }
 
       const canName = delta.updates[0].source.canName
-      
-      if ( this.options.useCanName && !canName && !this.sourceMeta[src].unknowCanName ) {
+
+      if (
+        this.options.useCanName &&
+        !canName &&
+        !this.sourceMeta[src].unknowCanName
+      ) {
         done()
         return
       }
 
-      delta.updates.forEach(update => {
-          update.values.forEach(kv => {
-            if ( kv.path && kv.path.startsWith('notifications.') ) {
-              if ( kv.value.state === 'normal' && this.notifications[kv.path] && this.notifications[kv.path][src]) {
-                clearInterval(this.notifications[kv.path][src].interval)
-                delete this.notifications[kv.path][src]
-              } else if ( kv.value.state !== 'normal' ) {
-                if ( !this.notifications[kv.path] ) {
-                  this.notifications[kv.path] = {}
-                }
-                if ( !this.notifications[kv.path][src] ) {
-                  const interval = setInterval(() => {
-                    if (Date.now() - this.notifications[kv.path][src].lastTime > 10000) {
-                      const copy = JSON.parse(JSON.stringify(kv))
-                      copy.value.state = 'normal'
-                      const normalDelta = {
-                        context: delta.context,
-                        updates: [
-                          {
-                            source: update.source,
-                            values: [ copy ]
-                          }
-                        ]
-                      }
-                      delete this.notifications[kv.path][src]
-                      clearInterval(interval)
-                      this.app.handleMessage(this.options.providerId, normalDelta)
+      delta.updates.forEach((update) => {
+        update.values.forEach((kv) => {
+          if (kv.path && kv.path.startsWith('notifications.')) {
+            if (
+              kv.value.state === 'normal' &&
+              this.notifications[kv.path] &&
+              this.notifications[kv.path][src]
+            ) {
+              clearInterval(this.notifications[kv.path][src].interval)
+              delete this.notifications[kv.path][src]
+            } else if (kv.value.state !== 'normal') {
+              if (!this.notifications[kv.path]) {
+                this.notifications[kv.path] = {}
+              }
+              if (!this.notifications[kv.path][src]) {
+                const interval = setInterval(() => {
+                  if (
+                    Date.now() - this.notifications[kv.path][src].lastTime >
+                    10000
+                  ) {
+                    const copy = JSON.parse(JSON.stringify(kv))
+                    copy.value.state = 'normal'
+                    const normalDelta = {
+                      context: delta.context,
+                      updates: [
+                        {
+                          source: update.source,
+                          values: [copy],
+                        },
+                      ],
                     }
-                  }, 5000)
-                  this.notifications[kv.path][src] = {
-                    lastTime: Date.now(),
-                    interval: interval
+                    delete this.notifications[kv.path][src]
+                    clearInterval(interval)
+                    this.app.handleMessage(this.options.providerId, normalDelta)
                   }
-                } else {
-                  this.notifications[kv.path][src].lastTime = Date.now()
+                }, 5000)
+                this.notifications[kv.path][src] = {
+                  lastTime: Date.now(),
+                  interval: interval,
                 }
+              } else {
+                this.notifications[kv.path][src].lastTime = Date.now()
               }
             }
-          })
+          }
+        })
       })
       this.push(delta)
     }

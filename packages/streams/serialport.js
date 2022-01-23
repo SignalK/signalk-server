@@ -64,7 +64,7 @@ const SerialPort = require('serialport')
 const isArray = require('lodash').isArray
 const isBuffer = require('lodash').isBuffer
 
-function SerialStream (options) {
+function SerialStream(options) {
   if (!(this instanceof SerialStream)) {
     return new SerialStream(options)
   }
@@ -105,7 +105,7 @@ SerialStream.prototype.start = function () {
   }
 
   this.serial = new SerialPort(this.options.device, {
-    baudRate: this.options.baudrate
+    baudRate: this.options.baudrate,
   })
 
   this.serial.on(
@@ -148,22 +148,22 @@ SerialStream.prototype.start = function () {
   let pendingWrites = 0
   const stdOutEvent = this.options.toStdout
   if (stdOutEvent) {
-    (isArray(stdOutEvent) ? stdOutEvent : [stdOutEvent]).forEach(event => {
+    ;(isArray(stdOutEvent) ? stdOutEvent : [stdOutEvent]).forEach((event) => {
       const onDrain = () => {
         pendingWrites--
       }
 
-      that.options.app.on(event, d => {
+      that.options.app.on(event, (d) => {
         if (pendingWrites > that.maxPendingWrites) {
           that.debug('Buffer overflow, not writing:' + d)
           return
         }
         that.debug('Writing:' + d)
-        if ( isBuffer(d) ) {
+        if (isBuffer(d)) {
           that.serial.write(d)
         } else {
           that.serial.write(d + '\r\n')
-        } 
+        }
         pendingWrites++
         that.serial.drain(onDrain)
       })

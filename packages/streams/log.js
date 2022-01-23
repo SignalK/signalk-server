@@ -32,9 +32,9 @@
 const Transform = require('stream').Transform
 const getLogger = require('./logging').getLogger
 
-function Log (options) {
+function Log(options) {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   })
 
   this.logger = getLogger(options.app, options.discriminator, options.logdir)
@@ -48,7 +48,7 @@ Log.prototype._transform = function (msg, encoding, done) {
   done()
 }
 
-function pad (num) {
+function pad(num) {
   return (num > 9 ? '' : '0') + num
 }
 

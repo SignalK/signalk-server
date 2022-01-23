@@ -28,9 +28,9 @@ const Transform = require('stream').Transform
 
 require('util').inherits(Liner, Transform)
 
-function Liner (options) {
+function Liner(options) {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   })
   this.doPush = this.push.bind(this)
   this.lineSeparator = options.lineSeparator || '\n'

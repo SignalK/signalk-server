@@ -2,12 +2,12 @@
 
 const Transform = require('stream').Transform
 
-function ToSignalK (options) {
+function ToSignalK(options) {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   })
 
-  const createDebug = options.createDebug || require('debug')
+  const createDebug = options.createDebug || require('debug')
   this.debug = createDebug('signalk:streams:keys-filter')
   this.exclude = options.excludeMatchingPaths
 }
@@ -32,11 +32,11 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
 
   if (Array.isArray(delta.updates)) {
     const updates = []
-    delta.updates.forEach(update => {
+    delta.updates.forEach((update) => {
       if (Array.isArray(update.values)) {
         const values = []
 
-        update.values.forEach(value => {
+        update.values.forEach((value) => {
           if (this.exclude.includes(value.path) !== true) {
             values.push(value)
           }
@@ -44,7 +44,7 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
 
         if (values.length > 0) {
           const upd = {
-            values
+            values,
           }
 
           if (update.hasOwnProperty('$source')) {

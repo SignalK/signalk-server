@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-
 const Transform = require('stream').Transform
 
 require('util').inherits(Replacer, Transform)
 
-function Replacer (options) {
+function Replacer(options) {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   })
   this.doPush = this.push.bind(this)
   this.regexp = new RegExp(options.regexp, 'gu')
   this.template = options.template
 }
-
 
 Replacer.prototype._transform = function (chunk, encoding, done) {
   this.doPush(chunk.toString().replace(this.regexp, this.template))
