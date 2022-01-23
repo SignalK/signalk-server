@@ -4,7 +4,8 @@
   "description": "Utilities for handling streams of Signal K data",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "prettier --check .",
+    "format": "prettier --write ."
   },
   "repository": {
     "type": "git",
