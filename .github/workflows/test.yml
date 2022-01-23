@@ -9,7 +9,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [10.x, 16.x]
+        node-version: [16.x]
 
     steps:
     - uses: actions/checkout@v2
@@ -18,6 +18,22 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm install
+
+    - name: streams
+      working-directory: ./packages/streams
+      run: |
+        npm test
+
+    - name: server-api
+      working-directory: ./packages/server-api
+      run: |
+        npm run build
+
+    - name: server-admin-ui
+      working-directory: ./packages/server-admin-ui
+      run: |
+        npm run build
+
     - run: npm test
       env:
         CI: true
