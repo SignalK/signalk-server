@@ -22,7 +22,7 @@ jobs:
     - name: streams
       working-directory: ./packages/streams
       run: |
-        npm test
+        npm run ci
 
     - name: server-api
       working-directory: ./packages/server-api
@@ -32,6 +32,7 @@ jobs:
     - name: server-admin-ui
       working-directory: ./packages/server-admin-ui
       run: |
+        npm run ci
         npm run build
 
     - run: npm test

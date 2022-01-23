@@ -58,6 +58,7 @@
     "watch": "webpack --watch --mode development",
     "build": "webpack --mode=production",
     "format": "prettier --write src/",
+    "ci": "prettier --check src/",
     "clean": "rimraf ./public",
     "bundle-analyzer": "webpack-bundle-analyzer --port 4200 public/stats.json"
   }
