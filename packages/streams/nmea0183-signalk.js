@@ -35,9 +35,9 @@ const utils = require('@signalk/nmea0183-utilities')
 const n2kToDelta = require('@signalk/n2k-signalk').toDelta
 const FromPgn = require('@canboat/canboatjs').FromPgn
 
-function Nmea0183ToSignalK (options) {
+function Nmea0183ToSignalK(options) {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   })
 
   this.parser = new Parser(options)
@@ -49,7 +49,7 @@ function Nmea0183ToSignalK (options) {
 
   // Prepare a list of events to send for each sentence received
   this.sentenceEvents = options.suppress0183event ? [] : ['nmea0183']
-  this.appendChecksum = options.appendChecksum;
+  this.appendChecksum = options.appendChecksum
 
   if (options.sentenceEvent) {
     if (Array.isArray(options.sentenceEvent)) {
@@ -78,19 +78,19 @@ Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
   try {
     if (sentence !== undefined) {
       if (this.appendChecksum) {
-        sentence = utils.appendChecksum(sentence);
+        sentence = utils.appendChecksum(sentence)
       }
       // Send 'sentences' event to the app for each sentence
-      this.sentenceEvents.forEach(eventName => {
+      this.sentenceEvents.forEach((eventName) => {
         this.app.emit(eventName, sentence)
         this.app.signalk.emit(eventName, sentence)
       })
 
       let delta = null
-      if ( this.n2kParser.isN2KOver0183(sentence) ) {
+      if (this.n2kParser.isN2KOver0183(sentence)) {
         const pgn = this.n2kParser.parseN2KOver0183(sentence)
-        if ( pgn ) {
-          delta = n2kToDelta(pgn, this.state, {sendMetaData: true})
+        if (pgn) {
+          delta = n2kToDelta(pgn, this.state, { sendMetaData: true })
         }
       } else {
         delta = this.parser.parse(sentence)
@@ -98,7 +98,7 @@ Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
 
       if (delta !== null) {
         if (timestamp !== null) {
-          delta.updates.forEach(update => {
+          delta.updates.forEach((update) => {
             update.timestamp = timestamp
           })
         }

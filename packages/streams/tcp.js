@@ -32,21 +32,24 @@ const net = require('net')
 const Transform = require('stream').Transform
 const isArray = require('lodash').isArray
 
-function TcpStream (options) {
+function TcpStream(options) {
   Transform.call(this, options)
   this.options = options
-  this.noDataReceivedTimeout = Number.parseInt((this.options.noDataReceivedTimeout + '').trim()) * 1000
+  this.noDataReceivedTimeout =
+    Number.parseInt((this.options.noDataReceivedTimeout + '').trim()) * 1000
   this.debug = (options.createDebug || require('debug'))('signalk:streams:tcp')
-  this.debugData = (options.createDebug || require('debug'))('signalk:streams:tcp-data')
+  this.debugData = (options.createDebug || require('debug'))(
+    'signalk:streams:tcp-data'
+  )
 }
 
 require('util').inherits(TcpStream, Transform)
 
 TcpStream.prototype.pipe = function (pipeTo) {
   const that = this
-  if ( this.options.outEvent ) {
+  if (this.options.outEvent) {
     that.options.app.on(that.options.outEvent, function (d) {
-      if ( that.tcpStream ) {
+      if (that.tcpStream) {
         that.debug('sending %s', d)
         that.tcpStream.write(d)
       }
@@ -55,20 +58,22 @@ TcpStream.prototype.pipe = function (pipeTo) {
 
   const stdOutEvent = this.options.toStdout
   if (stdOutEvent) {
-    const that = this; //semicolon required here
-    (isArray(stdOutEvent) ? stdOutEvent : [stdOutEvent]).forEach(stdEvent => {
-      that.options.app.on(stdEvent, function (d) {
-        if (that.tcpStream) {
-          that.tcpStream.write(d + '\r\n')
-         that. debug('event %s sending %s', stdEvent, d)
-        }
-      })
-    })
+    const that = this //semicolon required here
+    ;(isArray(stdOutEvent) ? stdOutEvent : [stdOutEvent]).forEach(
+      (stdEvent) => {
+        that.options.app.on(stdEvent, function (d) {
+          if (that.tcpStream) {
+            that.tcpStream.write(d + '\r\n')
+            that.debug('event %s sending %s', stdEvent, d)
+          }
+        })
+      }
+    )
   }
 
   const re = require('reconnect-core')(function () {
     return net.connect.apply(null, arguments)
-  })({ maxDelay: 5 * 1000 }, tcpStream => {
+  })({ maxDelay: 5 * 1000 }, (tcpStream) => {
     if (!isNaN(this.noDataReceivedTimeout)) {
       tcpStream.setTimeout(this.noDataReceivedTimeout)
       that.debug(
@@ -81,31 +86,29 @@ TcpStream.prototype.pipe = function (pipeTo) {
         tcpStream.end()
       })
     }
-    tcpStream.on('data', data => {
+    tcpStream.on('data', (data) => {
       if (that.debugData.enabled) {
         that.debugData(data.toString())
       }
       this.write(data)
     })
   })
-    .on('connect', con => {
+    .on('connect', (con) => {
       this.tcpStream = con
       const msg = `Connected to ${this.options.host} ${this.options.port}`
       this.options.app.setProviderStatus(this.options.providerId, msg)
       that.debug(msg)
     })
     .on('reconnect', (n, delay) => {
-      const msg = `Reconnect ${this.options.host} ${
-        this.options.port
-      } retry ${n} delay ${delay}`
+      const msg = `Reconnect ${this.options.host} ${this.options.port} retry ${n} delay ${delay}`
       this.options.app.setProviderError(this.options.providerId, msg)
       that.debug(msg)
     })
-    .on('disconnect', err => {
+    .on('disconnect', (err) => {
       delete this.tcpStream
       that.debug(`Disconnected ${this.options.host} ${this.options.port}`)
     })
-    .on('error', err => {
+    .on('error', (err) => {
       this.options.app.setProviderError(this.options.providerId, err.message)
       console.error('TcpProvider:' + err.message)
     })

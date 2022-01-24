@@ -25,9 +25,9 @@ var Transform = require('stream').Transform
 */
 const AWS = require('aws-sdk')
 
-function S3Provider ({ bucket, prefix }) {
+function S3Provider({ bucket, prefix }) {
   Transform.call(this, {
-    objectMode: false
+    objectMode: false,
   })
   this.Bucket = bucket
   this.Prefix = prefix
@@ -41,12 +41,12 @@ S3Provider.prototype.pipe = function (pipeTo) {
   const s3 = new AWS.S3()
   const params = {
     Bucket: this.Bucket,
-    Prefix: this.Prefix
+    Prefix: this.Prefix,
   }
   console.log('listobjects')
   s3.listObjects(params)
     .promise()
-    .then(data => {
+    .then((data) => {
       // console.log(data)
       const jobs = data.Contents.map(
         (item, i) =>
@@ -55,18 +55,15 @@ S3Provider.prototype.pipe = function (pipeTo) {
               console.log('Starting key ' + item.Key)
               const objectParams = {
                 Bucket: params.Bucket,
-                Key: item.Key
+                Key: item.Key,
               }
               const request = s3.getObject(objectParams)
-              request.on('error', err => {
+              request.on('error', (err) => {
                 console.log(err)
               })
               const stream = request.createReadStream()
               stream.on('end', resolve)
-              stream.pipe(
-                pipeTo,
-                { end: i === data.Contents.length-1 }
-              )
+              stream.pipe(pipeTo, { end: i === data.Contents.length - 1 })
             })
           }
       )
@@ -74,14 +71,14 @@ S3Provider.prototype.pipe = function (pipeTo) {
       let i = 0
       function startNext() {
         if (i < jobs.length) {
-          jobs[i++]().then(startNext);
+          jobs[i++]().then(startNext)
         } else {
           doEnd()
         }
       }
-      startNext();
+      startNext()
     })
-    .catch(error => {
+    .catch((error) => {
       console.error(error)
     })
   return pipeTo

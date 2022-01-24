@@ -45,12 +45,12 @@ A => actisense-serial format N2K data
 1471172400153;A;2016-07-16T12:00:00.000Z,2,130306,105,255,8,00,d1,03,c9,23,fa,ff,ff
 */
 
-function DeMultiplexer (options) {
+function DeMultiplexer(options) {
   Writable.call(this)
 
   this.toTimestamped = new ToTimestamped(this, options)
   this.timestampThrottle = new TimestampThrottle({
-    getMilliseconds: msg => msg.timestamp
+    getMilliseconds: (msg) => msg.timestamp,
   })
   this.splitter = new Splitter(this, options)
   this.options = options
@@ -66,7 +66,7 @@ DeMultiplexer.prototype.write = function (chunk, encoding, callback) {
   return this.toTimestamped.write(chunk, encoding, callback)
 }
 
-function Splitter (deMultiplexer, options) {
+function Splitter(deMultiplexer, options) {
   Transform.call(this, { objectMode: true })
   this.demuxEmitData = function (msg) {
     deMultiplexer.emit('data', msg)
@@ -91,7 +91,7 @@ Splitter.prototype._transform = function (msg, encoding, _done) {
   let done = _done
   try {
     switch (msg.discriminator) {
-    case 'A': {
+      case 'A': {
         msg.fromFile = true
         const result = this.fromActisenseSerial.write(msg, encoding)
         if (!result) {
@@ -130,7 +130,7 @@ Splitter.prototype.pipe = function (target) {
   return Transform.prototype.pipe.call(this, target)
 }
 
-function ToTimestamped (deMultiplexer, options) {
+function ToTimestamped(deMultiplexer, options) {
   Transform.call(this, { objectMode: true })
   this.deMultiplexer = deMultiplexer
   this.options = options

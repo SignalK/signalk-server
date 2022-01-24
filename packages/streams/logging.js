@@ -25,11 +25,11 @@ const loggers = {}
 module.exports = {
   getLogger,
   getFullLogDir,
-  listLogFiles
+  listLogFiles,
 }
 
 class FileTimestampStreamWithDelete extends FileTimestampStream {
-  constructor(app, fullLogDir, filesToKeep, options){
+  constructor(app, fullLogDir, filesToKeep, options) {
     super(options)
     this.app = app
     this.filesToKeep = filesToKeep
@@ -41,42 +41,42 @@ class FileTimestampStreamWithDelete extends FileTimestampStream {
   // This method of base class is called when new file name is contemplated
   // So let's override it to check how many files are there and delete the oldest ones
   newFilename() {
-    if (this.prevFilename !== this.currentFilename){ // Only do that after new file created
+    if (this.prevFilename !== this.currentFilename) {
+      // Only do that after new file created
       this.prevFilename = this.currentFilename
       this.deleteOldFiles()
     }
     return super.newFilename()
   }
 
-  deleteOldFiles(){
+  deleteOldFiles() {
     debug(`Checking for old log files`)
     listLogFiles(this.app, (err, files) => {
       if (err) {
-        console.error(err);
-      }else{
+        console.error(err)
+      } else {
         if (files.length > this.filesToKeep) {
-          const sortedFiles = files.sort();
-          const numToDelete =  files.length - this.filesToKeep;
+          const sortedFiles = files.sort()
+          const numToDelete = files.length - this.filesToKeep
           debug(`Will delete ${numToDelete} files`)
-          for(let i = 0; i < numToDelete; i++){
+          for (let i = 0; i < numToDelete; i++) {
             const fileName = path.join(this.fullLogDir, sortedFiles[i])
             debug(`Deleting ${fileName}`)
             fs.unlink(fileName, (err) => {
-              if (err){
+              if (err) {
                 console.error(err)
-              }
-              else {
+              } else {
                 debug(`${fileName} was deleted`)
               }
-            });
+            })
           }
         }
       }
-    });
+    })
   }
 }
 
-function getLogger (app, discriminator = '', logdir) {
+function getLogger(app, discriminator = '', logdir) {
   const fullLogdir = getFullLogDir(app, logdir)
 
   if (!loggers[fullLogdir]) {
@@ -85,26 +85,28 @@ function getLogger (app, discriminator = '', logdir) {
     debug(`logging to ${fileName}`)
 
     let fileTimestampStream
-    if (app.config.settings.keepMostRecentLogsOnly){  // Delete old logs
+    if (app.config.settings.keepMostRecentLogsOnly) {
+      // Delete old logs
       fileTimestampStream = new FileTimestampStreamWithDelete(
-        app, fullLogdir, app.config.settings.logCountToKeep,
+        app,
+        fullLogdir,
+        app.config.settings.logCountToKeep,
         { path: fileName }
       )
-    }else{  // Don't delete any logs
-      fileTimestampStream = new FileTimestampStream(
-        { path: fileName }
-      )
+    } else {
+      // Don't delete any logs
+      fileTimestampStream = new FileTimestampStream({ path: fileName })
     }
 
     loggers[fullLogdir] = fileTimestampStream
   }
 
   const logger = loggers[fullLogdir]
-  logger.on('error', err => {
+  logger.on('error', (err) => {
     console.error(`Error opening data logging file: ${err.message}`)
   })
 
-  return msg => {
+  return (msg) => {
     try {
       logger.write(
         Date.now() +
@@ -120,7 +122,7 @@ function getLogger (app, discriminator = '', logdir) {
   }
 }
 
-function getFullLogDir (app, logdir) {
+function getFullLogDir(app, logdir) {
   if (!logdir) {
     logdir = app.config.settings.loggingDirectory || app.config.configPath
   }
@@ -129,10 +131,13 @@ function getFullLogDir (app, logdir) {
     : path.join(app.config.configPath, logdir)
 }
 
-function listLogFiles (app, cb) {
+function listLogFiles(app, cb) {
   fs.readdir(getFullLogDir(app), (err, files) => {
     if (!err) {
-      cb(undefined, files.filter(filename => filename.match(filenamePattern)))
+      cb(
+        undefined,
+        files.filter((filename) => filename.match(filenamePattern))
+      )
     } else {
       cb(err)
     }

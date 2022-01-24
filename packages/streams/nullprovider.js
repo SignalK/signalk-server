@@ -20,9 +20,9 @@
 
 const Transform = require('stream').Transform
 
-function NullProvider (options) {
+function NullProvider(options) {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   })
 }
 

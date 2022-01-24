@@ -16,19 +16,19 @@
 
 const Transform = require('stream').Transform
 
-function N2KAnalyzer (options) {
+function N2KAnalyzer(options) {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   })
   if (process.platform === 'win32') {
     this.analyzerProcess = require('child_process').spawn('cmd', [
       '/c',
-      'analyzer -json -si'
+      'analyzer -json -si',
     ])
   } else {
     this.analyzerProcess = require('child_process').spawn('sh', [
       '-c',
-      'analyzer -json -si'
+      'analyzer -json -si',
     ])
   }
   this.analyzerProcess.stderr.on('data', function (data) {

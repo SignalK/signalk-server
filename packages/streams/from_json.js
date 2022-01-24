@@ -27,9 +27,9 @@
 
 const Transform = require('stream').Transform
 
-function FromJson () {
+function FromJson() {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   })
 }
 

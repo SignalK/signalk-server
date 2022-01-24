@@ -35,9 +35,9 @@
 
 const Transform = require('stream').Transform
 
-function Udp (options) {
+function Udp(options) {
   Transform.call(this, {
-    objectMode: false
+    objectMode: false,
   })
   this.options = options
   this.debug = (options.createDebug || require('debug'))('signalk:streams:udp')

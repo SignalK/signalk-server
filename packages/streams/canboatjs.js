@@ -18,21 +18,22 @@ const Transform = require('stream').Transform
 const FromPgn = require('@canboat/canboatjs').FromPgn
 const _ = require('lodash')
 
-function CanboatJs (options) {
+function CanboatJs(options) {
   Transform.call(this, {
-    objectMode: true
+    objectMode: true,
   })
 
   this.fromPgn = new FromPgn(options)
-  const createDebug = options.createDebug || require('debug')
+  const createDebug = options.createDebug || require('debug')
   const debug = createDebug('signalk:streams:nmea0183-signalk')
-
 
   this.fromPgn.on('warning', (pgn, warning) => {
     debug(`[warning] ${pgn.pgn} ${warning}`)
   })
 
-  this.fromPgn.on('error', (pgn, err) => {console.log(err)} )
+  this.fromPgn.on('error', (pgn, err) => {
+    console.log(err)
+  })
 
   this.app = options.app
 }
@@ -42,14 +43,14 @@ require('util').inherits(CanboatJs, Transform)
 CanboatJs.prototype._transform = function (chunk, encoding, done) {
   if (_.isObject(chunk) && chunk.fromFile) {
     const pgnData = this.fromPgn.parse(chunk.data)
-    if ( pgnData ) {
+    if (pgnData) {
       pgnData.timestamp = new Date(Number(chunk.timestamp)).toISOString()
       this.push(pgnData)
       this.app.emit('N2KAnalyzerOut', pgnData)
     }
   } else {
     const pgnData = this.fromPgn.parse(chunk)
-    if ( pgnData ) {
+    if (pgnData) {
       this.push(pgnData)
       this.app.emit('N2KAnalyzerOut', pgnData)
     }
