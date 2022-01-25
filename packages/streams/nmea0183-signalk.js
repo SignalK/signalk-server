@@ -39,6 +39,8 @@ function Nmea0183ToSignalK(options) {
   Transform.call(this, {
     objectMode: true,
   })
+  this.debug = (options.createDebug || require('debug'))('signalk:streams:nmea0183-signalk')
+  
 
   this.parser = new Parser(options)
   this.n2kParser = new FromPgn(options)
@@ -107,7 +109,7 @@ Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
       }
     }
   } catch (e) {
-    console.error(e)
+    this.debug(e)
   }
 
   done()
