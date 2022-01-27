@@ -68,7 +68,7 @@ interface Polygon {
   type: 'Feature'
   geometry: {
     type: 'Polygon'
-    coords: GeoJsonPolygon
+    coordinates: GeoJsonPolygon
   }
   properties?: object
   id?: string
@@ -78,7 +78,7 @@ interface MultiPolygon {
   type: 'Feature'
   geometry: {
     type: 'MultiPolygon'
-    coords: GeoJsonMultiPolygon
+    coordinates: GeoJsonMultiPolygon
   }
   properties?: object
   id?: string
