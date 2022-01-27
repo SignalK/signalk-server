@@ -1,4 +1,4 @@
-import { createDebug } from './debug'
+import { createDebug } from '../../debug'
 const debug = createDebug('signalk:resourcesApi')
 
 import {

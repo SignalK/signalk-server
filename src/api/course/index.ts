@@ -1,4 +1,4 @@
-import { createDebug } from './debug'
+import { createDebug } from '../../debug'
 const debug = createDebug('signalk:courseApi')
 
 import { Application, Request, Response } from 'express'
