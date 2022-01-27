@@ -1,6 +1,6 @@
 import { FullSignalK } from '@signalk/signalk-schema'
-import { SecurityStrategy } from './security'
 import { Request } from 'express'
+import { SecurityStrategy } from './security'
 import SubscriptionManager from './subscriptionmanager'
 
 export interface HelloMessage {

@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require('uuid')
 const { createRequest, updateRequest } = require('./requestResponse')
 const skConfig = require('./config/config')
 
-const {isApiRequest} = require('./api')
+const { isApiRequest } = require('./api')
 
 const pathPrefix = '/signalk'
 const versionPrefix = '/v1'
@@ -33,7 +33,6 @@ module.exports = {
     app.deRegisterActionHandler = deRegisterActionHandler
 
     app.put(apiPathPrefix + '*', function(req, res, next) {
-
       // check for resources API, course API, etc request
       if (isApiRequest(req.path)) {
         next()

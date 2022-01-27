@@ -7,9 +7,9 @@ import path from 'path'
 import { WithConfig, WithSecurityStrategy, WithSignalK } from '../../app'
 import { Position } from '../../types'
 
+import { Responses } from '../'
 import { Store } from '../../serverstate/store'
 import { Route } from '../resources/types'
-import { Responses } from '../'
 
 const SIGNALK_API_PATH = `/signalk/v1/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
