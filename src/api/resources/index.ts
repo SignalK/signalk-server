@@ -1,9 +1,14 @@
+import Debug from 'debug'
+const debug = Debug('signalk:resourcesApi')
+// import { createDebug } from './debug'
+// const debug = createDebug('signalk:resourcesApi')
+
 import {
   ResourceProvider,
   ResourceProviderMethods,
   SignalKResourceType
 } from '@signalk/server-api'
-import Debug from 'debug'
+
 import { Application, NextFunction, Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid'
 import { WithSecurityStrategy, WithSignalK } from '../../app'
@@ -11,8 +16,6 @@ import { WithSecurityStrategy, WithSignalK } from '../../app'
 import { Responses } from '../'
 import { buildResource } from './resources'
 import { validate } from './validate'
-
-const debug = Debug('signalk:resourcesApi')
 
 const SIGNALK_API_PATH = `/signalk/v1/api`
 const UUID_PREFIX = 'urn:mrn:signalk:uuid:'

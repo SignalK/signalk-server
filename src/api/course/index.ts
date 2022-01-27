@@ -1,4 +1,8 @@
 import Debug from 'debug'
+const debug = Debug('signalk:courseApi')
+// import { createDebug } from './debug'
+// const debug = createDebug('signalk:courseApi')
+
 import { Application, Request, Response } from 'express'
 import _ from 'lodash'
 import path from 'path'
@@ -8,8 +12,6 @@ import { Position } from '../../types'
 import { Store } from '../../serverstate/store'
 import { Route } from '../resources/types'
 import { Responses } from '../'
-
-const debug = Debug('signalk:courseApi')
 
 const SIGNALK_API_PATH = `/signalk/v1/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
