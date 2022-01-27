@@ -1,9 +1,5 @@
 import { FullSignalK } from '@signalk/signalk-schema'
-<<<<<<< HEAD
 import { SecurityStrategy } from './security'
-=======
-import { Request } from 'express'
->>>>>>> fix: SecurityStrategy.shouldAllowPut must have Request
 import SubscriptionManager from './subscriptionmanager'
 
 export interface HelloMessage {
@@ -14,22 +10,6 @@ export interface HelloMessage {
   timestamp: Date
 }
 
-<<<<<<< HEAD
-=======
-export interface SecurityStrategy {
-  isDummy: () => boolean
-  allowReadOnly: () => boolean
-  shouldFilterDeltas: () => boolean
-  filterReadDelta: (user: any, delta: any) => any
-  shouldAllowPut: (
-    req: Request,
-    context: string,
-    source: any,
-    path: string
-  ) => boolean
-}
-
->>>>>>> refactor: tweak types
 export interface Bus {
   onValue: (callback: (value: any) => any) => () => void
   push: (v: any) => void
