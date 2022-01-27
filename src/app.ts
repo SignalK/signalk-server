@@ -2,7 +2,7 @@ import { FullSignalK } from '@signalk/signalk-schema'
 import { EventEmitter } from 'events'
 import { Config } from './config/config'
 import DeltaCache from './deltacache'
-import { SecurityStrategy } from './types'
+import { SecurityStrategy } from './security'
 
 export interface ServerApp {
   started: boolean
