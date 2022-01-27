@@ -23,11 +23,6 @@ The plugin module must export a single `function(app)` that must return an objec
 ## Getting Started with Plugin Development
 
 To get started with SignalK plugin development, you can follow this  guide.
-<<<<<<< HEAD
-
-_Note: For plugins acting as a provider for one or more of the SignalK resource types listed in the specification (`routes`, `waypoints`, `notes`, `regions` or `charts`) please refer to __[RESOURCE_PROVIDER_PLUGINS.md](./RESOURCE_PROVIDER_PLUGINS.md)__ for additional details._
-=======
->>>>>>> chore: Updated documentation
 
 _Note: For plugins acting as a provider for one or more of the SignalK resource types listed in the specification (`routes`, `waypoints`, `notes`, `regions` or `charts`) please refer to __[RESOURCE_PROVIDER_PLUGINS.md](./RESOURCE_PROVIDER_PLUGINS.md)__ for additional details._
 
@@ -707,8 +702,6 @@ app.registerDeltaInputHandler((delta, next) => {
 })
 ```
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 ### `app.resourcesApi.getResource(resource_type, resource_id)`
 
 Retrieve resource data for the supplied SignalK resource type and resource id.
@@ -763,88 +756,11 @@ module.exports = function (app) {
 ### `app.resourcesApi.unRegister(pluginId)`
 
 When a resource provider plugin is disabled it will need to un-register its provider methods for all of the resource types it manages. This should be done in the plugin's `stop()` function.
-=======
-=======
-### `app.resourcesApi.getResource(resource_type, resource_id)`
-
-Retrieve resource data for the supplied SignalK resource type and resource id.
-
-_Valid resource types are `routes`, `waypoints`, `notes`, `regions` & `charts`._
-
-
-This method invokes the `registered Resource Provider` for the supplied `resource_type` and returns a `resovled` __Promise__ containing the resource data if successful or 
-a `rejected` __Promise__ containing an __Error__ object if unsuccessful.
-
-_Example:_
-```javascript
-let resource= app.resourcesApi.getResource('routes', 'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a');
-
-resource.then ( (data)=> {
-  // route data
-  console.log(data);
-  ...
-}).catch (error) { 
-  // handle error
-  console.log(error.message);
-  ...
-}
-```
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> add getResource function
-### `app.resourcesApi.register(provider)`
-=======
-### `app.resourcesApi.register(pluginId, provider)`
->>>>>>> add pluginId to register() function
-=======
-=======
-
->>>>>>> chore: Updated documentation
-### `app.resourcesApi.register(pluginId, resourceProvider)`
->>>>>>> update docs
-
-If a plugin wants to act as a resource provider, it will need to register its provider methods during startup using this function.
 
 See [`RESOURCE_PROVIDER_PLUGINS.md`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
 
 
 ```javascript
-module.exports = function (app) {
-  let plugin= {
-    id: 'mypluginid',
-    name: 'My Resource Providerplugin',
-    resourceProvider: {
-      types: ['routes','waypoints'],
-      methods: { ... }
-    }
-    start: function(options) {
-      // do plugin start up
-      app.resourcesApi.register(this.id, this.resourceProvider);
-    }
-    ...
-  }
-}
-```
-
-### `app.resourcesApi.unRegister(pluginId)`
-
-<<<<<<< HEAD
-When a resource provider plugin is disabled it will need to un-register its provider methods for the resource types it manages. This should be done in the plugin's `stop()` function.
->>>>>>> Add register / unregister
-=======
-When a resource provider plugin is disabled it will need to un-register its provider methods for all of the resource types it manages. This should be done in the plugin's `stop()` function.
->>>>>>> add pluginId to unRegister function
-
-See [`RESOURCE_PROVIDER_PLUGINS.md`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
-
-
-```javascript
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> add pluginId to unRegister function
 module.exports = function (app) {
   let plugin= {
     id: 'mypluginid',
@@ -855,35 +771,11 @@ module.exports = function (app) {
     }
     ...
     stop: function(options) {
-<<<<<<< HEAD
-<<<<<<< HEAD
       app.resourcesApi.unRegister(this.id);
       // do plugin shutdown
     }
   }
 }
-=======
-plugin.stop = function(options) {
-  // resource_types example: ['routes',waypoints']
-  app.resourcesApi.unRegister(resource_types);
-  ...
-}
-
->>>>>>> Add register / unregister
-=======
-      app.resourcesApi.unRegister(this.id, this.resourceProvider.types);
-=======
-      app.resourcesApi.unRegister(this.id);
-<<<<<<< HEAD
->>>>>>> update docs
-      ...
-=======
-      // do plugin shutdown
->>>>>>> chore: Updated documentation
-    }
-  }
-}
->>>>>>> add pluginId to unRegister function
 ```
 
 

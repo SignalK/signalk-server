@@ -1,7 +1,5 @@
-import Debug from 'debug'
-const debug = Debug('signalk:resourcesApi')
-// import { createDebug } from './debug'
-// const debug = createDebug('signalk:resourcesApi')
+import { createDebug } from './debug'
+const debug = createDebug('signalk:resourcesApi')
 
 import {
   ResourceProvider,

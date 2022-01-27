@@ -113,42 +113,6 @@
             "put": {
                 "tags": ["course"],
                 "summary": "Restart course calculations",
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-                "description": "Sets previousPoint value to current vessel location"
-=======
-=======
->>>>>>> init courseApi
-=======
->>>>>>> init courseApi
-=======
->>>>>>> init courseApi
-                "description": "Sets previousPoint value to current vessel location",
-                "requestBody": {
-                    "description": "Restart payload",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["value"],
-                                "properties": {
-                                    "value": {
-                                        "type": "object",
-                                        "default": null
-                                    },
-                                    "source": {
-                                        "type": "string",
-                                        "example": "freeboard-sk"
-                                    }  
-=======
                 "description": "Sets previousPoint value to current vessel location",
                 "responses": {
                     "default": {
@@ -172,37 +136,11 @@
                                             "type": "string"
                                         }
                                     }
->>>>>>> chore: update OpenApi responses
                                 }
                             }
                         }
                     }
                 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> init courseApi
-=======
-                "description": "Sets previousPoint value to current vessel location"
->>>>>>> chore: lint
-=======
->>>>>>> init courseApi
-=======
-                "description": "Sets previousPoint value to current vessel location"
->>>>>>> chore: lint
-=======
->>>>>>> init courseApi
-=======
-                "description": "Sets previousPoint value to current vessel location"
->>>>>>> chore: lint
-=======
->>>>>>> init courseApi
-=======
-                "description": "Sets previousPoint value to current vessel location"
->>>>>>> chore: lint
-=======
->>>>>>> chore: update OpenApi responses
             }
         },
 
@@ -289,42 +227,6 @@
             "delete": {
                 "tags": ["course/destination"],
                 "summary": "Clear destination",
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
-=======
-=======
->>>>>>> init courseApi
-=======
->>>>>>> init courseApi
-=======
->>>>>>> init courseApi
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null",
-                "requestBody": {
-                    "description": "Delete payload",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["value"],
-                                "properties": {
-                                    "value": {
-                                        "type": "object",
-                                        "default": null
-                                    },
-                                    "source": {
-                                        "type": "string",
-                                        "example": "freeboard-sk"
-                                    }  
-=======
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null",
                 "responses": {
                     "default": {
@@ -348,37 +250,11 @@
                                             "type": "string"
                                         }
                                     }
->>>>>>> chore: update OpenApi responses
                                 }
                             }
                         }
                     }
                 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> init courseApi
-=======
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
->>>>>>> chore: lint
-=======
->>>>>>> init courseApi
-=======
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
->>>>>>> chore: lint
-=======
->>>>>>> init courseApi
-=======
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
->>>>>>> chore: lint
-=======
->>>>>>> init courseApi
-=======
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
->>>>>>> chore: lint
-=======
->>>>>>> chore: update OpenApi responses
             }
         },
 
@@ -509,42 +385,6 @@
             "delete": {
                 "tags": ["course/activeRoute"],
                 "summary": "Clear active route",
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
-=======
-=======
->>>>>>> init courseApi
-=======
->>>>>>> init courseApi
-=======
->>>>>>> init courseApi
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null",
-                "requestBody": {
-                    "description": "Delete payload",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["value"],
-                                "properties": {
-                                    "value": {
-                                        "type": "object",
-                                        "default": null
-                                    },
-                                    "source": {
-                                        "type": "string",
-                                        "example": "freeboard-sk"
-                                    }  
-=======
                 "description": "Sets activeRoute, nextPoint & previousPoint values to null",
                 "responses": {
                     "default": {
@@ -568,37 +408,11 @@
                                             "type": "string"
                                         }
                                     }
->>>>>>> chore: update OpenApi responses
                                 }
                             }
                         }
                     }
                 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> init courseApi
-=======
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
->>>>>>> chore: lint
-=======
->>>>>>> init courseApi
-=======
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
->>>>>>> chore: lint
-=======
->>>>>>> init courseApi
-=======
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
->>>>>>> chore: lint
-=======
->>>>>>> init courseApi
-=======
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null"
->>>>>>> chore: lint
-=======
->>>>>>> chore: update OpenApi responses
             }
         },
 

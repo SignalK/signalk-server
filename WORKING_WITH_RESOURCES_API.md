@@ -317,4 +317,3 @@ HTTP PUT 'http://hostname:3000/signalk/v1/api/resources/set/note/urn:mrn:signalk
   href: '/resources/regions/urn:mrn:signalk:uuid:35052456-65fa-48ce-a85d-41b78a9d2a61'
 }
 ```
-
