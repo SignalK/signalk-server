@@ -30,6 +30,7 @@ import { Mode } from 'stat-mode'
 import { WithConfig } from './app'
 import { createDebug } from './debug'
 import dummysecurity from './dummysecurity'
+import { Request } from 'express'
 const debug = createDebug('signalk-server:security')
 
 export interface WithSecurityStrategy {
@@ -44,6 +45,12 @@ export interface SecurityStrategy {
   configFromArguments: boolean
   securityConfig: any
   requestAccess: (config: any, request: any, ip: any, updateCb: any) => any
+  shouldAllowPut: (
+    req: Request,
+    context: string,
+    source: any,
+    path: string
+  ) => boolean
 }
 
 export class InvalidTokenError extends Error {
