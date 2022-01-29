@@ -14,6 +14,7 @@
  * limitations under the License.
 */
 
+import { Request } from 'express'
 import {
   chmodSync,
   existsSync,
@@ -30,7 +31,6 @@ import { Mode } from 'stat-mode'
 import { WithConfig } from './app'
 import { createDebug } from './debug'
 import dummysecurity from './dummysecurity'
-import { Request } from 'express'
 const debug = createDebug('signalk-server:security')
 
 export interface WithSecurityStrategy {
