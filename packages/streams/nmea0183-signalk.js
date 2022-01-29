@@ -39,8 +39,9 @@ function Nmea0183ToSignalK(options) {
   Transform.call(this, {
     objectMode: true,
   })
-  this.debug = (options.createDebug || require('debug'))('signalk:streams:nmea0183-signalk')
-  
+  this.debug = (options.createDebug || require('debug'))(
+    'signalk:streams:nmea0183-signalk'
+  )
 
   this.parser = new Parser(options)
   this.n2kParser = new FromPgn(options)
