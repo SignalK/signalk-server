@@ -46,7 +46,7 @@ import SubscriptionManager from './subscriptionmanager'
 import { Delta } from './types'
 
 import { CourseApi } from './api/course'
-import { Resources } from './api/resources'
+import { ResourcesApi } from './api/resources'
 
 const debug = createDebug('signalk-server')
 
@@ -80,7 +80,7 @@ class Server {
     require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
     require('./put').start(app)
 
-    app.resourcesApi = new Resources(app)
+    app.resourcesApi = new ResourcesApi(app)
     const courseApi = new CourseApi(app)
 
     app.signalk = new FullSignalK(app.selfId, app.selfType)
