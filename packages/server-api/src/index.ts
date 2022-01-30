@@ -4,7 +4,7 @@ import { PropertyValuesCallback } from './propertyvalues'
 export { PropertyValue, PropertyValues, PropertyValuesCallback } from './propertyvalues'
 
 export type SignalKResourceType= 'routes' | 'waypoints' |'notes' |'regions' |'charts'
-export type ResourceTypes= SignalKResourceType[] | string[]
+export type ResourceType = SignalKResourceType | string
 
 export interface ResourcesApi {
   register: (pluginId: string, provider: ResourceProvider) => void;
@@ -13,7 +13,7 @@ export interface ResourcesApi {
 }
 
 export interface ResourceProvider {
-  types: ResourceTypes
+  types: ResourceType[]
   methods: ResourceProviderMethods
 }
 
