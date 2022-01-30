@@ -728,14 +728,7 @@ resource.then ( (data)=> {
 }
 ```
 
-
-### `app.resourcesApi.register(pluginId, resourceProvider)`
-
-See [`RESOURCE_PROVIDER_PLUGINS`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
-
-
-### `app.resourcesApi.unRegister(pluginId)`
-
+### `app.registerResourceProvider(resourceProvider)`
 
 See [`RESOURCE_PROVIDER_PLUGINS`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
 

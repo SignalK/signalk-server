@@ -282,7 +282,7 @@ module.exports = function (app) {
 
     start: (options)=> { 
       ... 
-      app.register(this.resourceProvider);
+      app.registerResourceProvider(this.resourceProvider);
     }
 
   }
