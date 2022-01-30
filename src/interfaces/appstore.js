@@ -15,7 +15,7 @@
 */
 
 import { createDebug } from '../debug'
-const debug = createDebug('signalk:interfaces:appstore')
+const debug = createDebug('signalk-server:interfaces:appstore')
 const _ = require('lodash')
 const compareVersions = require('compare-versions')
 const { installModule, removeModule } = require('../modules')

@@ -15,7 +15,7 @@
 */
 
 import { createDebug } from '../debug'
-const debug = createDebug('signalk:interfaces:webapps')
+const debug = createDebug('signalk-server:interfaces:webapps')
 const fs = require('fs')
 const path = require('path')
 const express = require('express')
