@@ -19,14 +19,14 @@ export interface ResourceProvider {
 
 export interface ResourceProviderMethods {
   pluginId?: string
-  listResources: (type: string, query: { [key: string]: any }) => Promise<any>
-  getResource: (type: string, id: string) => Promise<any>
+  listResources: (type: ResourceType, query: { [key: string]: any }) => Promise<any>
+  getResource: (type: ResourceType, id: string) => Promise<any>
   setResource: (
-    type: string,
+    type: ResourceType,
     id: string,
     value: { [key: string]: any }
   ) => Promise<any>
-  deleteResource: (type: string, id: string) => Promise<any>
+  deleteResource: (type: ResourceType, id: string) => Promise<any>
 }
 
 type Unsubscribe = () => {}
