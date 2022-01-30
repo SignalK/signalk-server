@@ -28,7 +28,7 @@ import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
 import { DeltaInputHandler } from '../deltachain'
 import { listAllSerialPorts, Ports } from '../serialports'
-const debug = createDebug('signalk:interfaces:plugins')
+const debug = createDebug('signalk-server:interfaces:plugins')
 
 // tslint:disable-next-line:no-var-requires
 const modulesWithKeyword = require('../modules').modulesWithKeyword
