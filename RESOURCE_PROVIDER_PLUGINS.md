@@ -194,15 +194,12 @@ deleteResource(
 ### Registering a Resource Provider:
 ---
 
-To register the resource provider plugin with the SignalK server, the server's `resourcesApi.register()` function should be called during plugin startup.
-
-The server `resourcesApi.register()` function has the following signature:
+To register the resource provider plugin with the SignalK servert the plugin must call the server's `registerResourceProvider` function during plugin startup. The function has the following signature:
 
 ```typescript
-app.resourcesApi.register(pluginId: string, resourceProvider: ResourceProvider)
+app.registerResourceProvider(resourceProvider: ResourceProvider)
 ```
 where:
-- `pluginId`: is the plugin's id
 - `resourceProvider`: is a reference to the plugins ResourceProvider interface.
 
 _Note: If a plugin has already registered as a provider for a resource type, the method throws with an `Error`._
@@ -227,46 +224,10 @@ module.exports = function (app) {
 
   plugin.start = function(options) {
     ...
-    app.resourcesApi.register(plugin.id, plugin.resourceProvider);
+    app.registerResourceProvider(plugin.resourceProvider);
   }
 }
 ```
-
-### Un-registering the Resource Provider:
----
-
-When a resource provider plugin is disabled, it should un-register itself to ensure resource requests are no longer directed to it by calling the SignalK server. This should be done by calling the server's  `resourcesApi.unRegister()` function during shutdown.
-
-The server `resourcesApi.unRegister()` function has the following signature:
-
-```typescript
-app.resourcesApi.unRegister(pluginId: string)
-```
-where:
-- `pluginId`: is the plugin's id
-
-
-_Example:_
-```javascript
-module.exports = function (app) {
-
-  let plugin= {
-    id: 'mypluginid',
-    name: 'My Resource Providerplugin',
-    resourceProvider: {
-      types: [ ... ],
-      methods: { ... }
-    }
-  }
-
-  plugin.stop = function(options) {
-    app.resourcesApi.unRegister(plugin.id);
-    ...
-  }
-}
-```
-
----
 
 ### __Example:__ 
 
@@ -321,13 +282,9 @@ module.exports = function (app) {
 
     start: (options)=> { 
       ... 
-      app.resourceApi.register(this.id, this.resourceProvider);
-    },
-
-    stop: ()=> { 
-      app.resourceApi.unRegister(this.id);
-      ... 
+      app.register(this.resourceProvider);
     }
+
   }
 }
 ```
