@@ -1,5 +1,5 @@
-const chai = require('chai')
-chai.Should()
+import chai from 'chai'
+chai.should()
 
 
 const { getToPreferredDelta } = require('../lib/deltaPriority')
@@ -26,10 +26,10 @@ describe('toPreferredDelta logic', () => {
 
 
     let totalDelay = 0
-    const result = []
-    const expectedResult = []
+    const result: any[] = []
+    const expectedResult: string[] = []
     let n = 0
-    function push(sourceRef, delay, shouldBeEmitted) {
+    function push(sourceRef: string, delay: number, shouldBeEmitted: boolean) {
       totalDelay += delay
       if (shouldBeEmitted) {
         expectedResult.push(sourceRef)
@@ -74,7 +74,7 @@ describe('toPreferredDelta logic', () => {
             .filter(r => r.updates[0].values.length > 0)
             .map(r => r.updates[0].$source)
             .should.eql(expectedResult)
-          resolve()
+          resolve(undefined)
         } catch (err) {
           reject(err)
         }
