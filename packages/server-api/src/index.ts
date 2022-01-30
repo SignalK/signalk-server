@@ -1,5 +1,5 @@
 import { IRouter } from 'express'
-import { PropertyValues, PropertyValuesCallback } from './propertyvalues'
+import { PropertyValuesCallback } from './propertyvalues'
 
 export { PropertyValue, PropertyValues, PropertyValuesCallback } from './propertyvalues'
 
