@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --declaration",
-    "watch": "tsc --watch",
+    "watch": "tsc --declaration --watch",
     "prepublishOnly": "npm run build",
     "typedoc": "typedoc --out docs src",
     "test": "mocha --require ts-node/register src/**/*.test.ts"
