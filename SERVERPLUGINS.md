@@ -702,6 +702,7 @@ app.registerDeltaInputHandler((delta, next) => {
 })
 ```
 
+---
 ### `app.resourcesApi.getResource(resource_type, resource_id)`
 
 Retrieve resource data for the supplied SignalK resource type and resource id.
@@ -730,55 +731,15 @@ resource.then ( (data)=> {
 
 ### `app.resourcesApi.register(pluginId, resourceProvider)`
 
-If a plugin wants to act as a resource provider, it will need to register its provider methods during startup using this function.
+See [`RESOURCE_PROVIDER_PLUGINS`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
 
-See [`RESOURCE_PROVIDER_PLUGINS.md`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
-
-
-```javascript
-module.exports = function (app) {
-  let plugin= {
-    id: 'mypluginid',
-    name: 'My Resource Providerplugin',
-    resourceProvider: {
-      types: ['routes','waypoints'],
-      methods: { ... }
-    }
-    start: function(options) {
-      // do plugin start up
-      app.resourcesApi.register(this.id, this.resourceProvider);
-    }
-    ...
-  }
-}
-```
 
 ### `app.resourcesApi.unRegister(pluginId)`
 
-When a resource provider plugin is disabled it will need to un-register its provider methods for all of the resource types it manages. This should be done in the plugin's `stop()` function.
 
-See [`RESOURCE_PROVIDER_PLUGINS.md`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
+See [`RESOURCE_PROVIDER_PLUGINS`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
 
-
-```javascript
-module.exports = function (app) {
-  let plugin= {
-    id: 'mypluginid',
-    name: 'My Resource Providerplugin',
-    resourceProvider: {
-      types: ['routes','waypoints'],
-      methods: { ... }
-    }
-    ...
-    stop: function(options) {
-      app.resourcesApi.unRegister(this.id);
-      // do plugin shutdown
-    }
-  }
-}
-```
-
-
+---
 ### `app.setPluginStatus(msg)`
 
 Set the current status of the plugin. The `msg` should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.

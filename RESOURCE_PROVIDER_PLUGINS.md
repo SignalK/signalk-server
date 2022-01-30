@@ -38,6 +38,7 @@ The Signal K server handles all requests to `/signalk/v1/api/resources` and all 
 The following operations are performed by the server when a request is received:
 - Checks for a registered provider for the resource type
 - Checks that ResourceProvider methods are defined
+- Performs access control check
 - For __Common__ resource types, checks the validity of the: 
   - Resource id
   - Submitted resource data.
@@ -88,9 +89,7 @@ _Note: It is the responsibility of the resource provider plugin to filter the re
 
 `query:` Object contining `key | value` pairs repesenting the parameters by which to filter the returned entries. _e.g. {distance,'50000}_
 
-`returns:` 
-- Resolved Promise containing a list of resource entries on completion. 
-- Rejected Promise containing an Error if incomplete or not implemented.
+returns: `Promise<{[id: string]: any}>`
 
 
 _Example resource request:_ 
@@ -116,9 +115,7 @@ __`getResource(type, id)`__: This method is called when a request is made for a 
 
 `id:` String containing the target resource entry id. _e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'_
 
-`returns:` 
-- Resolved Promise containing the resource entry on completion. 
-- Rejected Promise containing an Error if incomplete or not implemented.
+returns: `Promise<{[key: string]: any}>`
 
 _Example resource request:_ 
 ```
@@ -142,9 +139,7 @@ __`setResource(type, id, value)`__: This method is called when a request is made
 
 `value:` Resource data to be stored.
 
-`returns:` 
-- Resolved Promise containing a list of resource entries on completion.
-- Rejected Promise containing an Error if incomplete or not implemented.
+returns: `Promise<void>`
 
 _Example PUT resource request:_ 
 ```
@@ -181,9 +176,7 @@ __`deleteResource(type, id)`__: This method is called when a request is made to 
 
 `id:` String containing the target resource entry id. _e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'_
 
-`returns:`
-- Resolved Promise on completion. 
-- Rejected Promise containing an Error if incomplete or not implemented.
+returns: `Promise<void>`
 
 _Example resource request:_ 
 ```
@@ -212,7 +205,7 @@ where:
 - `pluginId`: is the plugin's id
 - `resourceProvider`: is a reference to the plugins ResourceProvider interface.
 
-_Note: A resource type can only have one registered plugin, so if more than one plugin attempts to register as a provider for the same resource type, the first plugin to call the `register()` function will be registered by the server for the resource types defined in the ResourceProvider interface!_
+_Note: If a plugin has already registered as a provider for a resource type, the method throws with an `Error`._
 
 _Example:_
 ```javascript
