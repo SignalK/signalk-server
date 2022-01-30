@@ -14,13 +14,8 @@
  * limitations under the License.
 */
 
-import { createDebug } from '../debug'
-const debug = createDebug('signalk:interfaces:logfiles')
 const moment = require('moment')
-const fs = require('fs')
 const path = require('path')
-const zip = require('express-easy-zip')
-const express = require('express')
 const { getFullLogDir, listLogFiles } = require('@signalk/streams/logging')
 import { SERVERROUTESPREFIX } from '../constants'
 
