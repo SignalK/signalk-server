@@ -206,7 +206,7 @@ describe('Application Data', () => {
 
   it('post user data fails readonly user', async function () {
     await post(false, readToken, 401)
-    for ( test of tests ) {
+    for (let test of tests ) {
       const data = readUserData(test, 'testuser')
       assert(data === null)
     }
@@ -214,7 +214,7 @@ describe('Application Data', () => {
 
   it('post user data works', async function () {
     await post(false, writeToken, 200)
-    for ( test of tests ) {
+    for (let test of tests ) {
       const data = readUserData(test, 'writeuser')
       assert(data !== null)
       data.should.jsonEqual(test.settings)
@@ -224,7 +224,7 @@ describe('Application Data', () => {
   it('json patch works', async function () {
     let server = await start()
     try {
-      for ( test of tests ) {
+      for (let test of tests ) {
         var result = await fetch(
           `${url}/signalk/v1/applicationData/user/${test.appid}/${test.version}`,
           {
