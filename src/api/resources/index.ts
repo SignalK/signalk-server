@@ -1,5 +1,5 @@
 import { createDebug } from '../../debug'
-const debug = createDebug('signalk:resourcesApi')
+const debug = createDebug('signalk-server:resourcesApi')
 
 import {
   ResourceProvider,
@@ -41,7 +41,7 @@ export class ResourcesApi {
   }
 
   register(pluginId: string, provider: ResourceProvider) {
-    debug(`** Registering provider(s)....${provider?.types}`)
+    debug(`** Registering provider(s)....${pluginId} ${provider?.types}`)
     if (!provider) {
       return
     }

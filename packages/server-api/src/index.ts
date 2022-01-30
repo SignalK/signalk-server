@@ -29,6 +29,10 @@ export interface ResourceProviderMethods {
   deleteResource: (type: ResourceType, id: string) => Promise<any>
 }
 
+export interface ResourceProviderRegistry {
+  registerResourceProvider: (provider: ResourceProvider) => void;
+}
+
 type Unsubscribe = () => {}
 export interface PropertyValuesEmitter {
   emitPropertyValue: (name: string, value: any) => void
@@ -42,7 +46,7 @@ export interface PropertyValuesEmitter {
  * INCOMPLETE, work in progress.
  */
 
- export interface PluginServerApp extends PropertyValuesEmitter {}
+ export interface PluginServerApp extends PropertyValuesEmitter, ResourceProviderRegistry {}
 
 /**
  * This is the API that a [server plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md) must implement.
