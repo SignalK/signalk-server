@@ -92,6 +92,52 @@ export class ResourcesApi {
     return this.resProvider[resType]?.getResource(resType, resId)
   }
 
+  listResources(resType: SignalKResourceType, params: { [key: string]: any }) {
+    debug(`** listResources(${resType}, ${JSON.stringify(params)})`)
+    if (!this.checkForProvider(resType)) {
+      return Promise.reject(new Error(`No provider for ${resType}`))
+    }
+    return this.resProvider[resType]?.listResources(resType, params)
+  }
+
+  setResource(
+    resType: SignalKResourceType,
+    resId: string,
+    data: { [key: string]: any }
+  ) {
+    debug(`** setResource(${resType}, ${resId}, ${JSON.stringify(data)})`)
+    if (!this.checkForProvider(resType)) {
+      return Promise.reject(new Error(`No provider for ${resType}`))
+    }
+    if (this.signalkResTypes.includes(resType as SignalKResourceType)) {
+      let isValidId: boolean
+      if (resType === 'charts') {
+        isValidId = validate.chartId(resId)
+      } else {
+        isValidId = validate.uuid(resId)
+      }
+      if (!isValidId) {
+        return Promise.reject(
+          new Error(`Invalid resource id provided (${resId})`)
+        )
+      }
+      if (!validate.resource(resType, data)) {
+        return Promise.reject(new Error(`Invalid resource data!`))
+      }
+    }
+
+    return this.resProvider[resType]?.setResource(resType, resId, data)
+  }
+
+  deleteResource(resType: SignalKResourceType, resId: string) {
+    debug(`** setResource(${resType}, ${resId})`)
+    if (!this.checkForProvider(resType)) {
+      return Promise.reject(new Error(`No provider for ${resType}`))
+    }
+
+    return this.resProvider[resType]?.deleteResource(resType, resId)
+  }
+
   private start(app: any) {
     debug(`** Initialise ${SIGNALK_API_PATH}/resources path handler **`)
     this.server = app
