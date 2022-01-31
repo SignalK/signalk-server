@@ -128,7 +128,6 @@ export interface ServerAPI extends PluginServerApp {
     ) => void
   }) => void
   getSerialPorts: () => Promise<Ports>
-  registerResourceProvider: (provider: ResourceProvider) => void
 }
 
 interface ModuleMetadata {
