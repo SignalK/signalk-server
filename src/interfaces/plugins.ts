@@ -476,9 +476,7 @@ module.exports = (theApp: any) => {
         console.error(`${plugin.id}:no configuration data`)
         safeConfiguration = {}
       }
-      onStopHandlers[plugin.id] = [
-        () => app.resourcesApi.unRegister(plugin.id)
-      ]  
+      onStopHandlers[plugin.id] = [() => app.resourcesApi.unRegister(plugin.id)]
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
@@ -553,7 +551,7 @@ module.exports = (theApp: any) => {
     appCopy.putPath = putPath
 
     const resourcesApi: ResourcesApi = app.resourcesApi
-    _.omit(appCopy, 'resourcesApi') //don't expose the actual resource api manager
+    _.omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {
       resourcesApi.register(plugin.id, provider)
     }
