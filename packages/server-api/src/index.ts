@@ -1,7 +1,15 @@
 import { IRouter } from 'express'
 import { PropertyValuesCallback } from './propertyvalues'
 
+export interface Position {
+  latitude: number
+  longitude: number
+  altitude?: number
+}
+
 export { PropertyValue, PropertyValues, PropertyValuesCallback } from './propertyvalues'
+
+export * from './resourcetypes'
 
 export type SignalKResourceType= 'routes' | 'waypoints' |'notes' |'regions' |'charts'
 export type ResourceType = SignalKResourceType | string

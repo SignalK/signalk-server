@@ -1,5 +1,5 @@
 import { createDebug } from '../../debug'
-const debug = createDebug('signalk:courseApi')
+const debug = createDebug('signalk-server:courseApi')
 
 import { FullSignalK } from '@signalk/signalk-schema'
 import { Application, Request, Response } from 'express'
@@ -7,11 +7,10 @@ import _ from 'lodash'
 import path from 'path'
 import { WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
-import { Position } from '../../types'
 
 import { Responses } from '../'
 import { Store } from '../../serverstate/store'
-import { Route } from '../resources/types'
+import { Position, Route } from '@signalk/server-api'
 
 const SIGNALK_API_PATH = `/signalk/v1/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
