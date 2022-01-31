@@ -1,4 +1,4 @@
-import { SignalKResourceType } from '@signalk/server-api'
+import { Position, SignalKResourceType } from '@signalk/server-api'
 import { getDistance, isValidCoordinate } from 'geolib'
 
 export const buildResource = (resType: SignalKResourceType, data: any): any => {
@@ -49,18 +49,15 @@ const buildRoute = (rData: any): any => {
   if (!Array.isArray(rData.points)) {
     return null
   }
-  let isValid = true
-  rData.points.forEach((p: any) => {
-    if (!isValidCoordinate(p)) {
-      isValid = false
-    }
-  })
-  if (!isValid) {
+  const cType = coordsType(rData.points)
+  if (!cType) {
     return null
   }
-  rte.feature.geometry.coordinates = rData.points.map((p: any) => {
-    return [p.longitude, p.latitude]
-  })
+  const tc = transformCoords(rData.points)
+  if (!tc) {
+    return null
+  }
+  rte.feature.geometry.coordinates = tc
 
   rte.distance = 0
   for (let i = 0; i < rData.points.length; i++) {
@@ -160,7 +157,6 @@ const buildRegion = (rData: any): any => {
       properties: {}
     }
   }
-  let coords: Array<[number, number]> = []
 
   if (typeof rData.name !== 'undefined') {
     reg.feature.properties.name = rData.name
@@ -172,35 +168,27 @@ const buildRegion = (rData: any): any => {
     Object.assign(reg.feature.properties, rData.attributes)
   }
 
-  if (typeof rData.points !== 'undefined') {
+  if (typeof rData.points === 'undefined') {
     return null
   }
   if (!Array.isArray(rData.points)) {
     return null
   }
-  let isValid = true
-  rData.points.forEach((p: any) => {
-    if (!isValidCoordinate(p)) {
-      isValid = false
-    }
-  })
-  if (!isValid) {
+
+  const cType = coordsType(rData.points)
+  if (!cType) {
     return null
   }
-  if (
-    rData.points[0].latitude !==
-      rData.points[rData.points.length - 1].latitude &&
-    rData.points[0].longitude !==
-      rData.points[rData.points.length - 1].longitude
-  ) {
-    rData.points.push(rData.points[0])
+  if (cType === 'MultiPolygon') {
+    reg.feature.geometry.type = cType
   }
-  coords = rData.points.map((p: any) => {
-    return [p.longitude, p.latitude]
-  })
-  reg.feature.geometry.coordinates.push(coords)
 
-  return reg
+  try {
+    reg.feature.geometry.coordinates = processRegionCoords(rData.points, cType)
+    return reg
+  } catch (error) {
+    return null
+  }
 }
 
 const buildChart = (rData: any): any => {
@@ -264,4 +252,83 @@ const buildChart = (rData: any): any => {
   }
 
   return chart
+}
+
+const coordsType = (coords: any[]): string | undefined => {
+  if (!Array.isArray(coords) || coords.length === 0) {
+    return undefined
+  }
+  if (isValidCoordinate(coords[0])) {
+    return 'Line'
+  }
+  const ca = coords[0]
+  if (Array.isArray(ca) && ca.length !== 0) {
+    if (isValidCoordinate(ca[0])) {
+      return 'Polygon'
+    } else if (Array.isArray(ca[0])) {
+      return 'MultiPolygon'
+    }
+  }
+  return undefined
+}
+
+const processRegionCoords = (coords: any[], type: string) => {
+  if (type === 'Line') {
+    const tc = transformCoords(coords)
+    if (tc) {
+      return [tc]
+    } else {
+      throw new Error('Invalid coordinates!')
+    }
+  }
+  if (type === 'Polygon') {
+    const polygon: any[] = []
+    coords.forEach(line => {
+      const tc = transformCoords(line)
+      if (tc) {
+        polygon.push(transformCoords(line))
+      } else {
+        throw new Error('Invalid coordinates!')
+      }
+    })
+    return polygon
+  }
+  if (type === 'MultiPolygon') {
+    const multipolygon: any[] = []
+    coords.forEach(polygon => {
+      const pa: any[] = []
+      polygon.forEach((line: Position[]) => {
+        const tc = transformCoords(line)
+        if (tc) {
+          pa.push(transformCoords(line))
+        } else {
+          throw new Error('Invalid coordinates!')
+        }
+      })
+      multipolygon.push(pa)
+    })
+    return multipolygon
+  }
+}
+
+const transformCoords = (coords: Position[]) => {
+  let isValid = true
+  coords.forEach((p: any) => {
+    if (!isValidCoordinate(p)) {
+      isValid = false
+    }
+  })
+  if (!isValid) {
+    return null
+  }
+  // ensure polygon is closed
+  if (
+    coords[0].latitude !== coords[coords.length - 1].latitude &&
+    coords[0].longitude !== coords[coords.length - 1].longitude
+  ) {
+    coords.push(coords[0])
+  }
+  return coords.map((p: Position) => {
+    return [p.longitude, p.latitude]
+  })
 }
