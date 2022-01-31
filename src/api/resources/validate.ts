@@ -1,6 +1,6 @@
+import { Chart, Note, Region, Route, Waypoint } from '@signalk/server-api'
 import geoJSON from 'geojson-validation'
 import { isValidCoordinate } from 'geolib'
-import { Chart, Note, Region, Route, Waypoint } from '@signalk/server-api'
 
 export const validate = {
   resource: (type: string, value: any): boolean => {

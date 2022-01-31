@@ -213,9 +213,9 @@ HTTP PUT 'http://hostname:3000/signalk/v1/api/resources/set/waypoint/urn:mrn:sig
 ---
 #### __Regions:__
 
-To create / update a region entry the body of the request must contain data in the following format(s): 
+To create / update a region entry the body of the request must contain data in the following format(s):
 
-`1. Bounded area (Polygon)`
+`1. Single Bounded area`
 ```javascript
 {
   name: 'region name',
@@ -233,13 +233,13 @@ To create / update a region entry the body of the request must contain data in t
 }
 ```
 where:
-- name: is text detailing the name of the region
-- description (optional): is text describing the region
-- attributes (optional): object containing key | value pairs of attributes associated with the region
-- points: is an array of points (latitude and longitude) defining an area.
+- `name`: is text detailing the name of the region
+- `description (optional)`: is text describing the region
+- `attributes (optional)`: object containing key | value pairs of attributes associated with the region
+- `points`: is an array of points (latitude and longitude) defining the area.
 
 
-`2. Bounded area containing other areas (MultiPolygon)`
+`2. Bounded area containing other areas (Polygon)`
 ```javascript
 {
   name: 'region name',
@@ -262,10 +262,42 @@ where:
 }
 ```
 where:
-- name: is text detailing the name of the region
-- description (optional): is text describing the region
-- attributes (optional): object containing key | value pairs of attributes associated with the region
-- points: is an array of an array of points (latitude and longitude) with the first point array defining the bouding area and the subsequent arrays defining areas within the bounding area.
+- `name`: is text detailing the name of the region
+- `description (optional)`: is text describing the region
+- `attributes (optional)`: object containing key | value pairs of attributes associated with the region
+- `points`: is an array containing an array of points (latitude and longitude). The first point array defines the bounding area containing the subsequent areas defined by the other point arrays.
+
+
+`3. Multiple Bounded areas (MultiPolygon)`
+```javascript
+{
+  name: 'region name',
+  description: 'description of the region',
+  attributes: {
+    ...
+  },
+  points: [
+    [
+      [
+        {latitude: -38.567,longitude: 135.9467},
+        ...
+        {latitude: -38.567,longitude: 135.9467}
+      ],
+      [
+        {latitude: -39.167,longitude: 135.567},
+        ...
+        {latitude: -39.167,longitude: 135.567}
+      ]
+    ]
+  ]
+}
+```
+where:
+- `name`: is text detailing the name of the region
+- `description (optional)`: is text describing the region
+- `attributes (optional)`: object containing key | value pairs of attributes associated with the region
+- `points`: is an array of Polygons (as outlined in 2. above).
+
 
 _Example: Create new region entry (with server generated id)_
 ```typescript
