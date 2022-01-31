@@ -43,10 +43,10 @@ export class ResourcesApi {
   register(pluginId: string, provider: ResourceProvider) {
     debug(`** Registering provider(s)....${pluginId} ${provider?.types}`)
     if (!provider) {
-      return
+      throw new Error(`Error registering provider ${pluginId}!`)
     }
     if (provider.types && !Array.isArray(provider.types)) {
-      return
+      throw new Error(`Invalid ResourceProvider.types!`)
     }
     provider.types.forEach((i: string) => {
       if (!this.resProvider[i]) {
@@ -60,10 +60,7 @@ export class ResourcesApi {
           typeof provider.methods.setResource !== 'function' ||
           typeof provider.methods.deleteResource !== 'function'
         ) {
-          console.error(
-            `Error: Could not register Resource Provider for ${i.toUpperCase()} due to missing provider methods!`
-          )
-          return
+          throw new Error(`Error missing ResourceProvider.methods!`)
         } else {
           provider.methods.pluginId = pluginId
           this.resProvider[i] = provider.methods
