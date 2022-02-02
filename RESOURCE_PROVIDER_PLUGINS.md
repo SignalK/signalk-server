@@ -28,7 +28,7 @@ These plugins are called __Resource Providers__.
 
 This de-coupling of resource request handling and storage / retrieval provides great flexibility to ensure that an appropriate resource storage solution can be configured for your SignalK implementation.
 
-SignalK server handles requests for both __Common__ and __Custom__ resource types in a similar manner, the only difference being that it does not perform any validation on __Custom__ resource data, so a plugin can act a s a provider for both types.
+SignalK server handles requests for both __Common__ and __Custom__ resource types in a similar manner, the only difference being that it does not perform any validation on __Custom__ resource data, so a plugin can act as a provider for both types.
 
 ---
 ## Server Operation:
@@ -48,72 +48,67 @@ Upon successful completion of these operations the request will then be passed t
 ---
 ## Resource Provider plugin:
 
-For a plugin to be considered a Resource Provider it needs to implement the `ResourceProvider` interface.
-
-By implementing this interface the plugin is able to register with the SignalK server the:
-- Resource types provided for by the plugin
-- Methods to used to action requests. 
-
-It is these methods that perform the retrival, saving and deletion of resources from storage.
+For a plugin to be considered a Resource Provider it needs to register with the SignalK server:
+- Each resource type provided for by the plugin
+- The methods used to action requests. It is these methods that perform the writing, retrieval and deletion of resources from storage.
 
 
 ### Resource Provider Interface
 
 ---
-The `ResourceProvider` interface defines the contract between the the Resource Provider plugin and the SignalK server and has the following definition _(which it and other related types can be imported from `@signalk/server-api`)_:
+The `ResourceProvider` interface is the means by which the plugin informs the SignalK server the resource type(s) it services and the endpoints to which requests should be passed. 
+
+`ResourceProvider` is defined as follows in _`@signalk/server-api`_:
 
 ```typescript
 interface ResourceProvider: {
-  types: string[],
+  type: ResourceType,
   methods: {
-    listResources: (type:string, query: {[key:string]:any})=> Promise<any>
-    getResource: (type:string, id:string)=> Promise<any>
-    setResource: (type:string, id:string, value:{[key:string]:any})=> Promise<any>
-    deleteResource: (type:string, id:string)=> Promise<any>
+    listResources: (query: {[key:string]:any})=> Promise<{[key:string]:any}>
+    getResource: (id:string)=> Promise<{[key:string]:any}>
+    setResource: (id:string, value:{[key:string]:any})=> Promise<void>
+    deleteResource: (id:string)=> Promise<void>
   }
 }
 ```
 where:
 
-- `types`: An array containing a list of resource types provided for by the plugin. These can be a mixture of both __Common__ and __Custom__ resource types.
-- `methods`: An object containing the methods resource requests are passed to by the SignalK server. The plugin __MUST__ implement each method, even if that operation is not supported by the plugin!
+- `type`: The resource type provided for by the plugin _(e.g. `routes`)_. 
+
+These can be either __Common__ or __Custom__ resource types.
+
+- `methods`: An object containing the methods to which resource requests are passed by the SignalK server. The plugin __MUST__ implement each method, even if that operation is NOT supported by the plugin!
 
 #### __Method Details:__
 
 ---
-__`listResources(type, query)`__: This method is called when a request is made for resource entries of a specific resource type that match a specifiec criteria.
+__`listResources(query)`__: This method is called when a request is made for resource entries that match a specific criteria.
 
 _Note: It is the responsibility of the resource provider plugin to filter the resources returned as per the supplied query parameters._
 
-`type:` String containing the type of resource to retrieve.
-
-`query:` Object contining `key | value` pairs repesenting the parameters by which to filter the returned entries. _e.g. {distance,'50000}_
+`query:` Object contining `key | value` pairs repesenting the parameters by which to filter the returned entries. _e.g. {region: 'fishing_zone'}_
 
 returns: `Promise<{[id: string]: any}>`
 
 
 _Example resource request:_ 
 ```
-GET /signalk/v1/api/resources/waypoints?bbox=5.4,25.7,6.9,31.2&distance=30000
+GET /signalk/v1/api/resources/waypoints?bbox=5.4,25.7,6.9,31.2
 ```
 _ResourceProvider method invocation:_
 
 ```javascript
 listResources(
-  'waypoints', 
   {
-    bbox: '5.4,25.7,6.9,31.2',
-    distance: 30000
+    bbox: '5.4,25.7,6.9,31.2'
   }
 );
 ```
 
 ---
-__`getResource(type, id)`__: This method is called when a request is made for a specific resource entry of the supplied resource type and id.
+__`getResource(id)`__: This method is called when a request is made for a specific resource entry with the supplied id.
 
-`type:` String containing the type of resource to retrieve.
-
-`id:` String containing the target resource entry id. _e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'_
+`id:` String containing the target resource entry id. _(e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99')_
 
 returns: `Promise<{[key: string]: any}>`
 
@@ -125,17 +120,14 @@ _ResourceProvider method invocation:_
 
 ```javascript
 getResource(
-  'routes', 
   'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'
 );
 ```
 
 ---
-__`setResource(type, id, value)`__: This method is called when a request is made to save / update a resource entry of the specified resource type, with the supplied id and data.
+__`setResource(id, value)`__: This method is called when a request is made to save / update a resource entry with the supplied id. The supplied data is a complete resource record.
 
-`type:` String containing the type of resource to store.
-
-`id:` String containing the target resource entry id. _e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'_
+`id:` String containing the id of the resource entry created / updated. _e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'_
 
 `value:` Resource data to be stored.
 
@@ -149,9 +141,19 @@ _ResourceProvider method invocation:_
 
 ```javascript
 setResource(
-  'routes', 
   'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99',
-  {<resource_data>}
+  {
+    name: 'test route', 
+    distance': 8000, 
+    feature: {
+      type: 'Feature', 
+      geometry: {
+        type: 'LineString',
+        coordinates: [[138.5, -38.6], [138.7, -38.2], [138.9, -38.0]]
+      },
+      properties:{}
+    }
+  }
 );
 ```
 
@@ -163,16 +165,24 @@ _ResourceProvider method invocation:_
 
 ```javascript
 setResource(
-  'routes', 
   '<server_generated_id>',
-  {<resource_data>}
+  {
+    name: 'test route', 
+    distance': 8000, 
+    feature: {
+      type: 'Feature', 
+      geometry: {
+        type: 'LineString',
+        coordinates: [[138.5, -38.6], [138.7, -38.2], [138.9, -38.0]]
+      },
+      properties:{}
+    }
+  }
 );
 ```
 
 ---
-__`deleteResource(type, id)`__: This method is called when a request is made to remove the specific resource entry of the supplied resource type and id.
-
-`type:` String containing the type of resource to delete.
+__`deleteResource(id)`__: This method is called when a request is made to remove the specific resource entry with the supplied resource id.
 
 `id:` String containing the target resource entry id. _e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'_
 
@@ -186,7 +196,6 @@ _ResourceProvider method invocation:_
 
 ```javascript
 deleteResource(
-  'routes', 
   'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'
 );
 ```
@@ -194,95 +203,138 @@ deleteResource(
 ### Registering a Resource Provider:
 ---
 
-To register the resource provider plugin with the SignalK servert the plugin must call the server's `registerResourceProvider` function during plugin startup. The function has the following signature:
+To register a plugin as a provider for one or more resource types with the SignalK server, it must call the server's `registerResourceProvider` function for each resource type being serviced during plugin startup. 
+
+The function has the following signature:
 
 ```typescript
 app.registerResourceProvider(resourceProvider: ResourceProvider)
 ```
 where:
-- `resourceProvider`: is a reference to the plugins ResourceProvider interface.
+- `resourceProvider`: is a reference to a `ResourceProvider` object containing the __resource type__ and __methods__ to receive the requests.
 
 _Note: If a plugin has already registered as a provider for a resource type, the method throws with an `Error`._
 
 _Example:_
 ```javascript
+import { ResourceProvider } from '@signalk/server-api'
+
 module.exports = function (app) {
 
-  let plugin= {
+  const plugin = {
     id: 'mypluginid',
-    name: 'My Resource Providerplugin',
-    resourceProvider: {
-      types: ['routes','waypoints'],
+    name: 'My Resource Providerplugin'
+  }
+
+  const routesProvider: ResourceProvider = {
+      type: 'routes',
       methods: {
-        listResources: (type, params)=> { ... },
-        getResource: (type:string, id:string)=> { ... } ,
-        setResource: (type:string, id:string, value:any)=> { ... },
-        deleteResource: (type:string, id:string)=> { ... }
+        listResources: (params) => { 
+          fetchRoutes(params)
+          ... 
+        },
+        getResource: (id) => { 
+          getRoute(id)
+          ... 
+        },
+        setResource: (id, value )=> { 
+          saveRoute(id, value)
+          ... 
+        },
+        deleteResource: (id) => { 
+          deleteRoute(id, value)
+          ...
+        }
       }
     }
-  }
+
+  const waypointsProvider: ResourceProvider = {
+      type: 'waypoints',
+      methods: {
+        listResources: (params) => { 
+          fetchWaypoints(params)
+          ... 
+        },
+        getResource: (id) => { 
+          getWaypoint(id)
+          ... 
+        },
+        setResource: (id, value )=> { 
+          saveWaypoint(id, value)
+          ... 
+        },
+        deleteResource: (id) => { 
+          deleteWaypoint(id, value)
+          ...
+        }
+      }
+    }
 
   plugin.start = function(options) {
     ...
-    app.registerResourceProvider(plugin.resourceProvider);
+    try {
+      app.registerResourceProvider(routesProvider)
+      app.registerResourceProvider(waypointsProvider)
+    }
+    catch (error) {
+      // handle error
+    }
   }
+
+  return plugin
 }
 ```
 
-### __Example:__ 
+### Methods 
 
-Resource Provider plugin providing for the retrieval of routes & waypoints.
+Resource Provider plugin must implement methods to service the requests passed from the server.
+
+All methods must be implemented even if the plugin does not provide for a specific request.
+
+Each method should return a __Promise__ on success and `throw` on error or if a request is not serviced.
+
+
 
 ```javascript
 // SignalK server plugin 
 module.exports = function (app) {
 
-  let plugin= {
+  const plugin = {
     id: 'mypluginid',
     name: 'My Resource Providerplugin',
-    // ResourceProvider interface
-    resourceProvider: {
-      types: ['routes','waypoints'],
-      methods: {
-        listResources: (type, params)=> { 
-          return new Promise( (resolve, reject) => { 
-            // fetch resource entries from storage
-            ....
-            if(ok) { // success
-              resolve({
-                'id1': { ... },
-                'id2': { ... },
-              });
-            } else { // error
-              reject(new Error('Error encountered!')
-            }
-          }
-        },
-        getResource: (type, id)=> {
-          // fetch resource entries from storage
-          ....
-          if(ok) { // success
-            return Promise.resolve({
-              ...
-            }); 
-          } else { // error
-            reject(new Error('Error encountered!')
-          }
-        },
-        setResource: (type, id, value)=> { 
-          // not implemented
-          return Promise.reject(new Error('NOT IMPLEMENTED!')); 
-        },
-        deleteResource: (type, id)=> {
-          // not implemented
-          return Promise.reject(new Error('NOT IMPLEMENTED!'));  
-        }
-      }
-    },
-
-    start: (options)=> { 
+    start: options => { 
       ... 
-      app.registerResourceProvider(this.resourceProvider);
+      app.registerResourceProvider({
+        type: 'waypoints',
+        methods: {
+          listResources: (params) => { 
+            return new Promise( (resolve, reject) => {
+              ...
+              if (ok) {
+                resolve(resource_list)
+              } else {
+                reject( new Error('Error fetching resources!'))
+              }
+            })
+          },
+          getResource: (id) => { 
+            return new Promise( (resolve, reject) => {
+              ...
+              if (ok) {
+                resolve(resource_list)
+              } else {
+                reject( new Error('Error fetching resource with supplied id!'))
+              }
+            })
+          },
+          setResource: (id, value )=> { 
+            throw( new Error('Not implemented!')) 
+          },
+          deleteResource: (id) => { 
+            throw( new Error('Not implemented!')) 
+          }
+        }
+      })
     }
 
   }
