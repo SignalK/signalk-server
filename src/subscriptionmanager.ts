@@ -210,9 +210,6 @@ function handleSubscribeRow(
 }
 
 function pathMatcher(path: string) {
-  if (path === '') {
-    return () => true
-  }
   const pattern = path.replace('.', '\\.').replace('*', '.*')
   const matcher = new RegExp('^' + pattern + '$')
   return (aPath: string) => matcher.test(aPath)
