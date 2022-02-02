@@ -41,33 +41,35 @@ export class ResourcesApi {
   }
 
   register(pluginId: string, provider: ResourceProvider) {
-    debug(`** Registering provider(s)....${pluginId} ${provider?.types}`)
+    debug(`** Registering provider(s)....${pluginId} ${provider?.type}`)
     if (!provider) {
       throw new Error(`Error registering provider ${pluginId}!`)
     }
-    if (provider.types && !Array.isArray(provider.types)) {
-      throw new Error(`Invalid ResourceProvider.types!`)
+    if (!provider.type) {
+      throw new Error(`Invalid ResourceProvider.type value!`)
     }
-    provider.types.forEach((i: string) => {
-      if (!this.resProvider[i]) {
-        if (
-          !provider.methods.listResources ||
-          !provider.methods.getResource ||
-          !provider.methods.setResource ||
-          !provider.methods.deleteResource ||
-          typeof provider.methods.listResources !== 'function' ||
-          typeof provider.methods.getResource !== 'function' ||
-          typeof provider.methods.setResource !== 'function' ||
-          typeof provider.methods.deleteResource !== 'function'
-        ) {
-          throw new Error(`Error missing ResourceProvider.methods!`)
-        } else {
-          provider.methods.pluginId = pluginId
-          this.resProvider[i] = provider.methods
-        }
+    if (!this.resProvider[provider.type]) {
+      if (
+        !provider.methods.listResources ||
+        !provider.methods.getResource ||
+        !provider.methods.setResource ||
+        !provider.methods.deleteResource ||
+        typeof provider.methods.listResources !== 'function' ||
+        typeof provider.methods.getResource !== 'function' ||
+        typeof provider.methods.setResource !== 'function' ||
+        typeof provider.methods.deleteResource !== 'function'
+      ) {
+        throw new Error(`Error missing ResourceProvider.methods!`)
+      } else {
+        provider.methods.pluginId = pluginId
+        this.resProvider[provider.type] = provider.methods
       }
-    })
-    debug(this.resProvider)
+      debug(this.resProvider[provider.type])
+    } else {
+      const msg = `Error: ${provider?.type} alreaady registered!`
+      debug(msg)
+      throw new Error(msg)
+    }
   }
 
   unRegister(pluginId: string) {
@@ -89,7 +91,7 @@ export class ResourcesApi {
     if (!this.checkForProvider(resType)) {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
-    return this.resProvider[resType]?.getResource(resType, resId)
+    return this.resProvider[resType]?.getResource(resId)
   }
 
   listResources(resType: SignalKResourceType, params: { [key: string]: any }) {
@@ -97,7 +99,7 @@ export class ResourcesApi {
     if (!this.checkForProvider(resType)) {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
-    return this.resProvider[resType]?.listResources(resType, params)
+    return this.resProvider[resType]?.listResources(params)
   }
 
   setResource(
@@ -126,7 +128,7 @@ export class ResourcesApi {
       }
     }
 
-    return this.resProvider[resType]?.setResource(resType, resId, data)
+    return this.resProvider[resType]?.setResource(resId, data)
   }
 
   deleteResource(resType: SignalKResourceType, resId: string) {
@@ -135,7 +137,7 @@ export class ResourcesApi {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
 
-    return this.resProvider[resType]?.deleteResource(resType, resId)
+    return this.resProvider[resType]?.deleteResource(resId)
   }
 
   private start(app: any) {
@@ -177,7 +179,7 @@ export class ResourcesApi {
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
-          ]?.getResource(req.params.resourceType, req.params.resourceId)
+          ]?.getResource(req.params.resourceId)
           res.json(retVal)
         } catch (err) {
           res.status(404).json({
@@ -204,7 +206,7 @@ export class ResourcesApi {
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
-          ]?.listResources(req.params.resourceType, req.query)
+          ]?.listResources(req.query)
           res.json(retVal)
         } catch (err) {
           res.status(404).json({
@@ -255,7 +257,7 @@ export class ResourcesApi {
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
-          ]?.setResource(req.params.resourceType, id, req.body)
+          ]?.setResource(id, req.body)
 
           this.server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
@@ -329,7 +331,6 @@ export class ResourcesApi {
           const retVal = await this.resProvider[
             req.params.resourceType
           ]?.setResource(
-            req.params.resourceType,
             req.params.resourceId,
             req.body
           )
@@ -379,7 +380,7 @@ export class ResourcesApi {
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
-          ]?.deleteResource(req.params.resourceType, req.params.resourceId)
+          ]?.deleteResource(req.params.resourceId)
 
           this.server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
@@ -452,7 +453,6 @@ export class ResourcesApi {
 
         try {
           await this.resProvider[apiData.type]?.setResource(
-            apiData.type,
             apiData.id,
             apiData.value
           )
@@ -522,7 +522,6 @@ export class ResourcesApi {
 
         try {
           await this.resProvider[apiData.type]?.setResource(
-            apiData.type,
             apiData.id,
             apiData.value
           )
