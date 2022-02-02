@@ -666,6 +666,7 @@ export class CourseApi {
       value: course
     })
 
+    /*
     values.push({
       path: `${navPath[0]}.activeRoute.href`,
       value: this.courseInfo.activeRoute.href
@@ -738,6 +739,7 @@ export class CourseApi {
       path: `${navPath[1]}.previousPoint.type`,
       value: this.courseInfo.previousPoint.type
     })
+    */
 
     return {
       updates: [

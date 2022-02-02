@@ -330,10 +330,7 @@ export class ResourcesApi {
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
-          ]?.setResource(
-            req.params.resourceId,
-            req.body
-          )
+          ]?.setResource(req.params.resourceId, req.body)
 
           this.server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
