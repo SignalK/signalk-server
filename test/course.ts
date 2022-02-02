@@ -2,11 +2,18 @@ import freeport from 'freeport-promise'
 import fetch from 'node-fetch'
 import { sendDelta, startServerP, WsPromiser } from './servertestutilities'
 import chai from 'chai'
+import { reject } from 'lodash'
 chai.should()
 
 describe('Course Api', () => {
   it('can set course destination', async function() {
-    const { createWsPromiser, selfPut, sendDelta, stop } = await startServer()
+    const {
+      createWsPromiser,
+      selfGetJson,
+      selfPut,
+      sendDelta,
+      stop
+    } = await startServer()
     sendDelta('navigation.position', { latitude: -35.45, longitude: 138.0 })
 
     const wsPromiser = createWsPromiser()
@@ -32,6 +39,28 @@ describe('Course Api', () => {
         position: { latitude: -35.45, longitude: 138 }
       }
     })
+    await selfGetJson('navigation/course').then(data => {
+      data.should.deep.equal({
+        activeRoute: {
+          href: null,
+          startTime: null,
+          pointIndex: 0,
+          pointTotal: 0,
+          reverse: false
+        },
+        nextPoint: {
+          href: null,
+          type: 'Location',
+          position: { latitude: -35.5, longitude: 138.7 },
+          arrivalCircle: 0
+        },
+        previousPoint: {
+          href: null,
+          type: 'VesselPosition',
+          position: { latitude: -35.45, longitude: 138 }
+        }
+      })
+    })
     stop()
   })
 })
@@ -55,6 +84,8 @@ const startServer = async () => {
         body: JSON.stringify(body),
         headers: { 'Content-Type': 'application/json' }
       }),
+    selfGetJson: (path: string) =>
+      fetch(`${api}vessels/self/${path}`).then(r => r.json()),
     sendDelta: (path: string, value: any) =>
       sendDelta(
         {
