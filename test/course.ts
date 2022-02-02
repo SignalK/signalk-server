@@ -6,69 +6,76 @@ chai.should()
 
 describe('Course Api', () => {
   it('can set course destination', async function() {
-    const port = await freeport()
-    const host = 'http://localhost:' + port
-    const sendDeltaUrl = host + '/signalk/v1/api/_test/delta'
-    const api = host + '/signalk/v1/api/'
+    const { createWsPromiser, selfPut, sendDelta, stop } = await startServer()
+    sendDelta('navigation.position', { latitude: -35.45, longitude: 138.0 })
 
-    const server = await startServerP(port)
-    await setSelfPosition(sendDeltaUrl)
-    const wsPromiser = new WsPromiser(
-      'ws://localhost:' +
-        port +
-        '/signalk/v1/stream?subscribe=self&metaDeltas=none&sendCachedValues=false'
-    )
+    const wsPromiser = createWsPromiser()
     const self = JSON.parse(await wsPromiser.nthMessage(1)).self
 
-    const responseStatus = await fetch(
-      `${api}vessels/self/navigation/course/destination`,
-      {
-        method: 'PUT',
-        body: JSON.stringify({
-          position: { latitude: -35.5, longitude: 138.7 }
-        }),
-        headers: { 'Content-Type': 'application/json' }
-      }
-    ).then(response => response.status)
-    responseStatus.should.equal(200)
+    await selfPut('navigation/course/destination', {
+      position: { latitude: -35.5, longitude: 138.7 }
+    }).then(response => response.status.should.equal(200))
 
     const courseDelta = JSON.parse(await wsPromiser.nthMessage(2))
     courseDelta.context.should.equal(self)
 
-    courseDelta.updates[0].values
-      .find((x: any) => x.path === 'navigation.course')
-      .value.should.deep.equal({
-        nextPoint: {
-          href: null,
-          type: 'Location',
-          position: { latitude: -35.5, longitude: 138.7 },
-          arrivalCircle: 0
-        },
-        previousPoint: {
-          href: null,
-          type: 'VesselPosition',
-          position: { latitude: -35.45, longitude: 138 }
-        }
-      })
-
-    server.stop()
+    deltaHasPathValue(courseDelta, 'navigation.course', {
+      nextPoint: {
+        href: null,
+        type: 'Location',
+        position: { latitude: -35.5, longitude: 138.7 },
+        arrivalCircle: 0
+      },
+      previousPoint: {
+        href: null,
+        type: 'VesselPosition',
+        position: { latitude: -35.45, longitude: 138 }
+      }
+    })
+    stop()
   })
 })
 
-const setSelfPosition = async (deltaUrl: string) => {
-  return sendDelta(
-    {
-      updates: [
+const startServer = async () => {
+  const port = await freeport()
+  const host = 'http://localhost:' + port
+  const sendDeltaUrl = host + '/signalk/v1/api/_test/delta'
+  const api = host + '/signalk/v1/api/'
+
+  return startServerP(port).then(server => ({
+    createWsPromiser: () =>
+      new WsPromiser(
+        'ws://localhost:' +
+          port +
+          '/signalk/v1/stream?subscribe=self&metaDeltas=none&sendCachedValues=false'
+      ),
+    selfPut: (path: string, body: object) =>
+      fetch(`${api}vessels/self/${path}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' }
+      }),
+    sendDelta: (path: string, value: any) =>
+      sendDelta(
         {
-          values: [
+          updates: [
             {
-              path: 'navigation.position',
-              value: { latitude: -35.45, longitude: 138.0 }
+              values: [
+                {
+                  path,
+                  value
+                }
+              ]
             }
           ]
-        }
-      ]
-    },
-    deltaUrl
-  )
+        },
+        sendDeltaUrl
+      ),
+    stop: () => server.stop()
+  }))
 }
+
+const deltaHasPathValue = (delta: any, path: string, value: any) =>
+  delta.updates[0].values
+    .find((x: any) => x.path === path)
+    .value.should.deep.equal(value)
