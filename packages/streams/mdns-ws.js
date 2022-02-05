@@ -34,12 +34,12 @@ function MdnsWs(options) {
   const createDebug = options.createDebug || require('debug')
   this.debug = createDebug('signalk:streams:mdns-ws')
   this.dataDebug = createDebug('signalk:streams:mdns-ws-data')
-  debug(`deltaStreamBehaviour:${deltaStreamBehaviour}`)
+  this.debug(`deltaStreamBehaviour:${deltaStreamBehaviour}`)
 
   this.handleContext = () => {}
   if (options.selfHandling === 'manualSelf') {
     if (options.remoteSelf) {
-      debug(`Using manual remote self ${options.remoteSelf}`)
+      this.debug(`Using manual remote self ${options.remoteSelf}`)
       this.handleContext = (delta) => {
         if (delta.context === options.remoteSelf) {
           delete delta.context
