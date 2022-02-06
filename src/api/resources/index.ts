@@ -270,7 +270,7 @@ export class ResourcesApi {
           res.status(200).json({
             state: 'COMPLETED',
             statusCode: 200,
-            message: id
+            id
           })
         } catch (err) {
           res.status(404).json({
