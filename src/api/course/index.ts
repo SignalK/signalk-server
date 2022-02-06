@@ -9,6 +9,7 @@ import { WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
 
 import { Position, Route } from '@signalk/server-api'
+import { isValidCoordinate } from 'geolib'
 import { Responses } from '../'
 import { Store } from '../../serverstate/store'
 
@@ -498,10 +499,7 @@ export class CourseApi {
             href.type,
             href.id
           )
-          if (
-            typeof r.position?.latitude !== 'undefined' &&
-            typeof r.position?.longitude !== 'undefined'
-          ) {
+          if (isValidCoordinate(r.position)) {
             newCourse.nextPoint.position = r.position
             newCourse.nextPoint.href = dest.href
             newCourse.nextPoint.type = 'Waypoint'
@@ -522,7 +520,7 @@ export class CourseApi {
     } else if (dest.position) {
       newCourse.nextPoint.href = null
       newCourse.nextPoint.type = 'Location'
-      if (typeof dest.position.latitude !== 'undefined') {
+      if (isValidCoordinate(dest.position)) {
         newCourse.nextPoint.position = dest.position
       } else {
         debug(`** Error: position.latitude is undefined!`)
