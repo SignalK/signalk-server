@@ -2,11 +2,10 @@ import freeport from 'freeport-promise'
 import fetch from 'node-fetch'
 import { sendDelta, startServerP, WsPromiser } from './servertestutilities'
 import chai from 'chai'
-import { reject } from 'lodash'
 chai.should()
 
 describe('Course Api', () => {
-  it('can set course destination', async function() {
+  it('can set course destination as position', async function() {
     const {
       createWsPromiser,
       selfGetJson,
@@ -61,7 +60,27 @@ describe('Course Api', () => {
         }
       })
     })
-    stop()
+    await stop()
+  })
+
+  it('can not set course destination as nonexistent waypoint or bad payload', async function() {
+    const { selfPut, sendDelta, stop } = await startServer()
+    sendDelta('navigation.position', { latitude: -35.45, longitude: 138.0 })
+
+    await selfPut('navigation/course/destination', {
+      href:
+        '/resources/waypoints/urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b95'
+    }).then(response => response.status.should.equal(400))
+
+    await selfPut('navigation/course/destination', {
+      hrefff: 'dummy data'
+    }).then(response => response.status.should.equal(400))
+
+    await selfPut('navigation/course/destination', {
+      position: { latitude: -35.5}
+    }).then(response => response.status.should.equal(400))
+
+    await stop()
   })
 })
 
