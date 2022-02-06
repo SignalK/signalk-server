@@ -523,7 +523,7 @@ export class CourseApi {
       if (isValidCoordinate(dest.position)) {
         newCourse.nextPoint.position = dest.position
       } else {
-        debug(`** Error: position.latitude is undefined!`)
+        debug(`** Error: position is not valid`)
         return false
       }
     } else {
