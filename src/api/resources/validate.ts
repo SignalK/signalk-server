@@ -91,21 +91,25 @@ const validateWaypoint = (r: Waypoint): boolean => {
 
 // validate note data
 const validateNote = (r: Note): boolean => {
-  if (!r.region && !r.position && !r.geohash) {
+  try {
+    if (!r.region && !r.position && !r.geohash) {
+      return false
+    }
+    if (r.position) {
+      if (!isValidCoordinate(r.position)) {
+        return false
+      }
+    }
+    if (r.region) {
+      const l = r.region.split('/')
+      if (!validate.uuid(l[l.length - 1])) {
+        return false
+      }
+    }
+    return true
+  } catch (error) {
     return false
   }
-  if (typeof r.position !== 'undefined') {
-    if (!isValidCoordinate(r.position)) {
-      return false
-    }
-  }
-  if (r.region) {
-    const l = r.region.split('/')
-    if (!validate.uuid(l[l.length - 1])) {
-      return false
-    }
-  }
-  return true
 }
 
 const validateRegion = (r: Region): boolean => {
