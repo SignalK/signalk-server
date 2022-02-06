@@ -15,7 +15,7 @@ export const Responses = {
   },
   invalid: {
     state: 'FAILED',
-    statusCode: 406,
+    statusCode: 400,
     message: `Invalid Data supplied.`
   },
   unauthorised: {

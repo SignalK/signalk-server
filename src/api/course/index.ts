@@ -151,9 +151,9 @@ export class CourseApi {
           return
         }
         if (!this.courseInfo.nextPoint.position) {
-          res.status(406).json({
+          res.status(400).json({
             state: 'FAILED',
-            statusCode: 406,
+            statusCode: 400,
             message: `No active destination!`
           })
           return
@@ -166,16 +166,16 @@ export class CourseApi {
             this.emitCourseInfo()
             res.status(200).json(Responses.ok)
           } else {
-            res.status(406).json({
+            res.status(400).json({
               state: 'FAILED',
-              statusCode: 406,
+              statusCode: 400,
               message: `Vessel position unavailable!`
             })
           }
         } catch (err) {
-          res.status(406).json({
+          res.status(400).json({
             state: 'FAILED',
-            statusCode: 406,
+            statusCode: 400,
             message: `Vessel position unavailable!`
           })
         }
@@ -195,7 +195,7 @@ export class CourseApi {
           this.emitCourseInfo()
           res.status(200).json(Responses.ok)
         } else {
-          res.status(406).json(Responses.invalid)
+          res.status(400).json(Responses.invalid)
         }
       }
     )
@@ -211,7 +211,7 @@ export class CourseApi {
         }
         if (!req.body) {
           debug(`** Error: req.body is null || undefined!`)
-          res.status(406).json(Responses.invalid)
+          res.status(400).json(Responses.invalid)
           return
         }
         const result = await this.setDestination(req.body)
@@ -221,7 +221,7 @@ export class CourseApi {
         } else {
           this.clearDestination()
           this.emitCourseInfo()
-          res.status(406).json(Responses.invalid)
+          res.status(400).json(Responses.invalid)
         }
       }
     )
@@ -257,7 +257,7 @@ export class CourseApi {
         } else {
           this.clearDestination()
           this.emitCourseInfo()
-          res.status(406).json(Responses.invalid)
+          res.status(400).json(Responses.invalid)
         }
       }
     )
@@ -287,12 +287,12 @@ export class CourseApi {
         }
         // fetch active route data
         if (!this.courseInfo.activeRoute.href) {
-          res.status(406).json(Responses.invalid)
+          res.status(400).json(Responses.invalid)
           return
         }
         const rte = await this.getRoute(this.courseInfo.activeRoute.href)
         if (!rte) {
-          res.status(406).json(Responses.invalid)
+          res.status(400).json(Responses.invalid)
           return
         }
 
@@ -306,7 +306,7 @@ export class CourseApi {
               rte
             )
           } else {
-            res.status(406).json(Responses.invalid)
+            res.status(400).json(Responses.invalid)
             return
           }
         }
@@ -318,7 +318,7 @@ export class CourseApi {
               rte
             )
           } else {
-            res.status(406).json(Responses.invalid)
+            res.status(400).json(Responses.invalid)
             return
           }
         }
@@ -372,12 +372,12 @@ export class CourseApi {
               this.courseInfo.previousPoint.position = position.value
               this.courseInfo.previousPoint.type = `VesselPosition`
             } else {
-              res.status(406).json(Responses.invalid)
+              res.status(400).json(Responses.invalid)
               return false
             }
           } catch (err) {
             console.log(`** Error: unable to retrieve vessel position!`)
-            res.status(406).json(Responses.invalid)
+            res.status(400).json(Responses.invalid)
             return false
           }
         } else {

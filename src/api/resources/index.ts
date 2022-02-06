@@ -242,7 +242,7 @@ export class ResourcesApi {
           )
         ) {
           if (!validate.resource(req.params.resourceType, req.body)) {
-            res.status(406).json(Responses.invalid)
+            res.status(400).json(Responses.invalid)
             return
           }
         }
@@ -311,9 +311,9 @@ export class ResourcesApi {
             isValidId = validate.uuid(req.params.resourceId)
           }
           if (!isValidId) {
-            res.status(406).json({
+            res.status(400).json({
               state: 'FAILED',
-              statusCode: 406,
+              statusCode: 400,
               message: `Invalid resource id provided (${req.params.resourceId})`
             })
             return
@@ -322,7 +322,7 @@ export class ResourcesApi {
           debug('req.body')
           debug(req.body)
           if (!validate.resource(req.params.resourceType, req.body)) {
-            res.status(406).json(Responses.invalid)
+            res.status(400).json(Responses.invalid)
             return
           }
         }
@@ -425,23 +425,23 @@ export class ResourcesApi {
           return
         }
         if (!apiData.value) {
-          res.status(406).json(Responses.invalid)
+          res.status(400).json(Responses.invalid)
           return
         }
         if (apiData.type === 'charts') {
           if (!validate.chartId(apiData.id)) {
-            res.status(406).json({
+            res.status(400).json({
               state: 'FAILED',
-              statusCode: 406,
+              statusCode: 400,
               message: `Invalid chart resource id supplied!`
             })
             return
           }
         } else {
           if (!validate.uuid(apiData.id)) {
-            res.status(406).json({
+            res.status(400).json({
               state: 'FAILED',
-              statusCode: 406,
+              statusCode: 400,
               message: `Invalid resource id supplied!`
             })
             return
@@ -494,23 +494,23 @@ export class ResourcesApi {
           return
         }
         if (!apiData.value) {
-          res.status(406).json(Responses.invalid)
+          res.status(400).json(Responses.invalid)
           return
         }
         if (apiData.type === 'charts') {
           if (!validate.chartId(apiData.id)) {
-            res.status(406).json({
+            res.status(400).json({
               state: 'FAILED',
-              statusCode: 406,
+              statusCode: 400,
               message: `Invalid chart resource id supplied!`
             })
             return
           }
         } else {
           if (!validate.uuid(apiData.id)) {
-            res.status(406).json({
+            res.status(400).json({
               state: 'FAILED',
-              statusCode: 406,
+              statusCode: 400,
               message: `Invalid resource id supplied!`
             })
             return
