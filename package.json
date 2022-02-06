@@ -5,11 +5,13 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
+    "build:all": "npm run build:workspaces && npm run build",
+    "build:workspaces": "npm run build --workspaces --if-present",
     "build-declaration": "tsc --declaration --allowJs false",
     "watch": "npm run build -- -w",
     "lint": "tslint --config tslint.js --project tsconfig.json --fix",
     "ci-lint": "tslint --config tslint.js --project tsconfig.json",
-    "prepublishOnly": "npm run lint && npm run build && npm run build-declaration",
+    "prepublishOnly": "npm run lint && npm run build:all && npm run build-declaration",
     "create-release": "github-create-release --owner signalk --repository signalk-server --npm-base-url https://www.npmjs.com/package/signalk-server",
     "release": "npm run prepublishOnly && git tag -d latest && git push --delete origin latest && git tag latest && git push --tags && git push && npm run create-release",
     "update-latest-release": "git checkout master && git branch -D latest-release || git checkout -b latest-release && git push -f origin/latest-release",
@@ -17,7 +19,7 @@
     "test-only": "mocha --require ts-node/register --extensions ts,tsx,js --timeout 10000 --exit 'test/**/*.[jt]s' 'lib/**/*.test.js'",
     "test": "npm run build && npm run test-only && npm run ci-lint",
     "typedoc": "typedoc",
-    "heroku-postbuild": "npm run build"
+    "heroku-postbuild": "npm run build:all"
   },
   "bin": {
     "signalk-server": "./bin/signalk-server",
