@@ -73,8 +73,8 @@ const validateWaypoint = (r: Waypoint): boolean => {
   if (typeof r.position === 'undefined') {
     return false
   }
-  if (!isValidCoordinate(r.position)) {
-    return false
+  if (isValidCoordinate(r.position)) {
+    return true
   }
   try {
     if (!r.feature || !geoJSON.valid(r.feature)) {
