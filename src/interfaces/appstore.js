@@ -59,7 +59,7 @@ module.exports = function(app) {
           findPluginsAndWebapps()
             .then(([plugins, webapps]) => {
               if (
-                !isTheServerModule(name, app) &&
+                !isTheServerModule(name, app.config) &&
                 !plugins.find(packageNameIs(name)) &&
                 !webapps.find(packageNameIs(name))
               ) {
@@ -230,7 +230,7 @@ module.exports = function(app) {
         }
       }
     } else {
-      all.canUpdateServer = false
+      all.canUpdateServer = true
     }
 
     getModulesInfo(plugins, getPlugin, all)
@@ -325,7 +325,7 @@ module.exports = function(app) {
   }
 
   function installSKModule(module, version) {
-    if (isTheServerModule(module, app)) {
+    if (isTheServerModule(module, app.config)) {
       try {
         app.providers.forEach(providerHolder => {
           if (
