@@ -42,10 +42,7 @@ To generate your own vessel settings file and configure your Pi to start the ser
 git clone https://github.com/SignalK/signalk-server.git
 cd signalk-server
 npm install
-cd packages/server-api/
-npm run build
-cd ../..
-npm run build
+npm run build:all
 ```
 
 Start the server with sample data:
