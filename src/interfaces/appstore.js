@@ -230,7 +230,7 @@ module.exports = function(app) {
         }
       }
     } else {
-      all.canUpdateServer = true
+      all.canUpdateServer = false
     }
 
     getModulesInfo(plugins, getPlugin, all)
