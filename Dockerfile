@@ -13,11 +13,14 @@ WORKDIR /home/node/signalk
 
 COPY --chown=node:node . .
 
+RUN npm install
+
 WORKDIR /home/node/signalk/packages/server-api
-RUN npm install && npm run build
+RUN npm run build
+WORKDIR /home/node/signalk/packages/server-admin-ui
+RUN npm run build
 
 WORKDIR /home/node/signalk
-RUN npm install
 RUN npm run build
 RUN mkdir -p /home/node/.signalk
 
