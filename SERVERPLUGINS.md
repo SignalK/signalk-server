@@ -20,6 +20,8 @@ The plugin module must export a single `function(app)` that must return an objec
 - property or function `schema`: The object returned from this property or function defines the configuration of the plugin and is used to generate the configuration user interface for the plugin. The value can be an object or `Promise<object>`.
 - (optional) property or function  `uiSchema`: The returned structure defines additional UI components or effects. The value can be an object or `Promise<object>`.
 
+Whan a plugin's configuration is changed the server will first call `stop` to stop the plugin and then `start` with the new configuration data.
+
 ## Getting Started with Plugin Development
 
 To get started with SignalK plugin development, you can follow the following guide.
