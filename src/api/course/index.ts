@@ -220,8 +220,6 @@ export class CourseApi {
           this.emitCourseInfo()
           res.status(200).json(Responses.ok)
         } else {
-          this.clearDestination()
-          this.emitCourseInfo()
           res.status(400).json(Responses.invalid)
         }
       }
@@ -256,8 +254,6 @@ export class CourseApi {
           this.emitCourseInfo()
           res.status(200).json(Responses.ok)
         } else {
-          this.clearDestination()
-          this.emitCourseInfo()
           res.status(400).json(Responses.invalid)
         }
       }
