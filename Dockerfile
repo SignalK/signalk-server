@@ -8,6 +8,7 @@ RUN groupadd -r docker -g 998 && groupadd -r i2c -g 997 && groupadd -r spi -g 99
 
 RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash -
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install nodejs
+RUN npm install pm2 -g
 
 USER node
 RUN mkdir -p /home/node/signalk
