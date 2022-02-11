@@ -14,8 +14,8 @@ USER node
 RUN mkdir -p /home/node/signalk
 WORKDIR /home/node/signalk
 
-COPY --chown=node:node . .
-RUN chmod +x startup.sh
+COPY --chown=node:node ./.. .
+RUN chmod +x docker/startup.sh
 
 USER root
 COPY --chown=root avahi/avahi-dbus.conf /etc/dbus-1/system.d/avahi-dbus.conf
@@ -45,4 +45,4 @@ RUN rm -rf /home/node/signalk/packages/streams/node_modules
 EXPOSE 3000
 ENV IS_IN_DOCKER true
 WORKDIR /home/node/.signalk
-ENTRYPOINT /home/node/signalk/startup.sh
+ENTRYPOINT /home/node/signalk/docker/startup.sh
