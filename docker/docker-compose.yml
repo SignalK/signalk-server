@@ -12,11 +12,11 @@ services:
 #      - TCPSTREAMPORT=8375
     volumes:
       - /dev:/dev/hostdev
-#      - $PWD/signalk_conf:/home/node/.signalk  # uncomment and make signalk_conf -folder where .signalk is bind mounted
+#      - $PWD/signalk_conf:/root/.signalk  # uncomment and make signalk_conf -folder where .signalk is bind mounted
 #      - type: bind  # uncomment these 3 lines to control startup.sh outside container (1/3)
 #        source: $PWD/startup.sh  # (2/3)
-#        target: /home/node/signalk/docker/startup.sh  # (3/3)
-    entrypoint: sh /home/node/signalk/docker/startup.sh
+#        target: /root/signalk/startup.sh  # (3/3)
+    entrypoint: sh /root/signalk/startup.sh
     privileged: true
     logging:
       options:
