@@ -18,7 +18,7 @@ export interface ResourcesApi {
   register: (pluginId: string, provider: ResourceProvider) => void;
   unRegister: (pluginId: string) => void;
   listResources: (resType: SignalKResourceType, params: { [key: string]: any }) => Promise<{[id: string]: any}>
-  getResource: (resType: SignalKResourceType, resId: string) => Promise<{[id: string]: any}>;
+  getResource: (resType: SignalKResourceType, resId: string) => Promise<object>
   setResource: (
     resType: SignalKResourceType,
     resId: string,
@@ -35,7 +35,7 @@ export interface ResourceProvider {
 export interface ResourceProviderMethods {
   pluginId?: string
   listResources: (query: { [key: string]: any }) => Promise<{[id: string]: any}>
-  getResource: (id: string) => Promise<{[id: string]: any}>
+  getResource: (id: string) => Promise<object>
   setResource: (
     id: string,
     value: { [key: string]: any }

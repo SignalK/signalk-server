@@ -106,11 +106,11 @@ listResources(
 ```
 
 ---
-__`getResource(id)`__: This method is called when a request is made for a specific resource entry with the supplied id.
+__`getResource(id)`__: This method is called when a request is made for a specific resource entry with the supplied id. If there is no resource associated with the id the call should return Promise.reject.
 
 `id:` String containing the target resource entry id. _(e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99')_
 
-returns: `Promise<{[key: string]: any}>`
+returns: `Promise<object>`
 
 _Example resource request:_ 
 ```
