@@ -17,7 +17,8 @@ RUN mkdir -p /root/.signalk/ \
 
 WORKDIR /root/signalk
 COPY ./.. .
-RUN chmod +x docker/startup.sh
+COPY startup.sh startup.sh
+RUN chmod +x startup.sh
 
 RUN npm install
 
@@ -33,4 +34,4 @@ RUN npm run build
 EXPOSE 3000
 ENV IS_IN_DOCKER true
 WORKDIR /root/.signalk
-ENTRYPOINT /root/signalk/docker/startup.sh
+ENTRYPOINT /root/signalk/startup.sh
