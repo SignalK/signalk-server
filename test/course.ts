@@ -1,8 +1,15 @@
+import { strict as assert } from 'assert'
+import chai from 'chai'
 import freeport from 'freeport-promise'
 import fetch from 'node-fetch'
-import { sendDelta, startServerP, WsPromiser } from './servertestutilities'
-import chai from 'chai'
-import { response } from 'express'
+import path from 'path'
+import rmfr from 'rmfr'
+import {
+  sendDelta,
+  serverTestConfigDirectory,
+  startServerP,
+  WsPromiser
+} from './servertestutilities'
 chai.should()
 
 describe('Course Api', () => {
@@ -65,21 +72,35 @@ describe('Course Api', () => {
   })
 
   it('can not set course destination as nonexistent waypoint or bad payload', async function() {
-    const { selfPut, sendDelta, stop } = await startServer()
+    const { createWsPromiser, selfPut, sendDelta, stop } = await startServer()
     sendDelta('navigation.position', { latitude: -35.45, longitude: 138.0 })
+
+    const validDestinationPosition = { latitude: -35.5, longitude: 138.7 }
+    const wsPromiser = createWsPromiser()
+    await selfPut('navigation/course/destination', {
+      position: validDestinationPosition
+    }).then(response => response.status.should.equal(200))
+
+    const courseDelta = JSON.parse(await wsPromiser.nthMessage(2))
+    courseDelta.updates[0].values[0].value.nextPoint.position.should.deep.equal(
+      validDestinationPosition
+    )
 
     await selfPut('navigation/course/destination', {
       href:
         '/resources/waypoints/urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b95'
     }).then(response => response.status.should.equal(400))
+    await assert.rejects( wsPromiser.nthMessage(4))
 
     await selfPut('navigation/course/destination', {
       hrefff: 'dummy data'
     }).then(response => response.status.should.equal(400))
+    await assert.rejects( wsPromiser.nthMessage(4))
 
     await selfPut('navigation/course/destination', {
       position: { latitude: -35.5 }
     }).then(response => response.status.should.equal(400))
+    await assert.rejects( wsPromiser.nthMessage(4))
 
     await stop()
   })
@@ -157,19 +178,28 @@ describe('Course Api', () => {
   })
 })
 
+const emptyConfigDirectory = () =>
+  Promise.all(
+    ['serverstate/course', 'resources', 'plugin-config-data', 'baseDeltas.json']
+      .map(subDir => path.join(serverTestConfigDirectory(), subDir))
+      .map(dir => rmfr(dir).then(() => console.error(dir)))
+  )
+
 const startServer = async () => {
   const port = await freeport()
   const host = 'http://localhost:' + port
   const sendDeltaUrl = host + '/signalk/v1/api/_test/delta'
   const api = host + '/signalk/v1/api'
 
-  return startServerP(port, false, {
+  await emptyConfigDirectory()
+  const server = await startServerP(port, false, {
     settings: {
       interfaces: {
         plugins: true
       }
     }
-  }).then(server => ({
+  })
+  return {
     createWsPromiser: () =>
       new WsPromiser(
         'ws://localhost:' +
@@ -207,7 +237,7 @@ const startServer = async () => {
         sendDeltaUrl
       ),
     stop: () => server.stop()
-  }))
+  }
 }
 
 const deltaHasPathValue = (delta: any, path: string, value: any) =>

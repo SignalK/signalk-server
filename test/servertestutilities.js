@@ -100,9 +100,14 @@ const LIMITED_USER_PASSWORD = 'verylimited'
 const ADMIN_USER_NAME = 'adminuser'
 const ADMIN_USER_PASSWORD = 'admin'
 
+const serverTestConfigDirectory = () => require('path').join(
+  __dirname,
+  'server-test-config'
+)
 
 module.exports = {
   WsPromiser: WsPromiser,
+  serverTestConfigDirectory,
   sendDelta: (delta, deltaUrl) => {
     return fetch(deltaUrl, { method: 'POST', body: JSON.stringify(delta), headers: { 'Content-Type': 'application/json' } })
   },
@@ -124,10 +129,7 @@ module.exports = {
       }
     }
 
-    process.env.SIGNALK_NODE_CONFIG_DIR = require('path').join(
-      __dirname,
-      'server-test-config'
-    )
+    process.env.SIGNALK_NODE_CONFIG_DIR = serverTestConfigDirectory()
     process.env.SIGNALK_DISABLE_SERVER_UPDATES = "true"
     
     const server = new Server(props)
