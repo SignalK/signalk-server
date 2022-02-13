@@ -5,7 +5,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteract
 RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
   && DEBIAN_FRONTEND=noninteractive apt-get -y install nodejs
 
-COPY --chown=root avahi/avahi-dbus.conf /etc/dbus-1/system.d/avahi-dbus.conf
+COPY avahi/avahi-dbus.conf /etc/dbus-1/system.d/avahi-dbus.conf
 RUN mkdir -p /var/run/dbus/ \
   && chmod -R 777 /var/run/dbus/ \
   && mkdir -p /var/run/avahi-daemon/ \
@@ -17,7 +17,7 @@ RUN npm i -g signalk-server
 RUN ln -s /usr/lib/node_modules/signalk-server /root/signalk
 
 WORKDIR /root/signalk
-COPY --chown=node startup.sh startup.sh
+COPY startup.sh startup.sh
 RUN chmod +x startup.sh
 
 EXPOSE 3000
