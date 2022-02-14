@@ -728,7 +728,7 @@ module.exports = function(app, config) {
     // `jwt-simple` throws errors if something goes wrong when decoding the JWT.
     //
     if (token) {
-      payload = jwt.decode(token, configuration.secretKey)
+      payload = jwt.verify(token, configuration.secretKey)
 
       if (!payload) {
         error = new InvalidTokenError('Invalid access token')

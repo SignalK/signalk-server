@@ -27,6 +27,7 @@ const {
 const { putPath } = require('../put')
 const skConfig = require('../config/config')
 import { createDebug } from '../debug'
+import { JsonWebTokenError } from 'jsonwebtoken'
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
 const Primus = require('primus')
@@ -465,7 +466,10 @@ function createPrimusAuthorize(authorizeWS) {
       // To be able to login or request access via WS with security in place
       // only clearly invalid tokens result in 401 response, so that we can inform
       // the client that the credentials do not work.
-      if (error instanceof InvalidTokenError) {
+      if (
+        error instanceof InvalidTokenError ||
+        error instanceof JsonWebTokenError
+      ) {
         authorized(error)
       } else {
         authorized()
