@@ -237,6 +237,22 @@ describe('Security', () => {
     return result
   })
 
+  it('websocket with mangled token returns 401', async () => {
+    console.log(readToken)
+    return fetch(`${url}/signalk/v1/stream`, {
+      headers: {
+        Authorization: `JWT ${readToken.substring(0, readToken.length - 1)}`
+      }
+    }).then(response => response.status.should.equal(401))
+  })
+
+  it('websocket with invalid token returns 401', async () =>
+    fetch(`${url}/signalk/v1/stream`, {
+      headers: {
+        Authorization: `JWT ${readToken[0] + 1}${readToken.substring(1)}`
+      }
+    }).then(response => response.status.should.equal(401)))
+
   it('websockets acls work', async function () {
     const readPromiser = new WsPromiser(
       `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=all&metaDeltas=none&token=${readToken}`
