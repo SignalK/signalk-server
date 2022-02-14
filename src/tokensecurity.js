@@ -37,7 +37,7 @@ const CONFIG_PLUGINID = 'sk-simple-token-security-config'
 const passwordSaltRounds = 10
 const permissionDeniedMessage =
   // tslint:disable-next-line
-  "You do not have permission to view this resource, <a href='/@signalk/server-admin-ui/#/login'>Please Login</a>"
+  "You do not have permission to view this resource, <a href='/admin/#/login'>Please Login</a>"
 
 const skPrefix = '/signalk/v1'
 const skAPIPrefix = `${skPrefix}/api`
