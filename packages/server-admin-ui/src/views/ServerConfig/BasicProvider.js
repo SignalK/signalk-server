@@ -391,7 +391,7 @@ class SentenceEventInput extends Component {
   render() {
     return (
       <TextInput
-        title="Sentence Event"
+        title="Input Event"
         name="options.sentenceEvent"
         helpText="Event name for incoming sentences. Example: nmea1data"
         value={this.props.value.sentenceEvent}
