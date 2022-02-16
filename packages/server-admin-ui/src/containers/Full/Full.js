@@ -142,9 +142,20 @@ export default connect()(Full)
 
 const loginOrOriginal = (BaseComponent, componentSupportsReadOnly) => {
   class Restricted extends Component {
+    constructor(props) {
+      super(props)
+      this.state = { hasError: false }
+    }
+
+    static getDerivedStateFromError(error) {
+      return { hasError: true }
+    }
+
     render() {
       if (loginRequired(this.props.loginStatus, componentSupportsReadOnly)) {
         return <Login />
+      } else if (this.state.hasError) {
+        return <span>Something went wrong.</span>
       } else {
         return <BaseComponent {...this.props} />
       }
