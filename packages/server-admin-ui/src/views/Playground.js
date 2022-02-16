@@ -409,7 +409,7 @@ class Playground extends Component {
                                   data.value,
                                   null,
                                   typeof data.value === 'object' &&
-                                  data.value !== null &&
+                                    data.value !== null &&
                                     Object.keys(data.value).length > 1
                                     ? 2
                                     : 0
