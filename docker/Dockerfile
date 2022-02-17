@@ -25,16 +25,8 @@ COPY ./.. .
 COPY startup.sh startup.sh
 RUN chmod +x startup.sh
 
-RUN npm install
-
-WORKDIR /home/node/signalk/packages/server-api
-RUN npm run build
-
-WORKDIR /home/node/signalk/packages/server-admin-ui
-RUN npm run build
-
-WORKDIR /home/node/signalk
-RUN npm run build
+RUN npm install \
+  && npm run build:all
 
 EXPOSE 3000
 ENV IS_IN_DOCKER true
