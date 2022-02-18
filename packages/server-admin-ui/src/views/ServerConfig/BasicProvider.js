@@ -597,9 +597,6 @@ class RemoteSelfInput extends Component {
 class Suppress0183Checkbox extends Component {
   constructor(props) {
     super(props)
-    this.props.value.suppress0183event =
-      typeof this.props.value.suppress0183event === 'undefined' ||
-      this.props.value.suppress0183event
   }
   render() {
     return (
@@ -607,7 +604,7 @@ class Suppress0183Checkbox extends Component {
         <Col xs="3" md="3">
           <Label>Suppress nmea0183 event</Label>
         </Col>
-        <Col xs="2" md="3">
+        <Col xs="1" md="1">
           <Label className="switch switch-text switch-primary">
             <Input
               type="checkbox"
@@ -620,6 +617,12 @@ class Suppress0183Checkbox extends Component {
             <span className="switch-handle" />
           </Label>
         </Col>
+        <Col xs="12" md="6">
+          <label className="text-muted small">
+            Supress sending the default nmea0183 event for incoming sentences
+          </label>
+        </Col>
+
       </FormGroup>
     )
   }
