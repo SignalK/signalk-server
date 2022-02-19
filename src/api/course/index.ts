@@ -109,7 +109,7 @@ export class CourseApi {
       const storeData = await this.store.read()
       this.courseInfo = this.validateCourseInfo(storeData)
     } catch (error) {
-      debug('** No persisted course data (using default) **')
+      console.error('** No persisted course data (using default) **')
     }
     debug(this.courseInfo)
     this.emitCourseInfo(true)

@@ -82,6 +82,7 @@ describe('Course Api', () => {
     }).then(response => response.status.should.equal(200))
 
     const courseDelta = JSON.parse(await wsPromiser.nthMessage(2))
+    console.error(courseDelta)
     courseDelta.updates[0].values[0].value.nextPoint.position.should.deep.equal(
       validDestinationPosition
     )
