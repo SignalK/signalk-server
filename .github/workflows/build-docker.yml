@@ -1,4 +1,4 @@
-name: Build Docker container
+name: Build Docker development container
 
 on:
   push:
@@ -8,6 +8,8 @@ on:
     - "build-docker"
     tags:
     - '*'
+    tags-ignore:        
+    - 'v*'  # Releases build from npm source and using docker release action
 
 jobs:
   build_docker_images:
@@ -33,6 +35,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
+          file: ./docker/Dockerfile
           platforms: linux/amd64,linux/arm/v7, linux/arm64
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
