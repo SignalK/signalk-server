@@ -157,6 +157,21 @@ const expectedOrder = [
         ]
       }
     ]
+  },
+  {
+    "context": "N/A",
+    "updates": [
+      {
+        "$source": "courseApi",
+        "timestamp": "N/A",
+        "values": [
+          {
+            "path": "navigation.course",
+            "value": null
+          }
+        ]
+      }
+    ]
   }
 ]
 
@@ -201,6 +216,7 @@ describe('deltacache', () => {
         self.should.have.nested.property('name', 'TestBoat')
 
         delete self.imaginary
+        delete self.navigation.course //FIXME until in schema
         fullTree.should.be.validSignalK
       })
     })
@@ -232,8 +248,10 @@ describe('deltacache', () => {
         const fullTree = server.app.deltaCache.buildFull(null, ['sources'])
         const self = _.get(fullTree, fullTree.self)
         delete self.imaginary
+        delete self.navigation.course //FIXME until in schema
         fullTree.should.be.validSignalK
         fullTree.sources.should.deep.equal({
+          courseApi: {},
           defaults: {},
           deltaFromHttp: {}
         })
