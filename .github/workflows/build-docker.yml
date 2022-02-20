@@ -8,8 +8,7 @@ on:
     - "build-docker"
     tags:
     - '*'
-    tags-ignore:        
-    - 'v*'  # Releases build from npm source and using docker release action
+    - '!v*'  # Ignore v* tags and use docker release action
 
 jobs:
   build_docker_images:
