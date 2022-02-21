@@ -25,7 +25,8 @@ COPY ./.. .
 COPY startup.sh startup.sh
 RUN chmod +x startup.sh
 
-RUN npm install \
+RUN npm install --package-lock-only \
+  && npm ci && npm cache clean --force \
   && npm run build:all
 
 EXPOSE 3000
