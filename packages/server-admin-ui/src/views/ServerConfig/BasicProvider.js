@@ -793,7 +793,7 @@ const NMEA0183 = (props) => {
             <option>Select a source</option>
             <option value="serial">Serial</option>
             <option value="tcp">TCP Client</option>
-            <option value="tcpserver">TCP Server</option>
+            <option value="tcpserver">TCP Server on port 10110</option>
             <option value="udp">UDP</option>
             <option value="gpsd">GPSD</option>
           </Input>
@@ -807,8 +807,7 @@ const NMEA0183 = (props) => {
         )}
         {props.value.options.type === 'tcpserver' && (
           <Col xs="12" md="6">
-            Make this server's NMEA 10110 server bidirectional so that input
-            from clients is converted to Signal K.
+            Accept input from clients connected to the default TCP/10110 NMEA0183 server
           </Col>
         )}
       </FormGroup>
