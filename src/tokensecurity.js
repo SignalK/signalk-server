@@ -910,14 +910,14 @@ module.exports = function(app, config) {
               debug('unknown user: ' + (decoded.id || decoded.device))
             }
           } else {
-            debug('bad token: ' + req.path)
+            debug(`bad token: ${err.message} ${req.path}`)
+            res.clearCookie('JAUTHENTICATION')
           }
 
           if (configuration.allow_readonly) {
             req.skIsAuthenticated = false
             next()
           } else {
-            res.clearCookie('JAUTHENTICATION')
             res.status(401).send('bad auth token')
           }
         })
