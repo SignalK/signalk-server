@@ -495,8 +495,11 @@ export class CourseApi {
             href.type,
             href.id
           )
-          if (isValidCoordinate(r.position)) {
-            newCourse.nextPoint.position = r.position
+          if (isValidCoordinate(r.feature.geometry.coordinates)) {
+            newCourse.nextPoint.position = {
+              latitude: r.feature.geometry.coordinates[1],
+              longitude: r.feature.geometry.coordinates[0]
+            }
             newCourse.nextPoint.href = dest.href
             newCourse.nextPoint.type = 'Waypoint'
           } else {
