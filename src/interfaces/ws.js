@@ -27,7 +27,7 @@ const {
 const { putPath } = require('../put')
 const skConfig = require('../config/config')
 import { createDebug } from '../debug'
-import { JsonWebTokenError } from 'jsonwebtoken'
+import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
 const Primus = require('primus')
@@ -468,7 +468,8 @@ function createPrimusAuthorize(authorizeWS) {
       // the client that the credentials do not work.
       if (
         error instanceof InvalidTokenError ||
-        error instanceof JsonWebTokenError
+        error instanceof JsonWebTokenError ||
+        error instanceof TokenExpiredError
       ) {
         authorized(error)
       } else {
