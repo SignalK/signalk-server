@@ -132,7 +132,7 @@ export class ResourcesApi {
   }
 
   deleteResource(resType: SignalKResourceType, resId: string) {
-    debug(`** setResource(${resType}, ${resId})`)
+    debug(`** deleteResource(${resType}, ${resId})`)
     if (!this.checkForProvider(resType)) {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
@@ -220,9 +220,9 @@ export class ResourcesApi {
 
     // facilitate creation of new resource entry of supplied type
     this.server.post(
-      `${SIGNALK_API_PATH}/resources/:resourceType`,
+      `${SIGNALK_API_PATH}/resources/:resourceType/`,
       async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** POST ${SIGNALK_API_PATH}/resources/:resourceType`)
+        debug(`** POST ${SIGNALK_API_PATH}/resources/${req.params.resourceType}`)
 
         if (
           !this.checkForProvider(req.params.resourceType as SignalKResourceType)
