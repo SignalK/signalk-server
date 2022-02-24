@@ -489,6 +489,7 @@ export class CourseApi {
     if (dest.href) {
       const href = this.parseHref(dest.href)
       if (href) {
+        debug(`fetching ${href}`)
         // fetch waypoint resource details
         try {
           const r = await this.server.resourcesApi.getResource(
@@ -508,7 +509,7 @@ export class CourseApi {
           }
         } catch (err) {
           console.log(
-            `** Could not retrieve waypoint information for ${dest.href}`
+            `** Error retrieving and validating ${dest.href}`
           )
           return false
         }

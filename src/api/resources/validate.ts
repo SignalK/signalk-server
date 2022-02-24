@@ -70,13 +70,15 @@ const validateRoute = (r: Route): boolean => {
 }
 
 const validateWaypoint = (r: Waypoint): boolean => {
-  if (typeof r.position === 'undefined') {
-    return false
-  }
-  if (isValidCoordinate(r.position)) {
-    return true
-  }
+  // FIXME remove?
+  // if (typeof r.position === 'undefined') {
+  //   return false
+  // }
+  // if (isValidCoordinate(r.position)) {
+  //   return true
+  // }
   try {
+    console.log(geoJSON.valid(r.feature, true))
     if (!r.feature || !geoJSON.valid(r.feature)) {
       return false
     }
