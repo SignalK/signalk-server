@@ -11,7 +11,16 @@ export { PropertyValue, PropertyValues, PropertyValuesCallback } from './propert
 
 export * from './resourcetypes'
 
-export type SignalKResourceType= 'routes' | 'waypoints' |'notes' |'regions' |'charts'
+export type SignalKResourceType = 'routes' | 'waypoints' |'notes' |'regions' |'charts'
+export const SIGNALKRESOURCETYPES: SignalKResourceType[] = [
+  'routes',
+  'waypoints',
+  'notes',
+  'regions',
+  'charts'
+]
+export const isSignalKResourceType = (s: string) => SIGNALKRESOURCETYPES.includes(s as SignalKResourceType)
+
 export type ResourceType = SignalKResourceType | string
 
 export interface ResourcesApi {

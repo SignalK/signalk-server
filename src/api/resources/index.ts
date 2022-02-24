@@ -2,6 +2,7 @@ import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:resourcesApi')
 
 import {
+  isSignalKResourceType,
   ResourceProvider,
   ResourceProviderMethods,
   SignalKResourceType
@@ -26,14 +27,6 @@ interface ResourceApplication extends Application, WithSecurityStrategy {
 export class ResourcesApi {
   private resProvider: { [key: string]: ResourceProviderMethods | null } = {}
   private server: ResourceApplication
-
-  private signalkResTypes: SignalKResourceType[] = [
-    'routes',
-    'waypoints',
-    'notes',
-    'regions',
-    'charts'
-  ]
 
   constructor(app: ResourceApplication) {
     this.server = app
@@ -111,7 +104,7 @@ export class ResourcesApi {
     if (!this.checkForProvider(resType)) {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
-    if (this.signalkResTypes.includes(resType as SignalKResourceType)) {
+    if (isSignalKResourceType(resType)) {
       let isValidId: boolean
       if (resType === 'charts') {
         isValidId = validate.chartId(resId)
@@ -236,11 +229,7 @@ export class ResourcesApi {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        if (
-          this.signalkResTypes.includes(
-            req.params.resourceType as SignalKResourceType
-          )
-        ) {
+        if (isSignalKResourceType(req.params.resourceType)) {
           if (!validate.resource(req.params.resourceType, req.body)) {
             res.status(400).json(Responses.invalid)
             return
@@ -299,11 +288,7 @@ export class ResourcesApi {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        if (
-          this.signalkResTypes.includes(
-            req.params.resourceType as SignalKResourceType
-          )
-        ) {
+        if (isSignalKResourceType(req.params.resourceType)) {
           let isValidId: boolean
           if (req.params.resourceType === 'charts') {
             isValidId = validate.chartId(req.params.resourceId)
