@@ -26,11 +26,9 @@ interface ResourceApplication extends Application, WithSecurityStrategy {
 
 export class ResourcesApi {
   private resProvider: { [key: string]: ResourceProviderMethods | null } = {}
-  private server: ResourceApplication
 
   constructor(app: ResourceApplication) {
-    this.server = app
-    this.start(app)
+    this.initResourceRoutes(app)
   }
 
   register(pluginId: string, provider: ResourceProvider) {
@@ -133,24 +131,18 @@ export class ResourcesApi {
     return this.resProvider[resType]?.deleteResource(resId)
   }
 
-  private start(app: any) {
-    debug(`** Initialise ${SIGNALK_API_PATH}/resources path handler **`)
-    this.server = app
-    this.initResourceRoutes()
-  }
+  private initResourceRoutes(server: ResourceApplication) {
+    const updateAllowed = (req: Request): boolean => {
+      return server.securityStrategy.shouldAllowPut(
+        req,
+        'vessels.self',
+        null,
+        'resources'
+      )
+    }
 
-  private updateAllowed(req: Request): boolean {
-    return this.server.securityStrategy.shouldAllowPut(
-      req,
-      'vessels.self',
-      null,
-      'resources'
-    )
-  }
-
-  private initResourceRoutes() {
     // list all serviced paths under resources
-    this.server.get(
+    server.get(
       `${SIGNALK_API_PATH}/resources`,
       (req: Request, res: Response) => {
         res.json(this.getResourcePaths())
@@ -158,7 +150,7 @@ export class ResourcesApi {
     )
 
     // facilitate retrieval of a specific resource
-    this.server.get(
+    server.get(
       `${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** GET ${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`)
@@ -185,7 +177,7 @@ export class ResourcesApi {
     )
 
     // facilitate retrieval of a collection of resource entries
-    this.server.get(
+    server.get(
       `${SIGNALK_API_PATH}/resources/:resourceType`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** GET ${SIGNALK_API_PATH}/resources/:resourceType`)
@@ -212,10 +204,12 @@ export class ResourcesApi {
     )
 
     // facilitate creation of new resource entry of supplied type
-    this.server.post(
+    server.post(
       `${SIGNALK_API_PATH}/resources/:resourceType/`,
       async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** POST ${SIGNALK_API_PATH}/resources/${req.params.resourceType}`)
+        debug(
+          `** POST ${SIGNALK_API_PATH}/resources/${req.params.resourceType}`
+        )
 
         if (
           !this.checkForProvider(req.params.resourceType as SignalKResourceType)
@@ -225,7 +219,7 @@ export class ResourcesApi {
           return
         }
 
-        if (!this.updateAllowed(req)) {
+        if (!updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -248,7 +242,7 @@ export class ResourcesApi {
             req.params.resourceType
           ]?.setResource(id, req.body)
 
-          this.server.handleMessage(
+          server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
             this.buildDeltaMsg(
               req.params.resourceType as SignalKResourceType,
@@ -272,7 +266,7 @@ export class ResourcesApi {
     )
 
     // facilitate creation / update of resource entry at supplied id
-    this.server.put(
+    server.put(
       `${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** PUT ${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`)
@@ -284,7 +278,7 @@ export class ResourcesApi {
           return
         }
 
-        if (!this.updateAllowed(req)) {
+        if (!updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -317,7 +311,7 @@ export class ResourcesApi {
             req.params.resourceType
           ]?.setResource(req.params.resourceId, req.body)
 
-          this.server.handleMessage(
+          server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
             this.buildDeltaMsg(
               req.params.resourceType as SignalKResourceType,
@@ -341,7 +335,7 @@ export class ResourcesApi {
     )
 
     // facilitate deletion of specific of resource entry at supplied id
-    this.server.delete(
+    server.delete(
       `${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(
@@ -355,7 +349,7 @@ export class ResourcesApi {
           return
         }
 
-        if (!this.updateAllowed(req)) {
+        if (!updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -364,7 +358,7 @@ export class ResourcesApi {
             req.params.resourceType
           ]?.deleteResource(req.params.resourceId)
 
-          this.server.handleMessage(
+          server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
             this.buildDeltaMsg(
               req.params.resourceType as SignalKResourceType,
@@ -388,12 +382,12 @@ export class ResourcesApi {
     )
 
     // facilitate API requests
-    this.server.post(
+    server.post(
       `${SIGNALK_API_PATH}/resources/set/:resourceType`,
       async (req: Request, res: Response) => {
         debug(`** POST ${SIGNALK_API_PATH}/resources/set/:resourceType`)
 
-        if (!this.updateAllowed(req)) {
+        if (!updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -438,7 +432,7 @@ export class ResourcesApi {
             apiData.id,
             apiData.value
           )
-          this.server.handleMessage(
+          server.handleMessage(
             this.resProvider[apiData.type]?.pluginId as string,
             this.buildDeltaMsg(apiData.type, apiData.id, apiData.value)
           )
@@ -456,14 +450,14 @@ export class ResourcesApi {
         }
       }
     )
-    this.server.put(
+    server.put(
       `${SIGNALK_API_PATH}/resources/set/:resourceType/:resourceId`,
       async (req: Request, res: Response) => {
         debug(
           `** PUT ${SIGNALK_API_PATH}/resources/set/:resourceType/:resourceId`
         )
 
-        if (!this.updateAllowed(req)) {
+        if (!updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
@@ -507,7 +501,7 @@ export class ResourcesApi {
             apiData.id,
             apiData.value
           )
-          this.server.handleMessage(
+          server.handleMessage(
             this.resProvider[apiData.type]?.pluginId as string,
             this.buildDeltaMsg(apiData.type, apiData.id, apiData.value)
           )
