@@ -1,2505 +1,1466 @@
 {
-    "openapi": "3.0.2",
+    "openapi": "3.0.0",
     "info": {
-        "version": "1.0.0",
-        "title": "Signal K Resources API"
+      "version": "2.0.0",
+      "title": "Signal K Resources API",
+      "termsOfService": "http://signalk.org/terms/",
+      "license": {
+        "name": "Apache 2.0",
+        "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+      }
     },
-    
+    "externalDocs": {
+      "url": "http://signalk.org/specification/",
+      "description": "Signal K specification."
+    },
+    "servers": [
+      {
+        "description": "Signal K Server",
+        "url": "http://localhost:3000/signalk/v1/api"
+      }
+    ],
+    "tags": [
+      {
+        "name": "resources",
+        "description": "Signal K resources"
+      },
+      {
+        "name": "routes",
+        "description": "Route operations"
+      },
+      {
+        "name": "waypoints",
+        "description": "Waypoint operations"
+      },
+      {
+        "name": "regions",
+        "description": "Region operations"
+      },
+      {
+        "name": "notes",
+        "description": "Note operations"
+      },
+      {
+        "name": "charts",
+        "description": "Chart operations"
+      }
+    ],
+    "components": {
+      "schemas": {
+        "Coordinate": {
+          "type": "array",
+          "maxItems": 3,
+          "minItems": 2,
+          "items": {
+            "type": "number"
+          }
+        },
+        "Point": {
+          "type": "object",
+          "description": "GeoJSon Point geometry",
+          "externalDocs": {
+            "url": "http://geojson.org/geojson-spec.html#id2"
+          },
+          "properties": {
+            "type": {
+              "type": "string",
+              "required": true,
+              "enum": [
+                "Point"
+              ]
+            },
+            "coordinates": {
+              "$ref": "#/components/schemas/Coordinate"
+            }
+          }
+        },
+        "LineString": {
+          "type": "object",
+          "description": "GeoJSon LineString geometry",
+          "externalDocs": {
+            "url": "http://geojson.org/geojson-spec.html#id3"
+          },
+          "properties": {
+            "type": {
+              "type": "string",
+              "required": true,
+              "enum": [
+                "LineString"
+              ]
+            },
+            "coordinates": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Coordinate"
+              }
+            }
+          }
+        },
+        "Polygon": {
+          "type": "object",
+          "description": "GeoJSon Polygon geometry",
+          "externalDocs": {
+            "url": "http://geojson.org/geojson-spec.html#id4"
+          },
+          "properties": {
+            "type": {
+              "type": "string",
+              "required": true,
+              "enum": [
+                "Polygon"
+              ]
+            },
+            "coordinates": {
+              "type": "array",
+              "items": {
+                  "$ref": "#/components/schemas/LineString"
+              }
+            }
+          }
+        },
+        "MultiPolygon": {
+          "type": "object",
+          "description": "GeoJSon MultiPolygon geometry",
+          "externalDocs": {
+            "url": "http://geojson.org/geojson-spec.html#id6"
+          },
+          "properties": {
+            "type": {
+              "type": "string",
+              "required": true,
+              "enum": [
+                "MultiPolygon"
+              ]
+            },
+            "coordinates": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Polygon"
+              }
+            }
+          }
+        },
+        "SignalKUuid": {
+          "type": "string",
+          "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+          "example": "urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+        },
+        "SignalKHref": {
+          "type": "string",
+          "pattern": "/resources/[0-9a-z]/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+          "example": "/resources/waypoint/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+        },
+        "SignalKPosition": {
+          "type": "object",
+          "required": [
+            "latitude",
+            "longitude"
+          ],
+          "properties": {
+            "latitude": {
+              "type": "number",
+              "format": "float"
+            },
+            "longitude": {
+              "type": "number",
+              "format": "float"
+            },
+            "altitude": {
+              "type": "number",
+              "format": "float"
+            }
+          },
+          "example": {
+            "latitude": 65.4567,
+            "longitude": 3.3452
+          }
+        },
+        "SignalKPositionArray": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/SignalKPosition"
+          },
+          "description": "Array of points.",
+          "example": [
+            {
+              "latitude": 65.4567,
+              "longitude": 3.3452
+            },
+            {
+              "latitude": 65.5567,
+              "longitude": 3.3352
+            },
+            {
+              "latitude": 65.5777,
+              "longitude": 3.3261
+            }
+          ]
+        },
+        "SignalKPositionPolygon": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/SignalKPositionArray"
+          },
+          "description": "Array of SignalKPositionArray.",
+          "example": [
+            [
+              {
+                "latitude": 65.4567,
+                "longitude": 3.3452
+              },
+              {
+                "latitude": 65.5567,
+                "longitude": 3.3352
+              },
+              {
+                "latitude": 65.5777,
+                "longitude": 3.3261
+              }
+            ],
+            [
+              {
+                "latitude": 64.4567,
+                "longitude": 4.3452
+              },
+              {
+                "latitude": 64.5567,
+                "longitude": 4.3352
+              },
+              {
+                "latitude": 64.5777,
+                "longitude": 4.3261
+              }
+            ]
+          ]
+        },
+        "SignalKPositionMultiPolygon": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/SignalKPositionPolygon"
+          },
+          "description": "Array of SignalKPositionPolygon.",
+          "example": [
+            [
+              [
+                {
+                  "latitude": 65.4567,
+                  "longitude": 3.3452
+                },
+                {
+                  "latitude": 65.5567,
+                  "longitude": 3.3352
+                },
+                {
+                  "latitude": 65.5777,
+                  "longitude": 3.3261
+                }
+              ],
+              [
+                {
+                  "latitude": 64.4567,
+                  "longitude": 4.3452
+                },
+                {
+                  "latitude": 64.5567,
+                  "longitude": 4.3352
+                },
+                {
+                  "latitude": 64.5777,
+                  "longitude": 4.3261
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "latitude": 75.4567,
+                  "longitude": 3.3452
+                },
+                {
+                  "latitude": 75.5567,
+                  "longitude": 3.3352
+                },
+                {
+                  "latitude": 75.5777,
+                  "longitude": 3.3261
+                }
+              ],
+              [
+                {
+                  "latitude": 74.4567,
+                  "longitude": 4.3452
+                },
+                {
+                  "latitude": 74.5567,
+                  "longitude": 4.3352
+                },
+                {
+                  "latitude": 74.5777,
+                  "longitude": 4.3261
+                }
+              ]
+            ]
+          ]
+        },
+        "Route": {
+          "type": "object",
+          "description": "Signal K Route resource",
+          "required": [
+            "feature"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Route's common name"
+            },
+            "description": {
+              "type": "string",
+              "description": "A description of the route"
+            },
+            "distance": {
+              "description": "Total distance from start to end",
+              "type": "number"
+            },
+            "feature": {
+              "type": "object",
+              "title": "Feature",
+              "description": "A GeoJSON feature object which describes a route",
+              "properties": {
+                "geometry": {
+                  "$ref": "#/components/schemas/LineString"
+                },
+                "properties": {
+                  "description": "Additional feature properties",
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "RoutePostModel": {
+          "description": "Route API resource request payload",
+          "type": "object",
+          "required": [
+            "points"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Title of route"
+            },
+            "description": {
+              "type": "string",
+              "description": "Text describing route"
+            },
+            "points": {
+              "$ref": "#/components/schemas/SignalKPositionArray"
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "Waypoint": {
+          "description": "Signal K Waypoint resource",
+          "type": "object",
+          "required": [
+            "feature"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Waypoint's common name"
+            },
+            "description": {
+              "type": "string",
+              "description": "A description of the waypoint"
+            },
+            "feature": {
+              "type": "object",
+              "title": "Feature",
+              "description": "A Geo JSON feature object which describes a waypoint",
+              "properties": {
+                "geometry": {
+                  "$ref": "#/components/schemas/Point"
+                },
+                "properties": {
+                  "description": "Additional feature properties",
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "WaypointPostModel": {
+          "description": "Waypoint API resource request payload",
+          "type": "object",
+          "required": [
+            "position"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Title of waypoint"
+            },
+            "description": {
+              "type": "string",
+              "description": "Text describing waypoint"
+            },
+            "position": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/SignalKPosition"
+                }
+              ],
+              "description": "Waypoint position."
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "Region": {
+          "description": "Signal K Region resource",
+          "type": "object",
+          "required": [
+            "feature"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Region's common name"
+            },
+            "description": {
+              "type": "string",
+              "description": "A description of the region"
+            },
+            "feature": {
+              "type": "object",
+              "title": "Feature",
+              "description": "A Geo JSON feature object which describes the regions boundary",
+              "properties": {
+                "geometry": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Polygon"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MultiPolygon"
+                    }
+                  ]
+                },
+                "properties": {
+                  "description": "Additional feature properties",
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "RegionPostModel": {
+          "description": "Region API resource request payload",
+          "type": "object",
+          "required": [
+            "points"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Title of region"
+            },
+            "description": {
+              "type": "string",
+              "description": "Text describing region"
+            },
+            "points": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/SignalKPositionArray"
+                },
+                {
+                  "$ref": "#/components/schemas/SignalKPositionPolygon"
+                },
+                {
+                  "$ref": "#/components/schemas/SignalKPositionMultiPolygon"
+                }
+              ]
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "Note": {
+            "description": "Signal K Note resource",
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "description": "Title of note"
+              },
+              "description": {
+                "type": "string",
+                "description": "Text describing note"
+              },
+              "oneOf": {
+                  "properties": {
+                      "href": {
+                          "allOf": [
+                              {
+                              "$ref": "#/components/schemas/SignalKHref"
+                              }
+                          ],
+                          "description": "Reference to a related resource. A pointer to the resource UUID. Alternative to position"
+                      },
+                      "position": {
+                          "allOf": [
+                              {
+                              "$ref": "#/components/schemas/SignalKPosition"
+                              }
+                          ],
+                          "description": "Position related to note. Alternative to href."
+                      }
+                  }
+              },
+              "mimeType": {
+                "type": "string",
+                "description": "MIME type of the note"
+              },
+              "url": {
+                "type": "string",
+                "description": "Location of the note"
+              },
+              "properties": {
+                "description": "Additional user defined note properties",
+                "type": "object",
+                "additionalProperties": true,
+                "example": {
+                  "group": "My Note group",
+                  "author": "M Jones"
+                }
+              }
+            }
+        },
+        "Chart": {
+          "description": "Signal K Chart resource",
+          "type": "object",
+          "required": [
+            "identiifer"
+          ],
+          "properties": {
+            "identifier": {
+              "type": "string",
+              "description": "chart identifier / number",
+              "example": "NZ615"
+            },
+            "name": {
+              "type": "string",
+              "description": "Chart common name",
+              "example": "NZ615 Marlborough Sound"
+            },
+            "description": {
+              "type": "string",
+              "description": "Text describing chart",
+              "example": "Marlborough Sound, New Zealaand"
+            },
+            "oneOf": {
+              "properties": {
+                "tilemapUrl": {
+                  "type": "string",
+                  "description": "Chart tiles source",
+                  "example": "/signalk/v1/api/resources/charts/ALASKA/{z}/{x}/{y}"
+                },
+                "chartUrl": {
+                  "type": "string",
+                  "description": "A url to the chart file's storage location",
+                  "example": "file:///home/pi/charts/mapcache/NZ615"
+                }
+              }
+            },
+            "scale": {
+              "type": "number",
+              "description": "chart scale",
+              "example": 250000
+            },
+            "chartFormat": {
+              "type": "string",
+              "description": "format of chart",
+              "example": "png"
+            },
+            "chartLayers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of chart layers",
+              "example": [
+                "Restricted Areas",
+                "Fishing Zones"
+              ]
+            },
+            "bounds": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "Bounds of chart extent",
+              "example": [
+                172.7499244562935,
+                -41.27498133450632,
+                173.9166560895481,
+                -40.70659187633642
+              ]
+            },
+            "properties": {
+              "description": "Additional user defined chart properties",
+              "type": "object",
+              "additionalProperties": true,
+              "example": {
+                "styleUrl": "http://charthost.org/styles/vector/marine.json"
+              }
+            }
+          }
+        },
+        "BaseResponseModel": {
+          "description": "base model for resource entry response",
+          "type": "object",
+          "required": [
+            "timestamp",
+            "$source"
+          ],
+          "properties": {
+            "timestamp": {
+              "type": "string"
+            },
+            "$source": {
+              "type": "string"
+            }
+          }
+        },
+        "RouteResponseModel": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/BaseResponseModel"
+            },
+            {
+              "$ref": "#/components/schemas/Route"
+            }
+          ]
+        },
+        "WaypointResponseModel": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/BaseResponseModel"
+            },
+            {
+              "$ref": "#/components/schemas/Waypoint"
+            }
+          ]
+        },
+        "NoteResponseModel": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/BaseResponseModel"
+            },
+            {
+              "$ref": "#/components/schemas/Note"
+            }
+          ]
+        },
+        "RegionResponseModel": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/BaseResponseModel"
+            },
+            {
+              "$ref": "#/components/schemas/Region"
+            }
+          ]
+        },
+        "ChartResponseModel": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/BaseResponseModel"
+            },
+            {
+              "$ref": "#/components/schemas/Chart"
+            }
+          ]
+        }
+      },
+      "responses": {
+        "200ActionResponse": {
+          "description": "PUT, POST, DELETE OK response",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "COMPLETED"
+                    ]
+                  },
+                  "statusCode": {
+                    "type": "number",
+                    "enum": [
+                      200
+                    ]
+                  },
+                  "id": {
+                    "$ref": "#/components/schemas/SignalKUuid"
+                  }
+                },
+                "required": [
+                  "id",
+                  "statusCode",
+                  "state"
+                ]
+              }
+            }
+          }
+        },
+        "ErrorResponse": {
+          "description": "Failed operation",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Request error response",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "FAILED"
+                    ]
+                  },
+                  "statusCode": {
+                    "type": "number",
+                    "enum": [
+                      404
+                    ]
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "state",
+                  "statusCode",
+                  "message"
+                ]
+              }
+            }
+          }
+        },
+        "RouteResponse": {
+          "description": "Route record response",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RouteResponseModel"
+              }
+            }
+          }
+        },
+        "WaypointResponse": {
+          "description": "Waypoint record response",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaypointResponseModel"
+              }
+            }
+          }
+        },
+        "NoteResponse": {
+          "description": "Note record response",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteResponseModel"
+              }
+            }
+          }
+        },
+        "RegionResponse": {
+          "description": "Region record response",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegionResponseModel"
+              }
+            }
+          }
+        },
+        "ChartResponse": {
+          "description": "Chart record response",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChartResponseModel"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "LimitParam": {
+          "in": "query",
+          "name": "limit",
+          "description": "maximum number of records to return",
+          "schema": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "example": 100
+          }
+        },
+        "DistanceParam": {
+          "in": "query",
+          "name": "distance",
+          "description": "limit results to resources that fall within a square area, centered around the vessel's position, the edges of which are the sepecified distance in meters from the vessel.",
+          "schema": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 100,
+            "example": 2000
+          }
+        },
+        "BoundingBoxParam": {
+          "in": "query",
+          "name": "bbox",
+          "description": "limit results to resources that fall within the bounded area defined as lower left and upper right x,y coordinates x1,y1,x2,y2",
+          "style": "form",
+          "explode": false,
+          "schema": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "number",
+              "format": "float"
+            },
+            "example": [
+              135.5,
+              -25.2,
+              138.1,
+              -28
+            ]
+          }
+        }
+      }
+    },
     "paths": {
-
-        "/resources": {
-            "get": {
-                "tags": ["resources"],
-                "summary": "List available resource types",
-                "responses": {
-                    "200": {
-                        "description": "List of available resource types",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "additionalProperties": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
+      "/resources": {
+        "get": {
+          "tags": [
+            "resources"
+          ],
+          "summary": "Retrieve list of available resource types",
+          "responses": {
+            "default": {
+              "description": "List of avaialble resource types identified by name",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "required": [
+                        "$source"
+                      ],
+                      "properties": {
+                        "description": {
+                          "type": "string"
+                        },
+                        "$source": {
+                          "type": "string"
                         }
+                      }
                     }
+                  }
                 }
+              }
             }
-        },
-
-        "/resources/{resourceType}": {
-            "get": {
-                "tags": ["resources"],
-                "summary": "Retrieve resources",
-                "parameters": [
-                    {
-                        "name": "resourceType",
-                        "in": "path",
-                        "description": "Type of resources to retrieve. Valid values are: routes, waypoints, notes, regions, charts",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "enum": ["routes", "waypoints", "notes", "regions", "charts"],
-                            "example": "waypoints"
+          }
+        }
+      },
+      "/resources/routes": {
+        "get": {
+          "tags": [
+            "routes"
+          ],
+          "summary": "Retrieve route resources",
+          "parameters": [
+            {
+              "$ref": "#/components/parameters/LimitParam"
+            },
+            {
+              "$ref": "#/components/parameters/DistanceParam"
+            },
+            {
+              "$ref": "#/components/parameters/BoundingBoxParam"
+            }
+          ],
+          "responses": {
+            "default": {
+              "description": "List of route resources identified by their UUID",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/RouteResponseModel"
                         }
-                    },
-                    {
-                        "name": "limit",
-                        "in": "query",
-                        "description": "Maximum number of records to return",
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32",
-                            "minimum": 1,
-                            "example": 100
-                        }
-                    },
-                    {
-                        "name": "distance",
-                        "in": "query",
-                        "description": "Limit results to resources that fall within a square area, centered around the vessel's position, the edges of which are the sepecified distance in meters from the vessel.",
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32",
-                            "minimum": 100,
-                            "example": 2000 
-                        }
-                    },
-                    {
-                        "name": "bbox",
-                        "in": "query",
-                        "description": "Limit results to resources that fall within the bounded area defined as lower left (south west) and upper right (north east) coordinates [swlon,swlat,nelon,nelat]",
-                        "style": "form",
-                        "explode": false,
-                        "schema": {
-                            "type": "array",
-                            "minItems": 4,
-                            "maxItems": 4,
-                            "items": {
-                                "type": "number",
-                                "format": "float",
-                                "example": [135.5,-25.2,138.1,-28.0]
-                            }
-                        }
+                      ]
                     }
-                ],  
-                "responses": {
-                    "200": {
-                        "description": "List of resources identified by their UUID",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "description": "List of Signal K resources",
-                                    "type": "object",
-                                    "additionalProperties": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        }
-                    }
+                  }
                 }
+              }
             }
+          }
         },
-
-        "/resources/routes/": {
-            "post": {
-                "tags": ["resources/routes"],
-                "summary": "Add a new Route",
-                "requestBody": {
-                    "description": "Route details",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "description": "Signal K Route resource",
-                                "required": ["feature"],
-                                "properties": {
-                                    "name": { 
-                                        "type": "string",
-                                        "description": "Route's common name"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "A description of the route"
-                                    },
-                                    "distance": {
-                                        "description": "Total distance from start to end",
-                                        "type": "number"
-                                    },
-                                    "start": {
-                                        "description": "The waypoint UUID at the start of the route",
-                                        "type": "string",
-                                        "pattern": "/resources/waypoints/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
-                                    },
-                                    "end": {
-                                        "description": "The waypoint UUID at the end of the route",
-                                        "type": "string",
-                                        "pattern": "/resources//waypoints/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
-                                    },
-                                    "feature": {
-                                        "type": "object",
-                                        "title": "Feature",
-                                        "description": "A GeoJSON feature object which describes a route",
-                                        "properties": {
-                                            "geometry": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "type": {
-                                                        "type": "string",
-                                                        "enum": ["LineString"]
-                                                    },
-                                                    "coordinates": {
-                                                        "type": "array",
-                                                        "items": {
-                                                            "type": "array",
-                                                            "maxItems": 3,
-                                                            "minItems": 2,
-                                                            "items": {
-                                                                "type": "number"
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            "properties": {
-                                                "description": "Additional feature properties",
-                                                "type": "object",
-                                                "additionalProperties": true
-                                            },
-                                            "id": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/resources/routes/{id}": {
-            "parameters": {
-                "name": "id",
-                "in": "path",
-                "description": "route id",
-                "required": true,
+        "post": {
+          "tags": [
+            "routes"
+          ],
+          "summary": "New Route",
+          "requestBody": {
+            "description": "API request payload",
+            "required": true,
+            "content": {
+              "application/json": {
                 "schema": {
-                    "type": "string",
-                    "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                  "$ref": "#/components/schemas/RoutePostModel"
                 }
-            },
-              
-            "get": {
-                "tags": ["resources/routes"],
-                "summary": "Retrieve route with supplied id",
-                "responses": {
-                    "200": {
-                        "description": "List of resources identified by their UUID",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "description": "List of Signal K resources",
-                                    "type": "object",
-                                    "additionalProperties": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-
-            "put": {
-                "tags": ["resources/routes"],
-                "summary": "Add / update a new Route with supplied id",
-                "requestBody": {
-                    "description": "Route details",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "description": "Signal K Route resource",
-                                "required": ["feature"],
-                                "properties": {
-                                    "name": { 
-                                        "type": "string",
-                                        "description": "Route's common name"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "A description of the route"
-                                    },
-                                    "distance": {
-                                        "description": "Total distance from start to end",
-                                        "type": "number"
-                                    },
-                                    "start": {
-                                        "description": "The waypoint UUID at the start of the route",
-                                        "type": "string",
-                                        "pattern": "/resources/waypoints/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
-                                    },
-                                    "end": {
-                                        "description": "The waypoint UUID at the end of the route",
-                                        "type": "string",
-                                        "pattern": "/resources/waypoints/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
-                                    },
-                                    "feature": {
-                                        "type": "object",
-                                        "title": "Feature",
-                                        "description": "A GeoJSON feature object which describes a route",
-                                        "properties": {
-                                            "geometry": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "type": {
-                                                        "type": "string",
-                                                        "enum": ["LineString"]
-                                                    },
-                                                    "coordinates": {
-                                                        "type": "array",
-                                                        "items": {
-                                                            "type": "array",
-                                                            "maxItems": 3,
-                                                            "minItems": 2,
-                                                            "items": {
-                                                                "type": "number"
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            "properties": {
-                                                "description": "Additional feature properties",
-                                                "type": "object",
-                                                "additionalProperties": true
-                                            },
-                                            "id": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-      
-            "delete": {
-                "tags": ["resources/routes"],
-                "summary": "Remove Route with supplied id",
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+              }
             }
-
-        },
-
-        "/resources/waypoints/": {
-            "post": {
-                "tags": ["resources/waypoints"],
-                "summary": "Add a new Waypoint",
-                "requestBody": {
-                    "description": "Waypoint details",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "description": "Signal K Waypoint resource",
-                                "required": ["feature"],
-                                "properties": {
-                                    "position": {
-                                        "description": "The waypoint position",
-                                        "type": "object",
-                                        "required": [
-                                            "latitude",
-                                            "longitude"
-                                        ],
-                                        "properties": {
-                                            "latitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            },
-                                            "longitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            },
-                                            "altitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            }
-                                        }
-                                    },
-                                    "feature": {
-                                        "type": "object",
-                                        "title": "Feature",
-                                        "description": "A GeoJSON feature object which describes a waypoint",
-                                        "properties": {
-                                            "geometry": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "type": "object",
-                                                    "description": "GeoJSon geometry",
-                                                    "properties": {
-                                                        "type": {
-                                                            "type": "string",
-                                                            "enum": ["Point"]
-                                                        }
-                                                    },
-                                                    "coordinates": {
-                                                        "type": "array",
-                                                        "maxItems": 3,
-                                                        "minItems": 2,
-                                                        "items": {
-                                                            "type": "number"
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            "properties": {
-                                                "description": "Additional feature properties",
-                                                "type": "object",
-                                                "additionalProperties": true
-                                            },
-                                            "id": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
             }
+          }
+        }
+      },
+      "/resources/routes/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "route id",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SignalKUuid"
+            }
+          }
+        ],
+        "get": {
+          "tags": [
+            "routes"
+          ],
+          "summary": "Retrieve route with supplied id",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/RouteResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
         },
-
-        "/resources/waypoints/{id}": {
-            "parameters": {
-                "name": "id",
-                "in": "path",
-                "description": "waypoint id",
-                "required": true,
+        "put": {
+          "tags": [
+            "routes"
+          ],
+          "summary": "Add / update a new Route with supplied id",
+          "requestBody": {
+            "description": "Route resource entry",
+            "required": true,
+            "content": {
+              "application/json": {
                 "schema": {
-                    "type": "string",
-                    "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                  "$ref": "#/components/schemas/Route"
                 }
-            },
-              
-            "get": {
-                "tags": ["resources/waypoints"],
-                "summary": "Retrieve waypoint with supplied id",
-                "responses": {
-                    "200": {
-                        "description": "List of resources identified by their UUID",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "description": "List of Signal K resources",
-                                    "type": "object",
-                                    "additionalProperties": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-
-            "put": {
-                "tags": ["resources/waypoints"],
-                "summary": "Add / update a new Waypoint with supplied id",
-                "requestBody": {
-                    "description": "Waypoint details",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "description": "Signal K Waypoint resource",
-                                "required": ["feature"],
-                                "properties": {
-                                    "position": {
-                                        "description": "The waypoint position",
-                                        "type": "object",
-                                        "required": [
-                                            "latitude",
-                                            "longitude"
-                                        ],
-                                        "properties": {
-                                            "latitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            },
-                                            "longitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            },
-                                            "altitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            }
-                                        }
-                                    },
-                                    "feature": {
-                                        "type": "object",
-                                        "title": "Feature",
-                                        "description": "A GeoJSON feature object which describes a waypoint",
-                                        "properties": {
-                                            "geometry": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "type": "object",
-                                                    "description": "GeoJSon geometry",
-                                                    "properties": {
-                                                        "type": {
-                                                            "type": "string",
-                                                            "enum": ["Point"]
-                                                        }
-                                                    },
-                                                    "coordinates": {
-                                                        "type": "array",
-                                                        "maxItems": 3,
-                                                        "minItems": 2,
-                                                        "items": {
-                                                            "type": "number"
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            "properties": {
-                                                "description": "Additional feature properties",
-                                                "type": "object",
-                                                "additionalProperties": true
-                                            },
-                                            "id": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-      
-            "delete": {
-                "tags": ["resources/waypoints"],
-                "summary": "Remove Waypoint with supplied id",
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+              }
             }
-
-        },
-
-        "/resources/notes/": {
-            "post": {
-                "tags": ["resources/notes"],
-                "summary": "Add a new Note",
-                "requestBody": {
-                    "description": "Note details",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "description": "Signal K Note resource",
-                                "required": ["feature"],
-                                "properties": {
-                                    "title": { 
-                                        "type": "string",
-                                        "description": "Common Note name"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "A description of the note"
-                                    },
-                                    "position": {
-                                        "description": "Position related to note. Alternative to region or geohash.",
-                                        "type": "object",
-                                        "required": [
-                                            "latitude",
-                                            "longitude"
-                                        ],
-                                        "properties": {
-                                            "latitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            },
-                                            "longitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            },
-                                            "altitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            }
-                                        }
-                                    },
-                                    "region": {
-                                        "description": "Pointer / path to Region related to note (e.g. /resources/routes/{uuid}. Alternative to position or geohash",
-                                            "type": "string",
-                                            "pattern": "/resources/regions/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
-                                    },
-                                    "geohash": {
-                                        "description": "Area related to note. Alternative to region or position",
-                                        "type": "string"
-                                    },
-                                    "mimeType": {
-                                        "description": "MIME type of the note",
-                                        "type": "string"
-                                    },
-                                    "url": {
-                                        "description": "Location of the note content",
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
             }
+          }
         },
-
-        "/resources/notes/{id}": {
-            "parameters": {
-                "name": "id",
-                "in": "path",
-                "description": "note id",
-                "required": true,
+        "delete": {
+          "tags": [
+            "routes"
+          ],
+          "summary": "Remove Route with supplied id",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/resources/waypoints": {
+        "get": {
+          "tags": [
+            "waypoints"
+          ],
+          "summary": "Retrieve waypoint resources",
+          "parameters": [
+            {
+              "$ref": "#/components/parameters/LimitParam"
+            },
+            {
+              "$ref": "#/components/parameters/DistanceParam"
+            },
+            {
+              "$ref": "#/components/parameters/BoundingBoxParam"
+            }
+          ],
+          "responses": {
+            "default": {
+              "description": "List of waypoint resources identified by their UUID",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/WaypointResponseModel"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "tags": [
+            "waypoints"
+          ],
+          "summary": "New Waypoint",
+          "requestBody": {
+            "description": "API request payload",
+            "required": true,
+            "content": {
+              "application/json": {
                 "schema": {
-                    "type": "string",
-                    "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                  "$ref": "#/components/schemas/WaypointPostModel"
                 }
-            },
-              
-            "get": {
-                "tags": ["resources/notes"],
-                "summary": "Retrieve Note with supplied id",
-                "responses": {
-                    "200": {
-                        "description": "List of resources identified by their UUID",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "description": "List of Signal K resources",
-                                    "type": "object",
-                                    "additionalProperties": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-
-            "put": {
-                "tags": ["resources/notes"],
-                "summary": "Add / update a new Note with supplied id",
-                "requestBody": {
-                    "description": "Note details",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "description": "Signal K Note resource",
-                                "required": ["feature"],
-                                "properties": {
-                                    "title": { 
-                                        "type": "string",
-                                        "description": "Common Note name"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "A description of the note"
-                                    },
-                                    "position": {
-                                        "description": "Position related to note. Alternative to region or geohash.",
-                                        "type": "object",
-                                        "required": [
-                                            "latitude",
-                                            "longitude"
-                                        ],
-                                        "properties": {
-                                            "latitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            },
-                                            "longitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            },
-                                            "altitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            }
-                                        }
-                                    },
-                                    "region": {
-                                        "description": "Pointer / path to Region related to note (e.g. /resources/routes/{uuid}. Alternative to position or geohash",
-                                            "type": "string",
-                                            "pattern": "/resources/regions/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
-                                    },
-                                    "geohash": {
-                                        "description": "Area related to note. Alternative to region or position",
-                                        "type": "string"
-                                    },
-                                    "mimeType": {
-                                        "description": "MIME type of the note",
-                                        "type": "string"
-                                    },
-                                    "url": {
-                                        "description": "Location of the note content",
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-      
-            "delete": {
-                "tags": ["resources/notes"],
-                "summary": "Remove Note with supplied id",
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+              }
             }
-
-        },
-
-        "/resources/regions/": {
-            "post": {
-                "tags": ["resources/regions"],
-                "summary": "Add a new Region",
-                "requestBody": {
-                    "description": "Region details",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "description": "Signal K Region resource",
-                                "required": ["feature"],
-                                "properties": {
-                                    "geohash": {
-                                        "description": "geohash of the approximate boundary of this region",
-                                        "type": "string"
-                                    },
-                                    "feature": {
-                                        "type": "object",
-                                        "title": "Feature",
-                                        "description": "A Geo JSON feature object which describes the regions boundary",
-                                        "properties": {
-                                            "geometry": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "oneOf": [
-                                                        {
-                                                            "type": "object",
-                                                            "description": "GeoJSon geometry",
-                                                            "properties": {
-                                                                "type": {
-                                                                    "type": "string",
-                                                                    "enum": ["Polygon"]
-                                                                },
-                                                                "coordinates": {
-                                                                    "type": "array",
-                                                                    "items": {
-                                                                        "type": "array",
-                                                                        "items": {
-                                                                            "type": "array",
-                                                                            "maxItems": 3,
-                                                                            "minItems": 2,
-                                                                            "items": {
-                                                                                "type": "number"
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "object",
-                                                            "description": "GeoJSon geometry",
-                                                            "properties": {
-                                                                "type": {
-                                                                    "type": "string",
-                                                                    "enum": ["MultiPolygon"]
-                                                                },
-                                                                "coordinates": {
-                                                                    "type": "array",
-                                                                    "items": {
-                                                                        "type": "array",
-                                                                        "items": {
-                                                                            "type": "array",
-                                                                            "items": {
-                                                                                "type": "array",
-                                                                                "maxItems": 3,
-                                                                                "minItems": 2,
-                                                                                "items": {
-                                                                                    "type": "number"
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    ]
-                                                }
-                                            },
-                                            "properties": {
-                                                "description": "Additional feature properties",
-                                                "type": "object",
-                                                "additionalProperties": true
-                                            },
-                                            "id": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
             }
+          }
+        }
+      },
+      "/resources/waypoints/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "waypoint id",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SignalKUuid"
+            }
+          }
+        ],
+        "get": {
+          "tags": [
+            "waypoints"
+          ],
+          "summary": "Retrieve waypoint with supplied id",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/WaypointResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
         },
-
-        "/resources/regions/{id}": {
-            "parameters": {
-                "name": "id",
-                "in": "path",
-                "description": "region id",
-                "required": true,
+        "put": {
+          "tags": [
+            "waypoints"
+          ],
+          "summary": "Add / update a new Waypoint with supplied id",
+          "requestBody": {
+            "description": "Waypoint resource entry",
+            "required": true,
+            "content": {
+              "application/json": {
                 "schema": {
-                    "type": "string",
-                    "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+                  "$ref": "#/components/schemas/Waypoint"
                 }
-            },
-              
-            "get": {
-                "tags": ["resources/regions"],
-                "summary": "Retrieve Region with supplied id",
-                "responses": {
-                    "200": {
-                        "description": "List of resources identified by their UUID",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "description": "List of Signal K resources",
-                                    "type": "object",
-                                    "additionalProperties": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-
-            "put": {
-                "tags": ["resources/regions"],
-                "summary": "Add / update a new Region with supplied id",
-                "requestBody": {
-                    "description": "Region details",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "description": "Signal K Region resource",
-                                "required": ["feature"],
-                                "properties": {
-                                    "geohash": {
-                                        "description": "geohash of the approximate boundary of this region",
-                                        "type": "string"
-                                    },
-                                    "feature": {
-                                        "type": "object",
-                                        "title": "Feature",
-                                        "description": "A Geo JSON feature object which describes the regions boundary",
-                                        "properties": {
-                                            "geometry": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "oneOf": [
-                                                        {
-                                                            "type": "object",
-                                                            "description": "GeoJSon geometry",
-                                                            "properties": {
-                                                                "type": {
-                                                                    "type": "string",
-                                                                    "enum": ["Polygon"]
-                                                                },
-                                                                "coordinates": {
-                                                                    "type": "array",
-                                                                    "items": {
-                                                                        "type": "array",
-                                                                        "items": {
-                                                                            "type": "array",
-                                                                            "maxItems": 3,
-                                                                            "minItems": 2,
-                                                                            "items": {
-                                                                                "type": "number"
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        },
-                                                        {
-                                                            "type": "object",
-                                                            "description": "GeoJSon geometry",
-                                                            "properties": {
-                                                                "type": {
-                                                                    "type": "string",
-                                                                    "enum": ["MultiPolygon"]
-                                                                },
-                                                                "coordinates": {
-                                                                    "type": "array",
-                                                                    "items": {
-                                                                        "type": "array",
-                                                                        "items": {
-                                                                            "type": "array",
-                                                                            "items": {
-                                                                                "type": "array",
-                                                                                "maxItems": 3,
-                                                                                "minItems": 2,
-                                                                                "items": {
-                                                                                    "type": "number"
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    ]
-                                                }
-                                            },
-                                            "properties": {
-                                                "description": "Additional feature properties",
-                                                "type": "object",
-                                                "additionalProperties": true
-                                            },
-                                            "id": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-      
-            "delete": {
-                "tags": ["resources/regions"],
-                "summary": "Remove Region with supplied id",
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+              }
             }
-
-        },
-
-        "/resources/charts/": {
-            "post": {
-                "tags": ["resources/charts"],
-                "summary": "Add a new Chart",
-                "requestBody": {
-                    "description": "Chart details",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "description": "Signal K Chart resource",
-                                "required": ["feature"],
-                                "properties": {
-                                    "name": {
-                                        "description": "Chart common name",
-                                        "example":"NZ615 Marlborough Sounds",
-                                        "type": "string"
-                                    },
-                                    "identifier": {
-                                        "type": "string",
-                                        "description": "Chart number",
-                                        "example":"NZ615"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "A description of the chart"
-                                    },
-                                    "tilemapUrl": {
-                                        "type": "string",
-                                        "description": "A url to the tilemap of the chart for use in TMS chartplotting apps",
-                                        "example":"http://{server}:8080/mapcache/NZ615"
-                                    },
-                                    "region": {
-                                        "type": "string",
-                                        "description": "Region related to note. A pointer to a region UUID. Alternative to geohash"
-                                    },
-                                    "geohash": {
-                                        "description": "Position related to chart. Alternative to region",
-                                        "type": "string"
-                                    },
-                                    "chartUrl": {
-                                        "type": "string",
-                                        "description": "A url to the chart file's storage location",
-                                        "example":"file:///home/pi/freeboard/mapcache/NZ615"
-                                    },
-                                    "scale": {
-                                        "type": "integer",
-                                        "description": "The scale of the chart, the larger number from 1:200000"
-                                    },
-                                    "chartLayers": {
-                                        "type": "array",
-                                        "description": "If the chart format is WMS, the layers enabled for the chart.",
-                                        "items": {
-                                            "type": "string",
-                                            "description": "Identifier for the layer."
-                                        }
-                                    },
-                                    "bounds": {
-                                        "type": "array",
-                                        "description": "The bounds of the chart. An array containing the position of the upper left corner, and the lower right corner. Useful when the chart isn't inherently geo-referenced.",
-                                        "items": {
-                                            "description": "Position of a corner of the chart",
-                                            "type": "object",
-                                            "required": [
-                                                "latitude",
-                                                "longitude"
-                                            ],
-                                            "properties": {
-                                                "latitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                },
-                                                "longitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                },
-                                                "altitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "chartFormat": {
-                                        "type": "string",
-                                        "description": "The format of the chart",
-                                        "enum": [
-                                            "gif",
-                                            "geotiff",
-                                            "kap",
-                                            "png",
-                                            "jpg",
-                                            "kml",
-                                            "wkt",
-                                            "topojson",
-                                            "geojson",
-                                            "gpx",
-                                            "tms",
-                                            "wms",
-                                            "S-57",
-                                            "S-63",
-                                            "svg",
-                                            "other"
-                                        ]
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
             }
+          }
         },
-
-        "/resources/charts/{id}": {
-            "parameters": {
-                "name": "id",
-                "in": "path",
-                "description": "Chart id",
-                "required": true,
+        "delete": {
+          "tags": [
+            "waypoints"
+          ],
+          "summary": "Remove Waypoint with supplied id",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/resources/regions": {
+        "get": {
+          "tags": [
+            "regions"
+          ],
+          "summary": "Retrieve region resources",
+          "parameters": [
+            {
+              "$ref": "#/components/parameters/LimitParam"
+            },
+            {
+              "$ref": "#/components/parameters/DistanceParam"
+            },
+            {
+              "$ref": "#/components/parameters/BoundingBoxParam"
+            }
+          ],
+          "responses": {
+            "default": {
+              "description": "List of region resources identified by their UUID",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/RegionResponseModel"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "tags": [
+            "regions"
+          ],
+          "summary": "New Region",
+          "requestBody": {
+            "description": "API request payload",
+            "required": true,
+            "content": {
+              "application/json": {
                 "schema": {
-                    "type": "string",
-                    "pattern": "(^[A-Za-z0-9_-]{8,}$)"
+                  "$ref": "#/components/schemas/RegionPostModel"
                 }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200ActionResponse"
             },
-              
-            "get": {
-                "tags": ["resources/charts"],
-                "summary": "Retrieve Chart with supplied id",
-                "responses": {
-                    "200": {
-                        "description": "List of resources identified by their UUID",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "description": "List of Signal K resources",
-                                    "type": "object",
-                                    "additionalProperties": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/resources/regions/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "region id",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SignalKUuid"
+            }
+          }
+        ],
+        "get": {
+          "tags": [
+            "regions"
+          ],
+          "summary": "Retrieve region with supplied id",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/RegionResponse"
             },
-
-            "put": {
-                "tags": ["resources/charts"],
-                "summary": "Add / update a new Chart with supplied id",
-                "requestBody": {
-                    "description": "Chart details",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "description": "Signal K Chart resource",
-                                "required": ["feature"],
-                                "properties": {
-                                    "name": {
-                                        "description": "Chart common name",
-                                        "example":"NZ615 Marlborough Sounds",
-                                        "type": "string"
-                                    },
-                                    "identifier": {
-                                        "type": "string",
-                                        "description": "Chart number",
-                                        "example":"NZ615"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "A description of the chart"
-                                    },
-                                    "tilemapUrl": {
-                                        "type": "string",
-                                        "description": "A url to the tilemap of the chart for use in TMS chartplotting apps",
-                                        "example":"http://{server}:8080/mapcache/NZ615"
-                                    },
-                                    "region": {
-                                        "type": "string",
-                                        "description": "Region related to note. A pointer to a region UUID. Alternative to geohash"
-                                    },
-                                    "geohash": {
-                                        "description": "Position related to chart. Alternative to region",
-                                        "type": "string"
-                                    },
-                                    "chartUrl": {
-                                        "type": "string",
-                                        "description": "A url to the chart file's storage location",
-                                        "example":"file:///home/pi/freeboard/mapcache/NZ615"
-                                    },
-                                    "scale": {
-                                        "type": "integer",
-                                        "description": "The scale of the chart, the larger number from 1:200000"
-                                    },
-                                    "chartLayers": {
-                                        "type": "array",
-                                        "description": "If the chart format is WMS, the layers enabled for the chart.",
-                                        "items": {
-                                            "type": "string",
-                                            "description": "Identifier for the layer."
-                                        }
-                                    },
-                                    "bounds": {
-                                        "type": "array",
-                                        "description": "The bounds of the chart. An array containing the position of the upper left corner, and the lower right corner. Useful when the chart isn't inherently geo-referenced.",
-                                        "items": {
-                                            "description": "Position of a corner of the chart",
-                                            "type": "object",
-                                            "required": [
-                                                "latitude",
-                                                "longitude"
-                                            ],
-                                            "properties": {
-                                                "latitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                },
-                                                "longitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                },
-                                                "altitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "chartFormat": {
-                                        "type": "string",
-                                        "description": "The format of the chart",
-                                        "enum": [
-                                            "gif",
-                                            "geotiff",
-                                            "kap",
-                                            "png",
-                                            "jpg",
-                                            "kml",
-                                            "wkt",
-                                            "topojson",
-                                            "geojson",
-                                            "gpx",
-                                            "tms",
-                                            "wms",
-                                            "S-57",
-                                            "S-63",
-                                            "svg",
-                                            "other"
-                                        ]
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "regions"
+          ],
+          "summary": "Add / update a new Region with supplied id",
+          "requestBody": {
+            "description": "Region resource entry",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Region"
                 }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200ActionResponse"
             },
-      
-            "delete": {
-                "tags": ["resources/charts"],
-                "summary": "Remove Chart with supplied id",
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
             }
-
+          }
         },
-
-        "/resources/set/waypoint": {
-            "post": {
-                "tags": ["resources/api"],
-                "summary": "Add / update a Waypoint",
-                "requestBody": {
-                    "description": "Waypoint attributes",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["position"],
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "description": "Waypoint name"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "Textual description of the waypoint"
-                                    },
-                                    "attributes": {
-                                        "type": "object",
-                                        "description": "Additional attributes as name:value pairs.",
-                                        "additionalProperties": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "position": {
-                                        "description": "The waypoint position",
-                                        "type": "object",
-                                        "required": [
-                                            "latitude",
-                                            "longitude"
-                                        ],
-                                        "properties": {
-                                            "latitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            },
-                                            "longitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        "delete": {
+          "tags": [
+            "regions"
+          ],
+          "summary": "Remove Region with supplied id",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
             }
+          }
+        }
+      },
+      "/resources/notes": {
+        "get": {
+          "tags": [
+            "notes"
+          ],
+          "summary": "Retrieve note resources",
+          "parameters": [
+            {
+              "$ref": "#/components/parameters/LimitParam"
+            },
+            {
+              "$ref": "#/components/parameters/DistanceParam"
+            },
+            {
+              "$ref": "#/components/parameters/BoundingBoxParam"
+            }
+          ],
+          "responses": {
+            "default": {
+              "description": "List of note resources identified by their UUID",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/NoteResponseModel"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
         },
-
-        "/resources/set/waypoint/{id}": {
-            "put": {
-                "tags": ["resources/api"],
-                "summary": "Add / update a Waypoint",
-                "requestBody": {
-                    "description": "Waypoint attributes",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["position"],
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "description": "Waypoint name"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "Textual description of the waypoint"
-                                    },
-                                    "attributes": {
-                                        "type": "object",
-                                        "description": "Additional attributes as name:value pairs.",
-                                        "additionalProperties": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "position": {
-                                        "description": "The waypoint position",
-                                        "type": "object",
-                                        "required": [
-                                            "latitude",
-                                            "longitude"
-                                        ],
-                                        "properties": {
-                                            "latitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            },
-                                            "longitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+        "post": {
+          "tags": [
+            "notes"
+          ],
+          "summary": "New Note",
+          "requestBody": {
+            "description": "Note resource entry",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
                 }
+              }
             }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/resources/notes/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "note id",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SignalKUuid"
+            }
+          }
+        ],
+        "get": {
+          "tags": [
+            "notes"
+          ],
+          "summary": "Retrieve note with supplied id",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/NoteResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
         },
-
-        "/resources/set/route": {
-            "post": {
-                "tags": ["resources/api"],
-                "summary": "Add / update a Route",
-                "requestBody": {
-                    "description": "Note attributes",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["position"],
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "description": "Route name"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "Textual description of the route"
-                                    },
-                                    "attributes": {
-                                        "type": "object",
-                                        "description": "Additional attributes as name:value pairs.",
-                                        "additionalProperties": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "points": {
-                                        "description": "Route points",
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object",
-                                            "required": [
-                                                "latitude",
-                                                "longitude"
-                                            ],
-                                            "properties": {
-                                                "latitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                },
-                                                "longitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+        "put": {
+          "tags": [
+            "notes"
+          ],
+          "summary": "Add / update a new Note with supplied id",
+          "requestBody": {
+            "description": "Note resource entry",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
                 }
+              }
             }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
         },
-
-        "/resources/set/route/{id}": {
-            "put": {
-                "tags": ["resources/api"],
-                "summary": "Add / update a Route",
-                "requestBody": {
-                    "description": "Note attributes",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["position"],
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "description": "Route name"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "Textual description of the route"
-                                    },
-                                    "attributes": {
-                                        "type": "object",
-                                        "description": "Additional attributes as name:value pairs.",
-                                        "additionalProperties": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "points": {
-                                        "description": "Route points",
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object",
-                                            "required": [
-                                                "latitude",
-                                                "longitude"
-                                            ],
-                                            "properties": {
-                                                "latitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                },
-                                                "longitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        "delete": {
+          "tags": [
+            "notes"
+          ],
+          "summary": "Remove Note with supplied id",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
             }
-        },
-
-        "/resources/set/note": {
-            "post": {
-                "tags": ["resources/api"],
-                "summary": "Add / update a Note",
-                "requestBody": {
-                    "description": "Note attributes",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["title"],
-                                "properties": {
-                                    "title": {
-                                        "type": "string",
-                                        "description": "Note's common name"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": " Textual description of the note"
-                                    },
-                                    "oneOf":[
-                                        {
-                                            "position": {
-                                                "description": "Position related to note. Alternative to region or geohash",
-                                                "type": "object",
-                                                "required": [
-                                                    "latitude",
-                                                    "longitude"
-                                                ],
-                                                "properties": {
-                                                    "latitude": {
-                                                        "type": "number",
-                                                        "format": "float"
-                                                    },
-                                                    "longitude": {
-                                                        "type": "number",
-                                                        "format": "float"
-                                                    }
-                                                }
-                                            },
-                                            "region": {
-                                                "type": "string",
-                                                "description": "Region related to note. A pointer to a region UUID. Alternative to position or geohash",
-                                                "example": "/resources/regions/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
-                                            }
-                                        }
-                                    ],
-                                    "mimeType": {
-                                      "type": "string",
-                                      "description": "MIME type of the note"
-                                    },
-                                    "url": {
-                                      "type": "string",
-                                      "description": "Location of the note contents"
-                                    }
-                                }
-                            }
+          }
+        }
+      },
+      "/resources/charts": {
+        "get": {
+          "tags": [
+            "charts"
+          ],
+          "summary": "Retrieve chart resources",
+          "responses": {
+            "default": {
+              "description": "List of chart resources identified by their UUID",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/ChartResponseModel"
                         }
+                      ]
                     }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                  }
                 }
+              }
             }
-        },
-
-        "/resources/set/note/{id}": {
-            "put": {
-                "tags": ["resources/api"],
-                "summary": "Add / update a Note",
-                "requestBody": {
-                    "description": "Note attributes",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["title"],
-                                "properties": {
-                                    "title": {
-                                        "type": "string",
-                                        "description": "Note's common name"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": " Textual description of the note"
-                                    },
-                                    "oneOf":[
-                                        {
-                                            "position": {
-                                                "description": "Position related to note. Alternative to region or geohash",
-                                                "type": "object",
-                                                "required": [
-                                                    "latitude",
-                                                    "longitude"
-                                                ],
-                                                "properties": {
-                                                    "latitude": {
-                                                        "type": "number",
-                                                        "format": "float"
-                                                    },
-                                                    "longitude": {
-                                                        "type": "number",
-                                                        "format": "float"
-                                                    }
-                                                }
-                                            },
-                                            "region": {
-                                                "type": "string",
-                                                "description": "Region related to note. A pointer to a region UUID. Alternative to position or geohash",
-                                                "example": "/resources/regions/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
-                                            }
-                                        }
-                                    ],
-                                    "mimeType": {
-                                      "type": "string",
-                                      "description": "MIME type of the note"
-                                    },
-                                    "url": {
-                                      "type": "string",
-                                      "description": "Location of the note contents"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+          }
+        }
+      },
+      "/resources/charts/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "chart id",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SignalKUuid"
             }
-        },
-
-        "/resources/set/region": {
-            "post": {
-                "tags": ["resources/api"],
-                "summary": "Add / update a Region",
-                "requestBody": {
-                    "description": "Region attributes",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["position"],
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "description": "Region name"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "Textual description of region"
-                                    },
-                                    "attributes": {
-                                        "type": "object",
-                                        "description": "Additional attributes as name:value pairs.",
-                                        "additionalProperties": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "points": {
-                                        "description": "Region boundary points",
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object",
-                                            "required": [
-                                                "latitude",
-                                                "longitude"
-                                            ],
-                                            "properties": {
-                                                "latitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                },
-                                                "longitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+          }
+        ],
+        "get": {
+          "tags": [
+            "charts"
+          ],
+          "summary": "Retrieve chart with supplied id",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/ChartResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
             }
-        },
-
-        "/resources/set/region/{id}": {
-            "put": {
-                "tags": ["resources/api"],
-                "summary": "Add / update a Region",
-                "requestBody": {
-                    "description": "Region attributes",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["position"],
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "description": "Region name"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "Textual description of region"
-                                    },
-                                    "attributes": {
-                                        "type": "object",
-                                        "description": "Additional attributes as name:value pairs.",
-                                        "additionalProperties": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "points": {
-                                        "description": "Region boundary points",
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object",
-                                            "required": [
-                                                "latitude",
-                                                "longitude"
-                                            ],
-                                            "properties": {
-                                                "latitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                },
-                                                "longitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/resources/set/chart": {
-            "post": {
-                "tags": ["resources/api"],
-                "summary": "Add / update a Chart",
-                "requestBody": {
-                    "description": "Chart attributes",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "description": "Signal K Chart resource",
-                                "required": ["identifier", "tilemapUrl"],
-                                "properties": {
-                                    "identifier": {
-                                        "type": "string",
-                                        "description": "Chart number",
-                                        "example":"NZ615"
-                                    },
-                                    "name": {
-                                        "description": "Chart common name",
-                                        "example":"NZ615 Marlborough Sounds",
-                                        "type": "string"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "A description of the chart"
-                                    },
-                                    "tilemapUrl": {
-                                        "type": "string",
-                                        "description": "A url to the tilemap of the chart for use in TMS chartplotting apps",
-                                        "example":"http://{server}:8080/mapcache/NZ615"
-                                    },
-                                    "scale": {
-                                        "type": "integer",
-                                        "description": "The scale of the chart, the larger number from 1:200000"
-                                    },
-                                    "layers": {
-                                        "type": "array",
-                                        "description": "If the chart format is WMS, the layers enabled for the chart.",
-                                        "items": {
-                                            "type": "string",
-                                            "description": "Identifier for the layer."
-                                        }
-                                    },
-                                    "bounds": {
-                                        "type": "array",
-                                        "description": "The bounding rectangle of the chart defined by the position of the lower left corner, and the upper right corner.",
-                                        "items": {
-                                            "description": "Position of a corner of the chart",
-                                            "type": "object",
-                                            "required": [
-                                                "latitude",
-                                                "longitude"
-                                            ],
-                                            "properties": {
-                                                "latitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                },
-                                                "longitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "format": {
-                                        "type": "string",
-                                        "description": "The format of the chart",
-                                        "enum": [
-                                            "png",
-                                            "jpg"                                            
-                                        ]
-                                    },
-                                    "serverType": {
-                                        "type": "string",
-                                        "description": "Chart server type",
-                                        "enum": [
-                                            "tilelayer",
-                                            "WMS"                                            
-                                        ]
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/resources/set/chart/{id}": {
-            "put": {
-                "tags": ["resources/api"],
-                "summary": "Add / update a Chart",
-                "requestBody": {
-                    "description": "Chart attributes",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "description": "Signal K Chart resource",
-                                "required": ["identifier", "tilemapUrl"],
-                                "properties": {
-                                    "identifier": {
-                                        "type": "string",
-                                        "description": "Chart number",
-                                        "example":"NZ615"
-                                    },
-                                    "name": {
-                                        "description": "Chart common name",
-                                        "example":"NZ615 Marlborough Sounds",
-                                        "type": "string"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "A description of the chart"
-                                    },
-                                    "tilemapUrl": {
-                                        "type": "string",
-                                        "description": "A url to the tilemap of the chart for use in TMS chartplotting apps",
-                                        "example":"http://{server}:8080/mapcache/NZ615"
-                                    },
-                                    "scale": {
-                                        "type": "integer",
-                                        "description": "The scale of the chart, the larger number from 1:200000"
-                                    },
-                                    "layers": {
-                                        "type": "array",
-                                        "description": "If the chart format is WMS, the layers enabled for the chart.",
-                                        "items": {
-                                            "type": "string",
-                                            "description": "Identifier for the layer."
-                                        }
-                                    },
-                                    "bounds": {
-                                        "type": "array",
-                                        "description": "The bounding rectangle of the chart defined by the position of the lower left corner, and the upper right corner.",
-                                        "items": {
-                                            "description": "Position of a corner of the chart",
-                                            "type": "object",
-                                            "required": [
-                                                "latitude",
-                                                "longitude"
-                                            ],
-                                            "properties": {
-                                                "latitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                },
-                                                "longitude": {
-                                                    "type": "number",
-                                                    "format": "float"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "format": {
-                                        "type": "string",
-                                        "description": "The format of the chart",
-                                        "enum": [
-                                            "png",
-                                            "jpg"                                            
-                                        ]
-                                    },
-                                    "serverType": {
-                                        "type": "string",
-                                        "description": "Chart server type",
-                                        "enum": [
-                                            "tilelayer",
-                                            "WMS"                                            
-                                        ]
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }        
-                
+          }
+        }
+      }
     }
-
-}
- 
+  }
