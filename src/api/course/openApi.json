@@ -1,625 +1,648 @@
 {
-    "openapi": "3.0.2",
+    "openapi": "3.0.0",
     "info": {
-        "version": "1.0.0",
-        "title": "Signal K Course API"
+      "version": "2.0.0",
+      "title": "Signal K Course API",
+      "termsOfService": "http://signalk.org/terms/",
+      "license": {
+        "name": "Apache 2.0",
+        "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+      }
     },
-    
-    "paths": {
-
-        "/vessels/self/navigation/course/": {
-            "get": {
-                "tags": ["course"],
-                "summary": "Get course information",
-                "responses": {
-                    "default": {
-                        "description": "Course data",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "activeRoute": {
-                                            "type": "object",
-                                            "properties": {
-                                                "href": {
-                                                    "type": "string",
-                                                    "example": "/resources/routes/urn:mrn:signalk:uuid:0d95e282-3e1f-4521-8c30-8288addbdb69"
-                                                },
-                                                "startTime": {
-                                                    "type": "string",
-                                                    "example": "2021-10-23T05:17:20.065Z"
-                                                },
-                                                "pointIndex": {
-                                                    "type": "number",
-                                                    "format": "int64",
-                                                    "example": 2
-                                                },
-                                                "pointTotal": {
-                                                    "type": "number",
-                                                    "format": "int64",
-                                                    "example": 9
-                                                },
-                                                "reverse": {
-                                                    "type": "boolean",
-                                                    "default": false
-                                                }
-                                            }
-                                        },
-                                        "nextPoint": {
-                                            "type": "object",
-                                            "properties": {
-                                                "href": {
-                                                    "type": "string",
-                                                    "example": "/resources/waypoints/urn:mrn:signalk:uuid:0d95e282-3e1f-4521-8c30-8288addbdbab"
-                                                },
-                                                "type": {
-                                                    "type": "string",
-                                                    "example": "RoutePoint"
-                                                },
-                                                "position": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "latitude": {
-                                                            "type": "number",
-                                                            "format": "float"
-                                                        },
-                                                        "longitude": {
-                                                            "type": "number",
-                                                            "format": "float"
-                                                        }
-                                                    },
-                                                    "example": {"latitude":-29.5,"longitude":137.5}
-                                                }
-                                            }
-                                        },
-                                        "previousPoint": {
-                                            "type": "object",
-                                            "properties": {
-                                                "href": {
-                                                    "type": "string",
-                                                    "example": null
-                                                },
-                                                "type": {
-                                                    "type": "string",
-                                                    "example": "Location"
-                                                },
-                                                "position": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "latitude": {
-                                                            "type": "number",
-                                                            "format": "float"
-                                                        },
-                                                        "longitude": {
-                                                            "type": "number",
-                                                            "format": "float"
-                                                        }
-                                                    },
-                                                    "example": {"longitude":29.821001582434413,"latitude":70.7014589462524}
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+    "externalDocs": {
+      "url": "http://signalk.org/specification/",
+      "description": "Signal K specification."
+    },
+    "servers": [
+      {
+        "url": "https://localhost:3000/signalk/v1/api/vessels/self/navigation"
+      }
+    ],
+    "tags": [
+      {
+        "name": "course",
+        "description": "Course operations"
+      },
+      {
+        "name": "destination",
+        "description": "Destination operations"
+      },
+      {
+        "name": "activeRoute",
+        "description": "Route operations"
+      },
+      {
+        "name": "calculations",
+        "description": "Calculated course data"
+      }
+    ],
+    "components": {
+      "schemas": {
+        "SignalKHrefRoute": {
+            "type": "string",
+            "pattern": "/resources/routes/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+            "description": "pointer to route resource",
+            "example": "/resources/routes/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
         },
-
-        "/vessels/self/navigation/course/restart": {
-            "put": {
-                "tags": ["course"],
-                "summary": "Restart course calculations",
-                "description": "Sets previousPoint value to current vessel location",
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        "SignalKHrefWaypoint": {
+            "type": "string",
+            "pattern": "/resources/waypoints/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+            "description": "pointer to waypoint resource",
+            "example": "/resources/waypoints/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
         },
-
-        "/vessels/self/navigation/course/destination": {
-            "put": {
-                "tags": ["course/destination"],
-                "summary": "Set destination",
-                "description": "Set destination path from supplied details",
-                "requestBody": {
-                    "description": "Destination details",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "position": {              
-                                        "type": "object",
-                                        "description": "Destination position",
-                                        "required": [
-                                            "latitude",
-                                            "longitude"
-                                        ],
-                                        "properties": {
-                                            "latitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            },
-                                            "longitude": {
-                                                "type": "number",
-                                                "format": "float"
-                                            }
-                                        },
-                                        "example": {"latitude":-29.5,"longitude":137.5}
-                                    },
-                                    "href": {
-                                        "type": "string",
-                                        "description": "A reference (URL) to an object (under /resources) this point is related to",
-                                        "example": "/resources/waypoints/urn:mrn:signalk:uuid:3dd34dcc-36bf-4d61-ba80-233799b25672"
-                                    },
-                                    "type": {
-                                        "type": "string",
-                                        "description": "Type of point",
-                                        "example": "POI"
-                                    },
-                                    "arrivalCircle": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 500
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        "SignalKPosition": {
+          "type": "object",
+          "required": [
+            "latitude",
+            "longitude"
+          ],
+          "properties": {
+            "latitude": {
+              "type": "number",
+              "format": "float"
             },
-            "delete": {
-                "tags": ["course/destination"],
-                "summary": "Clear destination",
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null",
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/vessels/self/navigation/course/arrivalCircle": {
-            "put": {
-                "tags": ["course"],
-                "summary": "Set arrival circle radius (m)",
-                "description": "Sets an arrival circle radius (in meters)",
-                "requestBody": {
-                    "description": "Arrival circle payload",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["value"],
-                                "properties": {
-                                    "value": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 500
-                                    } 
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/vessels/self/navigation/course/activeRoute": {
-            "put": {
-                "tags": ["course/activeRoute"],
-                "summary": "Set active route",
-                "description": "Sets activeRoute path and sets nextPoint to first point in the route",
-                "requestBody": {
-                    "description": "Active route details",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "href": {
-                                        "type": "string",
-                                        "description": "Path to route resource",
-                                        "example": "/resources/routes/urn:mrn:signalk:uuid:3dd34dcc-36bf-4d61-ba80-233799b25672"
-                                    },
-                                    "pointIndex": {              
-                                        "type": "number",
-                                        "format": "int64",
-                                        "description": "Zero based index of route point to use as destination",
-                                        "default": 0,
-                                        "minimum": 0,
-                                        "example": 2
-                                    },
-                                    "reverse": {              
-                                        "type": "boolean",
-                                        "default": false,
-                                        "description": "If true performs operations on route points in reverse order",
-                                        "example": 2
-                                    },
-                                    "arrivalCircle": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 500
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            "longitude": {
+              "type": "number",
+              "format": "float"
             },
-            "delete": {
-                "tags": ["course/activeRoute"],
-                "summary": "Clear active route",
-                "description": "Sets activeRoute, nextPoint & previousPoint values to null",
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            "altitude": {
+              "type": "number",
+              "format": "float"
             }
+          },
+          "example": {
+            "latitude": 65.4567,
+            "longitude": 3.3452
+          }
         },
-
-        "/vessels/self/navigation/course/activeRoute/nextPoint": {
-            "put": {
-                "tags": ["course/activeRoute"],
-                "summary": "Increment / decrement point in route as destination",
-                "description": "Increment / decrement point in the route as destination", 
-                "requestBody": {
-                    "description": "Increment / decrement",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["value"],
-                                "properties": {
-                                    "value": {
-                                        "type": "number",
-                                        "description": "increment (1) / decrement (-1) index of point in route to use as destination",
-                                        "enum": [-1,1],
-                                        "example": -1
-                                    }
-                                }
-                            }
-                        }
-                    }
+        "CourseModel": {
+          "description": "base model for course response",
+          "type": "object",
+          "required": [
+            "activeRoute",
+            "nextPoint",
+            "previousPoint"
+          ],
+          "properties": {
+            "activeRoute": {
+              "type": "object",
+              "required": [
+                "href",
+                "startTime",
+                "pointIndex",
+                "pointTotal",
+                "reverse"
+              ],
+              "properties": {
+                "href": {
+                  "$ref": "#/components/schemas/SignalKHrefRoute"
                 },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/vessels/self/navigation/course/activeRoute/pointIndex": {
-            "put": {
-                "tags": ["course/activeRoute"],
-                "summary": "Set point in route as destination",
-                "description": "Sets the specified point in the route as destination", 
-                "requestBody": {
-                    "description": "Next point index",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "required": ["value"],
-                                "properties": {
-                                    "value": {
-                                        "type": "number",
-                                        "description": "Index of point in route to use as destination",
-                                        "minimum": 0,
-                                        "example": 2
-                                    }
-                                }
-                            }
-                        }
-                    }
+                "startTime": {
+                  "type": "string"
                 },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/vessels/self/navigation/course/activeRoute/refresh": {
-            "put": {
-                "tags": ["course/activeRoute"],
-                "summary": "Refresh route details.",
-                "description": "Use after active route is modified to refresh pointIndex and pointsTotal values.",
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        "/vessels/self/navigation/course/activeRoute/reverse": {
-            "put": {
-                "tags": ["course/activeRoute"],
-                "summary": "Reverse direction of route",
-                "description": "Reverse direction of route from current point or from supplied pointIndex.", 
-                "requestBody": {
-                    "description": "Reverse route",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "pointIndex": {
-                                        "type": "number",
-                                        "description": "Index of point in route to use as destination",
-                                        "minimum": 0,
-                                        "example": 2
-                                    }
-                                }
-                            }
-                        }
-                    }
+                "pointIndex": {
+                  "type": "number",
+                  "description": "0 based index of the point in the route that is the current destination"
                 },
-                "responses": {
-                    "default": {
-                        "description": "Default response format",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "description": "Signal K response",
-                                    "required": ["statusCode", "status", "message"],
-                                    "properties": {
-                                        "statusCode": {
-                                            "type": "number",
-                                            "format": "int64"
-                                        },
-                                        "status": {
-                                            "type": "string",
-                                            "enum": ["COMPLETED", "FAILED"]
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                "pointTotal": {
+                  "type": "number",
+                  "description": "Total number of points in the route"
+                },
+                "reverse": {
+                  "type": "boolean",
+                  "description": "When true indicates the route points are being navigated in reverse order."
                 }
+              }
+            },
+            "nextPoint": {
+              "type": "object",
+              "required": [
+                "position",
+                "href",
+                "arrivalCircle"
+              ],
+              "properties": {
+                "position": {
+                  "$ref": "#/components/schemas/SignalKPosition"
+                },
+                "href": {
+                  "$ref": "#/components/schemas/SignalKHrefWaypoint"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Type of the next point e.g. waypoint, routePoint, etc."
+                },
+                "arrivalCircle": {
+                  "type": "number",
+                  "description": "Radius of arrival zone in meters centered around position value."
+                }
+              }
+            },
+            "previousPoint": {
+              "type": "object",
+              "required": [
+                "position"
+              ],
+              "properties": {
+                "position": {
+                  "$ref": "#/components/schemas/SignalKPosition"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Type of the next point e.g. waypoint, routePoint, etc."
+                }
+              }
             }
+          }
+        },
+        "CourseCalculationsModel": {
+          "type": "object",
+          "description": "Request error response",
+          "properties": {
+            "crossTrackError": {
+              "type": "number",
+              "description": "Distance in meters",
+              "example": 458.784
+            },
+            "bearingTrackTrue": {
+              "type": "number",
+              "description": "angle in radians",
+              "example": 4.58491
+            },
+            "bearingTrackMagnetic": {
+              "type": "number",
+              "description": "angle in radians",
+              "example": 4.51234
+            },
+            "estimatedTimeOfArrival": {
+              "type": "string",
+              "description": "Time of arrival at destination",
+              "example": "2019-10-02T18:36:12.123+01:00"
+            },
+            "distance": {
+              "type": "number",
+              "description": "Distance from the current position to the destination in meters",
+              "example": 10157
+            },
+            "bearingTrue": {
+              "type": "number",
+              "description": "angle in radians",
+              "example": 4.58491
+            },
+            "bearingMagnetic": {
+              "type": "number",
+              "description": "angle in radians",
+              "example": 4.51234
+            },
+            "velocityMadeGood": {
+              "type": "number",
+              "description": "Velocity component of vessel towards destination in m/s",
+              "example": 7.2653
+            },
+            "timeToGo": {
+              "type": "number",
+              "description": "Time remaining in seconds until arrival at destination",
+              "example": 8491
+            }
+          }
         }
-                
+      },
+      "responses": {
+        "200Ok": {
+          "description": "OK",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "COMPLETED"
+                    ]
+                  },
+                  "statusCode": {
+                    "type": "number",
+                    "enum": [
+                      200
+                    ]
+                  }
+                },
+                "required": [
+                  "state",
+                  "statusCode"
+                ]
+              }
+            }
+          }
+        },
+        "ErrorResponse": {
+          "description": "Failed operation",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Request error response",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "FAILED"
+                    ]
+                  },
+                  "statusCode": {
+                    "type": "number",
+                    "enum": [
+                      404
+                    ]
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "state",
+                  "statusCode",
+                  "message"
+                ]
+              }
+            }
+          }
+        },
+        "CourseResponse": {
+          "description": "Course details",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseModel"
+              }
+            }
+          }
+        },
+        "CourseDataResponse": {
+          "description": "Course data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseCalculationsModel"
+              }
+            }
+          }
+        }
+      },
+      "parameters": {}
+    },
+    "paths": {
+      "/course": {
+        "get": {
+          "tags": [
+            "course"
+          ],
+          "summary": "Retrieve current course details",
+          "description": "Returns the current course status",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/CourseResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/restart": {
+        "put": {
+          "tags": [
+            "course"
+          ],
+          "summary": "Restart course calculations",
+          "description": "Sets previousPoint value to current vessel position and bases calculations on update.",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/arrivalCircle": {
+        "put": {
+          "tags": [
+            "course"
+          ],
+          "summary": "Set arrival zone size",
+          "description": "Sets the radius of a circle in meters centered at the current destination.",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "number",
+                      "example": 500
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/destination": {
+        "put": {
+          "tags": [
+            "destination"
+          ],
+          "summary": "Set destination",
+          "description": "Sets nextPoint path with supplied details",
+          "requestBody": {
+            "description": "destination details",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "oneOf": {
+                      "properties": {
+                        "position": {
+                          "$ref": "#/components/schemas/SignalKPosition"
+                        },
+                        "href": {
+                          "$ref": "#/components/schemas/SignalKHrefWaypoint"
+                        }
+                      }
+                    },
+                    "arrivalCircle": {
+                      "type": "number",
+                      "description": "Radius of arrival zone in meters",
+                      "example": 500
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "destination"
+          ],
+          "summary": "Clear destination",
+          "description": "Clears all course information",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/activeRoute": {
+        "put": {
+          "tags": [
+            "activeRoute"
+          ],
+          "summary": "Set active route",
+          "description": "Sets activeRoute path and sets nextPoint to first point in the route",
+          "requestBody": {
+            "description": "Route to activate",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "href"
+                  ],
+                  "properties": {
+                    "href": {
+                      "$ref": "#/components/schemas/SignalKHrefRoute"
+                    },
+                    "pointIndex": {
+                      "type": "number",
+                      "default": 0,
+                      "description": "0 based index of the point in the route to set as the destination"
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Set to true to navigate the route points in reverse order."
+                    },
+                    "arrivalCircle": {
+                      "type": "number",
+                      "description": "Radius of arrival zone in meters",
+                      "example": 500
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "activeRoute"
+          ],
+          "summary": "Clear active route",
+          "description": "Clears all course information",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/activeRoute/nextPoint": {
+        "put": {
+          "tags": [
+            "activeRoute"
+          ],
+          "summary": "Set next point in route",
+          "description": "Sets nextPoint / previousPoint",
+          "requestBody": {
+            "description": "destination details",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "number",
+                      "description": "Index of point in route (-1= previous point)",
+                      "enum": [
+                        1,
+                        -1
+                      ],
+                      "default": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/activeRoute/pointIndex": {
+        "put": {
+          "tags": [
+            "activeRoute"
+          ],
+          "summary": "Set point in route as destination",
+          "description": "Sets destination to the point with the provided index",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "number",
+                      "description": "Index of point in route",
+                      "example": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/activeRoute/reverse": {
+        "put": {
+          "tags": [
+            "activeRoute"
+          ],
+          "summary": "Refresh course information",
+          "description": "Refresh course values after a change has been made.",
+          "requestBody": {
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pointindex": {
+                      "type": "number",
+                      "description": "Index of point in route",
+                      "example": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/activeRoute/refresh": {
+        "put": {
+          "tags": [
+            "activeRoute"
+          ],
+          "summary": "Refresh course information",
+          "description": "Refresh course values after a change has been made.",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/courseGreatCircle": {
+        "get": {
+          "tags": [
+            "calculations"
+          ],
+          "summary": "Great circle course calculations",
+          "description": "Returns the current course status",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/CourseDataResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/courseRhumbline": {
+        "get": {
+          "tags": [
+            "calculations"
+          ],
+          "summary": "Rhumbline course calculations",
+          "description": "Returns the current course status",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/CourseDataResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      }
     }
-
-}
-    
-
-
-
-  
+  }
