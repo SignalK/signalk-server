@@ -123,14 +123,7 @@ describe('Course Api', () => {
       longitude: 24.9384
     }
     const { id } = await post('/resources/waypoints', {
-      feature: {
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [destination.longitude, destination.latitude]
-        },
-        properties: {}
-      }
+      position: destination
     }).then(response => {
       response.status.should.equal(200)
       return response.json()

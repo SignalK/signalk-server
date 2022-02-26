@@ -1,30 +1,29 @@
-import { Chart, Note, Region, Route, Waypoint } from '@signalk/server-api'
-import geoJSON from 'geojson-validation'
-import { isValidCoordinate } from 'geolib'
+import { SignalKResourceType } from '@signalk/server-api'
+import { buildSchemaSync } from 'api-schema-builder'
+import { createDebug } from '../../debug'
+import resourcesOpenApi from './openApi.json'
+const debug = createDebug('signalk-server:resourcesApi:validate')
+
+class ValidationError extends Error {}
+
+const API_SCHEMA = buildSchemaSync(resourcesOpenApi)
 
 export const validate = {
-  resource: (type: string, value: any): boolean => {
-    if (!type) {
-      return false
+  resource: (type: SignalKResourceType, method: string, value: any): void => {
+    debug(`Validating ${type} ${method} ${JSON.stringify(value)}`)
+    const endpoint =
+      API_SCHEMA[`/signalk/v1/api/resources/${type as string}`][
+        method.toLowerCase()
+      ]
+    if (!endpoint) {
+      throw new Error(`Endpoint for ${type} ${method} not found`)
     }
-    switch (type) {
-      case 'routes':
-        return validateRoute(value)
-        break
-      case 'waypoints':
-        return validateWaypoint(value)
-        break
-      case 'notes':
-        return validateNote(value)
-        break
-      case 'regions':
-        return validateRegion(value)
-        break
-      case 'charts':
-        return validateChart(value)
-        break
-      default:
-        return true
+    const valid = endpoint.body.validate(value)
+    if (valid) {
+      return
+    } else {
+      debug(endpoint.body.errors)
+      throw new ValidationError(endpoint.body.errors)
     }
   },
 
@@ -41,109 +40,4 @@ export const validate = {
     const uuid = RegExp('(^[A-Za-z0-9_-]{8,}$)')
     return uuid.test(id)
   }
-}
-
-const validateRoute = (r: Route): boolean => {
-  if (r.start) {
-    const l = r.start.split('/')
-    if (!validate.uuid(l[l.length - 1])) {
-      return false
-    }
-  }
-  if (r.end) {
-    const l = r.end.split('/')
-    if (!validate.uuid(l[l.length - 1])) {
-      return false
-    }
-  }
-  try {
-    if (!r.feature || !geoJSON.valid(r.feature)) {
-      return false
-    }
-    if (r.feature.geometry.type !== 'LineString') {
-      return false
-    }
-  } catch (err) {
-    return false
-  }
-  return true
-}
-
-const validateWaypoint = (r: Waypoint): boolean => {
-  // FIXME remove?
-  // if (typeof r.position === 'undefined') {
-  //   return false
-  // }
-  // if (isValidCoordinate(r.position)) {
-  //   return true
-  // }
-  try {
-    console.log(geoJSON.valid(r.feature, true))
-    if (!r.feature || !geoJSON.valid(r.feature)) {
-      return false
-    }
-    if (r.feature.geometry.type !== 'Point') {
-      return false
-    }
-  } catch (e) {
-    return false
-  }
-  return true
-}
-
-// validate note data
-const validateNote = (r: Note): boolean => {
-  try {
-    if (!r.region && !r.position && !r.geohash) {
-      return false
-    }
-    if (r.position) {
-      if (!isValidCoordinate(r.position)) {
-        return false
-      }
-    }
-    if (r.region) {
-      const l = r.region.split('/')
-      if (!validate.uuid(l[l.length - 1])) {
-        return false
-      }
-    }
-    return true
-  } catch (error) {
-    return false
-  }
-}
-
-const validateRegion = (r: Region): boolean => {
-  if (!r.geohash && !r.feature) {
-    return false
-  }
-  if (r.feature) {
-    try {
-      if (!geoJSON.valid(r.feature)) {
-        return false
-      }
-      if (
-        r.feature.geometry.type !== 'Polygon' &&
-        r.feature.geometry.type !== 'MultiPolygon'
-      ) {
-        return false
-      }
-    } catch (e) {
-      return false
-    }
-  }
-  return true
-}
-
-const validateChart = (r: Chart): boolean => {
-  if (!r.name || !r.identifier || !r.chartFormat) {
-    return false
-  }
-
-  if (!r.tilemapUrl && !r.chartUrl) {
-    return false
-  }
-
-  return true
 }
