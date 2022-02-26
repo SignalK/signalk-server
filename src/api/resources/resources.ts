@@ -1,4 +1,4 @@
-import { Position, SignalKResourceType } from '@signalk/server-api'
+import { Position, SignalKResourceType, Waypoint } from '@signalk/server-api'
 import { getDistance, isValidCoordinate } from 'geolib'
 
 export const buildResource = (resType: SignalKResourceType, data: any): any => {
@@ -332,3 +332,28 @@ const transformCoords = (coords: Position[]) => {
     return [p.longitude, p.latitude]
   })
 }
+
+const FROM_POST_MAPPERS: {
+  [key: string]: (data: any) => any
+} = {
+  waypoints: (data: any) => {
+    const { name, description, position, properties } = data
+    const result: Waypoint = {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [position.longitude, position.latitude]
+        }
+      }
+    }
+    name && (result.name = name)
+    description && (result.description = description)
+    properties && (result.feature.properties = properties)
+    return result
+  }
+}
+export const fromPostData = (type: string, data: any) =>
+  FROM_POST_MAPPERS[type as string]
+    ? FROM_POST_MAPPERS[type as string](data)
+    : data
