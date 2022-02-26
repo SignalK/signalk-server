@@ -374,6 +374,12 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "oneOf": [
+                    { "required":
+                      [ "position" ] },
+                    { "required":
+                      [ "href" ] }
+                  ],
                   "properties": {
                     "oneOf": {
                       "properties": {
