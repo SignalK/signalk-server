@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { WithSecurityStrategy } from '../../security'
 
 import { Responses } from '../'
-import { buildResource } from './resources'
+import { buildResource, fromPostData } from './resources'
 import { validate } from './validate'
 
 const SIGNALK_API_PATH = `/signalk/v1/api`
@@ -242,9 +242,10 @@ export class ResourcesApi {
         }
 
         try {
-          const retVal = await this.resProvider[
-            req.params.resourceType
-          ]?.setResource(id, req.body)
+          await this.resProvider[req.params.resourceType]?.setResource(
+            id,
+            fromPostData(req.params.resourceType, req.body)
+          )
 
           server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
