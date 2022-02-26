@@ -82,6 +82,7 @@
     "@signalk/signalk-schema": "1.5.1",
     "@signalk/streams": "2.x",
     "@types/debug": "^4.1.5",
+    "api-schema-builder": "^2.0.11",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.14.1",

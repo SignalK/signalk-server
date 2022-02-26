@@ -114,9 +114,7 @@ export class ResourcesApi {
           new Error(`Invalid resource id provided (${resId})`)
         )
       }
-      if (!validate.resource(resType, data)) {
-        return Promise.reject(new Error(`Invalid resource data!`))
-      }
+      validate.resource(resType as SignalKResourceType, 'PUT', data)
     }
 
     return this.resProvider[resType]?.setResource(resId, data)
@@ -224,8 +222,14 @@ export class ResourcesApi {
           return
         }
         if (isSignalKResourceType(req.params.resourceType)) {
-          if (!validate.resource(req.params.resourceType, req.body)) {
-            res.status(400).json(Responses.invalid)
+          try {
+            validate.resource(
+              req.params.resourceType as SignalKResourceType,
+              req.method,
+              req.body
+            )
+          } catch (e) {
+            res.status(400).send(e.message)
             return
           }
         }
@@ -300,9 +304,14 @@ export class ResourcesApi {
 
           debug('req.body')
           debug(req.body)
-          if (!validate.resource(req.params.resourceType, req.body)) {
-            res.status(400).json(Responses.invalid)
-            return
+          try {
+            validate.resource(
+              req.params.resourceType as SignalKResourceType,
+              req.method,
+              req.body
+            )
+          } catch (e) {
+            res.status(400).send(e.message)
           }
         }
 
