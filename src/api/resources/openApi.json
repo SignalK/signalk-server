@@ -403,11 +403,11 @@
           "properties": {
             "name": {
               "type": "string",
-              "description": "Title of waypoint"
+              "description": "Name of waypoint"
             },
             "description": {
               "type": "string",
-              "description": "Text describing waypoint"
+              "description": "Waypoint description"
             },
             "position": {
               "allOf": [

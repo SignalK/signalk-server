@@ -18,12 +18,13 @@ export interface Route {
 }
 
 export interface Waypoint {
-  position?: Position
+  name?: string,
+  description?: string,
   feature: {
     type: 'Feature'
     geometry: {
       type: 'Point'
-      coords: GeoJsonPoint
+      coordinates: GeoJsonPoint
     }
     properties?: object
     id?: string
