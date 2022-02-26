@@ -13,6 +13,11 @@ import { isValidCoordinate } from 'geolib'
 import { Responses } from '../'
 import { Store } from '../../serverstate/store'
 
+import { buildSchemaSync } from 'api-schema-builder'
+import courseOpenApi from './openApi.json'
+
+const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
+
 const SIGNALK_API_PATH = `/signalk/v1/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
 
@@ -210,11 +215,13 @@ export class CourseApi {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        if (!req.body) {
-          debug(`** Error: req.body is null || undefined!`)
-          res.status(400).json(Responses.invalid)
+
+        const endpoint = COURSE_API_SCHEMA[`${COURSE_API_PATH}/destination`].put
+        if (!endpoint.body.validate(req.body)) {
+          res.status(400).json(endpoint.body.errors)
           return
         }
+
         const result = await this.setDestination(req.body)
         if (result) {
           this.emitCourseInfo()
@@ -508,9 +515,7 @@ export class CourseApi {
             return false
           }
         } catch (err) {
-          console.log(
-            `** Error retrieving and validating ${dest.href}`
-          )
+          console.log(`** Error retrieving and validating ${dest.href}`)
           return false
         }
       } else {

@@ -229,7 +229,7 @@ export class ResourcesApi {
               req.body
             )
           } catch (e) {
-            res.status(400).send(e.message)
+            res.status(400).json(e.message)
             return
           }
         }
@@ -312,7 +312,7 @@ export class ResourcesApi {
               req.body
             )
           } catch (e) {
-            res.status(400).send(e.message)
+            res.status(400).json(e.message)
           }
         }
 
