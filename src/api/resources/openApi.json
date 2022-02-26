@@ -61,10 +61,10 @@
           "externalDocs": {
             "url": "http://geojson.org/geojson-spec.html#id2"
           },
+          "required": ["type"],
           "properties": {
             "type": {
               "type": "string",
-              "required": true,
               "enum": [
                 "Point"
               ]
@@ -80,10 +80,10 @@
           "externalDocs": {
             "url": "http://geojson.org/geojson-spec.html#id3"
           },
+          "required": ["type"],
           "properties": {
             "type": {
               "type": "string",
-              "required": true,
               "enum": [
                 "LineString"
               ]
@@ -102,10 +102,10 @@
           "externalDocs": {
             "url": "http://geojson.org/geojson-spec.html#id4"
           },
+          "required": ["type"],
           "properties": {
             "type": {
               "type": "string",
-              "required": true,
               "enum": [
                 "Polygon"
               ]
@@ -124,10 +124,10 @@
           "externalDocs": {
             "url": "http://geojson.org/geojson-spec.html#id6"
           },
+          "required": ["type"],
           "properties": {
             "type": {
               "type": "string",
-              "required": true,
               "enum": [
                 "MultiPolygon"
               ]
