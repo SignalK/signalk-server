@@ -107,7 +107,7 @@ describe('Course Api', () => {
     await stop()
   })
 
-  it('can set course destination as waypoint', async function() {
+  it('can set course destination as waypoint with arrivalcircle', async function() {
     const {
       createWsPromiser,
       post,
@@ -129,13 +129,17 @@ describe('Course Api', () => {
       response.status.should.equal(200)
       return response.json()
     })
+    id.length.should.equal(
+      'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length
+    )
     const href = `/resources/waypoints/${id}`
 
     const wsPromiser = createWsPromiser()
     const self = JSON.parse(await wsPromiser.nthMessage(1)).self
 
     await selfPut('navigation/course/destination', {
-      href
+      href,
+      arrivalCircle: 99
     }).then(response => response.status.should.equal(200))
 
     const courseDelta = JSON.parse(await wsPromiser.nthMessage(2))
@@ -146,7 +150,7 @@ describe('Course Api', () => {
         href,
         type: 'Waypoint',
         position: destination,
-        arrivalCircle: 0
+        arrivalCircle: 99
       },
       previousPoint: {
         href: null,
@@ -167,7 +171,7 @@ describe('Course Api', () => {
           href,
           type: 'Waypoint',
           position: destination,
-          arrivalCircle: 0
+          arrivalCircle: 99
         },
         previousPoint: {
           href: null,
