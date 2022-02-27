@@ -494,14 +494,14 @@ export class CourseApi {
       typeof dest.type !== 'undefined' ? dest.type : null
 
     if (dest.href) {
-      const href = this.parseHref(dest.href)
-      if (href) {
-        debug(`fetching ${href}`)
+      const typedHref = this.parseHref(dest.href)
+      if (typedHref) {
+        debug(`fetching ${JSON.stringify(typedHref)}`)
         // fetch waypoint resource details
         try {
           const r = await this.server.resourcesApi.getResource(
-            href.type,
-            href.id
+            typedHref.type,
+            typedHref.id
           )
           if (isValidCoordinate(r.feature.geometry.coordinates)) {
             newCourse.nextPoint.position = {
