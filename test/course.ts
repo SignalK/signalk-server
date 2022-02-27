@@ -77,6 +77,8 @@ describe('Course Api', () => {
 
     const validDestinationPosition = { latitude: -35.5, longitude: 138.7 }
     const wsPromiser = createWsPromiser()
+    //wait to make sure we get position before course delta
+    await wsPromiser.nthMessage(1)
     await selfPut('navigation/course/destination', {
       position: validDestinationPosition
     }).then(response => response.status.should.equal(200))
