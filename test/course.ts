@@ -116,10 +116,11 @@ describe('Course Api', () => {
     await stop()
   })
 
-  it('can set course destination as waypoint with arrivalcircle', async function() {
+  it('can set course destination as waypoint with arrivalcircle and then clear destination', async function() {
     const {
       createWsPromiser,
       post,
+      selfDelete,
       selfGetJson,
       selfPut,
       sendDelta,
@@ -189,6 +190,47 @@ describe('Course Api', () => {
         }
       })
     })
+
+    await selfDelete('navigation/course/destination').then(response =>
+      response.status.should.equal(200)
+    )
+    const destinationClearedDelta = JSON.parse(await wsPromiser.nthMessage(3))
+    deltaHasPathValue(destinationClearedDelta, 'navigation.course', {
+      nextPoint: {
+        href: null, 
+        type: null,
+        position: null,
+        arrivalCircle: 99
+      },
+      previousPoint: {
+        href: null,
+        type: null,
+        position: null
+      }
+    })
+    await selfGetJson('navigation/course').then(data => {
+      data.should.deep.equal({
+        activeRoute: {
+          href: null,
+          startTime: null,
+          pointIndex: 0,
+          pointTotal: 0,
+          reverse: false
+        },
+        nextPoint: {
+          href: null,
+          type: null,
+          position: null,
+          arrivalCircle: 99
+        },
+        previousPoint: {
+          href: null,
+          type: null,
+          position: null
+        }
+      })
+    })
+
     stop()
   })
 
@@ -276,6 +318,10 @@ const startServer = async () => {
         method: 'PUT',
         body: JSON.stringify(body),
         headers: { 'Content-Type': 'application/json' }
+      }),
+    selfDelete: (path: string) =>
+      fetch(`${api}/vessels/self/${path}`, {
+        method: 'DELETE'
       }),
     post: (path: string, body: object) =>
       fetch(`${api}${path}`, {
