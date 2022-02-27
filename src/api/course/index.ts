@@ -646,108 +646,25 @@ export class CourseApi {
   }
 
   private buildDeltaMsg(): any {
-    const values: Array<{ path: string; value: any }> = []
-    const navPath = [
-      'navigation.courseGreatCircle',
-      'navigation.courseRhumbline'
-    ]
-
-    let course = null
-    if (this.courseInfo.activeRoute.href) {
-      course = this.courseInfo
-    } else if (this.courseInfo.nextPoint.position) {
-      course = {
-        nextPoint: this.courseInfo.nextPoint,
-        previousPoint: this.courseInfo.previousPoint
-      }
+    const {activeRoute, nextPoint, previousPoint} = this. courseInfo
+    const value: any = {
+      nextPoint,
+      previousPoint
     }
-
-    debug(course)
-
-    values.push({
-      path: `navigation.course`,
-      value: course
-    })
-
-    /*
-    values.push({
-      path: `${navPath[0]}.activeRoute.href`,
-      value: this.courseInfo.activeRoute.href
-    })
-    values.push({
-      path: `${navPath[1]}.activeRoute.href`,
-      value: this.courseInfo.activeRoute.href
-    })
-    values.push({
-      path: `${navPath[0]}.activeRoute.startTime`,
-      value: this.courseInfo.activeRoute.startTime
-    })
-    values.push({
-      path: `${navPath[1]}.activeRoute.startTime`,
-      value: this.courseInfo.activeRoute.startTime
-    })
-    values.push({
-      path: `${navPath[0]}.nextPoint.href`,
-      value: this.courseInfo.nextPoint.href
-    })
-    values.push({
-      path: `${navPath[1]}.nextPoint.href`,
-      value: this.courseInfo.nextPoint.href
-    })
-    values.push({
-      path: `${navPath[0]}.nextPoint.position`,
-      value: this.courseInfo.nextPoint.position
-    })
-    values.push({
-      path: `${navPath[1]}.nextPoint.position`,
-      value: this.courseInfo.nextPoint.position
-    })
-    values.push({
-      path: `${navPath[0]}.nextPoint.type`,
-      value: this.courseInfo.nextPoint.type
-    })
-    values.push({
-      path: `${navPath[1]}.nextPoint.type`,
-      value: this.courseInfo.nextPoint.type
-    })
-    values.push({
-      path: `${navPath[0]}.nextPoint.arrivalCircle`,
-      value: this.courseInfo.nextPoint.arrivalCircle
-    })
-    values.push({
-      path: `${navPath[1]}.nextPoint.arrivalCircle`,
-      value: this.courseInfo.nextPoint.arrivalCircle
-    })
-    values.push({
-      path: `${navPath[0]}.previousPoint.href`,
-      value: this.courseInfo.previousPoint.href
-    })
-    values.push({
-      path: `${navPath[1]}.previousPoint.href`,
-      value: this.courseInfo.previousPoint.href
-    })
-    values.push({
-      path: `${navPath[0]}.previousPoint.position`,
-      value: this.courseInfo.previousPoint.position
-    })
-    values.push({
-      path: `${navPath[1]}.previousPoint.position`,
-      value: this.courseInfo.previousPoint.position
-    })
-    values.push({
-      path: `${navPath[0]}.previousPoint.type`,
-      value: this.courseInfo.previousPoint.type
-    })
-    values.push({
-      path: `${navPath[1]}.previousPoint.type`,
-      value: this.courseInfo.previousPoint.type
-    })
-    */
+    if (activeRoute.href) {
+      value.activeRoute = activeRoute
+    }
+    debug(value)
 
     return {
       updates: [
         {
-          values
+          values: [
+            {
+              path: 'navigation.course',
+              value
+            }
+          ]
         }
       ]
     }
