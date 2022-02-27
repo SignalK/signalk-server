@@ -21,16 +21,17 @@ describe('Course Api', () => {
       sendDelta,
       stop
     } = await startServer()
-    sendDelta('navigation.position', { latitude: -35.45, longitude: 138.0 })
-
     const wsPromiser = createWsPromiser()
     const self = JSON.parse(await wsPromiser.nthMessage(1)).self
+
+    sendDelta('navigation.position', { latitude: -35.45, longitude: 138.0 })
+    await wsPromiser.nthMessage(2)
 
     await selfPut('navigation/course/destination', {
       position: { latitude: -35.5, longitude: 138.7 }
     }).then(response => response.status.should.equal(200))
 
-    const courseDelta = JSON.parse(await wsPromiser.nthMessage(2))
+    const courseDelta = JSON.parse(await wsPromiser.nthMessage(3))
     courseDelta.context.should.equal(self)
 
     deltaHasPathValue(courseDelta, 'navigation.course', {
@@ -73,36 +74,44 @@ describe('Course Api', () => {
 
   it('can not set course destination as nonexistent waypoint or bad payload', async function() {
     const { createWsPromiser, selfPut, sendDelta, stop } = await startServer()
+
+    const wsPromiser = createWsPromiser()
+    await wsPromiser.nthMessage(1) // hello
+
     sendDelta('navigation.position', { latitude: -35.45, longitude: 138.0 })
+    await wsPromiser.nthMessage(2) // position
 
     const validDestinationPosition = { latitude: -35.5, longitude: 138.7 }
-    const wsPromiser = createWsPromiser()
-    //wait to make sure we get position before course delta
-    await wsPromiser.nthMessage(1)
+
     await selfPut('navigation/course/destination', {
       position: validDestinationPosition
     }).then(response => response.status.should.equal(200))
 
-    const courseDelta = JSON.parse(await wsPromiser.nthMessage(2))
-    courseDelta.updates[0].values[0].value.nextPoint.position.should.deep.equal(
-      validDestinationPosition
-    )
+    const courseDelta = JSON.parse(await wsPromiser.nthMessage(3))
+    try {
+      courseDelta.updates[0].values[0].value.nextPoint.position.should.deep.equal(
+        validDestinationPosition
+      )
+    } catch (e) {
+      console.log(JSON.stringify(courseDelta, null, 2))
+      throw e
+    }
 
     await selfPut('navigation/course/destination', {
       href:
         '/resources/waypoints/urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b95'
     }).then(response => response.status.should.equal(400))
-    await assert.rejects( wsPromiser.nthMessage(4))
+    await assert.rejects(wsPromiser.nthMessage(4))
 
     await selfPut('navigation/course/destination', {
       hrefff: 'dummy data'
     }).then(response => response.status.should.equal(400))
-    await assert.rejects( wsPromiser.nthMessage(4))
+    await assert.rejects(wsPromiser.nthMessage(4))
 
     await selfPut('navigation/course/destination', {
       position: { latitude: -35.5 }
     }).then(response => response.status.should.equal(400))
-    await assert.rejects( wsPromiser.nthMessage(4))
+    await assert.rejects(wsPromiser.nthMessage(4))
 
     await stop()
   })
@@ -210,8 +219,7 @@ const startServer = async () => {
       new WsPromiser(
         'ws://localhost:' +
           port +
-          '/signalk/v1/stream?subscribe=self&metaDeltas=none&sendCachedValues=false',
-        500
+          '/signalk/v1/stream?subscribe=self&metaDeltas=none&sendCachedValues=false'
       ),
     selfPut: (path: string, body: object) =>
       fetch(`${api}/vessels/self/${path}`, {
