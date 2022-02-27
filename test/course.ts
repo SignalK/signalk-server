@@ -10,6 +10,7 @@ import {
   startServerP,
   WsPromiser
 } from './servertestutilities'
+import resourcesOpenApi from '../src/api/resources/openApi.json'
 chai.should()
 
 describe('Course Api', () => {
@@ -247,20 +248,7 @@ describe('Course Api', () => {
     const vesselPosition = { latitude: -35.45, longitude: 138.0 }
     sendDelta('navigation.position', vesselPosition)
 
-    const points = [
-      {
-        "latitude": 65.4567,
-        "longitude": 3.3452
-      },
-      {
-        "latitude": 65.5567,
-        "longitude": 3.3352
-      },
-      {
-        "latitude": 65.5777,
-        "longitude": 3.3261
-      }
-    ]
+    const points = resourcesOpenApi.components.schemas.SignalKPositionArray.example
 
     const { id } = await post('/resources/routes', {
       points
