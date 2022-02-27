@@ -1,5 +1,5 @@
 import { createDebug } from '../../debug'
-const debug = createDebug('signalk-server:resourcesApi')
+const debug = createDebug('signalk-server:api:resources')
 
 import {
   isSignalKResourceType,

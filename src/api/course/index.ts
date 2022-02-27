@@ -1,5 +1,5 @@
 import { createDebug } from '../../debug'
-const debug = createDebug('signalk-server:courseApi')
+const debug = createDebug('signalk-server:api:course')
 
 import { FullSignalK } from '@signalk/signalk-schema'
 import { Application, Request, Response } from 'express'
