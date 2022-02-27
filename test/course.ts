@@ -82,7 +82,6 @@ describe('Course Api', () => {
     }).then(response => response.status.should.equal(200))
 
     const courseDelta = JSON.parse(await wsPromiser.nthMessage(2))
-    console.error(courseDelta)
     courseDelta.updates[0].values[0].value.nextPoint.position.should.deep.equal(
       validDestinationPosition
     )
@@ -205,7 +204,8 @@ const startServer = async () => {
       new WsPromiser(
         'ws://localhost:' +
           port +
-          '/signalk/v1/stream?subscribe=self&metaDeltas=none&sendCachedValues=false'
+          '/signalk/v1/stream?subscribe=self&metaDeltas=none&sendCachedValues=false',
+        500
       ),
     selfPut: (path: string, body: object) =>
       fetch(`${api}/vessels/self/${path}`, {

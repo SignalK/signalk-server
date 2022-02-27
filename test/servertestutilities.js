@@ -33,12 +33,13 @@ const defaultConfig = {
   }
 }
 
-function WsPromiser (url) {
+function WsPromiser (url, timeout = 250) {
   this.ws = new WebSocket(url)
   this.ws.on('message', this.onMessage.bind(this))
   this.callees = []
   this.receivedMessagePromisers = []
   this.messageCount = 0
+  this.timeout = timeout
 }
 
 WsPromiser.prototype.nextMsg = function () {
@@ -47,7 +48,7 @@ WsPromiser.prototype.nextMsg = function () {
     callees.push(resolve)
     setTimeout(_ => {
       resolve('timeout')
-    }, 250)
+    }, this.timeout)
   })
 }
 
