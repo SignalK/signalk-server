@@ -312,7 +312,12 @@ export class ResourcesApi {
               req.body
             )
           } catch (e) {
-            res.status(400).json(e.message)
+            res.status(400).json({
+              state: 'FAILED',
+              statusCode: 400,
+              message: e.message
+            })
+            return
           }
         }
 
