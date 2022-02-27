@@ -809,7 +809,8 @@ const NMEA0183 = (props) => {
         )}
         {props.value.options.type === 'tcpserver' && (
           <Col xs="12" md="6">
-            Accept input from clients connected to the default TCP/10110 NMEA0183 server
+            Accept input from clients connected to the default TCP/10110
+            NMEA0183 server
           </Col>
         )}
       </FormGroup>
