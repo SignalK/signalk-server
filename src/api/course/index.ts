@@ -623,11 +623,14 @@ export class CourseApi {
           rte.feature.geometry.coordinates.length - (index + 1)
         ]
       : rte.feature.geometry.coordinates[index]
-    return {
+    const result: Position = {
       latitude: pos[1],
-      longitude: pos[0],
-      altitude: pos.length === 3 ? pos[2] : 0
+      longitude: pos[0]
     }
+    if (pos.length === 3) {
+      result.altitude = pos[2]
+    }
+    return result
   }
 
   private async getRoute(href: string): Promise<Route | undefined> {
