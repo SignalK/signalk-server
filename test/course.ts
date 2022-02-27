@@ -191,6 +191,56 @@ describe('Course Api', () => {
     })
     stop()
   })
+
+  it('can set arrivalCircle', async function() {
+    const { createWsPromiser, selfGetJson, selfPut, stop } = await startServer()
+
+    const wsPromiser = createWsPromiser()
+    await wsPromiser.nthMessage(1)
+
+    await selfPut('navigation/course/arrivalCircle', {
+      value: 98
+    }).then(response => response.status.should.equal(200))
+
+    const courseDelta = JSON.parse(await wsPromiser.nthMessage(2))
+
+    deltaHasPathValue(courseDelta, 'navigation.course', {
+      nextPoint: {
+        href: null,
+        position: null,
+        type: null,
+        arrivalCircle: 98
+      },
+      previousPoint: {
+        href: null,
+        position: null,
+        type: null
+      }
+    })
+    await selfGetJson('navigation/course').then(data => {
+      data.should.deep.equal({
+        activeRoute: {
+          href: null,
+          startTime: null,
+          pointIndex: 0,
+          pointTotal: 0,
+          reverse: false
+        },
+        nextPoint: {
+          href: null,
+          type: null,
+          position: null,
+          arrivalCircle: 98
+        },
+        previousPoint: {
+          href: null,
+          type: null,
+          position: null
+        }
+      })
+    })
+    stop()
+  })
 })
 
 const emptyConfigDirectory = () =>
