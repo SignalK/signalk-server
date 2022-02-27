@@ -97,7 +97,7 @@ export class CourseApi {
     this.store = new Store(
       path.join(app.config.configPath, 'serverstate/course')
     )
-    this.start(app).catch(error => {
+    this.start().catch(error => {
       console.log(error)
     })
   }
@@ -106,8 +106,7 @@ export class CourseApi {
     return _.get((this.server.signalk as any).self, 'navigation.position')
   }
 
-  private async start(app: any) {
-    debug(`** Initialise ${COURSE_API_PATH} path handler **`)
+  private async start() {
     this.initCourseRoutes()
 
     try {
@@ -139,6 +138,7 @@ export class CourseApi {
   }
 
   private initCourseRoutes() {
+    debug(`** Initialise ${COURSE_API_PATH} path handlers **`)
     // return current course information
     this.server.get(
       `${COURSE_API_PATH}`,
