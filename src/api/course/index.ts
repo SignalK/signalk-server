@@ -649,7 +649,7 @@ export class CourseApi {
   }
 
   private buildDeltaMsg(): any {
-    const {activeRoute, nextPoint, previousPoint} = this. courseInfo
+    const { activeRoute, nextPoint, previousPoint } = this.courseInfo
     const value: any = {
       nextPoint,
       previousPoint
