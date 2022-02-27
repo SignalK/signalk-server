@@ -696,7 +696,7 @@
       },
       "responses": {
         "200ActionResponse": {
-          "description": "PUT, POST, DELETE OK response",
+          "description": "PUT, DELETE OK response",
           "content": {
             "application/json": {
               "schema": {
@@ -712,6 +712,38 @@
                     "type": "number",
                     "enum": [
                       200
+                    ]
+                  },
+                  "id": {
+                    "$ref": "#/components/schemas/SignalKUuid"
+                  }
+                },
+                "required": [
+                  "id",
+                  "statusCode",
+                  "state"
+                ]
+              }
+            }
+          }
+        },
+        "201ActionResponse": {
+          "description": "POST OK response",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "COMPLETED"
+                    ]
+                  },
+                  "statusCode": {
+                    "type": "number",
+                    "enum": [
+                      201
                     ]
                   },
                   "id": {
@@ -946,8 +978,8 @@
             }
           },
           "responses": {
-            "200": {
-              "$ref": "#/components/responses/200ActionResponse"
+            "201": {
+              "$ref": "#/components/responses/201ActionResponse"
             },
             "default": {
               "$ref": "#/components/responses/ErrorResponse"
@@ -1075,8 +1107,8 @@
             }
           },
           "responses": {
-            "200": {
-              "$ref": "#/components/responses/200ActionResponse"
+            "201": {
+              "$ref": "#/components/responses/201ActionResponse"
             },
             "default": {
               "$ref": "#/components/responses/ErrorResponse"
@@ -1204,8 +1236,8 @@
             }
           },
           "responses": {
-            "200": {
-              "$ref": "#/components/responses/200ActionResponse"
+            "201": {
+              "$ref": "#/components/responses/201ActionResponse"
             },
             "default": {
               "$ref": "#/components/responses/ErrorResponse"
@@ -1333,8 +1365,8 @@
             }
           },
           "responses": {
-            "200": {
-              "$ref": "#/components/responses/200ActionResponse"
+            "201": {
+              "$ref": "#/components/responses/201ActionResponse"
             },
             "default": {
               "$ref": "#/components/responses/ErrorResponse"

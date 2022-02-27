@@ -255,9 +255,9 @@ export class ResourcesApi {
               req.body
             )
           )
-          res.status(200).json({
+          res.status(201).json({
             state: 'COMPLETED',
-            statusCode: 200,
+            statusCode: 201,
             id
           })
         } catch (err) {
