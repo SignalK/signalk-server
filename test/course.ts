@@ -234,6 +234,102 @@ describe('Course Api', () => {
     stop()
   })
 
+  it('can activate route', async function() {
+    const {
+      createWsPromiser,
+      post,
+      selfDelete,
+      selfGetJson,
+      selfPut,
+      sendDelta,
+      stop
+    } = await startServer()
+    const vesselPosition = { latitude: -35.45, longitude: 138.0 }
+    sendDelta('navigation.position', vesselPosition)
+
+    const points = [
+      {
+        "latitude": 65.4567,
+        "longitude": 3.3452
+      },
+      {
+        "latitude": 65.5567,
+        "longitude": 3.3352
+      },
+      {
+        "latitude": 65.5777,
+        "longitude": 3.3261
+      }
+    ]
+
+    const { id } = await post('/resources/routes', {
+      points
+    }).then(response => {
+      response.status.should.equal(200)
+      return response.json()
+    })
+    id.length.should.equal(
+      'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length
+    )
+    const href = `/resources/routes/${id}`
+
+    const wsPromiser = createWsPromiser()
+    const self = JSON.parse(await wsPromiser.nthMessage(1)).self
+
+    await selfPut('navigation/course/activeRoute', {
+      href
+    }).then(response => response.status.should.equal(200))
+
+    const courseDelta = JSON.parse(await wsPromiser.nthMessage(2))
+    courseDelta.context.should.equal(self)
+
+    delete courseDelta.updates[0].values[0].value.activeRoute.startTime
+    deltaHasPathValue(courseDelta, 'navigation.course', {
+      activeRoute: {
+        href,
+        pointIndex: 0,
+        pointTotal: 3,
+        reverse: false
+      },
+      nextPoint: {
+        href: null, 
+        type: 'RoutePoint',
+        position: points[0],
+        arrivalCircle: 0
+      },
+      previousPoint: {
+        href: null,
+        type: 'VesselPosition',
+        position: vesselPosition
+      }
+    })
+    await selfGetJson('navigation/course').then(data => {
+      delete data.activeRoute.startTime
+      data.should.deep.equal({
+        activeRoute: {
+          href,
+          pointIndex: 0,
+          pointTotal: 3,
+          reverse: false
+        },
+        nextPoint: {
+          href: null,
+          position: points[0],
+          type: 'RoutePoint',
+          arrivalCircle: 0
+        },
+        previousPoint: {
+          href: null,
+          type: 'VesselPosition',
+          position: vesselPosition
+        }
+      })
+    })
+
+
+    stop()
+  })
+
   it('can set arrivalCircle', async function() {
     const { createWsPromiser, selfGetJson, selfPut, stop } = await startServer()
 
