@@ -71,6 +71,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
             .concat(app.pluginconfigurators)
             .concat(app.embeddablewebapps)
         )
+        setNoCache(res)
         res.send(
           indexContent.toString().replace(
             /%ADDONSCRIPTS%/g,
@@ -99,7 +100,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   })
 
   app.get('/@signalk/server-admin-ui', (req, res) => {
-    res.redirect('/admin')
+    res.redirect('/admin/')
   })
 
   app.put(`${SERVERROUTESPREFIX}/restart`, (req, res, next) => {
@@ -117,9 +118,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     const result = app.securityStrategy.getLoginStatus(req)
     result.securityWasEnabled = !_.isUndefined(securityWasEnabled)
 
-    res.header('Cache-Control', 'no-cache, no-store, must-revalidate')
-    res.header('Pragma', 'no-cache')
-    res.header('Expires', 0)
+    setNoCache(res)
     res.json(result)
   }
 
@@ -977,4 +976,10 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       })
     })
   })
+}
+
+const setNoCache = res => {
+  res.header('Cache-Control', 'no-cache, no-store, must-revalidate')
+  res.header('Pragma', 'no-cache')
+  res.header('Expires', 0)
 }
