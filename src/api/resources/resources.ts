@@ -1,4 +1,9 @@
-import { Position, SignalKResourceType, Waypoint } from '@signalk/server-api'
+import {
+  Position,
+  Route,
+  SignalKResourceType,
+  Waypoint
+} from '@signalk/server-api'
 import { getDistance, isValidCoordinate } from 'geolib'
 
 export const buildResource = (resType: SignalKResourceType, data: any): any => {
@@ -333,11 +338,19 @@ const transformCoords = (coords: Position[]) => {
   })
 }
 
+const calculateDistance = (points: Position[]) => {
+  let result = 0
+  for (let i = points.length - 2; i >= 0; i--) {
+    result += getDistance(points[i], points[i + 1])
+  }
+  return result
+}
+
 const FROM_POST_MAPPERS: {
   [key: string]: (data: any) => any
 } = {
   waypoints: (data: any) => {
-    const { name, description, position, properties } = data
+    const { name, description, position, properties = {} } = data
     const result: Waypoint = {
       feature: {
         type: 'Feature',
@@ -347,9 +360,33 @@ const FROM_POST_MAPPERS: {
         }
       }
     }
-    name && (result.name = name)
-    description && (result.description = description)
-    properties && (result.feature.properties = properties)
+    name && (result.name = name) && (properties.name = name)
+    description &&
+      (result.description = description) &&
+      (properties.description = description)
+    result.feature.properties = properties
+    return result
+  },
+  routes: (data: any) => {
+    const { name, description, points, properties = {} } = data
+    const distance = calculateDistance(points)
+    const result: Route = {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: points.map((p: Position) => {
+            return [p.longitude, p.latitude]
+          })
+        }
+      },
+      distance
+    }
+    name && (result.name = name) && (properties.name = name)
+    description &&
+      (result.description = description) &&
+      (properties.description = description)
+    result.feature.properties = properties
     return result
   }
 }
