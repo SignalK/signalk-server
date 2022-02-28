@@ -137,7 +137,7 @@ describe('Course Api', () => {
     const { id } = await post('/resources/waypoints', {
       position: destination
     }).then(response => {
-      response.status.should.equal(200)
+      response.status.should.equal(201)
       return response.json()
     })
     id.length.should.equal(
@@ -253,7 +253,7 @@ describe('Course Api', () => {
     const { id } = await post('/resources/routes', {
       points
     }).then(response => {
-      response.status.should.equal(200)
+      response.status.should.equal(201)
       return response.json()
     })
     id.length.should.equal(

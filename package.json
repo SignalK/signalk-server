@@ -163,6 +163,7 @@
     "prettier": "^1.18.2",
     "rimraf": "^3.0.2",
     "rmfr": "^2.0.0",
+    "ts-node": "^10.5.0",
     "tslint": "^5.20.0",
     "tslint-config-prettier": "^1.18.0",
     "tslint-plugin-prettier": "^2.0.1",
