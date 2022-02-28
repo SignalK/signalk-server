@@ -18,7 +18,9 @@ import { buildResource, fromPostData } from './resources'
 import { validate } from './validate'
 
 const SIGNALK_API_PATH = `/signalk/v1/api`
+
 const UUID_PREFIX = 'urn:mrn:signalk:uuid:'
+export const skUuid = () => `${UUID_PREFIX}${uuidv4()}`
 
 interface ResourceApplication extends Application, WithSecurityStrategy {
   handleMessage: (id: string, data: any) => void
@@ -114,7 +116,7 @@ export class ResourcesApi {
           new Error(`Invalid resource id provided (${resId})`)
         )
       }
-      validate.resource(resType as SignalKResourceType, 'PUT', data)
+      validate.resource(resType as SignalKResourceType, resId, 'PUT', data)
     }
 
     return this.resProvider[resType]?.setResource(resId, data)
@@ -225,6 +227,7 @@ export class ResourcesApi {
           try {
             validate.resource(
               req.params.resourceType as SignalKResourceType,
+              undefined,
               req.method,
               req.body
             )
@@ -238,7 +241,7 @@ export class ResourcesApi {
         if (req.params.resourceType === 'charts') {
           id = req.body.identifier
         } else {
-          id = UUID_PREFIX + uuidv4()
+          id = skUuid()
         }
 
         try {
@@ -304,11 +307,11 @@ export class ResourcesApi {
             return
           }
 
-          debug('req.body')
           debug(req.body)
           try {
             validate.resource(
               req.params.resourceType as SignalKResourceType,
+              req.params.resourceId,
               req.method,
               req.body
             )

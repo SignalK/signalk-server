@@ -2,28 +2,33 @@ import { SignalKResourceType } from '@signalk/server-api'
 import { buildSchemaSync } from 'api-schema-builder'
 import { createDebug } from '../../debug'
 import resourcesOpenApi from './openApi.json'
-const debug = createDebug('signalk-server:resourcesApi:validate')
+const debug = createDebug('signalk-server:api:resources:validate')
 
 class ValidationError extends Error {}
 
 const API_SCHEMA = buildSchemaSync(resourcesOpenApi)
 
 export const validate = {
-  resource: (type: SignalKResourceType, method: string, value: any): void => {
+  resource: (
+    type: SignalKResourceType,
+    id: string | undefined,
+    method: string,
+    value: any
+  ): void => {
     debug(`Validating ${type} ${method} ${JSON.stringify(value)}`)
     const endpoint =
-      API_SCHEMA[`/signalk/v1/api/resources/${type as string}`][
-        method.toLowerCase()
-      ]
+      API_SCHEMA[
+        `/signalk/v1/api/resources/${type as string}${id ? '/:id' : ''}`
+      ][method.toLowerCase()]
     if (!endpoint) {
-      throw new Error(`Endpoint for ${type} ${method} not found`)
+      throw new Error(`Validation: endpoint for ${type} ${method} not found`)
     }
     const valid = endpoint.body.validate(value)
     if (valid) {
       return
     } else {
       debug(endpoint.body.errors)
-      throw new ValidationError(endpoint.body.errors)
+      throw new ValidationError(JSON.stringify(endpoint.body.errors))
     }
   },
 
