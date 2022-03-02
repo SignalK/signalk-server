@@ -147,8 +147,7 @@
         },
         "SignalKHref": {
           "type": "string",
-          "pattern": "/resources/[0-9a-z]/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-          "example": "/resources/waypoint/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+          "pattern": "/resources/[0-9a-z]/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
         },
         "SignalKPosition": {
           "type": "object",
@@ -169,10 +168,6 @@
               "type": "number",
               "format": "float"
             }
-          },
-          "example": {
-            "latitude": 65.4567,
-            "longitude": 3.3452
           }
         },
         "SignalKPositionArray": {
@@ -301,6 +296,61 @@
               ]
             ]
           ]
+        },
+        "HrefAttribute": {
+          "type": "object",
+          "required": ["href"],
+          "properties": {
+            "href": {
+              "description": "Reference to a related resource. A pointer to the resource UUID.",
+              "example": "/resources/waypoint/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a",
+              "allOf": [
+                  {
+                  "$ref": "#/components/schemas/SignalKHref"
+                  }
+              ]
+            }
+          }
+        },
+        "PositionAttribute": {
+          "type": "object",
+          "required": ["position"],
+          "properties": {
+            "position": {
+              "description": "Resource location.",
+              "example": {
+                "latitude": 65.4567,
+                "longitude": 3.3452
+              },
+              "allOf": [
+                  {
+                  "$ref": "#/components/schemas/SignalKPosition"
+                  }
+              ]
+            }
+          }
+        },
+        "TileMapAttribute": {
+          "type": "object",
+          "required": ["tilemapUrl"],
+          "properties": {
+            "tilemapUrl": {
+              "type": "string",
+              "description": "Chart tiles source",
+              "example": "/signalk/v1/api/resources/charts/ALASKA/{z}/{x}/{y}"
+            }
+          }
+        },
+        "ChartUrlAttribute": {
+          "type": "object",
+          "required": ["chartUrl"],
+          "properties": {
+            "chartUrl": {
+              "type": "string",
+              "description": "A url to the chart file's storage location",
+              "example": "file:///home/pi/charts/mapcache/NZ615"
+            }
+          }
         },
         "Route": {
           "type": "object",
@@ -496,7 +546,7 @@
             }
           }
         },
-        "Note": {
+        "NoteBaseModel": {
             "description": "Signal K Note resource",
             "type": "object",
             "properties": {
@@ -507,26 +557,6 @@
               "description": {
                 "type": "string",
                 "description": "Text describing note"
-              },
-              "oneOf": {
-                  "properties": {
-                      "href": {
-                          "allOf": [
-                              {
-                              "$ref": "#/components/schemas/SignalKHref"
-                              }
-                          ],
-                          "description": "Reference to a related resource. A pointer to the resource UUID. Alternative to position"
-                      },
-                      "position": {
-                          "allOf": [
-                              {
-                              "$ref": "#/components/schemas/SignalKPosition"
-                              }
-                          ],
-                          "description": "Position related to note. Alternative to href."
-                      }
-                  }
               },
               "mimeType": {
                 "type": "string",
@@ -547,7 +577,22 @@
               }
             }
         },
-        "Chart": {
+        "Note": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/NoteBaseModel"
+            }
+          ],
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/HrefAttribute"
+            },
+            {
+              "$ref": "#/components/schemas/PositionAttribute"
+            }
+          ]
+        },
+        "ChartBaseModel": {
           "description": "Signal K Chart resource",
           "type": "object",
           "required": [
@@ -568,20 +613,6 @@
               "type": "string",
               "description": "Text describing chart",
               "example": "Marlborough Sound, New Zealaand"
-            },
-            "oneOf": {
-              "properties": {
-                "tilemapUrl": {
-                  "type": "string",
-                  "description": "Chart tiles source",
-                  "example": "/signalk/v1/api/resources/charts/ALASKA/{z}/{x}/{y}"
-                },
-                "chartUrl": {
-                  "type": "string",
-                  "description": "A url to the chart file's storage location",
-                  "example": "file:///home/pi/charts/mapcache/NZ615"
-                }
-              }
             },
             "scale": {
               "type": "number",
@@ -627,6 +658,21 @@
             }
           }
         },
+        "Chart": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChartBaseModel"
+            }
+          ],
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/TileMapAttribute"
+            },
+            {
+              "$ref": "#/components/schemas/ChartUrlAttribute"
+            }
+          ]
+        },
         "BaseResponseModel": {
           "description": "base model for resource entry response",
           "type": "object",
@@ -669,7 +715,15 @@
               "$ref": "#/components/schemas/BaseResponseModel"
             },
             {
-              "$ref": "#/components/schemas/Note"
+              "$ref": "#/components/schemas/NoteBaseModel"
+            }
+          ],
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/HrefAttribute"
+            },
+            {
+              "$ref": "#/components/schemas/PositionAttribute"
             }
           ]
         },
@@ -689,7 +743,15 @@
               "$ref": "#/components/schemas/BaseResponseModel"
             },
             {
-              "$ref": "#/components/schemas/Chart"
+              "$ref": "#/components/schemas/ChartBaseModel"
+            }
+          ],
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/TileMapAttribute"
+            },
+            {
+              "$ref": "#/components/schemas/ChartUrlAttribute"
             }
           ]
         }
@@ -1465,6 +1527,31 @@
               }
             }
           }
+        },
+        "post": {
+          "tags": [
+            "charts"
+          ],
+          "summary": "New Chart",
+          "requestBody": {
+            "description": "Chart resource entry",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Chart"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "$ref": "#/components/responses/201ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
         }
       },
       "/resources/charts/{id}": {
@@ -1487,6 +1574,31 @@
           "responses": {
             "200": {
               "$ref": "#/components/responses/ChartResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "charts"
+          ],
+          "summary": "Add / update a new Chart with supplied id",
+          "requestBody": {
+            "description": "Chart resource entry",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Chart"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200ActionResponse"
             },
             "default": {
               "$ref": "#/components/responses/ErrorResponse"
