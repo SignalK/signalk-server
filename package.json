@@ -76,6 +76,7 @@
     "packages/server-api"
   ],
   "dependencies": {
+    "@homebridge/ciao": "^1.1.3",
     "@signalk/n2k-signalk": "^2.0.0",
     "@signalk/nmea0183-signalk": "^3.0.0",
     "@signalk/server-admin-ui": "1.39.2",

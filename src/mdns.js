@@ -19,14 +19,16 @@
 const _ = require('lodash')
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:mdns')
-const dnssd = require('dnssd2')
+//const dnssd = require('dnssd2')
+const ciao = require('@homebridge/ciao')
 const ports = require('./ports')
 
 module.exports = function mdnsResponder(app) {
   const config = app.config
 
-  let mdns = dnssd
+  let mdns // = dnssd
 
+  /*
   try {
     mdns = require('mdns')
     debug('using  mdns')
@@ -34,6 +36,7 @@ module.exports = function mdnsResponder(app) {
     debug(ex)
     debug('mdns not found, using dnssd2')
   }
+  */
 
   if (typeof config.settings.mdns !== 'undefined' && !config.settings.mdns) {
     debug('Mdns disabled by configuration')
@@ -57,8 +60,10 @@ module.exports = function mdnsResponder(app) {
 
   const types = []
   types.push({
-    type: app.config.settings.ssl ? mdns.tcp('https') : mdns.tcp('http'),
-    port: ports.getExternalPort(app)
+    //type: app.config.settings.ssl ? mdns.tcp('https') : mdns.tcp('http'),
+    type: app.config.settings.ssl ? 'https' : 'http',
+    port: ports.getExternalPort(app),
+    name: 'Signal K'
   })
 
   for (const key in app.interfaces) {
@@ -73,7 +78,12 @@ module.exports = function mdnsResponder(app) {
         service.name.charAt(0) === '_'
       ) {
         types.push({
-          type: mdns[service.type](service.name),
+          //type: mdns[service.type](service.name),
+
+
+          name: require('os').hostname(),
+          type: service.name.slice(1),
+          protocol: service.type,
           port: service.port
         })
       } else {
@@ -99,6 +109,7 @@ module.exports = function mdnsResponder(app) {
   debug(options)
 
   const ads = []
+  const responder = ciao.getResponder()
   // tslint:disable-next-line: forin
   for (const i in types) {
     const type = types[i]
@@ -110,6 +121,19 @@ module.exports = function mdnsResponder(app) {
         ':' +
         type.port
     )
+    const service = responder.createService({
+      type: type.type,
+      name: type.name,
+      port: type.port,
+      host: require('os').hostname(),
+      txt: txtRecord
+    })
+    service.advertise().then(() => {
+      console.log("Service is published :)");
+    });
+
+    ads.push(service)
+    /*
     const ad = new mdns.Advertisement(type.type, type.port, options)
     ad.on('error', err => {
       console.log(type.type.name)
@@ -117,6 +141,7 @@ module.exports = function mdnsResponder(app) {
     })
     ad.start()
     ads.push(ad)
+    */
   }
 
   return {
