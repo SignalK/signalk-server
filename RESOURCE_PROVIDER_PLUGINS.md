@@ -26,29 +26,29 @@ This functionality needs to be provided by one or more server plugins that handl
 
 These plugins are called __Resource Providers__.
 
-This de-coupling of resource request handling and storage / retrieval provides great flexibility to ensure that an appropriate resource storage solution can be configured for your SignalK implementation.
+The de-coupling of request handling and data storage provides flexibility to persist resource data in different types of storage to meet the needs of your SignalK implementation.
 
-SignalK server handles requests for both __Common__ and __Custom__ resource types in a similar manner, the only difference being that it does not perform any validation on __Custom__ resource data, so a plugin can act as a provider for both types.
+Requests for both __Common__ and __Custom__ resource types are handled by the SignalK server, the only difference being that the resource data contained in `POST` and `PUT` requests for __Common__ resource types is validated against the OpenApi schema.
+
+_Note: A plugin can act as a provider for both __Common__ and __Custom__ resource types._
 
 ---
 ## Server Operation:
 
-The Signal K server handles all requests to `/signalk/v1/api/resources` and all sub-paths, before passing on the request to the registered resource provider plugin.
+The Signal K server handles all requests to `/signalk/v1/api/resources` (and sub-paths), before passing on the request to the registered resource provider plugin.
 
 The following operations are performed by the server when a request is received:
 - Checks for a registered provider for the resource type
-- Checks that ResourceProvider methods are defined
+- Checks that the required ResourceProvider methods are defined
 - Performs access control check
-- For __Common__ resource types, checks the validity of the: 
-  - Resource id
-  - Submitted resource data.
+- For __Common__ resource types, checks the validity of the `resource id` and submitted `resource data`.
 
-Upon successful completion of these operations the request will then be passed to the registered resource provider plugin.
+Only after successful completion of all these operations is the request  passed on to the registered resource provider plugin.
 
 ---
 ## Resource Provider plugin:
 
-For a plugin to be considered a Resource Provider it needs to register with the SignalK server:
+For a plugin to be considered a Resource Provider it needs to register with the SignalK server the following:
 - Each resource type provided for by the plugin
 - The methods used to action requests. It is these methods that perform the writing, retrieval and deletion of resources from storage.
 
@@ -56,37 +56,47 @@ For a plugin to be considered a Resource Provider it needs to register with the 
 ### Resource Provider Interface
 
 ---
-The `ResourceProvider` interface is the means by which the plugin informs the SignalK server the resource type(s) it services and the endpoints to which requests should be passed. 
+The `ResourceProvider` interface is the means by which the plugin informs the SignalK server each of the resource type(s) it services and the endpoints to which requests should be passed. 
 
-`ResourceProvider` is defined as follows in _`@signalk/server-api`_:
+The `ResourceProvider` interface is defined as follows in _`@signalk/server-api`_:
 
 ```typescript
-interface ResourceProvider: {
-  type: ResourceType,
-  methods: {
-    listResources: (query: {[key:string]:any})=> Promise<{[key:string]:any}>
-    getResource: (id:string)=> Promise<{[key:string]:any}>
-    setResource: (id:string, value:{[key:string]:any})=> Promise<void>
-    deleteResource: (id:string)=> Promise<void>
-  }
+interface ResourceProvider {
+  type: ResourceType
+  methods: ResourceProviderMethods
 }
 ```
 where:
 
-- `type`: The resource type provided for by the plugin _(e.g. `routes`)_. 
+- `type`: The resource type provided for by the plugin. These can be either __Common__ or __Custom__ resource types _(e.g. `routes`, `fishingZones`)_ 
 
-These can be either __Common__ or __Custom__ resource types.
+- `methods`: An object implementing the `ResourceProviderMethods` interface defining the methods to which resource requests are passed by the SignalK server. _Note: The plugin __MUST__ implement each method, even if that operation is NOT supported by the plugin!_
 
-- `methods`: An object containing the methods to which resource requests are passed by the SignalK server. The plugin __MUST__ implement each method, even if that operation is NOT supported by the plugin!
+The `ResourceProviderMethods` interface is defined as follows in _`@signalk/server-api`_:
 
-#### __Method Details:__
+```typescript
+interface ResourceProviderMethods {
+  pluginId?: string
+  listResources: (query: { [key: string]: any }) => Promise<{[id: string]: any}>
+  getResource: (id: string) => Promise<object>
+  setResource: (
+    id: string,
+    value: { [key: string]: any }
+  ) => Promise<void>
+  deleteResource: (id: string) => Promise<void>
+}
+```
+
+
+#### Methods:
 
 ---
+
 __`listResources(query)`__: This method is called when a request is made for resource entries that match a specific criteria.
 
 _Note: It is the responsibility of the resource provider plugin to filter the resources returned as per the supplied query parameters._
 
-`query:` Object contining `key | value` pairs repesenting the parameters by which to filter the returned entries. _e.g. {region: 'fishing_zone'}_
+- `query:` Object contining `key | value` pairs repesenting the parameters by which to filter the returned entries. _e.g. {region: 'fishing_zone'}_
 
 returns: `Promise<{[id: string]: any}>`
 
@@ -108,7 +118,7 @@ listResources(
 ---
 __`getResource(id)`__: This method is called when a request is made for a specific resource entry with the supplied id. If there is no resource associated with the id the call should return Promise.reject.
 
-`id:` String containing the target resource entry id. _(e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99')_
+- `id:` String containing the target resource entry id. _(e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99')_
 
 returns: `Promise<object>`
 
@@ -127,9 +137,9 @@ getResource(
 ---
 __`setResource(id, value)`__: This method is called when a request is made to save / update a resource entry with the supplied id. The supplied data is a complete resource record.
 
-`id:` String containing the id of the resource entry created / updated. _e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'_
+- `id:` String containing the id of the resource entry created / updated. _e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'_
 
-`value:` Resource data to be stored.
+- `value:` Resource data to be stored.
 
 returns: `Promise<void>`
 
@@ -184,7 +194,7 @@ setResource(
 ---
 __`deleteResource(id)`__: This method is called when a request is made to remove the specific resource entry with the supplied resource id.
 
-`id:` String containing the target resource entry id. _e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'_
+- `id:` String containing the target resource entry id. _e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'_
 
 returns: `Promise<void>`
 
@@ -287,7 +297,7 @@ module.exports = function (app) {
 
 ### Methods 
 
-Resource Provider plugin must implement methods to service the requests passed from the server.
+A Resource Provider plugin must implement methods to service the requests passed from the server.
 
 All methods must be implemented even if the plugin does not provide for a specific request.
 
