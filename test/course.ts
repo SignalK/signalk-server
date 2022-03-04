@@ -189,7 +189,7 @@ describe('Course Api', () => {
     const destinationClearedDelta = JSON.parse(await wsPromiser.nthMessage(3))
     deltaHasPathValue(destinationClearedDelta, 'navigation.course', {
       nextPoint: {
-        href: null, 
+        href: null,
         type: null,
         position: null,
         arrivalCircle: 99
@@ -226,11 +226,10 @@ describe('Course Api', () => {
     stop()
   })
 
-  it('can activate route', async function() {
+  it('can activate route and manipulate it', async function() {
     const {
       createWsPromiser,
       post,
-      selfDelete,
       selfGetJson,
       selfPut,
       sendDelta,
@@ -239,7 +238,8 @@ describe('Course Api', () => {
     const vesselPosition = { latitude: -35.45, longitude: 138.0 }
     sendDelta('navigation.position', vesselPosition)
 
-    const points = resourcesOpenApi.components.schemas.SignalKPositionArray.example
+    const points =
+      resourcesOpenApi.components.schemas.SignalKPositionArray.example
 
     const { id } = await post('/resources/routes', {
       points
@@ -271,7 +271,7 @@ describe('Course Api', () => {
         reverse: false
       },
       nextPoint: {
-        href: null, 
+        href: null,
         type: 'RoutePoint',
         position: points[0],
         arrivalCircle: 0
@@ -305,6 +305,52 @@ describe('Course Api', () => {
       })
     })
 
+    await selfPut('navigation/course/activeRoute/nextPoint', {
+      value: 1
+    }).then(response => response.status.should.equal(200))
+    await selfGetJson('navigation/course').then(data =>
+      data.activeRoute.pointIndex.should.equal(1)
+    )
+
+    await selfPut('navigation/course/activeRoute/nextPoint', {
+      value: 100
+    }).then(response => response.status.should.equal(400))
+    await selfGetJson('navigation/course').then(data =>
+      data.activeRoute.pointIndex.should.equal(1)
+    )
+
+    await selfPut('navigation/course/activeRoute/nextPoint', {
+      value: -1
+    }).then(response => response.status.should.equal(200))
+    await selfGetJson('navigation/course').then(data =>
+      data.activeRoute.pointIndex.should.equal(0)
+    )
+
+    await selfPut('navigation/course/activeRoute/pointIndex', {
+      value: 2
+    }).then(response => response.status.should.equal(200))
+    await selfGetJson('navigation/course').then(data =>
+      data.activeRoute.pointIndex.should.equal(2)
+    )
+
+    await selfPut('navigation/course/activeRoute', {
+      href,
+      reverse: true
+    }).then(response => response.status.should.equal(200))
+    await selfGetJson('navigation/course').then(data =>
+      data.nextPoint.position.latitude.should.equal(
+        points[points.length - 1].latitude
+      )
+    )
+    await selfPut('navigation/course/activeRoute/nextPoint', {
+      value: 1
+    }).then(response => response.status.should.equal(200))
+    await selfGetJson('navigation/course').then(data => {
+      data.nextPoint.position.latitude.should.equal(points[1].latitude)
+      data.previousPoint.position.latitude.should.equal(
+        points[points.length - 1].latitude
+      )
+    })
 
     stop()
   })
