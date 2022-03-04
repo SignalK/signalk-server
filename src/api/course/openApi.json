@@ -40,13 +40,13 @@
       "schemas": {
         "SignalKHrefRoute": {
             "type": "string",
-            "pattern": "/resources/routes/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+            "pattern": "^\/resources\/routes\/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
             "description": "pointer to route resource",
             "example": "/resources/routes/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
         },
         "SignalKHrefWaypoint": {
             "type": "string",
-            "pattern": "/resources/waypoints/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+            "pattern": "^\/resources\/waypoints\/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
             "description": "pointer to waypoint resource",
             "example": "/resources/waypoints/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
         },
@@ -73,6 +73,47 @@
           "example": {
             "latitude": 65.4567,
             "longitude": 3.3452
+          }
+        },
+        "HrefWaypointAttribute": {
+          "type": "object",
+          "required": ["href"],
+          "properties": {
+            "href": {
+              "type": "string",
+              "pattern": "^\/resources\/waypoints\/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+              "description": "Reference to a related route resource. A pointer to the resource UUID.",
+              "example": "/resources/waypoints/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+            }
+          }
+        },
+        "PositionAttribute": {
+          "type": "object",
+          "required": ["position"],
+          "properties": {
+            "position": {
+              "description": "Resource location.",
+              "example": {
+                "latitude": 65.4567,
+                "longitude": 3.3452
+              },
+              "allOf": [
+                  {
+                  "$ref": "#/components/schemas/SignalKPosition"
+                  }
+              ]
+            }
+          }
+        },
+        "ArrivalCircleAttribute": {
+          "type": "object",
+          "properties": {
+            "arrivalCircle": {
+              "type": "number",
+              "description": "Radius of arrival zone in meters",
+              "minimum": 0,
+              "example": 500
+            }
           }
         },
         "CourseModel": {
@@ -102,6 +143,7 @@
                 },
                 "pointIndex": {
                   "type": "number",
+                  "minimum": 0,
                   "description": "0 based index of the point in the route that is the current destination"
                 },
                 "pointTotal": {
@@ -134,6 +176,7 @@
                 },
                 "arrivalCircle": {
                   "type": "number",
+                  "minimum": 0,
                   "description": "Radius of arrival zone in meters centered around position value."
                 }
               }
@@ -340,9 +383,11 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "required": ["value"],
                   "properties": {
                     "value": {
                       "type": "number",
+                      "minimum": 0,
                       "example": 500
                     }
                   }
@@ -373,30 +418,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
                   "oneOf": [
-                    { "required":
-                      [ "position" ] },
-                    { "required":
-                      [ "href" ] }
-                  ],
-                  "properties": {
-                    "oneOf": {
-                      "properties": {
-                        "position": {
-                          "$ref": "#/components/schemas/SignalKPosition"
-                        },
-                        "href": {
-                          "$ref": "#/components/schemas/SignalKHrefWaypoint"
-                        }
+                      {
+                        "$ref": "#/components/schemas/HrefWaypointAttribute"
+                      },
+                      {
+                        "$ref": "#/components/schemas/PositionAttribute"
                       }
-                    },
-                    "arrivalCircle": {
-                      "type": "number",
-                      "description": "Radius of arrival zone in meters",
-                      "example": 500
+                  ],
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ArrivalCircleAttribute"
                     }
-                  }
+                  ]
                 }
               }
             }
@@ -450,6 +484,7 @@
                     "pointIndex": {
                       "type": "number",
                       "default": 0,
+                      "minimum": 0,
                       "description": "0 based index of the point in the route to set as the destination"
                     },
                     "reverse": {
@@ -459,6 +494,7 @@
                     },
                     "arrivalCircle": {
                       "type": "number",
+                      "minimum": 0,
                       "description": "Radius of arrival zone in meters",
                       "example": 500
                     }
@@ -506,6 +542,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "required": ["value"],
                   "properties": {
                     "value": {
                       "type": "number",
@@ -536,18 +573,20 @@
           "tags": [
             "activeRoute"
           ],
-          "summary": "Set point in route as destination",
-          "description": "Sets destination to the point with the provided index",
+          "summary": "Set point in route as destination.",
+          "description": "Sets destination to the point with the provided index.",
           "requestBody": {
             "required": true,
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "required": ["value"],
                   "properties": {
                     "value": {
                       "type": "number",
-                      "description": "Index of point in route",
+                      "minimum": 0,
+                      "description": "Index of point in route to set as destination.",
                       "example": 2
                     }
                   }
@@ -570,8 +609,8 @@
           "tags": [
             "activeRoute"
           ],
-          "summary": "Refresh course information",
-          "description": "Refresh course values after a change has been made.",
+          "summary": "Reverse route direction.",
+          "description": "Reverse the direction the active route is navigated.",
           "requestBody": {
             "required": false,
             "content": {
@@ -579,9 +618,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "pointindex": {
+                    "pointIndex": {
                       "type": "number",
-                      "description": "Index of point in route",
+                      "minimum": 0,
+                      "description": "Index of point in route to set as destination.",
                       "example": 2
                     }
                   }
