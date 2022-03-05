@@ -27,6 +27,7 @@ import http from 'http'
 import https from 'https'
 import _ from 'lodash'
 import path from 'path'
+import { startApis } from './api'
 import { SelfIdentity, ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
@@ -44,10 +45,6 @@ import {
 } from './security.js'
 import SubscriptionManager from './subscriptionmanager'
 import { Delta } from './types'
-
-import { CourseApi } from './api/course'
-import { ResourcesApi } from './api/resources'
-
 const debug = createDebug('signalk-server')
 
 // tslint:disable-next-line: no-var-requires
@@ -79,9 +76,6 @@ class Server {
 
     require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
     require('./put').start(app)
-
-    app.resourcesApi = new ResourcesApi(app)
-    const courseApi = new CourseApi(app)
 
     app.signalk = new FullSignalK(app.selfId, app.selfType)
 
@@ -354,8 +348,8 @@ class Server {
 
     app.intervals.push(startDeltaStatistics(app))
 
-    return new Promise((resolve, reject) => {
-      createServer(app, (err, server) => {
+    return new Promise(async (resolve, reject) => {
+      createServer(app, async (err, server) => {
         if (err) {
           reject(err)
           return
@@ -369,6 +363,7 @@ class Server {
 
         sendBaseDeltas((app as unknown) as ConfigApp)
 
+        await startApis(app)
         startInterfaces(app)
         startMdns(app)
         app.providers = require('./pipedproviders')(app).start()

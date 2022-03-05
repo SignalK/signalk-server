@@ -33,6 +33,10 @@ export class ResourcesApi {
     this.initResourceRoutes(app)
   }
 
+  async start() {
+    return Promise.resolve()
+  }
+
   register(pluginId: string, provider: ResourceProvider) {
     debug(`** Registering provider(s)....${pluginId} ${provider?.type}`)
     if (!provider) {
