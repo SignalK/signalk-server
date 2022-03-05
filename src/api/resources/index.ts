@@ -17,7 +17,7 @@ import { Responses } from '../'
 import { buildResource, fromPostData } from './resources'
 import { validate } from './validate'
 
-const SIGNALK_API_PATH = `/signalk/v1/api`
+export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 
 const UUID_PREFIX = 'urn:mrn:signalk:uuid:'
 export const skUuid = () => `${UUID_PREFIX}${uuidv4()}`
@@ -142,18 +142,15 @@ export class ResourcesApi {
     }
 
     // list all serviced paths under resources
-    server.get(
-      `${SIGNALK_API_PATH}/resources`,
-      (req: Request, res: Response) => {
-        res.json(this.getResourcePaths())
-      }
-    )
+    server.get(`${RESOURCES_API_PATH}`, (req: Request, res: Response) => {
+      res.json(this.getResourcePaths())
+    })
 
     // facilitate retrieval of a specific resource
     server.get(
-      `${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`,
+      `${RESOURCES_API_PATH}/:resourceType/:resourceId`,
       async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** GET ${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`)
+        debug(`** GET ${RESOURCES_API_PATH}/:resourceType/:resourceId`)
         if (
           !this.checkForProvider(req.params.resourceType as SignalKResourceType)
         ) {
@@ -178,9 +175,9 @@ export class ResourcesApi {
 
     // facilitate retrieval of a collection of resource entries
     server.get(
-      `${SIGNALK_API_PATH}/resources/:resourceType`,
+      `${RESOURCES_API_PATH}/:resourceType`,
       async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** GET ${SIGNALK_API_PATH}/resources/:resourceType`)
+        debug(`** GET ${RESOURCES_API_PATH}/:resourceType`)
         if (
           !this.checkForProvider(req.params.resourceType as SignalKResourceType)
         ) {
@@ -205,11 +202,9 @@ export class ResourcesApi {
 
     // facilitate creation of new resource entry of supplied type
     server.post(
-      `${SIGNALK_API_PATH}/resources/:resourceType/`,
+      `${RESOURCES_API_PATH}/:resourceType/`,
       async (req: Request, res: Response, next: NextFunction) => {
-        debug(
-          `** POST ${SIGNALK_API_PATH}/resources/${req.params.resourceType}`
-        )
+        debug(`** POST ${RESOURCES_API_PATH}/${req.params.resourceType}`)
 
         if (
           !this.checkForProvider(req.params.resourceType as SignalKResourceType)
@@ -280,9 +275,9 @@ export class ResourcesApi {
 
     // facilitate creation / update of resource entry at supplied id
     server.put(
-      `${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`,
+      `${RESOURCES_API_PATH}/:resourceType/:resourceId`,
       async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** PUT ${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`)
+        debug(`** PUT ${RESOURCES_API_PATH}/:resourceType/:resourceId`)
         if (
           !this.checkForProvider(req.params.resourceType as SignalKResourceType)
         ) {
@@ -359,11 +354,9 @@ export class ResourcesApi {
 
     // facilitate deletion of specific of resource entry at supplied id
     server.delete(
-      `${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`,
+      `${RESOURCES_API_PATH}/:resourceType/:resourceId`,
       async (req: Request, res: Response, next: NextFunction) => {
-        debug(
-          `** DELETE ${SIGNALK_API_PATH}/resources/:resourceType/:resourceId`
-        )
+        debug(`** DELETE ${RESOURCES_API_PATH}/:resourceType/:resourceId`)
         if (
           !this.checkForProvider(req.params.resourceType as SignalKResourceType)
         ) {
@@ -406,9 +399,9 @@ export class ResourcesApi {
 
     // facilitate API requests
     server.post(
-      `${SIGNALK_API_PATH}/resources/set/:resourceType`,
+      `${RESOURCES_API_PATH}/set/:resourceType`,
       async (req: Request, res: Response) => {
-        debug(`** POST ${SIGNALK_API_PATH}/resources/set/:resourceType`)
+        debug(`** POST ${RESOURCES_API_PATH}/set/:resourceType`)
 
         if (!updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
@@ -474,11 +467,9 @@ export class ResourcesApi {
       }
     )
     server.put(
-      `${SIGNALK_API_PATH}/resources/set/:resourceType/:resourceId`,
+      `${RESOURCES_API_PATH}/set/:resourceType/:resourceId`,
       async (req: Request, res: Response) => {
-        debug(
-          `** PUT ${SIGNALK_API_PATH}/resources/set/:resourceType/:resourceId`
-        )
+        debug(`** PUT ${RESOURCES_API_PATH}/set/:resourceType/:resourceId`)
 
         if (!updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)

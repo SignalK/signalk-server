@@ -1,5 +1,6 @@
 import { SignalKResourceType } from '@signalk/server-api'
 import { buildSchemaSync } from 'api-schema-builder'
+import { RESOURCES_API_PATH } from '.'
 import { createDebug } from '../../debug'
 import resourcesOpenApi from './openApi.json'
 const debug = createDebug('signalk-server:api:resources:validate')
@@ -17,9 +18,9 @@ export const validate = {
   ): void => {
     debug(`Validating ${type} ${method} ${JSON.stringify(value)}`)
     const endpoint =
-      API_SCHEMA[
-        `/signalk/v1/api/resources/${type as string}${id ? '/:id' : ''}`
-      ][method.toLowerCase()]
+      API_SCHEMA[`${RESOURCES_API_PATH}/${type as string}${id ? '/:id' : ''}`][
+        method.toLowerCase()
+      ]
     if (!endpoint) {
       throw new Error(`Validation: endpoint for ${type} ${method} not found`)
     }

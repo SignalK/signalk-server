@@ -18,7 +18,7 @@ import courseOpenApi from './openApi.json'
 
 const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
 
-const SIGNALK_API_PATH = `/signalk/v1/api`
+const SIGNALK_API_PATH = `/signalk/v2/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
 
 interface CourseApplication
