@@ -41,14 +41,8 @@
         "SignalKHrefRoute": {
             "type": "string",
             "pattern": "^\/resources\/routes\/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-            "description": "pointer to route resource",
+            "description": "Pointer to route resource.",
             "example": "/resources/routes/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
-        },
-        "SignalKHrefWaypoint": {
-            "type": "string",
-            "pattern": "^\/resources\/waypoints\/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-            "description": "pointer to waypoint resource",
-            "example": "/resources/waypoints/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
         },
         "SignalKPosition": {
           "type": "object",
@@ -75,6 +69,12 @@
             "longitude": 3.3452
           }
         },
+        "ArrivalCircle": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Radius of arrival zone in meters",
+          "example": 500
+        },
         "HrefWaypointAttribute": {
           "type": "object",
           "required": ["href"],
@@ -92,7 +92,7 @@
           "required": ["position"],
           "properties": {
             "position": {
-              "description": "Resource location.",
+              "description": "Location coordinates.",
               "example": {
                 "latitude": 65.4567,
                 "longitude": 3.3452
@@ -105,96 +105,21 @@
             }
           }
         },
+        "PointTypeAttribute": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Type of point.",
+              "example": "Point of Interest"
+            }
+          }
+        },
         "ArrivalCircleAttribute": {
           "type": "object",
           "properties": {
             "arrivalCircle": {
-              "type": "number",
-              "description": "Radius of arrival zone in meters",
-              "minimum": 0,
-              "example": 500
-            }
-          }
-        },
-        "CourseModel": {
-          "description": "base model for course response",
-          "type": "object",
-          "required": [
-            "activeRoute",
-            "nextPoint",
-            "previousPoint"
-          ],
-          "properties": {
-            "activeRoute": {
-              "type": "object",
-              "required": [
-                "href",
-                "startTime",
-                "pointIndex",
-                "pointTotal",
-                "reverse"
-              ],
-              "properties": {
-                "href": {
-                  "$ref": "#/components/schemas/SignalKHrefRoute"
-                },
-                "startTime": {
-                  "type": "string"
-                },
-                "pointIndex": {
-                  "type": "number",
-                  "minimum": 0,
-                  "description": "0 based index of the point in the route that is the current destination"
-                },
-                "pointTotal": {
-                  "type": "number",
-                  "description": "Total number of points in the route"
-                },
-                "reverse": {
-                  "type": "boolean",
-                  "description": "When true indicates the route points are being navigated in reverse order."
-                }
-              }
-            },
-            "nextPoint": {
-              "type": "object",
-              "required": [
-                "position",
-                "href",
-                "arrivalCircle"
-              ],
-              "properties": {
-                "position": {
-                  "$ref": "#/components/schemas/SignalKPosition"
-                },
-                "href": {
-                  "$ref": "#/components/schemas/SignalKHrefWaypoint"
-                },
-                "type": {
-                  "type": "string",
-                  "description": "Type of the next point e.g. waypoint, routePoint, etc."
-                },
-                "arrivalCircle": {
-                  "type": "number",
-                  "minimum": 0,
-                  "description": "Radius of arrival zone in meters centered around position value."
-                }
-              }
-            },
-            "previousPoint": {
-              "type": "object",
-              "required": [
-                "position"
-              ],
-              "properties": {
-                "position": {
-                  "$ref": "#/components/schemas/SignalKPosition"
-                },
-                "type": {
-                  "type": "string",
-                  "description": "Type of the next point e.g. waypoint, routePoint, etc."
-                }
-              }
+              "$ref": "#/components/schemas/ArrivalCircle"
             }
           }
         },
@@ -209,11 +134,13 @@
             },
             "bearingTrackTrue": {
               "type": "number",
+              "minimum": 0,
               "description": "angle in radians",
               "example": 4.58491
             },
             "bearingTrackMagnetic": {
               "type": "number",
+              "minimum": 0,
               "description": "angle in radians",
               "example": 4.51234
             },
@@ -224,16 +151,19 @@
             },
             "distance": {
               "type": "number",
+              "minimum": 0,
               "description": "Distance from the current position to the destination in meters",
               "example": 10157
             },
             "bearingTrue": {
               "type": "number",
+              "minimum": 0,
               "description": "angle in radians",
               "example": 4.58491
             },
             "bearingMagnetic": {
               "type": "number",
+              "minimum": 0,
               "description": "angle in radians",
               "example": 4.51234
             },
@@ -244,6 +174,7 @@
             },
             "timeToGo": {
               "type": "number",
+              "minimum": 0,
               "description": "Time remaining in seconds until arrival at destination",
               "example": 8491
             }
@@ -317,7 +248,74 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CourseModel"
+                "description": "base model for course response",
+                "type": "object",
+                "required": [
+                  "activeRoute",
+                  "nextPoint",
+                  "previousPoint"
+                ],
+                "properties": {
+                  "activeRoute": {
+                    "type": "object",
+                    "required": [
+                      "href",
+                      "startTime",
+                      "pointIndex",
+                      "pointTotal",
+                      "reverse"
+                    ],
+                    "properties": {
+                      "href": {
+                        "$ref": "#/components/schemas/SignalKHrefRoute"
+                      },
+                      "startTime": {
+                        "type": "string"
+                      },
+                      "pointIndex": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "0 based index of the point in the route that is the current destination"
+                      },
+                      "pointTotal": {
+                        "type": "number",
+                        "description": "Total number of points in the route"
+                      },
+                      "reverse": {
+                        "type": "boolean",
+                        "description": "When true indicates the route points are being navigated in reverse order."
+                      }
+                    }
+                  },
+                  "nextPoint": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/HrefWaypointAttribute"
+                      },
+                      {
+                        "$ref": "#/components/schemas/PositionAttribute"
+                      }
+                    ],
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/PointTypeAttribute"
+                      },
+                      {
+                        "$ref": "#/components/schemas/ArrivalCircleAttribute"
+                      }
+                    ]
+                  },
+                  "previousPoint": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/PositionAttribute"
+                      },
+                      {
+                        "$ref": "#/components/schemas/PointTypeAttribute"
+                      }
+                    ]
+                  }
+                }
               }
             }
           }
@@ -332,8 +330,7 @@
             }
           }
         }
-      },
-      "parameters": {}
+      }
     },
     "paths": {
       "/course": {
@@ -386,9 +383,7 @@
                   "required": ["value"],
                   "properties": {
                     "value": {
-                      "type": "number",
-                      "minimum": 0,
-                      "example": 500
+                      "$ref": "#/components/schemas/ArrivalCircle"
                     }
                   }
                 }
@@ -493,10 +488,7 @@
                       "description": "Set to true to navigate the route points in reverse order."
                     },
                     "arrivalCircle": {
-                      "type": "number",
-                      "minimum": 0,
-                      "description": "Radius of arrival zone in meters",
-                      "example": 500
+                      "$ref": "#/components/schemas/ArrivalCircle"
                     }
                   }
                 }
