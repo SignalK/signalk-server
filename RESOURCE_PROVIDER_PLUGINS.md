@@ -8,7 +8,7 @@ To see an example of a resource provider plugin see [resources-provider-plugin](
 
 ## Overview
 
-The SignalK specification defines the path `/signalk/v1/api/resources` for accessing resources to aid in navigation and operation of the vessel.
+The SignalK specification defines the path `/signalk/v2/api/resources` for accessing resources to aid in navigation and operation of the vessel.
 
 It also defines the schema for the following __Common__ resource types:
 - routes
@@ -17,9 +17,9 @@ It also defines the schema for the following __Common__ resource types:
 - regions
 - charts
 
-each with its own path under the root `resources` path _(e.g. `/signalk/v1/api/resources/routes`)_.
+each with its own path under the root `resources` path _(e.g. `/signalk/v2/api/resources/routes`)_.
 
-It should also be noted that the `/signalk/v1/api/resources` path can also host other types of resource data which can be grouped within a __Custom__ path name _(e.g. `/signalk/v1/api/resources/fishingZones`)_.
+It should also be noted that the `/signalk/v2/api/resources` path can also host other types of resource data which can be grouped within a __Custom__ path name _(e.g. `/signalk/v2/api/resources/fishingZones`)_.
 
 The SignalK server does not natively provide the ability to store or retrieve resource data for either __Common__ and __Custom__ resource types.
 This functionality needs to be provided by one or more server plugins that handle the data for specific resource types.
@@ -35,7 +35,7 @@ _Note: A plugin can act as a provider for both __Common__ and __Custom__ resourc
 ---
 ## Server Operation:
 
-The Signal K server handles all requests to `/signalk/v1/api/resources` (and sub-paths), before passing on the request to the registered resource provider plugin.
+The Signal K server handles all requests to `/signalk/v2/api/resources` (and sub-paths), before passing on the request to the registered resource provider plugin.
 
 The following operations are performed by the server when a request is received:
 - Checks for a registered provider for the resource type
@@ -103,7 +103,7 @@ returns: `Promise<{[id: string]: any}>`
 
 _Example resource request:_ 
 ```
-GET /signalk/v1/api/resources/waypoints?bbox=5.4,25.7,6.9,31.2
+GET /signalk/v2/api/resources/waypoints?bbox=5.4,25.7,6.9,31.2
 ```
 _ResourceProvider method invocation:_
 
@@ -124,7 +124,7 @@ returns: `Promise<object>`
 
 _Example resource request:_ 
 ```
-GET /signalk/v1/api/resources/routes/urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99
+GET /signalk/v2/api/resources/routes/urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99
 ```
 _ResourceProvider method invocation:_
 
@@ -145,7 +145,7 @@ returns: `Promise<void>`
 
 _Example PUT resource request:_ 
 ```
-PUT /signalk/v1/api/resources/routes/urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99 {resource_data}
+PUT /signalk/v2/api/resources/routes/urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99 {resource_data}
 ```
 _ResourceProvider method invocation:_
 
@@ -169,7 +169,7 @@ setResource(
 
 _Example POST resource request:_ 
 ```
-POST /signalk/v1/api/resources/routes {resource_data}
+POST /signalk/v2/api/resources/routes {resource_data}
 ```
 _ResourceProvider method invocation:_
 
@@ -200,7 +200,7 @@ returns: `Promise<void>`
 
 _Example resource request:_ 
 ```
-DELETE /signalk/v1/api/resources/routes/urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99
+DELETE /signalk/v2/api/resources/routes/urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99
 ```
 _ResourceProvider method invocation:_
 

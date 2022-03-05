@@ -20,7 +20,7 @@ export const startServer = async () => {
   const port = await freeport()
   const host = 'http://localhost:' + port
   const sendDeltaUrl = host + '/signalk/v1/api/_test/delta'
-  const api = host + '/signalk/v1/api'
+  const api = host + '/signalk/v2/api'
 
   await emptyConfigDirectory()
   const server = await startServerP(port, false, {
