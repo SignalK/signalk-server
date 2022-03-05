@@ -1,3 +1,6 @@
+import { CourseApi } from './course'
+import { ResourcesApi } from './resources'
+
 export interface ApiResponse {
   state: 'FAILED' | 'COMPLETED' | 'PENDING'
   statusCode: number
@@ -41,3 +44,18 @@ export function isApiRequest(path: string): boolean {
     return false
   }
 }
+
+const APIS = {
+  resourcesApi: ResourcesApi,
+  courseApi: CourseApi
+}
+
+export const startApis = (app: any) =>
+  Promise.all(
+    Object.entries(APIS).map((value: any) => {
+      const [apiName, apiConstructor] = value
+      const api = new apiConstructor(app)
+      app[apiName] = api
+      return api.start()
+    })
+  )

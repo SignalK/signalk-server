@@ -97,26 +97,26 @@ export class CourseApi {
     this.store = new Store(
       path.join(app.config.configPath, 'serverstate/course')
     )
-    this.start().catch(error => {
-      console.log(error)
+  }
+
+  async start() {
+    return new Promise<void>(async resolve => {
+      this.initCourseRoutes()
+
+      try {
+        const storeData = await this.store.read()
+        this.courseInfo = this.validateCourseInfo(storeData)
+      } catch (error) {
+        console.error('** No persisted course data (using default) **')
+      }
+      debug(this.courseInfo)
+      this.emitCourseInfo(true)
+      resolve()
     })
   }
 
   private getVesselPosition() {
     return _.get((this.server.signalk as any).self, 'navigation.position')
-  }
-
-  private async start() {
-    this.initCourseRoutes()
-
-    try {
-      const storeData = await this.store.read()
-      this.courseInfo = this.validateCourseInfo(storeData)
-    } catch (error) {
-      console.error('** No persisted course data (using default) **')
-    }
-    debug(this.courseInfo)
-    this.emitCourseInfo(true)
   }
 
   private validateCourseInfo(info: CourseInfo) {
