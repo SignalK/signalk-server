@@ -55,6 +55,24 @@
             "type": "number"
           }
         },
+        "LineStringCoordinates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/Coordinate"
+          }
+        },
+        "PolygonCoordinates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/LineStringCoordinates"
+          }
+        },
+        "MultiPolygonCoordinates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/PolygonCoordinates"
+          }
+        },
         "Point": {
           "type": "object",
           "description": "GeoJSon Point geometry",
@@ -89,10 +107,7 @@
               ]
             },
             "coordinates": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Coordinate"
-              }
+              "$ref": "#/components/schemas/LineStringCoordinates"
             }
           }
         },
@@ -111,10 +126,7 @@
               ]
             },
             "coordinates": {
-              "type": "array",
-              "items": {
-                  "$ref": "#/components/schemas/LineString"
-              }
+              "$ref": "#/components/schemas/PolygonCoordinates"
             }
           }
         },
@@ -133,10 +145,7 @@
               ]
             },
             "coordinates": {
-              "type": "array",
-              "items": {
-                "$ref": "#/components/schemas/Polygon"
-              }
+              "$ref": "#/components/schemas/MultiPolygonCoordinates"
             }
           }
         },
