@@ -361,8 +361,7 @@ const FROM_POST_MAPPERS: {
       }
     }
     name && (result.name = name)
-    description &&
-      (result.description = description)
+    description && (result.description = description)
     result.feature.properties = properties
     return result
   },
@@ -382,8 +381,7 @@ const FROM_POST_MAPPERS: {
       distance
     }
     name && (result.name = name)
-    description &&
-      (result.description = description)
+    description && (result.description = description)
     result.feature.properties = properties
     return result
   }
