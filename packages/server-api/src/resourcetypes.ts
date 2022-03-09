@@ -32,9 +32,9 @@ export interface Waypoint {
 }
 
 export interface Note {
-  title?: string
+  name?: string
   description?: string
-  region?: string
+  href?: string
   position?: Position
   geohash?: string
   mimeType?: string
@@ -42,7 +42,8 @@ export interface Note {
 }
 
 export interface Region {
-  geohash?: string
+  name?: string
+  description?: string
   feature: Polygon | MultiPolygon
 }
 
