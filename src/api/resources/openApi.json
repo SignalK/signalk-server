@@ -1400,7 +1400,7 @@
             },
             {
               "name": "href",
-              "in": "path",
+              "in": "query",
               "description": "Limit results to notes with matching resource reference",
               "example": "/resources/waypoints/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a",
               "required": false,
