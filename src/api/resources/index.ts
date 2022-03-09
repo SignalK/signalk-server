@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { WithSecurityStrategy } from '../../security'
 
 import { Responses } from '../'
-import { buildResource, fromPostData } from './resources'
+import { fromPostData } from './resources'
 import { validate } from './validate'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
@@ -400,7 +400,6 @@ export class ResourcesApi {
         }
       }
     )
-
   }
 
   private getResourcePaths(): { [key: string]: any } {
