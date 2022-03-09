@@ -189,6 +189,25 @@ export class ResourcesApi {
           next()
           return
         }
+
+        if (isSignalKResourceType(req.params.resourceType)) {
+          try {
+            validate.query(
+              req.params.resourceType as SignalKResourceType,
+              undefined,
+              req.method,
+              req.query
+            )
+          } catch (e) {
+            res.status(400).json({
+              state: 'FAILED',
+              statusCode: 400,
+              message: e.message
+            })
+            return
+          }
+        }
+
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
