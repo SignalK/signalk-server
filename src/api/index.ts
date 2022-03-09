@@ -33,18 +33,6 @@ export const Responses = {
   }
 }
 
-// returns true if target path is an API request
-export function isApiRequest(path: string): boolean {
-  if (
-    path.split('/')[4] === 'resources' || // resources API
-    path.indexOf('/navigation/course/') !== -1 // course API
-  ) {
-    return true
-  } else {
-    return false
-  }
-}
-
 const APIS = {
   resourcesApi: ResourcesApi,
   courseApi: CourseApi
