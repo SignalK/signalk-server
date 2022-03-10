@@ -39,7 +39,11 @@ export const validate = {
     method: string,
     value: any
   ): void => {
-    debug(`*** Validating query params for ${type} ${method} ${JSON.stringify(value)}`)
+    debug(
+      `*** Validating query params for ${type} ${method} ${JSON.stringify(
+        value
+      )}`
+    )
     const endpoint =
       API_SCHEMA[`${RESOURCES_API_PATH}/${type as string}${id ? '/:id' : ''}`][
         method.toLowerCase()
@@ -47,7 +51,7 @@ export const validate = {
     if (!endpoint) {
       throw new Error(`Validation: endpoint for ${type} ${method} not found`)
     }
-    const valid = endpoint.parameters.validate({query: value})
+    const valid = endpoint.parameters.validate({ query: value })
     if (valid) {
       return
     } else {
