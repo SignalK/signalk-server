@@ -30,10 +30,9 @@ describe('Resources Api', () => {
     })
 
     const resourceDelta = JSON.parse(await wsPromiser.nthMessage(2))
-    const {path, value} = resourceDelta.updates[0].values[0]
+    const { path, value } = resourceDelta.updates[0].values[0]
     path.should.equal(`resources.waypoints.${resId}`)
     value.should.deep.equal(waypoint)
-
     ;(waypoint as any).$source = 'resources-provider'
     await get(`/resources/waypoints/${resId}`)
       .then(response => {
@@ -43,5 +42,33 @@ describe('Resources Api', () => {
       .then(resData => resData.should.deep.equal(waypoint))
 
     stop()
+  })
+
+  it('bbox search works for waypoints', async function() {
+    const { createWsPromiser, get, post, stop } = await startServer()
+
+    const resourceIds = await Promise.all(
+      [
+        [60.151672, 24.891637],
+        [60.251672, 24.891637],
+        [60.151672, 24.991637]
+      ].map(([latitude, longitude]) => {
+        return post(`/resources/waypoints/`, {
+          position: {
+            longitude,
+            latitude
+          }
+        })
+          .then(r => r.json())
+          .then((r: any) => r.id)
+      })
+    )
+    await get('/resources/waypoints?bbox=[24.8,60.16,24.899,60.3]')
+      .then(r => r.json())
+      .then(r => {
+        const returnedIds = Object.keys(r)
+        returnedIds.length.should.equal(1)
+        returnedIds[0].should.equal(resourceIds[1])
+      })
   })
 })
