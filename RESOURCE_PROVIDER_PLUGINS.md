@@ -103,7 +103,7 @@ returns: `Promise<{[id: string]: any}>`
 
 _Example resource request:_ 
 ```
-GET /signalk/v2/api/resources/waypoints?bbox=5.4,25.7,6.9,31.2
+GET /signalk/v2/api/resources/waypoints?bbox=[5.4,25.7,6.9,31.2]
 ```
 _ResourceProvider method invocation:_
 

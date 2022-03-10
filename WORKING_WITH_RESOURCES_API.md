@@ -51,7 +51,7 @@ HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?distance=90000
 _Example 3: Retrieve waypoints within a bounded area. Note: the bounded area is supplied as bottom left & top right corner coordinates in the form swLongitude,swLatitude,neLongitude,neLatitude_.
 
 ```typescript
-HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?bbox=-135.5,38,-134,38.5'
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?bbox=[-135.5,38,-134,38.5]'
 ```
 
 
