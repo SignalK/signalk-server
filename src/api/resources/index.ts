@@ -190,13 +190,21 @@ export class ResourcesApi {
           return
         }
 
+        const parsedQuery = Object.entries(req.query).reduce(
+          (acc: any, [name, value]) => {
+            acc[name] = JSON.parse(value as string)
+            return acc
+          },
+          {}
+        )
+
         if (isSignalKResourceType(req.params.resourceType)) {
           try {
             validate.query(
               req.params.resourceType as SignalKResourceType,
               undefined,
               req.method,
-              req.query
+              parsedQuery
             )
           } catch (e) {
             res.status(400).json({
@@ -211,9 +219,10 @@ export class ResourcesApi {
         try {
           const retVal = await this.resProvider[
             req.params.resourceType
-          ]?.listResources(req.query)
+          ]?.listResources(parsedQuery)
           res.json(retVal)
         } catch (err) {
+          console.error(err)
           res.status(404).json({
             state: 'FAILED',
             statusCode: 404,
