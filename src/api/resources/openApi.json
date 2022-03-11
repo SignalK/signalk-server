@@ -929,7 +929,7 @@
         "DistanceParam": {
           "in": "query",
           "name": "distance",
-          "description": "Limit results to resources that fall within a square area, centered around the vessel's position, the edges of which are the sepecified distance in meters from the vessel.",
+          "description": "Limit results to resources that fall within a square area, centered around the vessel's position (or position parameter value if supplied), the edges of which are the sepecified distance in meters from the vessel.",
           "schema": {
             "type": "integer",
             "format": "int32",
@@ -940,7 +940,7 @@
         "BoundingBoxParam": {
           "in": "query",
           "name": "bbox",
-          "description": "Limit results to resources that fall within the bounded area defined as lower left and upper right x,y coordinates x1,y1,x2,y2",
+          "description": "Limit results to resources that fall within the bounded area defined as lower left and upper right longitude, latatitude coordinates [lon1, lat1, lon2, lat2]",
           "style": "form",
           "explode": false,
           "schema": {
@@ -958,6 +958,28 @@
               -25.2,
               138.1,
               -28
+            ]
+          }
+        },
+        "PositionParam": {
+          "in": "query",
+          "name": "position",
+          "description": "Location, in format [longitude, latitude], from where the distance parameter is applied.",
+          "style": "form",
+          "explode": false,
+          "schema": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "number",
+              "format": "float",
+              "minimum": -180,
+              "maximum": 180
+            },
+            "example": [
+              135.5,
+              -25.2
             ]
           }
         }
@@ -1012,6 +1034,9 @@
             },
             {
               "$ref": "#/components/parameters/BoundingBoxParam"
+            },
+            {
+              "$ref": "#/components/parameters/PositionParam"
             }
           ],
           "responses": {
@@ -1141,6 +1166,9 @@
             },
             {
               "$ref": "#/components/parameters/BoundingBoxParam"
+            },
+            {
+              "$ref": "#/components/parameters/PositionParam"
             }
           ],
           "responses": {
@@ -1270,6 +1298,9 @@
             },
             {
               "$ref": "#/components/parameters/BoundingBoxParam"
+            },
+            {
+              "$ref": "#/components/parameters/PositionParam"
             }
           ],
           "responses": {
@@ -1399,6 +1430,9 @@
             },
             {
               "$ref": "#/components/parameters/BoundingBoxParam"
+            },
+            {
+              "$ref": "#/components/parameters/PositionParam"
             },
             {
               "name": "href",
