@@ -949,7 +949,9 @@
             "maxItems": 4,
             "items": {
               "type": "number",
-              "format": "float"
+              "format": "float",
+              "minimum": -180,
+              "maximum": 180
             },
             "example": [
               135.5,
