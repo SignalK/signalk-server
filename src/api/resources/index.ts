@@ -192,8 +192,13 @@ export class ResourcesApi {
 
         const parsedQuery = Object.entries(req.query).reduce(
           (acc: any, [name, value]) => {
-            acc[name] = JSON.parse(value as string)
-            return acc
+            try {
+              acc[name] = JSON.parse(value as string)
+              return acc
+            } catch (error) {
+              debug(`Invalid query data! ${name}=${value}`)
+              return acc
+            }
           },
           {}
         )
