@@ -1,26 +1,85 @@
-name: Build Docker release container
+name: Build official docker release container
 
 on:
-  push:
-    branches:
-    - master
-    - latest
-    - "build-docker"
-    tags:
-    - 'v*'  # Releases build from npm source
+  release:
+    types: [created]
 
 jobs:
+  build_server-admin-ui-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+     - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: cd packages/server-admin-ui-dependencies && npm install --package-lock-only
+      - run: cd packages/server-admin-ui-dependencies && npm ci && npm cache clean --force
+      - run: cd packages/server-admin-ui-dependencies && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  build_server-admin-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: cd packages/server-admin-ui && npm install --package-lock-only
+      - run: cd packages/server-admin-ui && npm ci && npm cache clean --force
+      - run: cd packages/server-admin-ui && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  build_server-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: cd packages/server-api && npm install --package-lock-only
+      - run: cd packages/server-api && npm ci && npm cache clean --force
+      - run: cd packages/server-api && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  build_streams:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: cd packages/streams && npm install --package-lock-only
+      - run: cd packages/streams && npm ci && npm cache clean --force
+      - run: cd packages/streams && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  build_signalk-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install --package-lock-only
+      - run: npm ci && npm cache clean --force
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
   build_docker_images:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
-      - name: Docker meta
-        id: docker_meta
-        uses: crazy-max/ghaction-docker-meta@v1
-        with:
-          images: signalk/signalk-server
-          tag-sha: true # add git short SHA as Docker tag
+        uses: actions/checkout@v2    
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -34,8 +93,9 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           file: ./docker/Dockerfile_rel
-          platforms: linux/amd64,linux/arm/v7, linux/arm64
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
-          tags: ${{ steps.docker_meta.outputs.tags }}
+          images: signalk/signalk-server-docker
+          tags: ${{ steps.docker_meta.outputs.tags }}   #or is this correct tag ${{ GITHUB_REF }}
           build-args: |
-            TAG=${{ steps.docker_meta.outputs.tags }}
+            TAG=${{ steps.docker_meta.outputs.tags }}   #or is this correct tag ${{ GITHUB_REF }}
