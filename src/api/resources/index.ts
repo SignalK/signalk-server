@@ -196,7 +196,7 @@ export class ResourcesApi {
               acc[name] = JSON.parse(value as string)
               return acc
             } catch (error) {
-              debug(`Invalid query data! ${name}=${value}`)
+              acc[name] = value
               return acc
             }
           },
