@@ -15,7 +15,7 @@ jobs:
         id: docker_meta
         uses: crazy-max/ghaction-docker-meta@v1
         with:
-          images: signalk/signalk-server-docker
+          images: signalk/signalk-server
           tag-sha: false # Do not add git short SHA as Docker tag
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -35,7 +35,7 @@ jobs:
           file: ./docker/Dockerfile_rel
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
-          images: signalk/signalk-server-docker
+          images: signalk/signalk-server
           tags: ${{ steps.docker_meta.outputs.tags }}
           build-args: |
             TAG=${{ steps.vars.outputs.tag }}
