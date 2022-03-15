@@ -1,8 +1,11 @@
 name: Build official docker release container
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+    - master
+    tags:
+    - 'v*'
 
 jobs:
   build_docker_images:
