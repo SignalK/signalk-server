@@ -13,7 +13,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
   && npm i -g signalk-server@$TAG \
   && ln -s /usr/lib/node_modules/signalk-server /home/node/signalk
 
-COPY avahi/avahi-dbus.conf /etc/dbus-1/system.d/avahi-dbus.conf
+COPY docker/avahi/avahi-dbus.conf /etc/dbus-1/system.d/avahi-dbus.conf
 RUN mkdir -p /var/run/dbus/ \
   && chmod -R 777 /var/run/dbus/ \
   && mkdir -p /var/run/avahi-daemon/ \
@@ -21,7 +21,7 @@ RUN mkdir -p /var/run/dbus/ \
   && chown -R avahi:avahi /var/run/avahi-daemon/
 
 WORKDIR /home/node/signalk
-COPY startup.sh startup.sh
+COPY docker/startup.sh startup.sh
 RUN chmod +x startup.sh
 
 USER node
