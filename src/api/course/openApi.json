@@ -125,57 +125,65 @@
         },
         "CourseCalculationsModel": {
           "type": "object",
+          "required": ["calcMethod"],
           "description": "Request error response",
           "properties": {
+            "calcMethod": {
+              "type": "string",
+              "description": "Calculation method by which values are derived.",
+              "enum": ["Great Circle", "Rhumbline"],
+              "default": "Great Circle",
+              "example": "Rhumbline"
+            },
             "crossTrackError": {
               "type": "number",
-              "description": "Distance in meters",
+              "description": "The distance in meters from the vessel's present position to the closest point on a line (track) between previousPoint and nextPoint. A negative number indicates that the vessel is currently to the left of this line (and thus must steer right to compensate), a positive number means the vessel is to the right of the line (steer left to compensate).",
               "example": 458.784
             },
             "bearingTrackTrue": {
               "type": "number",
               "minimum": 0,
-              "description": "angle in radians",
+              "description": "The bearing of a line between previousPoint and nextPoint, relative to true north. (angle in radians)",
               "example": 4.58491
             },
             "bearingTrackMagnetic": {
               "type": "number",
               "minimum": 0,
-              "description": "angle in radians",
+              "description": "The bearing of a line between previousPoint and nextPoint, relative to magnetic north. (angle in radians)",
               "example": 4.51234
             },
             "estimatedTimeOfArrival": {
               "type": "string",
-              "description": "Time of arrival at destination",
+              "description": "The estimated time of arrival at nextPoint position.",
               "example": "2019-10-02T18:36:12.123+01:00"
             },
             "distance": {
               "type": "number",
               "minimum": 0,
-              "description": "Distance from the current position to the destination in meters",
+              "description": "The distance in meters between the vessel's present position and the nextPoint.",
               "example": 10157
             },
             "bearingTrue": {
               "type": "number",
               "minimum": 0,
-              "description": "angle in radians",
+              "description": "The bearing of a line between the vessel's current position and nextPoint, relative to true north. (angle in radians)",
               "example": 4.58491
             },
             "bearingMagnetic": {
               "type": "number",
               "minimum": 0,
-              "description": "angle in radians",
+              "description": "The bearing of a line between the vessel's current position and nextPoint, relative to magnetic north. (angle in radians)",
               "example": 4.51234
             },
             "velocityMadeGood": {
               "type": "number",
-              "description": "Velocity component of vessel towards destination in m/s",
+              "description": "The velocity component of the vessel towards the nextPoint in m/s",
               "example": 7.2653
             },
             "timeToGo": {
               "type": "number",
               "minimum": 0,
-              "description": "Time remaining in seconds until arrival at destination",
+              "description": "Time in seconds to reach nextPoint's perpendicular with current speed & direction.",
               "example": 8491
             }
           }
@@ -316,16 +324,6 @@
                     ]
                   }
                 }
-              }
-            }
-          }
-        },
-        "CourseDataResponse": {
-          "description": "Course data",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CourseCalculationsModel"
               }
             }
           }
@@ -648,33 +646,23 @@
           }
         }
       },
-      "/courseGreatCircle": {
+      "/course/calculations": {
         "get": {
           "tags": [
             "calculations"
           ],
-          "summary": "Great circle course calculations",
+          "summary": "Course calculations",
           "description": "Returns the current course status",
           "responses": {
             "200": {
-              "$ref": "#/components/responses/CourseDataResponse"
-            },
-            "default": {
-              "$ref": "#/components/responses/ErrorResponse"
-            }
-          }
-        }
-      },
-      "/courseRhumbline": {
-        "get": {
-          "tags": [
-            "calculations"
-          ],
-          "summary": "Rhumbline course calculations",
-          "description": "Returns the current course status",
-          "responses": {
-            "200": {
-              "$ref": "#/components/responses/CourseDataResponse"
+              "description": "Course data",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CourseCalculationsModel"
+                  }
+                }
+              }
             },
             "default": {
               "$ref": "#/components/responses/ErrorResponse"
