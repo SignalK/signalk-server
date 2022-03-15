@@ -2,8 +2,6 @@ name: Build official docker release container
 
 on:
   push:
-    branches:
-    - master
     tags:
     - 'v*'
 
@@ -30,7 +28,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Set TAG for build-args
         id: vars
-        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+        run: echo ::set-output name=tag::$(echo ${GITHUB_REF#refs/*/} | sed 's/v//g')
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
