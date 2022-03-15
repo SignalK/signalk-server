@@ -17,7 +17,7 @@ services:
 #      - TCPSTREAMPORT=8375    # (5/5)
 #   ----------------------
     volumes:
-      - /dev:/dev/hostdev
+      - /dev:/dev
 #      - $PWD/signalk_conf:/home/node/.signalk    # uncomment and make signalk_conf -folder where .signalk is bind mounted
 #   ----------------------
 #      - type: bind    # (1/3) uncomment these 3 lines to control startup.sh outside container
