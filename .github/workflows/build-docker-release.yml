@@ -2,12 +2,87 @@ name: Build official docker release container
 
 on:
   push:
+    branches:
+    - latest
     tags:
     - 'v*'
 
 jobs:
+  build_server-admin-ui-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: cd packages/server-admin-ui-dependencies && npm install --package-lock-only
+      - run: cd packages/server-admin-ui-dependencies && npm ci && npm cache clean --force
+      - run: cd packages/server-admin-ui-dependencies && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  build_server-admin-ui:
+    runs-on: ubuntu-latest
+    needs: build_server-admin-ui-dependencies
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: cd packages/server-admin-ui && npm install --package-lock-only
+      - run: cd packages/server-admin-ui && npm ci && npm cache clean --force
+      - run: cd packages/server-admin-ui && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  build_server-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: cd packages/server-api && npm install --package-lock-only
+      - run: cd packages/server-api && npm ci && npm cache clean --force
+      - run: cd packages/server-api && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  build_streams:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: cd packages/streams && npm install --package-lock-only
+      - run: cd packages/streams && npm ci && npm cache clean --force
+      - run: cd packages/streams && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  build_signalk-server:
+    runs-on: ubuntu-latest
+    needs: [build_server-admin-ui, build_server-api, build_streams]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install --package-lock-only
+      - run: npm ci && npm cache clean --force
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
   build_docker_images:
     runs-on: ubuntu-latest
+    needs: build_signalk-server
     steps:
       - name: Checkout
         uses: actions/checkout@v2
