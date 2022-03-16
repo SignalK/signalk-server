@@ -605,7 +605,8 @@
           "description": "Signal K Chart resource",
           "type": "object",
           "required": [
-            "identifier"
+            "identifier",
+            "chartFormat"
           ],
           "properties": {
             "identifier": {
