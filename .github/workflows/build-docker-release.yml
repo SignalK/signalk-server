@@ -2,8 +2,6 @@ name: Build official docker release container
 
 on:
   push:
-    branches:
-    - latest
     tags:
     - 'v*'
 
