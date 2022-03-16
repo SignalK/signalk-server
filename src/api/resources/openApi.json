@@ -556,35 +556,35 @@
           }
         },
         "NoteBaseModel": {
-            "description": "Signal K Note resource",
-            "type": "object",
+          "description": "Signal K Note resource",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "Title of note"
+            },
+            "description": {
+              "type": "string",
+              "description": "Text describing note"
+            },
+            "mimeType": {
+              "type": "string",
+              "description": "MIME type of the note"
+            },
+            "url": {
+              "type": "string",
+              "description": "Location of the note"
+            },
             "properties": {
-              "title": {
-                "type": "string",
-                "description": "Title of note"
-              },
-              "description": {
-                "type": "string",
-                "description": "Text describing note"
-              },
-              "mimeType": {
-                "type": "string",
-                "description": "MIME type of the note"
-              },
-              "url": {
-                "type": "string",
-                "description": "Location of the note"
-              },
-              "properties": {
-                "description": "Additional user defined note properties",
-                "type": "object",
-                "additionalProperties": true,
-                "example": {
-                  "group": "My Note group",
-                  "author": "M Jones"
-                }
+              "description": "Additional user defined note properties",
+              "type": "object",
+              "additionalProperties": true,
+              "example": {
+                "group": "My Note group",
+                "author": "M Jones"
               }
             }
+          }
         },
         "Note": {
           "allOf": [
@@ -605,7 +605,7 @@
           "description": "Signal K Chart resource",
           "type": "object",
           "required": [
-            "identiifer"
+            "identifier"
           ],
           "properties": {
             "identifier": {
@@ -1047,7 +1047,7 @@
                   "schema": {
                     "type": "object",
                     "additionalProperties": {
-                      "oneOf": [
+                      "allOf": [
                         {
                           "$ref": "#/components/schemas/RouteResponseModel"
                         }
@@ -1179,7 +1179,7 @@
                   "schema": {
                     "type": "object",
                     "additionalProperties": {
-                      "oneOf": [
+                      "allOf": [
                         {
                           "$ref": "#/components/schemas/WaypointResponseModel"
                         }
@@ -1311,7 +1311,7 @@
                   "schema": {
                     "type": "object",
                     "additionalProperties": {
-                      "oneOf": [
+                      "allOf": [
                         {
                           "$ref": "#/components/schemas/RegionResponseModel"
                         }
@@ -1454,7 +1454,7 @@
                   "schema": {
                     "type": "object",
                     "additionalProperties": {
-                      "oneOf": [
+                      "allOf": [
                         {
                           "$ref": "#/components/schemas/NoteResponseModel"
                         }
@@ -1572,7 +1572,7 @@
                   "schema": {
                     "type": "object",
                     "additionalProperties": {
-                      "oneOf": [
+                      "allOf": [
                         {
                           "$ref": "#/components/schemas/ChartResponseModel"
                         }
