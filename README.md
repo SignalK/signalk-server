@@ -77,7 +77,7 @@ docker run -d --init  --name signalk-server -p 3000:3000 -v $(pwd):/home/node/.s
 ```
 This will run the server as background process and current directory as the settings directory. You will be prompted to create admin credentials the first time you you access the configuration admin web UI.
 
-More docker information can found from [docker](https://github.com/SignalK/signalk-server/tree/master/docker) -folder
+More docker information can found from [docker](docker/) -folder
 
 
 Now what?
