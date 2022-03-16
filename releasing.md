@@ -16,8 +16,8 @@ NPM Packages are:
 - @signalk/streams
 - signalk-server
 
-## Docker release
-Docker images are build after npm packages are published npmjs.com. Docker images are then build using just published npm packages.
+## Docker releases
+Docker images are build after npm packages are published to npmjs.com. Docker images are then build using just published npm packages.
 Images are pushed to [hub.docker.com](https://hub.docker.com).
 
 Docker Images are:
