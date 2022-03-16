@@ -6,7 +6,7 @@ Signalk K docker images are based on Ubuntu 20.04 LTS. During build process, Nod
 
 Official releases `docker/Dockerfile_rel` are size vice optimized versions and there are only mandatory files in the images. Image is generated when release is done for Signal K and it is tagged with v* label. During the build process, npm packages are also build and published to npmjs. Offcial Signal K docker image is then build from just published npm packages with similar manners as Signal K would be installed normally from npmjs.
 
-Official docker images can be found from Docker Hub (dockerhub.com) under `signalk/signalk-server-docker`
+Official docker images can be found from Docker Hub (dockerhub.com) under `signalk/signalk-server`, tag `latest` refers to last released version.
 Released npm packages can be found from npmjs (npmjs.org) under `signalk` namespace.
 
 ## Development releses
