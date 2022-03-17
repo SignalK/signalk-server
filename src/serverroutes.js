@@ -787,7 +787,8 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     'settings.json',
     'defaults.json',
     'security.json',
-    'package.json'
+    'package.json',
+    'baseDeltas.json'
   ]
   function listSafeRestoreFiles(restorePath) {
     return new Promise((resolve, reject) => {
