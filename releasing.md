@@ -1,32 +1,37 @@
-```
-npm version [<newversion> | major | minor | patch | premajor | preminor | prepatch | prerelease | from-git]
-npm run release
-```
-# Releasing
-![releasing.png](img/releasing.png)
+# Releasing a new server version
 
-## NPM releases
-When release is done, npm packages are build and published from `./packages` -folder to [www.npmjs.com](https://www.npmjs.com).
-- steps are described in above picture
+### (0) Update submodule versions
 
-NPM Packages are:
+Update package.jsons of individual modules under `packages` as well as dependent module package.jsons.
+
+Npm Packages are:
 - @signalk/server-admin-ui-dependencies
 - @signalk/server-admin-ui
 - @signalk/server-api
 - @signalk/streams
 - signalk-server
 
-## Docker releases
-Docker images are build after npm packages are published to npmjs.com. Docker images are then build using just published npm packages.
-Images are pushed to [hub.docker.com](https://hub.docker.com).
+### (1) Update package.json and git tag using npm version
+```
+npm version [<newversion> | major | minor | patch | premajor | preminor | prepatch | prerelease | from-git]
+```
 
-Docker Images are:
-- signalk/signalk-server:latest
-- signalk/signalk-server:`<release tag>`, e.g. `v1.40.0`
+*Prerelease versions*
 
-Supported os/architectures are:
-- linux/amd64
-- linux/arm/v7
-- linux/arm64
+- [Check the status in npm](http://registry.npmjs.org/-/package/signalk-server/dist-tags)
+- Set package.json version & git tag using `npm version` as usual but specify the version, for example `npm version 1.19.0-beta.2`
 
-More docker information can found from [docker](docker/) -folder
+### (2) Push git tag
+
+![releasing.png](img/releasing.png)
+
+This will trigger GH action that 
+- builds and publishes all the submodules whose version does not match the latest version in npm
+- builds and publishes the server
+- builds docker images tagged with version and `latest`
+
+
+### (3) Create github release with release notes
+
+```PR_CHANGES_TOKEN=XXXX npm run release```
+
