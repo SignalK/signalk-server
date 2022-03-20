@@ -19,7 +19,7 @@ jobs:
             cd packages/server-admin-ui-dependencies
             npm install --package-lock-only
             npm ci && npm cache clean --force
-            npm publish --access public
+            npm publish
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -38,7 +38,7 @@ jobs:
             cd packages/server-admin-ui
             npm install --package-lock-only
             npm ci && npm cache clean --force
-            npm publish --access public
+            npm publish
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -56,7 +56,7 @@ jobs:
             cd packages/server-api
             npm install --package-lock-only
             npm ci && npm cache clean --force
-            npm publish --access public
+            npm publish
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -74,7 +74,7 @@ jobs:
             cd packages/streams
             npm install --package-lock-only
             npm ci && npm cache clean --force
-            npm publish --access public
+            npm publish
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -98,7 +98,7 @@ jobs:
             then
               npm publish --tag beta
             else
-              npm publish --access public
+              npm publish
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
