@@ -88,10 +88,18 @@ jobs:
         with:
           node-version: '16.x'
           registry-url: 'https://registry.npmjs.org'
+      - name: Set tag variable
+        id: vars
+        run: echo ::set-output name=tag::$(echo ${GITHUB_REF#refs/*/})    
       - run: |
           npm install --package-lock-only
           npm ci && npm cache clean --force
-          npm publish --access public
+          if [[ "${{ steps.vars.outputs.tag }}" == *beta* ]];
+            then
+              npm publish --tag beta
+            else
+              npm publish --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
