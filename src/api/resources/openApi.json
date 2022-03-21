@@ -579,6 +579,36 @@
             }
           ]
         },
+        "MBTilesLayersModel": {
+          "description": "When format='pbf' Lists the layers that appear in the vector tiles and the names and types of the attributes of features that appear in those layers.",
+          "type": "object",
+          "required": [
+            "id",
+            "fields"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Layer id."
+            },
+            "fields": {
+              "type": "string",
+              "description": "Layer fields."
+            },
+            "description": {
+              "type": "string",
+              "description": "Layer description."
+            },
+            "minzoom": {
+              "type": "string",
+              "description": "The lowest zoom level whose tiles this layer appears in."
+            },
+            "maxzoom": {
+              "type": "string",
+              "description": "he highest zoom level whose tiles this layer appears in."
+            }
+          }
+        },
         "MBTilesExtModel": {
           "description": "Extends TileJSON schema with MBTiles extensions.",
           "type": "object",
@@ -597,10 +627,12 @@
               "description": "layer type",
               "enum": ["overlay", "baselayer"]
             },
-            "json": {
-              "type": "object",
+            "vector_layers": {
+              "type": "array",
               "description": "When format='pbf' Lists the layers that appear in the vector tiles and the names and types of the attributes of features that appear in those layers.",
-              "additionalProperties": true
+              "items": {
+                "$ref": "#/components/schemas/MBTilesLayersModel"
+              }
             }
           }
         },
