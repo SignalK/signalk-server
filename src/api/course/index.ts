@@ -649,25 +649,63 @@ export class CourseApi {
   }
 
   private buildDeltaMsg(): any {
-    const { activeRoute, nextPoint, previousPoint } = this.courseInfo
-    const value: any = {
-      nextPoint,
-      previousPoint
-    }
-    if (activeRoute.href) {
-      value.activeRoute = activeRoute
-    }
-    debug(value)
+
+    const values: Array<{ path: string; value: any }> = []
+    const navPath = 'navigation.course'
+
+    debug(this.courseInfo)
+
+    values.push({
+      path: `${navPath}.activeRoute.href`,
+      value: this.courseInfo.activeRoute.href
+    })
+    values.push({
+      path: `${navPath}.activeRoute.startTime`,
+      value: this.courseInfo.activeRoute.startTime
+    })
+    values.push({
+      path: `${navPath}.activeRoute.pointIndex`,
+      value: this.courseInfo.activeRoute.pointIndex
+    })
+    values.push({
+      path: `${navPath}.activeRoute.pointTotal`,
+      value: this.courseInfo.activeRoute.pointTotal
+    })
+    values.push({
+      path: `${navPath}.activeRoute.reverse`,
+      value: this.courseInfo.activeRoute.reverse
+    })
+
+    values.push({
+      path: `${navPath}.nextPoint.href`,
+      value: this.courseInfo.nextPoint.href
+    })
+    values.push({
+      path: `${navPath}.nextPoint.position`,
+      value: this.courseInfo.nextPoint.position
+    })
+    values.push({
+      path: `${navPath}.nextPoint.type`,
+      value: this.courseInfo.nextPoint.type
+    })
+    values.push({
+      path: `${navPath}.nextPoint.arrivalCircle`,
+      value: this.courseInfo.nextPoint.arrivalCircle
+    })
+
+    values.push({
+      path: `${navPath}.previousPoint.position`,
+      value: this.courseInfo.previousPoint.position
+    })
+    values.push({
+      path: `${navPath}.previousPoint.type`,
+      value: this.courseInfo.previousPoint.type
+    })
 
     return {
       updates: [
         {
-          values: [
-            {
-              path: 'navigation.course',
-              value
-            }
-          ]
+          values: values
         }
       ]
     }
