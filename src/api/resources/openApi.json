@@ -592,8 +592,9 @@
               "description": "Layer id."
             },
             "fields": {
-              "type": "string",
-              "description": "Layer fields."
+              "type": "object",
+              "description": "A JSON object whose keys and values are the names and types of attributes available in this layer. ",
+              "additionalProperties": true
             },
             "description": {
               "type": "string",
