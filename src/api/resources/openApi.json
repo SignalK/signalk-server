@@ -339,28 +339,6 @@
             }
           }
         },
-        "TileMapAttribute": {
-          "type": "object",
-          "required": ["tilemapUrl"],
-          "properties": {
-            "tilemapUrl": {
-              "type": "string",
-              "description": "Chart tiles source",
-              "example": "/signalk/v2/api/resources/charts/ALASKA/{z}/{x}/{y}"
-            }
-          }
-        },
-        "ChartUrlAttribute": {
-          "type": "object",
-          "required": ["chartUrl"],
-          "properties": {
-            "chartUrl": {
-              "type": "string",
-              "description": "A url to the chart file's storage location",
-              "example": "file:///home/pi/charts/mapcache/NZ615"
-            }
-          }
-        },
         "Route": {
           "type": "object",
           "description": "Signal K Route resource",
@@ -601,56 +579,101 @@
             }
           ]
         },
-        "ChartBaseModel": {
-          "description": "Signal K Chart resource",
+        "MBTilesExtModel": {
+          "description": "Extends TileJSON schema with MBTiles extensions.",
           "type": "object",
           "required": [
-            "identifier",
-            "chartFormat"
+            "format"
           ],
           "properties": {
-            "identifier": {
+            "format": {
               "type": "string",
-              "description": "chart identifier / number",
-              "example": "NZ615"
-            },
-            "name": {
-              "type": "string",
-              "description": "Chart common name",
-              "example": "NZ615 Marlborough Sound"
-            },
-            "description": {
-              "type": "string",
-              "description": "Text describing chart",
-              "example": "Marlborough Sound, New Zealaand"
-            },
-            "scale": {
-              "type": "number",
-              "description": "chart scale",
-              "example": 250000
-            },
-            "chartFormat": {
-              "type": "string",
-              "description": "format of chart",
+              "description": "The file format of the tile data.",
+              "enum": ["pbf", "jpg", "png", "webp"],
               "example": "png"
             },
-            "chartLayers": {
+            "type": {
+              "type": "string",
+              "description": "layer type",
+              "enum": ["overlay", "baselayer"]
+            },
+            "json": {
+              "type": "object",
+              "description": "When format='pbf' Lists the layers that appear in the vector tiles and the names and types of the attributes of features that appear in those layers.",
+              "additionalProperties": true
+            }
+          }
+        },
+        "TileJSONModel": {
+          "description": "TileJSON schema model",
+          "type": "object",
+          "required": [
+            "sourceType",
+            "tilejson",
+            "tiles"
+          ],
+          "properties": {
+            "sourceType": {
+              "type": "string",
+              "description": "Source type of chart data.",
+              "enum": [
+                "tilejson"
+              ],
+              "default": "tilejson",
+              "example": "tilejson"
+            },
+            "tilejson": {
+              "type": "string",
+              "description": "A semver.org style version number describing the version of the TileJSON spec.",
+              "example": "2.2.0"
+            },
+            "tiles": {
               "type": "array",
+              "description": "An array of chart tile endpoints {z}, {x} and {y}. The array MUST contain at least one endpoint.",
               "items": {
                 "type": "string"
               },
-              "description": "List of chart layers",
-              "example": [
-                "Restricted Areas",
-                "Fishing Zones"
-              ]
+              "example": "http://localhost:3000/signalk/v2/api/resources/charts/islands/{z}/{x}/{y}.png"
+            },
+            "name": {
+              "type": "string",
+              "description": "tileset name.",
+              "example": "Indonesia",
+              "default": null
+            },
+            "description": {
+              "type": "string",
+              "description": "A text description of the tileset.",
+              "example": "Indonesian coastline",
+              "default": null
+            },
+            "version": {
+              "type": "string",
+              "description": "A semver.org style version number defining the version of the chart content.",
+              "example": "1.0.0",
+              "default": "1.0.0"
+            },
+            "attribution": {
+              "type": "string",
+              "description": "Contains an attribution to be displayed when the map is shown.",
+              "example": "<a href='http://openstreetmap.org'>OSM contributors</a>",
+              "default": null
+            },
+            "scheme": {
+              "type": "string",
+              "description": "Influences the y direction of the tile coordinates.",
+              "enum": ["xyz", "tms"],
+              "example": "xyz",
+              "default": "xyz"
             },
             "bounds": {
+              "description": "The maximum extent of available chart tiles in the format left, bottom, right, top.",
               "type": "array",
               "items": {
                 "type": "number"
               },
-              "description": "Bounds of chart extent",
+              "minItems": 4,
+              "maxItems": 4,
               "example": [
                 172.7499244562935,
                 -41.27498133450632,
@@ -658,13 +681,101 @@
                 -40.70659187633642
               ]
             },
-            "properties": {
-              "description": "Additional user defined chart properties",
-              "type": "object",
-              "additionalProperties": true,
-              "example": {
-                "styleUrl": "http://charthost.org/styles/vector/marine.json"
-              }
+            "minzoom": {
+              "type": "number",
+              "description": "An integer specifying the minimum zoom level.",
+              "example": 19,
+              "default": 0,
+              "minimum": 0,
+              "maximum": 30
+            },
+            "maxzoom": {
+              "type": "number",
+              "description": "An integer specifying the maximum zoom level. MUST be >= minzoom.",
+              "example": 27,
+              "default": 0,
+              "minimum": 0,
+              "maximum": 30
+            },
+            "center": {
+              "description": "Center of chart expressed as [longitude, latitude, zoom].",
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "example": [
+                172.7499244562935,
+                -41.27498133450632,
+                8
+              ]
+            }
+          }
+        },
+        "TileSet": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/TileJSONModel"
+            },
+            {
+              "$ref": "#/components/schemas/MBTilesExtModel"
+            }
+          ]
+        },
+        "WMSModel": {
+          "description": "WMS and WMTS attributes",
+          "type": "object",
+          "required": [
+            "sourceType",
+            "url",
+            "layers"
+          ],
+          "properties": {
+            "sourceType": {
+              "type": "string",
+              "description": "Source type of chart data.",
+              "enum": [
+                "wmts",
+                "wms"
+              ],
+              "default": "wmts",
+              "example": "wms"
+            },
+            "url": {
+              "type": "string",
+              "description": "URL to WMS / WMTS service",
+              "example": "http://mapserver.org/wmts"
+            },
+            "layers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of chart layers to display.",
+              "example": [
+                "Restricted Areas",
+                "Fishing Zones"
+              ]
+            }
+          }
+        },
+        "ChartBaseModel": {
+          "description": "Signal K Chart resource",
+          "type": "object",
+          "required": [
+            "identifier"
+          ],
+          "properties": {
+            "identifier": {
+              "type": "string",
+              "description": "chart identifier / number",
+              "example": "NZ615"
+            },
+            "scale": {
+              "type": "number",
+              "description": "chart scale",
+              "example": 250000
             }
           }
         },
@@ -676,10 +787,10 @@
           ],
           "oneOf": [
             {
-              "$ref": "#/components/schemas/TileMapAttribute"
+              "$ref": "#/components/schemas/TileSet"
             },
             {
-              "$ref": "#/components/schemas/ChartUrlAttribute"
+              "$ref": "#/components/schemas/WMSModel"
             }
           ]
         },
@@ -753,15 +864,7 @@
               "$ref": "#/components/schemas/BaseResponseModel"
             },
             {
-              "$ref": "#/components/schemas/ChartBaseModel"
-            }
-          ],
-          "oneOf": [
-            {
-              "$ref": "#/components/schemas/TileMapAttribute"
-            },
-            {
-              "$ref": "#/components/schemas/ChartUrlAttribute"
+              "$ref": "#/components/schemas/Chart"
             }
           ]
         }
@@ -1619,7 +1722,7 @@
             "description": "chart id",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/SignalKUuid"
+              "type": "string"
             }
           }
         ],
