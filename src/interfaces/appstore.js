@@ -76,8 +76,8 @@ module.exports = function(app) {
               }
             })
             .catch(error => {
-              console.error(error.message)
-              console.error(error.stack)
+              console.log(error.message)
+              debug(error.stack)
               res.status(500)
               res.send('<pre>' + error.message + '</pre>')
             })
@@ -115,8 +115,8 @@ module.exports = function(app) {
               }
             })
             .catch(error => {
-              console.error(error.message)
-              console.error(error.stack)
+              console.log(error.message)
+              debug(error.stack)
               res.status(500)
               res.send('<pre>' + error.message + '</pre>')
             })
@@ -139,14 +139,9 @@ module.exports = function(app) {
               })
           })
           .catch(error => {
-            if (error.code === 'ENOTFOUND') {
-              res.send(emptyAppStoreInfo())
-            }
-            console.log(error)
-            console.error(error.message)
-            console.error(error.stack)
-            res.status(500)
-            res.send(error.message)
+            console.log(error.message)
+            debug(error.stack)
+            res.send(emptyAppStoreInfo(false))
           })
       })
     },
@@ -182,14 +177,14 @@ module.exports = function(app) {
     )
   }
 
-  function emptyAppStoreInfo() {
+  function emptyAppStoreInfo(storeAvailable = true) {
     return {
       available: [],
       installed: [],
       updates: [],
       installing: [],
       categories: getAvailableCategories(),
-      storeAvailable: true,
+      storeAvailable: storeAvailable,
       isInDocker: process.env.IS_IN_DOCKER === 'true'
     }
   }
