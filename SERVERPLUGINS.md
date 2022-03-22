@@ -24,7 +24,9 @@ Whan a plugin's configuration is changed the server will first call `stop` to st
 
 ## Getting Started with Plugin Development
 
-To get started with SignalK plugin development, you can follow the following guide.
+To get started with SignalK plugin development, you can follow this guide.
+
+_Note: For plugins acting as a provider for one or more of the SignalK resource types listed in the specification (`routes`, `waypoints`, `notes`, `regions` or `charts`) please refer to __[RESOURCE_PROVIDER_PLUGINS.md](./RESOURCE_PROVIDER_PLUGINS.md)__ for additional details._
 
 ### Project setup
 
@@ -702,6 +704,142 @@ app.registerDeltaInputHandler((delta, next) => {
 })
 ```
 
+### `app.registerResourceProvider(resourceProvider)`
+
+See [`RESOURCE_PROVIDER_PLUGINS`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
+
+---
+### `app.resourcesApi.getResource(resource_type, resource_id)`
+
+Retrieve data for the supplied SignalK resource_type and resource_id.
+
+_Note: Requires a registered Resource Provider for the supplied `resource_type`._
+
+  - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
+ or user defined resource types.
+
+  - `resource_id`: The id of the resource to retrieve _(e.g. `urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+
+- returns:  `Promise<{[key: string]: any}>` 
+
+_Example:_
+```javascript
+app.resourcesApi.getResource(
+  'routes', 
+  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+).then (data => {
+  // route data
+  console.log(data);
+  ...
+}).catch (error) { 
+  // handle error
+  console.log(error.message);
+  ...
+}
+```
+
+### `app.resourcesApi.setResource(resource_type, resource_id, resource_data)`
+
+Create / update value of the resource with the supplied SignalK resource_type and resource_id.
+
+_Note: Requires a registered Resource Provider for the supplied `resource_type`._
+
+  - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
+ or user defined resource types.
+
+  - `resource_id`: The id of the resource to retrieve _(e.g. `urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+
+  - `resource_data`: A complete and valid resource record.
+
+- returns:  `Promise<void>` 
+
+_Example:_
+```javascript
+app.resourcesApi.setResource(
+  'waypoints',
+  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
+  {
+    "position": {"longitude": 138.5, "latitude": -38.6}, 
+    "feature": {
+      "type":"Feature", 
+      "geometry": {
+        "type": "Point", 
+        "coordinates": [138.5, -38.6] 
+      }, 
+      "properties":{} 
+    }
+  }
+).then ( () => {
+  // success
+  ...
+}).catch (error) { 
+  // handle error
+  console.log(error.message);
+  ...
+}
+```
+
+### `app.resourcesApi.deleteResource(resource_type, resource_id)`
+
+Delete the resource with the supplied SignalK resource_type and resource_id.
+
+_Note: Requires a registered Resource Provider for the supplied `resource_type`._
+
+- `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
+or user defined resource types.
+
+- `resource_id`: The id of the resource to retrieve _(e.g. `urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+
+- returns: `Promise<void>` 
+
+_Example:_
+```javascript
+app.resourcesApi.deleteResource(
+  'notes', 
+  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+).then ( () => {
+  // success
+  ...
+}).catch (error) { 
+  // handle error
+  console.log(error.message);
+  ...
+}
+```
+
+### `app.resourcesApi.listResources(resource_type, params)`
+
+Retrieve data for the supplied SignalK resource_type and resource_id.
+
+_Note: Requires a registered Resource Provider for the supplied `resource_type`._
+
+  - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
+ or user defined resource types.
+
+  - `params`: Object contining `key | value` pairs repesenting the parameters by which to filter the returned entries.
+  
+  __Note: The registered Resource Provider must support the supplied parameters for results to be filtered.__
+
+- returns:  `Promise<{[key: string]: any}>` 
+
+_Example:_
+```javascript
+app.resourcesApi.listResources(
+  'waypoints', 
+  {region: 'fishing_zone'}
+).then (data => {
+  // success
+  console.log(data);
+  ...
+}).catch (error) { 
+  // handle error
+  console.log(error.message);
+  ...
+}
+```
+
+
+---
 ### `app.setPluginStatus(msg)`
 
 Set the current status of the plugin. The `msg` should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.

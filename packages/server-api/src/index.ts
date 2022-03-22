@@ -1,7 +1,60 @@
 import { IRouter } from 'express'
 import { PropertyValuesCallback } from './propertyvalues'
 
+export interface Position {
+  latitude: number
+  longitude: number
+  altitude?: number
+}
+
 export { PropertyValue, PropertyValues, PropertyValuesCallback } from './propertyvalues'
+
+export * from './resourcetypes'
+
+export type SignalKResourceType = 'routes' | 'waypoints' |'notes' |'regions' |'charts'
+export const SIGNALKRESOURCETYPES: SignalKResourceType[] = [
+  'routes',
+  'waypoints',
+  'notes',
+  'regions',
+  'charts'
+]
+export const isSignalKResourceType = (s: string) => SIGNALKRESOURCETYPES.includes(s as SignalKResourceType)
+
+export type ResourceType = SignalKResourceType | string
+
+export interface ResourcesApi {
+  register: (pluginId: string, provider: ResourceProvider) => void;
+  unRegister: (pluginId: string) => void;
+  listResources: (resType: SignalKResourceType, params: { [key: string]: any }) => Promise<{[id: string]: any}>
+  getResource: (resType: SignalKResourceType, resId: string) => Promise<object>
+  setResource: (
+    resType: SignalKResourceType,
+    resId: string,
+    data: { [key: string]: any }
+  ) => Promise<void>
+  deleteResource: (resType: SignalKResourceType, resId: string) => Promise<void>
+}
+
+export interface ResourceProvider {
+  type: ResourceType
+  methods: ResourceProviderMethods
+}
+
+export interface ResourceProviderMethods {
+  pluginId?: string
+  listResources: (query: { [key: string]: any }) => Promise<{[id: string]: any}>
+  getResource: (id: string) => Promise<object>
+  setResource: (
+    id: string,
+    value: { [key: string]: any }
+  ) => Promise<void>
+  deleteResource: (id: string) => Promise<void>
+}
+
+export interface ResourceProviderRegistry {
+  registerResourceProvider: (provider: ResourceProvider) => void;
+}
 
 type Unsubscribe = () => {}
 export interface PropertyValuesEmitter {
@@ -16,7 +69,7 @@ export interface PropertyValuesEmitter {
  * INCOMPLETE, work in progress.
  */
 
- export interface PluginServerApp extends PropertyValuesEmitter {}
+ export interface PluginServerApp extends PropertyValuesEmitter, ResourceProviderRegistry {}
 
 /**
  * This is the API that a [server plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md) must implement.
