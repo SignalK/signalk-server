@@ -73,7 +73,8 @@
     "packages/server-admin-ui-dependencies",
     "packages/server-admin-ui",
     "packages/streams",
-    "packages/server-api"
+    "packages/server-api",
+    "packages/resources-provider-plugin"
   ],
   "dependencies": {
     "@signalk/n2k-signalk": "^2.0.0",
