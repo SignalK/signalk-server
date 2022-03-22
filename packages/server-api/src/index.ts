@@ -1,4 +1,5 @@
 import { IRouter } from 'express'
+import { CourseAPI } from './course-api-generated'
 import { PropertyValuesCallback } from './propertyvalues'
 
 export interface Position {
@@ -69,7 +70,9 @@ export interface PropertyValuesEmitter {
  * INCOMPLETE, work in progress.
  */
 
- export interface PluginServerApp extends PropertyValuesEmitter, ResourceProviderRegistry {}
+ export interface PluginServerApp extends PropertyValuesEmitter, ResourceProviderRegistry {
+   courseAPI: CourseAPI
+ }
 
 /**
  * This is the API that a [server plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md) must implement.

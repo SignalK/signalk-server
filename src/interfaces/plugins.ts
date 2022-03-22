@@ -19,6 +19,7 @@ import {
   PropertyValuesCallback,
   ResourceProvider
 } from '@signalk/server-api'
+import { CourseAPI } from '@signalk/server-api/dist/course-api-generated'
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
 import express, { Request, Response } from 'express'
@@ -140,8 +141,14 @@ function backwardsCompat(url: string) {
   return [`${SERVERROUTESPREFIX}${url}`, url]
 }
 
+
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
+  
+  const courseAPI = new CourseAPI({
+    BASE: 'http://localhost:3000/signalk/v2/api/vessels/self/navigation'
+  })
+
   return {
     start() {
       startPlugins(theApp)
@@ -548,6 +555,7 @@ module.exports = (theApp: any) => {
       getMetadata
     })
     appCopy.putPath = putPath
+    appCopy.courseAPI = courseAPI
 
     const resourcesApi: ResourcesApi = app.resourcesApi
     _.omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager

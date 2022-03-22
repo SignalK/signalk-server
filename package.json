@@ -16,7 +16,6 @@
     "start": "node bin/signalk-server",
     "test-only": "mocha --require ts-node/register --extensions ts,tsx,js --timeout 10000 --exit 'test/**/*.[jt]s' 'lib/**/*.test.js'",
     "test": "npm run build && npm run test-only && npm run ci-lint",
-    "typedoc": "typedoc",
     "heroku-postbuild": "npm run build"
   },
   "bin": {
@@ -167,7 +166,6 @@
     "tslint": "^5.20.0",
     "tslint-config-prettier": "^1.18.0",
     "tslint-plugin-prettier": "^2.0.1",
-    "typedoc": "^0.17.3",
     "typescript": "^3.6.3"
   },
   "lint-staged": {

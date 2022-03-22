@@ -223,6 +223,7 @@ export class CourseApi {
         }
 
         const result = await this.setDestination(req.body)
+        console.log(result)
         if (result) {
           this.emitCourseInfo()
           res.status(200).json(Responses.ok)
@@ -525,7 +526,9 @@ export class CourseApi {
     } else if (dest.position) {
       newCourse.nextPoint.href = null
       newCourse.nextPoint.type = 'Location'
+      console.log(dest.position)
       if (isValidCoordinate(dest.position)) {
+        console.log('VLIAD')
         newCourse.nextPoint.position = dest.position
       } else {
         debug(`** Error: position is not valid`)

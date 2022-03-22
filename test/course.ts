@@ -25,6 +25,7 @@ describe('Course Api', () => {
 
     const courseDelta = JSON.parse(await wsPromiser.nthMessage(3))
     courseDelta.context.should.equal(self)
+    console.log(JSON.stringify(courseDelta, null, 2))
 
     deltaHasPathValue(courseDelta, 'navigation.course', {
       nextPoint: {
