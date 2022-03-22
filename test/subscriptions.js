@@ -181,12 +181,13 @@ describe('Subscriptions', _ => {
     await sendDelta(getDelta({ context: self }), deltaUrl)
     await sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
 
-    //skip 2nd message that is delta from defaults
-    const echoedDelta = await wsPromiser.nthMessage(3)
+    //2nd message is delta from defaults
+    //3-13 messages are null course delta from courseApi
+    const echoedDelta = await wsPromiser.nthMessage(14)
     assert(JSON.parse(echoedDelta).updates[0].source.pgn === 128275)
 
     try {
-      await wsPromiser.nthMessage(4)
+      await wsPromiser.nthMessage(15)
       throw new Error('no more messages should arrive')
     } catch (e) {
       assert.strictEqual(e, 'timeout')
@@ -213,10 +214,10 @@ describe('Subscriptions', _ => {
     await sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
 
     //skip 2nd message that is delta from defaults
-    const echoedSelfDelta = await wsPromiser.nthMessage(3)
+    const echoedSelfDelta = await wsPromiser.nthMessage(14)
     assert(JSON.parse(echoedSelfDelta).updates[0].source.pgn === 128275)
 
-    const echoedOtherDelta = await wsPromiser.nthMessage(4)
+    const echoedOtherDelta = await wsPromiser.nthMessage(15)
     assert(
       JSON.parse(echoedOtherDelta).context === 'vessels.othervessel',
       'Sends other vessel data'

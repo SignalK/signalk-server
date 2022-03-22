@@ -14,6 +14,7 @@
  * limitations under the License.
 */
 
+import { Request } from 'express'
 import {
   chmodSync,
   existsSync,
@@ -44,6 +45,12 @@ export interface SecurityStrategy {
   configFromArguments: boolean
   securityConfig: any
   requestAccess: (config: any, request: any, ip: any, updateCb: any) => any
+  shouldAllowPut: (
+    req: Request,
+    context: string,
+    source: any,
+    path: string
+  ) => boolean
 }
 
 export class InvalidTokenError extends Error {

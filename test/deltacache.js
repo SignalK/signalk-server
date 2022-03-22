@@ -201,6 +201,7 @@ describe('deltacache', () => {
         self.should.have.nested.property('name', 'TestBoat')
 
         delete self.imaginary
+        delete self.navigation.course //FIXME until in schema
         fullTree.should.be.validSignalK
       })
     })
@@ -210,7 +211,8 @@ describe('deltacache', () => {
     return serverP.then(server => {
       return deltaP.then(() => {
         var deltas = server.app.deltaCache.getCachedDeltas(delta => true, null)
-        assert(deltas.length == expectedOrder.length)
+        const COURSE_API_INITIAL_DELTAS = 11
+        deltas.length.should.equal(expectedOrder.length + COURSE_API_INITIAL_DELTAS)
         for (var i = 0; i < expectedOrder.length; i++) {
           if (!deltas[i].updates[0].meta) {
             deltas[i].updates[0].values[0].path.should.equal(
@@ -232,8 +234,10 @@ describe('deltacache', () => {
         const fullTree = server.app.deltaCache.buildFull(null, ['sources'])
         const self = _.get(fullTree, fullTree.self)
         delete self.imaginary
+        delete self.navigation.course //FIXME until in schema
         fullTree.should.be.validSignalK
         fullTree.sources.should.deep.equal({
+          courseApi: {},
           defaults: {},
           deltaFromHttp: {}
         })

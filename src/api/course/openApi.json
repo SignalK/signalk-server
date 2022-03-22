@@ -1,0 +1,674 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "version": "2.0.0",
+      "title": "Signal K Course API",
+      "termsOfService": "http://signalk.org/terms/",
+      "license": {
+        "name": "Apache 2.0",
+        "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+      }
+    },
+    "externalDocs": {
+      "url": "http://signalk.org/specification/",
+      "description": "Signal K specification."
+    },
+    "servers": [
+      {
+        "url": "https://localhost:3000/signalk/v2/api/vessels/self/navigation"
+      }
+    ],
+    "tags": [
+      {
+        "name": "course",
+        "description": "Course operations"
+      },
+      {
+        "name": "destination",
+        "description": "Destination operations"
+      },
+      {
+        "name": "activeRoute",
+        "description": "Route operations"
+      },
+      {
+        "name": "calculations",
+        "description": "Calculated course data"
+      }
+    ],
+    "components": {
+      "schemas": {
+        "SignalKHrefRoute": {
+            "type": "string",
+            "pattern": "^\/resources\/routes\/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+            "description": "Pointer to route resource.",
+            "example": "/resources/routes/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+        },
+        "SignalKPosition": {
+          "type": "object",
+          "required": [
+            "latitude",
+            "longitude"
+          ],
+          "properties": {
+            "latitude": {
+              "type": "number",
+              "format": "float"
+            },
+            "longitude": {
+              "type": "number",
+              "format": "float"
+            },
+            "altitude": {
+              "type": "number",
+              "format": "float"
+            }
+          },
+          "example": {
+            "latitude": 65.4567,
+            "longitude": 3.3452
+          }
+        },
+        "ArrivalCircle": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Radius of arrival zone in meters",
+          "example": 500
+        },
+        "HrefWaypointAttribute": {
+          "type": "object",
+          "required": ["href"],
+          "properties": {
+            "href": {
+              "type": "string",
+              "pattern": "^\/resources\/waypoints\/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+              "description": "Reference to a related route resource. A pointer to the resource UUID.",
+              "example": "/resources/waypoints/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+            }
+          }
+        },
+        "PositionAttribute": {
+          "type": "object",
+          "required": ["position"],
+          "properties": {
+            "position": {
+              "description": "Location coordinates.",
+              "example": {
+                "latitude": 65.4567,
+                "longitude": 3.3452
+              },
+              "allOf": [
+                  {
+                  "$ref": "#/components/schemas/SignalKPosition"
+                  }
+              ]
+            }
+          }
+        },
+        "PointTypeAttribute": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Type of point.",
+              "example": "Point of Interest"
+            }
+          }
+        },
+        "ArrivalCircleAttribute": {
+          "type": "object",
+          "properties": {
+            "arrivalCircle": {
+              "$ref": "#/components/schemas/ArrivalCircle"
+            }
+          }
+        },
+        "CourseCalculationsModel": {
+          "type": "object",
+          "required": ["calcMethod"],
+          "description": "Request error response",
+          "properties": {
+            "calcMethod": {
+              "type": "string",
+              "description": "Calculation method by which values are derived.",
+              "enum": ["Great Circle", "Rhumbline"],
+              "default": "Great Circle",
+              "example": "Rhumbline"
+            },
+            "crossTrackError": {
+              "type": "number",
+              "description": "The distance in meters from the vessel's present position to the closest point on a line (track) between previousPoint and nextPoint. A negative number indicates that the vessel is currently to the left of this line (and thus must steer right to compensate), a positive number means the vessel is to the right of the line (steer left to compensate).",
+              "example": 458.784
+            },
+            "bearingTrackTrue": {
+              "type": "number",
+              "minimum": 0,
+              "description": "The bearing of a line between previousPoint and nextPoint, relative to true north. (angle in radians)",
+              "example": 4.58491
+            },
+            "bearingTrackMagnetic": {
+              "type": "number",
+              "minimum": 0,
+              "description": "The bearing of a line between previousPoint and nextPoint, relative to magnetic north. (angle in radians)",
+              "example": 4.51234
+            },
+            "estimatedTimeOfArrival": {
+              "type": "string",
+              "description": "The estimated time of arrival at nextPoint position.",
+              "example": "2019-10-02T18:36:12.123+01:00"
+            },
+            "distance": {
+              "type": "number",
+              "minimum": 0,
+              "description": "The distance in meters between the vessel's present position and the nextPoint.",
+              "example": 10157
+            },
+            "bearingTrue": {
+              "type": "number",
+              "minimum": 0,
+              "description": "The bearing of a line between the vessel's current position and nextPoint, relative to true north. (angle in radians)",
+              "example": 4.58491
+            },
+            "bearingMagnetic": {
+              "type": "number",
+              "minimum": 0,
+              "description": "The bearing of a line between the vessel's current position and nextPoint, relative to magnetic north. (angle in radians)",
+              "example": 4.51234
+            },
+            "velocityMadeGood": {
+              "type": "number",
+              "description": "The velocity component of the vessel towards the nextPoint in m/s",
+              "example": 7.2653
+            },
+            "timeToGo": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Time in seconds to reach nextPoint's perpendicular with current speed & direction.",
+              "example": 8491
+            }
+          }
+        }
+      },
+      "responses": {
+        "200Ok": {
+          "description": "OK",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "COMPLETED"
+                    ]
+                  },
+                  "statusCode": {
+                    "type": "number",
+                    "enum": [
+                      200
+                    ]
+                  }
+                },
+                "required": [
+                  "state",
+                  "statusCode"
+                ]
+              }
+            }
+          }
+        },
+        "ErrorResponse": {
+          "description": "Failed operation",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Request error response",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "FAILED"
+                    ]
+                  },
+                  "statusCode": {
+                    "type": "number",
+                    "enum": [
+                      404
+                    ]
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "state",
+                  "statusCode",
+                  "message"
+                ]
+              }
+            }
+          }
+        },
+        "CourseResponse": {
+          "description": "Course details",
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "base model for course response",
+                "type": "object",
+                "required": [
+                  "activeRoute",
+                  "nextPoint",
+                  "previousPoint"
+                ],
+                "properties": {
+                  "activeRoute": {
+                    "type": "object",
+                    "required": [
+                      "href",
+                      "startTime",
+                      "pointIndex",
+                      "pointTotal",
+                      "reverse"
+                    ],
+                    "properties": {
+                      "href": {
+                        "$ref": "#/components/schemas/SignalKHrefRoute"
+                      },
+                      "startTime": {
+                        "type": "string"
+                      },
+                      "pointIndex": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "0 based index of the point in the route that is the current destination"
+                      },
+                      "pointTotal": {
+                        "type": "number",
+                        "description": "Total number of points in the route"
+                      },
+                      "reverse": {
+                        "type": "boolean",
+                        "description": "When true indicates the route points are being navigated in reverse order."
+                      }
+                    }
+                  },
+                  "nextPoint": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/HrefWaypointAttribute"
+                      },
+                      {
+                        "$ref": "#/components/schemas/PositionAttribute"
+                      }
+                    ],
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/PointTypeAttribute"
+                      },
+                      {
+                        "$ref": "#/components/schemas/ArrivalCircleAttribute"
+                      }
+                    ]
+                  },
+                  "previousPoint": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/PositionAttribute"
+                      },
+                      {
+                        "$ref": "#/components/schemas/PointTypeAttribute"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "paths": {
+      "/course": {
+        "get": {
+          "tags": [
+            "course"
+          ],
+          "summary": "Retrieve current course details",
+          "description": "Returns the current course status",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/CourseResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/restart": {
+        "put": {
+          "tags": [
+            "course"
+          ],
+          "summary": "Restart course calculations",
+          "description": "Sets previousPoint value to current vessel position and bases calculations on update.",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/arrivalCircle": {
+        "put": {
+          "tags": [
+            "course"
+          ],
+          "summary": "Set arrival zone size",
+          "description": "Sets the radius of a circle in meters centered at the current destination.",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["value"],
+                  "properties": {
+                    "value": {
+                      "$ref": "#/components/schemas/ArrivalCircle"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/destination": {
+        "put": {
+          "tags": [
+            "destination"
+          ],
+          "summary": "Set destination",
+          "description": "Sets nextPoint path with supplied details",
+          "requestBody": {
+            "description": "destination details",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/HrefWaypointAttribute"
+                      },
+                      {
+                        "$ref": "#/components/schemas/PositionAttribute"
+                      }
+                  ],
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ArrivalCircleAttribute"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "destination"
+          ],
+          "summary": "Clear destination",
+          "description": "Clears all course information",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/activeRoute": {
+        "put": {
+          "tags": [
+            "activeRoute"
+          ],
+          "summary": "Set active route",
+          "description": "Sets activeRoute path and sets nextPoint to first point in the route",
+          "requestBody": {
+            "description": "Route to activate",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "href"
+                  ],
+                  "properties": {
+                    "href": {
+                      "$ref": "#/components/schemas/SignalKHrefRoute"
+                    },
+                    "pointIndex": {
+                      "type": "number",
+                      "default": 0,
+                      "minimum": 0,
+                      "description": "0 based index of the point in the route to set as the destination"
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Set to true to navigate the route points in reverse order."
+                    },
+                    "arrivalCircle": {
+                      "$ref": "#/components/schemas/ArrivalCircle"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        },
+        "delete": {
+          "tags": [
+            "activeRoute"
+          ],
+          "summary": "Clear active route",
+          "description": "Clears all course information",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/activeRoute/nextPoint": {
+        "put": {
+          "tags": [
+            "activeRoute"
+          ],
+          "summary": "Set next point in route",
+          "description": "Sets nextPoint / previousPoint",
+          "requestBody": {
+            "description": "destination details",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["value"],
+                  "properties": {
+                    "value": {
+                      "type": "number",
+                      "description": "Index of point in route (-1= previous point)",
+                      "enum": [
+                        1,
+                        -1
+                      ],
+                      "default": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/activeRoute/pointIndex": {
+        "put": {
+          "tags": [
+            "activeRoute"
+          ],
+          "summary": "Set point in route as destination.",
+          "description": "Sets destination to the point with the provided index.",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["value"],
+                  "properties": {
+                    "value": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Index of point in route to set as destination.",
+                      "example": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/activeRoute/reverse": {
+        "put": {
+          "tags": [
+            "activeRoute"
+          ],
+          "summary": "Reverse route direction.",
+          "description": "Reverse the direction the active route is navigated.",
+          "requestBody": {
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pointIndex": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Index of point in route to set as destination.",
+                      "example": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/activeRoute/refresh": {
+        "put": {
+          "tags": [
+            "activeRoute"
+          ],
+          "summary": "Refresh course information",
+          "description": "Refresh course values after a change has been made.",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/calculations": {
+        "get": {
+          "tags": [
+            "calculations"
+          ],
+          "summary": "Course calculations",
+          "description": "Returns the current course status",
+          "responses": {
+            "200": {
+              "description": "Course data",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CourseCalculationsModel"
+                  }
+                }
+              }
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  }
