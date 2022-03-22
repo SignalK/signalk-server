@@ -1,13 +1,13 @@
-name: Build Docker container
+name: Build Docker development container
 
 on:
   push:
     branches:
     - master
-    - latest
     - "build-docker"
     tags:
     - '*'
+    - '!v*'
 
 jobs:
   build_docker_images:
@@ -33,6 +33,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
-          platforms: linux/amd64,linux/arm/v7, linux/arm64
+          file: ./docker/Dockerfile
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
+          images: signalk/signalk-server
           tags: ${{ steps.docker_meta.outputs.tags }}
