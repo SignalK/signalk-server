@@ -579,7 +579,7 @@
             }
           ]
         },
-        "MBTilesLayersModel": {
+        "TileLayerExtModel": {
           "description": "When format='pbf' Lists the layers that appear in the vector tiles and the names and types of the attributes of features that appear in those layers.",
           "type": "object",
           "required": [
@@ -610,35 +610,8 @@
             }
           }
         },
-        "MBTilesExtModel": {
-          "description": "Extends TileJSON schema with MBTiles extensions.",
-          "type": "object",
-          "required": [
-            "format"
-          ],
-          "properties": {
-            "format": {
-              "type": "string",
-              "description": "The file format of the tile data.",
-              "enum": ["pbf", "jpg", "png", "webp"],
-              "example": "png"
-            },
-            "type": {
-              "type": "string",
-              "description": "layer type",
-              "enum": ["overlay", "baselayer"]
-            },
-            "vector_layers": {
-              "type": "array",
-              "description": "When format='pbf' Lists the layers that appear in the vector tiles and the names and types of the attributes of features that appear in those layers.",
-              "items": {
-                "$ref": "#/components/schemas/MBTilesLayersModel"
-              }
-            }
-          }
-        },
-        "TileJSONModel": {
-          "description": "TileJSON schema model",
+        "TileLayerSource": {
+          "description": "Tile layer metadata model",
           "type": "object",
           "required": [
             "sourceType",
@@ -667,18 +640,6 @@
                 "type": "string"
               },
               "example": "http://localhost:3000/signalk/v2/api/resources/charts/islands/{z}/{x}/{y}.png"
-            },
-            "name": {
-              "type": "string",
-              "description": "tileset name.",
-              "example": "Indonesia",
-              "default": null
-            },
-            "description": {
-              "type": "string",
-              "description": "A text description of the tileset.",
-              "example": "Indonesian coastline",
-              "default": null
             },
             "version": {
               "type": "string",
@@ -743,26 +704,33 @@
                 -41.27498133450632,
                 8
               ]
+            },
+            "format": {
+              "type": "string",
+              "description": "The file format of the tile data.",
+              "enum": ["pbf", "jpg", "png", "webp"],
+              "example": "png"
+            },
+            "type": {
+              "type": "string",
+              "description": "layer type",
+              "enum": ["overlay", "baselayer"]
+            },
+            "vector_layers": {
+              "type": "array",
+              "description": "When format='pbf' Lists the layers that appear in the vector tiles and the names and types of the attributes of features that appear in those layers.",
+              "items": {
+                "$ref": "#/components/schemas/TileLayerExtModel"
+              }
             }
           }
         },
-        "TileSet": {
-          "allOf": [
-            {
-              "$ref": "#/components/schemas/TileJSONModel"
-            },
-            {
-              "$ref": "#/components/schemas/MBTilesExtModel"
-            }
-          ]
-        },
-        "WMSModel": {
-          "description": "WMS and WMTS attributes",
+        "WmsSourceModel": {
+          "description": "WMS / WMTS source model",
           "type": "object",
           "required": [
             "sourceType",
-            "url",
-            "layers"
+            "url"
           ],
           "properties": {
             "sourceType": {
@@ -793,6 +761,30 @@
             }
           }
         },
+        "TileJsonSource": {
+          "description": "TileJSON source model",
+          "type": "object",
+          "required": [
+            "sourceType",
+            "url"
+          ],
+          "properties": {
+            "sourceType": {
+              "type": "string",
+              "description": "Source type of chart data.",
+              "enum": [
+                "tilejson"
+              ],
+              "default": "tilejson",
+              "example": "tilejson"
+            },
+            "url": {
+              "type": "string",
+              "description": "URL to TileJSON file",
+              "example": "http://mapserver.org/mychart.json"
+            }
+          }
+        },
         "ChartBaseModel": {
           "description": "Signal K Chart resource",
           "type": "object",
@@ -802,12 +794,26 @@
           "properties": {
             "identifier": {
               "type": "string",
-              "description": "chart identifier / number",
+              "description": "Chart identifier / number",
               "example": "NZ615"
+            },
+            "name": {
+              "type": "string",
+              "description": "Chart name.",
+              "example": "Tasman Bay",
+              "default": null
+            },
+            "description": {
+              "type": "string",
+              "description": "A text description of the chart.",
+              "example": "Tasman Bay coastline",
+              "default": null
             },
             "scale": {
               "type": "number",
               "description": "chart scale",
+              "minimum": 1,
+              "default": 250000,
               "example": 250000
             }
           }
@@ -820,10 +826,13 @@
           ],
           "oneOf": [
             {
-              "$ref": "#/components/schemas/TileSet"
+              "$ref": "#/components/schemas/TileLayerSource"
             },
             {
-              "$ref": "#/components/schemas/WMSModel"
+              "$ref": "#/components/schemas/TileJsonSource"
+            },
+            {
+              "$ref": "#/components/schemas/WmsSourceModel"
             }
           ]
         },
