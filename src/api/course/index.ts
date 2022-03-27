@@ -649,7 +649,6 @@ export class CourseApi {
   }
 
   private buildDeltaMsg(): any {
-
     const values: Array<{ path: string; value: any }> = []
     const navPath = 'navigation.course'
 
@@ -705,7 +704,7 @@ export class CourseApi {
     return {
       updates: [
         {
-          values: values
+          values
         }
       ]
     }
