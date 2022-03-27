@@ -1,4 +1,4 @@
-name: Build official docker release container
+name: Release - build & publish modules and server, build & publish docker containers
 
 on:
   push:
