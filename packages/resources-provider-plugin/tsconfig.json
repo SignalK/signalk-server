@@ -7,7 +7,9 @@
       "strict": true,
       "allowJs": true,
       "allowSyntheticDefaultImports": true,
-      "resolveJsonModule": true
+      "resolveJsonModule": true,
+      "composite": true,
+      "rootDir": "src"
     },
     "include": ["./src/**/*"],
     "exclude": ["node_modules"],
