@@ -27,7 +27,6 @@
         "watch": "npm run build -- -w",
         "test": "echo \"Error: no test specified\" && exit 1",
         "start": "npm run build -- -w",
-        "prepare": "tsc",
         "format": "prettier --write src/*"
     },
     "dependencies": {
