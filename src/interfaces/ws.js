@@ -488,7 +488,7 @@ function processUpdates(app, pathSources, spark, msg) {
     )
     return
   }
-  app.handleMessage(spark.request.source || 'ws', msg)
+  app.handleMessage(clientSourceId(spark), msg)
 
   msg.updates.forEach(update => {
     if (update.values) {
@@ -653,10 +653,15 @@ function wrapWithverifyWS(securityStrategy, spark, theFunction) {
   }
 }
 
+function clientSourceId(spark) {
+  return `ws:${spark.id}`
+}
+
 function sendHello(app, helloProps, spark) {
   spark.write({
     ...app.getHello(),
-    ...helloProps
+    ...helloProps,
+    client$source: clientSourceId(spark)
   })
 }
 
