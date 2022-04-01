@@ -208,11 +208,13 @@ function pathToProcessForFull(pathArray: any[]) {
 }
 
 function pickDeltasFromBranch(acc: any[], obj: any) {
-  if (isUndefined(obj.path) || isUndefined(obj.value)) {
-    // not a delta, so process possible children
-    _.values(obj).reduce(pickDeltasFromBranch, acc)
-  } else {
-    acc.push(obj)
+  if (typeof obj === 'object') {
+    if (isUndefined(obj.path) || isUndefined(obj.value)) {
+      // not a delta, so process possible children
+      _.values(obj).reduce(pickDeltasFromBranch, acc)
+    } else {
+      acc.push(obj)
+    }
   }
   return acc
 }
