@@ -99,7 +99,7 @@ export class FileStore implements IResourceStore {
       result.$source = this.pkg.id
       return result
     } catch (e) {
-      if (e.code === 'ENOENT') {
+      if ((e as any).code === 'ENOENT') {
         return Promise.reject(`No such resource ${type} ${itemUuid}`)
       }
       console.error(e)
