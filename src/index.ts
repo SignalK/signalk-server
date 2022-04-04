@@ -60,7 +60,6 @@ class Server {
     const bodyParser = require('body-parser')
     const app = express() as any
     app.use(require('compression')())
-    app.use(require('cors')())
     app.use(bodyParser.json({ limit: FILEUPLOADSIZELIMIT }))
 
     this.app = app
@@ -72,6 +71,7 @@ class Server {
     app.version = '0.0.1'
 
     startSecurity(app, opts ? opts.securityConfig : null)
+    setupCors(app, getSecurityConfig(app))
 
     require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
     require('./put').start(app)
@@ -558,4 +558,27 @@ function startInterfaces(app: ServerApp & WithConfig) {
       debug(`Not loading interface '${name}' because of configuration`)
     }
   })
+}
+
+function setupCors(app: any, { allowedCorsOrigins }: any) {
+  const corsDebug = createDebug('signalk-server:cors')
+  
+  const corsOrigins = allowedCorsOrigins ? allowedCorsOrigins.split(',') : []
+  corsDebug(`corsOrigins:${corsOrigins.toString()}`)
+  const corsOptions: any = {
+    credentials: true
+  }
+  if (corsOrigins.length) {
+    corsOptions.origin = (origin: any, cb: any) => {
+      if (corsOrigins.indexOf(origin)) {
+        corsDebug(`Found CORS origin ${origin}`)
+        cb(undefined, origin)
+      } else {
+        const errorMsg = `CORS origin not allowed ${origin}`
+        corsDebug(errorMsg)
+        cb(new Error(errorMsg))
+      }
+    }
+  }
+  app.use(require('cors')(corsOptions))
 }
