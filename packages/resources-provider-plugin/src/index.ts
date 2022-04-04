@@ -107,7 +107,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
 
   const plugin: Plugin = {
     id: 'resources-provider',
-    name: 'Resources Provider',
+    name: 'Resources Provider (built-in)',
     schema: () => CONFIG_SCHEMA,
     uiSchema: () => CONFIG_UISCHEMA,
     start: (options: any, restart: any) => {
