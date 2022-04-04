@@ -22,6 +22,8 @@ The plugin module must export a single `function(app)` that must return an objec
 
 Whan a plugin's configuration is changed the server will first call `stop` to stop the plugin and then `start` with the new configuration data.
 
+If the plugin wants to modify its own configuration it should call the function passed as `restartPlugin` with the new configuration. This will save the configuration and stop-start the plugin with the new configuration. Most plugins are configured in the server's configuration UI and never need to do this.
+
 ## Getting Started with Plugin Development
 
 To get started with SignalK plugin development, you can follow the following guide.
