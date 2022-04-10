@@ -404,7 +404,7 @@ class Playground extends Component {
                               </tr>
                             </thead>
                             <tbody>
-                              {this.state.data.map((data) => {
+                              {this.state.data.map((data, i) => {
                                 const formatted = JSON.stringify(
                                   data.value,
                                   null,
@@ -415,7 +415,7 @@ class Playground extends Component {
                                     : 0
                                 )
                                 const path = data.path
-                                const key = `${data.path}${data.context}`
+                                const key = `${data.path}${data.context}${i}`
 
                                 return (
                                   <tr key={key}>
