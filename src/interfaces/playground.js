@@ -36,16 +36,26 @@ module.exports = function(app) {
   const processors = {
     n2k: (msgs, sendToServer) => {
       const n2kJson = []
-      const deltas = msgs.map(msg => {
-        const n2k = pgnParser.parseString(msg)
-        if (n2k) {
-          if (sendToServer) {
-            app.emit('N2KAnalyzerOut', n2k)
+      let messageRangeStart = 0
+      const deltas = msgs
+        .map((msg, i) => [msg, i])
+        .map(([msg, i]) => {
+          if (!msg.startsWith('#')) {
+            const n2k = pgnParser.parseString(msg)
+            if (n2k) {
+              if (sendToServer) {
+                app.emit('N2KAnalyzerOut', JSON.parse(JSON.stringify(n2k)))
+              }
+              n2k.msgIndex = i
+              n2k.msgRange = [messageRangeStart, i]
+              messageRangeStart = i + 1
+              n2kJson.push(n2k)
+              return n2kMapper.toDelta(n2k)
+            }
+          } else {
+            messageRangeStart++
           }
-          n2kJson.push(n2k)
-          return n2kMapper.toDelta(n2k)
-        }
-      })
+        })
       return { deltas, n2kJson: n2kJson }
     },
     '0183': msgs => {

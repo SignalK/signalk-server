@@ -29,6 +29,7 @@ import classnames from 'classnames'
 
 import moment from 'moment'
 import jsonlint from 'jsonlint-mod'
+import { n2kPanel } from './N2kDebugPanel'
 
 const timestampFormat = 'MM/DD HH:mm:ss'
 const inputStorageKey = 'admin.v1.playground.input'
@@ -58,6 +59,8 @@ class Playground extends Component {
     this.handleInput = this.handleInput.bind(this)
     this.send = this.send.bind(this)
     this.beautify = this.beautify.bind(this)
+
+    this.scrollIntoviewHandlers = []
   }
 
   handleInput(event) {
@@ -66,6 +69,7 @@ class Playground extends Component {
       input: event.target.value,
       inputIsJson: isJson(event.target.value),
     })
+    console.log(event.target.value)
     localStorage.setItem(inputStorageKey, event.target.value)
     if (this.inputWaitTimeout) {
       clearTimeout(this.inputWaitTimeout)
@@ -88,6 +92,7 @@ class Playground extends Component {
   }
 
   beautify() {
+    console.log('beaut')
     try {
       jsonlint.parse(this.state.input)
       const text = JSON.stringify(JSON.parse(this.state.input), null, 2)
@@ -131,6 +136,8 @@ class Playground extends Component {
     }
 
     const body = { value: this.state.input, sendToServer }
+    console.log('set')
+    console.log(this.state.input)
     localStorage.setItem(inputStorageKey, this.state.input)
     if (sendToServer) {
       this.setState({ ...this.state, sending: true })
@@ -229,6 +236,7 @@ class Playground extends Component {
     const toggle = (tab) => {
       this.setState({ ...this.state, activeTab: tab })
     }
+    const inputRef = React.createRef(null)
     return (
       this.state.hasData && (
         <div className="animated fadeIn">
@@ -250,15 +258,71 @@ class Playground extends Component {
                       <Col xs="12" md="12">
                         <FormText color="muted">
                           You can enter multi-line raw NMEA 2000, NMEA 0183 or
-                          Signal K deltas (one delta or an array)
+                          Signal K deltas (one delta or an array).
                         </FormText>
-                        <Input
-                          type="textarea"
-                          name="input"
-                          rows="15"
+                        <textarea
+                          ref={inputRef}
+                          style={{
+                            width: '100%',
+                            minHeight: '60vh',
+                          }}
+                          onKeyUp={(e) => {
+                            if (e.altKey && e.ctrlKey) {
+                              if (e.key === 'ArrowDown') {
+                                const end = inputRef.current.selectionEnd
+                                const nextLineStart =
+                                  this.state.input.indexOf('\n', end - 1) + 1
+                                const nextLineEnd = this.state.input.indexOf(
+                                  '\n',
+                                  nextLineStart
+                                )
+                                inputRef.current.selectionStart = nextLineStart
+                                inputRef.current.selectionEnd = nextLineEnd
+                                e.preventDefault()
+                              } else if (e.key === 'ArrowUp') {
+                                const start = inputRef.current.selectionStart
+                                const prevLineEnd =
+                                  this.state.input.lastIndexOf(
+                                    '\n',
+                                    start - 1
+                                  ) - 1
+                                const prevLineStart =
+                                  this.state.input.lastIndexOf(
+                                    '\n',
+                                    prevLineEnd
+                                  ) + 1
+                                inputRef.current.selectionStart = prevLineStart
+                                inputRef.current.selectionEnd = prevLineEnd
+                                e.preventDefault()
+                              }
+                            }
+                          }}
                           onChange={this.handleInput}
-                          value={this.state.input}
-                        />
+                          onSelect={(e) => {
+                            const cursorOnLine =
+                              this.state.input
+                                .substring(0, e.target.selectionEnd)
+                                .split('\n').length - 1
+                            this.setState({ cursorOnLine })
+                            let scrollHandlerIndex = cursorOnLine - 1
+                            while (++scrollHandlerIndex < cursorOnLine + 10) {
+                              if (
+                                this.scrollIntoviewHandlers[scrollHandlerIndex]
+                              ) {
+                                this.scrollIntoviewHandlers[
+                                  scrollHandlerIndex
+                                ]()
+                                break
+                              }
+                            }
+                          }}
+                        >
+                          {this.state.input}
+                        </textarea>
+                        <FormText color="muted">
+                          Use Ctrl-option up & down to move selection by lines.
+                          Prefix NMEA 2000 lines with # to ignore them.
+                        </FormText>
                       </Col>
                     </FormGroup>
                   </Form>
@@ -440,7 +504,12 @@ class Playground extends Component {
 
                     {this.state.n2kJson &&
                       this.state.n2kJson.length > 0 &&
-                      n2kJsonPanel(this.state.n2kJson)}
+                      n2kPanel(
+                        this.state.n2kJson,
+                        N2KJSON_TAB_ID,
+                        this.state.cursorOnLine,
+                        this.scrollIntoviewHandlers
+                      )}
 
                     {this.state.putResults && this.state.putResults.length > 0 && (
                       <TabPane tabId={PUTRESULTS_TAB_ID}>
@@ -482,23 +551,6 @@ class Playground extends Component {
       )
     )
   }
-}
-
-function n2kJsonPanel(n2kData) {
-  return (
-    <TabPane tabId={N2KJSON_TAB_ID}>
-      <div
-        style={{
-          overflowY: 'scroll',
-          maxHeight: '60vh',
-          border: '1px solid',
-          padding: '5px',
-        }}
-      >
-        <pre>{JSON.stringify(n2kData, null, 2)}</pre>
-      </div>
-    </TabPane>
-  )
 }
 
 function isJson(input) {
