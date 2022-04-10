@@ -1,0 +1,47 @@
+{
+  "vessel": {
+    "name": "Aava",
+    "brand": "Arcona",
+    "type": "Arcona 34",
+    "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d"
+  },
+  "pipedProviders": [
+    {
+      "id": "n2kFromFile",
+      "pipeElements": [
+        {
+          "type": "providers/filestream",
+          "options": {
+            "filename": "samples/aava-n2k.data",
+            "providerId": "n2kFromFile"
+          },
+          "optionMappings": [
+            {
+              "fromAppProperty": "argv.n2kfilename",
+              "toOption": "filename"
+            }
+          ]
+        },
+        {
+          "type": "providers/liner"
+        },
+        {
+          "type": "providers/canboatjs"
+        },
+        {
+          "type": "providers/timestamp-throttle",
+          "options": {
+              "adjustTimestamp": true
+          }
+        },
+        {
+          "type": "providers/n2k-signalk"
+        }
+      ]
+    }
+  ],
+  "interfaces": {},
+  "security": {
+    "strategy": "./tokensecurity"
+  }
+}

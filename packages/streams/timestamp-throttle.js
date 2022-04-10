@@ -32,6 +32,15 @@ function TimestampThrottle(options) {
     options && options.getMilliseconds
       ? options.getMilliseconds
       : getMilliseconds
+  this.adjustTimestamp = false
+  if (options) {
+    if (options.adjustTimestamp === true) {
+      this.adjustTimestamp = adjustTimestamp
+    }
+    else {
+      this.adjustTimestamp = options.adjustTimestamp
+    }
+  }
 }
 
 require('util').inherits(TimestampThrottle, Transform)
@@ -40,9 +49,13 @@ TimestampThrottle.prototype._transform = function (msg, encoding, done) {
   const msgMillis = this.getMilliseconds(msg)
   if (msgMillis < this.lastMsgMillis) {
     this.offsetMillis = new Date().getTime() - msgMillis
+    this.firstOffsetMillis = this.offsetMillis
   }
   this.lastMsgMillis = msgMillis
   const millisToCorrectSendTime = msgMillis - Date.now() + this.offsetMillis
+  if (this.adjustTimestamp) {
+    msg.timestamp = (new Date(this.adjustTimestamp(msgMillis, this.firstOffsetMillis))).toISOString();
+  }
   if (millisToCorrectSendTime <= 0) {
     this.push(msg)
     done()
@@ -58,6 +71,20 @@ TimestampThrottle.prototype._transform = function (msg, encoding, done) {
 function getMilliseconds(msg) {
   // 2014-08-15-16:00:00.083
   return moment(msg.timestamp, 'YYYY-MM-DD-HH:mm:ss.SSS').valueOf()
+}
+
+
+/**
+ * Adjust timestamp in message retrieved from log
+ *
+ * Usually, to shift timestamps into the current moment.
+ *
+ * @param {number} msgMillis timestamp of current message, in millis
+ * @param {number} offsetMillis difference between timestamp in first message of playback and system time at that time, in millis
+ * @returns {number} timestamp, to assign to message, in millis.
+ */
+function adjustTimestamp(msgMillis, offsetMillis) {
+  return msgMillis + offsetMillis;
 }
 
 module.exports = TimestampThrottle
