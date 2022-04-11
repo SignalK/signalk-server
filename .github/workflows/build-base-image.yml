@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_docker_images:
+  build_docker_base_images:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
