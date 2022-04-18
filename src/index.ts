@@ -562,7 +562,7 @@ function startInterfaces(app: ServerApp & WithConfig) {
 
 function setupCors(app: any, { allowedCorsOrigins }: any) {
   const corsDebug = createDebug('signalk-server:cors')
-  
+
   const corsOrigins = allowedCorsOrigins ? allowedCorsOrigins.split(',') : []
   corsDebug(`corsOrigins:${corsOrigins.toString()}`)
   const corsOptions: any = {
