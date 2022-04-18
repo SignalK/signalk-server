@@ -70,7 +70,7 @@ class Settings extends Component {
       expiration: this.state.expiration,
       allowNewUserRegistration: this.state.allowNewUserRegistration,
       allowDeviceAccessRequests: this.state.allowDeviceAccessRequests,
-      allowedCorsOrigins: this.state.allowedCorsOrigins
+      allowedCorsOrigins: this.state.allowedCorsOrigins,
     }
     fetch(`${window.serverRoutesPrefix}/security/config`, {
       method: 'PUT',
@@ -213,7 +213,8 @@ class Settings extends Component {
                         value={this.state.allowedCorsOrigins}
                       />
                       <FormText color="muted">
-                       Use comma delimited list, example: http://host1.name.com:3000,http://host2.name.com:3000
+                        Use comma delimited list, example:
+                        http://host1.name.com:3000,http://host2.name.com:3000
                       </FormText>
                     </Col>
                   </FormGroup>
