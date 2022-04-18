@@ -1,15 +1,24 @@
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import swaggerUi from 'swagger-ui-express'
 import { SERVERROUTESPREFIX } from '../constants'
-import courseApiDoc from './course/openApi.json'
-import resourcesApiDoc from './resources/openApi.json'
+import { courseApiRecord } from './course/openApi'
+import { resourcesApiRecord } from './resources/openApi'
+
+interface OpenApiRecord {
+  name: string
+  path: string
+  apiDoc: any
+}
 
 const apiDocs: {
-  [key: string]: any
-} = {
-  course: courseApiDoc,
-  resources: resourcesApiDoc
-}
+  [name: string]: OpenApiRecord
+} = [courseApiRecord, resourcesApiRecord].reduce(
+  (acc: any, apiRecord: OpenApiRecord) => {
+    acc[apiRecord.name] = apiRecord
+    return acc
+  },
+  {}
+)
 
 export function mountSwaggerUi(app: any, path: string) {
   app.use(
@@ -29,7 +38,14 @@ export function mountSwaggerUi(app: any, path: string) {
     `${SERVERROUTESPREFIX}/openapi/:api`,
     (req: Request, res: Response) => {
       if (apiDocs[req.params.api]) {
-        res.json(apiDocs[req.params.api])
+        apiDocs[req.params.api].apiDoc.servers = [
+          {
+            url: `${req.protocol}://${req.get('Host')}${
+              apiDocs[req.params.api].path
+            }`
+          }
+        ]
+        res.json(apiDocs[req.params.api].apiDoc)
       } else {
         res.status(404)
         res.send('Not found')
