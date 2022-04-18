@@ -70,6 +70,7 @@ class Settings extends Component {
       expiration: this.state.expiration,
       allowNewUserRegistration: this.state.allowNewUserRegistration,
       allowDeviceAccessRequests: this.state.allowDeviceAccessRequests,
+      allowedCorsOrigins: this.state.allowedCorsOrigins
     }
     fetch(`${window.serverRoutesPrefix}/security/config`, {
       method: 'PUT',
@@ -196,7 +197,23 @@ class Settings extends Component {
                         value={this.state.expiration}
                       />
                       <FormText color="muted">
-                        Exmaples: 60s, 1m, 1h, 1d
+                        Examples: 60s, 1m, 1h, 1d
+                      </FormText>
+                    </Col>
+                  </FormGroup>
+                  <FormGroup row>
+                    <Col md="2">
+                      <Label htmlFor="text-input">Allowed CORS origins</Label>
+                    </Col>
+                    <Col xs="12" md="9">
+                      <Input
+                        type="text"
+                        name="allowedCorsOrigins"
+                        onChange={this.handleChange}
+                        value={this.state.allowedCorsOrigins}
+                      />
+                      <FormText color="muted">
+                       Use comma delimited list, example: http://host1.name.com:3000,http://host2.name.com:3000
                       </FormText>
                     </Col>
                   </FormGroup>
