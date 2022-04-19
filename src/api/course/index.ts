@@ -222,12 +222,20 @@ export class CourseApi {
           return
         }
 
-        const result = await this.setDestination(req.body)
-        if (result) {
-          this.emitCourseInfo()
-          res.status(200).json(Responses.ok)
-        } else {
-          res.status(400).json(Responses.invalid)
+        try {
+          const result = await this.setDestination(req.body)
+          if (result) {
+            this.emitCourseInfo()
+            res.status(200).json(Responses.ok)
+          } else {
+            res.status(400).json(Responses.invalid)
+          }
+        } catch (error) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (error as any).message
+          })
         }
       }
     )
@@ -256,12 +264,20 @@ export class CourseApi {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        const result = await this.activateRoute(req.body)
-        if (result) {
-          this.emitCourseInfo()
-          res.status(200).json(Responses.ok)
-        } else {
-          res.status(400).json(Responses.invalid)
+        try {
+          const result = await this.activateRoute(req.body)
+          if (result) {
+            this.emitCourseInfo()
+            res.status(200).json(Responses.ok)
+          } else {
+            res.status(400).json(Responses.invalid)
+          }
+        } catch (error) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (error as any).message
+          })
         }
       }
     )
@@ -413,15 +429,15 @@ export class CourseApi {
     if (route.href) {
       rte = await this.getRoute(route.href)
       if (!rte) {
-        console.log(`** Could not retrieve route information for ${route.href}`)
-        return false
+        throw new Error(
+          `** Could not retrieve route information for ${route.href}`
+        )
       }
       if (!Array.isArray(rte.feature?.geometry?.coordinates)) {
-        debug(`** Invalid route coordinate data! (${route.href})`)
-        return false
+        throw new Error(`Invalid route coordinate data! (${route.href})`)
       }
     } else {
-      return false
+      throw new Error('Route information not supplied!')
     }
 
     const newCourse: CourseInfo = { ...this.courseInfo }
@@ -462,11 +478,10 @@ export class CourseApi {
           this.courseInfo.previousPoint.position = position.value
           this.courseInfo.previousPoint.type = `VesselPosition`
         } else {
-          console.log(`** Error: unable to retrieve vessel position!`)
-          return false
+          throw new Error(`Error: Unable to retrieve vessel position!`)
         }
       } catch (err) {
-        return false
+        throw new Error(`Error: Unable to retrieve vessel position!`)
       }
     } else {
       newCourse.previousPoint.position = this.getRoutePoint(
@@ -511,16 +526,13 @@ export class CourseApi {
             newCourse.nextPoint.href = dest.href
             newCourse.nextPoint.type = 'Waypoint'
           } else {
-            debug(`** Invalid waypoint coordinate data! (${dest.href})`)
-            return false
+            throw new Error(`Invalid waypoint coordinate data! (${dest.href})`)
           }
         } catch (err) {
-          console.log(`** Error retrieving and validating ${dest.href}`)
-          return false
+          throw new Error(`Error retrieving and validating ${dest.href}`)
         }
       } else {
-        debug(`** Invalid href! (${dest.href})`)
-        return false
+        throw new Error(`Invalid href! (${dest.href})`)
       }
     } else if (dest.position) {
       newCourse.nextPoint.href = null
@@ -528,11 +540,10 @@ export class CourseApi {
       if (isValidCoordinate(dest.position)) {
         newCourse.nextPoint.position = dest.position
       } else {
-        debug(`** Error: position is not valid`)
-        return false
+        throw new Error(`Error: position is not valid`)
       }
     } else {
-      return false
+      throw new Error(`Destination not provided!`)
     }
 
     // clear activeRoute values
@@ -550,12 +561,12 @@ export class CourseApi {
         newCourse.previousPoint.type = `VesselPosition`
         newCourse.previousPoint.href = null
       } else {
-        debug(`** Error: navigation.position.value is undefined! (${position})`)
-        return false
+        throw new Error(
+          `Error: navigation.position.value is undefined! (${position})`
+        )
       }
     } catch (err) {
-      console.log(`** Error: unable to retrieve vessel position!`)
-      return false
+      throw new Error(`Error: Unable to retrieve vessel position!`)
     }
 
     this.courseInfo = newCourse
