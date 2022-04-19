@@ -756,7 +756,7 @@ interface PropertyValue {
 Note that the value can be also a function.
 
 This mechanism allows plugins to _offer_ extensions via _"Well Known Properties"_, for example 
-- additional [NMEA0183 sentence parsers for custom sentences](https://github.com/SignalK/nmea0183-signalk/pull/193) via `nmea0183sentenceParser`
+- additional [NMEA0183 sentence parsers for custom sentences](https://github.com/SignalK/nmea0183-signalk/tree/master/custom-sentence-plugin) via `nmea0183sentenceParser`
 - additional [PGN definitions for propietary or custom PGNs](https://github.com/canboat/canboatjs/blob/master/test/customPgns.js)
 
 Code handling incoming PropertyValues should be fully reactive: even if all emitters emit during their startup there is no defined load / startup order and plugins may emit when activated and started. This means that depending on a PropertyValue being there when your code starts or arriving after your code has started is not possible.
