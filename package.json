@@ -134,7 +134,7 @@
     "ws": "^7.0.0"
   },
   "optionalDependencies": {
-    "@signalk/freeboard-sk": "^1.0.0",
+    "@signalk/freeboard-sk": "^2.0.0-beta.1",
     "@signalk/instrumentpanel": "0.x",
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
