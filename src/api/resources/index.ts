@@ -215,7 +215,7 @@ export class ResourcesApi {
             res.status(400).json({
               state: 'FAILED',
               statusCode: 400,
-              message: e.message
+              message: (e as Error).message
             })
             return
           }
@@ -267,7 +267,7 @@ export class ResourcesApi {
             res.status(400).json({
               state: 'FAILED',
               statusCode: 400,
-              message: e.message
+              message: (e as Error).message
             })
             return
           }
@@ -355,7 +355,7 @@ export class ResourcesApi {
             res.status(400).json({
               state: 'FAILED',
               statusCode: 400,
-              message: e.message
+              message: (e as Error).message
             })
             return
           }
