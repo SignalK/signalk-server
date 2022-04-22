@@ -49,9 +49,9 @@ interface CourseInfo {
   startTime: string | null
   activeRoute: {
     href: string | null
-    pointIndex: number
-    pointTotal: number
-    reverse: boolean
+    pointIndex: number | null
+    pointTotal: number | null
+    reverse: boolean | null
   }
   nextPoint: {
     href: string | null
@@ -318,6 +318,7 @@ export class CourseApi {
 
         if (req.params.action === 'nextPoint') {
           if (
+            typeof this.courseInfo.activeRoute.pointIndex === 'number' &&
             typeof req.body.value === 'number' &&
             (req.body.value === 1 || req.body.value === -1)
           ) {
@@ -378,7 +379,7 @@ export class CourseApi {
         // set new destination
         this.courseInfo.nextPoint.position = this.getRoutePoint(
           rte,
-          this.courseInfo.activeRoute.pointIndex,
+          (this.courseInfo.activeRoute.pointIndex as number),
           this.courseInfo.activeRoute.reverse
         )
         this.courseInfo.nextPoint.type = `RoutePoint`
@@ -403,7 +404,7 @@ export class CourseApi {
         } else {
           this.courseInfo.previousPoint.position = this.getRoutePoint(
             rte,
-            this.courseInfo.activeRoute.pointIndex - 1,
+            (this.courseInfo.activeRoute.pointIndex as number) - 1,
             this.courseInfo.activeRoute.reverse
           )
           this.courseInfo.previousPoint.type = `RoutePoint`
@@ -417,9 +418,9 @@ export class CourseApi {
 
   private calcReversedIndex(): number {
     return (
-      this.courseInfo.activeRoute.pointTotal -
+      (this.courseInfo.activeRoute.pointTotal as number) -
       1 -
-      this.courseInfo.activeRoute.pointIndex
+      (this.courseInfo.activeRoute.pointIndex as number)
     )
   }
 
@@ -577,9 +578,9 @@ export class CourseApi {
   private clearDestination() {
     this.courseInfo.startTime = null
     this.courseInfo.activeRoute.href = null
-    this.courseInfo.activeRoute.pointIndex = 0
-    this.courseInfo.activeRoute.pointTotal = 0
-    this.courseInfo.activeRoute.reverse = false
+    this.courseInfo.activeRoute.pointIndex = null
+    this.courseInfo.activeRoute.pointTotal = null
+    this.courseInfo.activeRoute.reverse = null
     this.courseInfo.nextPoint.href = null
     this.courseInfo.nextPoint.type = null
     this.courseInfo.nextPoint.position = null
@@ -629,7 +630,7 @@ export class CourseApi {
     }
   }
 
-  private getRoutePoint(rte: any, index: number, reverse: boolean) {
+  private getRoutePoint(rte: any, index: number, reverse: boolean | null) {
     const pos = reverse
       ? rte.feature.geometry.coordinates[
           rte.feature.geometry.coordinates.length - (index + 1)
