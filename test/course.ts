@@ -37,15 +37,15 @@ describe('Course Api', () => {
       },
       {
         path: 'navigation.course.activeRoute.pointIndex',
-        value: 0
+        value: null
       },
       {
         path: 'navigation.course.activeRoute.pointTotal',
-        value: 0
+        value: null
       },
       {
         path: 'navigation.course.activeRoute.reverse',
-        value: false
+        value: null
       },
       {
         path: 'navigation.course.nextPoint.href',
@@ -87,9 +87,9 @@ describe('Course Api', () => {
         startTime: null,
         activeRoute: {
           href: null,
-          pointIndex: 0,
-          pointTotal: 0,
-          reverse: false
+          pointIndex: null,
+          pointTotal: null,
+          reverse: null
         },
         nextPoint: {
           href: null,
@@ -190,9 +190,9 @@ describe('Course Api', () => {
     let expectedPathValues = [
       { path: 'navigation.course.activeRoute.href', value: null },
       { path: 'navigation.course.startTime', value: null },
-      { path: 'navigation.course.activeRoute.pointIndex', value: 0 },
-      { path: 'navigation.course.activeRoute.pointTotal', value: 0 },
-      { path: 'navigation.course.activeRoute.reverse', value: false },
+      { path: 'navigation.course.activeRoute.pointIndex', value: null },
+      { path: 'navigation.course.activeRoute.pointTotal', value: null },
+      { path: 'navigation.course.activeRoute.reverse', value: null },
       {
         path: 'navigation.course.nextPoint.href',
         value: href
@@ -221,9 +221,9 @@ describe('Course Api', () => {
         startTime: null,
         activeRoute: {
           href: null,
-          pointIndex: 0,
-          pointTotal: 0,
-          reverse: false
+          pointIndex: null,
+          pointTotal: null,
+          reverse: null
         },
         nextPoint: {
           href,
@@ -254,15 +254,15 @@ describe('Course Api', () => {
       },
       {
         path: 'navigation.course.activeRoute.pointIndex',
-        value: 0
+        value: null
       },
       {
         path: 'navigation.course.activeRoute.pointTotal',
-        value: 0
+        value: null
       },
       {
         path: 'navigation.course.activeRoute.reverse',
-        value: false
+        value: null
       },
       {
         path: 'navigation.course.nextPoint.href',
@@ -298,9 +298,9 @@ describe('Course Api', () => {
         startTime: null,
         activeRoute: {
           href: null,
-          pointIndex: 0,
-          pointTotal: 0,
-          reverse: false
+          pointIndex: null,
+          pointTotal: null,
+          reverse: null
         },
         nextPoint: {
           href: null,
@@ -506,15 +506,15 @@ describe('Course Api', () => {
       },
       {
         path: 'navigation.course.activeRoute.pointIndex',
-        value: 0
+        value: null
       },
       {
         path: 'navigation.course.activeRoute.pointTotal',
-        value: 0
+        value: null
       },
       {
         path: 'navigation.course.activeRoute.reverse',
-        value: false
+        value: null
       },
       {
         path: 'navigation.course.nextPoint.href',
@@ -550,9 +550,9 @@ describe('Course Api', () => {
         startTime: null,
         activeRoute: {
           href: null,
-          pointIndex: 0,
-          pointTotal: 0,
-          reverse: false
+          pointIndex: null,
+          pointTotal: null,
+          reverse: null
         },
         nextPoint: {
           href: null,
