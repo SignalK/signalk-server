@@ -266,7 +266,8 @@
                 ],
                 "properties": {
                   "startTime": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2022-04-22T05:02:56.484Z"
                   },
                   "activeRoute": {
                     "type": "object",
