@@ -32,7 +32,7 @@ describe('Course Api', () => {
         value: null
       },
       {
-        path: 'navigation.course.activeRoute.startTime',
+        path: 'navigation.course.startTime',
         value: null
       },
       {
@@ -84,9 +84,9 @@ describe('Course Api', () => {
 
     await selfGetJson('navigation/course').then(data => {
       data.should.deep.equal({
+        startTime: null,
         activeRoute: {
           href: null,
-          startTime: null,
           pointIndex: 0,
           pointTotal: 0,
           reverse: false
@@ -189,7 +189,7 @@ describe('Course Api', () => {
 
     let expectedPathValues = [
       { path: 'navigation.course.activeRoute.href', value: null },
-      { path: 'navigation.course.activeRoute.startTime', value: null },
+      { path: 'navigation.course.startTime', value: null },
       { path: 'navigation.course.activeRoute.pointIndex', value: 0 },
       { path: 'navigation.course.activeRoute.pointTotal', value: 0 },
       { path: 'navigation.course.activeRoute.reverse', value: false },
@@ -218,9 +218,9 @@ describe('Course Api', () => {
 
     await selfGetJson('navigation/course').then(data => {
       data.should.deep.equal({
+        startTime: null,
         activeRoute: {
           href: null,
-          startTime: null,
           pointIndex: 0,
           pointTotal: 0,
           reverse: false
@@ -249,7 +249,7 @@ describe('Course Api', () => {
         value: null
       },
       {
-        path: 'navigation.course.activeRoute.startTime',
+        path: 'navigation.course.startTime',
         value: null
       },
       {
@@ -295,9 +295,9 @@ describe('Course Api', () => {
 
     await selfGetJson('navigation/course').then(data => {
       data.should.deep.equal({
+        startTime: null,
         activeRoute: {
           href: null,
-          startTime: null,
           pointIndex: 0,
           pointTotal: 0,
           reverse: false
@@ -407,11 +407,11 @@ describe('Course Api', () => {
       deltaHasPathValue(courseDelta, path, value)
     )
     courseDelta.updates[0].values.find(
-      (x: any) => x.path === 'navigation.course.activeRoute.startTime'
+      (x: any) => x.path === 'navigation.course.startTime'
     ).should.not.be.undefined
 
     await selfGetJson('navigation/course').then(data => {
-      delete data.activeRoute.startTime
+      delete data.startTime
       data.should.deep.equal({
         activeRoute: {
           href,
@@ -501,7 +501,7 @@ describe('Course Api', () => {
         value: null
       },
       {
-        path: 'navigation.course.activeRoute.startTime',
+        path: 'navigation.course.startTime',
         value: null
       },
       {
@@ -547,9 +547,9 @@ describe('Course Api', () => {
 
     await selfGetJson('navigation/course').then(data => {
       data.should.deep.equal({
+        startTime: null,
         activeRoute: {
           href: null,
-          startTime: null,
           pointIndex: 0,
           pointTotal: 0,
           reverse: false
