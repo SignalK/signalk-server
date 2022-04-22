@@ -259,16 +259,19 @@
                 "description": "base model for course response",
                 "type": "object",
                 "required": [
+                  "startTime",
                   "activeRoute",
                   "nextPoint",
                   "previousPoint"
                 ],
                 "properties": {
+                  "startTime": {
+                    "type": "string"
+                  },
                   "activeRoute": {
                     "type": "object",
                     "required": [
                       "href",
-                      "startTime",
                       "pointIndex",
                       "pointTotal",
                       "reverse"
@@ -276,9 +279,6 @@
                     "properties": {
                       "href": {
                         "$ref": "#/components/schemas/SignalKHrefRoute"
-                      },
-                      "startTime": {
-                        "type": "string"
                       },
                       "pointIndex": {
                         "type": "number",

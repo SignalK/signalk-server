@@ -46,9 +46,9 @@ interface ActiveRoute extends DestinationBase {
 }
 
 interface CourseInfo {
+  startTime: string | null
   activeRoute: {
     href: string | null
-    startTime: string | null
     pointIndex: number
     pointTotal: number
     reverse: boolean
@@ -70,9 +70,9 @@ export class CourseApi {
   private server: CourseApplication
 
   private courseInfo: CourseInfo = {
+    startTime: null,
     activeRoute: {
       href: null,
-      startTime: null,
       pointIndex: 0,
       pointTotal: 0,
       reverse: false
@@ -445,11 +445,11 @@ export class CourseApi {
     // set activeroute
     newCourse.activeRoute.href = route.href
 
+    newCourse.startTime = new Date().toISOString()
+
     if (this.isValidArrivalCircle(route.arrivalCircle as number)) {
       newCourse.nextPoint.arrivalCircle = route.arrivalCircle as number
     }
-
-    newCourse.activeRoute.startTime = new Date().toISOString()
 
     if (typeof route.reverse === 'boolean') {
       newCourse.activeRoute.reverse = route.reverse
@@ -500,6 +500,8 @@ export class CourseApi {
   private async setDestination(dest: Destination): Promise<boolean> {
     const newCourse: CourseInfo = { ...this.courseInfo }
 
+    newCourse.startTime = new Date().toISOString()
+
     // set nextPoint
     if (this.isValidArrivalCircle(dest.arrivalCircle)) {
       newCourse.nextPoint.arrivalCircle = dest.arrivalCircle as number
@@ -548,7 +550,6 @@ export class CourseApi {
 
     // clear activeRoute values
     newCourse.activeRoute.href = null
-    newCourse.activeRoute.startTime = null
     newCourse.activeRoute.pointIndex = 0
     newCourse.activeRoute.pointTotal = 0
     newCourse.activeRoute.reverse = false
@@ -574,8 +575,8 @@ export class CourseApi {
   }
 
   private clearDestination() {
+    this.courseInfo.startTime = null
     this.courseInfo.activeRoute.href = null
-    this.courseInfo.activeRoute.startTime = null
     this.courseInfo.activeRoute.pointIndex = 0
     this.courseInfo.activeRoute.pointTotal = 0
     this.courseInfo.activeRoute.reverse = false
@@ -666,12 +667,12 @@ export class CourseApi {
     debug(this.courseInfo)
 
     values.push({
-      path: `${navPath}.activeRoute.href`,
-      value: this.courseInfo.activeRoute.href
+      path: `${navPath}.startTime`,
+      value: this.courseInfo.startTime
     })
     values.push({
-      path: `${navPath}.activeRoute.startTime`,
-      value: this.courseInfo.activeRoute.startTime
+      path: `${navPath}.activeRoute.href`,
+      value: this.courseInfo.activeRoute.href
     })
     values.push({
       path: `${navPath}.activeRoute.pointIndex`,
