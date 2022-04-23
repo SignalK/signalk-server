@@ -1,7 +1,7 @@
 import { strict as assert } from 'assert'
 import chai from 'chai'
 import resourcesOpenApi from '../src/api/resources/openApi.json'
-import { deltaHasPathValue, startServer } from './ts-servertestutilities'
+import { DATETIME_REGEX, deltaHasPathValue, startServer } from './ts-servertestutilities'
 chai.should()
 
 describe('Course Api', () => {
@@ -29,10 +29,6 @@ describe('Course Api', () => {
     const expectedPathValues = [
       {
         path: 'navigation.course.activeRoute.href',
-        value: null
-      },
-      {
-        path: 'navigation.course.startTime',
         value: null
       },
       {
@@ -83,8 +79,9 @@ describe('Course Api', () => {
     )
 
     await selfGetJson('navigation/course').then(data => {
+      data.startTime.should.match(DATETIME_REGEX)
+      delete data.startTime
       data.should.deep.equal({
-        startTime: null,
         activeRoute: {
           href: null,
           pointIndex: null,
@@ -189,7 +186,6 @@ describe('Course Api', () => {
 
     let expectedPathValues = [
       { path: 'navigation.course.activeRoute.href', value: null },
-      { path: 'navigation.course.startTime', value: null },
       { path: 'navigation.course.activeRoute.pointIndex', value: null },
       { path: 'navigation.course.activeRoute.pointTotal', value: null },
       { path: 'navigation.course.activeRoute.reverse', value: null },
@@ -216,9 +212,14 @@ describe('Course Api', () => {
       deltaHasPathValue(courseDelta, path, value)
     )
 
+    const pathValue = courseDelta.updates[0].values.find((x: any) => x.path === 'navigation.course.startTime')
+    pathValue.value.should.match(DATETIME_REGEX)
+
+
     await selfGetJson('navigation/course').then(data => {
+      data.startTime.should.match(DATETIME_REGEX)
+      delete data.startTime
       data.should.deep.equal({
-        startTime: null,
         activeRoute: {
           href: null,
           pointIndex: null,

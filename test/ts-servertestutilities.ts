@@ -10,6 +10,8 @@ import {
 } from './servertestutilities'
 import { expect } from 'chai'
 
+export const DATETIME_REGEX = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)Z?$/
+
 const emptyConfigDirectory = () =>
   Promise.all(
     ['serverstate/course', 'resources', 'plugin-config-data', 'baseDeltas.json']
