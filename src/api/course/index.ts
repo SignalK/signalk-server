@@ -452,9 +452,7 @@ export class CourseApi {
       newCourse.nextPoint.arrivalCircle = route.arrivalCircle as number
     }
 
-    if (typeof route.reverse === 'boolean') {
-      newCourse.activeRoute.reverse = route.reverse
-    }
+    newCourse.activeRoute.reverse = !!route.reverse
 
     newCourse.activeRoute.pointIndex = this.parsePointIndex(
       route.pointIndex as number,
