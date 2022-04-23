@@ -379,7 +379,7 @@ export class CourseApi {
         // set new destination
         this.courseInfo.nextPoint.position = this.getRoutePoint(
           rte,
-          (this.courseInfo.activeRoute.pointIndex as number),
+          this.courseInfo.activeRoute.pointIndex as number,
           this.courseInfo.activeRoute.reverse
         )
         this.courseInfo.nextPoint.type = `RoutePoint`
