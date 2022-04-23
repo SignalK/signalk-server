@@ -73,9 +73,9 @@ export class CourseApi {
     startTime: null,
     activeRoute: {
       href: null,
-      pointIndex: 0,
-      pointTotal: 0,
-      reverse: false
+      pointIndex: null,
+      pointTotal: null,
+      reverse: null
     },
     nextPoint: {
       href: null,
@@ -551,9 +551,9 @@ export class CourseApi {
 
     // clear activeRoute values
     newCourse.activeRoute.href = null
-    newCourse.activeRoute.pointIndex = 0
-    newCourse.activeRoute.pointTotal = 0
-    newCourse.activeRoute.reverse = false
+    newCourse.activeRoute.pointIndex = null
+    newCourse.activeRoute.pointTotal = null
+    newCourse.activeRoute.reverse = null
 
     // set previousPoint
     try {
