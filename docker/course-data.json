@@ -1,0 +1,10 @@
+{
+  "configuration": {
+    "notifications": {},
+    "calculations": {
+      "method": "Rhumbline",
+      "autopilot": true
+    }
+  },
+  "enabled": true
+}
