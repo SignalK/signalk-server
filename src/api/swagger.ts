@@ -40,9 +40,9 @@ export function mountSwaggerUi(app: any, path: string) {
       if (apiDocs[req.params.api]) {
         apiDocs[req.params.api].apiDoc.servers = [
           {
-            url: `${req.protocol}://${req.get('Host')}${
-              apiDocs[req.params.api].path
-            }`
+            url: `${process.env.PROTOCOL ? 'https' : req.protocol}://${req.get(
+              'Host'
+            )}${apiDocs[req.params.api].path}`
           }
         ]
         res.json(apiDocs[req.params.api].apiDoc)
