@@ -1,6 +1,6 @@
-#docker buildx build --platform linux/amd64 -f  Dockerfile_heroku_api_demo -t registry.heroku.com/signalk-course-resources-api/web .
-#docker push registry.heroku.com/signalk-course-resources-api/web 
-#heroku container:release web -a signalk-course-resources-api
+# docker buildx build --platform linux/amd64 -f  Dockerfile_heroku_api_demo -t registry.heroku.com/signalk-course-resources-api/web . && \
+# docker push registry.heroku.com/signalk-course-resources-api/web && \
+# heroku container:release web -a signalk-course-resources-api
 FROM signalk/signalk-server:resources_course_api
 
 USER root
