@@ -77,7 +77,7 @@
     "packages/resources-provider-plugin"
   ],
   "dependencies": {
-    "@signalk/course-provider": "^1.0.0-beta.1",
+    "@signalk/course-provider": "^1.0.0-beta.2",
     "@signalk/n2k-signalk": "^2.0.0",
     "@signalk/nmea0183-signalk": "^3.0.0",
     "@signalk/resources-provider": "github:SignalK/resources-provider-plugin",
@@ -135,7 +135,7 @@
     "ws": "^7.0.0"
   },
   "optionalDependencies": {
-    "@signalk/freeboard-sk": "^2.0.0-beta.1",
+    "@signalk/freeboard-sk": "^2.0.0-beta.2",
     "@signalk/instrumentpanel": "0.x",
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
