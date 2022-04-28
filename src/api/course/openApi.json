@@ -647,12 +647,12 @@
           }
         }
       },
-      "/course/calculations": {
+      "/course/calcValues": {
         "get": {
           "tags": [
             "calculations"
           ],
-          "summary": "Course calculations",
+          "summary": "Course calculated values.",
           "description": "Returns the current course status",
           "responses": {
             "200": {
