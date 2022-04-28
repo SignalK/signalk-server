@@ -386,29 +386,21 @@ export class CourseApi {
         this.courseInfo.nextPoint.href = null
 
         // set previousPoint
-        if (this.courseInfo.activeRoute.pointIndex === 0) {
-          try {
-            const position: any = this.getVesselPosition()
-            if (position && position.value) {
-              this.courseInfo.previousPoint.position = position.value
-              this.courseInfo.previousPoint.type = `VesselPosition`
-            } else {
-              res.status(400).json(Responses.invalid)
-              return false
-            }
-          } catch (err) {
-            console.log(`** Error: unable to retrieve vessel position!`)
+        try {
+          const position: any = this.getVesselPosition()
+          if (position && position.value) {
+            this.courseInfo.previousPoint.position = position.value
+            this.courseInfo.previousPoint.type = `VesselPosition`
+          } else {
             res.status(400).json(Responses.invalid)
             return false
           }
-        } else {
-          this.courseInfo.previousPoint.position = this.getRoutePoint(
-            rte,
-            (this.courseInfo.activeRoute.pointIndex as number) - 1,
-            this.courseInfo.activeRoute.reverse
-          )
-          this.courseInfo.previousPoint.type = `RoutePoint`
+        } catch (err) {
+          console.log(`** Error: unable to retrieve vessel position!`)
+          res.status(400).json(Responses.invalid)
+          return false
         }
+
         this.courseInfo.previousPoint.href = null
         this.emitCourseInfo()
         res.status(200).json(Responses.ok)
@@ -470,26 +462,18 @@ export class CourseApi {
     newCourse.nextPoint.href = null
 
     // set previousPoint
-    if (newCourse.activeRoute.pointIndex === 0) {
-      try {
-        const position: any = this.getVesselPosition()
-        if (position && position.value) {
-          this.courseInfo.previousPoint.position = position.value
-          this.courseInfo.previousPoint.type = `VesselPosition`
-        } else {
-          throw new Error(`Error: Unable to retrieve vessel position!`)
-        }
-      } catch (err) {
+    try {
+      const position: any = this.getVesselPosition()
+      if (position && position.value) {
+        this.courseInfo.previousPoint.position = position.value
+        this.courseInfo.previousPoint.type = `VesselPosition`
+      } else {
         throw new Error(`Error: Unable to retrieve vessel position!`)
       }
-    } else {
-      newCourse.previousPoint.position = this.getRoutePoint(
-        rte,
-        newCourse.activeRoute.pointIndex - 1,
-        newCourse.activeRoute.reverse
-      )
-      newCourse.previousPoint.type = `RoutePoint`
+    } catch (err) {
+      throw new Error(`Error: Unable to retrieve vessel position!`)
     }
+
     newCourse.previousPoint.href = null
 
     this.courseInfo = newCourse
