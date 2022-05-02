@@ -22,11 +22,11 @@ The plugin module must export a single `function(app)` that must return an objec
 
 Whan a plugin's configuration is changed the server will first call `stop` to stop the plugin and then `start` with the new configuration data.
 
-If the plugin wants to modify its own configuration it should call the function passed as `restartPlugin` with the new configuration. This will save the configuration and stop-start the plugin with the new configuration. Most plugins are configured in the server's configuration UI and never need to do this.
-
 ## Getting Started with Plugin Development
 
-To get started with SignalK plugin development, you can follow the following guide.
+To get started with SignalK plugin development, you can follow this guide.
+
+_Note: For plugins acting as a provider for one or more of the SignalK resource types listed in the specification (`routes`, `waypoints`, `notes`, `regions` or `charts`) please refer to __[RESOURCE_PROVIDER_PLUGINS.md](./RESOURCE_PROVIDER_PLUGINS.md)__ for additional details._
 
 ### Project setup
 
@@ -704,6 +704,142 @@ app.registerDeltaInputHandler((delta, next) => {
 })
 ```
 
+### `app.registerResourceProvider(resourceProvider)`
+
+See [`RESOURCE_PROVIDER_PLUGINS`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
+
+---
+### `app.resourcesApi.getResource(resource_type, resource_id)`
+
+Retrieve data for the supplied SignalK resource_type and resource_id.
+
+_Note: Requires a registered Resource Provider for the supplied `resource_type`._
+
+  - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
+ or user defined resource types.
+
+  - `resource_id`: The id of the resource to retrieve _(e.g. `urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+
+- returns:  `Promise<{[key: string]: any}>` 
+
+_Example:_
+```javascript
+app.resourcesApi.getResource(
+  'routes', 
+  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+).then (data => {
+  // route data
+  console.log(data);
+  ...
+}).catch (error) { 
+  // handle error
+  console.log(error.message);
+  ...
+}
+```
+
+### `app.resourcesApi.setResource(resource_type, resource_id, resource_data)`
+
+Create / update value of the resource with the supplied SignalK resource_type and resource_id.
+
+_Note: Requires a registered Resource Provider for the supplied `resource_type`._
+
+  - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
+ or user defined resource types.
+
+  - `resource_id`: The id of the resource to retrieve _(e.g. `urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+
+  - `resource_data`: A complete and valid resource record.
+
+- returns:  `Promise<void>` 
+
+_Example:_
+```javascript
+app.resourcesApi.setResource(
+  'waypoints',
+  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
+  {
+    "position": {"longitude": 138.5, "latitude": -38.6}, 
+    "feature": {
+      "type":"Feature", 
+      "geometry": {
+        "type": "Point", 
+        "coordinates": [138.5, -38.6] 
+      }, 
+      "properties":{} 
+    }
+  }
+).then ( () => {
+  // success
+  ...
+}).catch (error) { 
+  // handle error
+  console.log(error.message);
+  ...
+}
+```
+
+### `app.resourcesApi.deleteResource(resource_type, resource_id)`
+
+Delete the resource with the supplied SignalK resource_type and resource_id.
+
+_Note: Requires a registered Resource Provider for the supplied `resource_type`._
+
+- `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
+or user defined resource types.
+
+- `resource_id`: The id of the resource to retrieve _(e.g. `urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+
+- returns: `Promise<void>` 
+
+_Example:_
+```javascript
+app.resourcesApi.deleteResource(
+  'notes', 
+  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+).then ( () => {
+  // success
+  ...
+}).catch (error) { 
+  // handle error
+  console.log(error.message);
+  ...
+}
+```
+
+### `app.resourcesApi.listResources(resource_type, params)`
+
+Retrieve data for the supplied SignalK resource_type and resource_id.
+
+_Note: Requires a registered Resource Provider for the supplied `resource_type`._
+
+  - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
+ or user defined resource types.
+
+  - `params`: Object contining `key | value` pairs repesenting the parameters by which to filter the returned entries.
+  
+  __Note: The registered Resource Provider must support the supplied parameters for results to be filtered.__
+
+- returns:  `Promise<{[key: string]: any}>` 
+
+_Example:_
+```javascript
+app.resourcesApi.listResources(
+  'waypoints', 
+  {region: 'fishing_zone'}
+).then (data => {
+  // success
+  console.log(data);
+  ...
+}).catch (error) { 
+  // handle error
+  console.log(error.message);
+  ...
+}
+```
+
+
+---
 ### `app.setPluginStatus(msg)`
 
 Set the current status of the plugin. The `msg` should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.
@@ -756,12 +892,19 @@ interface PropertyValue {
 Note that the value can be also a function.
 
 This mechanism allows plugins to _offer_ extensions via _"Well Known Properties"_, for example 
-- additional [NMEA0183 sentence parsers for custom sentences](https://github.com/SignalK/nmea0183-signalk/tree/master/custom-sentence-plugin) via `nmea0183sentenceParser`
-- additional [PGN definitions for propietary or custom PGNs](https://github.com/canboat/canboatjs/blob/master/test/customPgns.js)
+- additional [NMEA0183 sentence parsers for custom sentences](https://github.com/SignalK/nmea0183-signalk/pull/193) via `nmea0183sentenceParser`
+- additional PGN definitions for propietary or custom PGNs
 
 Code handling incoming PropertyValues should be fully reactive: even if all emitters emit during their startup there is no defined load / startup order and plugins may emit when activated and started. This means that depending on a PropertyValue being there when your code starts or arriving after your code has started is not possible.
 
 PropertyValues is not meant for data passing on a regular basis, as the total history makes it a potential memory leak. There is a safeguard against accidentally emitting regularly with an upper bound for values per property name. New values will be ignored if it is reached and emits logged as errors.
+
+
+### Exposing custom HTTP paths
+
+If a plugin has a function called `registerWithRouter(router)` (like the plugin's `start` and `stop` functions) it will be called with an Express router as the parameter during plugin startup. The router will be mounted at `/plugins/<pluginId>` and you can use standard Express `.get` `.post` `.use` etc to add HTTP path handlers. Note that `GET /plugins/<pluginid>` and `POST /plugins/<pluginid>/configure` are reserved by server (see below).
+
+Express does not have a public API for deregistering subrouters, so `stop` does not do anything to the router.
 
 ## Plugin configuration HTTP API
 
