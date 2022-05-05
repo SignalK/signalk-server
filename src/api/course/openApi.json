@@ -152,39 +152,57 @@
               "description": "The bearing of a line between previousPoint and nextPoint, relative to magnetic north. (angle in radians)",
               "example": 4.51234
             },
-            "estimatedTimeOfArrival": {
-              "type": "string",
-              "description": "The estimated time of arrival at nextPoint position.",
-              "example": "2019-10-02T18:36:12.123+01:00"
+            "nextPoint": {
+              "type": "object",
+              "description": "Calculations relative to Destination position",
+              "properties": {
+                "estimatedTimeOfArrival": {
+                  "type": "string",
+                  "description": "The estimated time of arrival at nextPoint position.",
+                  "example": "2019-10-02T18:36:12.123+01:00"
+                },
+                "distance": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "The distance in meters between the vessel's present position and the nextPoint.",
+                  "example": 10157
+                },
+                "bearingTrue": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "The bearing of a line between the vessel's current position and nextPoint, relative to true north. (angle in radians)",
+                  "example": 4.58491
+                },
+                "bearingMagnetic": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "The bearing of a line between the vessel's current position and nextPoint, relative to magnetic north. (angle in radians)",
+                  "example": 4.51234
+                },
+                "velocityMadeGood": {
+                  "type": "number",
+                  "description": "The velocity component of the vessel towards the nextPoint in m/s",
+                  "example": 7.2653
+                },
+                "timeToGo": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Time in seconds to reach nextPoint's perpendicular with current speed & direction.",
+                  "example": 8491
+                }
+              }
             },
-            "distance": {
-              "type": "number",
-              "minimum": 0,
-              "description": "The distance in meters between the vessel's present position and the nextPoint.",
-              "example": 10157
-            },
-            "bearingTrue": {
-              "type": "number",
-              "minimum": 0,
-              "description": "The bearing of a line between the vessel's current position and nextPoint, relative to true north. (angle in radians)",
-              "example": 4.58491
-            },
-            "bearingMagnetic": {
-              "type": "number",
-              "minimum": 0,
-              "description": "The bearing of a line between the vessel's current position and nextPoint, relative to magnetic north. (angle in radians)",
-              "example": 4.51234
-            },
-            "velocityMadeGood": {
-              "type": "number",
-              "description": "The velocity component of the vessel towards the nextPoint in m/s",
-              "example": 7.2653
-            },
-            "timeToGo": {
-              "type": "number",
-              "minimum": 0,
-              "description": "Time in seconds to reach nextPoint's perpendicular with current speed & direction.",
-              "example": 8491
+            "previousPoint": {
+              "type": "object",
+              "description": "Calculations relative to source position.",
+              "properties": {
+                "distance": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "The distance in meters between the vessel's present position and the start point.",
+                  "example": 10157
+                }
+              }
             }
           }
         }
