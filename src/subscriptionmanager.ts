@@ -163,7 +163,11 @@ function handleSubscribeRow(
           )
         }
         debug('minPeriod:' + subscribeRow.minPeriod)
-        filteredBus = filteredBus.debounceImmediate(subscribeRow.minPeriod)
+        if (key !== '') {
+          // we can not apply minPeriod for empty path subscriptions
+          debug('debouncing')
+          filteredBus = filteredBus.debounceImmediate(subscribeRow.minPeriod)
+        }
       } else if (
         subscribeRow.period ||
         (subscribeRow.policy && subscribeRow.policy === 'fixed')
@@ -172,7 +176,8 @@ function handleSubscribeRow(
           errorCallback(
             `period assumes policy 'fixed', ignoring policy ${subscribeRow.policy}`
           )
-        } else {
+        } else if (key !== '') {
+          // we can not apply period for empty path subscriptions
           const interval = subscribeRow.period || 1000
           filteredBus = filteredBus
             .bufferWithTime(interval)

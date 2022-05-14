@@ -42,6 +42,24 @@ function getDelta (overwrite) {
             value: 3.85
           }
         ]
+      },
+      {
+        timestamp: '2014-05-03T09:14:11.001Z',
+        $source: 'ais',
+        values: [
+          {
+            path: '',
+            value: {
+              name: 'aName'
+            }
+          },
+          {
+            path: '',
+            value: {
+              mmsi: '230000000'
+            }
+          }
+        ]
       }
     ]
   }
@@ -49,7 +67,7 @@ function getDelta (overwrite) {
   return _.assign(delta, overwrite)
 }
 
-function getNameDelta (overwrite) {
+function getEmptyPathDelta (overwrite) {
   const delta = {
     updates: [
       {
@@ -62,8 +80,14 @@ function getNameDelta (overwrite) {
         values: [
           {
             path: '',
-            value: { name: 'SomeBoat' }
-          }
+            value: {mmsi: '230000000'}
+          },
+          {
+            path: '',
+            value: {
+              name: 'SomeBoat' 
+            }
+          }          
         ]
       }
     ]
@@ -329,17 +353,31 @@ describe('Subscriptions', _ => {
       })
       .then(() => {
         return Promise.all([
-          wsPromiser.nextMsg(),
           sendDelta(
-            getNameDelta({
+            getEmptyPathDelta({
               context: 'vessels.' + self
             }),
             deltaUrl
-          )
+          ),
+          sendDelta(getEmptyPathDelta({ context: 'vessels.othervessel' }), deltaUrl)
         ])
       })
-      .then(results => {
-        const delta = JSON.parse(results[0])
+      .then(() => wsPromiser.nthMessage(4)) //self, 1st delta with mmsi
+      .then((nextMsg) => {
+        const delta = JSON.parse(nextMsg)
+        assert(delta.updates[0].values[0].path === '', 'Path is empty string')
+        assert(
+          typeof delta.updates[0].values[0].value === 'object',
+          'Value is an object'
+        )
+        assert(
+          typeof delta.updates[0].values[0].value.mmsi !== 'undefined',
+          'Value has mmsi key'
+        )
+        return wsPromiser.nthMessage(5) //self, 2nd delta with mmsi
+      })
+      .then(nextMsg => {
+        const delta = JSON.parse(nextMsg)
         assert(delta.updates[0].values[0].path === '', 'Path is empty string')
         assert(
           typeof delta.updates[0].values[0].value === 'object',
@@ -358,16 +396,14 @@ describe('Subscriptions', _ => {
         assert(delta.context === 'vessels.' + self)
         assert(delta.updates[0].timestamp, '2014-05-03T09:14:11.001Z')
 
-        return Promise.all([
-          wsPromiser.nextMsg(),
-          sendDelta(getNameDelta({ context: 'vessels.othervessel' }), deltaUrl)
-        ])
+        return wsPromiser.nthMessage(6) //othervessel, 1st delta
       })
-      .then(results => {
-        const delta = JSON.parse(results[0])
+      .then(nextMsg => {
+        const delta = JSON.parse(nextMsg)
         assert(delta.updates.length === 1, 'Receives just one update')
         assert(delta.updates[0].values.length === 1, 'Receives just one value')
-        assert(delta.updates[0].values[0].path === '', 'Receives just name')
+        assert(delta.updates[0].values[0].path === '', 'Receives pathvalue with empty path')
+        assert(typeof delta.updates[0].values[0].value.mmsi === 'string', 'Receives object with mmsi')
         assert(delta.context === 'vessels.othervessel')
       })
   })
