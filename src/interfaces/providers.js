@@ -81,7 +81,7 @@ module.exports = function(app) {
       p => p.id === req.params.id
     )
     if (idx === -1) {
-      res.status(401).send(`Provider with name ${req.params.id} not found`)
+      res.status(401).send(`Connection with name ${req.params.id} not found`)
       return
     }
     app.config.settings.pipedProviders.splice(idx, 1)
@@ -91,7 +91,7 @@ module.exports = function(app) {
         console.error(err)
         res.status(500).send('Unable to save to settings file')
       } else {
-        res.send('Provider deleted')
+        res.send('Connection deleted')
       }
     })
   })
@@ -103,11 +103,13 @@ module.exports = function(app) {
     )
 
     if (isNew && existing) {
-      res.status(401).send(`Provider with ID '${provider.id}' already exists`)
+      res.status(401).send(`Connection with ID '${provider.id}' already exists`)
       return
     } else if (!isNew && idToUpdate !== provider.id) {
       if (app.config.settings.pipedProviders.find(p => p.id === provider.id)) {
-        res.status(401).send(`Provider with ID '${provider.id}' already exists`)
+        res
+          .status(401)
+          .send(`Connection with ID '${provider.id}' already exists`)
         return
       }
     }
@@ -155,7 +157,7 @@ module.exports = function(app) {
           console.error(err)
           res.status(500).send('Unable to save to settings file')
         } else {
-          res.send('Provider ' + (isNew ? 'added' : 'updated'))
+          res.send('Connection ' + (isNew ? 'added' : 'updated'))
         }
       })
     }
