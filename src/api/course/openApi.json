@@ -38,6 +38,12 @@
     ],
     "components": {
       "schemas": {
+
+        "IsoTime": {
+          "type": "string",
+          "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2}(?:\\.\\d*)?)((-(\\d{2}):(\\d{2})|Z)?)$",
+          "example": "2022-04-22T05:02:56.484Z"
+        },
         "SignalKHrefRoute": {
             "type": "string",
             "pattern": "^\/resources\/routes\/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
@@ -153,9 +159,8 @@
               "example": 4.51234
             },
             "estimatedTimeOfArrival": {
-              "type": "string",
-              "description": "The estimated time of arrival at nextPoint position.",
-              "example": "2019-10-02T18:36:12.123+01:00"
+              "$ref": "#/components/schemas/IsoTime",
+              "description": "The estimated time of arrival at nextPoint position."
             },
             "distance": {
               "type": "number",
@@ -278,7 +283,7 @@
                 ],
                 "properties": {
                   "startTime": {
-                    "type": "string",
+                    "$ref": "#/components/schemas/IsoTime",
                     "example": "2022-04-22T05:02:56.484Z"
                   },
                   "activeRoute": {
