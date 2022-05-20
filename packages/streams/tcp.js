@@ -38,6 +38,7 @@ function TcpStream(options) {
   this.noDataReceivedTimeout =
     Number.parseInt((this.options.noDataReceivedTimeout + '').trim()) * 1000
   this.debug = (options.createDebug || require('debug'))('signalk:streams:tcp')
+  this.debug(`noDataReceivedTimeout:${this.noDataReceivedTimeout}`)
   this.debugData = (options.createDebug || require('debug'))(
     'signalk:streams:tcp-data'
   )
