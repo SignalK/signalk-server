@@ -80,6 +80,20 @@ function Simple(options) {
     getLogger(options.app, options.logging, discriminatorByDataType[dataType]),
     dataTypeMapping[mappingType](options)
   )
+  if (options.subOptions.overrideTimestamp) {
+    pipeline.push(
+      new Transform({
+        objectMode: true,
+        transform(delta, encoding, callback) {
+          if (delta.updates) {
+            const now = new Date().toISOString()
+            delta.updates.forEach((update) => (update.timestamp = now))
+          }
+          callback(null, delta)
+        },
+      })
+    )
+  }
 
   for (let i = pipeline.length - 2; i >= 0; i--) {
     pipeline[i].pipe(pipeline[i + 1])

@@ -111,6 +111,11 @@ class BasicProvider extends Component {
           onChange={this.props.onChange}
           hasAnalyzer={this.state.hasAnalyzer}
         />
+        <OverrideTimestamps
+          value={this.props.value.options}
+          onChange={this.props.onChange}
+        />
+
         {this.props.value.type === 'NMEA2000' && (
           <N2KFilters
             value={this.props.value}
@@ -312,6 +317,34 @@ class ValidateChecksumInput extends Component {
                 }
               }}
               checked={this.props.value.validateChecksum}
+            />
+            <span className="switch-label" data-on="Yes" data-off="No" />
+            <span className="switch-handle" />
+          </Label>
+        </Col>
+      </FormGroup>
+    )
+  }
+}
+
+class OverrideTimestamps extends Component {
+  constructor(props) {
+    super(props)
+  }
+  render() {
+    return (
+      <FormGroup row>
+        <Col xs="3" md="3">
+          <Label>Override timestamps</Label>
+        </Col>
+        <Col xs="2" md="3">
+          <Label className="switch switch-text switch-primary">
+            <Input
+              type="checkbox"
+              name="options.overrideTimestamp"
+              className="switch-input"
+              onChange={this.props.onChange}
+              checked={this.props.value.overrideTimestamp}
             />
             <span className="switch-label" data-on="Yes" data-off="No" />
             <span className="switch-handle" />
