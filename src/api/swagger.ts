@@ -3,6 +3,7 @@ import swaggerUi from 'swagger-ui-express'
 import { SERVERROUTESPREFIX } from '../constants'
 import { courseApiRecord } from './course/openApi'
 import { resourcesApiRecord } from './resources/openApi'
+import { notificationsApiRecord } from './notifications/openApi'
 
 interface OpenApiRecord {
   name: string
@@ -12,7 +13,7 @@ interface OpenApiRecord {
 
 const apiDocs: {
   [name: string]: OpenApiRecord
-} = [courseApiRecord, resourcesApiRecord].reduce(
+} = [courseApiRecord, notificationsApiRecord, resourcesApiRecord].reduce(
   (acc: any, apiRecord: OpenApiRecord) => {
     acc[apiRecord.name] = apiRecord
     return acc
