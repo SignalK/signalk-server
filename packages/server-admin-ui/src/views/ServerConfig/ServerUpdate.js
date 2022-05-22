@@ -132,6 +132,31 @@ class ServerUpdate extends Component {
               <CardBody>Your server is up to date.</CardBody>
             </Card>
           )}
+
+        <Card>
+          <CardHeader>Sponsoring</CardHeader>
+          <CardBody>
+            <p>
+              If you find Signal K valuable to you consider sponsoring our work
+              on developing it further.
+            </p>
+            <p>
+              Your support allows us to do things like
+              <ul>
+                <li>travel to meet in person and push things forward</li>
+                <li>purchase equipment to develop on</li>
+                <li>upgrade our cloud resources beyond the free tiers</li>
+              </ul>
+            </p>
+            <p>
+              See{' '}
+              <a href="https://opencollective.com/signalk">
+                Signal K in Open Collective
+              </a>{' '}
+              for details.
+            </p>
+          </CardBody>
+        </Card>
       </div>
     )
   }

@@ -21,6 +21,10 @@ class Footer extends Component {
             &nbsp; version {this.props.serverSpecification.server.version}
           </span>
         )}
+        <span>
+          &nbsp;{' '}
+          <a href="https://opencollective.com/signalk">Sponsor Signal K</a>
+        </span>
         {typeof this.props.appStore.serverUpdate !== 'undefined' && (
           <span>
             <Link to="/serverConfiguration/update">
