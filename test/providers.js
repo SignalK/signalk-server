@@ -90,7 +90,7 @@ describe('Providers', _ => {
     })
     result.status.should.equal(200)
     const text = await result.text()
-    text.should.equal('Provider added')
+    text.should.equal('Connection added')
     const pipedProviders = server.app.config.settings.pipedProviders
     pipedProviders.length.should.equal(2)
     checkExistingProvider(pipedProviders[0])
@@ -152,7 +152,7 @@ describe('Providers', _ => {
     })
     result.status.should.equal(200)
     const text = await result.text()
-    text.should.equal('Provider updated')
+    text.should.equal('Connection updated')
     const pipedProviders = server.app.config.settings.pipedProviders
     pipedProviders.length.should.equal(2)
     checkExistingProvider(pipedProviders[0])
