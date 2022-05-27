@@ -32,6 +32,12 @@ class DeltaEditor {
     return JSON.parse(JSON.stringify(this.deltas))
   }
 
+  sendDeltas(handleMessage: (id: string, delta: any) => void) {
+    this.getDeltas().forEach((delta: any) => {
+      handleMessage('defaults', delta)
+    })
+  }
+
   load(filename: string) {
     const data = fs.readFileSync(filename, 'utf8')
     const deltas = JSON.parse(data)

@@ -80,7 +80,7 @@ module.exports = {
       }
 
       app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
-      skConfig.sendBaseDeltas(app)
+      app.sendBaseDeltas()
 
       if (app.config.hasOldDefaults) {
         let data

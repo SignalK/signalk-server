@@ -317,12 +317,6 @@ function setBaseDeltas(app: ConfigApp) {
   return true
 }
 
-export function sendBaseDeltas(app: ConfigApp) {
-  app.config.baseDeltaEditor.getDeltas().forEach((delta: any) => {
-    app.handleMessage('defaults', delta)
-  })
-}
-
 function writeDefaultsFile(app: ConfigApp, defaults: any, cb: any) {
   fs.writeFile(getDefaultsPath(app), JSON.stringify(defaults, null, 2), cb)
 }
@@ -488,6 +482,5 @@ module.exports = {
   writeSettingsFile,
   writeDefaultsFile,
   readDefaultsFile,
-  sendBaseDeltas,
   writeBaseDeltasFile
 }

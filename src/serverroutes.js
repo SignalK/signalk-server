@@ -700,7 +700,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       }
     })
 
-    skConfig.sendBaseDeltas(app)
+    app.sendBaseDeltas()
 
     if (app.config.hasOldDefaults) {
       writeOldDefaults(req, res)
