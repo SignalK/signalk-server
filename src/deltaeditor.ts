@@ -22,10 +22,14 @@ const META = 'meta'
 const SELF_VESSEL = 'vessels.self'
 
 class DeltaEditor {
-  deltas: any[]
+  private deltas: any[]
 
   constructor() {
     this.deltas = []
+  }
+
+  getDeltas() {
+    return JSON.parse(JSON.stringify(this.deltas))
   }
 
   load(filename: string) {

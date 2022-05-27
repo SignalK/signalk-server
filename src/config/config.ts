@@ -318,8 +318,7 @@ function setBaseDeltas(app: ConfigApp) {
 }
 
 export function sendBaseDeltas(app: ConfigApp) {
-  const copy = JSON.parse(JSON.stringify(app.config.baseDeltaEditor.deltas))
-  copy.forEach((delta: any) => {
+  app.config.baseDeltaEditor.getDeltas().forEach((delta: any) => {
     app.handleMessage('defaults', delta)
   })
 }
