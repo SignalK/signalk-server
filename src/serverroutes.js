@@ -17,7 +17,6 @@
 const fs = require('fs')
 const os = require('os')
 const readdir = require('util').promisify(fs.readdir)
-const page = require('./page')
 import { createDebug, listKnownDebugs } from './debug'
 const debug = createDebug('signalk-server:serverroutes')
 const path = require('path')
