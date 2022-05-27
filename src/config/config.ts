@@ -336,7 +336,7 @@ function writeBaseDeltasFile(app: ConfigApp) {
   return app.config.baseDeltaEditor.save(getBaseDeltasPath(app))
 }
 
-function setSelfSettings(app: ConfigApp) {
+async function setSelfSettings(app: ConfigApp) {
   const name = app.config.baseDeltaEditor.getSelfValue('name')
   const mmsi = app.config.baseDeltaEditor.getSelfValue('mmsi')
   let uuid = app.config.baseDeltaEditor.getSelfValue('uuid')
@@ -352,6 +352,7 @@ function setSelfSettings(app: ConfigApp) {
   if (mmsi === null && uuid === null) {
     uuid = 'urn:mrn:signalk:uuid:' + uuidv4()
     app.config.baseDeltaEditor.setSelfValue('uuid', uuid)
+    await writeBaseDeltasFile(app)
   }
 
   app.config.vesselName = name
