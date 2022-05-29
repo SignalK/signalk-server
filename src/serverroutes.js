@@ -39,6 +39,9 @@ const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
 import { SERVERROUTESPREFIX } from './constants'
 
+const MMSIPATTERN = /^\d{9}$/
+const UUIDPATTERN = /^urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$/
+
 module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   let securityWasEnabled
   let restoreFilePath
@@ -637,9 +640,26 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     })
   }
 
-  app.put(`${SERVERROUTESPREFIX}/vessel`, (req, res, next) => {
+  app.put(`${SERVERROUTESPREFIX}/vessel`, (req, res) => {
+    console.log(JSON.stringify(req.body, null, 2))
     const de = app.config.baseDeltaEditor
     let vessel = req.body
+
+    if (!vessel.mmsi && !vessel.uuid) {
+      res.status(400)
+      res.send(`You must provide either mmsi or uuid`)
+      return
+    }
+    if (vessel.mmsi && !vessel.mmsi.match(MMSIPATTERN)) {
+      res.status(400)
+      res.send(`MMSI must be a number with 9 digits`)
+      return
+    }
+    if (vessel.uuid && !vessel.uuid.match(UUIDPATTERN)) {
+      res.status(400)
+      res.send(`Uuid must be a v4 UUID with prefix urn:mrn:signalk:uuid:`)
+      return
+    }
 
     de.setSelfValue('name', vessel.name)
     app.config.vesselName = vessel.name
