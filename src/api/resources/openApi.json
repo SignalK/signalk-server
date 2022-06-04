@@ -579,61 +579,21 @@
           }
         ]
       },
-      "TileLayerExtModel": {
-        "description": "When format='pbf' Lists the layers that appear in the vector tiles and the names and types of the attributes of features that appear in those layers.",
-        "type": "object",
-        "required": [
-          "id",
-          "fields"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Layer id."
-          },
-          "fields": {
-            "type": "object",
-            "description": "A JSON object whose keys and values are the names and types of attributes available in this layer. ",
-            "additionalProperties": true
-          },
-          "description": {
-            "type": "string",
-            "description": "Layer description."
-          },
-          "minzoom": {
-            "type": "string",
-            "description": "The lowest zoom level whose tiles this layer appears in."
-          },
-          "maxzoom": {
-            "type": "string",
-            "description": "he highest zoom level whose tiles this layer appears in."
-          }
-        }
-      },
       "TileLayerSource": {
-        "description": "Tile layer metadata model",
+        "description": "Attributes to describe a chart resource.",
         "type": "object",
         "required": [
-          "sourceType",
-          "tiles"
+          "type"
         ],
         "properties": {
-          "sourceType": {
+          "type": {
             "type": "string",
-            "description": "Source type of chart data.",
+            "description": "Source type of map data.",
             "enum": [
               "tilelayer"
             ],
             "default": "tilelayer",
             "example": "tilelayer"
-          },
-          "tiles": {
-            "type": "array",
-            "description": "An array of chart tile endpoints {z}, {x} and {y}. The array MUST contain at least one endpoint.",
-            "items": {
-              "type": "string"
-            },
-            "example": "http://localhost:3000/signalk/v2/api/resources/charts/islands/{z}/{x}/{y}.png"
           },
           "bounds": {
             "description": "The maximum extent of available chart tiles in the format left, bottom, right, top.",
@@ -649,14 +609,12 @@
               173.9166560895481,
               -40.70659187633642
             ]
-          },
-          "minzoom": {
-            "type": "number",
-            "description": "An integer specifying the minimum zoom level.",
-            "example": 19,
-            "default": 0,
-            "minimum": 0,
-            "maximum": 30
+          },          
+          "format": {
+            "type": "string",
+            "description": "The file format of the tile data.",
+            "enum": ["jpg", "pbf", "png", "webp"],
+            "example": "png"
           },
           "maxzoom": {
             "type": "number",
@@ -666,121 +624,40 @@
             "minimum": 0,
             "maximum": 30
           },
-          "format": {
-            "type": "string",
-            "description": "The file format of the tile data.",
-            "enum": ["pbf", "jpg", "png", "webp"],
-            "example": "png"
+          "minzoom": {
+            "type": "number",
+            "description": "An integer specifying the minimum zoom level.",
+            "example": 19,
+            "default": 0,
+            "minimum": 0,
+            "maximum": 30
           },
-          "scheme": {
-            "type": "string",
-            "description": "Influences the y direction of the tile coordinates.",
-            "enum": ["xyz", "tms"],
-            "example": "xyz",
-            "default": "xyz"
-          },
-          "tilejson": {
-            "type": "string",
-            "description": "A semver.org style version number describing the version of the TileJSON spec.",
-            "example": "2.2.0"
-          },
-          "version": {
-            "type": "string",
-            "description": "A semver.org style version number defining the version of the chart content.",
-            "example": "1.0.0",
-            "default": "1.0.0"
-          },
-          "attribution": {
-            "type": "string",
-            "description": "Contains an attribution to be displayed when the map is shown.",
-            "example": "<a href='http://openstreetmap.org'>OSM contributors</a>",
-            "default": null
-          },
+          "scale": {
+            "type": "number",
+            "description": "Map scale",
+            "minimum": 1,
+            "default": 250000,
+            "example": 250000
+          }
+        }
+      },
+      "MapServerSource": {
+        "description": "Decribes Map server source types.",
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
           "type": {
             "type": "string",
-            "description": "layer type",
-            "enum": ["overlay", "baselayer"]
-          },
-          "center": {
-            "description": "Center of chart expressed as [longitude, latitude, zoom].",
-            "type": "array",
-            "items": {
-              "type": "number"
-            },
-            "minItems": 3,
-            "maxItems": 3,
-            "example": [
-              172.7499244562935,
-              -41.27498133450632,
-              8
-            ]
-          },
-          "vector_layers": {
-            "type": "array",
-            "description": "When format='pbf' Lists the layers that appear in the vector tiles and the names and types of the attributes of features that appear in those layers.",
-            "items": {
-              "$ref": "#/components/schemas/TileLayerExtModel"
-            }
-          }
-        }
-      },
-      "WmsSourceModel": {
-        "description": "WMS / WMTS source model",
-        "type": "object",
-        "required": [
-          "sourceType",
-          "url"
-        ],
-        "properties": {
-          "sourceType": {
-            "type": "string",
-            "description": "Source type of chart data.",
+            "description": "Source type of map data.",
             "enum": [
-              "wmts",
-              "wms"
+              "tilejson",
+              "wms",
+              "wmts"
             ],
-            "default": "wmts",
+            "default": "wms",
             "example": "wms"
-          },
-          "url": {
-            "type": "string",
-            "description": "URL to WMS / WMTS service",
-            "example": "http://mapserver.org/wmts"
-          },
-          "layers": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "List of chart layers to display.",
-            "example": [
-              "Restricted Areas",
-              "Fishing Zones"
-            ]
-          }
-        }
-      },
-      "TileJsonSource": {
-        "description": "TileJSON source model",
-        "type": "object",
-        "required": [
-          "sourceType",
-          "url"
-        ],
-        "properties": {
-          "sourceType": {
-            "type": "string",
-            "description": "Source type of chart data.",
-            "enum": [
-              "tilejson"
-            ],
-            "default": "tilejson",
-            "example": "tilejson"
-          },
-          "url": {
-            "type": "string",
-            "description": "URL to TileJSON file",
-            "example": "http://mapserver.org/mychart.json"
           }
         }
       },
@@ -808,12 +685,21 @@
             "example": "Tasman Bay coastline",
             "default": null
           },
-          "scale": {
-            "type": "number",
-            "description": "chart scale",
-            "minimum": 1,
-            "default": 250000,
-            "example": 250000
+          "url": {
+            "type": "string",
+            "description": "URL to tile / map source.",
+            "example": "http://mapserver.org/wms/nz615"
+          },
+          "layers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of chart layer ids.",
+            "example": [
+              "Restricted.Areas",
+              "Fishing-Zones"
+            ]
           }
         },
         "oneOf": [
@@ -821,10 +707,7 @@
             "$ref": "#/components/schemas/TileLayerSource"
           },
           {
-            "$ref": "#/components/schemas/TileJsonSource"
-          },
-          {
-            "$ref": "#/components/schemas/WmsSourceModel"
+            "$ref": "#/components/schemas/MapServerSource"
           }
         ]
       },

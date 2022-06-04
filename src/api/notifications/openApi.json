@@ -26,10 +26,6 @@
       {
         "name": "course",
         "description": "Course notifications"
-      },
-      {
-        "name": "anchor",
-        "description": "Anchor watch notifications"
       }
     ],
     "components": {
@@ -328,23 +324,6 @@
           ],
           "summary": "Perpendicular passed.",
           "description": "Set when line perpendicular to destination point has been passed by the vessel.",
-          "responses": {
-            "200": {
-              "$ref": "#/components/responses/200Ok"
-            },
-            "default": {
-              "$ref": "#/components/responses/ErrorResponse"
-            }
-          }
-        }
-      },
-      "/anchor/maxRadius": {
-        "get": {
-          "tags": [
-            "anchor"
-          ],
-          "summary": "Vessel outside anchor maximum radius.",
-          "description": "Set when the vessel position is outside the maxRadius value from the anchor.",
           "responses": {
             "200": {
               "$ref": "#/components/responses/200Ok"
