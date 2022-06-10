@@ -191,6 +191,11 @@
               "description": "Time in seconds to reach nextPoint's perpendicular with current speed & direction.",
               "example": 8491
             },
+            "targetSpeed": {
+              "type": "number",
+              "description": "The average velocity required to reach the destination at the value of targetArriavlTime in m/s",
+              "example": 2.2653
+            },
             "previousPoint": {
               "type": "object",
               "description": "Calculations relative to source position.",
@@ -284,7 +289,13 @@
                 "properties": {
                   "startTime": {
                     "$ref": "#/components/schemas/IsoTime",
-                    "example": "2022-04-22T05:02:56.484Z"
+                    "example": "2022-04-22T05:02:56.484Z",
+                    "description": "Time at which navigation to destination commenced."
+                  },
+                  "targetArrivalTime": {
+                    "$ref": "#/components/schemas/IsoTime",
+                    "example": "2022-04-22T05:02:56.484Z",
+                    "description": "The desired time at which to arrive at the destination."
                   },
                   "activeRoute": {
                     "type": "object",
