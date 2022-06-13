@@ -56,12 +56,24 @@ class Webapps extends Component {
                     <Col xs="12" md="12" lg="6" xl="4" key={webappInfo.name}>
                       <Webapp
                         key={webappInfo.name}
-                        header={webappInfo.signalk && webappInfo.signalk.displayName ? webappInfo.signalk.displayName : webappInfo.name}
+                        header={
+                          webappInfo.signalk && webappInfo.signalk.displayName
+                            ? webappInfo.signalk.displayName
+                            : webappInfo.name
+                        }
                         mainText={webappInfo.description}
                         url={url}
-                        icon={`fa fa-external-link ${webappInfo.signalk && webappInfo.signalk.displayName ? '' : 'icon-grid'}`}
+                        icon={`fa fa-external-link ${
+                          webappInfo.signalk && webappInfo.signalk.displayName
+                            ? ''
+                            : 'icon-grid'
+                        }`}
                         color="primary"
-                        bgImage={webappInfo.signalk && webappInfo.signalk.appIcon ? webappInfo.signalk.appIcon : ''}
+                        bgImage={
+                          webappInfo.signalk && webappInfo.signalk.appIcon
+                            ? webappInfo.signalk.appIcon
+                            : ''
+                        }
                       />
                     </Col>
                   )
