@@ -597,11 +597,11 @@ export class CourseApi {
   }
 
   private isValidIsoTime(value: string | undefined): boolean {
-
     return !value
       ? false
-      : /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d*)?)((-(\d{2}):(\d{2})|Z))$/
-        .test(value)
+      : /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d*)?)((-(\d{2}):(\d{2})|Z))$/.test(
+          value
+        )
   }
 
   private parsePointIndex(index: number, rte: any): number {
