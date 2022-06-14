@@ -2,8 +2,8 @@ import { NextFunction, Request, Response } from 'express'
 import swaggerUi from 'swagger-ui-express'
 import { SERVERROUTESPREFIX } from '../constants'
 import { courseApiRecord } from './course/openApi'
-import { resourcesApiRecord } from './resources/openApi'
 import { notificationsApiRecord } from './notifications/openApi'
+import { resourcesApiRecord } from './resources/openApi'
 
 interface OpenApiRecord {
   name: string

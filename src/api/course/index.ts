@@ -47,6 +47,7 @@ interface ActiveRoute extends DestinationBase {
 
 interface CourseInfo {
   startTime: string | null
+  targetArrivalTime: string | null
   activeRoute: {
     href: string | null
     pointIndex: number | null
@@ -71,6 +72,7 @@ export class CourseApi {
 
   private courseInfo: CourseInfo = {
     startTime: null,
+    targetArrivalTime: null,
     activeRoute: {
       href: null,
       pointIndex: null,
@@ -149,6 +151,24 @@ export class CourseApi {
     )
 
     this.server.put(
+      `${COURSE_API_PATH}/arrivalCircle`,
+      async (req: Request, res: Response) => {
+        debug(`** PUT ${COURSE_API_PATH}/arrivalCircle`)
+        if (!this.updateAllowed(req)) {
+          res.status(403).json(Responses.unauthorised)
+          return
+        }
+        if (this.isValidArrivalCircle(req.body.value)) {
+          this.courseInfo.nextPoint.arrivalCircle = req.body.value
+          this.emitCourseInfo()
+          res.status(200).json(Responses.ok)
+        } else {
+          res.status(400).json(Responses.invalid)
+        }
+      }
+    )
+
+    this.server.put(
       `${COURSE_API_PATH}/restart`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/restart`)
@@ -189,15 +209,15 @@ export class CourseApi {
     )
 
     this.server.put(
-      `${COURSE_API_PATH}/arrivalCircle`,
+      `${COURSE_API_PATH}/targetArrivalTime`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/arrivalCircle`)
+        debug(`** PUT ${COURSE_API_PATH}/targetArrivalTime`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        if (this.isValidArrivalCircle(req.body.value)) {
-          this.courseInfo.nextPoint.arrivalCircle = req.body.value
+        if (this.isValidIsoTime(req.body.value)) {
+          this.courseInfo.targetArrivalTime = req.body.value
           this.emitCourseInfo()
           res.status(200).json(Responses.ok)
         } else {
@@ -282,7 +302,7 @@ export class CourseApi {
       }
     )
 
-    // clear activeRoute /destination
+    // clear activeRoute
     this.server.delete(
       `${COURSE_API_PATH}/activeRoute`,
       async (req: Request, res: Response) => {
@@ -559,6 +579,7 @@ export class CourseApi {
 
   private clearDestination() {
     this.courseInfo.startTime = null
+    this.courseInfo.targetArrivalTime = null
     this.courseInfo.activeRoute.href = null
     this.courseInfo.activeRoute.pointIndex = null
     this.courseInfo.activeRoute.pointTotal = null
@@ -573,6 +594,14 @@ export class CourseApi {
 
   private isValidArrivalCircle(value: number | undefined): boolean {
     return typeof value === 'number' && value >= 0
+  }
+
+  private isValidIsoTime(value: string | undefined): boolean {
+
+    return !value
+      ? false
+      : /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d*)?)((-(\d{2}):(\d{2})|Z))$/
+        .test(value)
   }
 
   private parsePointIndex(index: number, rte: any): number {
@@ -652,6 +681,10 @@ export class CourseApi {
     values.push({
       path: `${navPath}.startTime`,
       value: this.courseInfo.startTime
+    })
+    values.push({
+      path: `${navPath}.targetArrivalTime`,
+      value: this.courseInfo.targetArrivalTime
     })
     values.push({
       path: `${navPath}.activeRoute.href`,

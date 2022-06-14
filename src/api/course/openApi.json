@@ -365,28 +365,11 @@
           "tags": [
             "course"
           ],
-          "summary": "Retrieve current course details",
-          "description": "Returns the current course status",
+          "summary": "Retrieve current course details.",
+          "description": "Returns the current course status.",
           "responses": {
             "200": {
               "$ref": "#/components/responses/CourseResponse"
-            },
-            "default": {
-              "$ref": "#/components/responses/ErrorResponse"
-            }
-          }
-        }
-      },
-      "/course/restart": {
-        "put": {
-          "tags": [
-            "course"
-          ],
-          "summary": "Restart course calculations",
-          "description": "Sets previousPoint value to current vessel position and bases calculations on update.",
-          "responses": {
-            "200": {
-              "$ref": "#/components/responses/200Ok"
             },
             "default": {
               "$ref": "#/components/responses/ErrorResponse"
@@ -399,7 +382,7 @@
           "tags": [
             "course"
           ],
-          "summary": "Set arrival zone size",
+          "summary": "Set arrival zone size.",
           "description": "Sets the radius of a circle in meters centered at the current destination.",
           "requestBody": {
             "required": true,
@@ -427,15 +410,65 @@
           }
         }
       },
+      "/course/restart": {
+        "put": {
+          "tags": [
+            "course"
+          ],
+          "summary": "Restart course calculations.",
+          "description": "Sets previousPoint value to current vessel position and bases calculations on update.",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/course/targetArrivalTime": {
+        "put": {
+          "tags": [
+            "course"
+          ],
+          "summary": "Set target arrival time.",
+          "description": "Sets the desired time to arrive at the destination. Used to calculate targetSpeed.",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["value"],
+                  "properties": {
+                    "value": {
+                      "$ref": "#/components/schemas/IsoTime"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/200Ok"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
       "/course/destination": {
         "put": {
           "tags": [
             "destination"
           ],
-          "summary": "Set destination",
-          "description": "Sets nextPoint path with supplied details",
+          "summary": "Set destination.",
+          "description": "Sets nextPoint path with supplied details.",
           "requestBody": {
-            "description": "destination details",
+            "description": "Destination details.",
             "required": true,
             "content": {
               "application/json": {
@@ -470,8 +503,8 @@
           "tags": [
             "destination"
           ],
-          "summary": "Clear destination",
-          "description": "Clears all course information",
+          "summary": "Clear destination.",
+          "description": "Clears all course information.",
           "responses": {
             "200": {
               "$ref": "#/components/responses/200Ok"
@@ -487,10 +520,10 @@
           "tags": [
             "activeRoute"
           ],
-          "summary": "Set active route",
-          "description": "Sets activeRoute path and sets nextPoint to first point in the route",
+          "summary": "Set active route.",
+          "description": "Sets activeRoute path and sets nextPoint to first point in the route.",
           "requestBody": {
-            "description": "Route to activate",
+            "description": "Route to activate.",
             "required": true,
             "content": {
               "application/json": {
@@ -535,8 +568,8 @@
           "tags": [
             "activeRoute"
           ],
-          "summary": "Clear active route",
-          "description": "Clears all course information",
+          "summary": "Clear active route.",
+          "description": "Clears all course information.",
           "responses": {
             "200": {
               "$ref": "#/components/responses/200Ok"
@@ -552,10 +585,10 @@
           "tags": [
             "activeRoute"
           ],
-          "summary": "Set next point in route",
-          "description": "Sets nextPoint / previousPoint",
+          "summary": "Set next point in route.",
+          "description": "Sets nextPoint / previousPoint.",
           "requestBody": {
-            "description": "destination details",
+            "description": "Destination details.",
             "required": true,
             "content": {
               "application/json": {
@@ -663,7 +696,7 @@
           "tags": [
             "activeRoute"
           ],
-          "summary": "Refresh course information",
+          "summary": "Refresh course information.",
           "description": "Refresh course values after a change has been made.",
           "responses": {
             "200": {
@@ -681,10 +714,10 @@
             "calculations"
           ],
           "summary": "Course calculated values.",
-          "description": "Returns the current course status",
+          "description": "Returns the current course status.",
           "responses": {
             "200": {
-              "description": "Course data",
+              "description": "Course data.",
               "content": {
                 "application/json": {
                   "schema": {
