@@ -216,7 +216,7 @@ export class CourseApi {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        if (this.isValidIsoTime(req.body.value)) {
+        if (req.body.value === null || this.isValidIsoTime(req.body.value)) {
           this.courseInfo.targetArrivalTime = req.body.value
           this.emitCourseInfo()
           res.status(200).json(Responses.ok)
