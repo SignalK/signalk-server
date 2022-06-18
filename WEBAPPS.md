@@ -34,9 +34,7 @@ The basic structure of a webapp is
 
 This structure is all that is needed for a standalone webapp.
 
-There is no keyword for a module that provides only embedded components, use `signalk-webapp` instead.
-
-You can also including the following section in `package.json` to determine how your webapp appears in the `WebApps` list:
+You can also include the following section in `package.json` to determine how your webapp appears in the _Webapps_ list:
 ```JSON
   "signalk": {
     "appIcon": "./assets/icons/icon-72x72.png",
@@ -49,6 +47,8 @@ where:
 - `displayName` is the name to appear in the webapp list. By default the `name` in the package.json is used, when supplied this text will be used instead.
 
 The embedded components are implemented using [Webpack Federated Modules](https://webpack.js.org/concepts/module-federation/) and [React Code Splitting](https://reactjs.org/docs/code-splitting.html).
+
+There is no keyword for a module that provides only embedded components, use `signalk-webapp` instead.
 
 You need to configured Webpack to create the necessary code for federation using *ModuleFederationPlugin* and expose the component with fixed names:
 - embeddable webapp: `./AppPanel`
