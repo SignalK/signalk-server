@@ -15,6 +15,7 @@ const propTypes = {
   children: PropTypes.node,
   className: PropTypes.string,
   cssModule: PropTypes.object,
+  bgImage: PropTypes.string,
 }
 
 const defaultProps = {
@@ -24,6 +25,7 @@ const defaultProps = {
   color: 'primary',
   variant: '0',
   link: '#',
+  bgImage: '',
 }
 
 class Widget02 extends Component {
@@ -40,6 +42,7 @@ class Widget02 extends Component {
       link,
       children,
       variant,
+      bgImage,
       ...attributes
     } = this.props
 
@@ -69,14 +72,18 @@ class Widget02 extends Component {
       'text-capitalize'
     )
 
-    const blockIcon = function (icon) {
+    const blockIcon = function (icon, bgImage = null) {
       const classes = classNames(
         icon,
         'bg-' + card.color,
         padding.icon,
         'font-2xl mr-3 float-left'
       )
-      return <i className={classes} />
+      const style = {
+        backgroundSize: 'cover',
+        backgroundImage: bgImage ? `url(${bgImage})` : 'unset',
+      }
+      return <i className={classes} style={style} />
     }
 
     const cardFooter = function () {
@@ -99,7 +106,7 @@ class Widget02 extends Component {
       <a href={url}>
         <Card>
           <CardBody className={card.classes} {...attributes}>
-            {blockIcon(card.icon)}
+            {blockIcon(card.icon, `${this.props.url}/${this.props.bgImage}`)}
             <div className={lead.classes}>{header}</div>
             <div className="text-muted font-xs">{mainText}</div>
           </CardBody>
