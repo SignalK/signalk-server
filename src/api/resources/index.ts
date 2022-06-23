@@ -63,7 +63,7 @@ export class ResourcesApi {
       }
       debug(this.resProvider[provider.type])
     } else {
-      const msg = `Error: ${provider?.type} alreaady registered!`
+      const msg = `Error: ${provider?.type} already registered!`
       debug(msg)
       throw new Error(msg)
     }
