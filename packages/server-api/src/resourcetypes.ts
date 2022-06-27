@@ -61,10 +61,10 @@ export interface Chart {
   chartFormat: string
 }
 
-type GeoJsonPoint = [number, number, number?]
-type GeoJsonLinestring = GeoJsonPoint[]
-type GeoJsonPolygon = GeoJsonLinestring[]
-type GeoJsonMultiPolygon = GeoJsonPolygon[]
+export type GeoJsonPoint = [number, number, number?]
+export type GeoJsonLinestring = GeoJsonPoint[]
+export type GeoJsonPolygon = GeoJsonLinestring[]
+export type GeoJsonMultiPolygon = GeoJsonPolygon[]
 
 interface Polygon {
   type: 'Feature'

@@ -111,6 +111,21 @@
             }
           }
         },
+        "Location": {
+          "type": "object",
+          "description": "Position with metadata.",
+          "required": ["position"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Location name / identifier",
+              "example": "Wpt001"
+            },
+            "position": {
+              "$ref": "#/components/schemas/SignalKPosition"
+            }
+          }
+        },
         "PointTypeAttribute": {
           "type": "object",
           "properties": {
@@ -308,6 +323,18 @@
                     "properties": {
                       "href": {
                         "$ref": "#/components/schemas/SignalKHrefRoute"
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Name of route.",
+                        "example": "Here to eternity."
+                      },
+                      "waypoints": {
+                        "type": "array",
+                        "description": "Array of points that make up the route.",
+                        "items": {
+                          "$ref": "#/components/schemas/Location"
+                        }
                       },
                       "pointIndex": {
                         "type": "number",

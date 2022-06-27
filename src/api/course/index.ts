@@ -8,7 +8,7 @@ import path from 'path'
 import { WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
 
-import { Position, Route } from '@signalk/server-api'
+import { Position, Route, GeoJsonPoint } from '@signalk/server-api'
 import { isValidCoordinate } from 'geolib'
 import { Responses } from '../'
 import { Store } from '../../serverstate/store'
@@ -43,6 +43,11 @@ interface Destination extends DestinationBase {
 interface ActiveRoute extends DestinationBase {
   pointIndex?: number
   reverse?: boolean
+  name?: string
+}
+
+interface Location extends Position {
+  name?: string
 }
 
 interface CourseInfo {
@@ -53,6 +58,8 @@ interface CourseInfo {
     pointIndex: number | null
     pointTotal: number | null
     reverse: boolean | null
+    name: string | null
+    waypoints: any[] | null
   }
   nextPoint: {
     href: string | null
@@ -77,7 +84,9 @@ export class CourseApi {
       href: null,
       pointIndex: null,
       pointTotal: null,
-      reverse: null
+      reverse: null,
+      name: null,
+      waypoints: null
     },
     nextPoint: {
       href: null,
@@ -460,6 +469,9 @@ export class CourseApi {
 
     newCourse.startTime = new Date().toISOString()
 
+    newCourse.activeRoute.name = rte.name
+    newCourse.activeRoute.waypoints = this.getRoutePoints(rte)
+
     if (this.isValidArrivalCircle(route.arrivalCircle as number)) {
       newCourse.nextPoint.arrivalCircle = route.arrivalCircle as number
     }
@@ -584,6 +596,8 @@ export class CourseApi {
     this.courseInfo.activeRoute.pointIndex = null
     this.courseInfo.activeRoute.pointTotal = null
     this.courseInfo.activeRoute.reverse = null
+    this.courseInfo.activeRoute.name = null
+    this.courseInfo.activeRoute.waypoints = null
     this.courseInfo.nextPoint.href = null
     this.courseInfo.nextPoint.type = null
     this.courseInfo.nextPoint.position = null
@@ -657,6 +671,20 @@ export class CourseApi {
     return result
   }
 
+  private getRoutePoints(rte: any) {
+    const pts = rte.feature.geometry.coordinates.map(
+      (pt: GeoJsonPoint) => {
+        return {
+          position: {
+            latitude: pt[1],
+            longitude: pt[0]
+          }
+        }
+      }
+    )
+    return pts
+  }
+
   private async getRoute(href: string): Promise<Route | undefined> {
     const h = this.parseHref(href)
     if (h) {
@@ -701,6 +729,14 @@ export class CourseApi {
     values.push({
       path: `${navPath}.activeRoute.reverse`,
       value: this.courseInfo.activeRoute.reverse
+    })
+    values.push({
+      path: `${navPath}.activeRoute.name`,
+      value: this.courseInfo.activeRoute.name
+    })
+    values.push({
+      path: `${navPath}.activeRoute.waypoints`,
+      value: this.courseInfo.activeRoute.waypoints
     })
 
     values.push({
