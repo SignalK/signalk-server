@@ -152,8 +152,8 @@
             "calcMethod": {
               "type": "string",
               "description": "Calculation method by which values are derived.",
-              "enum": ["Great Circle", "Rhumbline"],
-              "default": "Great Circle",
+              "enum": ["GreatCircle", "Rhumbline"],
+              "default": "GreatCircle",
               "example": "Rhumbline"
             },
             "crossTrackError": {
