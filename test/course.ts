@@ -82,11 +82,14 @@ describe('Course Api', () => {
       data.startTime.should.match(DATETIME_REGEX)
       delete data.startTime
       data.should.deep.equal({
+        targetArrivalTime: null,
         activeRoute: {
           href: null,
+          name: null,
           pointIndex: null,
           pointTotal: null,
-          reverse: null
+          reverse: null,
+          waypoints: null
         },
         nextPoint: {
           href: null,
@@ -220,11 +223,14 @@ describe('Course Api', () => {
       data.startTime.should.match(DATETIME_REGEX)
       delete data.startTime
       data.should.deep.equal({
+        targetArrivalTime: null,
         activeRoute: {
           href: null,
+          name: null,
           pointIndex: null,
           pointTotal: null,
-          reverse: null
+          reverse: null,
+          waypoints: null
         },
         nextPoint: {
           href,
@@ -297,11 +303,14 @@ describe('Course Api', () => {
     await selfGetJson('navigation/course').then(data => {
       data.should.deep.equal({
         startTime: null,
+        targetArrivalTime: null,
         activeRoute: {
           href: null,
+          name: null,
           pointIndex: null,
           pointTotal: null,
-          reverse: null
+          reverse: null,
+          waypoints: null
         },
         nextPoint: {
           href: null,
@@ -413,6 +422,9 @@ describe('Course Api', () => {
 
     await selfGetJson('navigation/course').then(data => {
       delete data.startTime
+      delete data.targetArrivalTime
+      delete data.activeRoute.name
+      delete data.activeRoute.waypoints
       data.should.deep.equal({
         activeRoute: {
           href,
@@ -549,11 +561,14 @@ describe('Course Api', () => {
     await selfGetJson('navigation/course').then(data => {
       data.should.deep.equal({
         startTime: null,
+        targetArrivalTime: null,
         activeRoute: {
           href: null,
+          name: null,
           pointIndex: null,
           pointTotal: null,
-          reverse: null
+          reverse: null,
+          waypoints: null
         },
         nextPoint: {
           href: null,
