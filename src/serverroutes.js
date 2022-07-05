@@ -384,7 +384,11 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
         wsCompression: app.config.settings.wsCompression || false,
         enablePluginLogging:
           _.isUndefined(app.config.settings.enablePluginLogging) ||
-          app.config.settings.enablePluginLogging
+          app.config.settings.enablePluginLogging,
+	accessLogging: 
+	  _.isUndefined(app.config.settings.accessLogging) ||
+	  app.config.settings.accessLogging
+
       },
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
@@ -486,6 +490,10 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
     if (!_.isUndefined(settings.options.wsCompression)) {
       app.config.settings.wsCompression = settings.options.wsCompression
+    }
+
+    if (!_.isUndefined(settings.options.accessLogging)) {
+      app.config.settings.accessLogging = settings.options.accessLogging
     }
 
     if (!_.isUndefined(settings.options.enablePluginLogging)) {

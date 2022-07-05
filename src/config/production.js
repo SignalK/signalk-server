@@ -1,3 +1,4 @@
+"use strict";
 /*
  * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
  *
@@ -13,15 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-
-module.exports = function(app) {
-  'use strict'
-
-  if (app.get('env') === 'production') {
-    app.config.environment = 'production'
-    app.config.debug = false
-
-    app.use(require('morgan')('combined'))
-    app.use(require('errorhandler')())
-  }
-}
+module.exports = function (app) {
+    'use strict';
+    if (app.get('env') === 'production') {
+        app.config.environment = 'production';
+        app.config.debug = false;
+        app.use(require('morgan')('combined', {
+          // reflect the Server / Settings / Server Settings / AccessLogging setting
+          // i.e. skip logging lines from morgan if AccessLogging is disabled.
+          skip: function (req, res) { return !app.config.settings.accessLogging }
+	}));
+        app.use(require('errorhandler')());
+    }
+};

@@ -1,3 +1,4 @@
+"use strict";
 /*
  * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
  *
@@ -13,20 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-
-module.exports = function(app) {
-  'use strict'
-
-  if (app.get('env') === 'development') {
-    app.config.environment = 'development'
-
-    app.use(
-      require('errorhandler')({
-        dumpExceptions: true,
-        showStack: true
-      })
-    )
-
-    app.use(require('morgan')('dev'))
-  }
-}
+module.exports = function (app) {
+    'use strict';
+    if (app.get('env') === 'development') {
+        app.config.environment = 'development';
+        app.use(require('errorhandler')({
+            dumpExceptions: true,
+            showStack: true
+        }));
+        app.use(require('morgan')('dev', {
+		// reflect the Server / Settings / Server Settings / AccessLogging setting
+		// i.e. skip logging lines from morgan if AccessLogging is disabled.
+		skip: function (req, res) { return !app.config.settings.accessLogging }
+	}));
+    }
+};
