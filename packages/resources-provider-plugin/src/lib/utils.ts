@@ -72,7 +72,7 @@ export const passFilter = (res: any, type: string, params: any) => {
   if (params.href) {
     // ** check is attached to another resource
     // console.log(`filter related href: ${params.href}`);
-    if (typeof res.href === 'undefined') {
+    if (typeof res.href === 'undefined' || !res.href) {
       ok = ok && false
     } else {
       // deconstruct resource href value
