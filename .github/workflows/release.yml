@@ -91,7 +91,8 @@ jobs:
       - name: Set tag variable
         id: vars
         run: echo ::set-output name=tag::$(echo ${GITHUB_REF#refs/*/})    
-      - run: |
+      - name: Install, build & publish
+        run: |
           npm install --package-lock-only
           npm ci && npm cache clean --force
           if [[ "${{ steps.vars.outputs.tag }}" == *beta* ]];
