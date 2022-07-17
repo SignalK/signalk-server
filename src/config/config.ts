@@ -317,13 +317,6 @@ function setBaseDeltas(app: ConfigApp) {
   return true
 }
 
-export function sendBaseDeltas(app: ConfigApp) {
-  const copy = JSON.parse(JSON.stringify(app.config.baseDeltaEditor.deltas))
-  copy.forEach((delta: any) => {
-    app.handleMessage('defaults', delta)
-  })
-}
-
 function writeDefaultsFile(app: ConfigApp, defaults: any, cb: any) {
   fs.writeFile(getDefaultsPath(app), JSON.stringify(defaults, null, 2), cb)
 }
@@ -336,7 +329,7 @@ function writeBaseDeltasFile(app: ConfigApp) {
   return app.config.baseDeltaEditor.save(getBaseDeltasPath(app))
 }
 
-function setSelfSettings(app: ConfigApp) {
+async function setSelfSettings(app: ConfigApp) {
   const name = app.config.baseDeltaEditor.getSelfValue('name')
   const mmsi = app.config.baseDeltaEditor.getSelfValue('mmsi')
   let uuid = app.config.baseDeltaEditor.getSelfValue('uuid')
@@ -352,6 +345,7 @@ function setSelfSettings(app: ConfigApp) {
   if (mmsi === null && uuid === null) {
     uuid = 'urn:mrn:signalk:uuid:' + uuidv4()
     app.config.baseDeltaEditor.setSelfValue('uuid', uuid)
+    await writeBaseDeltasFile(app)
   }
 
   app.config.vesselName = name
@@ -488,6 +482,5 @@ module.exports = {
   writeSettingsFile,
   writeDefaultsFile,
   readDefaultsFile,
-  sendBaseDeltas,
   writeBaseDeltasFile
 }

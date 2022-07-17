@@ -28,7 +28,7 @@ import https from 'https'
 import _ from 'lodash'
 import path from 'path'
 import { SelfIdentity, ServerApp, SignalKMessageHub, WithConfig } from './app'
-import { ConfigApp, load, sendBaseDeltas } from './config/config'
+import { load } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
 import DeltaChain, { DeltaInputHandler } from './deltachain'
@@ -245,6 +245,9 @@ class Server {
     app.on('nmea2000OutAvailable', () => {
       app.isNmea2000OutAvailable = true
     })
+
+    app.sendBaseDeltas = () =>
+      app.config.baseDeltaEditor.sendDeltas(app.handleMessage)
   }
 
   start() {
@@ -360,7 +363,7 @@ class Server {
         debug('ID type: ' + app.selfType)
         debug('ID: ' + app.selfId)
 
-        sendBaseDeltas((app as unknown) as ConfigApp)
+        app.config.baseDeltaEditor.sendDeltas(app.handleMessage)
 
         startInterfaces(app)
         startMdns(app)

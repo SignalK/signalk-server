@@ -1,7 +1,6 @@
 const _ = require('lodash')
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:put')
-const { v4: uuidv4 } = require('uuid')
 const { createRequest, updateRequest } = require('./requestResponse')
 const skConfig = require('./config/config')
 
@@ -81,7 +80,7 @@ module.exports = {
       }
 
       app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
-      skConfig.sendBaseDeltas(app)
+      app.sendBaseDeltas()
 
       if (app.config.hasOldDefaults) {
         let data
