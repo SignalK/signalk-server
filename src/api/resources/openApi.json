@@ -13,12 +13,6 @@
     "url": "http://signalk.org/specification/",
     "description": "Signal K specification."
   },
-  "servers": [
-    {
-      "description": "Signal K Server",
-      "url": "http://localhost:3000/signalk/v2/api"
-    }
-  ],
   "tags": [
     {
       "name": "resources",
