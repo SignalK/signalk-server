@@ -8,7 +8,7 @@ import path from 'path'
 import { WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
 
-import { Position, Route, GeoJsonPoint } from '@signalk/server-api'
+import { GeoJsonPoint, Position, Route } from '@signalk/server-api'
 import { isValidCoordinate } from 'geolib'
 import { Responses } from '../'
 import { Store } from '../../serverstate/store'
@@ -672,16 +672,14 @@ export class CourseApi {
   }
 
   private getRoutePoints(rte: any) {
-    const pts = rte.feature.geometry.coordinates.map(
-      (pt: GeoJsonPoint) => {
-        return {
-          position: {
-            latitude: pt[1],
-            longitude: pt[0]
-          }
+    const pts = rte.feature.geometry.coordinates.map((pt: GeoJsonPoint) => {
+      return {
+        position: {
+          latitude: pt[1],
+          longitude: pt[0]
         }
       }
-    )
+    })
     return pts
   }
 
