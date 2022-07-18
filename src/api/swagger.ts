@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express'
 import swaggerUi from 'swagger-ui-express'
 import { SERVERROUTESPREFIX } from '../constants'
+import { appsApiRecord } from './apps/openApi'
 import { courseApiRecord } from './course/openApi'
 import { notificationsApiRecord } from './notifications/openApi'
 import { resourcesApiRecord } from './resources/openApi'
@@ -14,13 +15,16 @@ interface OpenApiRecord {
 
 const apiDocs: {
   [name: string]: OpenApiRecord
-} = [courseApiRecord, notificationsApiRecord, resourcesApiRecord, securityApiRecord].reduce(
-  (acc: any, apiRecord: OpenApiRecord) => {
-    acc[apiRecord.name] = apiRecord
-    return acc
-  },
-  {}
-)
+} = [
+  appsApiRecord,
+  courseApiRecord,
+  notificationsApiRecord,
+  resourcesApiRecord,
+  securityApiRecord
+].reduce((acc: any, apiRecord: OpenApiRecord) => {
+  acc[apiRecord.name] = apiRecord
+  return acc
+}, {})
 
 export function mountSwaggerUi(app: any, path: string) {
   app.use(
