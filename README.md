@@ -167,7 +167,7 @@ Make sure that the settings file you are using is valid JSON. This can be done i
 
 ### NMEA0183
 
-There is an example settings file for using NMEA 0183 input from a serial device that you can use to start up the server: `bin/signalk-settings -s settings/volare-serial-settings.json`. You can change the `port` and `baudrate` in the [settings file](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-serial-settings.json#L23-L27).
+There is an example settings file for using NMEA 0183 input from a serial device that you can use to start up the server: `bin/signalk-server -s settings/volare-serial-settings.json`. You can change the `port` and `baudrate` in the [settings file](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-serial-settings.json#L23-L27).
 
 
 ### NMEA 2000 (via NGT-1 & Canboat)
