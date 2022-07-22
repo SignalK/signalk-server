@@ -15,12 +15,12 @@
     },
     "tags": [
       {
-        "name": "server",
-        "description": "Server App / WebApp operations"
+        "name": "apps",
+        "description": "Installed applications."
       },
       {
-        "name": "repository",
-        "description": "Repository /  AppStore operations"
+        "name": "plugins",
+        "description": "Installed plugins."
       }
     ],
     "components": {
@@ -141,6 +141,41 @@
               }
             }
           }
+        },
+        "PluginDetailResponse": {
+          "description": "Plugin detail response.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Plugin detail.",
+                "type": "object",
+                "required": [
+                  "enabled", "enabledByDefault", "id",
+                  "name", "version"
+                ],
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "enabledByDefault": {
+                    "type": "boolean"
+                  },
+                  "id": {
+                    "type": "string",
+                    "example": "sksim"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Data stream generator"
+                  },
+                  "version": {
+                    "type": "string",
+                    "example": "1.5.4"
+                  }
+                }
+              }
+            }
+          }
         }
       },
       "securitySchemes": {
@@ -161,7 +196,7 @@
       "/signalk/v1/apps/list": {
         "get": {
           "tags": [
-            "server"
+            "apps"
           ],
           "summary": "WebApp list.",
           "description": "Returns a list of all installed WebApps.",
@@ -175,69 +210,27 @@
           }
         }
       },
-      "/skServer/appstore/install/{pkgName}/{version}": {
-        "post": {
-          "tags": [
-            "repository"
-          ],
-          "summary": "Install WebApp.",
-          "description": "Install the supplied WebApp from the repository.",
-          "parameters": [
-            {
-              "name": "pkgName",
-              "in": "path",
-              "description": "application package name",
-              "required": true,
-              "type": "string",
-              "example": "@signalk/instrumentpanel"
-            },
-            {
-              "name": "version",
-              "in": "path",
-              "description": "application package version",
-              "required": true,
-              "type": "string",
-              "example": "1.3.1"
-            }
-          ],
-          "security": [
-            {"cookieAuth": []},
-            {"bearerAuth": []}
-          ],
-          "responses": {
-            "200": {
-              "$ref": "#/components/responses/200Ok"
-            },
-            "default": {
-              "$ref": "#/components/responses/ErrorResponse"
+      "/plugins/{id}": {
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Plugin identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           }
-        }
-      },
-      "/skServer/appstore/remove/{pkgName}": {
-        "post": {
+        ],
+        "get": {
           "tags": [
-            "server"
+            "plugins"
           ],
-          "summary": "Remove WebApp from server.",
-          "description": "Un-install the supplied WebApps from the server.",
-          "parameters": [
-            {
-              "name": "pkgName",
-              "in": "path",
-              "description": "application package name",
-              "required": true,
-              "type": "string",
-              "example": "@signalk/instrumentpanel"
-            }
-          ],
-          "security": [
-            {"cookieAuth": []},
-            {"bearerAuth": []}
-          ],
+          "summary": "Plugin details.",
+          "description": "Returns summary details for supplied plugin id.",
           "responses": {
             "200": {
-              "$ref": "#/components/responses/200Ok"
+              "$ref": "#/components/responses/PluginDetailResponse"
             },
             "default": {
               "$ref": "#/components/responses/ErrorResponse"

@@ -326,7 +326,7 @@
         }
       },
       "/auth/logout": {
-        "post": {
+        "put": {
           "tags": [
             "authentication"
           ],
