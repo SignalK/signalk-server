@@ -328,9 +328,6 @@ class ValidateChecksumInput extends Component {
 }
 
 class OverrideTimestamps extends Component {
-  constructor(props) {
-    super(props)
-  }
   render() {
     return (
       <FormGroup row>
@@ -356,10 +353,6 @@ class OverrideTimestamps extends Component {
 }
 
 class RemoveNullsInput extends Component {
-  constructor(props) {
-    super(props)
-    this.props.value.removeNulls = this.props.value.removeNulls
-  }
   render() {
     return (
       <FormGroup row>
@@ -628,9 +621,6 @@ class RemoteSelfInput extends Component {
 }
 
 class Suppress0183Checkbox extends Component {
-  constructor(props) {
-    super(props)
-  }
   render() {
     return (
       <FormGroup row>
@@ -661,9 +651,6 @@ class Suppress0183Checkbox extends Component {
 }
 
 class UseCanNameInput extends Component {
-  constructor(props) {
-    super(props)
-  }
   render() {
     return (
       <FormGroup row>
