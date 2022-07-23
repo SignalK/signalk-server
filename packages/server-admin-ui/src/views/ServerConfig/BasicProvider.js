@@ -501,12 +501,16 @@ class BaudRateIntputCanboat extends Component {
 class StdOutInput extends Component {
   constructor(props) {
     super()
+    this.state = StdOutInput.getDerivedStateFromProps(props)
+    this.onChange = this.onChange.bind(this)
+  }
+
+  static getDerivedStateFromProps(props) {
     let value = props.value.toStdout
     if (Array.isArray(value)) {
       value = value.join(',')
     }
-    this.state = { value }
-    this.onChange = this.onChange.bind(this)
+    return { value }
   }
   onChange(e) {
     this.setState({ value: e.target.value })
@@ -534,13 +538,18 @@ class StdOutInput extends Component {
 class IgnoredSentences extends Component {
   constructor(props) {
     super()
+    this.onChange = this.onChange.bind(this)
+    this.state = IgnoredSentences.getDerivedStateFromProps(props)
+  }
+
+  static getDerivedStateFromProps(props) {
     let value = props.value.ignoredSentences
     if (Array.isArray(value)) {
       value = value.join(',')
     }
-    this.state = { value }
-    this.onChange = this.onChange.bind(this)
+    return { value }
   }
+
   onChange(e) {
     this.setState({ value: e.target.value })
     this.props.onChange({
