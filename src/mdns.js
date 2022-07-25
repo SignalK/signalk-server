@@ -90,34 +90,17 @@ module.exports = function mdnsResponder(app) {
     txt: txtRecord
   }
 
-  const host = app.config.getExternalHostname()
+  const instanceName = getInstanceName(app.signalk)
 
+  const host = app.config.getExternalHostname()
   if (host !== require('os').hostname()) {
     options.host = host
   }
 
-  debug(options)
-
   const ads = []
-  // tslint:disable-next-line: forin
-  for (const i in types) {
-    const type = types[i]
-    debug(
-      'Starting mDNS ad: ' +
-        type.type +
-        ' ' +
-        app.config.getExternalHostname() +
-        ':' +
-        type.port
-    )
-    const ad = new mdns.Advertisement(type.type, type.port, options)
-    ad.on('error', err => {
-      console.log(type.type.name)
-      console.error(err)
-    })
-    ad.start()
-    ads.push(ad)
-  }
+  types.forEach((type, i) => {
+    startAdWithNamedRetry(mdns, type, i, options, instanceName, ads, 0)
+  })
 
   return {
     stop: function() {
@@ -127,4 +110,76 @@ module.exports = function mdnsResponder(app) {
       })
     }
   }
+}
+
+const MAX_RETRIES = 9
+
+function startAdWithNamedRetry(
+  mdns,
+  type,
+  i,
+  options,
+  instanceName,
+  ads,
+  retryIndex
+) {
+  if (retryIndex > MAX_RETRIES) {
+    return
+  }
+
+  debug(`Starting mDNS ad: ${type.type} ${type.host} ${type.port}`)
+
+  let name
+  if (instanceName) {
+    name = toLengthCappedIndexedName(
+      i === 0 ? `SK ${instanceName}` : instanceName,
+      retryIndex
+    )
+  }
+  const optionsForType = { name, ...options }
+  debug(optionsForType)
+  const ad = new mdns.Advertisement(type.type, type.port, optionsForType)
+  ad.on('error', err => {
+    console.log(type.type.name)
+    console.error(err)
+    try {
+      ad.stop()
+    } catch (e) {
+      console.error(e)
+    }
+    startAdWithNamedRetry(
+      mdns,
+      type,
+      i,
+      options,
+      instanceName,
+      ads,
+      retryIndex + 1
+    )
+  })
+  ad.start()
+  ads[i] = ad
+}
+
+const AD_NAME_MAX_UTF_LENGTH = 63 - 3 //allow prefix 'SK ' for http
+
+function getInstanceName(signalk) {
+  const full = signalk.retrieve()
+  return _.get(full, `${_.get(full, 'self')}.name`)
+}
+
+// return the string with utf length capped to 60
+// with retry count appended as -n for n >0
+function toLengthCappedIndexedName(s, retryIndex) {
+  let result = s
+  const maxLength = AD_NAME_MAX_UTF_LENGTH - (retryIndex > 0 ? '-X'.length : 0)
+  while (utfLength(result) > maxLength) {
+    result = result.slice(0, result.length - 1)
+  }
+  return result + (retryIndex > 0 ? `-${retryIndex}` : '')
+}
+
+function utfLength(s) {
+  // tslint:disable-next-line:no-bitwise
+  return ~-encodeURI(s).split(/%..|./).length
 }
