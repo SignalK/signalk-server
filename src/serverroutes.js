@@ -662,13 +662,13 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
     de.setSelfValue(
       'design.draft',
-      !_.isUndefined(vessel.draft) && vessel.draft.length
+      !_.isUndefined(vessel.draft)
         ? { maximum: Number(vessel.draft) }
         : undefined
     )
     de.setSelfValue(
       'design.length',
-      !_.isUndefined(vessel.length) && vessel.length.length
+      !_.isUndefined(vessel.length)
         ? { overall: Number(vessel.length) }
         : undefined
     )
@@ -678,7 +678,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     de.setSelfValue('sensors.gps.fromCenter', makeNumber(vessel.gpsFromCenter))
     de.setSelfValue(
       'design.aisShipType',
-      !_.isUndefined(vessel.aisShipType) && vessel.aisShipType.length
+      !_.isUndefined(vessel.aisShipType)
         ? {
             name: getAISShipTypeName(vessel.aisShipType),
             id: Number(vessel.aisShipType)
