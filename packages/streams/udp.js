@@ -41,6 +41,9 @@ function Udp(options) {
   })
   this.options = options
   this.debug = (options.createDebug || require('debug'))('signalk:streams:udp')
+  this.debugData = (options.createDebug || require('debug'))(
+    'signalk:streams:udp-data'
+  )
 }
 
 require('util').inherits(Udp, Transform)
@@ -51,11 +54,21 @@ Udp.prototype.pipe = function (pipeTo) {
 
   const socket = require('dgram').createSocket('udp4')
   const self = this
+
+  if (this.options.outEvent && (this.options.port !== undefined)) {
+    this.options.app.on(this.options.outEvent, function (d) {
+      self.debug('sending over udp: %s', d)
+      socket.send(d, 0, d.length, self.options.port, '255.255.255.255')
+    })
+  }
+
   socket.on('message', function (message, remote) {
     self.debug(message.toString())
     self.push(message)
   })
-  socket.bind(this.options.port)
+  socket.bind(this.options.port, function() {
+    socket.setBroadcast(true)
+  })
 }
 
 Udp.prototype._transform = function (chunk, encoding, done) {

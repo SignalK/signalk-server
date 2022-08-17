@@ -253,7 +253,12 @@ function nmea2000input(subOptions, logging) {
       new Liner(subOptions),
     ]
   } else if (subOptions.type === 'ydwg02-udp-canboatjs') {
-    return [new Udp(subOptions), new Liner(subOptions)]
+    return [
+      new Udp({
+        ...subOptions,
+        outEvent: 'ydwg02-out'}),
+        new Liner(subOptions)
+    ]
   } else if (subOptions.type === 'navlink2-tcp-canboatjs') {
     return [
       new Tcp({
