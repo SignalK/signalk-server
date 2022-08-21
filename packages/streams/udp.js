@@ -55,7 +55,7 @@ Udp.prototype.pipe = function (pipeTo) {
   const socket = require('dgram').createSocket('udp4')
   const self = this
 
-  if (this.options.outEvent && (this.options.port !== undefined)) {
+  if (this.options.outEvent && this.options.port !== undefined) {
     this.options.app.on(this.options.outEvent, function (d) {
       self.debug('sending over udp: %s', d)
       socket.send(d, 0, d.length, self.options.port, '255.255.255.255')
@@ -66,7 +66,7 @@ Udp.prototype.pipe = function (pipeTo) {
     self.debug(message.toString())
     self.push(message)
   })
-  socket.bind(this.options.port, function() {
+  socket.bind(this.options.port, function () {
     socket.setBroadcast(true)
   })
 }
