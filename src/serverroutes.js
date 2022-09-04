@@ -382,6 +382,9 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       options: {
         mdns: app.config.settings.mdns || false,
         wsCompression: app.config.settings.wsCompression || false,
+        accessLogging:
+          _.isUndefined(app.config.settings.accessLogging) ||
+          app.config.settings.accessLogging,
         enablePluginLogging:
           _.isUndefined(app.config.settings.enablePluginLogging) ||
           app.config.settings.enablePluginLogging
@@ -486,6 +489,10 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
     if (!_.isUndefined(settings.options.wsCompression)) {
       app.config.settings.wsCompression = settings.options.wsCompression
+    }
+
+    if (!_.isUndefined(settings.options.accessLogging)) {
+      app.config.settings.accessLogging = settings.options.accessLogging
     }
 
     if (!_.isUndefined(settings.options.enablePluginLogging)) {
