@@ -66,7 +66,7 @@ function MdnsWs(options) {
       autoConnect: false,
       deltaStreamBehaviour,
       rejectUnauthorized: !(options.selfsignedcert === true),
-      wsKeepaliveInterval: 10
+      wsKeepaliveInterval: 10,
     })
     this.connect(this.signalkClient)
   } else {
