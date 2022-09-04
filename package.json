@@ -17,7 +17,8 @@
     "test-only": "mocha --require ts-node/register --extensions ts,tsx,js --timeout 10000 --exit 'test/**/*.[jt]s' 'lib/**/*.test.js'",
     "test": "npm run build && npm run test-only && npm run ci-lint",
     "typedoc": "typedoc",
-    "heroku-postbuild": "npm run build:all"
+    "heroku-postbuild": "npm run build:all",
+    "master-changed-files": "git diff --name-status $(git tag | tail -1)..master"
   },
   "bin": {
     "signalk-server": "./bin/signalk-server",
