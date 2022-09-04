@@ -14,6 +14,8 @@
  * limitations under the License.
 */
 
+const { isUndefined } = require('lodash')
+
 module.exports = function(app) {
   'use strict'
 
@@ -27,6 +29,13 @@ module.exports = function(app) {
       })
     )
 
-    app.use(require('morgan')('dev'))
+    const morganOptions = {}
+    const accessLogging =
+      isUndefined(app.config.settings.accessLogging) ||
+      app.config.settings.accessLogging
+    if (!accessLogging) {
+      morganOptions.skip = () => true
+    }
+    app.use(require('morgan')('dev', morganOptions))
   }
 }
