@@ -595,7 +595,7 @@ module.exports = function (app, saveSecurityConfig, getSecurityConfig) {
     setString('mmsi', newVessel.mmsi)
 
     if (newVessel.uuid && !self.mmsi) {
-      set('uuid', newVessel.uuid)
+      setString('uuid', newVessel.uuid)
     } else {
       delete self.uuid
     }
