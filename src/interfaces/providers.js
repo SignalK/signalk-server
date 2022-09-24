@@ -18,8 +18,8 @@ const config = require('../config/config')
 const { runDiscovery } = require('../discovery')
 import { SERVERROUTESPREFIX } from '../constants'
 
-module.exports = function(app) {
-  app.on('discovered', provider => {
+module.exports = function (app) {
+  app.on('discovered', (provider) => {
     app.discoveredProviders.push(provider)
     app.emit('serverevent', {
       type: 'DISCOVERY_CHANGED',
@@ -39,7 +39,7 @@ module.exports = function(app) {
   })
 
   function getProviders(source, wasDiscovered) {
-    return source.map(provider => {
+    return source.map((provider) => {
       const type = provider.pipeElements[0].type
       let providerRes
       if (type === 'providers/simple' && provider.pipeElements.length === 1) {
@@ -78,7 +78,7 @@ module.exports = function(app) {
 
   app.delete(`${SERVERROUTESPREFIX}/providers/:id`, (req, res, next) => {
     const idx = app.config.settings.pipedProviders.findIndex(
-      p => p.id === req.params.id
+      (p) => p.id === req.params.id
     )
     if (idx === -1) {
       res.status(401).send(`Connection with name ${req.params.id} not found`)
@@ -86,7 +86,7 @@ module.exports = function(app) {
     }
     app.config.settings.pipedProviders.splice(idx, 1)
 
-    config.writeSettingsFile(app, app.config.settings, err => {
+    config.writeSettingsFile(app, app.config.settings, (err) => {
       if (err) {
         console.error(err)
         res.status(500).send('Unable to save to settings file')
@@ -99,14 +99,16 @@ module.exports = function(app) {
   function updateProvider(idToUpdate, provider, res) {
     const isNew = _.isUndefined(idToUpdate) || idToUpdate === null
     const existing = app.config.settings.pipedProviders.find(
-      p => p.id === (isNew ? provider.id : idToUpdate)
+      (p) => p.id === (isNew ? provider.id : idToUpdate)
     )
 
     if (isNew && existing) {
       res.status(401).send(`Connection with ID '${provider.id}' already exists`)
       return
     } else if (!isNew && idToUpdate !== provider.id) {
-      if (app.config.settings.pipedProviders.find(p => p.id === provider.id)) {
+      if (
+        app.config.settings.pipedProviders.find((p) => p.id === provider.id)
+      ) {
         res
           .status(401)
           .send(`Connection with ID '${provider.id}' already exists`)
@@ -121,7 +123,7 @@ module.exports = function(app) {
 
     if (provider.wasDiscovered) {
       const idx = app.discoveredProviders.findIndex(
-        p => p.id === provider.originalId
+        (p) => p.id === provider.originalId
       )
       app.discoveredProviders.splice(idx, 1)
       app.emit('serverevent', {
@@ -152,7 +154,7 @@ module.exports = function(app) {
         app.config.settings.pipedProviders.push(updatedProvider)
       }
 
-      config.writeSettingsFile(app, app.config.settings, err => {
+      config.writeSettingsFile(app, app.config.settings, (err) => {
         if (err) {
           console.error(err)
           res.status(500).send('Unable to save to settings file')

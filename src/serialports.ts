@@ -72,7 +72,7 @@ function listSafeSerialPortsOpenPlotter() {
     .catch(() => [])
     .then((filenames: string[]) =>
       filenames
-        .filter(filename => filename.startsWith('ttyOP_'))
-        .map(filename => `/dev/${filename}`)
+        .filter((filename) => filename.startsWith('ttyOP_'))
+        .map((filename) => `/dev/${filename}`)
     )
 }

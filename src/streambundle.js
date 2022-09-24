@@ -32,11 +32,11 @@ function StreamBundle(app, selfId) {
   this.metaSent = {}
 }
 
-StreamBundle.prototype.pushDelta = function(delta) {
+StreamBundle.prototype.pushDelta = function (delta) {
   var that = this
   function processIems(update, items, isMeta) {
     if (items) {
-      items.forEach(pathValue => {
+      items.forEach((pathValue) => {
         that.push(pathValue.path, {
           path: pathValue.path,
           value: pathValue.value,
@@ -51,7 +51,7 @@ StreamBundle.prototype.pushDelta = function(delta) {
   }
   try {
     if (delta.updates) {
-      delta.updates.forEach(update => {
+      delta.updates.forEach((update) => {
         if (update.meta) {
           processIems(update, update.meta, true)
         }
@@ -78,7 +78,7 @@ function getPathsFromObjectValue(objectValue) {
 }
 
 function accumulatePathsFromValues(acc, prefix, objectValue) {
-  Object.keys(objectValue).forEach(propName => {
+  Object.keys(objectValue).forEach((propName) => {
     const propValue = objectValue[propName]
     if (_.isObject(propValue)) {
       accumulatePathsFromValues(acc, `${prefix}.${propName}`, propValue)
@@ -86,7 +86,7 @@ function accumulatePathsFromValues(acc, prefix, objectValue) {
   })
 }
 
-StreamBundle.prototype.push = function(path, pathValueWithSourceAndContext) {
+StreamBundle.prototype.push = function (path, pathValueWithSourceAndContext) {
   if (this.availableSelfPaths.indexOf(path) === -1) {
     this.availableSelfPaths.push(path)
   }
@@ -102,7 +102,7 @@ StreamBundle.prototype.push = function(path, pathValueWithSourceAndContext) {
   }
 }
 
-StreamBundle.prototype.getBus = function(path) {
+StreamBundle.prototype.getBus = function (path) {
   if (path !== undefined) {
     let result = this.buses[path]
     if (!result) {
@@ -115,7 +115,7 @@ StreamBundle.prototype.getBus = function(path) {
   }
 }
 
-StreamBundle.prototype.getSelfStream = function(path) {
+StreamBundle.prototype.getSelfStream = function (path) {
   if (path !== undefined) {
     let result = this.selfStreams[path]
     if (!result) {
@@ -127,7 +127,7 @@ StreamBundle.prototype.getSelfStream = function(path) {
   }
 }
 
-StreamBundle.prototype.getSelfBus = function(path) {
+StreamBundle.prototype.getSelfBus = function (path) {
   if (path !== undefined) {
     let result = this.selfBuses[path]
     if (!result) {
@@ -139,7 +139,7 @@ StreamBundle.prototype.getSelfBus = function(path) {
   }
 }
 
-StreamBundle.prototype.getAvailablePaths = function() {
+StreamBundle.prototype.getAvailablePaths = function () {
   return this.availableSelfPaths
 }
 

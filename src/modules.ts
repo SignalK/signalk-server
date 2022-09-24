@@ -62,11 +62,11 @@ function findModulesInDir(dir: string, keyword: string): ModuleData[] {
   debug('findModulesInDir: ' + dir)
   return fs
     .readdirSync(dir)
-    .filter(name => name !== '.bin')
+    .filter((name) => name !== '.bin')
     .reduce<ModuleData[]>((result, filename) => {
       if (filename.indexOf('@') === 0) {
         return result.concat(
-          findModulesInDir(dir + filename + '/', keyword).map(entry => {
+          findModulesInDir(dir + filename + '/', keyword).map((entry) => {
             return {
               module: entry.module,
               metadata: entry.metadata,
@@ -101,10 +101,9 @@ function findModulesInDir(dir: string, keyword: string): ModuleData[] {
 function getModulePaths(config: Config) {
   // appPath is the app working directory.
   const { appPath, configPath } = config
-  return (appPath === configPath
-    ? [appPath]
-    : [configPath, appPath]
-  ).map(pathOption => path.join(pathOption, 'node_modules/'))
+  return (appPath === configPath ? [appPath] : [configPath, appPath]).map(
+    (pathOption) => path.join(pathOption, 'node_modules/')
+  )
 }
 
 const getModuleSortName = (x: ModuleData) =>
@@ -119,11 +118,11 @@ export function modulesWithKeyword(config: Config, keyword: string) {
   return _.uniqBy(
     // _.flatten since values are inside an array. [[modules...], [modules...]]
     _.flatten(
-      getModulePaths(config).map(pathOption =>
+      getModulePaths(config).map((pathOption) =>
         findModulesInDir(pathOption, keyword)
       )
     ),
-    moduleData => moduleData.module
+    (moduleData) => moduleData.module
   ).sort(priorityPrefix)
 }
 function installModule(
@@ -215,8 +214,8 @@ function findModulesWithKeyword(keyword: string) {
     const result = {}
     const handleResultWithTimeout = (fetchResult: Promise<Response>): void => {
       fetchResult
-        .then(r => r.json())
-        .then(parsed => {
+        .then((r) => r.json())
+        .then((parsed) => {
           const data = parsed.results || parsed.objects || []
           data.reduce(
             (
@@ -243,7 +242,7 @@ function findModulesWithKeyword(keyword: string) {
             )
           }
         })
-        .catch(e => {
+        .catch((e) => {
           if (errorCount++) {
             reject(e)
           }
@@ -271,8 +270,8 @@ function getLatestServerVersion(
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     distTags()
-      .then(npmjsResults => npmjsResults.json())
-      .then(npmjsParsed => {
+      .then((npmjsResults) => npmjsResults.json())
+      .then((npmjsParsed) => {
         const prereleaseData = semver.prerelease(currentVersion)
         if (prereleaseData) {
           if (semver.satisfies(npmjsParsed.latest, `>${currentVersion}`)) {

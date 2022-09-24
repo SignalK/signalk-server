@@ -97,7 +97,7 @@ class SubscriptionManager {
       msg.unsubscribe[0].path === '*'
     ) {
       debug('Unsubscribe all')
-      unsubscribes.forEach(unsubscribe => unsubscribe())
+      unsubscribes.forEach((unsubscribe) => unsubscribe())
       // clear unsubscribes
       unsubscribes.length = 0
     } else {
@@ -186,7 +186,7 @@ function handleSubscribeRow(
               const uniqueValues = _(bufferedValues)
                 .reverse()
                 .uniqBy(
-                  value =>
+                  (value) =>
                     value.context + ':' + value.$source + ':' + value.path
                 )
                 .value()
@@ -199,7 +199,7 @@ function handleSubscribeRow(
       }
       if (
         subscribeRow.policy &&
-        !['instant', 'fixed'].some(s => s === subscribeRow.policy)
+        !['instant', 'fixed'].some((s) => s === subscribeRow.policy)
       ) {
         errorCallback(
           `Only 'instant' and 'fixed' policies supported, ignoring policy ${subscribeRow.policy}`

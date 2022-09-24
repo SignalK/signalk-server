@@ -363,7 +363,7 @@ class Server {
         debug('ID type: ' + app.selfType)
         debug('ID: ' + app.selfId)
 
-        sendBaseDeltas((app as unknown) as ConfigApp)
+        sendBaseDeltas(app as unknown as ConfigApp)
 
         startInterfaces(app)
         startMdns(app)
@@ -415,10 +415,10 @@ class Server {
       this.app.config.settings = settings
     }
 
-    this.stop().catch(e => console.error(e))
+    this.stop().catch((e) => console.error(e))
 
     setTimeout(() => {
-      self.start().catch(e => console.error(e))
+      self.start().catch((e) => console.error(e))
     }, 1000)
 
     return this
@@ -440,11 +440,11 @@ class Server {
             }
           })
 
-          this.app.intervals.forEach(interval => {
+          this.app.intervals.forEach((interval) => {
             clearInterval(interval)
           })
 
-          this.app.providers.forEach(providerHolder => {
+          this.app.providers.forEach((providerHolder) => {
             providerHolder.pipeElements[0].end()
           })
 

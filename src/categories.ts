@@ -41,7 +41,7 @@ function getCategories(thePackage: NpmPackageData): string[] {
     )
   }
   const categoryNames = categoryKeywords.map(
-    category => CAT_KEYWORDS_TO_NAMES[category]
+    (category) => CAT_KEYWORDS_TO_NAMES[category]
   )
 
   if (categoryNames.length === 0) {

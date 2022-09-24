@@ -107,13 +107,13 @@ function findRequest(matcher) {
 
 function filterRequests(type, state) {
   return _.values(requests).filter(
-    r => r.type === type && (state === null || r.state === state)
+    (r) => r.type === type && (state === null || r.state === state)
   )
 }
 
 function pruneRequests() {
   debug('pruning requests')
-  _.keys(requests).forEach(id => {
+  _.keys(requests).forEach((id) => {
     const request = requests[id]
 
     const diff = new Date() - new Date(request.date)

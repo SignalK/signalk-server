@@ -21,7 +21,7 @@ const dgram = require('dgram')
 const mdns = require('mdns-js')
 const { networkInterfaces } = require('os')
 
-module.exports.runDiscovery = function(app) {
+module.exports.runDiscovery = function (app) {
   if (canboatjs.discover) {
     try {
       canboatjs.discover(app)
@@ -36,7 +36,7 @@ module.exports.runDiscovery = function(app) {
   discoverSignalkWs('wss')
 
   function findUDPProvider(port) {
-    return app.config.settings.pipedProviders.find(provider => {
+    return app.config.settings.pipedProviders.find((provider) => {
       return (
         provider.pipeElements &&
         provider.pipeElements.length === 1 &&
@@ -50,7 +50,7 @@ module.exports.runDiscovery = function(app) {
   }
 
   function findTCPProvider(host, port) {
-    return app.config.settings.pipedProviders.find(provider => {
+    return app.config.settings.pipedProviders.find((provider) => {
       return (
         provider.pipeElements &&
         provider.pipeElements.length === 1 &&
@@ -65,7 +65,7 @@ module.exports.runDiscovery = function(app) {
   }
 
   function findWSProvider(ip, wsType, host, port) {
-    return app.config.settings.pipedProviders.find(provider => {
+    return app.config.settings.pipedProviders.find((provider) => {
       return (
         provider.pipeElements &&
         provider.pipeElements.length === 1 &&
@@ -84,14 +84,14 @@ module.exports.runDiscovery = function(app) {
   function discoverGoFree() {
     const socket = dgram.createSocket('udp4')
     const found = []
-    socket.on('message', function(buffer, remote) {
+    socket.on('message', function (buffer, remote) {
       const msg = buffer.toString('utf8')
       if (msg[0] === '{') {
         try {
           const json = JSON.parse(msg)
           const serial = json.SerialNumber
           if (json.Services && found.indexOf(serial) === -1) {
-            json.Services.forEach(service => {
+            json.Services.forEach((service) => {
               if (
                 service.Service === 'nmea-0183' &&
                 !findTCPProvider(json.IP, service.Port)
@@ -124,7 +124,7 @@ module.exports.runDiscovery = function(app) {
         }
       }
     })
-    socket.on('error', error => {
+    socket.on('error', (error) => {
       debug('discoverGoFree:', error)
     })
     socket.on('close', () => {
@@ -152,7 +152,7 @@ module.exports.runDiscovery = function(app) {
   function discoverWLN10() {
     if (!findUDPProvider('2000')) {
       let socket = dgram.createSocket('udp4')
-      socket.on('message', function(buffer, remote) {
+      socket.on('message', function (buffer, remote) {
         const msg = buffer.toString('utf8')
         if (msg[0] === '$') {
           socket.close()
@@ -174,7 +174,7 @@ module.exports.runDiscovery = function(app) {
           })
         }
       })
-      socket.on('error', error => {
+      socket.on('error', (error) => {
         debug('discoverWLN10:', error)
       })
       socket.on('close', () => {

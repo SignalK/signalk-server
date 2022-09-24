@@ -18,7 +18,7 @@ const _ = require('lodash')
 import { createDebug } from '../debug'
 const debug = createDebug('signalk-server:interfaces:tcp:nmea0183')
 
-module.exports = function(app) {
+module.exports = function (app) {
   'use strict'
   const net = require('net')
   const openSockets = {}
@@ -27,29 +27,29 @@ module.exports = function(app) {
   const port = process.env.NMEA0183PORT || 10110
   const api = {}
 
-  api.start = function() {
+  api.start = function () {
     debug('Starting tcp interface')
 
-    server = net.createServer(function(socket) {
+    server = net.createServer(function (socket) {
       socket.id = idSequence++
       socket.name = socket.remoteAddress + ':' + socket.remotePort
       debug('Connected:' + socket.id + ' ' + socket.name)
       openSockets[socket.id] = socket
-      socket.on('data', data => {
+      socket.on('data', (data) => {
         app.emit('tcpserver0183data', data.toString())
       })
-      socket.on('end', function() {
+      socket.on('end', function () {
         // client disconnects
         debug('Ended:' + socket.id + ' ' + socket.name)
         delete openSockets[socket.id]
       })
-      socket.on('error', function(err) {
+      socket.on('error', function (err) {
         debug('Error:' + err + ' ' + socket.id + ' ' + socket.name)
         delete openSockets[socket.id]
       })
     })
-    const send = data => {
-      _.values(openSockets).forEach(function(socket) {
+    const send = (data) => {
+      _.values(openSockets).forEach(function (socket) {
         try {
           socket.write(data + '\r\n')
         } catch (e) {
@@ -62,13 +62,13 @@ module.exports = function(app) {
     server.on('listening', () =>
       debug('NMEA0138 tcp server listening on ' + port)
     )
-    server.on('error', e => {
+    server.on('error', (e) => {
       console.error(`NMEA0138 tcp server error: ${e.message}`)
     })
     server.listen(port)
   }
 
-  api.stop = function() {
+  api.stop = function () {
     if (server) {
       server.close()
       server = null

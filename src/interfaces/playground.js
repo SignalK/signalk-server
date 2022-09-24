@@ -29,14 +29,14 @@ const {
 
 const serverRoutesPrefix = '/skServer'
 
-module.exports = function(app) {
+module.exports = function (app) {
   const n2kMapper = new N2kMapper({ app }, app.propertyValues)
   const pgnParser = new FromPgn({}, app.propertyValues)
 
   const processors = {
     n2k: (msgs, sendToServer) => {
       const n2kJson = []
-      const deltas = msgs.map(msg => {
+      const deltas = msgs.map((msg) => {
         const n2k = pgnParser.parseString(msg)
         if (n2k) {
           if (sendToServer) {
@@ -48,11 +48,11 @@ module.exports = function(app) {
       })
       return { deltas, n2kJson: n2kJson }
     },
-    '0183': msgs => {
+    '0183': (msgs) => {
       const parser = new Parser0183({ app })
       return { deltas: msgs.map(parser.parse.bind(parser)) }
     },
-    'n2k-json': msgs => {
+    'n2k-json': (msgs) => {
       return processors.n2k(msgs.map(pgnToActisenseSerialFormat))
     }
   }
@@ -92,7 +92,7 @@ module.exports = function(app) {
     } else {
       type = 'n2k'
     }
-    return { type, msgs: msg.split('\n').filter(s => s.length > 0) }
+    return { type, msgs: msg.split('\n').filter((s) => s.length > 0) }
   }
 
   app.post(`${serverRoutesPrefix}/inputTest`, (req, res) => {
@@ -117,7 +117,7 @@ module.exports = function(app) {
     if (type === 'signalk') {
       let puts = []
       if (sendToServer) {
-        msgs.forEach(msg => {
+        msgs.forEach((msg) => {
           if (msg.put) {
             puts.push(
               new Promise((resolve, reject) => {
@@ -131,7 +131,7 @@ module.exports = function(app) {
                   msg.put,
                   req,
                   msg.requestId,
-                  reply => {
+                  (reply) => {
                     if (reply.state !== 'PENDING') {
                       resolve(reply)
                     }
@@ -145,7 +145,7 @@ module.exports = function(app) {
         })
       }
       if (puts.length > 0) {
-        Promise.all(puts).then(results => {
+        Promise.all(puts).then((results) => {
           res.json({ deltas: msgs, putResults: results })
         })
       } else {
@@ -157,7 +157,7 @@ module.exports = function(app) {
 
         if (data.deltas) {
           data.deltas = data.deltas.filter(
-            m =>
+            (m) =>
               typeof m !== 'undefined' &&
               m != null &&
               m.updates.length > 0 &&
@@ -168,7 +168,7 @@ module.exports = function(app) {
         res.json(data)
 
         if (sendToServer) {
-          data.deltas.forEach(msg => {
+          data.deltas.forEach((msg) => {
             app.handleMessage('input-test', msg)
           })
         }

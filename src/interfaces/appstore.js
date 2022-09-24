@@ -36,13 +36,13 @@ const npmServerInstallLocations = [
   '/usr/local/lib/node_modules/signalk-server/bin/signalk-server'
 ]
 
-module.exports = function(app) {
+module.exports = function (app) {
   let moduleInstalling
   const modulesInstalledSinceStartup = {}
   const moduleInstallQueue = []
 
   return {
-    start: function() {
+    start: function () {
       app.post(
         [
           `${SERVERROUTESPREFIX}/appstore/install/:name/:version`,
@@ -75,7 +75,7 @@ module.exports = function(app) {
                 res.send(`Installing ${name}...`)
               }
             })
-            .catch(error => {
+            .catch((error) => {
               console.log(error.message)
               debug(error.stack)
               res.status(500)
@@ -114,7 +114,7 @@ module.exports = function(app) {
                 res.send(`Removing ${name}...`)
               }
             })
-            .catch(error => {
+            .catch((error) => {
               console.log(error.message)
               debug(error.stack)
               res.status(500)
@@ -127,18 +127,18 @@ module.exports = function(app) {
         findPluginsAndWebapps()
           .then(([plugins, webapps]) => {
             getLatestServerVersion(app.config.version)
-              .then(serverVersion => {
+              .then((serverVersion) => {
                 const result = getAllModuleInfo(plugins, webapps, serverVersion)
                 res.send(JSON.stringify(result))
               })
-              .catch(err => {
+              .catch((err) => {
                 //could be that npmjs is down, so we can not get
                 //server version, but we have app store data
                 const result = getAllModuleInfo(plugins, webapps, '0.0.0')
                 res.send(JSON.stringify(result))
               })
           })
-          .catch(error => {
+          .catch((error) => {
             console.log(error.message)
             debug(error.stack)
             res.send(emptyAppStoreInfo(false))
@@ -157,7 +157,7 @@ module.exports = function(app) {
       const allWebapps = [].concat(embeddableWebapps).concat(webapps)
       return [
         plugins,
-        _.uniqBy(allWebapps, plugin => {
+        _.uniqBy(allWebapps, (plugin) => {
           return plugin.package.name
         })
       ]
@@ -165,15 +165,15 @@ module.exports = function(app) {
   }
 
   function getPlugin(id) {
-    return app.plugins.find(plugin => plugin.packageName === id)
+    return app.plugins.find((plugin) => plugin.packageName === id)
   }
 
   function getWebApp(id) {
     return (
-      (app.webapps && app.webapps.find(webapp => webapp.name === id)) ||
-      (app.addons && app.addons.find(webapp => webapp.name === id)) ||
+      (app.webapps && app.webapps.find((webapp) => webapp.name === id)) ||
+      (app.addons && app.addons.find((webapp) => webapp.name === id)) ||
       (app.embeddablewebapps &&
-        app.embeddablewebapps.find(webapp => webapp.name === id))
+        app.embeddablewebapps.find((webapp) => webapp.name === id))
     )
   }
 
@@ -212,7 +212,7 @@ module.exports = function(app) {
           isWebapp: false
         }
 
-        if (moduleInstallQueue.find(p => p.name === info.name)) {
+        if (moduleInstallQueue.find((p) => p.name === info.name)) {
           info.isWaiting = true
           all.installing.push(info)
         } else if (modulesInstalledSinceStartup[info.name]) {
@@ -233,14 +233,14 @@ module.exports = function(app) {
 
     if (process.env.PLUGINS_WITH_UPDATE_DISABLED) {
       let disabled = process.env.PLUGINS_WITH_UPDATE_DISABLED.split(',')
-      all.updates = all.updates.filter(info => !disabled.includes(info.name))
+      all.updates = all.updates.filter((info) => !disabled.includes(info.name))
     }
 
     return all
   }
 
   function getModulesInfo(modules, existing, result) {
-    modules.forEach(plugin => {
+    modules.forEach((plugin) => {
       const name = plugin.package.name
       const version = plugin.package.version
 
@@ -253,11 +253,11 @@ module.exports = function(app) {
         keywords: getKeywords(plugin.package),
         npmUrl: getNpmUrl(plugin),
         isPlugin: plugin.package.keywords.some(
-          v => v === 'signalk-node-server-plugin'
+          (v) => v === 'signalk-node-server-plugin'
         ),
-        isWebapp: plugin.package.keywords.some(v => v === 'signalk-webapp'),
+        isWebapp: plugin.package.keywords.some((v) => v === 'signalk-webapp'),
         isEmbeddableWebapp: plugin.package.keywords.some(
-          v => v === 'signalk-embeddable-webapp'
+          (v) => v === 'signalk-embeddable-webapp'
         )
       }
 
@@ -267,7 +267,7 @@ module.exports = function(app) {
         pluginInfo.installedVersion = installedModule.version
       }
 
-      if (moduleInstallQueue.find(p => p.name === name)) {
+      if (moduleInstallQueue.find((p) => p.name === name)) {
         pluginInfo.isWaiting = true
         addIfNotDuplicate(result.installing, pluginInfo)
       } else if (modulesInstalledSinceStartup[name]) {
@@ -296,7 +296,7 @@ module.exports = function(app) {
   }
 
   function addIfNotDuplicate(theArray, moduleInfo) {
-    if (!theArray.find(p => p.name === moduleInfo.name)) {
+    if (!theArray.find((p) => p.name === moduleInfo.name)) {
       theArray.push(moduleInfo)
     }
   }
@@ -308,7 +308,7 @@ module.exports = function(app) {
 
   function sendAppStoreChangedEvent() {
     findPluginsAndWebapps().then(([plugins, webapps]) => {
-      getLatestServerVersion(app.config.version).then(serverVersion => {
+      getLatestServerVersion(app.config.version).then((serverVersion) => {
         const result = getAllModuleInfo(plugins, webapps, serverVersion)
         app.emit('serverevent', {
           type: 'APP_STORE_CHANGED',
@@ -322,7 +322,7 @@ module.exports = function(app) {
   function installSKModule(module, version) {
     if (isTheServerModule(module, app.config)) {
       try {
-        app.providers.forEach(providerHolder => {
+        app.providers.forEach((providerHolder) => {
           if (
             typeof providerHolder.pipeElements[0].pipeline[0].options
               .filename !== 'undefined'
@@ -359,15 +359,15 @@ module.exports = function(app) {
       app.config,
       module,
       version,
-      output => {
+      (output) => {
         modulesInstalledSinceStartup[module].output.push(output)
         console.log(`stdout: ${output}`)
       },
-      output => {
+      (output) => {
         modulesInstalledSinceStartup[module].output.push(output)
         console.error(`stderr: ${output}`)
       },
-      code => {
+      (code) => {
         debug('close: ' + module)
         modulesInstalledSinceStartup[module].code = code
         moduleInstalling = undefined
@@ -389,5 +389,5 @@ module.exports = function(app) {
 }
 
 function packageNameIs(name) {
-  return x => x.package.name === name
+  return (x) => x.package.name === name
 }

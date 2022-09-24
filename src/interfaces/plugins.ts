@@ -33,8 +33,7 @@ import { DeltaInputHandler } from '../deltachain'
 import { listAllSerialPorts, Ports } from '../serialports'
 const debug = createDebug('signalk-server:interfaces:plugins')
 
-
-import {modulesWithKeyword} from '../modules'
+import { modulesWithKeyword } from '../modules'
 
 const put = require('../put')
 const _putPath = put.putPath
@@ -150,7 +149,6 @@ module.exports = (theApp: any) => {
         express.static(getPluginConfigPublic(theApp))
       )
 
-
       theApp.get(backwardsCompat('/plugins'), (req: Request, res: Response) => {
         const providerStatus = theApp.getProviderStatus()
 
@@ -163,8 +161,8 @@ module.exports = (theApp: any) => {
             getPluginResponseInfo(plugin, providerStatus)
           )
         )
-          .then(json => res.json(json))
-          .catch(err => {
+          .then((json) => res.json(json))
+          .catch((err) => {
             console.error(err)
             res.status(500)
             res.send(err)
@@ -234,7 +232,7 @@ module.exports = (theApp: any) => {
             data
           })
         })
-        .catch(err => {
+        .catch((err) => {
           reject(err)
         })
     })
@@ -545,7 +543,7 @@ module.exports = (theApp: any) => {
     try {
       const pluginConstructor: (
         app: ServerAPI
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
       ) => PluginInfo = require(path.join(location, packageName))
       plugin = pluginConstructor(appCopy)
     } catch (e: any) {
@@ -585,7 +583,7 @@ module.exports = (theApp: any) => {
     }
     appCopy.registerActionHandler = appCopy.registerPutHandler
 
-    appCopy.registerHistoryProvider = provider => {
+    appCopy.registerHistoryProvider = (provider) => {
       app.registerHistoryProvider(provider)
       onStopHandlers[plugin.id].push(() => {
         app.unregisterHistoryProvider(provider)
@@ -596,7 +594,7 @@ module.exports = (theApp: any) => {
     const restart = (newConfiguration: any) => {
       const pluginOptions = getPluginOptions(plugin.id)
       pluginOptions.configuration = newConfiguration
-      savePluginOptions(plugin.id, pluginOptions, err => {
+      savePluginOptions(plugin.id, pluginOptions, (err) => {
         if (err) {
           console.error(err)
         } else {
@@ -648,7 +646,7 @@ module.exports = (theApp: any) => {
     })
 
     router.post('/config', (req: Request, res: Response) => {
-      savePluginOptions(plugin.id, req.body, err => {
+      savePluginOptions(plugin.id, req.body, (err) => {
         if (err) {
           console.error(err)
           res.status(500)

@@ -43,7 +43,7 @@ export default class DeltaCache {
 
   constructor(app: SignalKServer, streambundle: StreamBundle) {
     this.app = app
-    streambundle.keys.onValue(key => {
+    streambundle.keys.onValue((key) => {
       streambundle.getBus(key).onValue(this.onValue.bind(this))
     })
   }
@@ -67,7 +67,7 @@ export default class DeltaCache {
     if (msg.path.length !== 0) {
       leaf[sourceRef] = msg
     } else if (msg.value) {
-      _.keys(msg.value).forEach(key => {
+      _.keys(msg.value).forEach((key) => {
         if (!leaf[key]) {
           leaf[key] = {}
         }
@@ -155,8 +155,8 @@ export default class DeltaCache {
 
   getCachedDeltas(contextFilter: ContextMatcher, user?: string, key?: string) {
     const contexts: any[] = []
-    _.keys(this.cache).forEach(type => {
-      _.keys(this.cache[type]).forEach(id => {
+    _.keys(this.cache).forEach((type) => {
+      _.keys(this.cache[type]).forEach((id) => {
         const context = `${type}.${id}`
         if (contextFilter({ context })) {
           contexts.push(this.cache[type][id])

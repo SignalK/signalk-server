@@ -40,7 +40,7 @@ const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
 import { SERVERROUTESPREFIX } from './constants'
 
-module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
+module.exports = function (app, saveSecurityConfig, getSecurityConfig) {
   let securityWasEnabled
   let restoreFilePath
 
@@ -77,7 +77,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
             /%ADDONSCRIPTS%/g,
             addonScripts
               .map(
-                moduleInfo =>
+                (moduleInfo) =>
                   `<script src="/${moduleInfo.name}/remoteEntry.js"></script>`
               )
               .join('\n')
@@ -106,7 +106,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   app.put(`${SERVERROUTESPREFIX}/restart`, (req, res, next) => {
     if (app.securityStrategy.allowRestart(req)) {
       res.send('Restarting...')
-      setTimeout(function() {
+      setTimeout(function () {
         process.exit(0)
       }, 2000)
     } else {
@@ -151,7 +151,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
       let config = getSecurityConfig(app)
       config = app.securityStrategy.setConfig(config, req.body)
-      saveSecurityConfig(app, config, err => {
+      saveSecurityConfig(app, config, (err) => {
         if (err) {
           console.log(err)
           res.status(500)
@@ -171,7 +171,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
         console.log(err)
         res.status(500).send(failure)
       } else if (config) {
-        saveSecurityConfig(app, config, theError => {
+        saveSecurityConfig(app, config, (theError) => {
           if (theError) {
             console.log(theError)
             res.status(500).send('Unable to save configuration change')
@@ -354,11 +354,11 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
     app.securityStrategy
       .requestAccess(config, { accessRequest: req.body }, ip)
-      .then(reply => {
+      .then((reply) => {
         res.status(reply.state === 'PENDING' ? 202 : reply.statusCode)
         res.json(reply)
       })
-      .catch(err => {
+      .catch((err) => {
         console.log(err.stack)
         res.status(500).send(err.message)
       })
@@ -366,10 +366,10 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
   app.get(`${skPrefix}/requests/:id`, (req, res) => {
     queryRequest(req.params.id)
-      .then(reply => {
+      .then((reply) => {
         res.json(reply)
       })
-      .catch(err => {
+      .catch((err) => {
         console.log(err)
         res.status(500)
         res.send(`Unable to check request: ${err.message}`)
@@ -405,7 +405,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
     const availableInterfaces = require('./interfaces')
     // tslint:disable-next-line:variable-name
-    _.forIn(availableInterfaces, function(_interface, name) {
+    _.forIn(availableInterfaces, function (_interface, name) {
       settings.interfaces[name] =
         _.isUndefined(app.config.settings.interfaces) ||
         _.isUndefined(app.config.settings.interfaces[name]) ||
@@ -429,7 +429,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
           res.status(400).send('userId or password missing or too short')
           return
         }
-        skConfig.writeSettingsFile(app, app.config.settings, err => {
+        skConfig.writeSettingsFile(app, app.config.settings, (err) => {
           if (err) {
             console.log(err)
             res.status(500).send('Unable to save to settings file')
@@ -458,7 +458,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
             response.status(500)
             response.send('Unable to add user')
           } else {
-            saveSecurityConfig(app, theConfig, theError => {
+            saveSecurityConfig(app, theConfig, (theError) => {
               if (theError) {
                 console.log(theError)
                 response.status(500)
@@ -527,7 +527,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       app.config.settings.logCountToKeep = Number(settings.logCountToKeep)
     }
 
-    skConfig.writeSettingsFile(app, app.config.settings, err => {
+    skConfig.writeSettingsFile(app, app.config.settings, (err) => {
       if (err) {
         res.status(500).send('Unable to save to settings file')
       } else {
@@ -636,7 +636,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
       delete self.communication
     }
 
-    skConfig.writeDefaultsFile(app, data, err => {
+    skConfig.writeDefaultsFile(app, data, (err) => {
       if (err) {
         res.status(500).send('Unable to save to defaults file')
       } else {
@@ -718,7 +718,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
         .then(() => {
           res.send('Vessel changed')
         })
-        .catch(err => {
+        .catch((err) => {
           res.status(500).send('Unable to save to defaults file')
         })
     }
@@ -730,7 +730,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
   app.get(`${SERVERROUTESPREFIX}/serialports`, (req, res, next) => {
     listAllSerialPorts()
-      .then(ports => res.json(ports))
+      .then((ports) => res.json(ports))
       .catch(next)
   })
 
@@ -747,7 +747,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   app.put(`${SERVERROUTESPREFIX}/sourcePriorities`, (req, res) => {
     app.config.settings.sourcePriorities = req.body
     app.activateSourcePriorities()
-    skConfig.writeSettingsFile(app, app.config.settings, err => {
+    skConfig.writeSettingsFile(app, app.config.settings, (err) => {
       if (err) {
         res
           .status(500)
@@ -777,7 +777,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
   app.get(`${skPrefix}/apps/list`, (req, res) => {
     res.json(
-      app.webapps.map(webapp => {
+      app.webapps.map((webapp) => {
         return {
           name: webapp.name,
           version: webapp.version,
@@ -801,11 +801,11 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     return new Promise((resolve, reject) => {
       readdir(restorePath)
         .catch(reject)
-        .then(filnames => {
+        .then((filnames) => {
           const goodFiles = filnames.filter(
-            name => safeFiles.indexOf(name) !== -1
+            (name) => safeFiles.indexOf(name) !== -1
           )
-          filnames.forEach(name => {
+          filnames.forEach((name) => {
             try {
               const stats = fs.lstatSync(path.join(restorePath, name))
               if (stats.isDirectory()) {
@@ -843,8 +843,8 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
     }
 
     listSafeRestoreFiles(restoreFilePath)
-      .then(files => {
-        const wanted = files.filter(name => {
+      .then((files) => {
+        const wanted = files.filter((name) => {
           const stats = fs.lstatSync(path.join(restoreFilePath, name))
           return req.body[name]
         })
@@ -861,7 +861,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
             path.join(restoreFilePath, name),
             path.join(app.config.configPath, name),
             { stopOnErr: true },
-            err => {
+            (err) => {
               if (err) {
                 sendRestoreStatus('error', err.message)
                 hasError = true
@@ -874,21 +874,21 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
           restoreModules(
             app.config,
-            output => {
+            (output) => {
               sendRestoreStatus('Installing Plugins', `${output}`, 1)
               console.log(`stdout: ${output}`)
             },
-            output => {
+            (output) => {
               //sendRestoreStatus('Error', `${output}`, 1)
               console.error(`stderr: ${output}`)
             },
-            code => {
+            (code) => {
               sendRestoreStatus('Complete', 'Please restart', 1)
             }
           )
         }
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(err)
         sendRestoreStatus('error', err.message)
       })
@@ -916,7 +916,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
         file
           .pipe(fs.createWriteStream(zipFile))
-          .on('error', err => {
+          .on('error', (err) => {
             console.error(err)
             res.status(500).send(err.message)
           })
@@ -925,17 +925,17 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
 
             zipStream
               .pipe(unzipStream)
-              .on('error', err => {
+              .on('error', (err) => {
                 console.error(err)
                 res.status(500).send(err.message)
               })
               .on('close', () => {
                 fs.unlinkSync(zipFile)
                 listSafeRestoreFiles(restoreFilePath)
-                  .then(files => {
+                  .then((files) => {
                     res.send(files)
                   })
-                  .catch(err => {
+                  .catch((err) => {
                     console.error(err)
                     res.status(500).send(err.message)
                   })
@@ -946,11 +946,11 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
         res.status(500).send(err.message)
       }
     })
-    busboy.on('error', err => {
+    busboy.on('error', (err) => {
       console.log(err)
       res.status(500).send(err.message)
     })
-    busboy.on('finish', function() {
+    busboy.on('finish', function () {
       console.log('finish')
     })
     req.pipe(busboy)
@@ -959,9 +959,9 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   app.use(zip())
 
   app.get(`${SERVERROUTESPREFIX}/backup`, (req, res) => {
-    readdir(app.config.configPath).then(filenames => {
+    readdir(app.config.configPath).then((filenames) => {
       const files = filenames
-        .filter(file => {
+        .filter((file) => {
           return (
             (file !== 'node_modules' ||
               (file === 'node_modules' &&
@@ -971,7 +971,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
             file !== '.npmrc'
           )
         })
-        .map(name => {
+        .map((name) => {
           const filename = path.join(app.config.configPath, name)
           return {
             path: filename,
@@ -986,7 +986,7 @@ module.exports = function(app, saveSecurityConfig, getSecurityConfig) {
   })
 }
 
-const setNoCache = res => {
+const setNoCache = (res) => {
   res.header('Cache-Control', 'no-cache, no-store, must-revalidate')
   res.header('Pragma', 'no-cache')
   res.header('Expires', 0)

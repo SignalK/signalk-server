@@ -16,7 +16,7 @@
 
 const { isUndefined } = require('lodash')
 
-module.exports = function(app) {
+module.exports = function (app) {
   'use strict'
 
   if (app.get('env') === 'development') {

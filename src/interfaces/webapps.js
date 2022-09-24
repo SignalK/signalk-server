@@ -23,34 +23,34 @@ const modulesWithKeyword = require('../modules').modulesWithKeyword
 import { SERVERROUTESPREFIX } from '../constants'
 import { uniqBy } from 'lodash'
 
-module.exports = function(app) {
+module.exports = function (app) {
   return {
-    start: function() {
+    start: function () {
       app.webapps = mountWebModules(app, 'signalk-webapp').map(
-        moduleData => moduleData.metadata
+        (moduleData) => moduleData.metadata
       )
       app.addons = mountWebModules(app, 'signalk-node-server-addon').map(
-        moduleData => moduleData.metadata
+        (moduleData) => moduleData.metadata
       )
       app.embeddablewebapps = mountWebModules(
         app,
         'signalk-embeddable-webapp'
-      ).map(moduleData => moduleData.metadata)
+      ).map((moduleData) => moduleData.metadata)
       app.pluginconfigurators = mountWebModules(
         app,
         'signalk-plugin-configurator'
-      ).map(moduleData => moduleData.metadata)
+      ).map((moduleData) => moduleData.metadata)
       mountApis(app)
     },
     // tslint:disable-next-line: no-empty
-    stop: function() {}
+    stop: function () {}
   }
 }
 
 function mountWebModules(app, keyword) {
   debug(`mountWebModules:${keyword}`)
   const modules = modulesWithKeyword(app.config, keyword)
-  modules.forEach(moduleData => {
+  modules.forEach((moduleData) => {
     let webappPath = path.join(moduleData.location, moduleData.module)
     if (fs.existsSync(webappPath + '/public/')) {
       webappPath += '/public/'
@@ -62,11 +62,11 @@ function mountWebModules(app, keyword) {
 }
 
 function mountApis(app) {
-  app.get(`${SERVERROUTESPREFIX}/webapps`, function(req, res) {
+  app.get(`${SERVERROUTESPREFIX}/webapps`, function (req, res) {
     const allWebapps = [].concat(app.webapps).concat(app.embeddablewebapps)
     res.json(uniqBy(allWebapps, 'name'))
   })
-  app.get(`${SERVERROUTESPREFIX}/addons`, function(req, res) {
+  app.get(`${SERVERROUTESPREFIX}/addons`, function (req, res) {
     res.json(app.addons)
   })
 }

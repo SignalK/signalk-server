@@ -122,7 +122,7 @@ export function saveSecurityConfig(
   } else {
     //const config = JSON.parse(JSON.stringify(data))
     const configPath = pathForSecurityConfig(app)
-    writeFile(configPath, JSON.stringify(data, null, 2), err => {
+    writeFile(configPath, JSON.stringify(data, null, 2), (err) => {
       if (!err) {
         chmodSync(configPath, '600')
       }

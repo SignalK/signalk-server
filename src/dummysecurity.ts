@@ -19,7 +19,7 @@
 
 /* tslint:disable */
 
-export default function() {
+export default function () {
   return {
     getConfiguration: () => {
       return {}
@@ -69,11 +69,11 @@ export default function() {
 
     deleteUser: (_config: any, _username: any, _callback: any) => {},
 
-    shouldAllowWrite: function(_req: any, _delta: any) {
+    shouldAllowWrite: function (_req: any, _delta: any) {
       return true
     },
 
-    shouldAllowPut: function(
+    shouldAllowPut: function (
       _req: any,
       _context: any,
       _source: any,
