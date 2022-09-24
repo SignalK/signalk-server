@@ -16,8 +16,8 @@
 
 import { createDebug } from './debug'
 const debug = createDebug('signalk:categories')
-// tslint:disable-next-line:no-var-requires
-const { getKeywords } = require('./modules')
+
+import { getKeywords, NpmPackageData } from './modules'
 
 const NEW_CATEGORY = 'New/Updated'
 
@@ -27,12 +27,7 @@ const isDeprecated = (packageName: string) =>
   DEFAULT_MODULE_CAT_KEYWORDS[packageName] &&
   DEFAULT_MODULE_CAT_KEYWORDS[packageName].includes(CAT_DEPRECATED)
 
-interface NamedDated {
-  name: string
-  date: string
-}
-
-function getCategories(thePackage: NamedDated): string[] {
+function getCategories(thePackage: NpmPackageData): string[] {
   if (isDeprecated(thePackage.name)) {
     return ['Deprecated']
   }

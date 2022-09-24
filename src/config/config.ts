@@ -278,7 +278,7 @@ function getBaseDeltasPath(app: ConfigApp) {
   return path.join(app.config.configPath, defaultsFile)
 }
 
-function readDefaultsFile(app: ConfigApp) {
+export function readDefaultsFile(app: ConfigApp) {
   const defaultsPath = getDefaultsPath(app)
   const data = fs.readFileSync(defaultsPath)
   return JSON.parse(data.toString())
@@ -325,15 +325,15 @@ export function sendBaseDeltas(app: ConfigApp) {
   })
 }
 
-function writeDefaultsFile(app: ConfigApp, defaults: any, cb: any) {
+export function writeDefaultsFile(app: ConfigApp, defaults: any, cb: any) {
   fs.writeFile(getDefaultsPath(app), JSON.stringify(defaults, null, 2), cb)
 }
 
-function writeBaseDeltasFileSync(app: ConfigApp) {
+export function writeBaseDeltasFileSync(app: ConfigApp) {
   app.config.baseDeltaEditor.saveSync(getBaseDeltasPath(app))
 }
 
-function writeBaseDeltasFile(app: ConfigApp) {
+export function writeBaseDeltasFile(app: ConfigApp) {
   return app.config.baseDeltaEditor.save(getBaseDeltasPath(app))
 }
 
@@ -390,7 +390,7 @@ function readSettingsFile(app: ConfigApp) {
   }
 }
 
-function writeSettingsFile(app: ConfigApp, settings: any, cb: any) {
+export function writeSettingsFile(app: ConfigApp, settings: any, cb: any) {
   if (!disableWriteSettings) {
     const settingsPath = getSettingsFilename(app)
     fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), cb)

@@ -30,9 +30,11 @@ interface ModuleData {
   location: string
 }
 
-interface NpmPackageData {
+export interface NpmPackageData {
   name: string
   version: string
+  date: string
+  keywords: string[]
 }
 
 interface NpmModuleData {
@@ -145,7 +147,7 @@ function removeModule(
   runNpm(config, name, null, 'remove', onData, onErr, onClose)
 }
 
-function restoreModules(
+export function restoreModules(
   config: Config,
   onData: () => any,
   onErr: (err: Error) => any,
@@ -306,7 +308,7 @@ export function checkForNewServerVersion(
     })
 }
 
-function getAuthor(thePackage: Package): string {
+export function getAuthor(thePackage: Package): string {
   debug(thePackage.name + ' author: ' + thePackage.author)
   return (
     (thePackage.author && (thePackage.author.name || thePackage.author.email)) +
@@ -319,12 +321,7 @@ function getAuthor(thePackage: Package): string {
   )
 }
 
-interface NamedWithKeywords {
-  name: string
-  keywords: string[]
-}
-
-function getKeywords(thePackage: NamedWithKeywords): string[] {
+export function getKeywords(thePackage: NpmPackageData): string[] {
   const keywords = thePackage.keywords
   debug('%s keywords: %j', thePackage.name, keywords)
   return keywords

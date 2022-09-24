@@ -88,7 +88,7 @@ function updateRequest(
   })
 }
 
-function queryRequest(requestId) {
+export function queryRequest(requestId) {
   return new Promise((resolve, reject) => {
     const request = requests[requestId]
 

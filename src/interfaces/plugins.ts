@@ -180,7 +180,7 @@ module.exports = (theApp: any) => {
       let data: { enabled: boolean } | null = null
       try {
         data = getPluginOptions(plugin.id)
-      } catch (e) {
+      } catch (e: any) {
         console.error(e.code + ' ' + e.path)
       }
 
@@ -275,7 +275,7 @@ module.exports = (theApp: any) => {
     try {
       fs.writeFileSync(pathForPluginId(pluginId), JSON.stringify(data, null, 2))
       callback(null)
-    } catch (err) {
+    } catch (err: any) {
       callback(err)
     }
   }
@@ -303,7 +303,7 @@ module.exports = (theApp: any) => {
       }
       debug(optionsAsString)
       return options
-    } catch (e) {
+    } catch (e: any) {
       console.error(
         'Could not parse JSON options:' + e.message + ' ' + optionsAsString
       )
@@ -476,7 +476,7 @@ module.exports = (theApp: any) => {
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
-    } catch (e) {
+    } catch (e: any) {
       console.error('error starting plugin: ' + e)
       console.error(e.stack)
       app.setProviderError(plugin.name, `Failed to start: ${e.message}`)
@@ -550,7 +550,7 @@ module.exports = (theApp: any) => {
         app: ServerAPI
       ) => PluginInfo = require(path.join(location, packageName))
       plugin = pluginConstructor(appCopy)
-    } catch (e) {
+    } catch (e: any) {
       console.error(`${packageName} failed to start: ${e.message}`)
       console.error(e)
       app.setProviderError(packageName, `Failed to start: ${e.message}`)

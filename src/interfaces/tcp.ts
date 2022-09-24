@@ -57,7 +57,7 @@ module.exports = (app: SignalKServer) => {
             if (s.length > 0) {
               try {
                 return JSON.parse(s)
-              } catch (e) {
+              } catch (e: any) {
                 console.log(e.message)
               }
             }
@@ -140,7 +140,7 @@ function socketMessageHandler(
       debug.enabled && debug(`unsubscribe:${JSON.stringify(msg)}`)
       try {
         app.subscriptionmanager.unsubscribe(msg, unsubscribes)
-      } catch (e) {
+      } catch (e: any) {
         console.error(e.message)
         socket.write(JSON.stringify(e.message))
         socket.end(() => {
