@@ -120,7 +120,7 @@ module.exports = function (app) {
         msgs.forEach((msg) => {
           if (msg.put) {
             puts.push(
-              new Promise((resolve, reject) => {
+              new Promise((resolve) => {
                 setTimeout(() => {
                   resolve('Timed out waiting for put result')
                 }, 5000)

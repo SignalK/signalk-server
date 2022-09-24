@@ -1,8 +1,7 @@
+/* eslint-disable no-undef */
 const { expect } = require('chai')
 const { getConfigDirectory } = require('./config')
-const { appPath } = require('./get')
 const path = require('path')
-const fs = require('fs')
 
 const app = {
   argv: {},

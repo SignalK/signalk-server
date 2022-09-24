@@ -16,14 +16,10 @@
 
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:tokensecurity')
-const util = require('util')
 const jwt = require('jsonwebtoken')
 const _ = require('lodash')
-const fs = require('fs')
-const path = require('path')
 const bcrypt = require('bcryptjs')
 const getSourceId = require('@signalk/signalk-schema').getSourceId
-const { v4: uuidv4 } = require('uuid')
 const { InvalidTokenError } = require('./security')
 const {
   createRequest,
@@ -40,7 +36,6 @@ const permissionDeniedMessage =
   "You do not have permission to view this resource, <a href='/admin/#/login'>Please Login</a>"
 
 const skPrefix = '/signalk/v1'
-const skAPIPrefix = `${skPrefix}/api`
 const skAuthPrefix = `${skPrefix}/auth`
 import { SERVERROUTESPREFIX } from './constants'
 
@@ -48,7 +43,6 @@ const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
 
 module.exports = function (app, config) {
   const strategy = {}
-  const accessRequests = []
 
   let {
     expiration = '1d',
@@ -129,7 +123,7 @@ module.exports = function (app, config) {
     }
   }
 
-  function handlePermissionDenied(req, res, next) {
+  function handlePermissionDenied(req, res) {
     res.status(401)
     if (req.accepts('application/json') && !req.accepts('text/html')) {
       res.set('Content-Type', 'application/json')
@@ -139,7 +133,7 @@ module.exports = function (app, config) {
     }
   }
 
-  function writeAuthenticationMiddleware(redirect) {
+  function writeAuthenticationMiddleware() {
     return function (req, res, next) {
       if (!getIsEnabled()) {
         return next()
@@ -221,9 +215,6 @@ module.exports = function (app, config) {
         })
     })
 
-    // tslint:disable-next-line:variable-name
-    const do_redir = http_authorize(false)
-
     app.use('/', http_authorize(false, true)) //semicolon required
     ;[
       '/apps',
@@ -245,26 +236,6 @@ module.exports = function (app, config) {
       res.clearCookie('JAUTHENTICATION')
       res.send('Logout OK')
     })
-
-    function readOnlyAuthenticationMiddleware(redirect) {
-      return function (req, res, next) {
-        if (!getIsEnabled()) {
-          return next()
-        }
-        debug('skIsAuthenticated: ' + req.skIsAuthenticated)
-        if (req.skIsAuthenticated) {
-          if (
-            ['admin', 'readonly', 'readwrite'].find(
-              (type) => req.skPrincipal.permissions === type
-            )
-          ) {
-            return next()
-          }
-        }
-        handlePermissionDenied(req, res, next)
-      }
-    }
-    // tslint:disable-next-line:semicolon
     ;[
       '/restart',
       '/runDiscovery',
@@ -1048,7 +1019,7 @@ module.exports = function (app, config) {
         token: request.token
       }
     })
-      .then((reply) => {
+      .then(() => {
         cb(null, theConfig)
         sendAccessRequestsUpdate()
       })
@@ -1096,7 +1067,6 @@ module.exports = function (app, config) {
           }
 
           let alertMessage
-          let response
           if (accessRequest.clientId) {
             if (!options.allowDeviceAccessRequests) {
               updateRequest(request.requestId, 'COMPLETED', { statusCode: 403 })

@@ -84,7 +84,7 @@ module.exports.runDiscovery = function (app) {
   function discoverGoFree() {
     const socket = dgram.createSocket('udp4')
     const found = []
-    socket.on('message', function (buffer, remote) {
+    socket.on('message', function (buffer) {
       const msg = buffer.toString('utf8')
       if (msg[0] === '{') {
         try {
@@ -152,7 +152,7 @@ module.exports.runDiscovery = function (app) {
   function discoverWLN10() {
     if (!findUDPProvider('2000')) {
       let socket = dgram.createSocket('udp4')
-      socket.on('message', function (buffer, remote) {
+      socket.on('message', function (buffer) {
         const msg = buffer.toString('utf8')
         if (msg[0] === '$') {
           socket.close()

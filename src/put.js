@@ -1,7 +1,6 @@
 const _ = require('lodash')
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:put')
-const { v4: uuidv4 } = require('uuid')
 const { createRequest, updateRequest } = require('./requestResponse')
 const skConfig = require('./config/config')
 
@@ -9,6 +8,7 @@ const pathPrefix = '/signalk'
 const versionPrefix = '/v1'
 const apiPathPrefix = pathPrefix + versionPrefix + '/api/'
 
+// eslint-disable-next-line no-unused-vars
 const State = {
   pending: 'PENDING',
   completed: 'COMPLETED',
@@ -17,6 +17,7 @@ const State = {
   noSource: 'NO SOURCE'
 }
 
+// eslint-disable-next-line no-unused-vars
 const Result = {
   success: 'SUCCESS',
   failure: 'FAILURE'
@@ -30,7 +31,7 @@ module.exports = {
     app.registerActionHandler = registerActionHandler
     app.deRegisterActionHandler = deRegisterActionHandler
 
-    app.put(apiPathPrefix + '*', function (req, res, next) {
+    app.put(apiPathPrefix + '*', function (req, res) {
       let path = String(req.path).replace(apiPathPrefix, '')
 
       const value = req.body
@@ -114,7 +115,7 @@ module.exports = {
           .then(() => {
             cb({ state: 'SUCCESS' })
           })
-          .catch((err) => {
+          .catch(() => {
             cb({ state: 'FAILURE', message: 'Unable to save to defaults file' })
           })
       }
@@ -187,6 +188,7 @@ function putPath(app, contextParam, path, body, req, requestId, updateCb) {
         }
 
         if (handler) {
+          // eslint-disable-next-line no-inner-declarations
           function fixReply(reply) {
             if (reply.state === 'FAILURE') {
               reply.state = 'COMPLETED'

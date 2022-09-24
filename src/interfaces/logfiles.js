@@ -30,7 +30,7 @@ module.exports = function (app) {
 
 function mountApi(app) {
   app.securityStrategy.addAdminMiddleware('/logfiles')
-  app.get(`${SERVERROUTESPREFIX}/logfiles/`, function (req, res, next) {
+  app.get(`${SERVERROUTESPREFIX}/logfiles/`, function (req, res) {
     listLogFiles(app, (err, files) => {
       if (err) {
         console.error(err)
@@ -41,16 +41,13 @@ function mountApi(app) {
       res.json(files)
     })
   })
-  app.get(
-    `${SERVERROUTESPREFIX}/logfiles/:filename`,
-    function (req, res, next) {
-      const sanitizedLogfile = path
-        .join(getFullLogDir(app), req.params.filename)
-        .replace(/\.\./g, '')
-      res.sendFile(sanitizedLogfile)
-    }
-  )
-  app.get(`${SERVERROUTESPREFIX}/ziplogs`, function (req, res, next) {
+  app.get(`${SERVERROUTESPREFIX}/logfiles/:filename`, function (req, res) {
+    const sanitizedLogfile = path
+      .join(getFullLogDir(app), req.params.filename)
+      .replace(/\.\./g, '')
+    res.sendFile(sanitizedLogfile)
+  })
+  app.get(`${SERVERROUTESPREFIX}/ziplogs`, function (req, res) {
     const boatName = app.config.vesselName
       ? app.config.vesselName
       : app.config.vesselMMSI

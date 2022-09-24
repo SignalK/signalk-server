@@ -15,8 +15,6 @@
  */
 
 const Bacon = require('baconjs')
-const _ = require('lodash')
-const { getMetadata } = require('@signalk/signalk-schema')
 
 function StreamBundle(app, selfId) {
   this.selfContext = 'vessels.' + selfId
@@ -63,27 +61,6 @@ StreamBundle.prototype.pushDelta = function (delta) {
   } catch (e) {
     console.error(e)
   }
-}
-
-function getPathsFromObjectValue(objectValue) {
-  return Object.keys(objectValue).reduce((acc, propName) => {
-    const propValue = objectValue[propName]
-    if (_.isObject(propValue)) {
-      accumulatePathsFromValues(acc, propName + '.', propValue)
-    } else {
-      acc.push(propName)
-    }
-    return acc
-  }, [])
-}
-
-function accumulatePathsFromValues(acc, prefix, objectValue) {
-  Object.keys(objectValue).forEach((propName) => {
-    const propValue = objectValue[propName]
-    if (_.isObject(propValue)) {
-      accumulatePathsFromValues(acc, `${prefix}.${propName}`, propValue)
-    }
-  })
 }
 
 StreamBundle.prototype.push = function (path, pathValueWithSourceAndContext) {

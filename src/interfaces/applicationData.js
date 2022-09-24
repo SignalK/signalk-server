@@ -254,7 +254,6 @@ module.exports = function (app) {
       return
     }
 
-    const config = JSON.parse(JSON.stringify(data))
     fs.writeFile(
       pathForApplicationData(req, appid, version, isUser),
       JSON.stringify(data, null, 2),

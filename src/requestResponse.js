@@ -10,7 +10,7 @@ const pruneIntervalRate = 15 * 60 * 1000
 let pruneInterval
 
 function createRequest(app, type, clientRequest, user, clientIp, updateCb) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const requestId = clientRequest.requestId
       ? clientRequest.requestId
       : uuidv4()

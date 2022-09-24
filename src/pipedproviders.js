@@ -17,7 +17,6 @@
 import { createDebug } from './debug'
 const deep = require('deep-get-set')
 const DevNull = require('dev-null-stream')
-const _ = require('lodash')
 
 module.exports = function (app) {
   function createPipedProvider(providerConfig) {

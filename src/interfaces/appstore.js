@@ -131,7 +131,7 @@ module.exports = function (app) {
                 const result = getAllModuleInfo(plugins, webapps, serverVersion)
                 res.send(JSON.stringify(result))
               })
-              .catch((err) => {
+              .catch(() => {
                 //could be that npmjs is down, so we can not get
                 //server version, but we have app store data
                 const result = getAllModuleInfo(plugins, webapps, '0.0.0')

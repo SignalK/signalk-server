@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-const flatMap = require('flatmap')
 const _ = require('lodash')
 const ports = require('../ports')
 const cookie = require('cookie')
@@ -25,14 +24,11 @@ const {
   queryRequest
 } = require('../requestResponse')
 const { putPath } = require('../put')
-const skConfig = require('../config/config')
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
 const Primus = require('primus')
-
-const supportedQuerySubscribeValues = ['self', 'all']
 
 module.exports = function (app) {
   'use strict'
@@ -50,7 +46,7 @@ module.exports = function (app) {
   api.numClients = function () {
     let count = 0
     primuses.forEach((primus) =>
-      primus.forEach((spark, id, connections) => {
+      primus.forEach(() => {
         count++
       })
     )
@@ -95,7 +91,7 @@ module.exports = function (app) {
                   spark.removeListener('data', listener)
                 }
               })
-              .catch((err) => {
+              .catch(() => {
                 console.error(`could not update requestId ${requestId}`)
               })
           }
@@ -320,7 +316,7 @@ module.exports = function (app) {
       .then((reply) => {
         spark.write(reply)
       })
-      .catch((err) => {
+      .catch(() => {
         spark.write({
           requestId: msg.requestId,
           statusCode: 404
@@ -426,24 +422,6 @@ module.exports = function (app) {
   }
 
   return api
-}
-
-function normalizeDelta(delta) {
-  return flatMap(delta.updates, normalizeUpdate).map(function (update) {
-    return {
-      context: delta.context,
-      updates: [update]
-    }
-  })
-}
-
-function normalizeUpdate(update) {
-  return update.values.map(function (value) {
-    return {
-      source: update.source,
-      values: [value]
-    }
-  })
 }
 
 function createPrimusAuthorize(authorizeWS) {
@@ -705,11 +683,11 @@ function handleRealtimeConnection(app, spark, onChange) {
 }
 
 function sendLatestDeltas(app, deltaCache, selfContext, spark) {
-  let deltaFilter = (delta) => false
+  let deltaFilter = () => false
   if (!spark.query.subscribe || spark.query.subscribe === 'self') {
     deltaFilter = (delta) => delta.context === selfContext
   } else if (spark.query.subscribe === 'all') {
-    deltaFilter = (delta) => true
+    deltaFilter = () => true
   }
 
   deltaCache

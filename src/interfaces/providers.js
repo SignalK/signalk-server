@@ -28,11 +28,11 @@ module.exports = function (app) {
     })
   })
 
-  app.get(`${SERVERROUTESPREFIX}/providers`, (req, res, next) => {
+  app.get(`${SERVERROUTESPREFIX}/providers`, (req, res) => {
     res.json(getProviders(app.config.settings.pipedProviders))
   })
 
-  app.put(`${SERVERROUTESPREFIX}/runDiscovery`, (req, res, next) => {
+  app.put(`${SERVERROUTESPREFIX}/runDiscovery`, (req, res) => {
     app.discoveredProviders = []
     runDiscovery(app)
     res.send('Discovery started')
@@ -68,15 +68,15 @@ module.exports = function (app) {
     })
   }
 
-  app.put(`${SERVERROUTESPREFIX}/providers/:id`, (req, res, next) => {
+  app.put(`${SERVERROUTESPREFIX}/providers/:id`, (req, res) => {
     updateProvider(req.params.id, req.body, res)
   })
 
-  app.post(`${SERVERROUTESPREFIX}/providers`, (req, res, next) => {
+  app.post(`${SERVERROUTESPREFIX}/providers`, (req, res) => {
     updateProvider(null, req.body, res)
   })
 
-  app.delete(`${SERVERROUTESPREFIX}/providers/:id`, (req, res, next) => {
+  app.delete(`${SERVERROUTESPREFIX}/providers/:id`, (req, res) => {
     const idx = app.config.settings.pipedProviders.findIndex(
       (p) => p.id === req.params.id
     )

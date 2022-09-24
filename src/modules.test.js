@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 const chai = require('chai')
 const _ = require('lodash')
 const fs = require('fs')
@@ -79,7 +80,7 @@ describe('checkForNewServerVersion', () => {
   it('normal version does not upgrade to beta', (done) => {
     checkForNewServerVersion(
       '1.17.0',
-      (err) => {
+      () => {
         done('callback should not be called')
       },
       () => Promise.resolve('1.18.0-beta.1')
@@ -135,7 +136,7 @@ describe('checkForNewServerVersion', () => {
   it('beta does not upgrade to newer minor beta', (done) => {
     checkForNewServerVersion(
       '1.17.0-beta.1',
-      (err) => {
+      () => {
         done('callback should not be called')
       },
       () => Promise.resolve('1.18.0-beta.2')
