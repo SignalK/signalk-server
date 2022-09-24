@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2016 Teppo Kurki <teppo.kurki@iki.fi>
  *
@@ -18,6 +20,7 @@ import {
   PropertyValues,
   PropertyValuesCallback
 } from '@signalk/server-api'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
 import express, { Request, Response } from 'express'
@@ -30,17 +33,13 @@ import { DeltaInputHandler } from '../deltachain'
 import { listAllSerialPorts, Ports } from '../serialports'
 const debug = createDebug('signalk-server:interfaces:plugins')
 
-// tslint:disable-next-line:no-var-requires
-const modulesWithKeyword = require('../modules').modulesWithKeyword
-// tslint:disable-next-line:no-var-requires
+
+import {modulesWithKeyword} from '../modules'
+
 const put = require('../put')
-// tslint:disable-next-line
 const _putPath = put.putPath
-// tslint:disable-next-line:no-var-requires
 const getModulePublic = require('../config/get').getModulePublic
-// tslint:disable-next-line:no-var-requires
 const queryRequest = require('../requestResponse').queryRequest
-// tslint:disable-next-line:no-var-requires
 const getMetadata = require('@signalk/signalk-schema').getMetadata
 
 // #521 Returns path to load plugin-config assets.
@@ -151,7 +150,6 @@ module.exports = (theApp: any) => {
         express.static(getPluginConfigPublic(theApp))
       )
 
-      const router = express.Router()
 
       theApp.get(backwardsCompat('/plugins'), (req: Request, res: Response) => {
         const providerStatus = theApp.getProviderStatus()
@@ -271,7 +269,6 @@ module.exports = (theApp: any) => {
     data: object,
     callback: (err: NodeJS.ErrnoException | null) => void
   ) {
-    const config = JSON.parse(JSON.stringify(data))
     try {
       fs.writeFileSync(pathForPluginId(pluginId), JSON.stringify(data, null, 2))
       callback(null)
@@ -548,6 +545,7 @@ module.exports = (theApp: any) => {
     try {
       const pluginConstructor: (
         app: ServerAPI
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       ) => PluginInfo = require(path.join(location, packageName))
       plugin = pluginConstructor(appCopy)
     } catch (e: any) {

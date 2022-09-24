@@ -61,7 +61,7 @@ function getCategories(thePackage: NpmPackageData): string[] {
 }
 
 function getAvailableCategories() {
-  let normal: any = Object.values(CAT_KEYWORDS_TO_NAMES)
+  let normal = Object.values(CAT_KEYWORDS_TO_NAMES)
   normal = normal.slice(0, normal.length - 1).sort() // take out Deprecated
   return ['All', NEW_CATEGORY, '---']
     .concat(normal)

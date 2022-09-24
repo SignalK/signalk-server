@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:sourcepriorities')
 
@@ -63,10 +64,11 @@ export type ToPreferredDelta = (
 
 export const getToPreferredDelta = (
   sourcePrioritiesData: SourcePrioritiesData,
-  unknownSourceTimeout: number = 10000
+  unknownSourceTimeout = 10000
 ): ToPreferredDelta => {
   if (!sourcePrioritiesData) {
     debug('No priorities data')
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return (delta: any, now: Date, selfContext: string) => delta
   }
   const precedences = toPrecedences(sourcePrioritiesData)

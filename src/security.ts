@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2017 Teppo Kurki <teppo.kurki@iki.fi>
  *
@@ -74,6 +75,7 @@ export function startSecurity(
     }
 
     const config = securityConfig || getSecurityConfig(app, true)
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     app.securityStrategy = require(securityStrategyModuleName)(app, config)
 
     if (securityConfig) {
@@ -118,7 +120,7 @@ export function saveSecurityConfig(
       callback(null)
     }
   } else {
-    const config = JSON.parse(JSON.stringify(data))
+    //const config = JSON.parse(JSON.stringify(data))
     const configPath = pathForSecurityConfig(app)
     writeFile(configPath, JSON.stringify(data, null, 2), err => {
       if (!err) {

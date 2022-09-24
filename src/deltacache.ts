@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2017 Scott Bender <scott@scottbender.net>
  *
@@ -145,7 +146,7 @@ export default class DeltaCache {
     if (deltas && deltas.length) {
       const secFilter = this.app.securityStrategy.shouldFilterDeltas()
         ? (delta: any) => this.app.securityStrategy.filterReadDelta(user, delta)
-        : (delta: any) => true
+        : () => true
       deltas.filter(secFilter).forEach(addDelta)
     }
 

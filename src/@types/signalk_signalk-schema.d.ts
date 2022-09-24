@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare module '@signalk/signalk-schema' {
     import { EventEmitter } from 'events'
 

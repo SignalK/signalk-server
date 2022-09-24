@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-this-alias */
+/* eslint-disable @typescript-eslint/no-var-requires */
 /*
  * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
  *
@@ -508,7 +511,6 @@ function startRedirectToSsl(
 ) {
   const redirectApp = express()
   redirectApp.use((req: Request, res: Response) => {
-    const hostHeader = req.headers.host || ''
     const host = req.headers.host?.split(':')[0]
     res.redirect(`https://${host}:${redirectPort}${req.path}`)
   })

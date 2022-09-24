@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2017 Teppo Kurki <teppo.kurki@iki.fi>
  *
@@ -114,7 +115,7 @@ const priorityPrefix = (a: ModuleData, b: ModuleData) =>
   getModuleSortName(a).localeCompare(getModuleSortName(b))
 
 // Searches for installed modules that contain `keyword`.
-function modulesWithKeyword(config: Config, keyword: string) {
+export function modulesWithKeyword(config: Config, keyword: string) {
   return _.uniqBy(
     // _.flatten since values are inside an array. [[modules...], [modules...]]
     _.flatten(

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-var-requires */
 /*
  * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
  *

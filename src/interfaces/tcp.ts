@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2015 Teppo Kurki <teppo.kurki@iki.fi>
  *

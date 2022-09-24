@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2016 Teppo Kurki <teppo.kurki@iki.fi>
  *
@@ -247,13 +248,13 @@ function contextMatcher(
         errorCallback(
           'Please specify a radius and position for relativePosition'
         )
-        return x => false
+        return () => false
       }
       return (normalizedDeltaData: WithContext) =>
         checkPosition(app, subscribeCommand.context, normalizedDeltaData)
     }
   }
-  return x => true
+  return () => true
 }
 
 function checkPosition(
