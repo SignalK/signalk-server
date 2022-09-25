@@ -49,7 +49,6 @@ import SubscriptionManager from './subscriptionmanager'
 import { Delta } from './types'
 const debug = createDebug('signalk-server')
 
-// tslint:disable-next-line: no-var-requires
 const { StreamBundle } = require('./streambundle')
 
 interface ServerOptions {

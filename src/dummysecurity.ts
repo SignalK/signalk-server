@@ -17,8 +17,6 @@
  * limitations under the License.
  */
 
-/* tslint:disable */
-
 export default function () {
   return {
     getConfiguration: () => {

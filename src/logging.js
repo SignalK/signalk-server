@@ -47,13 +47,11 @@ module.exports = function (app) {
   const outWrite = process.stdout.write
   const errWrite = process.stderr.write
 
-  // tslint:disable-next-line
   process.stdout.write = function (string) {
     outWrite.apply(process.stdout, arguments)
     storeOutput(string, false)
   }
 
-  // tslint:disable-next-line
   process.stderr.write = function (string) {
     errWrite.apply(process.stderr, arguments)
     storeOutput(string, true)

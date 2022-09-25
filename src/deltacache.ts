@@ -240,7 +240,7 @@ function getLeafObject(
   returnLast = false
 ) {
   let current = start
-  // tslint:disable-next-line: forin
+
   for (const i in contextAndPathParts) {
     const p = contextAndPathParts[i]
     if (isUndefined(current[p])) {

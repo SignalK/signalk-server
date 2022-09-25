@@ -397,7 +397,7 @@ module.exports = function (app, saveSecurityConfig, getSecurityConfig) {
     }
 
     const availableInterfaces = require('./interfaces')
-    // tslint:disable-next-line:variable-name
+
     _.forIn(availableInterfaces, function (_interface, name) {
       settings.interfaces[name] =
         _.isUndefined(app.config.settings.interfaces) ||

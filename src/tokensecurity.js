@@ -32,7 +32,6 @@ const ms = require('ms')
 const CONFIG_PLUGINID = 'sk-simple-token-security-config'
 const passwordSaltRounds = 10
 const permissionDeniedMessage =
-  // tslint:disable-next-line
   "You do not have permission to view this resource, <a href='/admin/#/login'>Please Login</a>"
 
 const skPrefix = '/signalk/v1'
@@ -257,7 +256,6 @@ module.exports = function (app, config) {
     app.use('/loginStatus', http_authorize(false, true))
     app.use(`${SERVERROUTESPREFIX}/loginStatus`, http_authorize(false, true))
 
-    // tslint:disable-next-line:variable-name
     const no_redir = http_authorize(false)
     app.use('/signalk/v1/api/*', function (req, res, next) {
       no_redir(req, res, next)
@@ -569,7 +567,6 @@ module.exports = function (app, config) {
     return false
   }
 
-  // tslint:disable-next-line:variable-name
   strategy.shouldAllowPut = function (req, _context, source, thePath) {
     if (
       req.skPrincipal &&

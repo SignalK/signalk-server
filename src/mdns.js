@@ -99,7 +99,7 @@ module.exports = function mdnsResponder(app) {
   debug(options)
 
   const ads = []
-  // tslint:disable-next-line: forin
+
   for (const i in types) {
     const type = types[i]
     debug(

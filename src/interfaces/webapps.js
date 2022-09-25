@@ -42,7 +42,7 @@ module.exports = function (app) {
       ).map((moduleData) => moduleData.metadata)
       mountApis(app)
     },
-    // tslint:disable-next-line: no-empty
+
     stop: function () {}
   }
 }

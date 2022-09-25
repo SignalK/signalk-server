@@ -72,7 +72,6 @@ module.exports = function (app) {
 
         function sendResult(last, aPath) {
           if (last) {
-            // tslint:disable-next-line: forin
             for (const i in aPath) {
               const p = aPath[i]
 
