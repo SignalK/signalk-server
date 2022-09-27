@@ -17,9 +17,8 @@
 import { createDebug } from './debug'
 const deep = require('deep-get-set')
 const DevNull = require('dev-null-stream')
-const _ = require('lodash')
 
-module.exports = function(app) {
+module.exports = function (app) {
   function createPipedProvider(providerConfig) {
     const { propertyValues, ...sanitizedApp } = app
     const emitPropertyValue = (name, value) =>
@@ -64,7 +63,7 @@ module.exports = function(app) {
     }
 
     result.pipeElements[result.pipeElements.length - 1].pipe(new DevNull())
-    result.pipeElements[result.pipeElements.length - 1].on('data', msg => {
+    result.pipeElements[result.pipeElements.length - 1].on('data', (msg) => {
       app.handleMessage(providerConfig.id, msg)
     })
     app.emit('pipedProvidersStarted', providerConfig)
@@ -73,7 +72,7 @@ module.exports = function(app) {
 
   function createPipeElement(elementConfig) {
     if (elementConfig.optionMappings) {
-      elementConfig.optionMappings.forEach(function(mapping) {
+      elementConfig.optionMappings.forEach(function (mapping) {
         if (deep(app, mapping.fromAppProperty)) {
           elementConfig.options[mapping.toOption] = deep(
             app,
@@ -108,7 +107,7 @@ module.exports = function(app) {
         []
       )
 
-      return piped.filter(function(n) {
+      return piped.filter(function (n) {
         return n != null
       })
     } else {

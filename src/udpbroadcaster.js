@@ -29,14 +29,14 @@ function UdpBroadcaster() {
 
   let socket
   this.udpSocket = socket = dgram.createSocket('udp4')
-  socket.bind('192.168.1.255', function() {
+  socket.bind('192.168.1.255', function () {
     socket.setBroadcast(true)
   })
 }
 
 require('util').inherits(UdpBroadcaster, Transform)
 
-UdpBroadcaster.prototype._transform = function(chunk, encoding, done) {
+UdpBroadcaster.prototype._transform = function (chunk, encoding, done) {
   try {
     const message = new Buffer(chunk.toString() + '\n')
     this.udpSocket.send(message, 0, message.length, 2000, '192.168.1.255')

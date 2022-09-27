@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /*
  * Copyright 2017 Scott Bender <scott@scottbender.net>
  *
@@ -14,9 +17,7 @@
  * limitations under the License.
  */
 
-/* tslint:disable */
-
-export default function() {
+export default function () {
   return {
     getConfiguration: () => {
       return {}
@@ -66,11 +67,11 @@ export default function() {
 
     deleteUser: (_config: any, _username: any, _callback: any) => {},
 
-    shouldAllowWrite: function(_req: any, _delta: any) {
+    shouldAllowWrite: function (_req: any, _delta: any) {
       return true
     },
 
-    shouldAllowPut: function(
+    shouldAllowPut: function (
       _req: any,
       _context: any,
       _source: any,

@@ -9,6 +9,7 @@ const debug = createDebug('signalk-server:interfaces:mfd_webapps')
 // For debugging you can use
 // tcpdump -i en0 -A  -v net 239.2.1.1
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 module.exports = (theApp: any) => {
   return {
     start() {
@@ -67,6 +68,7 @@ const send = (
 }
 
 const getPublishToNavico = (protocol: string, port: number) => () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   for (const [name, infos] of Object.entries(networkInterfaces())) {
     for (const addressInfo of infos || []) {
       if (addressInfo.family === 'IPv4') {

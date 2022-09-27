@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FullSignalK } from '@signalk/signalk-schema'
 import { SecurityStrategy } from './security'
 import SubscriptionManager from './subscriptionmanager'
@@ -50,6 +51,7 @@ export interface MdnsAdvertisement {
 }
 
 // move to subscriptionmanage.ts when all SubscriptionManager use is in ts
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface Unsubscribes extends Array<() => void> {}
 
 export interface WithContext {

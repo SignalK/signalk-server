@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2020 Scott Bender <scott@scottbender.net>
  *
@@ -40,6 +41,7 @@ export const listAllSerialPorts = (): Promise<Ports> => {
 
 function listSerialPorts() {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     return require('serialport').list()
   } catch (err) {
     return Promise.resolve([])
@@ -49,7 +51,7 @@ function listSerialPorts() {
 function listSafeSerialPortsDevSerialById() {
   return fs.promises
     .readdir('/dev/serial/by-id')
-    .catch((err: any) => [])
+    .catch(() => [])
     .then((filenames: string[]) =>
       filenames.map((filename: string) => `/dev/serial/by-id/${filename}`)
     )
@@ -58,7 +60,7 @@ function listSafeSerialPortsDevSerialById() {
 function listSafeSerialPortsDevSerialByPath() {
   return fs.promises
     .readdir('/dev/serial/by-path')
-    .catch((err: any) => [])
+    .catch(() => [])
     .then((filenames: string[]) =>
       filenames.map((filename: string) => `/dev/serial/by-path/${filename}`)
     )
@@ -67,10 +69,10 @@ function listSafeSerialPortsDevSerialByPath() {
 function listSafeSerialPortsOpenPlotter() {
   return fs.promises
     .readdir('/dev/')
-    .catch((err: any) => [])
+    .catch(() => [])
     .then((filenames: string[]) =>
       filenames
-        .filter(filename => filename.startsWith('ttyOP_'))
-        .map(filename => `/dev/${filename}`)
+        .filter((filename) => filename.startsWith('ttyOP_'))
+        .map((filename) => `/dev/${filename}`)
     )
 }

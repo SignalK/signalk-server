@@ -17,14 +17,13 @@
 const { createDebug } = require('../debug')
 const debug = createDebug('signalk-server:interfaces:rest')
 const express = require('express')
-const { getMetadata, getUnits } = require('@signalk/signalk-schema')
+const { getMetadata } = require('@signalk/signalk-schema')
 const ports = require('../ports')
-const geolib = require('geolib')
-const _ = require('lodash')
 
-const iso8601rexexp = /^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?Z$/
+const iso8601rexexp =
+  /^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?Z$/
 
-module.exports = function(app) {
+module.exports = function (app) {
   'use strict'
 
   const pathPrefix = '/signalk'
@@ -35,10 +34,10 @@ module.exports = function(app) {
   const KNOWN_OTHER_PATH_PREFIXES = ['resources']
 
   return {
-    start: function() {
+    start: function () {
       app.use('/', express.static(__dirname + '/../../public'))
 
-      app.get(apiPathPrefix + '*', function(req, res, next) {
+      app.get(apiPathPrefix + '*', function (req, res, next) {
         let path = String(req.path).replace(apiPathPrefix, '')
 
         if (path === 'self') {
@@ -69,11 +68,10 @@ module.exports = function(app) {
           }
         }
 
-        path = path.map(p => (p === 'self' ? app.selfId : p))
+        path = path.map((p) => (p === 'self' ? app.selfId : p))
 
         function sendResult(last, aPath) {
           if (last) {
-            // tslint:disable-next-line: forin
             for (const i in aPath) {
               const p = aPath[i]
 
@@ -109,7 +107,7 @@ module.exports = function(app) {
               app.historyProvider.getHistory(
                 new Date(req.query.time),
                 realPath,
-                deltas => {
+                (deltas) => {
                   if (deltas.length === 0) {
                     res.status(404).send('No data found for the given time')
                     return
@@ -134,7 +132,7 @@ module.exports = function(app) {
         }
       })
 
-      app.get(pathPrefix, function(req, res) {
+      app.get(pathPrefix, function (req, res) {
         const host = req.headers.host
         const splitHost = host.split(':')
 

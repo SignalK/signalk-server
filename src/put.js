@@ -1,7 +1,6 @@
 const _ = require('lodash')
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:put')
-const { v4: uuidv4 } = require('uuid')
 const { createRequest, updateRequest } = require('./requestResponse')
 const skConfig = require('./config/config')
 
@@ -9,6 +8,7 @@ const pathPrefix = '/signalk'
 const versionPrefix = '/v1'
 const apiPathPrefix = pathPrefix + versionPrefix + '/api/'
 
+// eslint-disable-next-line no-unused-vars
 const State = {
   pending: 'PENDING',
   completed: 'COMPLETED',
@@ -17,6 +17,7 @@ const State = {
   noSource: 'NO SOURCE'
 }
 
+// eslint-disable-next-line no-unused-vars
 const Result = {
   success: 'SUCCESS',
   failure: 'FAILURE'
@@ -26,11 +27,11 @@ const actionHandlers = {}
 let putMetaHandler
 
 module.exports = {
-  start: function(app) {
+  start: function (app) {
     app.registerActionHandler = registerActionHandler
     app.deRegisterActionHandler = deRegisterActionHandler
 
-    app.put(apiPathPrefix + '*', function(req, res, next) {
+    app.put(apiPathPrefix + '*', function (req, res) {
       let path = String(req.path).replace(apiPathPrefix, '')
 
       const value = req.body
@@ -53,11 +54,11 @@ module.exports = {
       const skpath = parts.slice(2).join('.')
 
       putPath(app, context, skpath, value, req)
-        .then(reply => {
+        .then((reply) => {
           res.status(reply.statusCode)
           res.json(reply)
         })
-        .catch(err => {
+        .catch((err) => {
           console.error(err)
           res.status(500).send(err.message)
         })
@@ -101,7 +102,7 @@ module.exports = {
         const pathWithContext = context + '.' + path
         _.set(data, pathWithContext, value)
 
-        skConfig.writeDefaultsFile(app, data, err => {
+        skConfig.writeDefaultsFile(app, data, (err) => {
           if (err) {
             cb({ state: 'FAILURE', message: 'Unable to save to defaults file' })
           } else {
@@ -114,7 +115,7 @@ module.exports = {
           .then(() => {
             cb({ state: 'SUCCESS' })
           })
-          .catch(err => {
+          .catch(() => {
             cb({ state: 'FAILURE', message: 'Unable to save to defaults file' })
           })
       }
@@ -143,7 +144,7 @@ function putPath(app, contextParam, path, body, req, requestId, updateCb) {
       null,
       updateCb
     )
-      .then(request => {
+      .then((request) => {
         if (
           req &&
           app.securityStrategy.shouldAllowPut(req, context, null, path) ===
@@ -187,6 +188,7 @@ function putPath(app, contextParam, path, body, req, requestId, updateCb) {
         }
 
         if (handler) {
+          // eslint-disable-next-line no-inner-declarations
           function fixReply(reply) {
             if (reply.state === 'FAILURE') {
               reply.state = 'COMPLETED'
@@ -197,22 +199,22 @@ function putPath(app, contextParam, path, body, req, requestId, updateCb) {
             }
           }
 
-          const actionResult = handler(context, path, body.value, reply => {
+          const actionResult = handler(context, path, body.value, (reply) => {
             debug('got result: %j', reply)
             fixReply(reply)
             updateRequest(request.requestId, reply.state, reply)
               .then(() => undefined)
-              .catch(err => {
+              .catch((err) => {
                 console.error(err)
               })
           })
 
           Promise.resolve(actionResult)
-            .then(result => {
+            .then((result) => {
               debug('got result: %j', result)
               fixReply(result)
               updateRequest(request.requestId, result.state, result)
-                .then(reply => {
+                .then((reply) => {
                   if (reply.state === 'PENDING') {
                     // backwards compatibility
                     reply.action = { href: reply.href }
@@ -222,7 +224,7 @@ function putPath(app, contextParam, path, body, req, requestId, updateCb) {
                 })
                 .catch(reject)
             })
-            .catch(err => {
+            .catch((err) => {
               updateRequest(request.requestId, 'COMPLETED', {
                 statusCode: 500,
                 message: err.message

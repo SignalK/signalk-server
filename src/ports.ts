@@ -33,6 +33,7 @@ export function getPrimaryPort(app: WithConfig) {
   return app.config.settings.ssl ? getSslPort(app) : getHttpPort(app)
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getSecondaryPort(app: WithConfig): any {
   if (Number(process.env.LISTEN_FDS) > 0) {
     if (Number(process.env.LISTEN_FDS) !== 2) {

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2016 Teppo Kurki <teppo.kurki@iki.fi>
  *
@@ -18,6 +20,7 @@ import {
   PropertyValues,
   PropertyValuesCallback
 } from '@signalk/server-api'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
 import express, { Request, Response } from 'express'
@@ -30,17 +33,12 @@ import { DeltaInputHandler } from '../deltachain'
 import { listAllSerialPorts, Ports } from '../serialports'
 const debug = createDebug('signalk-server:interfaces:plugins')
 
-// tslint:disable-next-line:no-var-requires
-const modulesWithKeyword = require('../modules').modulesWithKeyword
-// tslint:disable-next-line:no-var-requires
+import { modulesWithKeyword } from '../modules'
+
 const put = require('../put')
-// tslint:disable-next-line
 const _putPath = put.putPath
-// tslint:disable-next-line:no-var-requires
 const getModulePublic = require('../config/get').getModulePublic
-// tslint:disable-next-line:no-var-requires
 const queryRequest = require('../requestResponse').queryRequest
-// tslint:disable-next-line:no-var-requires
 const getMetadata = require('@signalk/signalk-schema').getMetadata
 
 // #521 Returns path to load plugin-config assets.
@@ -151,8 +149,6 @@ module.exports = (theApp: any) => {
         express.static(getPluginConfigPublic(theApp))
       )
 
-      const router = express.Router()
-
       theApp.get(backwardsCompat('/plugins'), (req: Request, res: Response) => {
         const providerStatus = theApp.getProviderStatus()
 
@@ -165,8 +161,8 @@ module.exports = (theApp: any) => {
             getPluginResponseInfo(plugin, providerStatus)
           )
         )
-          .then(json => res.json(json))
-          .catch(err => {
+          .then((json) => res.json(json))
+          .catch((err) => {
             console.error(err)
             res.status(500)
             res.send(err)
@@ -180,7 +176,7 @@ module.exports = (theApp: any) => {
       let data: { enabled: boolean } | null = null
       try {
         data = getPluginOptions(plugin.id)
-      } catch (e) {
+      } catch (e: any) {
         console.error(e.code + ' ' + e.path)
       }
 
@@ -236,7 +232,7 @@ module.exports = (theApp: any) => {
             data
           })
         })
-        .catch(err => {
+        .catch((err) => {
           reject(err)
         })
     })
@@ -271,11 +267,10 @@ module.exports = (theApp: any) => {
     data: object,
     callback: (err: NodeJS.ErrnoException | null) => void
   ) {
-    const config = JSON.parse(JSON.stringify(data))
     try {
       fs.writeFileSync(pathForPluginId(pluginId), JSON.stringify(data, null, 2))
       callback(null)
-    } catch (err) {
+    } catch (err: any) {
       callback(err)
     }
   }
@@ -303,7 +298,7 @@ module.exports = (theApp: any) => {
       }
       debug(optionsAsString)
       return options
-    } catch (e) {
+    } catch (e: any) {
       console.error(
         'Could not parse JSON options:' + e.message + ' ' + optionsAsString
       )
@@ -476,7 +471,7 @@ module.exports = (theApp: any) => {
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
-    } catch (e) {
+    } catch (e: any) {
       console.error('error starting plugin: ' + e)
       console.error(e.stack)
       app.setProviderError(plugin.name, `Failed to start: ${e.message}`)
@@ -548,9 +543,10 @@ module.exports = (theApp: any) => {
     try {
       const pluginConstructor: (
         app: ServerAPI
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
       ) => PluginInfo = require(path.join(location, packageName))
       plugin = pluginConstructor(appCopy)
-    } catch (e) {
+    } catch (e: any) {
       console.error(`${packageName} failed to start: ${e.message}`)
       console.error(e)
       app.setProviderError(packageName, `Failed to start: ${e.message}`)
@@ -587,7 +583,7 @@ module.exports = (theApp: any) => {
     }
     appCopy.registerActionHandler = appCopy.registerPutHandler
 
-    appCopy.registerHistoryProvider = provider => {
+    appCopy.registerHistoryProvider = (provider) => {
       app.registerHistoryProvider(provider)
       onStopHandlers[plugin.id].push(() => {
         app.unregisterHistoryProvider(provider)
@@ -598,7 +594,7 @@ module.exports = (theApp: any) => {
     const restart = (newConfiguration: any) => {
       const pluginOptions = getPluginOptions(plugin.id)
       pluginOptions.configuration = newConfiguration
-      savePluginOptions(plugin.id, pluginOptions, err => {
+      savePluginOptions(plugin.id, pluginOptions, (err) => {
         if (err) {
           console.error(err)
         } else {
@@ -650,7 +646,7 @@ module.exports = (theApp: any) => {
     })
 
     router.post('/config', (req: Request, res: Response) => {
-      savePluginOptions(plugin.id, req.body, err => {
+      savePluginOptions(plugin.id, req.body, (err) => {
         if (err) {
           console.error(err)
           res.status(500)

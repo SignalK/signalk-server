@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-this-alias */
+/* eslint-disable @typescript-eslint/no-var-requires */
 /*
  * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
  *
@@ -46,7 +49,6 @@ import SubscriptionManager from './subscriptionmanager'
 import { Delta } from './types'
 const debug = createDebug('signalk-server')
 
-// tslint:disable-next-line: no-var-requires
 const { StreamBundle } = require('./streambundle')
 
 interface ServerOptions {
@@ -360,7 +362,7 @@ class Server {
         debug('ID type: ' + app.selfType)
         debug('ID: ' + app.selfId)
 
-        sendBaseDeltas((app as unknown) as ConfigApp)
+        sendBaseDeltas(app as unknown as ConfigApp)
 
         startInterfaces(app)
         startMdns(app)
@@ -412,10 +414,10 @@ class Server {
       this.app.config.settings = settings
     }
 
-    this.stop().catch(e => console.error(e))
+    this.stop().catch((e) => console.error(e))
 
     setTimeout(() => {
-      self.start().catch(e => console.error(e))
+      self.start().catch((e) => console.error(e))
     }, 1000)
 
     return this
@@ -437,11 +439,11 @@ class Server {
             }
           })
 
-          this.app.intervals.forEach(interval => {
+          this.app.intervals.forEach((interval) => {
             clearInterval(interval)
           })
 
-          this.app.providers.forEach(providerHolder => {
+          this.app.providers.forEach((providerHolder) => {
             providerHolder.pipeElements[0].end()
           })
 
@@ -508,7 +510,6 @@ function startRedirectToSsl(
 ) {
   const redirectApp = express()
   redirectApp.use((req: Request, res: Response) => {
-    const hostHeader = req.headers.host || ''
     const host = req.headers.host?.split(':')[0]
     res.redirect(`https://${host}:${redirectPort}${req.path}`)
   })

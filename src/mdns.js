@@ -99,7 +99,7 @@ module.exports = function mdnsResponder(app) {
   debug(options)
 
   const ads = []
-  // tslint:disable-next-line: forin
+
   for (const i in types) {
     const type = types[i]
     debug(
@@ -111,7 +111,7 @@ module.exports = function mdnsResponder(app) {
         type.port
     )
     const ad = new mdns.Advertisement(type.type, type.port, options)
-    ad.on('error', err => {
+    ad.on('error', (err) => {
       console.log(type.type.name)
       console.error(err)
     })
@@ -120,8 +120,8 @@ module.exports = function mdnsResponder(app) {
   }
 
   return {
-    stop: function() {
-      ads.forEach(function(ad) {
+    stop: function () {
+      ads.forEach(function (ad) {
         debug('Stopping mDNS advertisement...')
         ad.stop()
       })
