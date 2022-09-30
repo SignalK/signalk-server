@@ -568,6 +568,7 @@ export class CourseApi {
     newCourse.activeRoute.pointIndex = null
     newCourse.activeRoute.pointTotal = null
     newCourse.activeRoute.reverse = null
+    newCourse.activeRoute.waypoints = null
 
     // set previousPoint
     try {
