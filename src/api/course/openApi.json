@@ -13,6 +13,11 @@
       "url": "http://signalk.org/specification/",
       "description": "Signal K specification."
     },
+    "servers":[
+      {
+        "url": "/signalk/v2/api/vessels/self/navigation"
+      }
+    ],
     "tags": [
       {
         "name": "course",
