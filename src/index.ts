@@ -72,8 +72,8 @@ class Server {
     app.logging = require('./logging')(app)
     app.version = '0.0.1'
 
-    startSecurity(app, opts ? opts.securityConfig : null)
     setupCors(app, getSecurityConfig(app))
+    startSecurity(app, opts ? opts.securityConfig : null)
 
     require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
     require('./put').start(app)
