@@ -571,13 +571,13 @@ function setupCors(app: any, { allowedCorsOrigins }: any) {
   }
   if (corsOrigins.length) {
     corsOptions.origin = (origin: any, cb: any) => {
-      if (corsOrigins.indexOf(origin)) {
+      if (origin === undefined || corsOrigins.indexOf(origin) >= 0) {
         corsDebug(`Found CORS origin ${origin}`)
         cb(undefined, origin)
       } else {
         const errorMsg = `CORS origin not allowed ${origin}`
         corsDebug(errorMsg)
-        cb(new Error(errorMsg))
+        cb(errorMsg)
       }
     }
   }
