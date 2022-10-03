@@ -12,8 +12,8 @@ const {
 describe('modulesWithKeyword', () => {
   it('returns a list of modules with one "installed" update in config dir', () => {
     const expectedModules = [
-      '@signalk/freeboard-sk',
-      '@signalk/instrumentpanel'
+      '@signalk/instrumentpanel',
+      '@signalk/freeboard-sk'
     ]
     const updateInstalledModule = '@signalk/instrumentpanel'
     const indexOfInstalledModule = expectedModules.indexOf(

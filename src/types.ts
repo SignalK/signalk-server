@@ -74,7 +74,3 @@ export type Delta = any
 export type Path = string
 export type Context = string
 export type Value = object | number | string | null
-export interface Position {
-  latitude: number
-  longitude: number
-}

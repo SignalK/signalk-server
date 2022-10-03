@@ -37,8 +37,5 @@
       ]
     }
   ],
-  "interfaces": {},
-  "security": {
-    "strategy": "./tokensecurity"
-  }
+  "interfaces": {}
 }

@@ -18,7 +18,8 @@
 import {
   PluginServerApp,
   PropertyValues,
-  PropertyValuesCallback
+  PropertyValuesCallback,
+  ResourceProvider
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -27,6 +28,7 @@ import express, { Request, Response } from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
+import { ResourcesApi } from '../api/resources'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
 import { DeltaInputHandler } from '../deltachain'
@@ -468,6 +470,7 @@ module.exports = (theApp: any) => {
         console.error(`${plugin.id}:no configuration data`)
         safeConfiguration = {}
       }
+      onStopHandlers[plugin.id] = [() => app.resourcesApi.unRegister(plugin.id)]
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
@@ -540,6 +543,13 @@ module.exports = (theApp: any) => {
       getMetadata
     })
     appCopy.putPath = putPath
+
+    const resourcesApi: ResourcesApi = app.resourcesApi
+    _.omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager
+    appCopy.registerResourceProvider = (provider: ResourceProvider) => {
+      resourcesApi.register(plugin.id, provider)
+    }
+
     try {
       const pluginConstructor: (
         app: ServerAPI
@@ -552,7 +562,6 @@ module.exports = (theApp: any) => {
       app.setProviderError(packageName, `Failed to start: ${e.message}`)
       return
     }
-    onStopHandlers[plugin.id] = []
 
     if (app.pluginsMap[plugin.id]) {
       console.log(
