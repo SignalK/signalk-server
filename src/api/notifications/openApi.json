@@ -13,6 +13,11 @@
       "url": "http://signalk.org/specification/",
       "description": "Signal K specification."
     },
+    "servers":[
+      {
+        "url": "/signalk/v1/api/vessels/self/notifications"
+      }
+    ],
     "tags": [
       {
         "name": "special",
