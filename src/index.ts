@@ -576,10 +576,10 @@ function setupCors(app: any, { allowedCorsOrigins }: any) {
   if (corsOrigins.length) {
     corsOptions.origin = (origin: any, cb: any) => {
       if (origin === undefined || corsOrigins.indexOf(origin) >= 0) {
-        corsDebug(`Found CORS origin ${origin}`)
+        corsDebug(`${origin} OK`)
         cb(undefined, origin)
       } else {
-        const errorMsg = `CORS origin not allowed ${origin}`
+        const errorMsg = `${origin} not allowed`
         corsDebug(errorMsg)
         cb(errorMsg)
       }
