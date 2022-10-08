@@ -564,7 +564,11 @@ function startInterfaces(app: ServerApp & WithConfig) {
 function setupCors(app: any, { allowedCorsOrigins }: any) {
   const corsDebug = createDebug('signalk-server:cors')
 
-  const corsOrigins = allowedCorsOrigins ? allowedCorsOrigins.split(',') : []
+  const corsOrigins = allowedCorsOrigins
+    ? allowedCorsOrigins
+        .split(',')
+        .map((s: string) => s.trim().replace(/\/*$/, ''))
+    : []
   corsDebug(`corsOrigins:${corsOrigins.toString()}`)
   const corsOptions: any = {
     credentials: true
