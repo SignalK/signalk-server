@@ -52,6 +52,9 @@ export interface Package {
   author?: PersonInPackage
   contributors?: PersonInPackage[]
   dependencies: { [key: string]: any }
+  version: string
+  description: string
+  license: string
 }
 
 function findModulesInDir(dir: string, keyword: string): ModuleData[] {
@@ -149,8 +152,8 @@ function removeModule(
 
 export function restoreModules(
   config: Config,
-  onData: () => any,
-  onErr: (err: Error) => any,
+  onData: (output: any) => void,
+  onErr: (err: Error) => void,
   onClose: (code: number) => any
 ) {
   runNpm(config, null, null, 'remove', onData, onErr, onClose)
@@ -161,7 +164,7 @@ function runNpm(
   name: any,
   version: any,
   command: string,
-  onData: () => any,
+  onData: (output: any) => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {

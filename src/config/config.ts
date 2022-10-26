@@ -41,8 +41,8 @@ export interface Config {
   version: string
   description: string
   vesselName: string
-  vesselUUID: string
-  vesselMMSI: string
+  vesselUUID?: string
+  vesselMMSI?: string
   baseDeltaEditor: DeltaEditor
   hasOldDefaults: boolean
   overrideTimestampWithNow: boolean
@@ -63,6 +63,11 @@ export interface Config {
     mdns?: boolean
     sslport?: number
     port?: number
+    keepMostRecentLogsOnly?: number
+    logCountToKeep?: number
+    enablePluginLogging?: boolean
+    loggingDirectory?: string
+    sourcePriorities?: any
   }
   defaults: object
 }
