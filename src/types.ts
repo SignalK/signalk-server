@@ -25,7 +25,10 @@ export interface Bus {
 export interface StreamBundle {
   keys: { onValue: (arg0: (key: any) => void) => void }
   getBus: (path: string) => Bus
+  getAvailablePaths: () => string[]
 }
+
+export type ICallback<T> = (error?: Error | null, result?: T) => void
 
 export interface SignalKServer {
   config: { defaults: any }
