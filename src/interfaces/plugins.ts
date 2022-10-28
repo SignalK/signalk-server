@@ -474,7 +474,7 @@ module.exports = (theApp: any) => {
     } catch (e: any) {
       console.error('error starting plugin: ' + e)
       console.error(e.stack)
-      app.setProviderError(plugin.name, `Failed to start: ${e.message}`)
+      app.setProviderError(plugin.id, `Failed to start: ${e.message}`)
     }
   }
 
