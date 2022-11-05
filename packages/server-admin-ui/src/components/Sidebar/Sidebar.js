@@ -268,6 +268,10 @@ const mapStateToProps = (state) => {
             url: '/serverConfiguration/datafiddler',
           },
           {
+            name: 'OpenApi',
+            url: `${window.location.protocol}//${window.location.host}/admin/openapi`,
+          },
+          {
             name: 'Backup/Restore',
             url: '/serverConfiguration/backuprestore',
           },
