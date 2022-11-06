@@ -30,11 +30,12 @@
     ],
     "components": {
       "schemas": {
-        "AppEntry": {
+        "WebAppInformation": {
           "type": "object",
           "required": [
             "name",
-            "version"
+            "version",
+            "location"
           ],
           "properties": {
             "name": {
@@ -95,39 +96,6 @@
             }
           }
         },
-        "ErrorResponse": {
-          "description": "Failed operation",
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "description": "Request error response",
-                "properties": {
-                  "state": {
-                    "type": "string",
-                    "enum": [
-                      "FAILED"
-                    ]
-                  },
-                  "statusCode": {
-                    "type": "number",
-                    "enum": [
-                      404
-                    ]
-                  },
-                  "message": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "state",
-                  "statusCode",
-                  "message"
-                ]
-              }
-            }
-          }
-        },
         "AppsListResponse": {
           "description": "Application list response.",
           "content": {
@@ -136,7 +104,7 @@
                 "description": "Application list.",
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/AppEntry"
+                  "$ref": "#/components/schemas/WebAppInformation"
                 }
               }
             }
@@ -202,9 +170,6 @@
           "responses": {
             "200": {
               "$ref": "#/components/responses/AppsListResponse"
-            },
-            "default": {
-              "$ref": "#/components/responses/ErrorResponse"
             }
           }
         }
@@ -229,9 +194,6 @@
           "responses": {
             "200": {
               "$ref": "#/components/responses/PluginDetailResponse"
-            },
-            "default": {
-              "$ref": "#/components/responses/ErrorResponse"
             }
           }
         }
