@@ -700,7 +700,7 @@ export class CourseApi {
   }
 
   private buildDeltaMsg(): any {
-    const values: Array<{ path: string; value: any }> = []
+    let values: Array<{ path: string; value: any }> = []
     const navPath = 'navigation.course'
 
     debug(this.courseInfo)
@@ -764,6 +764,8 @@ export class CourseApi {
       value: this.courseInfo.previousPoint.type
     })
 
+    values = values.concat(this.buildV1DeltaMsg())
+
     return {
       updates: [
         {
@@ -771,6 +773,86 @@ export class CourseApi {
         }
       ]
     }
+  }
+
+  private buildV1DeltaMsg(): Array<{ path: string; value: any }> {
+    const values: Array<{ path: string; value: any }> = []
+    const navGC = 'navigation.courseGreatCircle'
+    const navRL = 'navigation.courseRhumbline'
+
+    values.push({
+      path: `${navGC}.activeRoute.href`,
+      value: this.courseInfo.activeRoute.href
+    })
+    values.push({
+      path: `${navRL}.activeRoute.href`,
+      value: this.courseInfo.activeRoute.href
+    })
+
+    values.push({
+      path: `${navGC}.activeRoute.startTime`,
+      value: this.courseInfo.startTime
+    })
+    values.push({
+      path: `${navRL}.activeRoute.startTime`,
+      value: this.courseInfo.startTime
+    })
+
+    values.push({
+      path: `${navGC}.nextPoint.value href`,
+      value: this.courseInfo.nextPoint.href
+    })
+    values.push({
+      path: `${navRL}.nextPoint.value href`,
+      value: this.courseInfo.nextPoint.href
+    })
+
+    values.push({
+      path: `${navGC}.nextPoint.value.type`,
+      value: this.courseInfo.nextPoint.type
+    })
+    values.push({
+      path: `${navRL}.nextPoint.value.type`,
+      value: this.courseInfo.nextPoint.type
+    })
+
+    values.push({
+      path: `${navGC}.nextPoint.position`,
+      value: this.courseInfo.nextPoint.position
+    })
+    values.push({
+      path: `${navRL}.nextPoint.position`,
+      value: this.courseInfo.nextPoint.position
+    })
+
+    values.push({
+      path: `${navGC}.nextPoint.arrivalCircle`,
+      value: this.courseInfo.nextPoint.arrivalCircle
+    })
+    values.push({
+      path: `${navRL}.nextPoint.arrivalCircle`,
+      value: this.courseInfo.nextPoint.arrivalCircle
+    })
+
+    values.push({
+      path: `${navGC}.previousPoint.position`,
+      value: this.courseInfo.previousPoint.position
+    })
+    values.push({
+      path: `${navRL}.previousPoint.position`,
+      value: this.courseInfo.previousPoint.position
+    })
+
+    values.push({
+      path: `${navGC}.previousPoint.value.type`,
+      value: this.courseInfo.previousPoint.type
+    })
+    values.push({
+      path: `${navRL}.previousPoint.value.type`,
+      value: this.courseInfo.previousPoint.type
+    })
+
+    return values
   }
 
   private emitCourseInfo(noSave = false) {
