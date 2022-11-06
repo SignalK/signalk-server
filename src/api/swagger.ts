@@ -3,6 +3,7 @@ import swaggerUi from 'swagger-ui-express'
 import { SERVERROUTESPREFIX } from '../constants'
 import { securityApiRecord } from './security/openApi'
 import { discoveryApiRecord } from './discovery/openApi'
+import { appsApiRecord } from './apps/openApi'
 
 interface WithServers {
   servers: {
@@ -20,13 +21,14 @@ interface ApiRecords {
   [name: string]: OpenApiRecord
 }
 
-const apiDocs = [discoveryApiRecord, securityApiRecord].reduce<ApiRecords>(
-  (acc, apiRecord: OpenApiRecord) => {
-    acc[apiRecord.name] = apiRecord
-    return acc
-  },
-  {}
-)
+const apiDocs = [
+  discoveryApiRecord,
+  appsApiRecord,
+  securityApiRecord
+].reduce<ApiRecords>((acc, apiRecord: OpenApiRecord) => {
+  acc[apiRecord.name] = apiRecord
+  return acc
+}, {})
 
 export function mountSwaggerUi(app: IRouter, path: string) {
   app.use(
@@ -55,7 +57,6 @@ export function mountSwaggerUi(app: IRouter, path: string) {
           {
             url: `https://demo.signalk.org${apiDocs[req.params.api].path}`
           }
-
         ]
         res.json(apiDocs[req.params.api].apiDoc)
       } else {
