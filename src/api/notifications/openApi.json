@@ -20,6 +20,10 @@
     ],
     "tags": [
       {
+        "name": "notifications",
+        "description": "Root path"
+      },
+      {
         "name": "special",
         "description": "Special Alarms"
       },
@@ -81,9 +85,25 @@
               "$ref": "#/components/schemas/Alarm"
             }
           }
+        },
+        "Notifications": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/components/schemas/Alarm"
+          }
         }
       },
       "responses": {
+        "ListResponse": {
+          "description": "Collection of notifications",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Notifications"
+              }
+            }
+          }
+        },
         "200Ok": {
           "description": "OK",
           "content": {
@@ -130,6 +150,23 @@
       }
     },
     "paths": {
+      "/": {
+        "get": {
+          "tags": [
+            "notifications"
+          ],
+          "summary": "Notifications endpoint.",
+          "description": "Root path for notifications.",
+          "responses": {
+            "200": {
+              "$ref": "#/components/responses/ListResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
       "/mob": {
         "get": {
           "tags": [
