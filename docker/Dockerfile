@@ -25,10 +25,8 @@ COPY --chown=node . .
 COPY --chown=node docker/startup.sh startup.sh
 RUN chmod +x startup.sh
 
-RUN npm config set fetch-retries 5 \
-&& npm config set fetch-retry-mintimeout 600000 \
-&& npm config set fetch-retry-maxtimeout 1200000 \
-&& npm config set fetch-timeout 1800000
+RUN npm config rm proxy \
+  && npm config rm https-proxy
 
 RUN npm install --package-lock-only \
   && npm ci && npm cache clean --force \
