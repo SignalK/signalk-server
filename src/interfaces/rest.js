@@ -186,4 +186,5 @@ module.exports = function (app) {
   }
 }
 
+// @ts-ignore
 const getVersion = () => require('../../package.json').version

@@ -1,0 +1,102 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Signal K discovery API",
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "externalDocs": {
+    "url": "http://signalk.org/specification/",
+    "description": "Signal K specification."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [],
+  "components": {
+    "schemas": {
+      "DiscoveryData": {
+        "type": "object",
+        "required": ["endpoints", "server"],
+        "properties": {
+          "endpoints": {
+            "type": "object",
+            "properties": {
+              "v1": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string",
+                    "description": "Version of the Signal K API",
+                    "example": "1.1.0"
+                  },
+                  "signalk-http": {
+                    "type": "string",
+                    "description": "Address of the server's http API.",
+                    "example": "http://191.168.1.88:3000/signalk/v1/api/"
+                  },
+                  "signalk-ws": {
+                    "type": "string",
+                    "description": "Address of the server's WebSocket API.",
+                    "example": "http://191.168.1.88:3000/signalk/v1/stream"
+                  },
+                  "signalk-tcp": {
+                    "type": "string",
+                    "description": "Address of the server's Signal K over TCP API.",
+                    "example": "tcp://191.168.1.88:8375"
+                  }
+                }
+              }
+            }
+          },
+          "server": {
+            "type": "object",
+            "required": ["id", "version"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Id of the server implementation",
+                "example": "signalk-server-node"
+              },
+              "version": {
+                "type": "string",
+                "description": "Server software version"
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "DiscoveryResponse": {
+        "description": "Discovery response.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/DiscoveryData"
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "paths": {
+    "/signalk": {
+      "get": {
+        "tags": [],
+        "description": "Returns data about server's endpoints and versions.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/DiscoveryResponse"
+          }
+        }
+      }
+    }
+  }
+}

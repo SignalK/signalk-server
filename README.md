@@ -123,6 +123,7 @@ Environment variables
 - `SIGNALK_NODE_CONFIG_DIR` override the path to find server configuration files.
 - `PORT` override the port for http/ws service (default is 3000).
 - `SSLPORT` override the port for https/wss service. If defined activates ssl as forced, default protocol (default is 3443).
+- `PROTOCOL` override http/https where the server is accessed via https but the server sees http (for example when Heroku handles https termination)
 - `EXTERNALPORT` the port used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
 - `EXTERNALHOST` the host used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
 - `FILEUPLOADSIZELIMIT` override the file upload size limit (default is '10mb').

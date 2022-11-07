@@ -26,6 +26,7 @@ import os from 'os'
 import path from 'path'
 import unzipper from 'unzipper'
 import util from 'util'
+import { mountSwaggerUi } from './api/swagger'
 import {
   ConfigApp,
   readDefaultsFile,
@@ -95,6 +96,9 @@ module.exports = function (
       (req: Request, res: Response) => res.sendFile(logopath)
     )
   }
+
+  // mount before the main /admin
+  mountSwaggerUi(app, '/admin/openapi')
 
   app.get('/admin/', (req: Request, res: Response) => {
     fs.readFile(
