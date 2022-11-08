@@ -108,7 +108,7 @@ class Settings extends Component {
                   className="form-horizontal"
                 >
                   <FormGroup row>
-                    <Col xs="0" md="2">
+                    <Col xs="0" md="3">
                       <Label>Allow Readonly Access</Label>
                     </Col>
                     <Col md="9">
@@ -186,10 +186,10 @@ class Settings extends Component {
                     </Col>
                   </FormGroup>
                   <FormGroup row>
-                    <Col md="2">
+                    <Col md="3">
                       <Label htmlFor="text-input">Login Session Timeout</Label>
                     </Col>
-                    <Col xs="12" md="9">
+                    <Col xs="12" md="2">
                       <Input
                         type="text"
                         name="expiration"
@@ -202,7 +202,7 @@ class Settings extends Component {
                     </Col>
                   </FormGroup>
                   <FormGroup row>
-                    <Col md="2">
+                    <Col md="3">
                       <Label htmlFor="text-input">Allowed CORS origins</Label>
                     </Col>
                     <Col xs="12" md="9">
