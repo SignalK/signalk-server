@@ -233,7 +233,7 @@ module.exports = function (app, config) {
 
     app.put(['/logout', `${skAuthPrefix}/logout`], function (req, res) {
       res.clearCookie('JAUTHENTICATION')
-      res.send('Logout OK')
+      res.json('Logout OK')
     })
     ;[
       '/restart',
