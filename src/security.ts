@@ -98,6 +98,7 @@ export interface SecurityConfig {
   allow_readonly: boolean
   allowNewUserRegistration: boolean
   allowDeviceAccessRequests: boolean
+  allowedCorsOrigins?: string
   expiration: string
   devices: Device[]
   secretKey: string

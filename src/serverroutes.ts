@@ -36,6 +36,7 @@ import {
   writeSettingsFile
 } from './config/config'
 import { SERVERROUTESPREFIX } from './constants'
+import { handleAdminUICORSOrigin } from './cors'
 import { createDebug, listKnownDebugs } from './debug'
 import { getAuthor, Package, restoreModules } from './modules'
 import { getHttpPort, getSslPort } from './ports'
@@ -205,7 +206,8 @@ module.exports = function (
         }
 
         let config = getSecurityConfig(app)
-        config = app.securityStrategy.setConfig(config, req.body)
+        const configToSave = handleAdminUICORSOrigin(req.body)
+        config = app.securityStrategy.setConfig(config, configToSave)
         saveSecurityConfig(app, config, (err) => {
           if (err) {
             console.log(err)
