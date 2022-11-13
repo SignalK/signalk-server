@@ -2,20 +2,25 @@
 import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:api:course')
 
-import { FullSignalK } from '@signalk/signalk-schema'
-import { Application, Request, Response } from 'express'
+import { IRouter, Request, Response } from 'express'
 import _ from 'lodash'
 import path from 'path'
-import { WithConfig } from '../../app'
+import { SignalKMessageHub, WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
 
-import { GeoJsonPoint, Position, Route } from '@signalk/server-api'
+import {
+  GeoJsonPoint,
+  Position,
+  Route,
+  SignalKResourceType
+} from '@signalk/server-api'
 import { isValidCoordinate } from 'geolib'
 import { Responses } from '../'
 import { Store } from '../../serverstate/store'
 
 import { buildSchemaSync } from 'api-schema-builder'
 import courseOpenApi from './openApi.json'
+import { ResourcesApi } from '../resources'
 
 const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
 
@@ -23,15 +28,10 @@ const SIGNALK_API_PATH = `/signalk/v2/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
 
 interface CourseApplication
-  extends Application,
+  extends IRouter,
     WithConfig,
-    WithSecurityStrategy {
-  resourcesApi: {
-    getResource: (resourceType: string, resourceId: string) => any
-  }
-  signalk: FullSignalK
-  handleMessage: (id: string, data: any) => void
-}
+    WithSecurityStrategy,
+    SignalKMessageHub {}
 
 interface DestinationBase {
   href?: string
@@ -72,8 +72,6 @@ interface CourseInfo {
 }
 
 export class CourseApi {
-  private server: CourseApplication
-
   private courseInfo: CourseInfo = {
     startTime: null,
     targetArrivalTime: null,
@@ -100,10 +98,12 @@ export class CourseApi {
 
   private store: Store
 
-  constructor(app: CourseApplication) {
-    this.server = app
+  constructor(
+    private server: CourseApplication,
+    private resourcesApi: ResourcesApi
+  ) {
     this.store = new Store(
-      path.join(app.config.configPath, 'serverstate/course')
+      path.join(server.config.configPath, 'serverstate/course')
     )
   }
 
@@ -529,10 +529,10 @@ export class CourseApi {
         debug(`fetching ${JSON.stringify(typedHref)}`)
         // fetch waypoint resource details
         try {
-          const r = await this.server.resourcesApi.getResource(
+          const r = (await this.resourcesApi.getResource(
             typedHref.type,
             typedHref.id
-          )
+          )) as any
           if (isValidCoordinate(r.feature.geometry.coordinates)) {
             newCourse.nextPoint.position = {
               latitude: r.feature.geometry.coordinates[1],
@@ -636,7 +636,9 @@ export class CourseApi {
     return index
   }
 
-  private parseHref(href: string): { type: string; id: string } | undefined {
+  private parseHref(
+    href: string
+  ): { type: SignalKResourceType; id: string } | undefined {
     if (!href) {
       return undefined
     }
@@ -649,7 +651,7 @@ export class CourseApi {
       return undefined
     }
     return {
-      type: ref[1],
+      type: ref[1] as SignalKResourceType,
       id: ref[2]
     }
   }
@@ -686,7 +688,9 @@ export class CourseApi {
     const h = this.parseHref(href)
     if (h) {
       try {
-        return await this.server.resourcesApi.getResource(h.type, h.id)
+        return (await this.resourcesApi.getResource(h.type, h.id)) as
+          | Route
+          | undefined
       } catch (err) {
         debug(`** Unable to fetch resource: ${h.type}, ${h.id}`)
         return undefined

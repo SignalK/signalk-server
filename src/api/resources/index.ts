@@ -9,7 +9,7 @@ import {
   SignalKResourceType
 } from '@signalk/server-api'
 
-import { Application, NextFunction, Request, Response } from 'express'
+import { IRouter, NextFunction, Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid'
 // import { SignalKMessageHub } from '../../app'
 import { WithSecurityStrategy } from '../../security'
@@ -17,13 +17,17 @@ import { WithSecurityStrategy } from '../../security'
 import { Responses } from '../'
 import { fromPostData } from './resources'
 import { validate } from './validate'
+import { SignalKMessageHub } from '../../app'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 
 const UUID_PREFIX = 'urn:mrn:signalk:uuid:'
 export const skUuid = () => `${UUID_PREFIX}${uuidv4()}`
 
-interface ResourceApplication extends Application, WithSecurityStrategy {
+interface ResourceApplication
+  extends WithSecurityStrategy,
+    SignalKMessageHub,
+    IRouter {
   handleMessage: (id: string, data: any) => void
 }
 

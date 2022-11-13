@@ -1,3 +1,6 @@
+import { IRouter } from 'express'
+import { SignalKMessageHub, WithConfig } from '../app'
+import { WithSecurityStrategy } from '../security'
 import { CourseApi } from './course'
 import { ResourcesApi } from './resources'
 
@@ -33,19 +36,10 @@ export const Responses = {
   }
 }
 
-const APIS = {
-  resourcesApi: ResourcesApi,
-  courseApi: CourseApi
+export const startApis = (
+  app: SignalKMessageHub & WithSecurityStrategy & IRouter & WithConfig
+) => {
+  const resourcesApi = new ResourcesApi(app)
+  const courseApi = new CourseApi(app, resourcesApi)
+  Promise.all([resourcesApi.start(), courseApi.start()])
 }
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const startApis = (app: any) =>
-  Promise.all(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Object.entries(APIS).map((value: any) => {
-      const [apiName, apiConstructor] = value
-      const api = new apiConstructor(app)
-      app[apiName] = api
-      return api.start()
-    })
-  )

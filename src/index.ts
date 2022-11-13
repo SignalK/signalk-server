@@ -25,7 +25,7 @@ if (typeof [].includes !== 'function') {
 import { PropertyValues } from '@signalk/server-api'
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import { Debugger } from 'debug'
-import express, { Request, Response } from 'express'
+import express, { IRouter, Request, Response } from 'express'
 import http from 'http'
 import https from 'https'
 import _ from 'lodash'
@@ -44,7 +44,8 @@ import {
   getCertificateOptions,
   getSecurityConfig,
   saveSecurityConfig,
-  startSecurity
+  startSecurity,
+  WithSecurityStrategy
 } from './security.js'
 import SubscriptionManager from './subscriptionmanager'
 import { Delta } from './types'
@@ -57,7 +58,12 @@ interface ServerOptions {
 }
 
 class Server {
-  app: ServerApp & SelfIdentity & WithConfig & SignalKMessageHub
+  app: ServerApp &
+    SelfIdentity &
+    WithConfig &
+    SignalKMessageHub &
+    WithSecurityStrategy &
+    IRouter
   constructor(opts: ServerOptions) {
     const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
     const bodyParser = require('body-parser')
