@@ -6,6 +6,7 @@
     "esModuleInterop": true,
     "strict": true,
     "allowJs": true,
+    "typeRoots": ["./src/types", "./node_modules/@types"],
     "resolveJsonModule": true,
     "rootDir": "./src"
   },
