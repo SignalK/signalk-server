@@ -13,7 +13,7 @@
     "url": "http://signalk.org/specification/",
     "description": "Signal K specification."
   },
-  "servers":[
+  "servers": [
     {
       "url": "/signalk/v2/api"
     }
@@ -82,9 +82,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "Point"
-            ]
+            "enum": ["Point"]
           },
           "coordinates": {
             "$ref": "#/components/schemas/Coordinate"
@@ -101,9 +99,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "LineString"
-            ]
+            "enum": ["LineString"]
           },
           "coordinates": {
             "$ref": "#/components/schemas/LineStringCoordinates"
@@ -120,9 +116,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "Polygon"
-            ]
+            "enum": ["Polygon"]
           },
           "coordinates": {
             "$ref": "#/components/schemas/PolygonCoordinates"
@@ -139,9 +133,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "MultiPolygon"
-            ]
+            "enum": ["MultiPolygon"]
           },
           "coordinates": {
             "$ref": "#/components/schemas/MultiPolygonCoordinates"
@@ -155,14 +147,11 @@
       },
       "SignalKHref": {
         "type": "string",
-        "pattern": "^\/resources\/(\\w*)\/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        "pattern": "^/resources/(\\w*)/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
       },
       "SignalKPosition": {
         "type": "object",
-        "required": [
-          "latitude",
-          "longitude"
-        ],
+        "required": ["latitude", "longitude"],
         "properties": {
           "latitude": {
             "type": "number",
@@ -313,9 +302,9 @@
             "description": "Reference to a related resource. A pointer to the resource UUID.",
             "example": "/resources/waypoints/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a",
             "allOf": [
-                {
+              {
                 "$ref": "#/components/schemas/SignalKHref"
-                }
+              }
             ]
           }
         }
@@ -331,9 +320,9 @@
               "longitude": 3.3452
             },
             "allOf": [
-                {
+              {
                 "$ref": "#/components/schemas/SignalKPosition"
-                }
+              }
             ]
           }
         }
@@ -341,9 +330,7 @@
       "Route": {
         "type": "object",
         "description": "Signal K Route resource",
-        "required": [
-          "feature"
-        ],
+        "required": ["feature"],
         "properties": {
           "name": {
             "type": "string",
@@ -377,9 +364,7 @@
       "RoutePostModel": {
         "description": "Route API resource request payload",
         "type": "object",
-        "required": [
-          "points"
-        ],
+        "required": ["points"],
         "properties": {
           "name": {
             "type": "string",
@@ -401,9 +386,7 @@
       "Waypoint": {
         "description": "Signal K Waypoint resource",
         "type": "object",
-        "required": [
-          "feature"
-        ],
+        "required": ["feature"],
         "properties": {
           "name": {
             "type": "string",
@@ -433,9 +416,7 @@
       "WaypointPostModel": {
         "description": "Waypoint API resource request payload",
         "type": "object",
-        "required": [
-          "position"
-        ],
+        "required": ["position"],
         "properties": {
           "name": {
             "type": "string",
@@ -462,9 +443,7 @@
       "Region": {
         "description": "Signal K Region resource",
         "type": "object",
-        "required": [
-          "feature"
-        ],
+        "required": ["feature"],
         "properties": {
           "name": {
             "type": "string",
@@ -501,9 +480,7 @@
       "RegionPostModel": {
         "description": "Region API resource request payload",
         "type": "object",
-        "required": [
-          "points"
-        ],
+        "required": ["points"],
         "properties": {
           "name": {
             "type": "string",
@@ -581,16 +558,12 @@
       "TileLayerSource": {
         "description": "Attributes to describe a chart resource.",
         "type": "object",
-        "required": [
-          "type"
-        ],
+        "required": ["type"],
         "properties": {
           "type": {
             "type": "string",
             "description": "Source type of map data.",
-            "enum": [
-              "tilelayer"
-            ],
+            "enum": ["tilelayer"],
             "default": "tilelayer",
             "example": "tilelayer"
           },
@@ -603,12 +576,10 @@
             "minItems": 4,
             "maxItems": 4,
             "example": [
-              172.7499244562935,
-              -41.27498133450632,
-              173.9166560895481,
+              172.7499244562935, -41.27498133450632, 173.9166560895481,
               -40.70659187633642
             ]
-          },          
+          },
           "format": {
             "type": "string",
             "description": "The file format of the tile data.",
@@ -643,18 +614,12 @@
       "MapServerSource": {
         "description": "Decribes Map server source types.",
         "type": "object",
-        "required": [
-          "type"
-        ],
+        "required": ["type"],
         "properties": {
           "type": {
             "type": "string",
             "description": "Source type of map data.",
-            "enum": [
-              "tilejson",
-              "wms",
-              "wmts"
-            ],
+            "enum": ["tilejson", "wms", "wmts"],
             "default": "wms",
             "example": "wms"
           }
@@ -663,9 +628,7 @@
       "Chart": {
         "description": "Signal K Chart resource",
         "type": "object",
-        "required": [
-          "identifier"
-        ],
+        "required": ["identifier"],
         "properties": {
           "identifier": {
             "type": "string",
@@ -695,10 +658,7 @@
               "type": "string"
             },
             "description": "List of chart layer ids.",
-            "example": [
-              "Restricted.Areas",
-              "Fishing-Zones"
-            ]
+            "example": ["Restricted.Areas", "Fishing-Zones"]
           }
         },
         "oneOf": [
@@ -713,10 +673,7 @@
       "BaseResponseModel": {
         "description": "base model for resource entry response",
         "type": "object",
-        "required": [
-          "timestamp",
-          "$source"
-        ],
+        "required": ["timestamp", "$source"],
         "properties": {
           "timestamp": {
             "type": "string"
@@ -795,25 +752,17 @@
               "properties": {
                 "state": {
                   "type": "string",
-                  "enum": [
-                    "COMPLETED"
-                  ]
+                  "enum": ["COMPLETED"]
                 },
                 "statusCode": {
                   "type": "number",
-                  "enum": [
-                    200
-                  ]
+                  "enum": [200]
                 },
                 "id": {
                   "$ref": "#/components/schemas/SignalKUuid"
                 }
               },
-              "required": [
-                "id",
-                "statusCode",
-                "state"
-              ]
+              "required": ["id", "statusCode", "state"]
             }
           }
         }
@@ -827,25 +776,17 @@
               "properties": {
                 "state": {
                   "type": "string",
-                  "enum": [
-                    "COMPLETED"
-                  ]
+                  "enum": ["COMPLETED"]
                 },
                 "statusCode": {
                   "type": "number",
-                  "enum": [
-                    201
-                  ]
+                  "enum": [201]
                 },
                 "id": {
                   "$ref": "#/components/schemas/SignalKUuid"
                 }
               },
-              "required": [
-                "id",
-                "statusCode",
-                "state"
-              ]
+              "required": ["id", "statusCode", "state"]
             }
           }
         }
@@ -860,25 +801,17 @@
               "properties": {
                 "state": {
                   "type": "string",
-                  "enum": [
-                    "FAILED"
-                  ]
+                  "enum": ["FAILED"]
                 },
                 "statusCode": {
                   "type": "number",
-                  "enum": [
-                    404
-                  ]
+                  "enum": [404]
                 },
                 "message": {
                   "type": "string"
                 }
               },
-              "required": [
-                "state",
-                "statusCode",
-                "message"
-              ]
+              "required": ["state", "statusCode", "message"]
             }
           }
         }
@@ -973,12 +906,7 @@
             "minimum": -180,
             "maximum": 180
           },
-          "example": [
-            135.5,
-            -25.2,
-            138.1,
-            -28
-          ]
+          "example": [135.5, -25.2, 138.1, -28]
         }
       },
       "PositionParam": {
@@ -997,10 +925,7 @@
             "minimum": -180,
             "maximum": 180
           },
-          "example": [
-            135.5,
-            -25.2
-          ]
+          "example": [135.5, -25.2]
         }
       }
     },
@@ -1017,16 +942,11 @@
       }
     }
   },
-  "security": [
-    {"cookieAuth": []},
-    {"bearerAuth": []}
-  ],
+  "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
   "paths": {
     "/resources": {
       "get": {
-        "tags": [
-          "resources"
-        ],
+        "tags": ["resources"],
         "summary": "Retrieve list of available resource types",
         "responses": {
           "default": {
@@ -1036,9 +956,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": {
-                    "required": [
-                      "$source"
-                    ],
+                    "required": ["$source"],
                     "properties": {
                       "description": {
                         "type": "string"
@@ -1057,9 +975,7 @@
     },
     "/resources/routes": {
       "get": {
-        "tags": [
-          "routes"
-        ],
+        "tags": ["routes"],
         "summary": "Retrieve route resources",
         "parameters": [
           {
@@ -1096,9 +1012,7 @@
         }
       },
       "post": {
-        "tags": [
-          "routes"
-        ],
+        "tags": ["routes"],
         "summary": "New Route",
         "requestBody": {
           "description": "API request payload",
@@ -1134,9 +1048,7 @@
         }
       ],
       "get": {
-        "tags": [
-          "routes"
-        ],
+        "tags": ["routes"],
         "summary": "Retrieve route with supplied id",
         "responses": {
           "200": {
@@ -1148,9 +1060,7 @@
         }
       },
       "put": {
-        "tags": [
-          "routes"
-        ],
+        "tags": ["routes"],
         "summary": "Add / update a new Route with supplied id",
         "requestBody": {
           "description": "Route resource entry",
@@ -1173,9 +1083,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "routes"
-        ],
+        "tags": ["routes"],
         "summary": "Remove Route with supplied id",
         "responses": {
           "200": {
@@ -1189,9 +1097,7 @@
     },
     "/resources/waypoints": {
       "get": {
-        "tags": [
-          "waypoints"
-        ],
+        "tags": ["waypoints"],
         "summary": "Retrieve waypoint resources",
         "parameters": [
           {
@@ -1228,9 +1134,7 @@
         }
       },
       "post": {
-        "tags": [
-          "waypoints"
-        ],
+        "tags": ["waypoints"],
         "summary": "New Waypoint",
         "requestBody": {
           "description": "API request payload",
@@ -1266,9 +1170,7 @@
         }
       ],
       "get": {
-        "tags": [
-          "waypoints"
-        ],
+        "tags": ["waypoints"],
         "summary": "Retrieve waypoint with supplied id",
         "responses": {
           "200": {
@@ -1280,9 +1182,7 @@
         }
       },
       "put": {
-        "tags": [
-          "waypoints"
-        ],
+        "tags": ["waypoints"],
         "summary": "Add / update a new Waypoint with supplied id",
         "requestBody": {
           "description": "Waypoint resource entry",
@@ -1305,9 +1205,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "waypoints"
-        ],
+        "tags": ["waypoints"],
         "summary": "Remove Waypoint with supplied id",
         "responses": {
           "200": {
@@ -1321,9 +1219,7 @@
     },
     "/resources/regions": {
       "get": {
-        "tags": [
-          "regions"
-        ],
+        "tags": ["regions"],
         "summary": "Retrieve region resources",
         "parameters": [
           {
@@ -1360,9 +1256,7 @@
         }
       },
       "post": {
-        "tags": [
-          "regions"
-        ],
+        "tags": ["regions"],
         "summary": "New Region",
         "requestBody": {
           "description": "API request payload",
@@ -1398,9 +1292,7 @@
         }
       ],
       "get": {
-        "tags": [
-          "regions"
-        ],
+        "tags": ["regions"],
         "summary": "Retrieve region with supplied id",
         "responses": {
           "200": {
@@ -1412,9 +1304,7 @@
         }
       },
       "put": {
-        "tags": [
-          "regions"
-        ],
+        "tags": ["regions"],
         "summary": "Add / update a new Region with supplied id",
         "requestBody": {
           "description": "Region resource entry",
@@ -1437,9 +1327,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "regions"
-        ],
+        "tags": ["regions"],
         "summary": "Remove Region with supplied id",
         "responses": {
           "200": {
@@ -1453,9 +1341,7 @@
     },
     "/resources/notes": {
       "get": {
-        "tags": [
-          "notes"
-        ],
+        "tags": ["notes"],
         "summary": "Retrieve note resources",
         "parameters": [
           {
@@ -1503,9 +1389,7 @@
         }
       },
       "post": {
-        "tags": [
-          "notes"
-        ],
+        "tags": ["notes"],
         "summary": "New Note",
         "requestBody": {
           "description": "Note resource entry",
@@ -1541,9 +1425,7 @@
         }
       ],
       "get": {
-        "tags": [
-          "notes"
-        ],
+        "tags": ["notes"],
         "summary": "Retrieve note with supplied id",
         "responses": {
           "200": {
@@ -1555,9 +1437,7 @@
         }
       },
       "put": {
-        "tags": [
-          "notes"
-        ],
+        "tags": ["notes"],
         "summary": "Add / update a new Note with supplied id",
         "requestBody": {
           "description": "Note resource entry",
@@ -1580,9 +1460,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "notes"
-        ],
+        "tags": ["notes"],
         "summary": "Remove Note with supplied id",
         "responses": {
           "200": {
@@ -1596,9 +1474,7 @@
     },
     "/resources/charts": {
       "get": {
-        "tags": [
-          "charts"
-        ],
+        "tags": ["charts"],
         "summary": "Retrieve chart resources",
         "responses": {
           "default": {
@@ -1634,9 +1510,7 @@
         }
       ],
       "get": {
-        "tags": [
-          "charts"
-        ],
+        "tags": ["charts"],
         "summary": "Retrieve chart with supplied id",
         "responses": {
           "200": {
@@ -1648,9 +1522,7 @@
         }
       },
       "put": {
-        "tags": [
-          "charts"
-        ],
+        "tags": ["charts"],
         "summary": "Add / update a new Chart with supplied id",
         "requestBody": {
           "description": "Chart resource entry",

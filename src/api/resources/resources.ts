@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Position, Region, Route, Waypoint } from '@signalk/server-api'
 import { getDistance, isValidCoordinate } from 'geolib'
 
@@ -31,7 +32,7 @@ const processRegionCoords = (coords: any[], type: string) => {
   }
   if (type === 'Polygon') {
     const polygon: any[] = []
-    coords.forEach(line => {
+    coords.forEach((line) => {
       const tc = transformCoords(line)
       if (tc) {
         polygon.push(transformCoords(line))
@@ -43,7 +44,7 @@ const processRegionCoords = (coords: any[], type: string) => {
   }
   if (type === 'MultiPolygon') {
     const multipolygon: any[] = []
-    coords.forEach(polygon => {
+    coords.forEach((polygon) => {
       const pa: any[] = []
       polygon.forEach((line: Position[]) => {
         const tc = transformCoords(line)

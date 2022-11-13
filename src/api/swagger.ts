@@ -1,4 +1,5 @@
-import { NextFunction, Request, Response } from 'express'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Request, Response } from 'express'
 import swaggerUi from 'swagger-ui-express'
 import { SERVERROUTESPREFIX } from '../constants'
 import { courseApiRecord } from './course/openApi'
@@ -13,14 +14,13 @@ interface OpenApiRecord {
 
 const apiDocs: {
   [name: string]: OpenApiRecord
-} = [
-  courseApiRecord,
-  notificationsApiRecord,
-  resourcesApiRecord
-].reduce((acc: any, apiRecord: OpenApiRecord) => {
-  acc[apiRecord.name] = apiRecord
-  return acc
-}, {})
+} = [courseApiRecord, notificationsApiRecord, resourcesApiRecord].reduce(
+  (acc: any, apiRecord: OpenApiRecord) => {
+    acc[apiRecord.name] = apiRecord
+    return acc
+  },
+  {}
+)
 
 export function mountSwaggerUi(app: any, path: string) {
   app.use(
@@ -29,7 +29,7 @@ export function mountSwaggerUi(app: any, path: string) {
     swaggerUi.setup(undefined, {
       explorer: true,
       swaggerOptions: {
-        urls: Object.keys(apiDocs).map(name => ({
+        urls: Object.keys(apiDocs).map((name) => ({
           name,
           url: `${SERVERROUTESPREFIX}/openapi/${name}`
         }))

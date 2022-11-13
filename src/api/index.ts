@@ -38,8 +38,10 @@ const APIS = {
   courseApi: CourseApi
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const startApis = (app: any) =>
   Promise.all(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Object.entries(APIS).map((value: any) => {
       const [apiName, apiConstructor] = value
       const api = new apiConstructor(app)

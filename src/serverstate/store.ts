@@ -9,7 +9,7 @@ export class Store {
   constructor(filePath: string, fileName = 'settings.json') {
     this.filePath = filePath
     this.fileName = fileName
-    this.init().catch(error => {
+    this.init().catch((error) => {
       console.log(
         `Could not initialise ${path.join(this.filePath, this.fileName)}`
       )
@@ -17,19 +17,14 @@ export class Store {
     })
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async read(): Promise<any> {
-    try {
-      const data = await readFile(
-        path.join(this.filePath, this.fileName),
-        'utf8'
-      )
-      return JSON.parse(data)
-    } catch (error) {
-      throw error
-    }
+    const data = await readFile(path.join(this.filePath, this.fileName), 'utf8')
+    return JSON.parse(data)
   }
 
-  write(data: any): Promise<any> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  write(data: any) {
     return writeFile(
       path.join(this.filePath, this.fileName),
       JSON.stringify(data)

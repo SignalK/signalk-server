@@ -350,6 +350,7 @@ class Server {
 
     app.intervals.push(startDeltaStatistics(app))
 
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async (resolve, reject) => {
       createServer(app, async (err, server) => {
         if (err) {

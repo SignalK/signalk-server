@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:api:resources')
 
@@ -362,9 +363,10 @@ export class ResourcesApi {
         }
 
         try {
-          const retVal = await this.resProvider[
-            req.params.resourceType
-          ]?.setResource(req.params.resourceId, req.body)
+          await this.resProvider[req.params.resourceType]?.setResource(
+            req.params.resourceId,
+            req.body
+          )
 
           server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
@@ -407,9 +409,9 @@ export class ResourcesApi {
           return
         }
         try {
-          const retVal = await this.resProvider[
-            req.params.resourceType
-          ]?.deleteResource(req.params.resourceId)
+          await this.resProvider[req.params.resourceType]?.deleteResource(
+            req.params.resourceId
+          )
 
           server.handleMessage(
             this.resProvider[req.params.resourceType]?.pluginId as string,
@@ -438,6 +440,7 @@ export class ResourcesApi {
   private getResourcePaths(): { [key: string]: any } {
     const resPaths: { [key: string]: any } = {}
     for (const i in this.resProvider) {
+      // eslint-disable-next-line no-prototype-builtins
       if (this.resProvider.hasOwnProperty(i)) {
         resPaths[i] = {
           description: `Path containing ${

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:api:course')
 
@@ -43,10 +44,6 @@ interface Destination extends DestinationBase {
 interface ActiveRoute extends DestinationBase {
   pointIndex?: number
   reverse?: boolean
-  name?: string
-}
-
-interface Location extends Position {
   name?: string
 }
 
@@ -111,7 +108,9 @@ export class CourseApi {
   }
 
   async start() {
-    return new Promise<void>(async resolve => {
+
+    // eslint-disable-next-line no-async-promise-executor
+    return new Promise<void>(async (resolve) => {
       this.initCourseRoutes()
 
       try {
@@ -379,8 +378,8 @@ export class CourseApi {
           } else {
             this.courseInfo.activeRoute.pointIndex = this.calcReversedIndex()
           }
-          this.courseInfo.activeRoute.reverse = !this.courseInfo.activeRoute
-            .reverse
+          this.courseInfo.activeRoute.reverse =
+            !this.courseInfo.activeRoute.reverse
         }
 
         if (req.params.action === 'refresh') {
@@ -858,7 +857,7 @@ export class CourseApi {
   private emitCourseInfo(noSave = false) {
     this.server.handleMessage('courseApi', this.buildDeltaMsg())
     if (!noSave) {
-      this.store.write(this.courseInfo).catch(error => {
+      this.store.write(this.courseInfo).catch((error) => {
         console.log(error)
       })
     }

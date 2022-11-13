@@ -14,6 +14,7 @@ export const validate = {
     type: SignalKResourceType,
     id: string | undefined,
     method: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any
   ): void => {
     debug(`Validating ${type} ${method} ${JSON.stringify(value)}`)
@@ -37,6 +38,7 @@ export const validate = {
     type: SignalKResourceType,
     id: string | undefined,
     method: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any
   ): void => {
     debug(

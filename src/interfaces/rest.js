@@ -19,8 +19,6 @@ const debug = createDebug('signalk-server:interfaces:rest')
 const express = require('express')
 const { getMetadata } = require('@signalk/signalk-schema')
 const ports = require('../ports')
-const geolib = require('geolib')
-const _ = require('lodash')
 const pkg = require('../config/config').package
 
 const iso8601rexexp =
