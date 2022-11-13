@@ -1,28 +1,43 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Request, Response } from 'express'
+import { IRouter, Request, Response } from 'express'
 import swaggerUi from 'swagger-ui-express'
 import { SERVERROUTESPREFIX } from '../constants'
 import { courseApiRecord } from './course/openApi'
 import { notificationsApiRecord } from './notifications/openApi'
 import { resourcesApiRecord } from './resources/openApi'
+import { securityApiRecord } from './security/openApi'
+import { discoveryApiRecord } from './discovery/openApi'
+import { appsApiRecord } from './apps/openApi'
+
+interface WithServers {
+  servers: {
+    url: string
+  }[]
+}
 
 interface OpenApiRecord {
   name: string
   path: string
-  apiDoc: any
+  apiDoc: WithServers
 }
 
-const apiDocs: {
+interface ApiRecords {
   [name: string]: OpenApiRecord
-} = [courseApiRecord, notificationsApiRecord, resourcesApiRecord].reduce(
-  (acc: any, apiRecord: OpenApiRecord) => {
-    acc[apiRecord.name] = apiRecord
-    return acc
-  },
-  {}
-)
+}
 
-export function mountSwaggerUi(app: any, path: string) {
+const apiDocs = [
+  discoveryApiRecord,
+  appsApiRecord,
+  securityApiRecord,
+  courseApiRecord,
+  notificationsApiRecord,
+  resourcesApiRecord
+].reduce<ApiRecords>((acc, apiRecord: OpenApiRecord) => {
+  acc[apiRecord.name] = apiRecord
+  return acc
+}, {})
+
+export function mountSwaggerUi(app: IRouter, path: string) {
   app.use(
     path,
     swaggerUi.serve,
@@ -45,6 +60,9 @@ export function mountSwaggerUi(app: any, path: string) {
             url: `${process.env.PROTOCOL ? 'https' : req.protocol}://${req.get(
               'Host'
             )}${apiDocs[req.params.api].path}`
+          },
+          {
+            url: `https://demo.signalk.org${apiDocs[req.params.api].path}`
           }
         ]
         res.json(apiDocs[req.params.api].apiDoc)

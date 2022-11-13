@@ -83,6 +83,9 @@ class Widget02 extends Component {
         backgroundSize: 'cover',
         backgroundImage: bgImage ? `url(${bgImage})` : 'unset',
       }
+      if (bgImage) {
+        style.width = style.height = '72px'
+      }
       return <i className={classes} style={style} />
     }
 
@@ -106,7 +109,10 @@ class Widget02 extends Component {
       <a href={url}>
         <Card>
           <CardBody className={card.classes} {...attributes}>
-            {blockIcon(card.icon, `${this.props.url}/${this.props.bgImage}`)}
+            {blockIcon(
+              card.icon,
+              this.props.bgImage && `${this.props.url}/${this.props.bgImage}`
+            )}
             <div className={lead.classes}>{header}</div>
             <div className="text-muted font-xs">{mainText}</div>
           </CardBody>

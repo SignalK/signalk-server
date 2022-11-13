@@ -63,7 +63,7 @@ class Webapps extends Component {
                         }
                         mainText={webappInfo.description}
                         url={url}
-                        icon={`fa fa-external-link ${
+                        icon={`fa ${
                           webappInfo.signalk && webappInfo.signalk.displayName
                             ? ''
                             : 'icon-grid'
@@ -72,7 +72,7 @@ class Webapps extends Component {
                         bgImage={
                           webappInfo.signalk && webappInfo.signalk.appIcon
                             ? webappInfo.signalk.appIcon
-                            : ''
+                            : undefined
                         }
                       />
                     </Col>

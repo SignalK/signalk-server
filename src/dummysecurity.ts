@@ -17,8 +17,10 @@
  * limitations under the License.
  */
 
+import { SecurityStrategy } from './security'
+
 export default function () {
-  return {
+  const dummyStrategy = {
     getConfiguration: () => {
       return {}
     },
@@ -136,4 +138,9 @@ export default function () {
     securityConfig: undefined,
     requestAccess: () => undefined
   }
+  //force cast via unknown so that we don't need to
+  //implement all dummy methods that are never called
+  //with dummy strategy in place. or if they are called
+  //the result will be an error.
+  return dummyStrategy as unknown as SecurityStrategy
 }

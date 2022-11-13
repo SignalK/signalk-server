@@ -19,7 +19,6 @@ const debug = createDebug('signalk-server:interfaces:rest')
 const express = require('express')
 const { getMetadata } = require('@signalk/signalk-schema')
 const ports = require('../ports')
-const pkg = require('../config/config').package
 
 const iso8601rexexp =
   /^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?Z$/
@@ -187,4 +186,5 @@ module.exports = function (app) {
   }
 }
 
-const getVersion = () => pkg.version
+// @ts-ignore
+const getVersion = () => require('../../package.json').version

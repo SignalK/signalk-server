@@ -25,6 +25,9 @@ COPY --chown=node . .
 COPY --chown=node docker/startup.sh startup.sh
 RUN chmod +x startup.sh
 
+RUN npm config rm proxy \
+  && npm config rm https-proxy
+
 RUN npm install --package-lock-only \
   && npm ci && npm cache clean --force \
   && npm run build:all
