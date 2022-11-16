@@ -27,6 +27,11 @@ const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
 const SIGNALK_API_PATH = `/signalk/v2/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
 
+export const COURSE_API_V2_DELTA_COUNT = 13
+export const COURSE_API_V1_DELTA_COUNT = 8
+export const COURSE_API_INITIAL_DELTA_COUNT =
+  COURSE_API_V1_DELTA_COUNT * 2 + COURSE_API_V2_DELTA_COUNT
+
 interface CourseApplication
   extends IRouter,
     WithConfig,

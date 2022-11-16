@@ -3,9 +3,9 @@ chai.Should()
 chai.use(require('chai-things'))
 chai.use(require('@signalk/signalk-schema').chaiModule)
 const _ = require('lodash')
-const assert = require('assert')
 const freeport = require('freeport-promise')
 const { startServerP, sendDelta } = require('./servertestutilities')
+const { COURSE_API_INITIAL_DELTA_COUNT } = require('../lib/api/course/')
 
 const testDelta = {
   context: 'vessels.self',
@@ -211,8 +211,7 @@ describe('deltacache', () => {
     return serverP.then(server => {
       return deltaP.then(() => {
         var deltas = server.app.deltaCache.getCachedDeltas(delta => true, null)
-        const COURSE_API_INITIAL_DELTAS = 11
-        deltas.length.should.equal(expectedOrder.length + COURSE_API_INITIAL_DELTAS)
+        deltas.length.should.equal(expectedOrder.length + COURSE_API_INITIAL_DELTA_COUNT)
         for (var i = 0; i < expectedOrder.length; i++) {
           if (!deltas[i].updates[0].meta) {
             deltas[i].updates[0].values[0].path.should.equal(
