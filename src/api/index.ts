@@ -40,6 +40,7 @@ export const startApis = (
   app: SignalKMessageHub & WithSecurityStrategy & IRouter & WithConfig
 ) => {
   const resourcesApi = new ResourcesApi(app)
+  ;(app as any).resourcesApi = resourcesApi
   const courseApi = new CourseApi(app, resourcesApi)
   Promise.all([resourcesApi.start(), courseApi.start()])
 }
