@@ -731,10 +731,11 @@ export class CourseApi {
       path: `${navPath}.activeRoute.reverse`,
       value: this.courseInfo.activeRoute.reverse
     })
-    values.push({
-      path: `${navPath}.activeRoute.name`,
-      value: this.courseInfo.activeRoute.name
-    })
+    this.courseInfo.activeRoute.name &&
+      values.push({
+        path: `${navPath}.activeRoute.name`,
+        value: this.courseInfo.activeRoute.name
+      })
     values.push({
       path: `${navPath}.activeRoute.waypoints`,
       value: this.courseInfo.activeRoute.waypoints
