@@ -45,6 +45,7 @@ import {
   saveSecurityConfig,
   startSecurity
 } from './security.js'
+import { setupCors } from './cors'
 import SubscriptionManager from './subscriptionmanager'
 import { Delta } from './types'
 const debug = createDebug('signalk-server')
@@ -72,8 +73,8 @@ class Server {
     app.logging = require('./logging')(app)
     app.version = '0.0.1'
 
-    startSecurity(app, opts ? opts.securityConfig : null)
     setupCors(app, getSecurityConfig(app))
+    startSecurity(app, opts ? opts.securityConfig : null)
 
     require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
     require('./put').start(app)
@@ -559,27 +560,4 @@ function startInterfaces(app: ServerApp & WithConfig) {
       debug(`Not loading interface '${name}' because of configuration`)
     }
   })
-}
-
-function setupCors(app: any, { allowedCorsOrigins }: any) {
-  const corsDebug = createDebug('signalk-server:cors')
-
-  const corsOrigins = allowedCorsOrigins ? allowedCorsOrigins.split(',') : []
-  corsDebug(`corsOrigins:${corsOrigins.toString()}`)
-  const corsOptions: any = {
-    credentials: true
-  }
-  if (corsOrigins.length) {
-    corsOptions.origin = (origin: any, cb: any) => {
-      if (corsOrigins.indexOf(origin)) {
-        corsDebug(`Found CORS origin ${origin}`)
-        cb(undefined, origin)
-      } else {
-        const errorMsg = `CORS origin not allowed ${origin}`
-        corsDebug(errorMsg)
-        cb(new Error(errorMsg))
-      }
-    }
-  }
-  app.use(require('cors')(corsOptions))
 }

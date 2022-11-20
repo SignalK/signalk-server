@@ -6,16 +6,12 @@ import {
   CardHeader,
   CardBody,
   CardFooter,
-  InputGroup,
-  InputGroupAddon,
   Input,
   Form,
   Col,
   Label,
   FormGroup,
   FormText,
-  Table,
-  Row,
 } from 'reactstrap'
 import EnableSecurity from './EnableSecurity'
 
@@ -28,6 +24,8 @@ export function fetchSecurityConfig() {
       this.setState({ ...data, hasData: true })
     })
 }
+
+const adminUIOrigin = `${window.location.protocol}//${window.location.host}`
 
 class Settings extends Component {
   constructor(props) {
@@ -71,6 +69,7 @@ class Settings extends Component {
       allowNewUserRegistration: this.state.allowNewUserRegistration,
       allowDeviceAccessRequests: this.state.allowDeviceAccessRequests,
       allowedCorsOrigins: this.state.allowedCorsOrigins,
+      adminUIOrigin,
     }
     fetch(`${window.serverRoutesPrefix}/security/config`, {
       method: 'PUT',
@@ -108,7 +107,7 @@ class Settings extends Component {
                   className="form-horizontal"
                 >
                   <FormGroup row>
-                    <Col xs="0" md="2">
+                    <Col xs="0" md="3">
                       <Label>Allow Readonly Access</Label>
                     </Col>
                     <Col md="9">
@@ -186,10 +185,10 @@ class Settings extends Component {
                     </Col>
                   </FormGroup>
                   <FormGroup row>
-                    <Col md="2">
+                    <Col md="3">
                       <Label htmlFor="text-input">Login Session Timeout</Label>
                     </Col>
-                    <Col xs="12" md="9">
+                    <Col xs="12" md="2">
                       <Input
                         type="text"
                         name="expiration"
@@ -202,7 +201,19 @@ class Settings extends Component {
                     </Col>
                   </FormGroup>
                   <FormGroup row>
-                    <Col md="2">
+                    <Col md="12">
+                      <Label>
+                        Simple CORS requests are allowed from all hosts by
+                        default. You can restrict CORS requests to named hosts
+                        by configuring allowed CORS origins below. The host
+                        where this page is loaded from is automatically included
+                        in the allowed CORS origins so that the Admin UI
+                        continues to work.
+                      </Label>
+                    </Col>
+                  </FormGroup>{' '}
+                  <FormGroup row>
+                    <Col md="3">
                       <Label htmlFor="text-input">Allowed CORS origins</Label>
                     </Col>
                     <Col xs="12" md="9">

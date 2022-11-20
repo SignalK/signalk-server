@@ -98,6 +98,7 @@ export interface SecurityConfig {
   allow_readonly: boolean
   allowNewUserRegistration: boolean
   allowDeviceAccessRequests: boolean
+  allowedCorsOrigins?: string
   expiration: string
   devices: Device[]
   secretKey: string
@@ -229,7 +230,7 @@ export function getSecurityConfig(
   app: WithConfig & WithSecurityStrategy,
   forceRead = false
 ) {
-  if (!forceRead && app.securityStrategy.configFromArguments) {
+  if (!forceRead && app.securityStrategy?.configFromArguments) {
     return app.securityStrategy.securityConfig
   } else {
     try {
