@@ -40,6 +40,7 @@ function WsPromiser (url, timeout = 250) {
   this.receivedMessagePromisers = []
   this.messageCount = 0
   this.timeout = timeout
+  this.messages = []
 }
 
 WsPromiser.prototype.nextMsg = function () {
@@ -70,8 +71,12 @@ WsPromiser.prototype.nthMessage = function (n) {
   return this.nthMessagePromiser(n).promise
 }
 
+WsPromiser.prototype.parsedMessages = function () {
+  return this.messages.map(m => JSON.parse(m))
+}
 
 WsPromiser.prototype.onMessage = function (message) {
+  this.messages.push(message)
   const theCallees = this.callees
   this.callees = []
   theCallees.forEach(callee => callee(message))
