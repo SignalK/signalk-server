@@ -2,4 +2,4 @@
 service dbus restart
 /usr/sbin/avahi-daemon -k
 /usr/sbin/avahi-daemon --no-drop-root &
-/home/node/signalk/bin/signalk-server --securityenabled
+/usr/lib/node_modules/signalk-server/bin/signalk-server --securityenabled
