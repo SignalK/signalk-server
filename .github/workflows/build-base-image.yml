@@ -1,27 +1,16 @@
-name: Build Docker development container
+name: Build Docker base image
 
 on:
-  push:
-    branches:
-    - master
-    - "build-docker"
-    tags:
-    - '*'
-    - '!v*'
+  schedule:
+    - cron: "0 0 * * 1"
   workflow_dispatch:
 
 jobs:
-  build_docker_images:
+  build_docker_base_images:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Docker meta
-        id: docker_meta
-        uses: crazy-max/ghaction-docker-meta@v1
-        with:
-          images: signalk/signalk-server
-          tag-sha: true # add git short SHA as Docker tag
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -34,8 +23,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
-          file: ./docker/Dockerfile
+          file: ./docker/Dockerfile_base
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
-          images: signalk/signalk-server
-          tags: ${{ steps.docker_meta.outputs.tags }}
+          images: signalk/signalk-server-base
+          tags: latest
