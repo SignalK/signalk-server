@@ -8,6 +8,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteract
   
 RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
   && DEBIAN_FRONTEND=noninteractive apt-get -y install nodejs \
+  && npm cache clean -f \
+  && npm install npm@latest -g \
   && sudo setcap cap_net_raw+eip $(eval readlink -f `which node`)
 
 COPY docker/avahi/avahi-dbus.conf /etc/dbus-1/system.d/avahi-dbus.conf
