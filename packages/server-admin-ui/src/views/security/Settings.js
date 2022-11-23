@@ -92,157 +92,160 @@ class Settings extends Component {
         {this.props.loginStatus.authenticationRequired === false && (
           <EnableSecurity />
         )}
-        {this.state.hasData && this.props.loginStatus.authenticationRequired && (
-          <div>
-            <Card>
-              <CardHeader>
-                <i className="fa fa-align-justify" />
-                Settings
-              </CardHeader>
-              <CardBody>
-                <Form
-                  action=""
-                  method="post"
-                  encType="multipart/form-data"
-                  className="form-horizontal"
-                >
-                  <FormGroup row>
-                    <Col xs="0" md="3">
-                      <Label>Allow Readonly Access</Label>
-                    </Col>
-                    <Col md="9">
-                      <FormGroup check>
-                        <div>
-                          <Label className="switch switch-text switch-primary">
-                            <Input
-                              type="checkbox"
-                              name="allow_readonly"
-                              className="switch-input"
-                              onChange={this.handleChange}
-                              checked={this.state.allow_readonly}
-                            />
-                            <span
-                              className="switch-label"
-                              data-on="Yes"
-                              data-off="No"
-                            />
-                            <span className="switch-handle" />
-                          </Label>
-                        </div>
-                      </FormGroup>
-                    </Col>
-                  </FormGroup>
-                  <FormGroup row>
-                    <Col xs="0" md="3">
-                      <Label>Allow New User Registration</Label>
-                    </Col>
-                    <Col md="9">
-                      <FormGroup check>
-                        <div>
-                          <Label className="switch switch-text switch-primary">
-                            <Input
-                              type="checkbox"
-                              name="allowNewUserRegistration"
-                              className="switch-input"
-                              onChange={this.handleChange}
-                              checked={this.state.allowNewUserRegistration}
-                            />
-                            <span
-                              className="switch-label"
-                              data-on="Yes"
-                              data-off="No"
-                            ></span>
-                            <span className="switch-handle"></span>
-                          </Label>
-                        </div>
-                      </FormGroup>
-                    </Col>
-                  </FormGroup>
-                  <FormGroup row>
-                    <Col xs="0" md="3">
-                      <Label>Allow New Device Registration</Label>
-                    </Col>
-                    <Col md="9">
-                      <FormGroup check>
-                        <div>
-                          <Label className="switch switch-text switch-primary">
-                            <Input
-                              type="checkbox"
-                              name="allowDeviceAccessRequests"
-                              className="switch-input"
-                              onChange={this.handleChange}
-                              checked={this.state.allowDeviceAccessRequests}
-                            />
-                            <span
-                              className="switch-label"
-                              data-on="Yes"
-                              data-off="No"
-                            ></span>
-                            <span className="switch-handle"></span>
-                          </Label>
-                        </div>
-                      </FormGroup>
-                    </Col>
-                  </FormGroup>
-                  <FormGroup row>
-                    <Col md="3">
-                      <Label htmlFor="text-input">Login Session Timeout</Label>
-                    </Col>
-                    <Col xs="12" md="2">
-                      <Input
-                        type="text"
-                        name="expiration"
-                        onChange={this.handleChange}
-                        value={this.state.expiration}
-                      />
-                      <FormText color="muted">
-                        Examples: 60s, 1m, 1h, 1d
-                      </FormText>
-                    </Col>
-                  </FormGroup>
-                  <FormGroup row>
-                    <Col md="12">
-                      <Label>
-                        Simple CORS requests are allowed from all hosts by
-                        default. You can restrict CORS requests to named hosts
-                        by configuring allowed CORS origins below. The host
-                        where this page is loaded from is automatically included
-                        in the allowed CORS origins so that the Admin UI
-                        continues to work.
-                      </Label>
-                    </Col>
-                  </FormGroup>{' '}
-                  <FormGroup row>
-                    <Col md="3">
-                      <Label htmlFor="text-input">Allowed CORS origins</Label>
-                    </Col>
-                    <Col xs="12" md="9">
-                      <Input
-                        type="text"
-                        name="allowedCorsOrigins"
-                        onChange={this.handleChange}
-                        value={this.state.allowedCorsOrigins}
-                      />
-                      <FormText color="muted">
-                        Use comma delimited list, example:
-                        http://host1.name.com:3000,http://host2.name.com:3000
-                      </FormText>
-                    </Col>
-                  </FormGroup>
-                </Form>
-              </CardBody>
-              <CardFooter>
-                <Button
-                  size="sm"
-                  color="primary"
-                  onClick={this.handleSaveConfig}
-                >
-                  <i className="fa fa-dot-circle-o" /> Save
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
-        )}
+        {this.state.hasData &&
+          this.props.loginStatus.authenticationRequired && (
+            <div>
+              <Card>
+                <CardHeader>
+                  <i className="fa fa-align-justify" />
+                  Settings
+                </CardHeader>
+                <CardBody>
+                  <Form
+                    action=""
+                    method="post"
+                    encType="multipart/form-data"
+                    className="form-horizontal"
+                  >
+                    <FormGroup row>
+                      <Col xs="0" md="3">
+                        <Label>Allow Readonly Access</Label>
+                      </Col>
+                      <Col md="9">
+                        <FormGroup check>
+                          <div>
+                            <Label className="switch switch-text switch-primary">
+                              <Input
+                                type="checkbox"
+                                name="allow_readonly"
+                                className="switch-input"
+                                onChange={this.handleChange}
+                                checked={this.state.allow_readonly}
+                              />
+                              <span
+                                className="switch-label"
+                                data-on="Yes"
+                                data-off="No"
+                              />
+                              <span className="switch-handle" />
+                            </Label>
+                          </div>
+                        </FormGroup>
+                      </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                      <Col xs="0" md="3">
+                        <Label>Allow New User Registration</Label>
+                      </Col>
+                      <Col md="9">
+                        <FormGroup check>
+                          <div>
+                            <Label className="switch switch-text switch-primary">
+                              <Input
+                                type="checkbox"
+                                name="allowNewUserRegistration"
+                                className="switch-input"
+                                onChange={this.handleChange}
+                                checked={this.state.allowNewUserRegistration}
+                              />
+                              <span
+                                className="switch-label"
+                                data-on="Yes"
+                                data-off="No"
+                              ></span>
+                              <span className="switch-handle"></span>
+                            </Label>
+                          </div>
+                        </FormGroup>
+                      </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                      <Col xs="0" md="3">
+                        <Label>Allow New Device Registration</Label>
+                      </Col>
+                      <Col md="9">
+                        <FormGroup check>
+                          <div>
+                            <Label className="switch switch-text switch-primary">
+                              <Input
+                                type="checkbox"
+                                name="allowDeviceAccessRequests"
+                                className="switch-input"
+                                onChange={this.handleChange}
+                                checked={this.state.allowDeviceAccessRequests}
+                              />
+                              <span
+                                className="switch-label"
+                                data-on="Yes"
+                                data-off="No"
+                              ></span>
+                              <span className="switch-handle"></span>
+                            </Label>
+                          </div>
+                        </FormGroup>
+                      </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                      <Col md="3">
+                        <Label htmlFor="text-input">
+                          Login Session Timeout
+                        </Label>
+                      </Col>
+                      <Col xs="12" md="2">
+                        <Input
+                          type="text"
+                          name="expiration"
+                          onChange={this.handleChange}
+                          value={this.state.expiration}
+                        />
+                        <FormText color="muted">
+                          Examples: 60s, 1m, 1h, 1d
+                        </FormText>
+                      </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                      <Col md="12">
+                        <Label>
+                          Simple CORS requests are allowed from all hosts by
+                          default. You can restrict CORS requests to named hosts
+                          by configuring allowed CORS origins below. The host
+                          where this page is loaded from is automatically
+                          included in the allowed CORS origins so that the Admin
+                          UI continues to work.
+                        </Label>
+                      </Col>
+                    </FormGroup>{' '}
+                    <FormGroup row>
+                      <Col md="3">
+                        <Label htmlFor="text-input">Allowed CORS origins</Label>
+                      </Col>
+                      <Col xs="12" md="9">
+                        <Input
+                          type="text"
+                          name="allowedCorsOrigins"
+                          onChange={this.handleChange}
+                          value={this.state.allowedCorsOrigins}
+                        />
+                        <FormText color="muted">
+                          Use comma delimited list, example:
+                          http://host1.name.com:3000,http://host2.name.com:3000
+                        </FormText>
+                      </Col>
+                    </FormGroup>
+                  </Form>
+                </CardBody>
+                <CardFooter>
+                  <Button
+                    size="sm"
+                    color="primary"
+                    onClick={this.handleSaveConfig}
+                  >
+                    <i className="fa fa-dot-circle-o" /> Save
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+          )}
       </div>
     )
   }
