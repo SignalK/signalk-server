@@ -10,7 +10,7 @@ RUN npm i /patch/signalk-server-admin-ui-*.tgz --save \
   && npm i /patch/signalk-server-api-*.tgz --save \
   && npm i /patch/signalk-streams-*.tgz --save
 
-COPY startup.sh startup.sh
+COPY --chown=node docker/startup.sh startup.sh
 RUN chmod +x startup.sh
 
 USER node
