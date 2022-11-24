@@ -446,10 +446,12 @@ module.exports = function (
 
   app.get(`${skPrefix}/requests/:id`, (req: Request, res: Response) => {
     queryRequest(req.params.id)
-      .then((reply) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((reply: any) => {
         res.json(reply)
       })
-      .catch((err) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .catch((err: any) => {
         console.log(err)
         res.status(500)
         res.send(`Unable to check request: ${err.message}`)

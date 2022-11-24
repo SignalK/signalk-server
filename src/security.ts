@@ -49,7 +49,7 @@ export interface LoginStatusResponse {
   username?: string
 }
 
-interface ACL {
+export interface ACL {
   context: string
   resources: Array<{
     paths?: string[]
@@ -80,7 +80,7 @@ export interface UserWithPassword {
   password: string
 }
 
-interface Device {
+export interface Device {
   clientId: string
   permissions: string
   config: any

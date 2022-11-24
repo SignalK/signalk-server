@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "build:all": "npm run build:workspaces && npm run build",
+    "build:all": "npm run build:workspaces && npm run build && build-declaration",
     "build:workspaces": "npm run build --workspaces --if-present",
-    "build-declaration": "tsc --declaration --allowJs false",
+    "build-declaration": "tsc --declaration",
     "watch": "npm run build -- -w",
     "prettier": "prettier -w src/",
     "lint": "eslint -c .eslintrc.js --ext .ts --ext .js --fix src/",

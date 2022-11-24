@@ -1,6 +1,7 @@
 import { IRouter } from 'express'
 import { createDebug } from './debug'
-import { SecurityConfig } from './security'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { ACL, Device, SecurityConfig } from './security'
 import cors, { CorsOptions } from 'cors'
 
 type OriginCallback = (err: Error | null, origin?: string) => void
