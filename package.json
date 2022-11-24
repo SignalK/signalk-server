@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "build:all": "npm run build:workspaces && npm run build && build-declaration",
+    "build:all": "npm run build:workspaces && npm run build && npm run build-declaration",
     "build:workspaces": "npm run build --workspaces --if-present",
     "build-declaration": "tsc --declaration",
     "watch": "npm run build -- -w",
