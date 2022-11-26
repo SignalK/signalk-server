@@ -16,7 +16,7 @@
 
 const fs = require('fs')
 
-module.exports = function(filename, insertionTag) {
+module.exports = function (filename, insertionTag) {
   const html = fs.readFileSync(filename, {
     encoding: 'utf8'
   })

@@ -123,6 +123,7 @@ Environment variables
 - `SIGNALK_NODE_CONFIG_DIR` override the path to find server configuration files.
 - `PORT` override the port for http/ws service (default is 3000).
 - `SSLPORT` override the port for https/wss service. If defined activates ssl as forced, default protocol (default is 3443).
+- `PROTOCOL` override http/https where the server is accessed via https but the server sees http (for example when Heroku handles https termination)
 - `EXTERNALPORT` the port used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
 - `EXTERNALHOST` the host used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
 - `FILEUPLOADSIZELIMIT` override the file upload size limit (default is '10mb').
@@ -167,7 +168,7 @@ Make sure that the settings file you are using is valid JSON. This can be done i
 
 ### NMEA0183
 
-There is an example settings file for using NMEA 0183 input from a serial device that you can use to start up the server: `bin/signalk-settings -s settings/volare-serial-settings.json`. You can change the `port` and `baudrate` in the [settings file](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-serial-settings.json#L23-L27).
+There is an example settings file for using NMEA 0183 input from a serial device that you can use to start up the server: `bin/signalk-server -s settings/volare-serial-settings.json`. You can change the `port` and `baudrate` in the [settings file](https://github.com/SignalK/signalk-server-node/blob/master/settings/volare-serial-settings.json#L23-L27).
 
 
 ### NMEA 2000 (via NGT-1 & Canboat)

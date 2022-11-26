@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2017 Scott Bender <scott@scottbender.net>
  *
@@ -42,7 +43,7 @@ export default class DeltaCache {
 
   constructor(app: SignalKServer, streambundle: StreamBundle) {
     this.app = app
-    streambundle.keys.onValue(key => {
+    streambundle.keys.onValue((key) => {
       streambundle.getBus(key).onValue(this.onValue.bind(this))
     })
   }
@@ -66,7 +67,7 @@ export default class DeltaCache {
     if (msg.path.length !== 0) {
       leaf[sourceRef] = msg
     } else if (msg.value) {
-      _.keys(msg.value).forEach(key => {
+      _.keys(msg.value).forEach((key) => {
         if (!leaf[key]) {
           leaf[key] = {}
         }
@@ -145,7 +146,7 @@ export default class DeltaCache {
     if (deltas && deltas.length) {
       const secFilter = this.app.securityStrategy.shouldFilterDeltas()
         ? (delta: any) => this.app.securityStrategy.filterReadDelta(user, delta)
-        : (delta: any) => true
+        : () => true
       deltas.filter(secFilter).forEach(addDelta)
     }
 
@@ -154,8 +155,8 @@ export default class DeltaCache {
 
   getCachedDeltas(contextFilter: ContextMatcher, user?: string, key?: string) {
     const contexts: any[] = []
-    _.keys(this.cache).forEach(type => {
-      _.keys(this.cache[type]).forEach(id => {
+    _.keys(this.cache).forEach((type) => {
+      _.keys(this.cache[type]).forEach((id) => {
         const context = `${type}.${id}`
         if (contextFilter({ context })) {
           contexts.push(this.cache[type][id])
@@ -239,7 +240,7 @@ function getLeafObject(
   returnLast = false
 ) {
   let current = start
-  // tslint:disable-next-line: forin
+
   for (const i in contextAndPathParts) {
     const p = contextAndPathParts[i]
     if (isUndefined(current[p])) {

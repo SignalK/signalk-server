@@ -34,7 +34,7 @@ const userApplicationDataUrls = [
   `${prefix}/user/:appid/:version`
 ]
 
-module.exports = function(app) {
+module.exports = function (app) {
   if (app.securityStrategy.isDummy()) {
     debug('ApplicationData disabled because security is off')
 
@@ -49,11 +49,11 @@ module.exports = function(app) {
     return
   }
 
-  applicationDataUrls.forEach(url => {
+  applicationDataUrls.forEach((url) => {
     app.securityStrategy.addAdminWriteMiddleware(url)
   })
 
-  userApplicationDataUrls.forEach(url => {
+  userApplicationDataUrls.forEach((url) => {
     app.securityStrategy.addWriteMiddleware(url)
   })
 
@@ -96,7 +96,7 @@ module.exports = function(app) {
       return
     }
 
-    res.json(fs.readdirSync(dir).map(file => file.slice(0, -5)))
+    res.json(fs.readdirSync(dir).map((file) => file.slice(0, -5)))
   }
 
   function getApplicationData(req, res, isUser) {
@@ -161,7 +161,7 @@ module.exports = function(app) {
       applicationData = req.body
     }
 
-    saveApplicationData(req, appid, version, isUser, applicationData, err => {
+    saveApplicationData(req, appid, version, isUser, applicationData, (err) => {
       if (err) {
         console.log(err)
         res.status(500).send(err.message)
@@ -254,7 +254,6 @@ module.exports = function(app) {
       return
     }
 
-    const config = JSON.parse(JSON.stringify(data))
     fs.writeFile(
       pathForApplicationData(req, appid, version, isUser),
       JSON.stringify(data, null, 2),

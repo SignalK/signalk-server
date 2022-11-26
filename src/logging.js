@@ -3,7 +3,7 @@ const moment = require('moment')
 const path = require('path')
 const fs = require('fs')
 
-module.exports = function(app) {
+module.exports = function (app) {
   const log = []
   let debugEnabled = ''
   let rememberDebug = false
@@ -47,14 +47,12 @@ module.exports = function(app) {
   const outWrite = process.stdout.write
   const errWrite = process.stderr.write
 
-  // tslint:disable-next-line
-  process.stdout.write = function(string) {
+  process.stdout.write = function (string) {
     outWrite.apply(process.stdout, arguments)
     storeOutput(string, false)
   }
 
-  // tslint:disable-next-line
-  process.stderr.write = function(string) {
+  process.stderr.write = function (string) {
     errWrite.apply(process.stderr, arguments)
     storeOutput(string, true)
   }
@@ -99,7 +97,7 @@ module.exports = function(app) {
     getDebugSettings: () => {
       return { debugEnabled, rememberDebug }
     },
-    rememberDebug: enabled => {
+    rememberDebug: (enabled) => {
       if (debugPath) {
         if (enabled) {
           fs.writeFileSync(debugPath, debugEnabled)
@@ -117,7 +115,7 @@ module.exports = function(app) {
         }
       })
     },
-    addDebug: name => {
+    addDebug: (name) => {
       if (debugEnabled.length > 0) {
         const all = debugEnabled.split(',')
         if (all.indexOf(name) === -1) {
@@ -127,7 +125,7 @@ module.exports = function(app) {
         enableDebug(name)
       }
     },
-    removeDebug: name => {
+    removeDebug: (name) => {
       if (debugEnabled.length > 0) {
         const all = debugEnabled.split(',')
         const idx = all.indexOf(name)

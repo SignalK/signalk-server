@@ -10,7 +10,7 @@ const pruneIntervalRate = 15 * 60 * 1000
 let pruneInterval
 
 function createRequest(app, type, clientRequest, user, clientIp, updateCb) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const requestId = clientRequest.requestId
       ? clientRequest.requestId
       : uuidv4()
@@ -88,7 +88,7 @@ function updateRequest(
   })
 }
 
-function queryRequest(requestId) {
+export function queryRequest(requestId) {
   return new Promise((resolve, reject) => {
     const request = requests[requestId]
 
@@ -107,13 +107,13 @@ function findRequest(matcher) {
 
 function filterRequests(type, state) {
   return _.values(requests).filter(
-    r => r.type === type && (state === null || r.state === state)
+    (r) => r.type === type && (state === null || r.state === state)
   )
 }
 
 function pruneRequests() {
   debug('pruning requests')
-  _.keys(requests).forEach(id => {
+  _.keys(requests).forEach((id) => {
     const request = requests[id]
 
     const diff = new Date() - new Date(request.date)

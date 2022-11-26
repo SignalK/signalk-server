@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2017 Teppo Kurki <teppo.kurki@iki.fi>
  *
@@ -14,6 +15,7 @@
  * limitations under the License.
 */
 
+import { Request, Response } from 'express'
 import {
   chmodSync,
   existsSync,
@@ -30,10 +32,84 @@ import { Mode } from 'stat-mode'
 import { WithConfig } from './app'
 import { createDebug } from './debug'
 import dummysecurity from './dummysecurity'
+import { ICallback } from './types'
 const debug = createDebug('signalk-server:security')
 
 export interface WithSecurityStrategy {
   securityStrategy: SecurityStrategy
+}
+
+export interface LoginStatusResponse {
+  status: string // 'loggedIn' 'notLoggedIn'
+  readOnlyAccess?: boolean
+  authenticationRequired?: boolean
+  allowNewUserRegistration?: boolean
+  allowDeviceAccessRequests?: boolean
+  userLevel?: any
+  username?: string
+}
+
+export interface ACL {
+  context: string
+  resources: Array<{
+    paths?: string[]
+    sources?: string[]
+    permissions: Array<{
+      subject: string
+      permission: string
+    }>
+  }>
+}
+export interface User {
+  username: string
+  type: string
+  password: string
+}
+export interface UserData {
+  userId: string
+  type: string
+}
+export interface UserDataUpdate {
+  type?: string
+  password?: string
+}
+
+export interface UserWithPassword {
+  userId: string
+  type: string
+  password: string
+}
+
+export interface Device {
+  clientId: string
+  permissions: string
+  config: any
+  description: string
+  requestedPermissions: string
+}
+
+export interface DeviceDataUpdate {
+  permissions?: string
+  description?: string
+}
+
+export interface SecurityConfig {
+  immutableConfig: boolean
+  allow_readonly: boolean
+  allowNewUserRegistration: boolean
+  allowDeviceAccessRequests: boolean
+  allowedCorsOrigins?: string
+  expiration: string
+  devices: Device[]
+  secretKey: string
+  users: User[]
+  acls?: ACL[]
+}
+
+export interface RequestStatusData {
+  expiration: string
+  permissions: any
+  config: any
 }
 
 export interface SecurityStrategy {
@@ -43,7 +119,71 @@ export interface SecurityStrategy {
   filterReadDelta: (user: any, delta: any) => any
   configFromArguments: boolean
   securityConfig: any
-  requestAccess: (config: any, request: any, ip: any, updateCb: any) => any
+  requestAccess: (config: any, request: any, ip: any, updateCb?: any) => any
+  getConfiguration: () => any
+
+  setAccessRequestStatus: (
+    theConfig: SecurityConfig,
+    identifier: string,
+    status: string,
+    body: RequestStatusData,
+    cb: ICallback<SecurityConfig>
+  ) => void
+  getAccessRequestsResponse: any
+
+  getLoginStatus: (req: Request) => LoginStatusResponse
+  allowRestart: (req: Request) => boolean
+  allowConfigure: (req: Request) => boolean
+
+  getConfig: (ss: SecurityConfig) => Omit<SecurityConfig, 'secretKey' | 'users'>
+  setConfig: (prev: SecurityConfig, next: SecurityConfig) => SecurityConfig
+
+  validateConfiguration: (config: any) => void
+  getDevices: (theConfig: SecurityConfig) => Device[]
+  updateDevice: (
+    theConfig: SecurityConfig,
+    clientId: string,
+    updates: DeviceDataUpdate,
+    cb: ICallback<SecurityConfig>
+  ) => void
+  deleteDevice: (
+    theConfig: SecurityConfig,
+    clientId: string,
+    cb: ICallback<SecurityConfig>
+  ) => void
+
+  generateToken: (
+    req: Request,
+    res: Response,
+    next: any,
+    id: string,
+    expiration: string
+  ) => void
+
+  getUsers: (theConfig: SecurityConfig) => UserData[]
+  addUser: (
+    theConfig: SecurityConfig,
+    user: UserWithPassword,
+    cb: ICallback<SecurityConfig>
+  ) => void
+  updateUser: (
+    theConfig: SecurityConfig,
+    username: string,
+    userDataUpdate: UserDataUpdate,
+    cb: ICallback<SecurityConfig>
+  ) => void
+  deleteUser: (
+    theConfig: SecurityConfig,
+    username: string,
+    cb: ICallback<SecurityConfig>
+  ) => void
+
+  setPassword: (
+    theConfig: SecurityConfig,
+    username: string,
+    password: string,
+    cb: ICallback<SecurityConfig>
+  ) => void
 }
 
 export class InvalidTokenError extends Error {
@@ -74,6 +214,7 @@ export function startSecurity(
     }
 
     const config = securityConfig || getSecurityConfig(app, true)
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     app.securityStrategy = require(securityStrategyModuleName)(app, config)
 
     if (securityConfig) {
@@ -89,13 +230,13 @@ export function getSecurityConfig(
   app: WithConfig & WithSecurityStrategy,
   forceRead = false
 ) {
-  if (!forceRead && app.securityStrategy.configFromArguments) {
+  if (!forceRead && app.securityStrategy?.configFromArguments) {
     return app.securityStrategy.securityConfig
   } else {
     try {
       const optionsAsString = readFileSync(pathForSecurityConfig(app), 'utf8')
       return JSON.parse(optionsAsString)
-    } catch (e) {
+    } catch (e: any) {
       console.error('Could not parse security config')
       console.error(e.message)
       return {}
@@ -118,9 +259,9 @@ export function saveSecurityConfig(
       callback(null)
     }
   } else {
-    const config = JSON.parse(JSON.stringify(data))
+    //const config = JSON.parse(JSON.stringify(data))
     const configPath = pathForSecurityConfig(app)
-    writeFile(configPath, JSON.stringify(data, null, 2), err => {
+    writeFile(configPath, JSON.stringify(data, null, 2), (err) => {
       if (!err) {
         chmodSync(configPath, '600')
       }
@@ -240,3 +381,10 @@ export function requestAccess(
   const config = getSecurityConfig(app)
   return app.securityStrategy.requestAccess(config, request, ip, updateCb)
 }
+
+export type SecurityConfigSaver = (
+  app: any,
+  securityConfig: any,
+  cb: (err: any) => void
+) => void
+export type SecurityConfigGetter = (app: any) => any

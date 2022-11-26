@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 const chai = require('chai')
 const _ = require('lodash')
 const fs = require('fs')
@@ -61,7 +62,7 @@ describe('modulesWithKeyword', () => {
 })
 
 describe('checkForNewServerVersion', () => {
-  it('normal version upgrade', done => {
+  it('normal version upgrade', (done) => {
     checkForNewServerVersion(
       '1.17.0',
       (err, newVersion) => {
@@ -76,10 +77,10 @@ describe('checkForNewServerVersion', () => {
     )
   })
 
-  it('normal version does not upgrade to beta', done => {
+  it('normal version does not upgrade to beta', (done) => {
     checkForNewServerVersion(
       '1.17.0',
-      err => {
+      () => {
         done('callback should not be called')
       },
       () => Promise.resolve('1.18.0-beta.1')
@@ -87,7 +88,7 @@ describe('checkForNewServerVersion', () => {
     done()
   })
 
-  it('beta upgrades to same minor newer beta', done => {
+  it('beta upgrades to same minor newer beta', (done) => {
     checkForNewServerVersion(
       '1.18.0-beta.1',
       (err, newVersion) => {
@@ -102,7 +103,7 @@ describe('checkForNewServerVersion', () => {
     )
   })
 
-  it('beta upgrades to same normal version', done => {
+  it('beta upgrades to same normal version', (done) => {
     checkForNewServerVersion(
       '1.18.0-beta.2',
       (err, newVersion) => {
@@ -117,7 +118,7 @@ describe('checkForNewServerVersion', () => {
     )
   })
 
-  it('beta upgrades to newer normal version', done => {
+  it('beta upgrades to newer normal version', (done) => {
     checkForNewServerVersion(
       '1.18.0-beta.2',
       (err, newVersion) => {
@@ -132,10 +133,10 @@ describe('checkForNewServerVersion', () => {
     )
   })
 
-  it('beta does not upgrade to newer minor beta', done => {
+  it('beta does not upgrade to newer minor beta', (done) => {
     checkForNewServerVersion(
       '1.17.0-beta.1',
-      err => {
+      () => {
         done('callback should not be called')
       },
       () => Promise.resolve('1.18.0-beta.2')
@@ -153,12 +154,12 @@ describe('getLatestServerVersion', () => {
           beta: '1.19.0-beta.1'
         })
       })
-    ).then(newVersion => {
+    ).then((newVersion) => {
       chai.expect(newVersion).to.equal('1.18.3')
     })
   })
 
-  it('latest for beta is newer same series beta', done => {
+  it('latest for beta is newer same series beta', (done) => {
     getLatestServerVersion('1.18.0-beta.2', () =>
       Promise.resolve({
         json: () => ({
@@ -166,7 +167,7 @@ describe('getLatestServerVersion', () => {
           beta: '1.18.0-beta.3'
         })
       })
-    ).then(newVersion => {
+    ).then((newVersion) => {
       chai.expect(newVersion).to.equal('1.18.0-beta.3')
       done()
     })
@@ -180,7 +181,7 @@ describe('getLatestServerVersion', () => {
           beta: '1.18.0-beta.3'
         })
       })
-    ).then(newVersion => {
+    ).then((newVersion) => {
       chai.expect(newVersion).to.equal('1.18.0')
     })
   })

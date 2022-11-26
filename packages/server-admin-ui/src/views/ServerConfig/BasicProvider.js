@@ -328,9 +328,6 @@ class ValidateChecksumInput extends Component {
 }
 
 class OverrideTimestamps extends Component {
-  constructor(props) {
-    super(props)
-  }
   render() {
     return (
       <FormGroup row>
@@ -356,10 +353,6 @@ class OverrideTimestamps extends Component {
 }
 
 class RemoveNullsInput extends Component {
-  constructor(props) {
-    super(props)
-    this.props.value.removeNulls = this.props.value.removeNulls
-  }
   render() {
     return (
       <FormGroup row>
@@ -508,12 +501,16 @@ class BaudRateIntputCanboat extends Component {
 class StdOutInput extends Component {
   constructor(props) {
     super()
+    this.state = StdOutInput.getDerivedStateFromProps(props)
+    this.onChange = this.onChange.bind(this)
+  }
+
+  static getDerivedStateFromProps(props) {
     let value = props.value.toStdout
     if (Array.isArray(value)) {
       value = value.join(',')
     }
-    this.state = { value }
-    this.onChange = this.onChange.bind(this)
+    return { value }
   }
   onChange(e) {
     this.setState({ value: e.target.value })
@@ -541,13 +538,18 @@ class StdOutInput extends Component {
 class IgnoredSentences extends Component {
   constructor(props) {
     super()
+    this.onChange = this.onChange.bind(this)
+    this.state = IgnoredSentences.getDerivedStateFromProps(props)
+  }
+
+  static getDerivedStateFromProps(props) {
     let value = props.value.ignoredSentences
     if (Array.isArray(value)) {
       value = value.join(',')
     }
-    this.state = { value }
-    this.onChange = this.onChange.bind(this)
+    return { value }
   }
+
   onChange(e) {
     this.setState({ value: e.target.value })
     this.props.onChange({
@@ -628,9 +630,6 @@ class RemoteSelfInput extends Component {
 }
 
 class Suppress0183Checkbox extends Component {
-  constructor(props) {
-    super(props)
-  }
   render() {
     return (
       <FormGroup row>
@@ -661,9 +660,6 @@ class Suppress0183Checkbox extends Component {
 }
 
 class UseCanNameInput extends Component {
-  constructor(props) {
-    super(props)
-  }
   render() {
     return (
       <FormGroup row>
@@ -691,11 +687,6 @@ class UseCanNameInput extends Component {
 class CollectNetworkStatsInput extends Component {
   constructor(props) {
     super(props)
-    /*
-    this.props.value.useCanName =
-      (typeof this.props.value.useCanName !== 'undefined' &&
-       this.props.value.useCanName) || this.props.value.isNew
-    */
   }
   render() {
     return (

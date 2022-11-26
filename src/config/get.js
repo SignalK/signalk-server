@@ -9,7 +9,7 @@ const appModules = addModules(appPath)
 const getAppPath = get('config.appPath')
 
 // Build path to the public dir of a module. getInstalledPathSync(moduleName, { local: true })
-const getModulePublic = moduleName =>
+const getModulePublic = (moduleName) =>
   flow(getAppPath, addModules, partialRight(path.join, [moduleName, 'public']))
 
 module.exports = {

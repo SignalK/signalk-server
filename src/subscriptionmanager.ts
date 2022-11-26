@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2016 Teppo Kurki <teppo.kurki@iki.fi>
  *
@@ -96,7 +97,7 @@ class SubscriptionManager {
       msg.unsubscribe[0].path === '*'
     ) {
       debug('Unsubscribe all')
-      unsubscribes.forEach(unsubscribe => unsubscribe())
+      unsubscribes.forEach((unsubscribe) => unsubscribe())
       // clear unsubscribes
       unsubscribes.length = 0
     } else {
@@ -185,7 +186,7 @@ function handleSubscribeRow(
               const uniqueValues = _(bufferedValues)
                 .reverse()
                 .uniqBy(
-                  value =>
+                  (value) =>
                     value.context + ':' + value.$source + ':' + value.path
                 )
                 .value()
@@ -198,7 +199,7 @@ function handleSubscribeRow(
       }
       if (
         subscribeRow.policy &&
-        !['instant', 'fixed'].some(s => s === subscribeRow.policy)
+        !['instant', 'fixed'].some((s) => s === subscribeRow.policy)
       ) {
         errorCallback(
           `Only 'instant' and 'fixed' policies supported, ignoring policy ${subscribeRow.policy}`
@@ -247,13 +248,13 @@ function contextMatcher(
         errorCallback(
           'Please specify a radius and position for relativePosition'
         )
-        return x => false
+        return () => false
       }
       return (normalizedDeltaData: WithContext) =>
         checkPosition(app, subscribeCommand.context, normalizedDeltaData)
     }
   }
-  return x => true
+  return () => true
 }
 
 function checkPosition(

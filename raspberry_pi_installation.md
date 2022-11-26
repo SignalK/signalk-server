@@ -2,7 +2,7 @@
 
 If you are updating the Signal K server, especially moving from a version <= 1.40.0, [please check here.](https://github.com/SignalK/signalk-server/blob/master/raspberry_pi_installation.md#update-signal-k-node-server)
 
-Instructions to install the operating system, Raspberry Pi OS, [is found here.](https://www.raspberrypi.org/documentation/computers/getting-started.html#setting-up-your-raspberry-pi) Please use Buster OS! Bullseye, is not fully tested.
+Instructions to install the operating system, Raspberry Pi OS, [is found here.](https://www.raspberrypi.org/documentation/computers/getting-started.html#setting-up-your-raspberry-pi).
 
 If you are familiar with a "headless install" using Raspberry Pi OS Lite it's also possible since the GUI for Signal K is browser based.
 

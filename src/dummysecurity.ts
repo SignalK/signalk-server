@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /*
  * Copyright 2017 Scott Bender <scott@scottbender.net>
  *
@@ -14,10 +17,10 @@
  * limitations under the License.
  */
 
-/* tslint:disable */
+import { SecurityStrategy } from './security'
 
-export default function() {
-  return {
+export default function () {
+  const dummyStrategy = {
     getConfiguration: () => {
       return {}
     },
@@ -66,11 +69,11 @@ export default function() {
 
     deleteUser: (_config: any, _username: any, _callback: any) => {},
 
-    shouldAllowWrite: function(_req: any, _delta: any) {
+    shouldAllowWrite: function (_req: any, _delta: any) {
       return true
     },
 
-    shouldAllowPut: function(
+    shouldAllowPut: function (
       _req: any,
       _context: any,
       _source: any,
@@ -135,4 +138,9 @@ export default function() {
     securityConfig: undefined,
     requestAccess: () => undefined
   }
+  //force cast via unknown so that we don't need to
+  //implement all dummy methods that are never called
+  //with dummy strategy in place. or if they are called
+  //the result will be an error.
+  return dummyStrategy as unknown as SecurityStrategy
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FullSignalK } from '@signalk/signalk-schema'
 import { SecurityStrategy } from './security'
 import SubscriptionManager from './subscriptionmanager'
@@ -24,7 +25,10 @@ export interface Bus {
 export interface StreamBundle {
   keys: { onValue: (arg0: (key: any) => void) => void }
   getBus: (path: string) => Bus
+  getAvailablePaths: () => string[]
 }
+
+export type ICallback<T> = (error?: Error | null, result?: T) => void
 
 export interface SignalKServer {
   config: { defaults: any }
@@ -50,6 +54,7 @@ export interface MdnsAdvertisement {
 }
 
 // move to subscriptionmanage.ts when all SubscriptionManager use is in ts
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface Unsubscribes extends Array<() => void> {}
 
 export interface WithContext {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2015 Teppo Kurki <teppo.kurki@iki.fi>
  *
@@ -46,7 +47,7 @@ module.exports = (app: SignalKServer) => {
       socket.on('error', (err: Error) => {
         debug('Error:' + err + ' ' + socket.id + ' ' + socket.name)
       })
-      socket.on('close', hadError => {
+      socket.on('close', (hadError) => {
         debug('Close:' + hadError + ' ' + socket.id + ' ' + socket.name)
       })
 
@@ -57,7 +58,7 @@ module.exports = (app: SignalKServer) => {
             if (s.length > 0) {
               try {
                 return JSON.parse(s)
-              } catch (e) {
+              } catch (e: any) {
                 console.log(e.message)
               }
             }
@@ -68,7 +69,7 @@ module.exports = (app: SignalKServer) => {
           console.error(err)
         })
       socket.on('end', () => {
-        unsubscibes.forEach(f => f())
+        unsubscibes.forEach((f) => f())
         debug('Ended:' + socket.id + ' ' + socket.name)
       })
 
@@ -78,7 +79,7 @@ module.exports = (app: SignalKServer) => {
     server.on('listening', () =>
       debug('Signal K tcp server listening on ' + port)
     )
-    server.on('error', e => {
+    server.on('error', (e) => {
       console.error(`Signal K tcp server error: ${e.message}`)
     })
 
@@ -140,7 +141,7 @@ function socketMessageHandler(
       debug.enabled && debug(`unsubscribe:${JSON.stringify(msg)}`)
       try {
         app.subscriptionmanager.unsubscribe(msg, unsubscribes)
-      } catch (e) {
+      } catch (e: any) {
         console.error(e.message)
         socket.write(JSON.stringify(e.message))
         socket.end(() => {

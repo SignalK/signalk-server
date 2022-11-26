@@ -1,0 +1,315 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Signal K Security API",
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "externalDocs": {
+    "url": "http://signalk.org/specification/",
+    "description": "Signal K specification."
+  },
+  "servers": [
+    {
+      "url": "/signalk/v1"
+    }
+  ],
+  "tags": [
+    {
+      "name": "authentication",
+      "description": "User authentication"
+    },
+    {
+      "name": "access",
+      "description": "Device access"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "IsoTime": {
+        "type": "string",
+        "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2}(?:\\.\\d*)?)((-(\\d{2}):(\\d{2})|Z)?)$",
+        "example": "2022-04-22T05:02:56.484Z"
+      },
+      "RequestState": {
+        "type": "string",
+        "enum": ["PENDING", "FAILED", "COMPLETED"]
+      }
+    },
+    "responses": {
+      "200Ok": {
+        "description": "OK",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["COMPLETED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [200]
+                }
+              },
+              "required": ["state", "statusCode"]
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "description": "Failed operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "description": "Request error response",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["FAILED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [404]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["state", "statusCode", "message"]
+            }
+          }
+        }
+      },
+      "AccessRequestResponse": {
+        "description": "Request status",
+        "content": {
+          "application/json": {
+            "schema": {
+              "description": "Request response",
+              "type": "object",
+              "required": ["state"],
+              "properties": {
+                "state": {
+                  "$ref": "#/components/schemas/RequestState",
+                  "default": "PENDING",
+                  "example": "PENDING",
+                  "description": "Status of request."
+                },
+                "href": {
+                  "type": "string",
+                  "example": "/signalk/v1/requests/358b5f32-76bf-4b33-8b23-10a330827185",
+                  "description": "Path where the status of the request can be checked."
+                }
+              }
+            }
+          }
+        }
+      },
+      "RequestStatusResponse": {
+        "description": "Request status",
+        "content": {
+          "application/json": {
+            "schema": {
+              "description": "Request response",
+              "type": "object",
+              "required": ["state"],
+              "properties": {
+                "state": {
+                  "$ref": "#/components/schemas/RequestState",
+                  "example": "COMPLETED",
+                  "default": "COMPLETED",
+                  "description": "Status of request."
+                },
+                "statusCode": {
+                  "type": "number",
+                  "example": 200,
+                  "description": "Response status code."
+                },
+                "ip": {
+                  "type": "string",
+                  "example": "192.168.1.77",
+                  "description": "IP address of the original access request."
+                },
+                "accessRequest": {
+                  "type": "object",
+                  "required": ["permission", "token"],
+                  "description": "Access request result.",
+                  "properties": {
+                    "permission": {
+                      "enum": ["DENIED", "APPROVED"],
+                      "example": "APPROVED"
+                    },
+                    "token": {
+                      "type": "string",
+                      "description": "Authentication token to be supplied with future requests."
+                    },
+                    "expirationTime": {
+                      "$ref": "#/components/schemas/IsoTime",
+                      "description": "Token expiration time."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "JAUTHENTICATION"
+      }
+    }
+  },
+
+  "paths": {
+    "/access/requests": {
+      "post": {
+        "tags": ["access"],
+        "summary": "Create a device access request.",
+        "description": "Endpoint to create (device) access requests. The response contains the href to poll for the status of the request.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["clientId", "description"],
+                "properties": {
+                  "clientId": {
+                    "type": "string",
+                    "description": "Client identifier.",
+                    "example": "1234-45653-343453"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Description of device.",
+                    "example": "humidity sensor"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccessRequestResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/requests/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "request id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": ["access"],
+        "summary": "Check device access status.",
+        "description": "Returns the status of the supplied request id.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/RequestStatusResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["authentication"],
+        "summary": "Authenticate user.",
+        "description": "Authenticate to server using username and password.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "password"],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "User to authenticate"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Password for supplied username."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Authentication response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Login success result",
+                  "type": "object",
+                  "required": ["token"],
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "description": "Authentication token to be supplied with future requests."
+                    },
+                    "timeToLive": {
+                      "type": "number",
+                      "description": "Token validity time (seconds)."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "put": {
+        "tags": ["authentication"],
+        "summary": "Log out user.",
+        "description": "Log out the user with the token supplied in the request header.",
+        "security": ["cookieAuth", "bearerAuth"],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    }
+  }
+}

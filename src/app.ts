@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FullSignalK } from '@signalk/signalk-schema'
 import { Config } from './config/config'
 import DeltaCache from './deltacache'
