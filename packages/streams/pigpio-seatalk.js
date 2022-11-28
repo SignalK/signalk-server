@@ -92,4 +92,3 @@ function PigpioSeatalk(options) {
 require('util').inherits(PigpioSeatalk, Execute)
 
 module.exports = PigpioSeatalk
-
