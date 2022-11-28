@@ -29,7 +29,11 @@ import pigpio, time, signal, sys
 if  sys.argv[1] == "undefined":
         gpio = 4					                            #Default GPIO4 if not set
 else:
-        gpio = int(filter(str.isdigit, sys.argv[1])) 	#Ggpio, info as "GPIOnn", from GUI setup. Sensing the seatalk1 (yellow wire)
+        #Ggpio, info as "GPIOnn", from GUI setup. Sensing the seatalk1 (yellow wire)
+        try:
+                gpio = int(filter(str.isdigit, sys.argv[1])) #python2
+        except:
+                gpio = int("".join(filter(str.isdigit, sys.argv[1]))) #python3
 
 if __name__ == "__main__":
         st1read =pigpio.pi()
