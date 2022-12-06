@@ -70,3 +70,6 @@ signalk-server-*.tgz
 publishing.md
 
 bin/linkpackages
+
+fly_io
+.github

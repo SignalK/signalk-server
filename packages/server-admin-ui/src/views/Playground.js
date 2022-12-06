@@ -345,20 +345,22 @@ class Playground extends Component {
                         </NavLink>
                       </NavItem>
                     )}
-                    {this.state.putResults && this.state.putResults.length > 0 && (
-                      <NavItem>
-                        <NavLink
-                          className={classnames({
-                            active: this.state.activeTab === PUTRESULTS_TAB_ID,
-                          })}
-                          onClick={() => {
-                            toggle(PUTRESULTS_TAB_ID)
-                          }}
-                        >
-                          Put Results
-                        </NavLink>
-                      </NavItem>
-                    )}
+                    {this.state.putResults &&
+                      this.state.putResults.length > 0 && (
+                        <NavItem>
+                          <NavLink
+                            className={classnames({
+                              active:
+                                this.state.activeTab === PUTRESULTS_TAB_ID,
+                            })}
+                            onClick={() => {
+                              toggle(PUTRESULTS_TAB_ID)
+                            }}
+                          >
+                            Put Results
+                          </NavLink>
+                        </NavItem>
+                      )}
                     {this.state.jsonError && (
                       <NavItem>
                         <NavLink
@@ -442,22 +444,23 @@ class Playground extends Component {
                       this.state.n2kJson.length > 0 &&
                       n2kJsonPanel(this.state.n2kJson)}
 
-                    {this.state.putResults && this.state.putResults.length > 0 && (
-                      <TabPane tabId={PUTRESULTS_TAB_ID}>
-                        <div
-                          style={{
-                            overflowY: 'scroll',
-                            maxHeight: '60vh',
-                            border: '1px solid',
-                            padding: '5px',
-                          }}
-                        >
-                          <pre>
-                            {JSON.stringify(this.state.putResults, null, 2)}
-                          </pre>
-                        </div>
-                      </TabPane>
-                    )}
+                    {this.state.putResults &&
+                      this.state.putResults.length > 0 && (
+                        <TabPane tabId={PUTRESULTS_TAB_ID}>
+                          <div
+                            style={{
+                              overflowY: 'scroll',
+                              maxHeight: '60vh',
+                              border: '1px solid',
+                              padding: '5px',
+                            }}
+                          >
+                            <pre>
+                              {JSON.stringify(this.state.putResults, null, 2)}
+                            </pre>
+                          </div>
+                        </TabPane>
+                      )}
 
                     {this.state.jsonError && (
                       <TabPane tabId={LINT_ERROR_TAB_ID}>

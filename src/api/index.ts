@@ -40,6 +40,7 @@ export const startApis = (
   app: SignalKMessageHub & WithSecurityStrategy & IRouter & WithConfig
 ) => {
   const resourcesApi = new ResourcesApi(app)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).resourcesApi = resourcesApi
   const courseApi = new CourseApi(app, resourcesApi)
   Promise.all([resourcesApi.start(), courseApi.start()])

@@ -36,6 +36,7 @@ import {
   writeSettingsFile
 } from './config/config'
 import { SERVERROUTESPREFIX } from './constants'
+import { handleAdminUICORSOrigin } from './cors'
 import { createDebug, listKnownDebugs } from './debug'
 import { getAuthor, Package, restoreModules } from './modules'
 import { getHttpPort, getSslPort } from './ports'
@@ -205,7 +206,8 @@ module.exports = function (
         }
 
         let config = getSecurityConfig(app)
-        config = app.securityStrategy.setConfig(config, req.body)
+        const configToSave = handleAdminUICORSOrigin(req.body)
+        config = app.securityStrategy.setConfig(config, configToSave)
         saveSecurityConfig(app, config, (err) => {
           if (err) {
             console.log(err)
@@ -444,10 +446,12 @@ module.exports = function (
 
   app.get(`${skPrefix}/requests/:id`, (req: Request, res: Response) => {
     queryRequest(req.params.id)
-      .then((reply) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((reply: any) => {
         res.json(reply)
       })
-      .catch((err) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .catch((err: any) => {
         console.log(err)
         res.status(500)
         res.send(`Unable to check request: ${err.message}`)

@@ -49,7 +49,7 @@ export interface LoginStatusResponse {
   username?: string
 }
 
-interface ACL {
+export interface ACL {
   context: string
   resources: Array<{
     paths?: string[]
@@ -80,7 +80,7 @@ export interface UserWithPassword {
   password: string
 }
 
-interface Device {
+export interface Device {
   clientId: string
   permissions: string
   config: any
@@ -98,6 +98,7 @@ export interface SecurityConfig {
   allow_readonly: boolean
   allowNewUserRegistration: boolean
   allowDeviceAccessRequests: boolean
+  allowedCorsOrigins?: string
   expiration: string
   devices: Device[]
   secretKey: string
@@ -236,7 +237,7 @@ export function getSecurityConfig(
   app: WithConfig & WithSecurityStrategy,
   forceRead = false
 ) {
-  if (!forceRead && app.securityStrategy.configFromArguments) {
+  if (!forceRead && app.securityStrategy?.configFromArguments) {
     return app.securityStrategy.securityConfig
   } else {
     try {
