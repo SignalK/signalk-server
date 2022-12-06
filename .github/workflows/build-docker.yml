@@ -36,6 +36,8 @@ jobs:
           npm pack && mv *.tgz ../../
           cd ../streams
           npm pack && mv *.tgz ../../
+          cd ../resources-provider-plugin
+          npm pack && mv *.tgz ../../
           cd ../..
           jq '.workspaces=[]' package.json > _package.json && mv _package.json package.json
           npm i --save *.tgz
