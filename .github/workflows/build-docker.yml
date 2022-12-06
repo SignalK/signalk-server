@@ -5,7 +5,7 @@ on:
     branches:
     - master
     - "build-docker"
-    - "resources_course_api"
+    - "v2_api_base"
     tags:
       - '*'
       - '!v*'
