@@ -106,7 +106,11 @@ export function load(app: ConfigApp) {
     //master docker build the version will be like
     //file:signalk-server-admin-ui-1.44.1.tgz
     if (!process.env.SKIP_ADMINUI_VERSION_CHECK) {
-      checkPackageVersion('@signalk/server-admin-ui', packageJson, app.config.appPath)
+      checkPackageVersion(
+        '@signalk/server-admin-ui',
+        packageJson,
+        app.config.appPath
+      )
     }
   } catch (err) {
     console.error('error parsing package.json', err)

@@ -117,14 +117,18 @@ export class CourseApi {
     return new Promise<void>(async (resolve) => {
       this.initCourseRoutes()
 
+      let storeData
       try {
-        const storeData = await this.store.read()
+        storeData = await this.store.read()
+        debug('Found persisted course data')
         this.courseInfo = this.validateCourseInfo(storeData)
       } catch (error) {
-        console.error('** No persisted course data (using default) **')
+        debug('No persisted course data (using default)')
       }
       debug(this.courseInfo)
-      this.emitCourseInfo(true)
+      if (storeData) {
+        this.emitCourseInfo(true)
+      }
       resolve()
     })
   }

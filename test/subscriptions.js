@@ -372,7 +372,7 @@ describe('Subscriptions', _ => {
           sendDelta(getEmptyPathDelta({ context: 'vessels.othervessel' }), deltaUrl)
         ])
       })
-      .then(() => wsPromiser.nthMessage(62)) //self, 1st delta with mmsi
+      .then(() => wsPromiser.nthMessage(4)) //self, 1st delta with mmsi
       .then((nextMsg) => {
         const delta = JSON.parse(nextMsg)
         assert(delta.updates[0].values[0].path === '', 'Path is empty string')
@@ -384,7 +384,7 @@ describe('Subscriptions', _ => {
           typeof delta.updates[0].values[0].value.mmsi !== 'undefined',
           'Value has mmsi key'
         )
-        return wsPromiser.nthMessage(63) //self, 2nd delta with mmsi
+        return wsPromiser.nthMessage(5) //self, 2nd delta with mmsi
       })
       .then(nextMsg => {
         const delta = JSON.parse(nextMsg)
@@ -406,7 +406,7 @@ describe('Subscriptions', _ => {
         assert(delta.context === `vessels.${self}`)
         assert(delta.updates[0].timestamp, '2014-05-03T09:14:11.001Z')
 
-        return wsPromiser.nthMessage(64) //othervessel, 1st delta
+        return wsPromiser.nthMessage(6) //othervessel, 1st delta
       })
       .then(nextMsg => {
         const delta = JSON.parse(nextMsg)
