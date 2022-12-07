@@ -470,7 +470,7 @@ module.exports = (theApp: any) => {
         console.error(`${plugin.id}:no configuration data`)
         safeConfiguration = {}
       }
-      onStopHandlers[plugin.id] = [() => app.resourcesApi.unRegister(plugin.id)]
+      onStopHandlers[plugin.id].push(() => app.resourcesApi.unRegister(plugin.id))
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
@@ -562,6 +562,7 @@ module.exports = (theApp: any) => {
       app.setProviderError(packageName, `Failed to start: ${e.message}`)
       return
     }
+    onStopHandlers[plugin.id] = []
 
     if (app.pluginsMap[plugin.id]) {
       console.log(
