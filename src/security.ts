@@ -27,7 +27,7 @@ import {
 } from 'fs'
 import _ from 'lodash'
 import path from 'path'
-import pem from 'pem'
+import { certificateFor } from 'devcert'
 import { Mode } from 'stat-mode'
 import { WithConfig } from './app'
 import { createDebug } from './debug'
@@ -349,27 +349,20 @@ export function createCertificateOptions(
 ) {
   const location = app.config.configPath ? app.config.configPath : './settings'
   debug(`Creating certificate files in ${location}`)
-  pem.createCertificate(
-    {
-      days: 360,
-      selfSigned: true
-    },
-    (err: any, keys: any) => {
-      if (err) {
-        console.error('Could not create SSL certificate:' + err.message)
-        throw err
-      } else {
-        writeFileSync(keyFile, keys.serviceKey)
-        chmodSync(keyFile, '600')
-        writeFileSync(certFile, keys.certificate)
-        chmodSync(certFile, '600')
-        cb(null, {
-          key: keys.serviceKey,
-          cert: keys.certificate
-        })
-      }
-    }
-  )
+  certificateFor([
+    'localhost'
+  ])
+    .then(({ key, cert }) => {
+      writeFileSync(keyFile, key)
+      chmodSync(keyFile, '600')
+      writeFileSync(certFile, cert)
+      chmodSync(certFile, '600')
+      cb(null, {
+        key: key,
+        cert: cert
+      })
+    })
+    .catch(console.error);
 }
 
 export function requestAccess(
