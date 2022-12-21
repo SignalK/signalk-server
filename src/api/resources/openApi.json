@@ -361,28 +361,6 @@
           }
         }
       },
-      "RoutePostModel": {
-        "description": "Route API resource request payload",
-        "type": "object",
-        "required": ["points"],
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Title of route"
-          },
-          "description": {
-            "type": "string",
-            "description": "Text describing route"
-          },
-          "points": {
-            "$ref": "#/components/schemas/SignalKPositionArray"
-          },
-          "properties": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        }
-      },
       "Waypoint": {
         "description": "Signal K Waypoint resource",
         "type": "object",
@@ -410,33 +388,6 @@
                 "additionalProperties": true
               }
             }
-          }
-        }
-      },
-      "WaypointPostModel": {
-        "description": "Waypoint API resource request payload",
-        "type": "object",
-        "required": ["position"],
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Name of waypoint"
-          },
-          "description": {
-            "type": "string",
-            "description": "Waypoint description"
-          },
-          "position": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/SignalKPosition"
-              }
-            ],
-            "description": "Waypoint position."
-          },
-          "properties": {
-            "type": "object",
-            "additionalProperties": true
           }
         }
       },
@@ -474,38 +425,6 @@
                 "additionalProperties": true
               }
             }
-          }
-        }
-      },
-      "RegionPostModel": {
-        "description": "Region API resource request payload",
-        "type": "object",
-        "required": ["points"],
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Title of region"
-          },
-          "description": {
-            "type": "string",
-            "description": "Text describing region"
-          },
-          "points": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/SignalKPositionArray"
-              },
-              {
-                "$ref": "#/components/schemas/SignalKPositionPolygon"
-              },
-              {
-                "$ref": "#/components/schemas/SignalKPositionMultiPolygon"
-              }
-            ]
-          },
-          "properties": {
-            "type": "object",
-            "additionalProperties": true
           }
         }
       },
@@ -1020,7 +939,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RoutePostModel"
+                "$ref": "#/components/schemas/Route"
               }
             }
           }
@@ -1142,7 +1061,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WaypointPostModel"
+                "$ref": "#/components/schemas/Waypoint"
               }
             }
           }
@@ -1264,7 +1183,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RegionPostModel"
+                "$ref": "#/components/schemas/Region"
               }
             }
           }

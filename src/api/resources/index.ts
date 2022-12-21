@@ -15,7 +15,6 @@ import { v4 as uuidv4 } from 'uuid'
 import { WithSecurityStrategy } from '../../security'
 
 import { Responses } from '../'
-import { fromPostData } from './resources'
 import { validate } from './validate'
 import { SignalKMessageHub } from '../../app'
 
@@ -141,7 +140,6 @@ export class ResourcesApi {
 
   private initResourceRoutes(server: ResourceApplication) {
     const updateAllowed = (req: Request): boolean => {
-      return true
       return server.securityStrategy.shouldAllowPut(
         req,
         'vessels.self',
@@ -288,7 +286,7 @@ export class ResourcesApi {
         try {
           await this.resProvider[req.params.resourceType]?.setResource(
             id,
-            fromPostData(req.params.resourceType, req.body)
+            req.body
           )
 
           server.handleMessage(
@@ -306,9 +304,9 @@ export class ResourcesApi {
           })
         } catch (err) {
           console.log(err)
-          res.status(404).json({
+          res.status(400).json({
             state: 'FAILED',
-            statusCode: 404,
+            statusCode: 400,
             message: `Error saving ${req.params.resourceType} resource (${id})!`
           })
         }
