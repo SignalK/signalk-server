@@ -162,8 +162,13 @@ describe('Course Api', () => {
     sendDelta('navigation.position', vesselPosition)
 
     const destination = {
-      latitude: 60.1699,
-      longitude: 24.9384
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [24.9384, 60.1699]
+        }
+      }
     }
     const { id } = await post('/resources/waypoints', {
       position: destination
@@ -341,8 +346,15 @@ describe('Course Api', () => {
     const vesselPosition = { latitude: -35.45, longitude: 138.0 }
     sendDelta('navigation.position', vesselPosition)
 
-    const points =
-      resourcesOpenApi.components.schemas.SignalKPositionArray.example
+    const points = {
+      feature: { 
+        type: "Feature", 
+        geometry: {
+          type: "LineString",
+          coordinates: [[3.3452,65.4567],[3.3352, 65.5567],[3.3261,65.5777]]
+        }
+      }
+    }
 
     const { id } = await post('/resources/routes', {
       points
@@ -480,7 +492,7 @@ describe('Course Api', () => {
     }).then(response => response.status.should.equal(200))
     await selfGetJson('navigation/course').then(data =>
       data.nextPoint.position.latitude.should.equal(
-        points[points.length - 1].latitude
+        points.feature.geometry.coordinates[points.feature.geometry.coordinates.length - 1][1]
       )
     )
     await selfPut('navigation/course/activeRoute/nextPoint', {
@@ -489,7 +501,7 @@ describe('Course Api', () => {
     await selfGetJson('navigation/course').then(data => {
       data.nextPoint.position.latitude.should.equal(points[1].latitude)
       data.previousPoint.position.latitude.should.equal(
-        points[points.length - 1].latitude
+        points.feature.geometry.coordinates[points.feature.geometry.coordinates.length - 1][1]
       )
     })
 

@@ -56,9 +56,12 @@ describe('Resources Api', () => {
         [60.151672, 24.991637]
       ].map(([latitude, longitude]) => {
         return post(`/resources/waypoints/`, {
-          position: {
-            longitude,
-            latitude
+          feature: {
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [longitude, latitude]
+            }
           }
         })
           .then(r => r.json())
