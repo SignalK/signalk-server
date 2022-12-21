@@ -241,7 +241,7 @@ describe('Course Api', () => {
           type: 'Waypoint',
           position: {
             longitude: destination.feature.geometry.coordinates[0],
-            latitude: destination.feature.geometry.coordinates[0]
+            latitude: destination.feature.geometry.coordinates[1]
           },
           arrivalCircle: 99
         },
