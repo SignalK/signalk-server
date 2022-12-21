@@ -356,9 +356,7 @@ export function createCertificateOptions(
 ) {
   const location = app.config.configPath ? app.config.configPath : './settings'
   debug(`Creating certificate files in ${location}`)
-  certificateFor([
-    'localhost'
-  ])
+  certificateFor(['localhost'])
     .then(({ key, cert }) => {
       writeFileSync(keyFile, key)
       chmodSync(keyFile, '600')
@@ -369,7 +367,7 @@ export function createCertificateOptions(
         cert: cert
       })
     })
-    .catch(console.error);
+    .catch(console.error)
 }
 
 export function requestAccess(
