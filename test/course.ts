@@ -446,7 +446,10 @@ describe('Course Api', () => {
         },
         nextPoint: {
           href: null,
-          position: points[0],
+          position: {
+            longitude: points.feature.geometry.coordinates[0],
+            latitude: points.feature.geometry.coordinates[1]
+          },
           type: 'RoutePoint',
           arrivalCircle: 0
         },
