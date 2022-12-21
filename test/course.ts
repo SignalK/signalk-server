@@ -502,7 +502,7 @@ describe('Course Api', () => {
       value: 1
     }).then(response => response.status.should.equal(200))
     await selfGetJson('navigation/course').then(data => {
-      data.nextPoint.position.latitude.should.equal(points[1].latitude)
+      data.nextPoint.position.latitude.should.equal(points.feature.geometry.coordinates[1][1])
       data.previousPoint.position.latitude.should.equal(
         points.feature.geometry.coordinates[points.feature.geometry.coordinates.length - 1][1]
       )
