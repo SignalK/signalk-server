@@ -170,12 +170,11 @@ describe('Course Api', () => {
         }
       }
     }
-    const { id } = await post('/resources/waypoints', {
-      position: destination
-    }).then(response => {
-      response.status.should.equal(201)
-      return response.json()
-    })
+    const { id } = await post('/resources/waypoints', destination)
+      .then(response => {
+        response.status.should.equal(201)
+        return response.json()
+      })
     id.length.should.equal(
       'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length
     )
@@ -356,12 +355,11 @@ describe('Course Api', () => {
       }
     }
 
-    const { id } = await post('/resources/routes', {
-      points
-    }).then(response => {
-      response.status.should.equal(201)
-      return response.json()
-    })
+    const { id } = await post('/resources/routes', points)
+      .then(response => {
+        response.status.should.equal(201)
+        return response.json()
+      })
     id.length.should.equal(
       'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length
     )
