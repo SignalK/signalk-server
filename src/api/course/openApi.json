@@ -45,9 +45,9 @@
       },
       "SignalKHrefRoute": {
         "type": "string",
-        "pattern": "^/resources/routes/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+        "pattern": "^/resources/routes/[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
         "description": "Pointer to route resource.",
-        "example": "/resources/routes/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+        "example": "/resources/routes/ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
       },
       "SignalKPosition": {
         "type": "object",
@@ -83,9 +83,9 @@
         "properties": {
           "href": {
             "type": "string",
-            "pattern": "^/resources/waypoints/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+            "pattern": "^/resources/waypoints/[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
             "description": "Reference to a related route resource. A pointer to the resource UUID.",
-            "example": "/resources/waypoints/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+            "example": "/resources/waypoints/ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
           }
         }
       },

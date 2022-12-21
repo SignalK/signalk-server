@@ -142,12 +142,12 @@
       },
       "SignalKUuid": {
         "type": "string",
-        "pattern": "urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
-        "example": "urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+        "pattern": "[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+        "example": "ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
       },
       "SignalKHref": {
         "type": "string",
-        "pattern": "^/resources/(\\w*)/urn:mrn:signalk:uuid:[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        "pattern": "^/resources/(\\w*)/[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
       },
       "SignalKPosition": {
         "type": "object",
@@ -300,7 +300,7 @@
         "properties": {
           "href": {
             "description": "Reference to a related resource. A pointer to the resource UUID.",
-            "example": "/resources/waypoints/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a",
+            "example": "/resources/waypoints/ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a",
             "allOf": [
               {
                 "$ref": "#/components/schemas/SignalKHref"
@@ -1360,7 +1360,7 @@
             "name": "href",
             "in": "query",
             "description": "Limit results to notes with matching resource reference",
-            "example": "/resources/waypoints/urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a",
+            "example": "/resources/waypoints/ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a",
             "required": false,
             "explode": false,
             "schema": {

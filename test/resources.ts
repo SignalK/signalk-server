@@ -4,8 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { startServer } from './ts-servertestutilities'
 chai.should()
 
-const UUID_PREFIX = 'urn:mrn:signalk:uuid:'
-export const skUuid = () => `${UUID_PREFIX}${uuidv4()}`
+export const skUuid = () => `${uuidv4()}`
 
 describe('Resources Api', () => {
   it('can put and get a waypoint', async function() {

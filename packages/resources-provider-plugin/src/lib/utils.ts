@@ -1,4 +1,4 @@
-// ** utility library functions **
+// utility library functions
 
 import {
   computeDestinationPoint,
@@ -7,9 +7,7 @@ import {
 } from 'geolib'
 import ngeohash from 'ngeohash'
 
-export const UUID_PREFIX = 'urn:mrn:signalk:uuid:'
-
-// ** check geometry is in bounds
+// check geometry is in bounds
 export const inBounds = (
   val: any,
   type: string,
@@ -19,7 +17,7 @@ export const inBounds = (
   switch (type) {
     case 'notes':
     case 'waypoints':
-      if (val?.feature?.geometry?.coordinates) {
+      if (val?.feature?.geometry?.coordinates) {
         ok = isPointInPolygon(val?.feature?.geometry?.coordinates, polygon)
       }
       if (val.position) {
@@ -70,8 +68,7 @@ export const inBounds = (
 export const passFilter = (res: any, type: string, params: any) => {
   let ok = true
   if (params.href) {
-    // ** check is attached to another resource
-    // console.log(`filter related href: ${params.href}`);
+    // check is attached to another resource
     if (typeof res.href === 'undefined' || !res.href) {
       ok = ok && false
     } else {
@@ -99,8 +96,7 @@ export const passFilter = (res: any, type: string, params: any) => {
     }
   }
   if (params.group) {
-    // ** check is attached to group
-    // console.error(`check group: ${params.group}`);
+    // check is attached to group
     if (typeof res.group === 'undefined') {
       ok = ok && false
     } else {
@@ -108,13 +104,13 @@ export const passFilter = (res: any, type: string, params: any) => {
     }
   }
   if (params.geobounds) {
-    // ** check is within bounds
+    // check is within bounds
     ok = ok && inBounds(res, type, params.geobounds)
   }
   return ok
 }
 
-// ** process query parameters
+// process query parameters
 export const processParameters = (params: any) => {
   if (typeof params.limit !== 'undefined') {
     if (isNaN(params.limit)) {
@@ -127,7 +123,7 @@ export const processParameters = (params: any) => {
   }
 
   if (typeof params.bbox !== 'undefined') {
-    // ** generate geobounds polygon from bbox
+    // generate geobounds polygon from bbox
     params.geobounds = toPolygon(params.bbox)
     if (params.geobounds.length !== 5) {
       params.geobounds = null
@@ -143,14 +139,17 @@ export const processParameters = (params: any) => {
     }
     const sw = computeDestinationPoint(params.position, params.distance, 225)
     const ne = computeDestinationPoint(params.position, params.distance, 45)
-    params.geobounds = toPolygon(
-      [sw.longitude, sw.latitude, ne.longitude, ne.latitude]
-    )
+    params.geobounds = toPolygon([
+      sw.longitude,
+      sw.latitude,
+      ne.longitude,
+      ne.latitude
+    ])
   }
   return params
 }
 
-// ** convert bbox  string to array of points (polygon) **
+// convert bbox  string to array of points (polygon)
 export const toPolygon = (bbox: number[]) => {
   const polygon = []
   if (bbox.length == 4) {

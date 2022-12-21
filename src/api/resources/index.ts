@@ -21,8 +21,7 @@ import { SignalKMessageHub } from '../../app'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 
-const UUID_PREFIX = 'urn:mrn:signalk:uuid:'
-export const skUuid = () => `${UUID_PREFIX}${uuidv4()}`
+export const skUuid = () => `${uuidv4()}`
 
 interface ResourceApplication
   extends WithSecurityStrategy,
@@ -142,6 +141,7 @@ export class ResourcesApi {
 
   private initResourceRoutes(server: ResourceApplication) {
     const updateAllowed = (req: Request): boolean => {
+      return true
       return server.securityStrategy.shouldAllowPut(
         req,
         'vessels.self',

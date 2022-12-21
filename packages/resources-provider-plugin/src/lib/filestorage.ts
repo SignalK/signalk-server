@@ -10,12 +10,12 @@ import {
 } from 'fs/promises'
 import path from 'path'
 import { IResourceStore, StoreRequestParams } from '../types'
-import { passFilter, processParameters, UUID_PREFIX } from './utils'
+import { passFilter, processParameters } from './utils'
 
 export const getUuid = (skIdentifier: string) =>
   skIdentifier.split(':').slice(-1)[0]
 
-// ** File Resource Store Class
+// File Resource Store Class
 export class FileStore implements IResourceStore {
   savePath: string
   resources: any
@@ -27,7 +27,7 @@ export class FileStore implements IResourceStore {
     this.pkg = { id: pluginId }
   }
 
-  // ** check / create path to persist resources
+  // check / create path to persist resources
   async init(config: any): Promise<{ error: boolean; message: string }> {
     if (typeof config.settings.path === 'undefined') {
       this.savePath = config.path + '/resources'
@@ -62,7 +62,7 @@ export class FileStore implements IResourceStore {
     return await this.createSavePaths(enabledResTypes)
   }
 
-  // ** create save paths for resource types
+  // create save paths for resource types
   async createSavePaths(
     resTypes: any
   ): Promise<{ error: boolean; message: string }> {
@@ -107,12 +107,12 @@ export class FileStore implements IResourceStore {
     }
   }
 
-  // ** return persisted resources from storage
+  // return persisted resources from storage
   async getResources(
     type: string,
     params: any
   ): Promise<{ [key: string]: any }> {
-    let result: any = {}
+    const result: any = {}
     // ** parse supplied params
     params = processParameters(params)
     try {
@@ -133,9 +133,9 @@ export class FileStore implements IResourceStore {
           const res = JSON.parse(
             await readFile(path.join(rt.path, files[f]), 'utf8')
           )
-          // ** apply param filters **
+          // apply param filters
           if (passFilter(res, type, params)) {
-            const uuid = UUID_PREFIX + files[f]
+            const uuid = files[f]
             result[uuid] = res
             const stats: any = stat(path.join(rt.path, files[f]))
             result[uuid].timestamp = stats.mtime
@@ -155,13 +155,13 @@ export class FileStore implements IResourceStore {
     }
   }
 
-  // ** save / delete (r.value==null) resource file
+  // save / delete (r.value==null) resource file
   async setResource(r: StoreRequestParams): Promise<void> {
     const fname = getUuid(r.id)
     const p = path.join(this.resources[r.type].path, fname)
 
     if (r.value === null) {
-      // ** delete file **
+      // delete file
       try {
         await unlink(p)
         this.debug(`** DELETED: ${r.type} entry ${fname} **`)
@@ -172,7 +172,7 @@ export class FileStore implements IResourceStore {
         throw error
       }
     } else {
-      // ** add / update file
+      // add / update file
       try {
         await writeFile(p, JSON.stringify(r.value))
         this.debug(`** ${r.type} written to ${fname} **`)
@@ -184,7 +184,7 @@ export class FileStore implements IResourceStore {
     }
   }
 
-  // ** check path exists / create it if it doesn't **
+  // check path exists / create it if it doesn't
   async checkPath(path: string = this.savePath): Promise<boolean | Error> {
     if (!path) {
       throw new Error(`Path not supplied!`)

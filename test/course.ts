@@ -131,7 +131,7 @@ describe('Course Api', () => {
 
     await selfPut('navigation/course/destination', {
       href:
-        '/resources/waypoints/urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b95'
+        '/resources/waypoints/07894aba-f151-4099-aa4f-5e5773734b95'
     }).then(response => response.status.should.equal(400))
     await assert.rejects(wsPromiser.nthMessage(4))
 
@@ -172,7 +172,7 @@ describe('Course Api', () => {
       return response.json()
     })
     id.length.should.equal(
-      'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length
+      'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length
     )
     const href = `/resources/waypoints/${id}`
 
@@ -351,7 +351,7 @@ describe('Course Api', () => {
       return response.json()
     })
     id.length.should.equal(
-      'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length
+      'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length
     )
     const href = `/resources/routes/${id}`
 

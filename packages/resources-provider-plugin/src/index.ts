@@ -3,7 +3,7 @@ import {
   PluginServerApp,
   ResourceProviderRegistry
 } from '@signalk/server-api'
-// ***********************************************
+
 import { FileStore, getUuid } from './lib/filestorage'
 import { StoreRequestParams } from './types'
 
@@ -163,7 +163,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
         `** Enabled resource types: ${JSON.stringify(apiProviderFor)}`
       )
 
-      // ** initialise resource storage
+      // initialise resource storage
       db.init({ settings: config, path: server.config.configPath })
         .then((res: { error: boolean; message: string }) => {
           if (res.error) {
@@ -248,7 +248,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
     return failed
   }
 
-  // ******* Signal K server Resource Provider interface functions **************
+  // Signal K server Resource Provider interface functions
 
   const apiGetResources = async (
     resType: string,

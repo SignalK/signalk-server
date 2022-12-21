@@ -718,7 +718,7 @@ _Note: Requires a registered Resource Provider for the supplied `resource_type`.
   - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
  or user defined resource types.
 
-  - `resource_id`: The id of the resource to retrieve _(e.g. `urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+  - `resource_id`: The id of the resource to retrieve _(e.g. `ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
 
 - returns:  `Promise<{[key: string]: any}>` 
 
@@ -726,7 +726,7 @@ _Example:_
 ```javascript
 app.resourcesApi.getResource(
   'routes', 
-  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
 ).then (data => {
   // route data
   console.log(data);
@@ -747,7 +747,7 @@ _Note: Requires a registered Resource Provider for the supplied `resource_type`.
   - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
  or user defined resource types.
 
-  - `resource_id`: The id of the resource to retrieve _(e.g. `urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+  - `resource_id`: The id of the resource to retrieve _(e.g. `ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
 
   - `resource_data`: A complete and valid resource record.
 
@@ -757,7 +757,7 @@ _Example:_
 ```javascript
 app.resourcesApi.setResource(
   'waypoints',
-  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
   {
     "position": {"longitude": 138.5, "latitude": -38.6}, 
     "feature": {
@@ -788,7 +788,7 @@ _Note: Requires a registered Resource Provider for the supplied `resource_type`.
 - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
 or user defined resource types.
 
-- `resource_id`: The id of the resource to retrieve _(e.g. `urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+- `resource_id`: The id of the resource to retrieve _(e.g. `ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
 
 - returns: `Promise<void>` 
 
@@ -796,7 +796,7 @@ _Example:_
 ```javascript
 app.resourcesApi.deleteResource(
   'notes', 
-  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
 ).then ( () => {
   // success
   ...

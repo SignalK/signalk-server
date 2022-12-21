@@ -118,26 +118,26 @@ listResources(
 ---
 __`getResource(id)`__: This method is called when a request is made for a specific resource entry with the supplied id. If there is no resource associated with the id the call should return Promise.reject.
 
-- `id:` String containing the target resource entry id. _(e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99')_
+- `id:` String containing the target resource entry id. _(e.g. '07894aba-f151-4099-aa4f-5e5773734b99')_
 
 returns: `Promise<object>`
 
 _Example resource request:_ 
 ```
-GET /signalk/v2/api/resources/routes/urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99
+GET /signalk/v2/api/resources/routes/07894aba-f151-4099-aa4f-5e5773734b99
 ```
 _ResourceProvider method invocation:_
 
 ```javascript
 getResource(
-  'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'
+  '07894aba-f151-4099-aa4f-5e5773734b99'
 );
 ```
 
 ---
 __`setResource(id, value)`__: This method is called when a request is made to save / update a resource entry with the supplied id. The supplied data is a complete resource record.
 
-- `id:` String containing the id of the resource entry created / updated. _e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'_
+- `id:` String containing the id of the resource entry created / updated. _e.g. '07894aba-f151-4099-aa4f-5e5773734b99'_
 
 - `value:` Resource data to be stored.
 
@@ -145,13 +145,13 @@ returns: `Promise<void>`
 
 _Example PUT resource request:_ 
 ```
-PUT /signalk/v2/api/resources/routes/urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99 {resource_data}
+PUT /signalk/v2/api/resources/routes/07894aba-f151-4099-aa4f-5e5773734b99 {resource_data}
 ```
 _ResourceProvider method invocation:_
 
 ```javascript
 setResource(
-  'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99',
+  '07894aba-f151-4099-aa4f-5e5773734b99',
   {
     name: 'test route', 
     distance': 8000, 
@@ -194,19 +194,19 @@ setResource(
 ---
 __`deleteResource(id)`__: This method is called when a request is made to remove the specific resource entry with the supplied resource id.
 
-- `id:` String containing the target resource entry id. _e.g. 'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'_
+- `id:` String containing the target resource entry id. _e.g. '07894aba-f151-4099-aa4f-5e5773734b99'_
 
 returns: `Promise<void>`
 
 _Example resource request:_ 
 ```
-DELETE /signalk/v2/api/resources/routes/urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99
+DELETE /signalk/v2/api/resources/routes/07894aba-f151-4099-aa4f-5e5773734b99
 ```
 _ResourceProvider method invocation:_
 
 ```javascript
 deleteResource(
-  'urn:mrn:signalk:uuid:07894aba-f151-4099-aa4f-5e5773734b99'
+  '07894aba-f151-4099-aa4f-5e5773734b99'
 );
 ```
 
