@@ -239,7 +239,10 @@ describe('Course Api', () => {
         nextPoint: {
           href,
           type: 'Waypoint',
-          position: destination,
+          position: {
+            longitude: destination.feature.geometry.coordinates[0],
+            latitude: destination.feature.geometry.coordinates[0]
+          },
           arrivalCircle: 99
         },
         previousPoint: {
@@ -445,8 +448,8 @@ describe('Course Api', () => {
         nextPoint: {
           href: null,
           position: {
-            longitude: points.feature.geometry.coordinates[0],
-            latitude: points.feature.geometry.coordinates[1]
+            longitude: points.feature.geometry.coordinates[0][0],
+            latitude: points.feature.geometry.coordinates[0][1]
           },
           type: 'RoutePoint',
           arrivalCircle: 0
