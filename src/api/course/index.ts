@@ -827,11 +827,11 @@ export class CourseApi {
     })
 
     values.push({
-      path: `${navGC}.nextPoint.value href`,
+      path: `${navGC}.nextPoint.value.href`,
       value: this.courseInfo.nextPoint.href
     })
     values.push({
-      path: `${navRL}.nextPoint.value href`,
+      path: `${navRL}.nextPoint.value.href`,
       value: this.courseInfo.nextPoint.href
     })
 
