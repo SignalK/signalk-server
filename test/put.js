@@ -79,7 +79,7 @@ describe('Put Requests', () => {
     result.status.should.equal(405)
   })
 
-  it('HTTP successfull put', async function () {
+  it('HTTP successful PUT', async function () {
     let result = await fetch(
       `${url}/signalk/v1/api/vessels/self/electrical/switches/switch2.state`,
       {
@@ -98,6 +98,7 @@ describe('Put Requests', () => {
     let response = await result.json()
     response.should.have.property('state')
     response.state.should.equal('PENDING')
+    response.statusCode.should.equal(202)
     response.should.have.property('href')
 
     await sleep(200)
