@@ -218,7 +218,6 @@ function putPath(app, contextParam, path, body, req, requestId, updateCb) {
                   if (reply.state === 'PENDING') {
                     // backwards compatibility
                     reply.action = { href: reply.href }
-                    reply.statusCode = 202
                   }
                   resolve(reply)
                 })
