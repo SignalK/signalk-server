@@ -104,6 +104,32 @@
           "coordinates": {
             "$ref": "#/components/schemas/LineStringCoordinates"
           }
+        },
+        "example": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              24.897849923663273,
+              60.15202408867182
+            ],
+            [
+              24.902023936156723,
+              60.05997020643639
+            ],
+            [
+              24.67031474903851,
+              59.627962940557154
+            ],
+            [
+              24.777473968139503,
+              59.449626524251926
+            ],
+            [
+              24.758341055158922,
+              59.44208867188729
+            ]
+          ]
+
         }
       },
       "Polygon": {
@@ -334,11 +360,13 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Route's common name"
+            "description": "Route's common name",
+            "example": "HSK to Old City Marina"
           },
           "description": {
             "type": "string",
-            "description": "A description of the route"
+            "description": "A description of the route",
+            "example": "Helsinki to Tallinn via Helsinki & Tallinn lighthouses"
           },
           "distance": {
             "description": "Total distance from start to end",
