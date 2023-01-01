@@ -95,20 +95,20 @@ describe('Put Requests', () => {
 
     result.status.should.equal(202)
 
-    let json = await result.json()
-    json.should.have.property('state')
-    json.state.should.equal('PENDING')
-    json.should.have.property('href')
+    let response = await result.json()
+    response.should.have.property('state')
+    response.state.should.equal('PENDING')
+    response.should.have.property('href')
 
     await sleep(200)
 
-    result = await fetch(`${url}${json.href}`)
+    result = await fetch(`${url}${response.href}`)
 
     result.status.should.equal(200)
 
-    json = await result.json()
-    json.should.have.property('state')
-    json.state.should.equal('COMPLETED')
+    response = await result.json()
+    response.should.have.property('state')
+    response.state.should.equal('COMPLETED')
   })
 
   it('HTTP successfull meta put', async function () {
