@@ -83,7 +83,7 @@ export class ResourcesApi {
         delete this.resProvider[resourceType]
       }
     }
-    debug(JSON.stringify(this.resProvider))
+    debug('ResourceProvider = ' + JSON.stringify(this.resProvider))
   }
 
   getResource(resType: SignalKResourceType, resId: string) {

@@ -19,7 +19,8 @@ import {
   PluginServerApp,
   PropertyValues,
   PropertyValuesCallback,
-  ResourceProvider
+  ResourceProvider,
+  AutopilotProvider
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -29,6 +30,7 @@ import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
 import { ResourcesApi } from '../api/resources'
+import { AutopilotApi } from '../api/autopilot'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
 import { DeltaInputHandler } from '../deltachain'
@@ -470,8 +472,13 @@ module.exports = (theApp: any) => {
         console.error(`${plugin.id}:no configuration data`)
         safeConfiguration = {}
       }
+      debug(`${plugin.id} => app.resourcesApi: ${app.resourcesApi}`)
       onStopHandlers[plugin.id].push(() =>
         app.resourcesApi.unRegister(plugin.id)
+      )
+      debug(`${plugin.id} => app.autopilotApi: ${app.autopilotApi}`)
+      onStopHandlers[plugin.id].push(() =>
+        app.autopilotApi.unRegister(plugin.id)
       )
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
@@ -550,6 +557,11 @@ module.exports = (theApp: any) => {
     _.omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {
       resourcesApi.register(plugin.id, provider)
+    }
+    const autopilotApi: AutopilotApi = app.autopilotApi
+    _.omit(appCopy, 'autopilotApi') // don't expose the actual autopilot api manager
+    appCopy.registerAutopilotProvider = (provider: AutopilotProvider) => {
+      autopilotApi.register(plugin.id, provider)
     }
 
     try {
