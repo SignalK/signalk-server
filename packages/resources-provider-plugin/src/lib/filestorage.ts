@@ -150,7 +150,7 @@ export class FileStore implements IResourceStore {
     } catch (error) {
       console.error(error)
       throw new Error(
-        `Error retreiving resources from ${this.savePath}. Ensure plugin is active or restart plugin!`
+        `Error retrieving resources from ${this.savePath}. Ensure plugin is active or restart plugin!`
       )
     }
   }
