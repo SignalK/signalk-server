@@ -56,6 +56,34 @@ export interface ResourceProviderRegistry {
   registerResourceProvider: (provider: ResourceProvider) => void;
 }
 
+
+export interface AutopilotApi {
+  register: (pluginId: string, provider: AutopilotProvider) => void;
+  unRegister: (pluginId: string) => void;
+}
+
+export interface AutopilotProvider {
+  pilotType: string
+  methods: AutopilotProviderMethods
+}
+
+export interface AutopilotProviderMethods {
+  pluginId?: string
+  engage: (enable: boolean) => Promise<void>
+  getConfig: () => Promise<{[key: string]: any}>
+  getState: () => Promise<string>
+  setState: (state: string) => Promise<void>
+  getMode: () => Promise<string>
+  setMode: (mode: string) => Promise<void>
+  setTarget: (value: number) => Promise<void>
+  adjustTarget: (value: number) => Promise<void>
+  tack: (port: boolean) => Promise<void>
+}
+
+export interface AutopilotProviderRegistry {
+  registerAutopilotProvider: (provider: AutopilotProvider) => void;
+}
+
 type Unsubscribe = () => {}
 export interface PropertyValuesEmitter {
   emitPropertyValue: (name: string, value: any) => void
@@ -69,7 +97,7 @@ export interface PropertyValuesEmitter {
  * INCOMPLETE, work in progress.
  */
 
- export interface PluginServerApp extends PropertyValuesEmitter, ResourceProviderRegistry {}
+ export interface PluginServerApp extends PropertyValuesEmitter, ResourceProviderRegistry, AutopilotProviderRegistry {}
 
 /**
  * This is the API that a [server plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md) must implement.
