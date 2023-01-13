@@ -3,6 +3,7 @@ import {
   PluginServerApp,
   AutopilotProviderRegistry
 } from '@signalk/server-api'
+import debug from 'debug'
 
 interface DeltaUpdate {
   updates: [
@@ -71,7 +72,7 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
       }
       server.debug(`Applied config: ${JSON.stringify(config)}`)
 
-      // register as provider for enabled resource types
+      // register as autopilot provider
       const result = registerProvider()
 
       const msg = !result
@@ -83,6 +84,10 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
       } else {
         server.setProviderStatus(msg)
       }
+
+      // initialise autopilot connection
+      initialise()
+
     } catch (error) {
       const msg = `Started with errors!`
       server.setPluginError(msg)
@@ -103,6 +108,7 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
     }
   }
 
+  // mock autopilot config
   const apConfig: any = {
     options: {
       state: ['enabled', 'disabled'],
@@ -113,19 +119,59 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
     target: 0
   }
 
-  const emitDeltas = (values: Array<{ path: string; value: any }>) => {
-    server.handleMessage(plugin.id, {
-      updates: [
-        {
-          values: values
-        }
-      ]
-    })
-  }
-
   const deltaPath = 'steering.autopilot'
 
-  const emitConfig = () => {
+  const registerProvider = (): boolean => {
+    try {
+      server.registerAutopilotProvider({
+        pilotType: 'mockPilot',
+        methods: {
+          getConfig: () => {
+            console.log(`${plugin.id} => getConfig()`)
+            return Promise.resolve(apConfig)
+          },
+          engage: (enable: boolean): Promise<void> => {
+            console.log(`${plugin.id} => engage(${enable})`)
+            apSetState(enable ? 'enabled' : 'disabled')
+            return Promise.resolve()
+          },
+          getState: (): Promise<string> => {
+            console.log(`${plugin.id} => getState()`)
+            return Promise.resolve(apConfig.state)
+          },
+          setState: (state: string): Promise<void> => {
+            return apSetState(state)
+          },
+          getMode: (): Promise<string> => {
+            console.log(`${plugin.id} => getMode()`)
+            return Promise.resolve(apConfig.mode)
+          },
+          setMode: (mode: string): Promise<void> => {
+            return apSetMode(mode)
+          },
+          setTarget: (value: number): Promise<void> => {
+            console.log(`${plugin.id} => setTarget(${value})`)
+            return apSetTarget(value)
+          },
+          adjustTarget: (value: number): Promise<void> => {
+            console.log(`${plugin.id} => adjustTarget(${value})`)
+            return apSetTarget(apConfig.target + value)
+          },
+          tack: (port: boolean): Promise<void> => {
+            console.log(`${plugin.id} => tack ${port ? 'port' : 'starboard'}`)
+            return Promise.resolve()
+          }
+        }
+      })
+      return true
+    } catch (error) {
+      return false
+    }
+  }
+
+  // initialise autopilot connection / emit status
+  const initialise = () => {
+    server.debug('Initialising autopilot comms....')
     emitDeltas([
       {
         path: `${deltaPath}.mode`,
@@ -142,81 +188,8 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
     ])
   }
 
-  const registerProvider = (): boolean => {
-    try {
-      server.registerAutopilotProvider({
-        pilotType: 'mockPilot',
-        methods: {
-          getConfig: () => {
-            console.log(`${plugin.id} => getConfig()`)
-            return Promise.resolve(apConfig)
-          },
-          engage: (enable: boolean): Promise<void> => {
-            apiSetState(enable ? 'enabled' : 'disabled')
-            return Promise.resolve()
-          },
-          getState: (): Promise<string> => {
-            console.log(`${plugin.id} => getMode()`)
-            return Promise.resolve(apConfig.state)
-          },
-          setState: (state: string): Promise<void> => {
-            return apiSetState(state)
-          },
-          getMode: (): Promise<string> => {
-            console.log(`${plugin.id} => getMode()`)
-            return Promise.resolve(apConfig.mode)
-          },
-          setMode: (mode: string): Promise<void> => {
-            console.log(`${plugin.id} => setMode(${mode})`)
-            if (apConfig.options.mode.includes(mode)) {
-              apConfig.mode = mode
-              emitDeltas([
-                {
-                  path: `${deltaPath}.mode`,
-                  value: apConfig.mode
-                }
-              ])
-              return Promise.resolve()
-            } else {
-              return Promise.reject()
-            }
-          },
-          setTarget: (value: number): Promise<void> => {
-            console.log(`${plugin.id} => setTarget(${value})`)
-            apConfig.target = value
-            emitDeltas([
-              {
-                path: `${deltaPath}.target`,
-                value: apConfig.target
-              }
-            ])
-            return Promise.resolve()
-          },
-          adjustTarget: (value: number): Promise<void> => {
-            console.log(`${plugin.id} => adjustTarget(${value})`)
-            apConfig.target += value
-            emitDeltas([
-              {
-                path: `${deltaPath}.target`,
-                value: apConfig.target
-              }
-            ])
-            return Promise.resolve()
-          },
-          tack: (port: boolean): Promise<void> => {
-            console.log(`${plugin.id} => tack ${port ? 'port' : 'starboard'}`)
-            return Promise.resolve()
-          }
-        }
-      })
-      emitConfig()
-      return true
-    } catch (error) {
-      return false
-    }
-  }
-
-  const apiSetState = (state: string): Promise<void> => {
+  // set autopilot state
+  const apSetState = (state: string): Promise<void> => {
     console.log(`${plugin.id} => setState(${state})`)
     if (apConfig.options.state.includes(state)) {
       apConfig.state = state
@@ -230,6 +203,52 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
     } else {
       return Promise.reject()
     }
+  }
+
+  // set autopilot mode
+  const apSetMode = (mode: string): Promise<void> => {
+    console.log(`${plugin.id} => setMode(${mode})`)
+    if (apConfig.options.mode.includes(mode)) {
+      apConfig.mode = mode
+      emitDeltas([
+        {
+          path: `${deltaPath}.mode`,
+          value: apConfig.mode
+        }
+      ])
+      return Promise.resolve()
+    } else {
+      return Promise.reject()
+    }
+  }
+
+  // set autopilot target
+  const apSetTarget = (value: number): Promise<void> => {
+    if (value > 359) {
+      apConfig.target = 359
+    } else if (value < -179) {
+      apConfig.target = -179
+    } else {
+      apConfig.target = value
+    }
+    console.log(`${plugin.id} => Target value set = ${apConfig.target}`)
+    emitDeltas([
+      {
+        path: `${deltaPath}.target`,
+        value: apConfig.target
+      }
+    ])
+    return Promise.resolve()
+  }
+
+  const emitDeltas = (values: Array<{ path: string; value: any }>) => {
+    server.handleMessage(plugin.id, {
+      updates: [
+        {
+          values: values
+        }
+      ]
+    })
   }
 
   return plugin

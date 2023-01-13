@@ -146,7 +146,7 @@ export class AutopilotApi {
 
   private initAutopilotRoutes(server: AutopilotApplication) {
     const updateAllowed = (req: Request): boolean => {
-      return true
+      
       return server.securityStrategy.shouldAllowPut(
         req,
         'vessels.self',
@@ -417,7 +417,7 @@ export class AutopilotApi {
       }
     )
 
-    // facilitate setting of autopilot target (0-359)
+    // facilitate setting of autopilot target (-179 -> 359)
     server.put(
       `${AUTOPILOT_API_PATH}/target`,
       async (req: Request, res: Response, next: NextFunction) => {
@@ -436,7 +436,7 @@ export class AutopilotApi {
         debug(req.body)
         if (
           typeof req.body.value !== 'number' ||
-          !(req.body.value >= 0 && req.body.value < 360)
+          !(req.body.value >= -179 && req.body.value < 360)
         ) {
           res.status(400).json(Responses.invalid)
           return
