@@ -402,6 +402,11 @@
             "type": "string",
             "description": "A description of the waypoint"
           },
+          "type": {
+            "type": "string",
+            "description": "The type of point (e.g. Waypoint, PoI, Race Mark, etc)"
+            
+          },
           "feature": {
             "type": "object",
             "title": "Feature",

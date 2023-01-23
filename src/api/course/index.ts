@@ -564,7 +564,7 @@ export class CourseApi {
               longitude: r.feature.geometry.coordinates[0]
             }
             newCourse.nextPoint.href = dest.href
-            newCourse.nextPoint.type = 'Waypoint'
+            newCourse.nextPoint.type = r.type ?? 'Waypoint'
           } else {
             throw new Error(`Invalid waypoint coordinate data! (${dest.href})`)
           }
