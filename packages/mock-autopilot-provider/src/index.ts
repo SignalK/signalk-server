@@ -235,7 +235,7 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
     emitDeltas([
       {
         path: `${deltaPath}.target`,
-        value: apConfig.target
+        value: (Math.PI/180) * apConfig.target
       }
     ])
     return Promise.resolve()
