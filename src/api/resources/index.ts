@@ -139,7 +139,7 @@ export class ResourcesApi {
     if (providerId) {
       provider = this.checkForProvider(resType, providerId)
     } else {
-      provider = await this.getProviderId(resType, resId)
+      provider = await this.getProviderForResourceId(resType, resId)
     }
     if (provider) {
       return this.resProvider[resType]?.get(provider)?.setResource(resId, data)
@@ -159,7 +159,7 @@ export class ResourcesApi {
     if (providerId) {
       provider = this.checkForProvider(resType, providerId)
     } else {
-      provider = await this.getProviderId(resType, resId)
+      provider = await this.getProviderForResourceId(resType, resId)
     }
     if (provider) {
       return this.resProvider[resType]?.get(provider)?.deleteResource(resId)
@@ -181,9 +181,11 @@ export class ResourcesApi {
       req.push(v.listResources(params))
     })
 
-    const resp = await Promise.all(req)
+    const resp = await Promise.allSettled(req)
     resp.forEach((r) => {
-      Object.assign(result, r)
+      if(r.status === 'fulfilled') {
+        Object.assign(result, r.value)
+      }
     })
     return result
   }
@@ -201,19 +203,21 @@ export class ResourcesApi {
       req.push(v.getResource(resId))
     })
 
-    const resp = await Promise.all(req)
+    const resp = await Promise.allSettled(req)
     resp.forEach((r) => {
-      Object.assign(result, r)
+      if(r.status === 'fulfilled') {
+        Object.assign(result, r.value)
+      }
     })
     return result
   }
 
   // return providerId for supplied resource id
-  private async getProviderId(
+  private async getProviderForResourceId(
     resType: string,
     resId: string
   ): Promise<string | undefined> {
-    debug(`getProviderId(${resType}, ${resId})`)
+    debug(`getProviderForResourceId(${resType}, ${resId})`)
 
     let result: string | undefined = undefined
     if (!this.resProvider[resType]) {
@@ -226,15 +230,15 @@ export class ResourcesApi {
       req.push(v.getResource(resId))
     })
 
-    const resp = await Promise.all(req)
+    const resp = await Promise.allSettled(req)
     let idx = 0
     resp.forEach((r) => {
-      if (r) {
-        result = idList[idx]
-        idx++
+      if (r.status === 'fulfilled') {
+        result = !result ? idList[idx] : result
       }
+      idx++
     })
-    debug(`getProviderId().result = ${result}`)
+    debug(`getProviderForResourceId().result = ${result}`)
     return result
   }
 
@@ -445,6 +449,7 @@ export class ResourcesApi {
           res.status(403).json(Responses.unauthorised)
           return
         }
+        
         if (isSignalKResourceType(req.params.resourceType)) {
           let isValidId: boolean
           if (req.params.resourceType === 'charts') {
@@ -487,7 +492,7 @@ export class ResourcesApi {
               req.query.provider ? (req.query.provider as string) : undefined
             )
           } else {
-            provider = await this.getProviderId(
+            provider = await this.getProviderForResourceId(
               req.params.resourceType,
               req.params.resourceId
             )
@@ -543,7 +548,7 @@ export class ResourcesApi {
               req.query.provider ? (req.query.provider as string) : undefined
             )
           } else {
-            provider = await this.getProviderId(
+            provider = await this.getProviderForResourceId(
               req.params.resourceType,
               req.params.resourceId
             )
@@ -553,6 +558,7 @@ export class ResourcesApi {
             next()
             return
           }
+
           await this.resProvider[req.params.resourceType]
             ?.get(provider)
             ?.deleteResource(req.params.resourceId)
