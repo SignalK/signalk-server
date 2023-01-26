@@ -106,198 +106,94 @@ If either the submitted resource data or the resource id are invalid then the op
 
 _Note: the submitted resource data is validated against the OpenApi schema definition for the relevant resource type._
 
----
-
-### Creating Routes, Waypoints & Regions using `POST`
-
-The Signal K Resources API provides for `POST` requests to create routes, waypoints and regions to only require the resource coordinates.
-
-See the following sections for information relating to each of these resoource types.
 
 ---
-#### __Routes:__
+## Multiple Providers for a Resource Type
 
-To create a new route entry the body of the request must contain data in the following format: 
-```javascript
-{
-  points: [
-    {latitude: -38.567,longitude: 135.9467},
-    {latitude: -38.967,longitude: 135.2467},
-    {latitude: -39.367,longitude: 134.7467},
-    {latitude: -39.567,longitude: 134.4467}
-  ],
-  name: 'route name',
-  description: 'description of the route',
-  properties: {
-    ...
-  }
-}
-```
-where:
-- `points (required)`: is an array of route points (latitude and longitude)
-- `name`: is text detailing the name of the route
-- `description`: is text describing the route
-- `properties`: object containing key | value pairs of attributes associated with the route.
+The ResourcesAPI will allow for multiple plugins to register as a provider fo a resource type.
 
+When this scenario occurs the server services request in the following ways:
 
-_Example: Create new route entry using only required attributes._
+__Listing entries:__
 
-```typescript 
-HTTP POST 'http://hostname:3000/signalk/v2/api/resources/routes' {
-  points: [
-    {latitude: -38.567,longitude: 135.9467},
-    {latitude: -38.967,longitude: 135.2467},
-    {latitude: -39.367,longitude: 134.7467},
-    {latitude: -39.567,longitude: 134.4467}
-  ]
-}
-```
+When a list of resources is requested 
 
-
----
-#### __Waypoints:__
-
-To create a new waypoint entry the body of the request must contain data in the following format: 
-```javascript
-{
-  position: {
-    latitude: -38.567,
-    longitude: 135.9467
-  },
-  name: 'waypoint name',
-  description: 'description of the waypoint',
-  properties: {
-    ...
-  }
-}
-```
-where:
-- `position (required)`: the latitude and longitude of the waypoint
-- `name`: is text detailing the name of the waypoint
-- `description`: is text describing the waypoint
-- `properties`: object containing key | value pairs of attributes associated with the waypoint.
-
-
-_Example: Create new waypoint entry using only required attributes._
+_for example:_
 ```typescript
-HTTP POST 'http://hostname:3000/signalk/v2/api/resources/waypoints' {
-  position: {
-    latitude: -38.567,
-    longitude: 135.9467
-  }
-}
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints'
 ```
+
+each registered provider will be asked to return matching entries and the server aggregates the results and returns them to the client.
 
 ---
-#### __Regions:__
 
-To create a new region entry the body of the request must contain data in the following format(s):
+__Requests for specific resources:__
 
-```javascript
-{
-  points: [ ... ],
-  name: 'region name',
-  description: 'description of the region',
-  attributes: {
-    ...
-  }
-}
-```
-where:
-- `points (required)`: is an array containing coordinates defining a "closed" area in one of the formats listed below. 
-- `name`: is text detailing the name of the region
-- `description`: is text describing the region
-- `properties`: object containing key | value pairs of attributes associated with the region.
+When a request is received for a specific resource 
 
+_for example:_
+```typescript
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111'
 
-**format 1: Single Bounded Area (SBA)**
+HTTP PUT 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111'
 
-An array of points (latitude and longitude) defining the area.
-
-```javascript
-{
-  points: [
-    {latitude: -38.567,longitude: 135.9467},
-    {latitude: -38.967,longitude: 135.2467},
-    {latitude: -39.367,longitude: 134.7467},
-    {latitude: -39.567,longitude: 134.4467},
-    {latitude: -38.567,longitude: 135.9467}
-  ]
-}
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111'
 ```
 
-**format 2: Bounded area containing other areas (Polygon)**
+each registered provider will polled to determine which one owns the entry with the supplied id. The provider with the resource entry is then the target of the requested operation (`getResource()`, `setResource()`, `deleteResource()`).
 
-An array of Single Bounded Areas (`format 1`). The first entry of the array defines an area which contains the areas defined in the remainder of the array entries.
+---
 
-```javascript
-{
-  points: [
-    [
-      {latitude: -38.567,longitude: 135.9467},
-      ...
-      {latitude: -38.567,longitude: 135.9467}
-    ],
-    [
-      {latitude: -39.167,longitude: 135.567},
-      ...
-      {latitude: -39.167,longitude: 135.567}
-    ]
-  ]
-}
+__Creating new resource entries:__
+
+When a request is received to create a new resource 
+
+_for example:_
+```typescript
+HTTP POST 'http://hostname:3000/signalk/v2/api/resources/waypoints'
 ```
 
+the first provider that was registered for that resource type will be the target of the requested operation (`setResource()`).
 
-**format 3: Multiple Bounded areas (MultiPolygon)**
+---
 
-An array of Polygons (`format 2`).
+__Specifying the resource provider to be the tartet of the request:__
 
-```javascript
-{
-  name: 'region name',
-  description: 'description of the region',
-  attributes: {
+When multiple providers are registered for a resource type the client can specify which provider should be the target of the request by using the query parameter `provider`.
+
+_Example:_
+```typescript
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?provider=provider-plugin-id'
+
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111?provider=provider-plugin-id'
+
+HTTP PUT 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111?provider=provider-plugin-id'
+
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111?provider=provider-plugin-id'
+
+HTTP POST 'http://hostname:3000/signalk/v2/api/resources/waypoints?provider=provider-plugin-id'
+```
+
+the value assigned to `provider` is the `plugin id` of the resource provider plugin.
+
+The plugin id can be obtained from the Signal K server url `http://hostname:3000/plugins`.
+
+_Example:_
+
+```typescript
+HTTP GET 'http://hostname:3000/plugins'
+```
+
+```JSON
+[
+  {
+    "id": "sk-resources-fs",  // <-- plugin id
+    "name": "Resources Provider",
+    "packageName": "sk-resources-fs",
+    "version": "1.3.0",
     ...
   },
-  points: [
-    [
-      [
-        {latitude: -38.567,longitude: 135.9467},
-        ...
-        {latitude: -38.567,longitude: 135.9467}
-      ],
-      [
-        {latitude: -39.167,longitude: 135.567},
-        ...
-        {latitude: -39.167,longitude: 135.567}
-      ]
-    ],
-    [
-      [
-        {latitude: -40.567,longitude: 135.9467},
-        ...
-        {latitude: -40.567,longitude: 135.9467}
-      ],
-      [
-        {latitude: -41.167,longitude: 135.567},
-        ...
-        {latitude: -41.167,longitude: 135.567}
-      ]
-    ]
-  ]
-}
+  ...
+]
 ```
 
-
-_Example: Create new region entry using only required attributes._
-```typescript
-HTTP POST 'http://hostname:3000/signalk/v2/api/resources/regions' {
-  points: [
-    {latitude: -38.567,longitude: 135.9467},
-    {latitude: -38.967,longitude: 135.2467},
-    {latitude: -39.367,longitude: 134.7467},
-    {latitude: -39.567,longitude: 134.4467},
-    {latitude: -38.567,longitude: 135.9467}
-  ]
-}
-```

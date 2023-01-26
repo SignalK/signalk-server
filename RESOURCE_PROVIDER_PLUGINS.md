@@ -68,15 +68,14 @@ interface ResourceProvider {
 ```
 where:
 
-- `type`: The resource type provided for by the plugin. These can be either __Common__ or __Custom__ resource types _(e.g. `routes`, `fishingZones`)_ 
+- `type`: The resource type provided for by the plugin. These can be either __Common__ or __Custom__ resource types _(e.g. `'routes'`, `'fishingZones'`)_ 
 
-- `methods`: An object implementing the `ResourceProviderMethods` interface defining the methods to which resource requests are passed by the SignalK server. _Note: The plugin __MUST__ implement each method, even if that operation is NOT supported by the plugin!_
+- `methods`: An object implementing the `ResourceProviderMethods` interface defining the functions to which resource requests are passed by the SignalK server. _Note: The plugin __MUST__ implement each method, even if that operation is NOT supported by the plugin!_
 
 The `ResourceProviderMethods` interface is defined as follows in _`@signalk/server-api`_:
 
 ```typescript
 interface ResourceProviderMethods {
-  pluginId?: string
   listResources: (query: { [key: string]: any }) => Promise<{[id: string]: any}>
   getResource: (id: string) => Promise<object>
   setResource: (
@@ -101,7 +100,7 @@ _Note: It is the responsibility of the resource provider plugin to filter the re
 returns: `Promise<{[id: string]: any}>`
 
 
-_Example resource request:_ 
+_Example: Return waypoints within the bounded area with lower left corner at E5.4 N25.7 & upper right corner E6.9 & N31.2:_ 
 ```
 GET /signalk/v2/api/resources/waypoints?bbox=[5.4,25.7,6.9,31.2]
 ```
@@ -223,7 +222,7 @@ app.registerResourceProvider(resourceProvider: ResourceProvider)
 where:
 - `resourceProvider`: is a reference to a `ResourceProvider` object containing the __resource type__ and __methods__ to receive the requests.
 
-_Note: If a plugin has already registered as a provider for a resource type, the method throws with an `Error`._
+_Note: More than one plugin can be registered as a provider for a resource type._
 
 _Example:_
 ```javascript

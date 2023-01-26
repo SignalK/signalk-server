@@ -30,7 +30,8 @@ interface ResourceApplication
 }
 
 export class ResourcesApi {
-  private resProvider: { [key: string]: ResourceProviderMethods | null } = {}
+  private resProvider: { [key: string]: Map<string, ResourceProviderMethods> } =
+    {}
 
   constructor(app: ResourceApplication) {
     this.initResourceRoutes(app)
@@ -41,76 +42,84 @@ export class ResourcesApi {
   }
 
   register(pluginId: string, provider: ResourceProvider) {
-    debug(`** Registering provider(s)....${pluginId} ${provider?.type}`)
+    debug(`** Registering ${provider.type} provider => ${pluginId} `)
+
     if (!provider) {
       throw new Error(`Error registering provider ${pluginId}!`)
     }
     if (!provider.type) {
       throw new Error(`Invalid ResourceProvider.type value!`)
     }
-    if (!this.resProvider[provider.type]) {
-      if (
-        !provider.methods.listResources ||
-        !provider.methods.getResource ||
-        !provider.methods.setResource ||
-        !provider.methods.deleteResource ||
-        typeof provider.methods.listResources !== 'function' ||
-        typeof provider.methods.getResource !== 'function' ||
-        typeof provider.methods.setResource !== 'function' ||
-        typeof provider.methods.deleteResource !== 'function'
-      ) {
-        throw new Error(`Error missing ResourceProvider.methods!`)
-      } else {
-        provider.methods.pluginId = pluginId
-        this.resProvider[provider.type] = provider.methods
-      }
-      debug(this.resProvider[provider.type])
+    if (
+      !provider.methods.listResources ||
+      !provider.methods.getResource ||
+      !provider.methods.setResource ||
+      !provider.methods.deleteResource ||
+      typeof provider.methods.listResources !== 'function' ||
+      typeof provider.methods.getResource !== 'function' ||
+      typeof provider.methods.setResource !== 'function' ||
+      typeof provider.methods.deleteResource !== 'function'
+    ) {
+      throw new Error(`Error missing ResourceProvider.methods!`)
     } else {
-      const msg = `Error: ${provider?.type} already registered!`
-      debug(msg)
-      throw new Error(msg)
+      if (!this.resProvider[provider.type]) {
+        this.resProvider[provider.type] = new Map()
+      }
+      this.resProvider[provider.type].set(pluginId, provider.methods)
     }
+    debug(this.resProvider[provider.type])
   }
 
   unRegister(pluginId: string) {
     if (!pluginId) {
       return
     }
-    debug(`** Un-registering ${pluginId} resource provider(s)....`)
+    debug(`** Un-registering ${pluginId} plugin as a resource provider....`)
     for (const resourceType in this.resProvider) {
-      if (this.resProvider[resourceType]?.pluginId === pluginId) {
-        debug(`** Un-registering ${resourceType}....`)
-        delete this.resProvider[resourceType]
+      if (this.resProvider[resourceType].has(pluginId)) {
+        debug(`** Un-registering ${pluginId} as ${resourceType} provider....`)
+        this.resProvider[resourceType].delete(pluginId)
       }
     }
-    debug(JSON.stringify(this.resProvider))
+    debug(this.resProvider)
   }
 
-  getResource(resType: SignalKResourceType, resId: string) {
-    debug(`** getResource(${resType}, ${resId})`)
-    if (!this.checkForProvider(resType)) {
-      return Promise.reject(new Error(`No provider for ${resType}`))
-    }
-    return this.resProvider[resType]?.getResource(resId)
-  }
-
-  listResources(resType: SignalKResourceType, params: { [key: string]: any }) {
-    debug(`** listResources(${resType}, ${JSON.stringify(params)})`)
-    if (!this.checkForProvider(resType)) {
-      return Promise.reject(new Error(`No provider for ${resType}`))
-    }
-    return this.resProvider[resType]?.listResources(params)
-  }
-
-  setResource(
+  async getResource(
     resType: SignalKResourceType,
     resId: string,
-    data: { [key: string]: any }
+    providerId?: string
   ) {
-    debug(`** setResource(${resType}, ${resId}, ${JSON.stringify(data)})`)
-    if (!this.checkForProvider(resType)) {
+    debug(`** getResource(${resType}, ${resId})`)
+
+    const provider = this.checkForProvider(resType, providerId)
+    if (!provider) {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
+    return this.getFromAll(resType, resId)
+  }
+
+  async listResources(
+    resType: SignalKResourceType,
+    params: { [key: string]: any },
+    providerId?: string
+  ) {
+    debug(`** listResources(${resType}, ${JSON.stringify(params)})`)
+
+    const provider = this.checkForProvider(resType, providerId)
+    if (!provider) {
+      return Promise.reject(new Error(`No provider for ${resType}`))
+    }
+    return this.listFromAll(resType, params)
+  }
+
+  async setResource(
+    resType: SignalKResourceType,
+    resId: string,
+    data: { [key: string]: any },
+    providerId?: string
+  ) {
+    debug(`** setResource(${resType}, ${resId}, ${JSON.stringify(data)})`)
+
     if (isSignalKResourceType(resType)) {
       let isValidId: boolean
       if (resType === 'charts') {
@@ -126,16 +135,107 @@ export class ResourcesApi {
       validate.resource(resType as SignalKResourceType, resId, 'PUT', data)
     }
 
-    return this.resProvider[resType]?.setResource(resId, data)
-  }
-
-  deleteResource(resType: SignalKResourceType, resId: string) {
-    debug(`** deleteResource(${resType}, ${resId})`)
-    if (!this.checkForProvider(resType)) {
+    let provider: string | undefined = undefined
+    if (providerId) {
+      provider = this.checkForProvider(resType, providerId)
+    } else {
+      provider = await this.getProviderId(resType, resId)
+    }
+    if (provider) {
+      return this.resProvider[resType]?.get(provider)?.setResource(resId, data)
+    } else {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
+  }
 
-    return this.resProvider[resType]?.deleteResource(resId)
+  async deleteResource(
+    resType: SignalKResourceType,
+    resId: string,
+    providerId?: string
+  ) {
+    debug(`** deleteResource(${resType}, ${resId})`)
+
+    let provider: string | undefined = undefined
+    if (providerId) {
+      provider = this.checkForProvider(resType, providerId)
+    } else {
+      provider = await this.getProviderId(resType, resId)
+    }
+    if (provider) {
+      return this.resProvider[resType]?.get(provider)?.deleteResource(resId)
+    } else {
+      return Promise.reject(new Error(`No provider for ${resType}`))
+    }
+  }
+
+  // retrieve matching resources from ALL providers
+  private async listFromAll(resType: string, params: { [key: string]: any }) {
+    debug(`listFromAll(${resType}, ${JSON.stringify(params)})`)
+
+    const result = {}
+    if (!this.resProvider[resType]) {
+      return result
+    }
+    const req: Promise<any>[] = []
+    this.resProvider[resType].forEach((v) => {
+      req.push(v.listResources(params))
+    })
+
+    const resp = await Promise.all(req)
+    resp.forEach((r) => {
+      Object.assign(result, r)
+    })
+    return result
+  }
+
+  // query ALL providers for supplied resource id
+  private async getFromAll(resType: string, resId: string) {
+    debug(`getFromAll(${resType}, ${resId})`)
+
+    const result = {}
+    if (!this.resProvider[resType]) {
+      return result
+    }
+    const req: Promise<any>[] = []
+    this.resProvider[resType].forEach((v) => {
+      req.push(v.getResource(resId))
+    })
+
+    const resp = await Promise.all(req)
+    resp.forEach((r) => {
+      Object.assign(result, r)
+    })
+    return result
+  }
+
+  // return providerId for supplied resource id
+  private async getProviderId(
+    resType: string,
+    resId: string
+  ): Promise<string | undefined> {
+    debug(`getProviderId(${resType}, ${resId})`)
+
+    let result: string | undefined = undefined
+    if (!this.resProvider[resType]) {
+      return result
+    }
+    const req: Promise<any>[] = []
+    const idList: string[] = []
+    this.resProvider[resType].forEach((v, k) => {
+      idList.push(k)
+      req.push(v.getResource(resId))
+    })
+
+    const resp = await Promise.all(req)
+    let idx = 0
+    resp.forEach((r) => {
+      if (r) {
+        result = idList[idx]
+        idx++
+      }
+    })
+    debug(`getProviderId().result = ${result}`)
+    return result
   }
 
   private initResourceRoutes(server: ResourceApplication) {
@@ -158,18 +258,29 @@ export class ResourcesApi {
       `${RESOURCES_API_PATH}/:resourceType/:resourceId`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** GET ${RESOURCES_API_PATH}/:resourceType/:resourceId`)
-        if (
-          !this.checkForProvider(req.params.resourceType as SignalKResourceType)
-        ) {
-          debug('** No provider found... calling next()...')
-          next()
-          return
-        }
+
         try {
-          const retVal = await this.resProvider[
-            req.params.resourceType
-          ]?.getResource(req.params.resourceId)
-          res.json(retVal)
+          if (req.query.provider) {
+            const provider = this.checkForProvider(
+              req.params.resourceType as SignalKResourceType,
+              req.query.provider ? (req.query.provider as string) : undefined
+            )
+            if (!provider) {
+              debug('** No provider found... calling next()...')
+              next()
+              return
+            }
+            const retVal = await this.resProvider[req.params.resourceType]
+              ?.get(provider)
+              ?.getResource(req.params.resourceId)
+            res.json(retVal)
+          } else {
+            const retVal = await this.getFromAll(
+              req.params.resourceType,
+              req.params.resourceId
+            )
+            res.json(retVal)
+          }
         } catch (err) {
           res.status(404).json({
             state: 'FAILED',
@@ -185,13 +296,6 @@ export class ResourcesApi {
       `${RESOURCES_API_PATH}/:resourceType`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** GET ${RESOURCES_API_PATH}/:resourceType`)
-        if (
-          !this.checkForProvider(req.params.resourceType as SignalKResourceType)
-        ) {
-          debug('** No provider found... calling next()...')
-          next()
-          return
-        }
 
         const parsedQuery = Object.entries(req.query).reduce(
           (acc: any, [name, value]) => {
@@ -225,10 +329,27 @@ export class ResourcesApi {
         }
 
         try {
-          const retVal = await this.resProvider[
-            req.params.resourceType
-          ]?.listResources(parsedQuery)
-          res.json(retVal)
+          if (req.query.provider) {
+            const provider = this.checkForProvider(
+              req.params.resourceType as SignalKResourceType,
+              req.query.provider ? (req.query.provider as string) : undefined
+            )
+            if (!provider) {
+              debug('** No provider found... calling next()...')
+              next()
+              return
+            }
+            const retVal = await this.resProvider[req.params.resourceType]
+              ?.get(provider)
+              ?.listResources(parsedQuery)
+            res.json(retVal)
+          } else {
+            const retVal = await this.listFromAll(
+              req.params.resourceType,
+              req.query
+            )
+            res.json(retVal)
+          }
         } catch (err) {
           console.error(err)
           res.status(404).json({
@@ -246,9 +367,11 @@ export class ResourcesApi {
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** POST ${RESOURCES_API_PATH}/${req.params.resourceType}`)
 
-        if (
-          !this.checkForProvider(req.params.resourceType as SignalKResourceType)
-        ) {
+        const provider = this.checkForProvider(
+          req.params.resourceType as SignalKResourceType,
+          req.query.provider ? (req.query.provider as string) : undefined
+        )
+        if (!provider) {
           debug('** No provider found... calling next()...')
           next()
           return
@@ -284,13 +407,12 @@ export class ResourcesApi {
         }
 
         try {
-          await this.resProvider[req.params.resourceType]?.setResource(
-            id,
-            req.body
-          )
+          await this.resProvider[req.params.resourceType]
+            ?.get(provider)
+            ?.setResource(id, req.body)
 
           server.handleMessage(
-            this.resProvider[req.params.resourceType]?.pluginId as string,
+            provider as string,
             this.buildDeltaMsg(
               req.params.resourceType as SignalKResourceType,
               id,
@@ -318,13 +440,6 @@ export class ResourcesApi {
       `${RESOURCES_API_PATH}/:resourceType/:resourceId`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** PUT ${RESOURCES_API_PATH}/:resourceType/:resourceId`)
-        if (
-          !this.checkForProvider(req.params.resourceType as SignalKResourceType)
-        ) {
-          debug('** No provider found... calling next()...')
-          next()
-          return
-        }
 
         if (!updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
@@ -365,13 +480,29 @@ export class ResourcesApi {
         }
 
         try {
-          await this.resProvider[req.params.resourceType]?.setResource(
-            req.params.resourceId,
-            req.body
-          )
+          let provider: string | undefined = undefined
+          if (req.query.provider) {
+            provider = this.checkForProvider(
+              req.params.resourceType as SignalKResourceType,
+              req.query.provider ? (req.query.provider as string) : undefined
+            )
+          } else {
+            provider = await this.getProviderId(
+              req.params.resourceType,
+              req.params.resourceId
+            )
+          }
+          if (!provider) {
+            debug('** No provider found... calling next()...')
+            next()
+            return
+          }
+          await this.resProvider[req.params.resourceType]
+            ?.get(provider)
+            ?.setResource(req.params.resourceId, req.body)
 
           server.handleMessage(
-            this.resProvider[req.params.resourceType]?.pluginId as string,
+            provider as string,
             this.buildDeltaMsg(
               req.params.resourceType as SignalKResourceType,
               req.params.resourceId,
@@ -398,25 +529,36 @@ export class ResourcesApi {
       `${RESOURCES_API_PATH}/:resourceType/:resourceId`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** DELETE ${RESOURCES_API_PATH}/:resourceType/:resourceId`)
-        if (
-          !this.checkForProvider(req.params.resourceType as SignalKResourceType)
-        ) {
-          debug('** No provider found... calling next()...')
-          next()
-          return
-        }
 
         if (!updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
+
         try {
-          await this.resProvider[req.params.resourceType]?.deleteResource(
-            req.params.resourceId
-          )
+          let provider: string | undefined = undefined
+          if (req.query.provider) {
+            provider = this.checkForProvider(
+              req.params.resourceType as SignalKResourceType,
+              req.query.provider ? (req.query.provider as string) : undefined
+            )
+          } else {
+            provider = await this.getProviderId(
+              req.params.resourceType,
+              req.params.resourceId
+            )
+          }
+          if (!provider) {
+            debug('** No provider found... calling next()...')
+            next()
+            return
+          }
+          await this.resProvider[req.params.resourceType]
+            ?.get(provider)
+            ?.deleteResource(req.params.resourceId)
 
           server.handleMessage(
-            this.resProvider[req.params.resourceType]?.pluginId as string,
+            provider as string,
             this.buildDeltaMsg(
               req.params.resourceType as SignalKResourceType,
               req.params.resourceId,
@@ -447,18 +589,28 @@ export class ResourcesApi {
         resPaths[i] = {
           description: `Path containing ${
             i.slice(-1) === 's' ? i.slice(0, i.length - 1) : i
-          } resources`,
-          $source: this.resProvider[i]?.pluginId
+          } resources`
         }
       }
     }
     return resPaths
   }
 
-  private checkForProvider(resType: SignalKResourceType): boolean {
-    debug(`** checkForProvider(${resType})`)
-    debug(this.resProvider[resType])
-    return this.resProvider[resType] ? true : false
+  private checkForProvider(
+    resType: SignalKResourceType,
+    providerId?: string
+  ): string | undefined {
+    debug(`** checkForProvider(${resType}, ${providerId})`)
+    let result: string | undefined = undefined
+    if (providerId) {
+      result = this.resProvider[resType].has(providerId)
+        ? providerId
+        : undefined
+    } else {
+      result = this.resProvider[resType].keys().next().value
+    }
+    debug(`** checkForProvider().result = ${result}`)
+    return result
   }
 
   private buildDeltaMsg(

@@ -108,28 +108,12 @@
         "example": {
           "type": "LineString",
           "coordinates": [
-            [
-              24.897849923663273,
-              60.15202408867182
-            ],
-            [
-              24.902023936156723,
-              60.05997020643639
-            ],
-            [
-              24.67031474903851,
-              59.627962940557154
-            ],
-            [
-              24.777473968139503,
-              59.449626524251926
-            ],
-            [
-              24.758341055158922,
-              59.44208867188729
-            ]
+            [24.897849923663273, 60.15202408867182],
+            [24.902023936156723, 60.05997020643639],
+            [24.67031474903851, 59.627962940557154],
+            [24.777473968139503, 59.449626524251926],
+            [24.758341055158922, 59.44208867188729]
           ]
-
         }
       },
       "Polygon": {
@@ -405,7 +389,6 @@
           "type": {
             "type": "string",
             "description": "The type of point (e.g. Waypoint, PoI, Race Mark, etc)"
-            
           },
           "feature": {
             "type": "object",
@@ -879,6 +862,17 @@
           },
           "example": [135.5, -25.2]
         }
+      },
+      "ProviderParam": {
+        "in": "query",
+        "name": "provider",
+        "description": "Plugin id of the resource provider to direct the request to (When multiple providers are registered for a resource type).",
+        "style": "form",
+        "explode": false,
+        "schema": {
+          "type": "string",
+          "example": "my-provider"
+        }
       }
     },
     "securitySchemes": {
@@ -926,6 +920,11 @@
       }
     },
     "/resources/routes": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "get": {
         "tags": ["routes"],
         "summary": "Retrieve route resources",
@@ -997,6 +996,9 @@
           "schema": {
             "$ref": "#/components/schemas/SignalKUuid"
           }
+        },
+        {
+          "$ref": "#/components/parameters/ProviderParam"
         }
       ],
       "get": {
@@ -1048,6 +1050,11 @@
       }
     },
     "/resources/waypoints": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "get": {
         "tags": ["waypoints"],
         "summary": "Retrieve waypoint resources",
@@ -1119,6 +1126,9 @@
           "schema": {
             "$ref": "#/components/schemas/SignalKUuid"
           }
+        },
+        {
+          "$ref": "#/components/parameters/ProviderParam"
         }
       ],
       "get": {
@@ -1170,6 +1180,11 @@
       }
     },
     "/resources/regions": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "get": {
         "tags": ["regions"],
         "summary": "Retrieve region resources",
@@ -1241,6 +1256,9 @@
           "schema": {
             "$ref": "#/components/schemas/SignalKUuid"
           }
+        },
+        {
+          "$ref": "#/components/parameters/ProviderParam"
         }
       ],
       "get": {
@@ -1292,6 +1310,11 @@
       }
     },
     "/resources/notes": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "get": {
         "tags": ["notes"],
         "summary": "Retrieve note resources",
@@ -1374,6 +1397,9 @@
           "schema": {
             "$ref": "#/components/schemas/SignalKUuid"
           }
+        },
+        {
+          "$ref": "#/components/parameters/ProviderParam"
         }
       ],
       "get": {
@@ -1425,6 +1451,11 @@
       }
     },
     "/resources/charts": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "get": {
         "tags": ["charts"],
         "summary": "Retrieve chart resources",
@@ -1459,6 +1490,9 @@
           "schema": {
             "type": "string"
           }
+        },
+        {
+          "$ref": "#/components/parameters/ProviderParam"
         }
       ],
       "get": {
