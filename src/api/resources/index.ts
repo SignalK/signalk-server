@@ -183,7 +183,7 @@ export class ResourcesApi {
 
     const resp = await Promise.allSettled(req)
     resp.forEach((r) => {
-      if(r.status === 'fulfilled') {
+      if (r.status === 'fulfilled') {
         Object.assign(result, r.value)
       }
     })
@@ -205,7 +205,7 @@ export class ResourcesApi {
 
     const resp = await Promise.allSettled(req)
     resp.forEach((r) => {
-      if(r.status === 'fulfilled') {
+      if (r.status === 'fulfilled') {
         Object.assign(result, r.value)
       }
     })
@@ -449,7 +449,7 @@ export class ResourcesApi {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        
+
         if (isSignalKResourceType(req.params.resourceType)) {
           let isValidId: boolean
           if (req.params.resourceType === 'charts') {
