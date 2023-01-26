@@ -137,7 +137,7 @@ export class FileStore implements IResourceStore {
           if (passFilter(res, type, params)) {
             const uuid = files[f]
             result[uuid] = res
-            const stats: any = stat(path.join(rt.path, files[f]))
+            const stats = await stat(path.join(rt.path, files[f]))
             result[uuid].timestamp = stats.mtime
             result[uuid].$source = this.pkg.id
           }

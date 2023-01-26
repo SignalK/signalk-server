@@ -272,12 +272,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
       id,
       value
     }
-    try {
-      await db.setResource(r)
-      return
-    } catch (error) {
-      throw error
-    }
+    return await db.setResource(r)
   }
 
   return plugin
