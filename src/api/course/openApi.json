@@ -293,6 +293,9 @@
                   "example": "2022-04-22T05:02:56.484Z",
                   "description": "The desired time at which to arrive at the destination."
                 },
+                "arrivalCircle": {
+                  "$ref": "#/components/schemas/ArrivalCircle"
+                },
                 "activeRoute": {
                   "type": "object",
                   "required": ["href", "pointIndex", "pointTotal", "reverse"],
@@ -339,9 +342,6 @@
                   "allOf": [
                     {
                       "$ref": "#/components/schemas/PointTypeAttribute"
-                    },
-                    {
-                      "$ref": "#/components/schemas/ArrivalCircleAttribute"
                     }
                   ]
                 },

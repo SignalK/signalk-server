@@ -55,6 +55,7 @@ interface ActiveRoute extends DestinationBase {
 interface CourseInfo {
   startTime: string | null
   targetArrivalTime: string | null
+  arrivalCircle: number
   activeRoute: {
     href: string | null
     pointIndex: number | null
@@ -67,7 +68,6 @@ interface CourseInfo {
     href: string | null
     type: string | null
     position: Position | null
-    arrivalCircle: number
   }
   previousPoint: {
     href: string | null
@@ -80,6 +80,7 @@ export class CourseApi {
   private courseInfo: CourseInfo = {
     startTime: null,
     targetArrivalTime: null,
+    arrivalCircle: 0,
     activeRoute: {
       href: null,
       pointIndex: null,
@@ -91,8 +92,7 @@ export class CourseApi {
     nextPoint: {
       href: null,
       type: null,
-      position: null,
-      arrivalCircle: 0
+      position: null
     },
     previousPoint: {
       href: null,
@@ -175,8 +175,8 @@ export class CourseApi {
           return
         }
         if (this.isValidArrivalCircle(req.body.value)) {
-          this.courseInfo.nextPoint.arrivalCircle = req.body.value
-          this.emitCourseInfo()
+          this.courseInfo.arrivalCircle = req.body.value
+          this.emitCourseInfo(false, 'arrivalCircle')
           res.status(200).json(Responses.ok)
         } else {
           res.status(400).json(Responses.invalid)
@@ -205,7 +205,7 @@ export class CourseApi {
           const position: any = this.getVesselPosition()
           if (position && position.value) {
             this.courseInfo.previousPoint.position = position.value
-            this.emitCourseInfo()
+            this.emitCourseInfo(false, 'previousPoint')
             res.status(200).json(Responses.ok)
           } else {
             res.status(400).json({
@@ -234,7 +234,7 @@ export class CourseApi {
         }
         if (req.body.value === null || this.isValidIsoTime(req.body.value)) {
           this.courseInfo.targetArrivalTime = req.body.value
-          this.emitCourseInfo()
+          this.emitCourseInfo(false, 'targetArrivalTime')
           res.status(200).json(Responses.ok)
         } else {
           res.status(400).json(Responses.invalid)
@@ -488,7 +488,7 @@ export class CourseApi {
     newCourse.activeRoute.waypoints = this.getRoutePoints(rte)
 
     if (this.isValidArrivalCircle(route.arrivalCircle as number)) {
-      newCourse.nextPoint.arrivalCircle = route.arrivalCircle as number
+      newCourse.arrivalCircle = route.arrivalCircle as number
     }
 
     newCourse.activeRoute.reverse = !!route.reverse
@@ -542,7 +542,7 @@ export class CourseApi {
 
     // set nextPoint
     if (this.isValidArrivalCircle(dest.arrivalCircle)) {
-      newCourse.nextPoint.arrivalCircle = dest.arrivalCircle as number
+      newCourse.arrivalCircle = dest.arrivalCircle as number
     }
 
     newCourse.nextPoint.type =
@@ -726,73 +726,58 @@ export class CourseApi {
     }
   }
 
-  private buildDeltaMsg(): any {
+  private buildDeltaMsg(paths: string[]): any {
     let values: Array<{ path: string; value: any }> = []
     const navPath = 'navigation.course'
 
     debug(this.courseInfo)
 
-    values.push({
-      path: `${navPath}.startTime`,
-      value: this.courseInfo.startTime
-    })
-    values.push({
-      path: `${navPath}.targetArrivalTime`,
-      value: this.courseInfo.targetArrivalTime
-    })
-    values.push({
-      path: `${navPath}.activeRoute.href`,
-      value: this.courseInfo.activeRoute.href
-    })
-    values.push({
-      path: `${navPath}.activeRoute.pointIndex`,
-      value: this.courseInfo.activeRoute.pointIndex
-    })
-    values.push({
-      path: `${navPath}.activeRoute.pointTotal`,
-      value: this.courseInfo.activeRoute.pointTotal
-    })
-    values.push({
-      path: `${navPath}.activeRoute.reverse`,
-      value: this.courseInfo.activeRoute.reverse
-    })
-    this.courseInfo.activeRoute.name &&
+    if (
+      paths.length === 0 ||
+      (paths && (paths.includes('activeRoute') || paths.includes('nextPoint')))
+    ) {
       values.push({
-        path: `${navPath}.activeRoute.name`,
-        value: this.courseInfo.activeRoute.name
+        path: `${navPath}.startTime`,
+        value: this.courseInfo.startTime
       })
-    values.push({
-      path: `${navPath}.activeRoute.waypoints`,
-      value: this.courseInfo.activeRoute.waypoints
-    })
+    }
 
-    values.push({
-      path: `${navPath}.nextPoint.href`,
-      value: this.courseInfo.nextPoint.href
-    })
-    values.push({
-      path: `${navPath}.nextPoint.position`,
-      value: this.courseInfo.nextPoint.position
-    })
-    values.push({
-      path: `${navPath}.nextPoint.type`,
-      value: this.courseInfo.nextPoint.type
-    })
-    values.push({
-      path: `${navPath}.nextPoint.arrivalCircle`,
-      value: this.courseInfo.nextPoint.arrivalCircle
-    })
+    if (paths.length === 0 || (paths && paths.includes('targetArrivalTime'))) {
+      values.push({
+        path: `${navPath}.targetArrivalTime`,
+        value: this.courseInfo.targetArrivalTime
+      })
+    }
 
-    values.push({
-      path: `${navPath}.previousPoint.position`,
-      value: this.courseInfo.previousPoint.position
-    })
-    values.push({
-      path: `${navPath}.previousPoint.type`,
-      value: this.courseInfo.previousPoint.type
-    })
+    if (paths.length === 0 || (paths && paths.includes('activeRoute'))) {
+      values.push({
+        path: `${navPath}.activeRoute`,
+        value: this.courseInfo.activeRoute
+      })
+    }
 
-    values = values.concat(this.buildV1DeltaMsg())
+    if (paths.length === 0 || (paths && paths.includes('nextPoint'))) {
+      values.push({
+        path: `${navPath}.nextPoint`,
+        value: this.courseInfo.nextPoint
+      })
+    }
+
+    if (paths.length === 0 || (paths && paths.includes('arrivalCircle'))) {
+      values.push({
+        path: `${navPath}.arrivalCircle`,
+        value: this.courseInfo.arrivalCircle
+      })
+    }
+
+    if (paths.length === 0 || (paths && paths.includes('previousPoint'))) {
+      values.push({
+        path: `${navPath}.previousPoint`,
+        value: this.courseInfo.previousPoint
+      })
+    }
+
+    values = values.concat(this.buildV1DeltaMsg(paths))
 
     return {
       updates: [
@@ -803,88 +788,95 @@ export class CourseApi {
     }
   }
 
-  private buildV1DeltaMsg(): Array<{ path: string; value: any }> {
+  private buildV1DeltaMsg(
+    paths: string[]
+  ): Array<{ path: string; value: any }> {
     const values: Array<{ path: string; value: any }> = []
     const navGC = 'navigation.courseGreatCircle'
     const navRL = 'navigation.courseRhumbline'
 
-    values.push({
-      path: `${navGC}.activeRoute.href`,
-      value: this.courseInfo.activeRoute.href
-    })
-    values.push({
-      path: `${navRL}.activeRoute.href`,
-      value: this.courseInfo.activeRoute.href
-    })
+    if (paths.length === 0 || (paths && paths.includes('activeRoute'))) {
+      values.push({
+        path: `${navGC}.activeRoute.href`,
+        value: this.courseInfo.activeRoute.href
+      })
+      values.push({
+        path: `${navRL}.activeRoute.href`,
+        value: this.courseInfo.activeRoute.href
+      })
 
-    values.push({
-      path: `${navGC}.activeRoute.startTime`,
-      value: this.courseInfo.startTime
-    })
-    values.push({
-      path: `${navRL}.activeRoute.startTime`,
-      value: this.courseInfo.startTime
-    })
+      values.push({
+        path: `${navGC}.activeRoute.startTime`,
+        value: this.courseInfo.startTime
+      })
+      values.push({
+        path: `${navRL}.activeRoute.startTime`,
+        value: this.courseInfo.startTime
+      })
+    }
+    if (paths.length === 0 || (paths && paths.includes('nextPoint'))) {
+      values.push({
+        path: `${navGC}.nextPoint.value.href`,
+        value: this.courseInfo.nextPoint.href
+      })
+      values.push({
+        path: `${navRL}.nextPoint.value.href`,
+        value: this.courseInfo.nextPoint.href
+      })
 
-    values.push({
-      path: `${navGC}.nextPoint.value.href`,
-      value: this.courseInfo.nextPoint.href
-    })
-    values.push({
-      path: `${navRL}.nextPoint.value.href`,
-      value: this.courseInfo.nextPoint.href
-    })
+      values.push({
+        path: `${navGC}.nextPoint.value.type`,
+        value: this.courseInfo.nextPoint.type
+      })
+      values.push({
+        path: `${navRL}.nextPoint.value.type`,
+        value: this.courseInfo.nextPoint.type
+      })
 
-    values.push({
-      path: `${navGC}.nextPoint.value.type`,
-      value: this.courseInfo.nextPoint.type
-    })
-    values.push({
-      path: `${navRL}.nextPoint.value.type`,
-      value: this.courseInfo.nextPoint.type
-    })
+      values.push({
+        path: `${navGC}.nextPoint.position`,
+        value: this.courseInfo.nextPoint.position
+      })
+      values.push({
+        path: `${navRL}.nextPoint.position`,
+        value: this.courseInfo.nextPoint.position
+      })
+    }
+    if (paths.length === 0 || (paths && paths.includes('arrivalCircle'))) {
+      values.push({
+        path: `${navGC}.nextPoint.arrivalCircle`,
+        value: this.courseInfo.arrivalCircle
+      })
+      values.push({
+        path: `${navRL}.nextPoint.arrivalCircle`,
+        value: this.courseInfo.arrivalCircle
+      })
+    }
+    if (paths.length === 0 || (paths && paths.includes('previousPoint'))) {
+      values.push({
+        path: `${navGC}.previousPoint.position`,
+        value: this.courseInfo.previousPoint.position
+      })
+      values.push({
+        path: `${navRL}.previousPoint.position`,
+        value: this.courseInfo.previousPoint.position
+      })
 
-    values.push({
-      path: `${navGC}.nextPoint.position`,
-      value: this.courseInfo.nextPoint.position
-    })
-    values.push({
-      path: `${navRL}.nextPoint.position`,
-      value: this.courseInfo.nextPoint.position
-    })
-
-    values.push({
-      path: `${navGC}.nextPoint.arrivalCircle`,
-      value: this.courseInfo.nextPoint.arrivalCircle
-    })
-    values.push({
-      path: `${navRL}.nextPoint.arrivalCircle`,
-      value: this.courseInfo.nextPoint.arrivalCircle
-    })
-
-    values.push({
-      path: `${navGC}.previousPoint.position`,
-      value: this.courseInfo.previousPoint.position
-    })
-    values.push({
-      path: `${navRL}.previousPoint.position`,
-      value: this.courseInfo.previousPoint.position
-    })
-
-    values.push({
-      path: `${navGC}.previousPoint.value.type`,
-      value: this.courseInfo.previousPoint.type
-    })
-    values.push({
-      path: `${navRL}.previousPoint.value.type`,
-      value: this.courseInfo.previousPoint.type
-    })
+      values.push({
+        path: `${navGC}.previousPoint.value.type`,
+        value: this.courseInfo.previousPoint.type
+      })
+      values.push({
+        path: `${navRL}.previousPoint.value.type`,
+        value: this.courseInfo.previousPoint.type
+      })
+    }
 
     return values
   }
 
-  private emitCourseInfo(noSave = false) {
-    this.server.handleMessage('courseApi', this.buildDeltaMsg())
+  private emitCourseInfo(noSave = false, ...paths: string[]) {
+    this.server.handleMessage('courseApi', this.buildDeltaMsg(paths))
     if (!noSave) {
       this.store.write(this.courseInfo).catch((error) => {
         console.log(error)
