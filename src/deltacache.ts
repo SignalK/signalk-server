@@ -154,10 +154,10 @@ export default class DeltaCache {
   }
 
   getCachedDeltas(contextFilter: ContextMatcher, user?: string, key?: string) {
-    const contexts: any[] = []
+    const contexts: Context[] = []
     _.keys(this.cache).forEach((type) => {
       _.keys(this.cache[type]).forEach((id) => {
-        const context = `${type}.${id}`
+        const context = `${type}.${id}` as Context
         if (contextFilter({ context })) {
           contexts.push(this.cache[type][id])
         }

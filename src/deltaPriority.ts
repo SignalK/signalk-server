@@ -1,12 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createDebug } from './debug'
+import { Context, Path, SourceRef } from './types'
 const debug = createDebug('signalk-server:sourcepriorities')
-
-type Brand<K, T> = K & { __brand: T }
-
-type Context = Brand<string, 'context'>
-type SourceRef = Brand<string, 'sourceRef'>
-type Path = Brand<string, 'path'>
 
 interface SourcePriority {
   sourceRef: SourceRef

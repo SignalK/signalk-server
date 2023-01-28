@@ -71,11 +71,14 @@ export interface NormalizedDelta extends WithContext {
   isMeta: boolean
 }
 
-export type SourceRef = string
-export type Source = any
+
+export type Brand<K, T> = K & { __brand: T }
+
+export type SourceRef = Brand<string, 'sourceRef'>
+export type Source = Brand<string, 'source'>
 export type Delta = any
-export type Path = string
-export type Context = string
+export type Path = Brand<string, 'path'>
+export type Context = Brand<string, 'context'>
 export type Value = object | number | string | null
 export interface Position {
   latitude: number
