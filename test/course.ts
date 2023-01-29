@@ -28,50 +28,23 @@ describe('Course Api', () => {
 
     const expectedPathValues = [
       {
-        path: 'navigation.course.activeRoute.href',
+        path: 'navigation.course.activeRoute',
         value: null
       },
       {
-        path: 'navigation.course.activeRoute.pointIndex',
-        value: null
-      },
-      {
-        path: 'navigation.course.activeRoute.pointTotal',
-        value: null
-      },
-      {
-        path: 'navigation.course.activeRoute.reverse',
-        value: null
-      },
-      {
-        path: 'navigation.course.nextPoint.href',
-        value: null
-      },
-      {
-        path: 'navigation.course.nextPoint.position',
-        value: {
+        path: 'navigation.course.nextPoint',
+        value: {position: {
           latitude: -35.5,
           longitude: 138.7
-        }
+        },
+      type: 'Location'}
       },
       {
-        path: 'navigation.course.nextPoint.type',
-        value: 'Location'
-      },
-      {
-        path: 'navigation.course.nextPoint.arrivalCircle',
-        value: 0
-      },
-      {
-        path: 'navigation.course.previousPoint.position',
-        value: {
+        path: 'navigation.course.previousPoint',
+        value: {position: {
           latitude: -35.45,
           longitude: 138
-        }
-      },
-      {
-        path: 'navigation.course.previousPoint.type',
-        value: 'VesselPosition'
+        }, type: 'VesselPosition'}
       }
     ]
     expectedPathValues.forEach(({ path, value }) =>
@@ -83,22 +56,13 @@ describe('Course Api', () => {
       delete data.startTime
       data.should.deep.equal({
         targetArrivalTime: null,
-        activeRoute: {
-          href: null,
-          name: null,
-          pointIndex: null,
-          pointTotal: null,
-          reverse: null,
-          waypoints: null
-        },
+        arrivalCircle: 0,
+        activeRoute: null,
         nextPoint: {
-          href: null,
           type: 'Location',
-          position: { latitude: -35.5, longitude: 138.7 },
-          arrivalCircle: 0
+          position: { latitude: -35.5, longitude: 138.7 }
         },
         previousPoint: {
-          href: null,
           type: 'VesselPosition',
           position: { latitude: -35.45, longitude: 138 }
         }
@@ -125,8 +89,8 @@ describe('Course Api', () => {
     const courseDelta = JSON.parse(await wsPromiser.nthMessage(3))
     deltaHasPathValue(
       courseDelta,
-      'navigation.course.nextPoint.position',
-      validDestinationPosition
+      'navigation.course.nextPoint',
+      {position: validDestinationPosition, type: 'Location'}
     )
 
     await selfPut('navigation/course/destination', {
@@ -192,27 +156,22 @@ describe('Course Api', () => {
     courseDelta.context.should.equal(self)
 
     let expectedPathValues = [
-      { path: 'navigation.course.activeRoute.href', value: null },
-      { path: 'navigation.course.activeRoute.pointIndex', value: null },
-      { path: 'navigation.course.activeRoute.pointTotal', value: null },
-      { path: 'navigation.course.activeRoute.reverse', value: null },
+      { path: 'navigation.course.activeRoute', value: null },
       {
-        path: 'navigation.course.nextPoint.href',
-        value: href
+        path: 'navigation.course.nextPoint',
+        value: {
+          href: `/resources/waypoints/${id}`,
+          position: { latitude: 60.1699, longitude: 24.9384 },
+          type: 'Waypoint',
+
+        }
       },
       {
-        path: 'navigation.course.nextPoint.position',
-        value: { latitude: 60.1699, longitude: 24.9384 }
-      },
-      { path: 'navigation.course.nextPoint.type', value: 'Waypoint' },
-      { path: 'navigation.course.nextPoint.arrivalCircle', value: 99 },
-      {
-        path: 'navigation.course.previousPoint.position',
-        value: { latitude: -35.45, longitude: 138 }
-      },
-      {
-        path: 'navigation.course.previousPoint.type',
-        value: 'VesselPosition'
+        path: 'navigation.course.previousPoint',
+        value: {
+          position: { latitude: -35.45, longitude: 138 },
+          type: 'VesselPosition'
+        }
       }
     ]
     expectedPathValues.forEach(({ path, value }) =>
@@ -227,26 +186,18 @@ describe('Course Api', () => {
       data.startTime.should.match(DATETIME_REGEX)
       delete data.startTime
       data.should.deep.equal({
+        arrivalCircle: 99,
         targetArrivalTime: null,
-        activeRoute: {
-          href: null,
-          name: null,
-          pointIndex: null,
-          pointTotal: null,
-          reverse: null,
-          waypoints: null
-        },
+        activeRoute: null,
         nextPoint: {
           href,
           type: 'Waypoint',
           position: {
             longitude: destination.feature.geometry.coordinates[0],
             latitude: destination.feature.geometry.coordinates[1]
-          },
-          arrivalCircle: 99
+          }
         },
         previousPoint: {
-          href: null,
           type: 'VesselPosition',
           position: vesselPosition
         }
@@ -259,7 +210,7 @@ describe('Course Api', () => {
     const destinationClearedDelta = JSON.parse(await wsPromiser.nthMessage(3))
     expectedPathValues = [
       {
-        path: 'navigation.course.activeRoute.href',
+        path: 'navigation.course.activeRoute',
         value: null
       },
       {
@@ -267,39 +218,11 @@ describe('Course Api', () => {
         value: null
       },
       {
-        path: 'navigation.course.activeRoute.pointIndex',
+        path: 'navigation.course.nextPoint',
         value: null
       },
       {
-        path: 'navigation.course.activeRoute.pointTotal',
-        value: null
-      },
-      {
-        path: 'navigation.course.activeRoute.reverse',
-        value: null
-      },
-      {
-        path: 'navigation.course.nextPoint.href',
-        value: null
-      },
-      {
-        path: 'navigation.course.nextPoint.position',
-        value: null
-      },
-      {
-        path: 'navigation.course.nextPoint.type',
-        value: null
-      },
-      {
-        path: 'navigation.course.nextPoint.arrivalCircle',
-        value: 99
-      },
-      {
-        path: 'navigation.course.previousPoint.position',
-        value: null
-      },
-      {
-        path: 'navigation.course.previousPoint.type',
+        path: 'navigation.course.previousPoint',
         value: null
       }
     ]
@@ -311,25 +234,10 @@ describe('Course Api', () => {
       data.should.deep.equal({
         startTime: null,
         targetArrivalTime: null,
-        activeRoute: {
-          href: null,
-          name: null,
-          pointIndex: null,
-          pointTotal: null,
-          reverse: null,
-          waypoints: null
-        },
-        nextPoint: {
-          href: null,
-          type: null,
-          position: null,
-          arrivalCircle: 99
-        },
-        previousPoint: {
-          href: null,
-          type: null,
-          position: null
-        }
+        activeRoute: null,
+        arrivalCircle: 99,
+        nextPoint: null,
+        previousPoint: null
       })
     })
 
@@ -380,51 +288,36 @@ describe('Course Api', () => {
 
     const expectedPathValues = [
       {
-        path: 'navigation.course.activeRoute.href',
-        value: href
-      },
-      {
-        path: 'navigation.course.activeRoute.pointIndex',
-        value: 0
-      },
-      {
-        path: 'navigation.course.activeRoute.pointTotal',
-        value: 3
-      },
-      {
-        path: 'navigation.course.activeRoute.reverse',
-        value: false
-      },
-      {
-        path: 'navigation.course.nextPoint.href',
-        value: null
-      },
-      {
-        path: 'navigation.course.nextPoint.position',
+        path: 'navigation.course.activeRoute',
         value: {
-          latitude: 65.4567,
-          longitude: 3.3452
+          href,
+          pointIndex: 0,
+          pointTotal: 3,
+          reverse: false
         }
       },
       {
-        path: 'navigation.course.nextPoint.type',
-        value: 'RoutePoint'
+        path: 'navigation.course.nextPoint',
+        value: {
+          position: {
+            latitude: 65.4567,
+            longitude: 3.3452
+          },
+          type: 'RoutePoint'
+        }
       },
       {
-        path: 'navigation.course.nextPoint.arrivalCircle',
+        path: 'navigation.course.arrivalCircle',
         value: 0
       },
       {
-        path: 'navigation.course.previousPoint.position',
-        value: {
+        path: 'navigation.course.previousPoint',
+        value: {position: {
           latitude: -35.45,
           longitude: 138
-        }
+        },
+      type: 'VesselPosition'}
       },
-      {
-        path: 'navigation.course.previousPoint.type',
-        value: 'VesselPosition'
-      }
     ]
     expectedPathValues.forEach(({ path, value }) =>
       deltaHasPathValue(courseDelta, path, value)
@@ -439,6 +332,7 @@ describe('Course Api', () => {
       delete data.activeRoute.name
       delete data.activeRoute.waypoints
       data.should.deep.equal({
+        arrivalCircle: 0,
         activeRoute: {
           href,
           pointIndex: 0,
@@ -446,16 +340,13 @@ describe('Course Api', () => {
           reverse: false
         },
         nextPoint: {
-          href: null,
           position: {
             longitude: points.feature.geometry.coordinates[0][0],
             latitude: points.feature.geometry.coordinates[0][1]
           },
           type: 'RoutePoint',
-          arrivalCircle: 0
         },
         previousPoint: {
-          href: null,
           type: 'VesselPosition',
           position: vesselPosition
         }
@@ -539,24 +430,9 @@ describe('Course Api', () => {
         startTime: null,
         targetArrivalTime: null,
         arrivalCircle: 98,
-        activeRoute: {
-          href: null,
-          name: null,
-          pointIndex: null,
-          pointTotal: null,
-          reverse: null,
-          waypoints: null
-        },
-        nextPoint: {
-          href: null,
-          type: null,
-          position: null
-        },
-        previousPoint: {
-          href: null,
-          type: null,
-          position: null
-        }
+        activeRoute: null,
+        nextPoint: null,
+        previousPoint: null
       })
     })
     stop()
