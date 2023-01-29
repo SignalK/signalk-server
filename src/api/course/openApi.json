@@ -389,6 +389,19 @@
             "$ref": "#/components/responses/ErrorResponse"
           }
         }
+      },
+      "delete": {
+        "tags": ["course"],
+        "summary": "Cancel / clear course.",
+        "description": "Clear all course information.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
       }
     },
     "/course/arrivalCircle": {
@@ -504,19 +517,6 @@
             "$ref": "#/components/responses/ErrorResponse"
           }
         }
-      },
-      "delete": {
-        "tags": ["destination"],
-        "summary": "Clear destination.",
-        "description": "Clears all course information.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
       }
     },
     "/course/activeRoute": {
@@ -555,19 +555,6 @@
             }
           }
         },
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      },
-      "delete": {
-        "tags": ["activeRoute"],
-        "summary": "Clear active route.",
-        "description": "Clears all course information.",
         "responses": {
           "200": {
             "$ref": "#/components/responses/200Ok"

@@ -157,6 +157,7 @@ export class CourseApi {
 
   private initCourseRoutes() {
     debug(`** Initialise ${COURSE_API_PATH} path handlers **`)
+    
     // return current course information
     this.server.get(
       `${COURSE_API_PATH}`,
@@ -242,6 +243,21 @@ export class CourseApi {
       }
     )
 
+    // clear / cancel course
+    this.server.delete(
+      `${COURSE_API_PATH}`,
+      async (req: Request, res: Response) => {
+        debug(`** DELETE ${COURSE_API_PATH}`)
+        if (!this.updateAllowed(req)) {
+          res.status(403).json(Responses.unauthorised)
+          return
+        }
+        this.clearDestination()
+        this.emitCourseInfo()
+        res.status(200).json(Responses.ok)
+      }
+    )
+
     // set destination
     this.server.put(
       `${COURSE_API_PATH}/destination`,
@@ -276,21 +292,6 @@ export class CourseApi {
       }
     )
 
-    // clear destination
-    this.server.delete(
-      `${COURSE_API_PATH}/destination`,
-      async (req: Request, res: Response) => {
-        debug(`** DELETE ${COURSE_API_PATH}/destination`)
-        if (!this.updateAllowed(req)) {
-          res.status(403).json(Responses.unauthorised)
-          return
-        }
-        this.clearDestination()
-        this.emitCourseInfo()
-        res.status(200).json(Responses.ok)
-      }
-    )
-
     // set activeRoute
     this.server.put(
       `${COURSE_API_PATH}/activeRoute`,
@@ -315,21 +316,6 @@ export class CourseApi {
             message: (error as any).message
           })
         }
-      }
-    )
-
-    // clear activeRoute
-    this.server.delete(
-      `${COURSE_API_PATH}/activeRoute`,
-      async (req: Request, res: Response) => {
-        debug(`** DELETE ${COURSE_API_PATH}/activeRoute`)
-        if (!this.updateAllowed(req)) {
-          res.status(403).json(Responses.unauthorised)
-          return
-        }
-        this.clearDestination()
-        this.emitCourseInfo()
-        res.status(200).json(Responses.ok)
       }
     )
 

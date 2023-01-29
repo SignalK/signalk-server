@@ -253,7 +253,7 @@ describe('Course Api', () => {
       })
     })
 
-    await selfDelete('navigation/course/destination').then(response =>
+    await selfDelete('navigation/course').then(response =>
       response.status.should.equal(200)
     )
     const destinationClearedDelta = JSON.parse(await wsPromiser.nthMessage(3))
