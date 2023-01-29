@@ -526,48 +526,8 @@ describe('Course Api', () => {
 
     const expectedPathValues = [
       {
-        path: 'navigation.course.activeRoute.href',
-        value: null
-      },
-      {
-        path: 'navigation.course.startTime',
-        value: null
-      },
-      {
-        path: 'navigation.course.activeRoute.pointIndex',
-        value: null
-      },
-      {
-        path: 'navigation.course.activeRoute.pointTotal',
-        value: null
-      },
-      {
-        path: 'navigation.course.activeRoute.reverse',
-        value: null
-      },
-      {
-        path: 'navigation.course.nextPoint.href',
-        value: null
-      },
-      {
-        path: 'navigation.course.nextPoint.position',
-        value: null
-      },
-      {
-        path: 'navigation.course.nextPoint.type',
-        value: null
-      },
-      {
-        path: 'navigation.course.nextPoint.arrivalCircle',
+        path: 'navigation.course.arrivalCircle',
         value: 98
-      },
-      {
-        path: 'navigation.course.previousPoint.position',
-        value: null
-      },
-      {
-        path: 'navigation.course.previousPoint.type',
-        value: null
       }
     ]
     expectedPathValues.forEach(({ path, value }) =>
@@ -578,6 +538,7 @@ describe('Course Api', () => {
       data.should.deep.equal({
         startTime: null,
         targetArrivalTime: null,
+        arrivalCircle: 98,
         activeRoute: {
           href: null,
           name: null,
@@ -589,8 +550,7 @@ describe('Course Api', () => {
         nextPoint: {
           href: null,
           type: null,
-          position: null,
-          arrivalCircle: 98
+          position: null
         },
         previousPoint: {
           href: null,
