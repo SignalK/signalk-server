@@ -12,18 +12,18 @@ Client applications use `HTTP` requests to set (`PUT`), retrieve (`GET`) and cle
 
 _Note: the Course API persists course information on the server to ensure data is not lost in the event of a server restart._
 
-**See the OpenAPI documentation on the server admin console for more Course API details.**
+**See the [OpenAPI documentation](https://demo.signalk.io/admin/openapi/) in the Admin UI (Server => OpenApi) for more Course API details.**
 
 
 ## Retrieving Course Information
 ---
 
-Course information  are retrived by submitting an HTTP `GET` request to `/signalk/v2/api/vessels/self/navigation/course`.
+Course information is retrived by submitting an HTTP `GET` request to `/signalk/v2/api/vessels/self/navigation/course`.
 
 ```typescript
 HTTP GET 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course'
 ```
-The response will contain all values pertaining to the current course. See [Delta Messages](#delta-messages).
+The response will contain all values pertaining to the current course. See also [Delta Messages](#delta-messages).
 
 _Example: Course Information_
 ```JSON
@@ -70,7 +70,7 @@ The Course API provides endpoints for:
 ### 1. Navigating to a Point
 
 To navigate to a point submit an HTTP `PUT` request to `/signalk/v2/api/vessels/self/navigation/course/destination` and supply either:
-- The latitude / longitude of the destination point
+- The latitude & longitude of the destination point
 - A reference to a waypoint entry under `/resources/waypoints`
 
 _Example: Setting destination using lat / lon:_
@@ -164,7 +164,7 @@ _Note: Delta values reflect the relevant property of the Course Information data
 
 The Course API defines the path `/vessels/self/navigation/course/calcValues` to accommodate the calculated values related to course navigation.
 
-_**Note: The Course API does not perform the calculations to populate these values!**_
+_**Note: The Course API implementation on the server does not perform the calculations to populate these values!**_
 
 The following values are defined to be populated by a course computer / plugin based on the Course Information populated by the Course API.
 
