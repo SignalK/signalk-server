@@ -157,7 +157,7 @@ export class CourseApi {
 
   private initCourseRoutes() {
     debug(`** Initialise ${COURSE_API_PATH} path handlers **`)
-    
+
     // return current course information
     this.server.get(
       `${COURSE_API_PATH}`,
@@ -339,11 +339,10 @@ export class CourseApi {
         }
 
         if (req.params.action === 'nextPoint') {
-          if (
-            typeof this.courseInfo.activeRoute.pointIndex === 'number' &&
-            typeof req.body.value === 'number' &&
-            (req.body.value === 1 || req.body.value === -1)
-          ) {
+          if (typeof this.courseInfo.activeRoute.pointIndex === 'number') {
+            if (!req.body.value || typeof req.body.value !== 'number') {
+              req.body.value = 1
+            }
             this.courseInfo.activeRoute.pointIndex = this.parsePointIndex(
               this.courseInfo.activeRoute.pointIndex + req.body.value,
               rte

@@ -18,41 +18,109 @@ _Note: the Course API persists course information on the server to ensure data i
 ## Retrieving Course Information
 ---
 
-Course information is retrived by submitting an HTTP `GET` request to `/signalk/v2/api/vessels/self/navigation/course`.
+Course information is retrieved by submitting a HTTP `GET` request to `/signalk/v2/api/vessels/self/navigation/course`.
 
 ```typescript
 HTTP GET 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course'
 ```
-The response will contain all values pertaining to the current course. See also [Delta Messages](#delta-messages).
+The response will contain values pertaining to the current course. See also [Delta Messages](#delta-messages).
 
-_Example: Course Information_
+_Example: Navigate to Location._
 ```JSON
 {
   "startTime": "2023-01-27T01:47:39.785Z",
   "targetArrivalTime": "2022-06-10T01:29:27.592Z",
   "arrivalCircle": 4000,
-  "activeRoute": {
-    "href": null,
-    "pointIndex": null,
-    "pointTotal": null,
-    "reverse": null,
-    "name": null,
-    "waypoints": null
+  "activeRoute": null,
+  "nextPoint": {
+    "type": "Location",
+    "position": {
+      "latitude": -34.92084502261776,
+      "longitude": 131.54823303222656
+    }
   },
+  "previousPoint": {
+    "type":"VesselPosition",
+    "position": {
+      "latitude": -34.82084502261776,
+      "longitude": 131.04823303222656
+    }
+  }
+}
+```
+
+_Example: Following a route._
+```JSON
+{
+  "startTime": "2023-01-27T01:47:39.785Z",
+  "targetArrivalTime": "2022-06-10T01:29:27.592Z",
+  "arrivalCircle": 1000,
+  "activeRoute": {
+    "href": "/resources/routes/e24d72e4-e04b-47b1-920f-66b78e7b0331",
+    "pointIndex": 0,
+    "pointTotal": 5,
+    "reverse": false,
+    "name": "my route",
+    "waypoints": [
+      {
+        "latitude": -34.92084502261776,
+        "longitude": 131.54823303222656
+      },
+      {
+        "latitude": -34.86621482446046,
+        "longitude": 132.10166931152344,
+      },
+      {
+        "latitude": -34.6309479733581,
+        "longitude": 132.23350524902344
+      },
+      {
+        "latitude": -34.63546778783319,
+        "longitude": 131.8867492675781
+      },
+      {
+        "latitude": -34.71000915922492,
+        "longitude": 131.82289123535156
+      }
+    ]
+  },
+  "nextPoint": {
+    "type": "RoutePoint",
+    "position": {
+      "latitude": -34.92084502261776,
+      "longitude": 131.54823303222656
+    }
+  },
+  "previousPoint": {
+    "type":"VesselPosition",
+    "position": {
+      "latitude": -34.82084502261776,
+      "longitude": 131.04823303222656
+    }
+  }
+}
+```
+
+_Example: Navigate to Waypoint._
+```JSON
+{
+  "startTime": "2023-01-27T01:47:39.785Z",
+  "targetArrivalTime": "2022-06-10T01:29:27.592Z",
+  "arrivalCircle": 4000,
+  "activeRoute": null,
   "nextPoint": {
     "href": "/resources/waypoints/f24d72e4-e04b-47b1-920f-66b78e7b033e",
     "type": "Waypoint",
     "position": {
-      "latitude": -165.958039844987675,
-      "longitude": 60.30761571492312
+      "latitude": -34.92084502261776,
+      "longitude": 131.54823303222656
     }
   },
   "previousPoint": {
-    "href":null,
     "type":"VesselPosition",
     "position": {
-      "longitude":-166.18340908333334,
-      "latitude":60.03309133333333
+      "latitude": -34.82084502261776,
+      "longitude": 131.04823303222656
     }
   }
 }
@@ -69,7 +137,7 @@ The Course API provides endpoints for:
 
 ### 1. Navigating to a Point
 
-To navigate to a point submit an HTTP `PUT` request to `/signalk/v2/api/vessels/self/navigation/course/destination` and supply either:
+To navigate to a point submit a HTTP `PUT` request to `/signalk/v2/api/vessels/self/navigation/course/destination` and supply either:
 - The latitude & longitude of the destination point
 - A reference to a waypoint entry under `/resources/waypoints`
 
@@ -85,7 +153,7 @@ HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/des
 
 ### 2. Following a Route
 
-To follow a route submit an HTTP `PUT` request to `/signalk/v2/api/vessels/self/navigation/course/activeRoute` and supply a reference to a route entry under `/resources/routes`.
+To follow a route submit a HTTP `PUT` request to `/signalk/v2/api/vessels/self/navigation/course/activeRoute` and supply a reference to a route entry under `/resources/routes`.
 
 _Example: Following a route:_
 ```typescript
@@ -111,15 +179,31 @@ As progress along a route is made, you can use the following endpoints to update
 
 To set the destination to the next point along the route:
 ```typescript
-HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/nextPoint' {"value": 1}
+HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/nextPoint'
 ```
+
+To advance the destination to a point `n` places beyond the current destination point, supply a positive number representing the number of points to advance:
+
+```typescript
+HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/nextPoint' {"value": 2}
+```
+_Sets destination to the point after the next in sequence._
 
 To set the destination to the previous point along the route:
 ```typescript
 HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/nextPoint' {"value": -1}
 ```
 
-To set the destination to the 4th point along the route:
+To set the destination to a point `n` places prior the current destination point, supply a negative number representing the number of points prior:
+
+```typescript
+HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/nextPoint' {"value": -2}
+```
+_Sets destination to the point two prior to the current destination._
+
+To set the destination to a specific point along the route, supply the zero-based index of the point:
+
+_Example: 4th point along the route._
 ```typescript
 HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/pointIndex' {"value": 3}
 ```
@@ -136,11 +220,7 @@ HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/act
 To cancel the current course navigation and clear the course data
 
 ```typescript
-HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute'
-
-OR
-
-HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/destination'
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/'
 ```
 
 

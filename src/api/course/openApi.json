@@ -331,27 +331,32 @@
                   }
                 },
                 "nextPoint": {
-                  "oneOf": [
+                  "anyOf": [
                     {
                       "$ref": "#/components/schemas/HrefWaypointAttribute"
                     },
                     {
-                      "$ref": "#/components/schemas/PositionAttribute"
+                      "$ref": "#/components/schemas/PointTypeAttribute"
                     }
                   ],
                   "allOf": [
                     {
-                      "$ref": "#/components/schemas/PointTypeAttribute"
+                      "$ref": "#/components/schemas/PositionAttribute"
                     }
                   ]
                 },
                 "previousPoint": {
-                  "allOf": [
+                  "anyOf": [
                     {
-                      "$ref": "#/components/schemas/PositionAttribute"
+                      "$ref": "#/components/schemas/HrefWaypointAttribute"
                     },
                     {
                       "$ref": "#/components/schemas/PointTypeAttribute"
+                    }
+                  ],
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PositionAttribute"
                     }
                   ]
                 }
@@ -572,7 +577,7 @@
         "description": "Sets nextPoint / previousPoint.",
         "requestBody": {
           "description": "Destination details.",
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
@@ -581,8 +586,7 @@
                 "properties": {
                   "value": {
                     "type": "number",
-                    "description": "Index of point in route (-1= previous point)",
-                    "enum": [1, -1],
+                    "description": "Index of point in route (-ive = previous)",
                     "default": 1
                   }
                 }
