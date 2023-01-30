@@ -59,7 +59,7 @@ describe('Course Api', () => {
         value: 'Location'
       },
       {
-        path: 'navigation.course.nextPoint.arrivalCircle',
+        path: 'navigation.course.arrivalCircle',
         value: 0
       },
       {
@@ -83,6 +83,7 @@ describe('Course Api', () => {
       delete data.startTime
       data.should.deep.equal({
         targetArrivalTime: null,
+        arrivalCircle: 0,
         activeRoute: {
           href: null,
           name: null,
@@ -94,8 +95,7 @@ describe('Course Api', () => {
         nextPoint: {
           href: null,
           type: 'Location',
-          position: { latitude: -35.5, longitude: 138.7 },
-          arrivalCircle: 0
+          position: { latitude: -35.5, longitude: 138.7 }
         },
         previousPoint: {
           href: null,
@@ -205,7 +205,7 @@ describe('Course Api', () => {
         value: { latitude: 60.1699, longitude: 24.9384 }
       },
       { path: 'navigation.course.nextPoint.type', value: 'Waypoint' },
-      { path: 'navigation.course.nextPoint.arrivalCircle', value: 99 },
+      { path: 'navigation.course.arrivalCircle', value: 99 },
       {
         path: 'navigation.course.previousPoint.position',
         value: { latitude: -35.45, longitude: 138 }
@@ -228,6 +228,7 @@ describe('Course Api', () => {
       delete data.startTime
       data.should.deep.equal({
         targetArrivalTime: null,
+        arrivalCircle: 99,
         activeRoute: {
           href: null,
           name: null,
@@ -242,8 +243,7 @@ describe('Course Api', () => {
           position: {
             longitude: destination.feature.geometry.coordinates[0],
             latitude: destination.feature.geometry.coordinates[1]
-          },
-          arrivalCircle: 99
+          }
         },
         previousPoint: {
           href: null,
@@ -291,7 +291,7 @@ describe('Course Api', () => {
         value: null
       },
       {
-        path: 'navigation.course.nextPoint.arrivalCircle',
+        path: 'navigation.course.arrivalCircle',
         value: 99
       },
       {
@@ -311,6 +311,7 @@ describe('Course Api', () => {
       data.should.deep.equal({
         startTime: null,
         targetArrivalTime: null,
+        arrivalCircle: 99,
         activeRoute: {
           href: null,
           name: null,
@@ -322,8 +323,7 @@ describe('Course Api', () => {
         nextPoint: {
           href: null,
           type: null,
-          position: null,
-          arrivalCircle: 99
+          position: null
         },
         previousPoint: {
           href: null,
@@ -411,7 +411,7 @@ describe('Course Api', () => {
         value: 'RoutePoint'
       },
       {
-        path: 'navigation.course.nextPoint.arrivalCircle',
+        path: 'navigation.course.arrivalCircle',
         value: 0
       },
       {
@@ -438,6 +438,7 @@ describe('Course Api', () => {
       delete data.targetArrivalTime
       delete data.activeRoute.name
       delete data.activeRoute.waypoints
+      delete data.arrivalCircle
       data.should.deep.equal({
         activeRoute: {
           href,
@@ -451,8 +452,7 @@ describe('Course Api', () => {
             longitude: points.feature.geometry.coordinates[0][0],
             latitude: points.feature.geometry.coordinates[0][1]
           },
-          type: 'RoutePoint',
-          arrivalCircle: 0
+          type: 'RoutePoint'
         },
         previousPoint: {
           href: null,
