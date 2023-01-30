@@ -40,40 +40,35 @@ interface CourseApplication
 
 interface DestinationBase {
   href?: string
-  arrivalCircle?: number
 }
 interface Destination extends DestinationBase {
   position?: Position
   type?: string
 }
 interface ActiveRoute extends DestinationBase {
-  pointIndex?: number
-  reverse?: boolean
-  name?: string
+  href: string //ActiveRoute always has href
+  pointIndex: number
+  pointTotal: number
+  reverse: boolean
+  name: string
+  waypoints?: any[]
 }
 
 interface CourseInfo {
   startTime: string | null
   targetArrivalTime: string | null
   arrivalCircle: number
-  activeRoute: {
-    href: string | null
-    pointIndex: number | null
-    pointTotal: number | null
-    reverse: boolean | null
-    name: string | null
-    waypoints: any[] | null
-  }
+  activeRoute: ActiveRoute | null
   nextPoint: {
-    href: string | null
+    href?: string | null
     type: string | null
     position: Position | null
-  }
+  } | null
   previousPoint: {
-    href: string | null
+    href?: string | null
     type: string | null
     position: Position | null
-  }
+  } | null
 }
 
 export class CourseApi {
@@ -81,24 +76,9 @@ export class CourseApi {
     startTime: null,
     targetArrivalTime: null,
     arrivalCircle: 0,
-    activeRoute: {
-      href: null,
-      pointIndex: null,
-      pointTotal: null,
-      reverse: null,
-      name: null,
-      waypoints: null
-    },
-    nextPoint: {
-      href: null,
-      type: null,
-      position: null
-    },
-    previousPoint: {
-      href: null,
-      type: null,
-      position: null
-    }
+    activeRoute: null,
+    nextPoint: null,
+    previousPoint: null
   }
 
   private store: Store
@@ -193,7 +173,7 @@ export class CourseApi {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        if (!this.courseInfo.nextPoint.position) {
+        if (!this.courseInfo.nextPoint) {
           res.status(400).json({
             state: 'FAILED',
             statusCode: 400,
@@ -205,7 +185,10 @@ export class CourseApi {
         try {
           const position: any = this.getVesselPosition()
           if (position && position.value) {
-            this.courseInfo.previousPoint.position = position.value
+            this.courseInfo.previousPoint = {
+              position: position.value,
+              type: 'VesselPosition'
+            }
             this.emitCourseInfo(false, 'previousPoint')
             res.status(200).json(Responses.ok)
           } else {
@@ -303,6 +286,7 @@ export class CourseApi {
         }
         try {
           const result = await this.activateRoute(req.body)
+          console.log(this.courseInfo)
           if (result) {
             this.emitCourseInfo()
             res.status(200).json(Responses.ok)
@@ -328,7 +312,7 @@ export class CourseApi {
           return
         }
         // fetch active route data
-        if (!this.courseInfo.activeRoute.href) {
+        if (!this.courseInfo.activeRoute) {
           res.status(400).json(Responses.invalid)
           return
         }
@@ -369,7 +353,9 @@ export class CourseApi {
           if (typeof req.body.pointIndex === 'number') {
             this.courseInfo.activeRoute.pointIndex = req.body.pointIndex
           } else {
-            this.courseInfo.activeRoute.pointIndex = this.calcReversedIndex()
+            this.courseInfo.activeRoute.pointIndex = this.calcReversedIndex(
+              this.courseInfo.activeRoute
+            )
           }
           this.courseInfo.activeRoute.reverse =
             !this.courseInfo.activeRoute.reverse
@@ -382,7 +368,7 @@ export class CourseApi {
           for (let i = 0; i < rte.feature.geometry.coordinates.length; i++) {
             if (
               rte.feature.geometry.coordinates[i][0] ===
-                this.courseInfo.nextPoint.position?.longitude &&
+                this.courseInfo.nextPoint?.position?.longitude &&
               rte.feature.geometry.coordinates[i][1] ===
                 this.courseInfo.nextPoint.position?.latitude
             ) {
@@ -398,21 +384,24 @@ export class CourseApi {
         }
 
         // set new destination
-        this.courseInfo.nextPoint.position = this.getRoutePoint(
-          rte,
-          this.courseInfo.activeRoute.pointIndex as number,
-          this.courseInfo.activeRoute.reverse
-        )
-        this.courseInfo.nextPoint.type = `RoutePoint`
-        this.courseInfo.nextPoint.href = null
+        this.courseInfo.nextPoint = {
+          position: this.getRoutePoint(
+            rte,
+            this.courseInfo.activeRoute.pointIndex as number,
+            this.courseInfo.activeRoute.reverse
+          ),
+          type: 'RoutePoint'
+        }
 
         // set previousPoint
         if (this.courseInfo.activeRoute.pointIndex === 0) {
           try {
             const position: any = this.getVesselPosition()
             if (position && position.value) {
-              this.courseInfo.previousPoint.position = position.value
-              this.courseInfo.previousPoint.type = `VesselPosition`
+              this.courseInfo.previousPoint = {
+                position: position.value,
+                type: 'VesselPosition'
+              }
             } else {
               res.status(400).json(Responses.invalid)
               return false
@@ -423,33 +412,40 @@ export class CourseApi {
             return false
           }
         } else {
-          this.courseInfo.previousPoint.position = this.getRoutePoint(
-            rte,
-            (this.courseInfo.activeRoute.pointIndex as number) - 1,
-            this.courseInfo.activeRoute.reverse
-          )
-          this.courseInfo.previousPoint.type = `RoutePoint`
+          this.courseInfo.previousPoint = {
+            position: this.getRoutePoint(
+              rte,
+              (this.courseInfo.activeRoute.pointIndex as number) - 1,
+              this.courseInfo.activeRoute.reverse
+            ),
+            type: 'RoutePoint'
+          }
         }
-        this.courseInfo.previousPoint.href = null
         this.emitCourseInfo()
         res.status(200).json(Responses.ok)
       }
     )
   }
 
-  private calcReversedIndex(): number {
+  private calcReversedIndex(activeRoute: ActiveRoute): number {
     return (
-      (this.courseInfo.activeRoute.pointTotal as number) -
+      (activeRoute.pointTotal as number) -
       1 -
-      (this.courseInfo.activeRoute.pointIndex as number)
+      (activeRoute.pointIndex as number)
     )
   }
 
-  private async activateRoute(route: ActiveRoute): Promise<boolean> {
+  private async activateRoute(route: {
+    href?: string
+    reverse?: boolean
+    pointIndex?: number
+    arrivalCircle?: number
+  }): Promise<boolean> {
+    const { href, reverse } = route
     let rte: any
 
-    if (route.href) {
-      rte = await this.getRoute(route.href)
+    if (href) {
+      rte = await this.getRoute(href)
       if (!rte) {
         throw new Error(
           `** Could not retrieve route information for ${route.href}`
@@ -463,43 +459,35 @@ export class CourseApi {
     }
 
     const newCourse: CourseInfo = { ...this.courseInfo }
-
-    // set activeroute
-    newCourse.activeRoute.href = route.href
-
+    const pointIndex = this.parsePointIndex(route.pointIndex as number, rte)
+    const activeRoute = {
+      href,
+      name: rte.name,
+      reverse: !!reverse,
+      pointIndex,
+      pointTotal: rte.feature.geometry.coordinates.length
+    }
+    newCourse.activeRoute = activeRoute
+    newCourse.nextPoint = {
+      type: `RoutePoint`,
+      position: this.getRoutePoint(rte, pointIndex, !!reverse)
+    }
     newCourse.startTime = new Date().toISOString()
-
-    newCourse.activeRoute.name = rte.name
-    newCourse.activeRoute.waypoints = this.getRoutePoints(rte)
 
     if (this.isValidArrivalCircle(route.arrivalCircle as number)) {
       newCourse.arrivalCircle = route.arrivalCircle as number
     }
 
-    newCourse.activeRoute.reverse = !!route.reverse
-
-    newCourse.activeRoute.pointIndex = this.parsePointIndex(
-      route.pointIndex as number,
-      rte
-    )
-    newCourse.activeRoute.pointTotal = rte.feature.geometry.coordinates.length
-
-    // set nextPoint
-    newCourse.nextPoint.position = this.getRoutePoint(
-      rte,
-      newCourse.activeRoute.pointIndex,
-      newCourse.activeRoute.reverse
-    )
-    newCourse.nextPoint.type = `RoutePoint`
-    newCourse.nextPoint.href = null
 
     // set previousPoint
-    if (newCourse.activeRoute.pointIndex === 0) {
+    if (activeRoute.pointIndex === 0) {
       try {
         const position: any = this.getVesselPosition()
         if (position && position.value) {
-          this.courseInfo.previousPoint.position = position.value
-          this.courseInfo.previousPoint.type = `VesselPosition`
+          newCourse.previousPoint = {
+            position: position.value,
+            type: 'VesselPosition'
+          }
         } else {
           throw new Error(`Error: Unable to retrieve vessel position!`)
         }
@@ -507,31 +495,32 @@ export class CourseApi {
         throw new Error(`Error: Unable to retrieve vessel position!`)
       }
     } else {
-      newCourse.previousPoint.position = this.getRoutePoint(
-        rte,
-        newCourse.activeRoute.pointIndex - 1,
-        newCourse.activeRoute.reverse
-      )
-      newCourse.previousPoint.type = `RoutePoint`
+      newCourse.previousPoint = {
+        position: this.getRoutePoint(
+          rte,
+          activeRoute.pointIndex - 1,
+          activeRoute.reverse
+        ),
+        type: 'RoutePoint'
+      }
     }
-    newCourse.previousPoint.href = null
 
     this.courseInfo = newCourse
     return true
   }
 
-  private async setDestination(dest: Destination): Promise<boolean> {
+  private async setDestination(dest: Destination & {arrivalCircle?: number}): Promise<boolean> {
     const newCourse: CourseInfo = { ...this.courseInfo }
 
     newCourse.startTime = new Date().toISOString()
 
-    // set nextPoint
     if (this.isValidArrivalCircle(dest.arrivalCircle)) {
       newCourse.arrivalCircle = dest.arrivalCircle as number
     }
 
-    newCourse.nextPoint.type =
-      typeof dest.type !== 'undefined' ? dest.type : null
+    //FIXME what does this do?
+    // newCourse.nextPoint.type =
+    //   typeof dest.type !== 'undefined' ? dest.type : null
 
     if (dest.href) {
       const typedHref = this.parseHref(dest.href)
@@ -544,12 +533,15 @@ export class CourseApi {
             typedHref.id
           )) as any
           if (isValidCoordinate(r.feature.geometry.coordinates)) {
-            newCourse.nextPoint.position = {
-              latitude: r.feature.geometry.coordinates[1],
-              longitude: r.feature.geometry.coordinates[0]
+            newCourse.nextPoint = {
+              position: {
+                latitude: r.feature.geometry.coordinates[1],
+                longitude: r.feature.geometry.coordinates[0]
+              },
+              href: dest.href,
+              type: r.type ?? 'Waypoint'
             }
-            newCourse.nextPoint.href = dest.href
-            newCourse.nextPoint.type = r.type ?? 'Waypoint'
+            newCourse.activeRoute = null
           } else {
             throw new Error(`Invalid waypoint coordinate data! (${dest.href})`)
           }
@@ -560,10 +552,11 @@ export class CourseApi {
         throw new Error(`Invalid href! (${dest.href})`)
       }
     } else if (dest.position) {
-      newCourse.nextPoint.href = null
-      newCourse.nextPoint.type = 'Location'
       if (isValidCoordinate(dest.position)) {
-        newCourse.nextPoint.position = dest.position
+        newCourse.nextPoint = {
+          position: dest.position,
+          type: 'Location'
+        }
       } else {
         throw new Error(`Error: position is not valid`)
       }
@@ -571,20 +564,17 @@ export class CourseApi {
       throw new Error(`Destination not provided!`)
     }
 
-    // clear activeRoute values
-    newCourse.activeRoute.href = null
-    newCourse.activeRoute.pointIndex = null
-    newCourse.activeRoute.pointTotal = null
-    newCourse.activeRoute.reverse = null
-    newCourse.activeRoute.waypoints = null
+    // clear activeRoute
+    newCourse.activeRoute = null
 
     // set previousPoint
     try {
       const position: any = this.getVesselPosition()
       if (position && position.value) {
-        newCourse.previousPoint.position = position.value
-        newCourse.previousPoint.type = `VesselPosition`
-        newCourse.previousPoint.href = null
+        newCourse.previousPoint = {
+          position: position.value,
+          type: 'VesselPosition'
+        }
       } else {
         throw new Error(
           `Error: navigation.position.value is undefined! (${position})`
@@ -601,18 +591,9 @@ export class CourseApi {
   private clearDestination() {
     this.courseInfo.startTime = null
     this.courseInfo.targetArrivalTime = null
-    this.courseInfo.activeRoute.href = null
-    this.courseInfo.activeRoute.pointIndex = null
-    this.courseInfo.activeRoute.pointTotal = null
-    this.courseInfo.activeRoute.reverse = null
-    this.courseInfo.activeRoute.name = null
-    this.courseInfo.activeRoute.waypoints = null
-    this.courseInfo.nextPoint.href = null
-    this.courseInfo.nextPoint.type = null
-    this.courseInfo.nextPoint.position = null
-    this.courseInfo.previousPoint.href = null
-    this.courseInfo.previousPoint.type = null
-    this.courseInfo.previousPoint.position = null
+    this.courseInfo.activeRoute = null
+    this.courseInfo.nextPoint = null
+    this.courseInfo.previousPoint = null
   }
 
   private isValidArrivalCircle(value: number | undefined): boolean {
@@ -776,11 +757,19 @@ export class CourseApi {
   private buildV1DeltaMsg(
     paths: string[]
   ): Array<{ path: string; value: any }> {
+    return []
+  }
+  private buildV1DeltaMsg_(
+    paths: string[]
+  ): Array<{ path: string; value: any }> {
     const values: Array<{ path: string; value: any }> = []
     const navGC = 'navigation.courseGreatCircle'
     const navRL = 'navigation.courseRhumbline'
 
-    if (paths.length === 0 || (paths && paths.includes('activeRoute'))) {
+    if (
+      this.courseInfo.activeRoute &&
+      (paths.length === 0 || (paths && paths.includes('activeRoute')))
+    ) {
       values.push({
         path: `${navGC}.activeRoute.href`,
         value: this.courseInfo.activeRoute.href
@@ -799,7 +788,7 @@ export class CourseApi {
         value: this.courseInfo.startTime
       })
     }
-    if (paths.length === 0 || (paths && paths.includes('nextPoint'))) {
+    if (this.courseInfo.nextPoint && (paths.length === 0 || (paths && paths.includes('nextPoint')))) {
       values.push({
         path: `${navGC}.nextPoint.value.href`,
         value: this.courseInfo.nextPoint.href
@@ -837,7 +826,7 @@ export class CourseApi {
         value: this.courseInfo.arrivalCircle
       })
     }
-    if (paths.length === 0 || (paths && paths.includes('previousPoint'))) {
+    if (this.courseInfo.previousPoint && (paths.length === 0 || (paths && paths.includes('previousPoint')))) {
       values.push({
         path: `${navGC}.previousPoint.position`,
         value: this.courseInfo.previousPoint.position
