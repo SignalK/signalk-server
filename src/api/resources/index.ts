@@ -168,6 +168,23 @@ export class ResourcesApi {
     }
   }
 
+  private checkForProvider(
+    resType: SignalKResourceType,
+    providerId?: string
+  ): string | undefined {
+    debug(`** checkForProvider(${resType}, ${providerId})`)
+    let result: string | undefined = undefined
+    if (providerId) {
+      result = this.resProvider[resType].has(providerId)
+        ? providerId
+        : undefined
+    } else {
+      result = this.resProvider[resType].keys().next().value
+    }
+    debug(`** checkForProvider().result = ${result}`)
+    return result
+  }
+
   // retrieve matching resources from ALL providers
   private async listFromAll(resType: string, params: { [key: string]: any }) {
     debug(`listFromAll(${resType}, ${JSON.stringify(params)})`)
@@ -215,11 +232,15 @@ export class ResourcesApi {
   // return providerId for supplied resource id
   private async getProviderForResourceId(
     resType: string,
-    resId: string
+    resId: string,
+    fallbackToDefault?: boolean
   ): Promise<string | undefined> {
-    debug(`getProviderForResourceId(${resType}, ${resId})`)
+    debug(
+      `getProviderForResourceId(${resType}, ${resId}, ${fallbackToDefault})`
+    )
 
     let result: string | undefined = undefined
+
     if (!this.resProvider[resType]) {
       return result
     }
@@ -238,6 +259,10 @@ export class ResourcesApi {
       }
       idx++
     })
+
+    if (!result && fallbackToDefault) {
+      result = this.resProvider[resType].keys().next().value
+    }
     debug(`getProviderForResourceId().result = ${result}`)
     return result
   }
@@ -494,7 +519,8 @@ export class ResourcesApi {
           } else {
             provider = await this.getProviderForResourceId(
               req.params.resourceType,
-              req.params.resourceId
+              req.params.resourceId,
+              true
             )
           }
           if (!provider) {
@@ -600,23 +626,6 @@ export class ResourcesApi {
       }
     }
     return resPaths
-  }
-
-  private checkForProvider(
-    resType: SignalKResourceType,
-    providerId?: string
-  ): string | undefined {
-    debug(`** checkForProvider(${resType}, ${providerId})`)
-    let result: string | undefined = undefined
-    if (providerId) {
-      result = this.resProvider[resType].has(providerId)
-        ? providerId
-        : undefined
-    } else {
-      result = this.resProvider[resType].keys().next().value
-    }
-    debug(`** checkForProvider().result = ${result}`)
-    return result
   }
 
   private buildDeltaMsg(
