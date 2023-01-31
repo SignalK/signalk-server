@@ -211,7 +211,8 @@ describe('deltacache', () => {
     return serverP.then(server => {
       return deltaP.then(() => {
         var deltas = server.app.deltaCache.getCachedDeltas(delta => true, null)
-        deltas.length.should.equal(expectedOrder.length + COURSE_API_INITIAL_DELTA_COUNT)
+        // console.log(JSON.stringify(deltas, null, 2))
+        deltas.length.should.equal(expectedOrder.length)
         for (var i = 0; i < expectedOrder.length; i++) {
           if (!deltas[i].updates[0].meta) {
             deltas[i].updates[0].values[0].path.should.equal(
