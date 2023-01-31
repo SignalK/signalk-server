@@ -110,19 +110,35 @@ export const passFilter = (res: any, type: string, params: any) => {
   return ok
 }
 
+const paramToArray = (param: string) => {
+  if (typeof param === 'string') {
+    let c = param.replace('[', '')
+    c = c.replace(']', '')
+    return c.split(',').map((i) => {
+      return parseFloat(i)
+    })
+  } else {
+    return param
+  }
+}
+
+const paramToNumber = (param: string) => {
+  const n = parseFloat(param)
+  if (isNaN(n)) {
+    throw new Error(`Supplied parameter is not a number! (${n})`)
+  } else {
+    return n
+  }
+}
+
 // process query parameters
 export const processParameters = (params: any) => {
   if (typeof params.limit !== 'undefined') {
-    if (isNaN(params.limit)) {
-      throw new Error(
-        `max record count specified is not a number! (${params.limit})`
-      )
-    } else {
-      params.limit = parseInt(params.limit)
-    }
+    params.limit = paramToNumber(params.limit)
   }
 
   if (typeof params.bbox !== 'undefined') {
+    params.bbox = paramToArray(params.bbox)
     // generate geobounds polygon from bbox
     params.geobounds = toPolygon(params.bbox)
     if (params.geobounds.length !== 5) {
@@ -132,11 +148,8 @@ export const processParameters = (params: any) => {
       )
     }
   } else if (typeof params.distance !== 'undefined' && params.position) {
-    if (isNaN(params.distance)) {
-      throw new Error(
-        `Distance specified is not a number! (${params.distance})`
-      )
-    }
+    params.distance = paramToNumber(params.distance)
+    params.position = paramToArray(params.position)
     const sw = computeDestinationPoint(params.position, params.distance, 225)
     const ne = computeDestinationPoint(params.position, params.distance, 45)
     params.geobounds = toPolygon([
@@ -152,7 +165,7 @@ export const processParameters = (params: any) => {
 // convert bbox  string to array of points (polygon)
 export const toPolygon = (bbox: number[]) => {
   const polygon = []
-  if (bbox.length == 4) {
+  if (bbox.length === 4) {
     polygon.push([bbox[0], bbox[1]])
     polygon.push([bbox[0], bbox[3]])
     polygon.push([bbox[2], bbox[3]])
