@@ -210,7 +210,9 @@ describe('deltacache', () => {
   it('deltas ordered properly', function () {
     return serverP.then(server => {
       return deltaP.then(() => {
-        var deltas = server.app.deltaCache.getCachedDeltas(delta => true, null)
+        // eslint-disable-next-line no-unused-vars
+        var deltas = server.app.deltaCache.getCachedDeltas((delta) => true, null)
+          .filter(delta => delta.updates[0].$source != 'courseApi')
         // console.log(JSON.stringify(deltas, null, 2))
         deltas.length.should.equal(expectedOrder.length)
         for (var i = 0; i < expectedOrder.length; i++) {
