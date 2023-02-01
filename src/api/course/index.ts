@@ -478,7 +478,6 @@ export class CourseApi {
       newCourse.arrivalCircle = route.arrivalCircle as number
     }
 
-
     // set previousPoint
     if (activeRoute.pointIndex === 0) {
       try {
@@ -509,7 +508,9 @@ export class CourseApi {
     return true
   }
 
-  private async setDestination(dest: Destination & {arrivalCircle?: number}): Promise<boolean> {
+  private async setDestination(
+    dest: Destination & { arrivalCircle?: number }
+  ): Promise<boolean> {
     const newCourse: CourseInfo = { ...this.courseInfo }
 
     newCourse.startTime = new Date().toISOString()
@@ -517,10 +518,6 @@ export class CourseApi {
     if (this.isValidArrivalCircle(dest.arrivalCircle)) {
       newCourse.arrivalCircle = dest.arrivalCircle as number
     }
-
-    //FIXME what does this do?
-    // newCourse.nextPoint.type =
-    //   typeof dest.type !== 'undefined' ? dest.type : null
 
     if (dest.href) {
       const typedHref = this.parseHref(dest.href)
@@ -788,7 +785,10 @@ export class CourseApi {
         value: this.courseInfo.startTime
       })
     }
-    if (this.courseInfo.nextPoint && (paths.length === 0 || (paths && paths.includes('nextPoint')))) {
+    if (
+      this.courseInfo.nextPoint &&
+      (paths.length === 0 || (paths && paths.includes('nextPoint')))
+    ) {
       values.push({
         path: `${navGC}.nextPoint.value.href`,
         value: this.courseInfo.nextPoint.href
@@ -826,7 +826,10 @@ export class CourseApi {
         value: this.courseInfo.arrivalCircle
       })
     }
-    if (this.courseInfo.previousPoint && (paths.length === 0 || (paths && paths.includes('previousPoint')))) {
+    if (
+      this.courseInfo.previousPoint &&
+      (paths.length === 0 || (paths && paths.includes('previousPoint')))
+    ) {
       values.push({
         path: `${navGC}.previousPoint.position`,
         value: this.courseInfo.previousPoint.position
