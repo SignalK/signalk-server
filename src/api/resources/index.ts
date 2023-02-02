@@ -375,7 +375,7 @@ export class ResourcesApi {
           } else {
             const retVal = await this.listFromAll(
               req.params.resourceType,
-              req.query
+              parsedQuery
             )
             res.json(retVal)
           }

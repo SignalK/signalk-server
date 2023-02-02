@@ -110,35 +110,35 @@ export const passFilter = (res: any, type: string, params: any) => {
   return ok
 }
 
-const paramToArray = (param: string) => {
-  if (typeof param === 'string') {
-    let c = param.replace('[', '')
-    c = c.replace(']', '')
-    return c.split(',').map((i) => {
-      return parseFloat(i)
-    })
+const checkForNumberArray = (param: number[]): Array<number> => {
+  if (!Array.isArray(param)) {
+    throw new Error(`Supplied value is not valid! (Array<number>) (${param})`)
   } else {
+    param.forEach( (i:number) => {
+      if(typeof i !== 'number') {
+        throw new Error(`Supplied value is not a number array! (Array<number>) (${param})`)
+      }
+    })
     return param
   }
 }
 
-const paramToNumber = (param: string) => {
-  const n = parseFloat(param)
-  if (isNaN(n)) {
-    throw new Error(`Supplied parameter is not a number! (${n})`)
+const checkForNumber = (param: number): number => {
+  if (isNaN(param)) {
+    throw new Error(`Supplied value is not a number! (${param})`)
   } else {
-    return n
+    return param
   }
 }
 
 // process query parameters
 export const processParameters = (params: any) => {
   if (typeof params.limit !== 'undefined') {
-    params.limit = paramToNumber(params.limit)
+    params.limit = checkForNumber(params.limit)
   }
 
   if (typeof params.bbox !== 'undefined') {
-    params.bbox = paramToArray(params.bbox)
+    params.bbox = checkForNumberArray(params.bbox)
     // generate geobounds polygon from bbox
     params.geobounds = toPolygon(params.bbox)
     if (params.geobounds.length !== 5) {
@@ -148,8 +148,8 @@ export const processParameters = (params: any) => {
       )
     }
   } else if (typeof params.distance !== 'undefined' && params.position) {
-    params.distance = paramToNumber(params.distance)
-    params.position = paramToArray(params.position)
+    params.distance = checkForNumber(params.distance)
+    params.position = checkForNumberArray(params.position)
     const sw = computeDestinationPoint(params.position, params.distance, 225)
     const ne = computeDestinationPoint(params.position, params.distance, 45)
     params.geobounds = toPolygon([
