@@ -89,6 +89,55 @@
           }
         }
       },
+      "ActiveRouteModel": {
+        "type": "object",
+        "required": ["href","pointIndex", "pointTotal","reverse"],
+        "properties": {
+          "href": {
+            "$ref": "#/components/schemas/SignalKHrefRoute"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of route.",
+            "example": "Here to eternity."
+          },
+          "waypoints": {
+            "type": "array",
+            "description": "Array of points that make up the route.",
+            "items": {
+              "$ref": "#/components/schemas/Location"
+            }
+          },
+          "pointIndex": {
+            "type": "number",
+            "minimum": 0,
+            "description": "0 based index of the point in the route that is the current destination"
+          },
+          "pointTotal": {
+            "type": "number",
+            "description": "Total number of points in the route"
+          },
+          "reverse": {
+            "type": "boolean",
+            "description": "When true indicates the route points are being navigated in reverse order."
+          }
+        }
+      },
+      "PointModel": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/HrefWaypointAttribute"
+          },
+          {
+            "$ref": "#/components/schemas/PointTypeAttribute"
+          }
+        ],
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PositionAttribute"
+          }
+        ]
+      },
       "PositionAttribute": {
         "type": "object",
         "required": ["position"],
@@ -274,15 +323,35 @@
         "content": {
           "application/json": {
             "schema": {
-              "description": "base model for course response",
+              "description": "Course response",
               "type": "object",
               "required": [
-                "startTime",
                 "activeRoute",
                 "nextPoint",
                 "previousPoint"
               ],
               "properties": {
+                "activeRoute": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ActiveRouteModel"
+                    }
+                  ]
+                },
+                "nextPoint": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PointModel"
+                    }
+                  ]
+                },
+                "previousPoint": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PointModel"
+                    }
+                  ]
+                },
                 "startTime": {
                   "$ref": "#/components/schemas/IsoTime",
                   "example": "2022-04-22T05:02:56.484Z",
@@ -295,70 +364,6 @@
                 },
                 "arrivalCircle": {
                   "$ref": "#/components/schemas/ArrivalCircle"
-                },
-                "activeRoute": {
-                  "type": "object",
-                  "required": ["href", "pointIndex", "pointTotal", "reverse"],
-                  "properties": {
-                    "href": {
-                      "$ref": "#/components/schemas/SignalKHrefRoute"
-                    },
-                    "name": {
-                      "type": "string",
-                      "description": "Name of route.",
-                      "example": "Here to eternity."
-                    },
-                    "waypoints": {
-                      "type": "array",
-                      "description": "Array of points that make up the route.",
-                      "items": {
-                        "$ref": "#/components/schemas/Location"
-                      }
-                    },
-                    "pointIndex": {
-                      "type": "number",
-                      "minimum": 0,
-                      "description": "0 based index of the point in the route that is the current destination"
-                    },
-                    "pointTotal": {
-                      "type": "number",
-                      "description": "Total number of points in the route"
-                    },
-                    "reverse": {
-                      "type": "boolean",
-                      "description": "When true indicates the route points are being navigated in reverse order."
-                    }
-                  }
-                },
-                "nextPoint": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/HrefWaypointAttribute"
-                    },
-                    {
-                      "$ref": "#/components/schemas/PointTypeAttribute"
-                    }
-                  ],
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/PositionAttribute"
-                    }
-                  ]
-                },
-                "previousPoint": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/HrefWaypointAttribute"
-                    },
-                    {
-                      "$ref": "#/components/schemas/PointTypeAttribute"
-                    }
-                  ],
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/PositionAttribute"
-                    }
-                  ]
                 }
               }
             }
