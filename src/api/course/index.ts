@@ -754,11 +754,6 @@ export class CourseApi {
   private buildV1DeltaMsg(
     paths: string[]
   ): Array<{ path: string; value: any }> {
-    return []
-  }
-  private buildV1DeltaMsg_(
-    paths: string[]
-  ): Array<{ path: string; value: any }> {
     const values: Array<{ path: string; value: any }> = []
     const navGC = 'navigation.courseGreatCircle'
     const navRL = 'navigation.courseRhumbline'
