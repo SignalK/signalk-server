@@ -91,7 +91,7 @@
       },
       "ActiveRouteModel": {
         "type": "object",
-        "required": ["href","pointIndex", "pointTotal","reverse"],
+        "required": ["href", "pointIndex", "pointTotal", "reverse"],
         "properties": {
           "href": {
             "$ref": "#/components/schemas/SignalKHrefRoute"
@@ -325,11 +325,7 @@
             "schema": {
               "description": "Course response",
               "type": "object",
-              "required": [
-                "activeRoute",
-                "nextPoint",
-                "previousPoint"
-              ],
+              "required": ["activeRoute", "nextPoint", "previousPoint"],
               "properties": {
                 "activeRoute": {
                   "anyOf": [
