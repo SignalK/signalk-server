@@ -168,6 +168,16 @@ export class ResourcesApi {
     }
   }
 
+  private hasRegisteredProvider(resType: string): boolean {
+    const result =
+      this.resProvider[resType] && this.resProvider[resType].size !== 0
+        ? true
+        : false
+    debug(`hasRegisteredProvider(${resType}).result = ${result}`)
+    return result
+  }
+
+  // validates provider Id for a resourceType
   private checkForProvider(
     resType: SignalKResourceType,
     providerId?: string
@@ -288,6 +298,11 @@ export class ResourcesApi {
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** GET ${RESOURCES_API_PATH}/:resourceType/:resourceId`)
 
+        if (!this.hasRegisteredProvider(req.params.resourceType)) {
+          next()
+          return
+        }
+
         try {
           if (req.query.provider) {
             const provider = this.checkForProvider(
@@ -325,6 +340,11 @@ export class ResourcesApi {
       `${RESOURCES_API_PATH}/:resourceType`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** GET ${RESOURCES_API_PATH}/:resourceType`)
+
+        if (!this.hasRegisteredProvider(req.params.resourceType)) {
+          next()
+          return
+        }
 
         const parsedQuery = Object.entries(req.query).reduce(
           (acc: any, [name, value]) => {
@@ -395,6 +415,11 @@ export class ResourcesApi {
       `${RESOURCES_API_PATH}/:resourceType/`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** POST ${RESOURCES_API_PATH}/${req.params.resourceType}`)
+
+        if (!this.hasRegisteredProvider(req.params.resourceType)) {
+          next()
+          return
+        }
 
         const provider = this.checkForProvider(
           req.params.resourceType as SignalKResourceType,
@@ -469,6 +494,11 @@ export class ResourcesApi {
       `${RESOURCES_API_PATH}/:resourceType/:resourceId`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** PUT ${RESOURCES_API_PATH}/:resourceType/:resourceId`)
+
+        if (!this.hasRegisteredProvider(req.params.resourceType)) {
+          next()
+          return
+        }
 
         if (!updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
@@ -560,6 +590,11 @@ export class ResourcesApi {
       `${RESOURCES_API_PATH}/:resourceType/:resourceId`,
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** DELETE ${RESOURCES_API_PATH}/:resourceType/:resourceId`)
+
+        if (!this.hasRegisteredProvider(req.params.resourceType)) {
+          next()
+          return
+        }
 
         if (!updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
