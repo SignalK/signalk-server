@@ -77,3 +77,8 @@ export type Delta = any
 export type Path = string
 export type Context = string
 export type Value = object | number | string | null
+
+export enum SKVersion {
+  v1,
+  v2
+}

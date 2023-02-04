@@ -21,6 +21,7 @@ import { Store } from '../../serverstate/store'
 import { buildSchemaSync } from 'api-schema-builder'
 import courseOpenApi from './openApi.json'
 import { ResourcesApi } from '../resources'
+import { Delta, SKVersion } from '../../types'
 
 const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
 
@@ -690,7 +691,7 @@ export class CourseApi {
   }
 
   private buildDeltaMsg(paths: string[]): any {
-    let values: Array<{ path: string; value: any }> = []
+    const values: Array<{ path: string; value: any }> = []
     const navPath = 'navigation.course'
 
     debug(this.courseInfo)
@@ -740,8 +741,6 @@ export class CourseApi {
       })
     }
 
-    values = values.concat(this.buildV1DeltaMsg(paths))
-
     return {
       updates: [
         {
@@ -751,9 +750,7 @@ export class CourseApi {
     }
   }
 
-  private buildV1DeltaMsg(
-    paths: string[]
-  ): Array<{ path: string; value: any }> {
+  private buildV1DeltaMsg(paths: string[]): Delta {
     const values: Array<{ path: string; value: any }> = []
     const navGC = 'navigation.courseGreatCircle'
     const navRL = 'navigation.courseRhumbline'
@@ -844,11 +841,18 @@ export class CourseApi {
       })
     }
 
-    return values
+    return {
+      updates: [
+        {
+          values
+        }
+      ]
+    }
   }
 
   private emitCourseInfo(noSave = false, ...paths: string[]) {
-    this.server.handleMessage('courseApi', this.buildDeltaMsg(paths))
+    this.server.handleMessage('courseApi', this.buildV1DeltaMsg(paths), SKVersion.v1)
+    this.server.handleMessage('courseApi', this.buildDeltaMsg(paths), SKVersion.v2)
     if (!noSave) {
       this.store.write(this.courseInfo).catch((error) => {
         console.log(error)

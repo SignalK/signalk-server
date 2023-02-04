@@ -23,8 +23,8 @@ describe('Course Api', () => {
       position: { latitude: -35.5, longitude: 138.7 }
     }).then(response => response.status.should.equal(200))
 
-    const courseDelta = JSON.parse(await wsPromiser.nthMessage(3))
-    courseDelta.context.should.equal(self)
+    const v2courseDelta = JSON.parse(await wsPromiser.nthMessage(4))
+    v2courseDelta.context.should.equal(self)
 
     const expectedPathValues = [
       {
@@ -48,7 +48,7 @@ describe('Course Api', () => {
       }
     ]
     expectedPathValues.forEach(({ path, value }) =>
-      deltaHasPathValue(courseDelta, path, value)
+      deltaHasPathValue(v2courseDelta, path, value)
     )
 
     await selfGetJson('navigation/course').then(data => {
@@ -86,9 +86,9 @@ describe('Course Api', () => {
       position: validDestinationPosition
     }).then(response => response.status.should.equal(200))
 
-    const courseDelta = JSON.parse(await wsPromiser.nthMessage(3))
+    const v2courseDelta = JSON.parse(await wsPromiser.nthMessage(4))
     deltaHasPathValue(
-      courseDelta,
+      v2courseDelta,
       'navigation.course.nextPoint',
       {position: validDestinationPosition, type: 'Location'}
     )
@@ -97,17 +97,17 @@ describe('Course Api', () => {
       href:
         '/resources/waypoints/07894aba-f151-4099-aa4f-5e5773734b95'
     }).then(response => response.status.should.equal(400))
-    await assert.rejects(wsPromiser.nthMessage(4))
+    await assert.rejects(wsPromiser.nthMessage(5))
 
     await selfPut('navigation/course/destination', {
       hrefff: 'dummy data'
     }).then(response => response.status.should.equal(400))
-    await assert.rejects(wsPromiser.nthMessage(4))
+    await assert.rejects(wsPromiser.nthMessage(5))
 
     await selfPut('navigation/course/destination', {
       position: { latitude: -35.5 }
     }).then(response => response.status.should.equal(400))
-    await assert.rejects(wsPromiser.nthMessage(4))
+    await assert.rejects(wsPromiser.nthMessage(5))
 
     await stop()
   })
@@ -152,8 +152,8 @@ describe('Course Api', () => {
       arrivalCircle: 99
     }).then(response => response.status.should.equal(200))
 
-    const courseDelta = JSON.parse(await wsPromiser.nthMessage(2))
-    courseDelta.context.should.equal(self)
+    const v2courseDelta = JSON.parse(await wsPromiser.nthMessage(3))
+    v2courseDelta.context.should.equal(self)
 
     let expectedPathValues = [
       { path: 'navigation.course.activeRoute', value: null },
@@ -175,10 +175,10 @@ describe('Course Api', () => {
       }
     ]
     expectedPathValues.forEach(({ path, value }) =>
-      deltaHasPathValue(courseDelta, path, value)
+      deltaHasPathValue(v2courseDelta, path, value)
     )
 
-    const pathValue = courseDelta.updates[0].values.find((x: any) => x.path === 'navigation.course.startTime')
+    const pathValue = v2courseDelta.updates[0].values.find((x: any) => x.path === 'navigation.course.startTime')
     pathValue.value.should.match(DATETIME_REGEX)
 
 
@@ -207,7 +207,7 @@ describe('Course Api', () => {
     await selfDelete('navigation/course').then(response =>
       response.status.should.equal(200)
     )
-    const destinationClearedDelta = JSON.parse(await wsPromiser.nthMessage(3))
+    const destinationClearedDelta = JSON.parse(await wsPromiser.nthMessage(5))
     expectedPathValues = [
       {
         path: 'navigation.course.activeRoute',
@@ -283,8 +283,8 @@ describe('Course Api', () => {
       href
     }).then(response => response.status.should.equal(200))
 
-    const courseDelta = JSON.parse(await wsPromiser.nthMessage(2))
-    courseDelta.context.should.equal(self)
+    const v2courseDelta = JSON.parse(await wsPromiser.nthMessage(3))
+    v2courseDelta.context.should.equal(self)
 
     const expectedPathValues = [
       {
@@ -320,9 +320,9 @@ describe('Course Api', () => {
       },
     ]
     expectedPathValues.forEach(({ path, value }) =>
-      deltaHasPathValue(courseDelta, path, value)
+      deltaHasPathValue(v2courseDelta, path, value)
     )
-    courseDelta.updates[0].values.find(
+    v2courseDelta.updates[0].values.find(
       (x: any) => x.path === 'navigation.course.startTime'
     ).should.not.be.undefined
 
@@ -414,7 +414,7 @@ describe('Course Api', () => {
       value: 98
     }).then(response => response.status.should.equal(200))
 
-    const courseDelta = JSON.parse(await wsPromiser.nthMessage(2))
+    const v2courseDelta = JSON.parse(await wsPromiser.nthMessage(3))
 
     const expectedPathValues = [
       {
@@ -423,7 +423,7 @@ describe('Course Api', () => {
       }
     ]
     expectedPathValues.forEach(({ path, value }) =>
-      deltaHasPathValue(courseDelta, path, value)
+      deltaHasPathValue(v2courseDelta, path, value)
     )
 
     await selfGetJson('navigation/course').then(data => {

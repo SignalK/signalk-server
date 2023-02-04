@@ -49,7 +49,7 @@ import {
 } from './security.js'
 import { setupCors } from './cors'
 import SubscriptionManager from './subscriptionmanager'
-import { Delta } from './types'
+import { Delta, SKVersion } from './types'
 const debug = createDebug('signalk-server')
 
 const { StreamBundle } = require('./streambundle')
@@ -90,9 +90,13 @@ class Server {
 
     app.propertyValues = new PropertyValues()
 
-    const deltachain = new DeltaChain(app.signalk.addDelta.bind(app.signalk))
+    const deltachainV1 = new DeltaChain(app.signalk.addDelta.bind(app.signalk))
+    const deltachainV2 = new DeltaChain((delta: Delta) => app.signalk.emit('delta', delta))
     app.registerDeltaInputHandler = (handler: DeltaInputHandler) =>
-      deltachain.register(handler)
+      {
+        deltachainV1.register(handler)
+        deltachainV2.register(handler)
+      }
 
     app.providerStatus = {}
 
@@ -204,7 +208,7 @@ class Server {
     }
     app.activateSourcePriorities()
 
-    app.handleMessage = (providerId: string, data: any) => {
+    app.handleMessage = (providerId: string, data: any, skVersion = SKVersion.v1) => {
       if (data && data.updates) {
         incDeltaStatistics(app, providerId)
 
@@ -231,7 +235,12 @@ class Server {
           }
         })
         try {
-          deltachain.process(toPreferredDelta(data, now, app.selfContext))
+          const preferredDelta = toPreferredDelta(data, now, app.selfContext)
+          if (skVersion == SKVersion.v1) {
+            deltachainV1.process(preferredDelta)
+          } else {
+            deltachainV2.process(preferredDelta)
+          }
         } catch (err) {
           console.error(err)
         }
