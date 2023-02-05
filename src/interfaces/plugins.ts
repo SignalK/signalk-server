@@ -16,6 +16,7 @@
  * limitations under the License.
 */
 import {
+  Brand,
   PropertyValues,
   PropertyValuesCallback,
   ResourceProvider,
@@ -35,6 +36,7 @@ import { listAllSerialPorts } from '../serialports'
 const debug = createDebug('signalk-server:interfaces:plugins')
 
 import { modulesWithKeyword } from '../modules'
+import { OpenApiDescription, OpenApiRecord } from '../api/swagger'
 
 const put = require('../put')
 const _putPath = put.putPath
@@ -56,6 +58,13 @@ export interface Plugin {
   stop: () => any
 }
 
+export type PluginId = Brand<string, 'PluginId'>
+export interface PluginManager {
+  getPluginOpenApiRecords: () => OpenApiRecord[]
+  setPluginOpenApi: (pluginId: PluginId, openApi: OpenApiDescription) => void
+  getPluginOpenApi: (pluginId: PluginId) => OpenApiRecord | undefined
+}
+
 interface PluginInfo extends Plugin {
   enableLogging: any
   enableDebug: any
@@ -63,6 +72,7 @@ interface PluginInfo extends Plugin {
   keywords: string[]
   packageLocation: string
   registerWithRouter: any
+  getOpenApi?: () => object
   signalKApiRoutes: any
   name: string
   id: string
@@ -627,8 +637,11 @@ module.exports = (theApp: any) => {
       res.json(getPluginOptions(plugin.id))
     })
 
-    if (typeof plugin.registerWithRouter !== 'undefined') {
+    if (typeof plugin.registerWithRouter == 'function') {
       plugin.registerWithRouter(router)
+      if (typeof plugin.getOpenApi == 'function') {
+        app.setPluginOpenApi(plugin.id, plugin.getOpenApi())
+      }
     }
     app.use(backwardsCompat('/plugins/' + plugin.id), router)
 

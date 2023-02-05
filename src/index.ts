@@ -57,6 +57,8 @@ import {
 } from './security.js'
 import { setupCors } from './cors'
 import SubscriptionManager from './subscriptionmanager'
+import { PluginId, PluginManager } from './interfaces/plugins'
+import { OpenApiDescription, OpenApiRecord } from './api/swagger'
 const debug = createDebug('signalk-server')
 
 const { StreamBundle } = require('./streambundle')
@@ -70,6 +72,7 @@ class Server {
     SelfIdentity &
     WithConfig &
     SignalKMessageHub &
+    PluginManager &
     WithSecurityStrategy &
     IRouter
   constructor(opts: ServerOptions) {
@@ -110,6 +113,32 @@ class Server {
     }
 
     app.providerStatus = {}
+
+    // create first temporary pluginManager to get typechecks, as
+    // app is any and not typechecked
+    // TODO separate app.plugins and app.pluginsMap from app
+    const pluginManager: PluginManager = {
+      setPluginOpenApi: (pluginId: PluginId, openApi: OpenApiDescription) => {
+        app.pluginsMap[pluginId].openApi = openApi
+      },
+      getPluginOpenApi: (pluginId: PluginId) => ({
+        name: `plugins/${pluginId}`,
+        path: `/plugins/${pluginId}`,
+        apiDoc: app.pluginsMap[pluginId].openApi
+      }),
+      getPluginOpenApiRecords: () =>
+        Object.keys(app.pluginsMap).reduce<OpenApiRecord[]>((acc, pluginId) => {
+          if (app.pluginsMap[pluginId].openApi) {
+            acc.push({
+              name: `plugins/${pluginId}`,
+              path: `/plugins/${pluginId}`,
+              apiDoc: app.pluginsMap[pluginId].openApi
+            })
+          }
+          return acc
+        }, [])
+    }
+    Object.assign(app, pluginManager)
 
     app.setPluginStatus = (providerId: string, statusMessage: string) => {
       doSetProviderStatus(providerId, statusMessage, 'status', 'plugin')

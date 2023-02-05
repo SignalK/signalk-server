@@ -910,11 +910,15 @@ Code handling incoming PropertyValues should be fully reactive: even if all emit
 PropertyValues is not meant for data passing on a regular basis, as the total history makes it a potential memory leak. There is a safeguard against accidentally emitting regularly with an upper bound for values per property name. New values will be ignored if it is reached and emits logged as errors.
 
 
-### Exposing custom HTTP paths
+### Exposing custom HTTP paths & OpenApi
 
 If a plugin has a function called `registerWithRouter(router)` (like the plugin's `start` and `stop` functions) it will be called with an Express router as the parameter during plugin startup. The router will be mounted at `/plugins/<pluginId>` and you can use standard Express `.get` `.post` `.use` etc to add HTTP path handlers. Note that `GET /plugins/<pluginid>` and `POST /plugins/<pluginid>/configure` are reserved by server (see below).
 
 Express does not have a public API for deregistering subrouters, so `stop` does not do anything to the router.
+
+**Consider seriously providing an OpenApi description** for your plugin's API. This promotes further cooperation with other plugin/webapp authors. One way we can work together is by fleshing out new APIs within a plugin and then merge them in the Signal K specification for more cooperation.
+
+Implement `getOpenApi` in your plugin to expose your OpenApi to be included in the server's OpenApi UI tooling. See [testplugin](https://github.com/SignalK/signalk-server/tree/b82477e63ebdc14878164ce1ed3aedd80c5a8b0c/test/plugin-test-config/node_modules/testplugin) for an example.
 
 ## Plugin configuration HTTP API
 

@@ -38,6 +38,7 @@ import {
 import { SERVERROUTESPREFIX } from './constants'
 import { handleAdminUICORSOrigin } from './cors'
 import { createDebug, listKnownDebugs } from './debug'
+import { PluginManager } from './interfaces/plugins'
 import { getAuthor, Package, restoreModules } from './modules'
 import { getHttpPort, getSslPort } from './ports'
 import { queryRequest } from './requestResponse'
@@ -67,7 +68,12 @@ interface ScriptsApp {
   embeddablewebapps: ModuleInfo[]
 }
 
-interface App extends ScriptsApp, WithSecurityStrategy, ConfigApp, IRouter {
+interface App
+  extends ScriptsApp,
+    WithSecurityStrategy,
+    ConfigApp,
+    IRouter,
+    PluginManager {
   webapps: Package[]
   logging: {
     rememberDebug: (r: boolean) => void
