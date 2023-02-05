@@ -851,8 +851,16 @@ export class CourseApi {
   }
 
   private emitCourseInfo(noSave = false, ...paths: string[]) {
-    this.server.handleMessage('courseApi', this.buildV1DeltaMsg(paths), SKVersion.v1)
-    this.server.handleMessage('courseApi', this.buildDeltaMsg(paths), SKVersion.v2)
+    this.server.handleMessage(
+      'courseApi',
+      this.buildV1DeltaMsg(paths),
+      SKVersion.v1
+    )
+    this.server.handleMessage(
+      'courseApi',
+      this.buildDeltaMsg(paths),
+      SKVersion.v2
+    )
     if (!noSave) {
       this.store.write(this.courseInfo).catch((error) => {
         console.log(error)

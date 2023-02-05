@@ -91,12 +91,16 @@ class Server {
     app.propertyValues = new PropertyValues()
 
     const deltachainV1 = new DeltaChain(app.signalk.addDelta.bind(app.signalk))
-    const deltachainV2 = new DeltaChain((delta: Delta) => app.signalk.emit('delta', delta))
-    app.registerDeltaInputHandler = (handler: DeltaInputHandler) =>
-      {
-        deltachainV1.register(handler)
+    const deltachainV2 = new DeltaChain((delta: Delta) =>
+      app.signalk.emit('delta', delta)
+    )
+    app.registerDeltaInputHandler = (handler: DeltaInputHandler) => {
+      const unRegisterHandlers = [
+        deltachainV1.register(handler),
         deltachainV2.register(handler)
-      }
+      ]
+      return () => unRegisterHandlers.forEach((f) => f())
+    }
 
     app.providerStatus = {}
 
@@ -208,7 +212,11 @@ class Server {
     }
     app.activateSourcePriorities()
 
-    app.handleMessage = (providerId: string, data: any, skVersion = SKVersion.v1) => {
+    app.handleMessage = (
+      providerId: string,
+      data: any,
+      skVersion = SKVersion.v1
+    ) => {
       if (data && data.updates) {
         incDeltaStatistics(app, providerId)
 
