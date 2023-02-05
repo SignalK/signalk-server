@@ -1,6 +1,6 @@
 # Where to ask for help
 
-Use #support channel in [Signal K Slack](https://signalk-dev.slack.com/admin) (get an [invite](http://slack-invite.signalk.org/)).
+Use #support channel in [Signal K Slack](https://signalk-dev.slack.com/) (get an [invite via signalk.org](https://signalk.org/)).
 
 # NMEA 2000 inputs are not working
 

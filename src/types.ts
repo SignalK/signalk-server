@@ -71,7 +71,6 @@ export interface NormalizedDelta extends WithContext {
   isMeta: boolean
 }
 
-
 export type Brand<K, T> = K & { __brand: T }
 
 export type SourceRef = Brand<string, 'sourceRef'>
