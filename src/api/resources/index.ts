@@ -11,23 +11,21 @@ import {
 
 import { IRouter, NextFunction, Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid'
-// import { SignalKMessageHub } from '../../app'
 import { WithSecurityStrategy } from '../../security'
 
 import { Responses } from '../'
 import { validate } from './validate'
 import { SignalKMessageHub } from '../../app'
+import { Delta, SKVersion } from '../../types'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 
 export const skUuid = () => `${uuidv4()}`
 
 interface ResourceApplication
-  extends WithSecurityStrategy,
-    SignalKMessageHub,
-    IRouter {
-  handleMessage: (id: string, data: any) => void
-}
+  extends IRouter,
+    WithSecurityStrategy,
+    SignalKMessageHub {}
 
 export class ResourcesApi {
   private resProvider: { [key: string]: Map<string, ResourceProviderMethods> } =
@@ -471,7 +469,8 @@ export class ResourcesApi {
               req.params.resourceType as SignalKResourceType,
               id,
               req.body
-            )
+            ),
+            SKVersion.v2
           )
           res.status(201).json({
             state: 'COMPLETED',
@@ -568,7 +567,8 @@ export class ResourcesApi {
               req.params.resourceType as SignalKResourceType,
               req.params.resourceId,
               req.body
-            )
+            ),
+            SKVersion.v2
           )
           res.status(200).json({
             state: 'COMPLETED',
@@ -630,7 +630,8 @@ export class ResourcesApi {
               req.params.resourceType as SignalKResourceType,
               req.params.resourceId,
               null
-            )
+            ),
+            SKVersion.v2
           )
           res.status(200).json({
             state: 'COMPLETED',
@@ -667,7 +668,7 @@ export class ResourcesApi {
     resType: SignalKResourceType,
     resid: string,
     resValue: any
-  ): any {
+  ): Delta {
     return {
       updates: [
         {
