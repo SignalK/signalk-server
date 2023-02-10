@@ -216,7 +216,7 @@ export class ResourcesApi {
   }
 
   // query ALL providers for supplied resource id
-  private async getFromAll(resType: string, resId: string) {
+  private async getFromAll(resType: string, resId: string, property?: string) {
     debug(`getFromAll(${resType}, ${resId})`)
 
     const result = {}
@@ -224,8 +224,8 @@ export class ResourcesApi {
       return result
     }
     const req: Promise<any>[] = []
-    this.resProvider[resType].forEach((v) => {
-      req.push(v.getResource(resId))
+    this.resProvider[resType].forEach((id) => {
+      req.push(id.getResource(resId, property))
     })
 
     const resp = await Promise.allSettled(req)
@@ -320,6 +320,54 @@ export class ResourcesApi {
             const retVal = await this.getFromAll(
               req.params.resourceType,
               req.params.resourceId
+            )
+            res.json(retVal)
+          }
+        } catch (err) {
+          res.status(404).json({
+            state: 'FAILED',
+            statusCode: 404,
+            message: `Resource not found! (${req.params.resourceId})`
+          })
+        }
+      }
+    )
+
+    // facilitate retrieval of a specific resource property
+    server.get(
+      `${RESOURCES_API_PATH}/:resourceType/:resourceId/*`,
+      async (req: Request, res: Response, next: NextFunction) => {
+        debug(`** GET ${RESOURCES_API_PATH}/:resourceType/:resourceId/*`)
+
+        if (!this.hasRegisteredProvider(req.params.resourceType)) {
+          next()
+          return
+        }
+
+        try {
+          const property = req.params['0'] 
+            ? req.params['0'].split('/').join('.')
+            : undefined
+
+          if (req.query.provider) {
+            const provider = this.checkForProvider(
+              req.params.resourceType as SignalKResourceType,
+              req.query.provider ? (req.query.provider as string) : undefined
+            )
+            if (!provider) {
+              debug('** No provider found... calling next()...')
+              next()
+              return
+            }
+            const retVal = await this.resProvider[req.params.resourceType]
+              ?.get(provider)
+              ?.getResource(req.params.resourceId, property)
+            res.json(retVal)
+          } else {
+            const retVal = await this.getFromAll(
+              req.params.resourceType,
+              req.params.resourceId,
+              property
             )
             res.json(retVal)
           }

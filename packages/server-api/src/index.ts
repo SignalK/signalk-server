@@ -56,7 +56,7 @@ export interface ResourceProvider {
 
 export interface ResourceProviderMethods {
   listResources: (query: { [key: string]: any }) => Promise<{[id: string]: any}>
-  getResource: (id: string) => Promise<object>
+  getResource: (id: string, property?: string) => Promise<object>
   setResource: (
     id: string,
     value: { [key: string]: any }

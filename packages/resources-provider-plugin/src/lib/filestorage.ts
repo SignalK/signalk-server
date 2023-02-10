@@ -89,21 +89,36 @@ export class FileStore implements IResourceStore {
     return result
   }
 
-  async getResource(type: string, itemUuid: string): Promise<object> {
+  // return resource or property value of supplied resource id
+  async getResource(
+    type: string,
+    itemUuid: string,
+    property?: string
+  ): Promise<object> {
     try {
-      const result = JSON.parse(
+      let result = JSON.parse(
         await readFile(path.join(this.resources[type].path, itemUuid), 'utf8')
       )
+      if (property) {
+        const value = eval(`result.${property}`)
+        if (value) {
+          result = { value: value }
+        } else {
+          throw new Error(
+            `${type}/${itemUuid}.${property} not found!`
+          )
+        }
+      }
       const stats = await stat(path.join(this.resources[type].path, itemUuid))
       result.timestamp = stats.mtime
       result.$source = this.pkg.id
       return result
-    } catch (e) {
-      if ((e as any).code === 'ENOENT') {
-        return Promise.reject(`No such resource ${type} ${itemUuid}`)
+    } catch (e: any) {
+      if (e.code === 'ENOENT') {
+        throw new Error(`No such resource ${type} ${itemUuid}`)
       }
       console.error(e)
-      return Promise.reject(`Error retrieving resource ${type} ${itemUuid}`)
+      throw new Error(`Error retrieving resource ${type} ${itemUuid}`)
     }
   }
 

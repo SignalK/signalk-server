@@ -709,7 +709,7 @@ app.registerDeltaInputHandler((delta, next) => {
 See [`RESOURCE_PROVIDER_PLUGINS`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
 
 ---
-### `app.resourcesApi.getResource(resource_type, resource_id)`
+### `app.resourcesApi.getResource(resource_type, resource_id, provider_id?)`
 
 Retrieve data for the supplied SignalK resource_type and resource_id.
 
@@ -719,6 +719,8 @@ _Note: Requires a registered Resource Provider for the supplied `resource_type`.
  or user defined resource types.
 
   - `resource_id`: The id of the resource to retrieve _(e.g. `ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+
+  - `provider_id` (optional): The id of the Resource Provider plugin to specifically use. Can be specified when more than one provider has been registered for a reource type._(e.g. `resources-provider`)_
 
 - returns:  `Promise<{[key: string]: any}>` 
 
@@ -738,7 +740,7 @@ app.resourcesApi.getResource(
 }
 ```
 
-### `app.resourcesApi.setResource(resource_type, resource_id, resource_data)`
+### `app.resourcesApi.setResource(resource_type, resource_id, resource_data, provider_id?)`
 
 Create / update value of the resource with the supplied SignalK resource_type and resource_id.
 
@@ -750,6 +752,8 @@ _Note: Requires a registered Resource Provider for the supplied `resource_type`.
   - `resource_id`: The id of the resource to retrieve _(e.g. `ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
 
   - `resource_data`: A complete and valid resource record.
+
+  - `provider_id` (optional): The id of the Resource Provider plugin to specifically use. Can be specified when more than one provider has been registered for a reource type._(e.g. `resources-provider`)_
 
 - returns:  `Promise<void>` 
 
@@ -779,7 +783,7 @@ app.resourcesApi.setResource(
 }
 ```
 
-### `app.resourcesApi.deleteResource(resource_type, resource_id)`
+### `app.resourcesApi.deleteResource(resource_type, resource_id, provider_id?)`
 
 Delete the resource with the supplied SignalK resource_type and resource_id.
 
@@ -789,6 +793,8 @@ _Note: Requires a registered Resource Provider for the supplied `resource_type`.
 or user defined resource types.
 
 - `resource_id`: The id of the resource to retrieve _(e.g. `ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+
+- `provider_id` (optional): The id of the Resource Provider plugin to specifically use. Can be specified when more than one provider has been registered for a reource type._(e.g. `resources-provider`)_
 
 - returns: `Promise<void>` 
 
@@ -807,7 +813,7 @@ app.resourcesApi.deleteResource(
 }
 ```
 
-### `app.resourcesApi.listResources(resource_type, params)`
+### `app.resourcesApi.listResources(resource_type, params, provider_id?)`
 
 Retrieve data for the supplied SignalK resource_type and resource_id.
 
@@ -817,6 +823,8 @@ _Note: Requires a registered Resource Provider for the supplied `resource_type`.
  or user defined resource types.
 
   - `params`: Object contining `key | value` pairs repesenting the parameters by which to filter the returned entries.
+
+  - `provider_id` (optional): The id of the Resource Provider plugin to specifically use. Can be specified when more than one provider has been registered for a reource type._(e.g. `resources-provider`)_
   
   __Note: The registered Resource Provider must support the supplied parameters for results to be filtered.__
 

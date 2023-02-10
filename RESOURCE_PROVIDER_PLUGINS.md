@@ -77,7 +77,7 @@ The `ResourceProviderMethods` interface is defined as follows in _`@signalk/serv
 ```typescript
 interface ResourceProviderMethods {
   listResources: (query: { [key: string]: any }) => Promise<{[id: string]: any}>
-  getResource: (id: string) => Promise<object>
+  getResource: (id: string, property?: string) => Promise<object>
   setResource: (
     id: string,
     value: { [key: string]: any }
@@ -87,7 +87,10 @@ interface ResourceProviderMethods {
 ```
 
 
-#### Methods:
+### Methods and Resource Provider Implementation:
+
+---
+**The Resource Provider is responsible for implementing the methods and returning data in the required format!**
 
 ---
 
@@ -105,7 +108,6 @@ _Example: Return waypoints within the bounded area with lower left corner at E5.
 GET /signalk/v2/api/resources/waypoints?bbox=[5.4,25.7,6.9,31.2]
 ```
 _ResourceProvider method invocation:_
-
 ```javascript
 listResources(
   {
@@ -114,10 +116,47 @@ listResources(
 );
 ```
 
----
-__`getResource(id)`__: This method is called when a request is made for a specific resource entry with the supplied id. If there is no resource associated with the id the call should return Promise.reject.
+_Returns:_
+```JSON
+{
+  "07894aba-f151-4099-aa4f-5e5773734b69": {
+    "name":"my Point",
+    "description":"A Signal K waypoint",
+    "distance":124226.65183615577,
+    "feature":{
+      "type":"Feature",
+      "geometry":{
+        "type":"Point",
+        "coordinates":[5.7,26.4]
+      },
+      "properties":{}
+    },
+    "timestamp":"2023-01-01T05:02:54.561Z",
+    "$source":"resources-provider"
+  },
+  "0c894aba-d151-4099-aa4f-be5773734e99": {
+    "name":"another point",
+    "description":"Another Signal K waypoint",
+    "distance":107226.84,
+    "feature":{
+      "type":"Feature",
+      "geometry":{
+        "type":"Point",
+        "coordinates":[6.1,29.43]
+      },
+      "properties":{}
+    },
+    "timestamp":"2023-01-01T05:02:54.561Z",
+    "$source":"resources-provider"
+  }
+}
+```
 
-- `id:` String containing the target resource entry id. _(e.g. '07894aba-f151-4099-aa4f-5e5773734b99')_
+---
+__`getResource(id, property?)`__: This method is called when a request is made for a specific resource entry with the supplied `id`. If `property` is supplied then the value of the resource property is returned. If there is no resource associated with the id the call should return Promise.reject.
+
+- `id`: String containing the target resource entry id. _(e.g. '07894aba-f151-4099-aa4f-5e5773734b99')_
+- `property` (optional):  Name of resource property for which to return the value (in dot notation). _e.g. feature.geometry.coordinates_
 
 returns: `Promise<object>`
 
@@ -126,11 +165,50 @@ _Example resource request:_
 GET /signalk/v2/api/resources/routes/07894aba-f151-4099-aa4f-5e5773734b99
 ```
 _ResourceProvider method invocation:_
-
 ```javascript
 getResource(
   '07894aba-f151-4099-aa4f-5e5773734b99'
 );
+```
+
+_Returns:_
+```JSON
+{
+  "name":"myRoute",
+  "description":"A Signal K route",
+  "distance":124226.65183615577,
+  "feature":{
+    "type":"Feature",
+    "geometry":{
+      "type":"LineString",
+      "coordinates":[[-8,-8],[-8.5,-8],[-8.5,-8.4],[-8.7,-8.3]]
+    },
+    "properties":{}
+  },
+  "timestamp":"2023-01-01T05:02:54.561Z",
+  "$source":"resources-provider"
+}
+```
+
+_Example resource property value request:_ 
+```
+GET /signalk/v2/api/resources/routes/07894aba-f151-4099-aa4f-5e5773734b99/feature/geometry/type
+```
+_ResourceProvider method invocation:_
+```javascript
+getResource(
+  '07894aba-f151-4099-aa4f-5e5773734b99',
+  'feature.geometry.type'
+);
+```
+
+_Returns:_
+```JSON
+{
+  "value": "LineString",
+  "timestamp":"2023-01-01T05:02:54.561Z",
+  "$source":"resources-provider"
+}
 ```
 
 ---
@@ -242,8 +320,8 @@ module.exports = function (app) {
           fetchRoutes(params)
           ... 
         },
-        getResource: (id) => { 
-          getRoute(id)
+        getResource: (id, property?) => { 
+          getRoute(id, property)
           ... 
         },
         setResource: (id, value )=> { 
@@ -264,8 +342,8 @@ module.exports = function (app) {
           fetchWaypoints(params)
           ... 
         },
-        getResource: (id) => { 
-          getWaypoint(id)
+        getResource: (id, property?) => { 
+          getWaypoint(id, property)
           ... 
         },
         setResource: (id, value )=> { 
@@ -326,7 +404,7 @@ module.exports = function (app) {
               }
             })
           },
-          getResource: (id) => { 
+          getResource: (id, property?) => { 
             return new Promise( (resolve, reject) => {
               ...
               if (ok) {

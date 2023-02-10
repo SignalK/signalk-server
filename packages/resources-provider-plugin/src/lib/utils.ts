@@ -114,9 +114,11 @@ const checkForNumberArray = (param: number[]): Array<number> => {
   if (!Array.isArray(param)) {
     throw new Error(`Supplied value is not valid! (Array<number>) (${param})`)
   } else {
-    param.forEach( (i:number) => {
-      if(typeof i !== 'number') {
-        throw new Error(`Supplied value is not a number array! (Array<number>) (${param})`)
+    param.forEach((i: number) => {
+      if (typeof i !== 'number') {
+        throw new Error(
+          `Supplied value is not a number array! (Array<number>) (${param})`
+        )
       }
     })
     return param

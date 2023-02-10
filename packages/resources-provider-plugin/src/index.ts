@@ -230,8 +230,8 @@ module.exports = (server: ResourceProviderApp): Plugin => {
             listResources: (params: object): any => {
               return apiGetResources(resType, params)
             },
-            getResource: (id: string) => {
-              return db.getResource(resType, getUuid(id))
+            getResource: (id: string, property?: string) => {
+              return db.getResource(resType, getUuid(id), property)
             },
             setResource: (id: string, value: any) => {
               return apiSetResource(resType, id, value)
