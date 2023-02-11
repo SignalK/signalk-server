@@ -32,6 +32,7 @@
     "dependencies": {
         "geojson-validation": "^0.2.0",
         "geolib": "^3.3.3",
+        "lodash": "^4.17.21",
         "ngeohash": "^0.6.3"
     },
     "devDependencies": {
