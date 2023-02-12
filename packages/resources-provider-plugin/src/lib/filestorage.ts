@@ -11,7 +11,6 @@ import {
 import path from 'path'
 import { IResourceStore, StoreRequestParams } from '../types'
 import { passFilter, processParameters } from './utils'
-import { get } from 'lodash'
 
 export const getUuid = (skIdentifier: string) =>
   skIdentifier.split(':').slice(-1)[0]
@@ -101,13 +100,13 @@ export class FileStore implements IResourceStore {
         await readFile(path.join(this.resources[type].path, itemUuid), 'utf8')
       )
       if (property) {
-        const value = get(result, property, undefined)
+        const value = property.split('.').reduce((acc, val) => {
+          return acc[val]
+        }, result)
         if (value) {
           result = { value: value }
         } else {
-          throw new Error(
-            `${type}/${itemUuid}.${property} not found!`
-          )
+          throw new Error(`${type}/${itemUuid}.${property} not found!`)
         }
       }
       const stats = await stat(path.join(this.resources[type].path, itemUuid))
