@@ -108,8 +108,7 @@ class Server {
       doSetProviderStatus(providerId, statusMessage, 'status', 'plugin')
     }
 
-    app.setPluginError = (providerId: string, errorMessage: string) => {
-      doSetProviderStatus(providerId, errorMessage, 'error', 'plugin')
+    app.setPluginError = (providerId: string, errorMessage: string) => {      doSetProviderStatus(providerId, errorMessage, 'error', 'plugin')
     }
 
     app.setProviderStatus = (providerId: string, statusMessage: string) => {
