@@ -21,6 +21,7 @@ function createRequest(app, type, clientRequest, user, clientIp, updateCb) {
       ip: clientIp || undefined,
       date: new Date(),
       state: 'PENDING',
+      statusCode: 202,
       updateCb: updateCb,
       user: user || undefined
     }

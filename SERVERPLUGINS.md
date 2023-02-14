@@ -408,7 +408,7 @@ Some easier to understand examples of SignalK plugins are:
 
 Internally, SignalK server builds a full data model. Plugins can access the server's delta stream (updates) and full model and provide additional data as deltas using the following functions.
 
-### `app.handleMessage(pluginId, delta)`
+### `app.handleMessage(pluginId, delta, skVersion = 'v1')`
 
 Allows the plugin to publish deltas to the server. These deltas are handled as any incoming deltas.
 
@@ -426,6 +426,8 @@ app.handleMessage('my-signalk-plugin', {
   ]
 })
 ```
+
+Deltas that use Signal K V2 paths (like the [Course API](http://localhost:3000/admin/openapi/?urls.primaryName=course) paths) should call `handleMessage` with the optional 3rd parameter set to `v2`. This prevents V2 API data getting mixed in V1 paths' data in Full model & the v1 http API. If you don't know that your data is V2 API data you can omit the third parameter, as the default is V1.
 
 ### `app.getSelfPath(path)`
 

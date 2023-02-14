@@ -345,7 +345,7 @@ export class ResourcesApi {
         }
 
         try {
-          const property = req.params['0'] 
+          const property = req.params['0']
             ? req.params['0'].split('/').join('.')
             : undefined
 
