@@ -36,6 +36,7 @@ import { listAllSerialPorts, Ports } from '../serialports'
 const debug = createDebug('signalk-server:interfaces:plugins')
 
 import { modulesWithKeyword } from '../modules'
+import { SKVersion } from '../types'
 
 const put = require('../put')
 const _putPath = put.putPath
@@ -92,7 +93,7 @@ export interface ServerAPI extends PluginServerApp {
   debug: (msg: string) => void
   registerDeltaInputHandler: (handler: DeltaInputHandler) => void
   setProviderStatus: (msg: string) => void
-  handleMessage: (id: string, msg: any) => void
+  handleMessage: (id: string, msg: any, skVersion?: SKVersion) => void
   setProviderError: (msg: string) => void
   savePluginOptions: (
     configuration: object,

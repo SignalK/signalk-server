@@ -81,6 +81,6 @@ export type Context = Brand<string, 'context'>
 export type Value = object | number | string | null
 
 export enum SKVersion {
-  v1,
-  v2
+  v1 = 'v1',
+  v2 = 'v2'
 }
