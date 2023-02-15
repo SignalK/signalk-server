@@ -148,6 +148,20 @@ export class CourseApi {
       }
     )
 
+    // course metadata
+    this.server.get(
+      `${COURSE_API_PATH}/arrivalCircle/meta`,
+      async (req: Request, res: Response) => {
+        debug(`** GET ${COURSE_API_PATH}/arrivalCircle/meta`)
+        res.json({
+          arrivalCircle: {
+              description: 'The circle which indicates arrival when vessel position is within its radius.',
+              units: 'm'
+            }
+        })
+      }
+    )
+
     this.server.put(
       `${COURSE_API_PATH}/arrivalCircle`,
       async (req: Request, res: Response) => {
