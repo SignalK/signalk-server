@@ -24,11 +24,17 @@ interface ResourceProviderApp
 
 const CONFIG_SCHEMA = {
   properties: {
+    path: {
+      type: 'string',
+      title: 'Path to store resources:',
+      description: 'File system path relative to home/<user>/.signalk',
+      default: './resources'
+    },
     standard: {
       type: 'object',
       title: 'Resources (standard)',
       description:
-        'ENABLE / DISABLE storage provider for the following SignalK resource types.',
+        'ENABLE / DISABLE provider for the following SignalK resource types.',
       properties: {
         routes: {
           type: 'boolean',
@@ -51,54 +57,48 @@ const CONFIG_SCHEMA = {
     custom: {
       type: 'array',
       title: 'Resources (custom)',
-      description: 'Define paths for custom resource types.',
+      description: 'Add provider for custom resource types.',
       items: {
         type: 'object',
         required: ['name'],
         properties: {
           name: {
             type: 'string',
-            title: 'Name',
-            description: 'Path name to use /signalk/v1/api/resources/<name>'
+            title: 'Resource Type',
+            description: '/signalk/v2/api/resources/'
           }
         }
       }
-    },
-    path: {
-      type: 'string',
-      title:
-        'Path to Resource data: URL or file system path (relative to home/<user>/.signalk)',
-      default: './resources'
     }
   }
 }
 
 const CONFIG_UISCHEMA = {
+  path: {
+    'ui:emptyValue': './resources',
+    'ui:help': ' '
+  },
   standard: {
     routes: {
       'ui:widget': 'checkbox',
       'ui:title': ' ',
-      'ui:help': 'Signal K Route resources'
+      'ui:help': '/signalk/v2/api/resources/routes'
     },
     waypoints: {
       'ui:widget': 'checkbox',
       'ui:title': ' ',
-      'ui:help': 'Signal K Waypoint resources'
+      'ui:help': '/signalk/v2/api/resources/waypoints'
     },
     notes: {
       'ui:widget': 'checkbox',
       'ui:title': ' ',
-      'ui:help': 'Signal K Note resources'
+      'ui:help': '/signalk/v2/api/resources/notes'
     },
     regions: {
       'ui:widget': 'checkbox',
       'ui:title': ' ',
-      'ui:help': 'Signal K Region resources'
+      'ui:help': '/signalk/v2/api/resources/regions'
     }
-  },
-  path: {
-    'ui:emptyValue': './resources',
-    'ui:help': 'Enter URL or path relative to home/<user>/.signalk/'
   }
 }
 
