@@ -155,9 +155,10 @@ export class CourseApi {
         debug(`** GET ${COURSE_API_PATH}/arrivalCircle/meta`)
         res.json({
           arrivalCircle: {
-              description: 'The circle which indicates arrival when vessel position is within its radius.',
-              units: 'm'
-            }
+            description:
+              'The circle which indicates arrival when vessel position is within its radius.',
+            units: 'm'
+          }
         })
       }
     )
