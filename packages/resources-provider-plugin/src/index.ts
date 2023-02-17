@@ -1,15 +1,24 @@
 import {
   Plugin,
   PluginServerApp,
-  ResourceProviderRegistry
+  ResourceProviderRegistry,
 } from '@signalk/server-api'
 
 import { FileStore, getUuid } from './lib/filestorage'
 import { StoreRequestParams } from './types'
 
-interface ResourceProviderApp
-  extends PluginServerApp,
-    ResourceProviderRegistry{}
+interface ResourceProviderApp extends PluginServerApp, ResourceProviderRegistry {
+  statusMessage?: () => string
+  error: (msg: string) => void
+  debug: (msg: string) => void
+  setPluginStatus: (pluginId: string, status?: string) => void
+  setPluginError: (pluginId: string, status?: string) => void
+  setProviderStatus: (providerId: string, status?: string) => void
+  setProviderError: (providerId: string, status?: string) => void
+  getSelfPath: (path: string) => void
+  savePluginOptions: (options: any, callback: () => void) => void
+  config: { configPath: string }
+}
 
 const CONFIG_SCHEMA = {
   properties: {
