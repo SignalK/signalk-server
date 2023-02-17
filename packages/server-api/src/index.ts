@@ -7,66 +7,24 @@ export interface Position {
   altitude?: number
 }
 
-export { PropertyValue, PropertyValues, PropertyValuesCallback } from './propertyvalues'
+export interface ActionResult {
+  state: 'COMPLETED' | 'PENDING' | 'FAILED'
+  statusCode: number
+  message?: string
+  resultStatus?: number
+}
+
+export * from './deltas'
+import { DeltaMessage, DeltaSubscription } from './deltas'
 
 export * from './resourcetypes'
+export * from './resourcesapi'
+import { ResourceProviderRegistry } from './resourcesapi'
 
-export type SignalKResourceType = 'routes' | 'waypoints' |'notes' |'regions' |'charts'
-export const SIGNALKRESOURCETYPES: SignalKResourceType[] = [
-  'routes',
-  'waypoints',
-  'notes',
-  'regions',
-  'charts'
-]
-export const isSignalKResourceType = (s: string) => SIGNALKRESOURCETYPES.includes(s as SignalKResourceType)
+export * from './autopilotapi'
+import { AutopilotProviderRegistry } from './autopilotapi'
 
-export type ResourceType = SignalKResourceType | string
-
-export interface ResourcesApi {
-  register: (pluginId: string, provider: ResourceProvider) => void;
-  unRegister: (pluginId: string) => void;
-  listResources: (
-    resType: SignalKResourceType, 
-    params: { [key: string]: any }, 
-    providerId?: string
-  ) => Promise<{[id: string]: any}>
-  getResource: (
-    resType: SignalKResourceType, 
-    resId: string, 
-    providerId?: string
-  ) => Promise<object>
-  setResource: (
-    resType: SignalKResourceType,
-    resId: string,
-    data: { [key: string]: any }, 
-    providerId?: string
-  ) => Promise<void>
-  deleteResource: (
-    resType: SignalKResourceType, 
-    resId: string, 
-    providerId?: string
-  ) => Promise<void>
-}
-
-export interface ResourceProvider {
-  type: ResourceType
-  methods: ResourceProviderMethods
-}
-
-export interface ResourceProviderMethods {
-  listResources: (query: { [key: string]: any }) => Promise<{[id: string]: any}>
-  getResource: (id: string, property?: string) => Promise<object>
-  setResource: (
-    id: string,
-    value: { [key: string]: any }
-  ) => Promise<void>
-  deleteResource: (id: string) => Promise<void>
-}
-
-export interface ResourceProviderRegistry {
-  registerResourceProvider: (provider: ResourceProvider) => void;
-}
+export { PropertyValue, PropertyValues, PropertyValuesCallback } from './propertyvalues'
 
 type Unsubscribe = () => {}
 export interface PropertyValuesEmitter {
@@ -81,7 +39,69 @@ export interface PropertyValuesEmitter {
  * INCOMPLETE, work in progress.
  */
 
- export interface PluginServerApp extends PropertyValuesEmitter, ResourceProviderRegistry {}
+export interface PluginServerApp extends PropertyValuesEmitter {
+  config: {
+    configPath: string,
+    vesselName: string | null,
+    vesselUUID: string | null,
+    settings: object
+  }
+  error: (msg: string) => void
+  debug: (msg: string) => void
+  readPluginOptions: () => object
+  savePluginOptions: (options: object, callback: () => void) => void
+  getDataDirPath: () => string
+  getSelfPath: (path: string) => any
+  getPath: (path: string) => any
+  getSerialPorts: () => Promise<{
+    byId: string[]
+    byPath: string[]
+    byOpenPlotter: string[]
+    serialports: any
+  }>
+  getOpenApi: () => string
+  setPluginStatus: (status: string) => void
+  setPluginError: (status: string) => void
+  handleMessage: (
+    id: string | null,
+    msg: DeltaMessage,
+    version?: 'v1' | 'v2'
+  ) => void
+  subscriptionmanager: {
+    subscribe: (
+      subscribe: DeltaSubscription,
+      unsubscribes: Array<() => void>,
+      errorCallback: (error: any) => void,
+      deltaCallback: (delta: DeltaMessage) => void
+    ) => void
+  }
+  registerPutHandler: (
+    context: string,
+    path: string,
+    callback: (
+      context: string,
+      path: string,
+      value: any,
+      actionResultCallback: (actionResult: ActionResult) => void
+    ) => ActionResult
+  ) => void
+  registerDeltaInputHandler: (
+    delta: DeltaMessage, 
+    next: (delta: DeltaMessage) => void
+  ) => void
+  streambundle: {
+    getSelfBus: (path: string | void) => any,
+    getSelfStream : (path: string | void) => any,
+    getBus : (path: string | void) => any,
+    getAvailablePaths: () => Array<string>
+  }
+
+  /**
+   * FIX ME: Should these be included as they are mentioned in PLUGINS.md?
+   */
+  emit: (type: string, value: string | object) => void
+  on: (msgType: string, callback: () => void) => void
+}
 
 /**
  * This is the API that a [server plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md) must implement.

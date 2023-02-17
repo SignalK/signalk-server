@@ -9,18 +9,7 @@ import { StoreRequestParams } from './types'
 
 interface ResourceProviderApp
   extends PluginServerApp,
-    ResourceProviderRegistry {
-  statusMessage?: () => string
-  error: (msg: string) => void
-  debug: (msg: string) => void
-  setPluginStatus: (pluginId: string, status?: string) => void
-  setPluginError: (pluginId: string, status?: string) => void
-  setProviderStatus: (providerId: string, status?: string) => void
-  setProviderError: (providerId: string, status?: string) => void
-  getSelfPath: (path: string) => void
-  savePluginOptions: (options: any, callback: () => void) => void
-  config: { configPath: string }
-}
+    ResourceProviderRegistry{}
 
 const CONFIG_SCHEMA = {
   properties: {
@@ -103,14 +92,12 @@ const CONFIG_UISCHEMA = {
 }
 
 module.exports = (server: ResourceProviderApp): Plugin => {
-  let subscriptions: any[] = [] // stream subscriptions
-
   const plugin: Plugin = {
     id: 'resources-provider',
     name: 'Resources Provider (built-in)',
     schema: () => CONFIG_SCHEMA,
     uiSchema: () => CONFIG_UISCHEMA,
-    start: (options: any, restart: any) => {
+    start: (options) => {
       doStartup(options)
     },
     stop: () => {
@@ -184,11 +171,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
               ? `${result.toString()} not registered!`
               : `Providing: ${apiProviderFor.toString()}`
 
-          if (typeof server.setPluginStatus === 'function') {
-            server.setPluginStatus(msg)
-          } else {
-            server.setProviderStatus(msg)
-          }
+          server.setPluginStatus(msg)
         })
         .catch((e: Error) => {
           server.debug(e.message)
@@ -205,14 +188,8 @@ module.exports = (server: ResourceProviderApp): Plugin => {
   const doShutdown = () => {
     server.debug(`${plugin.name} stopping.......`)
     server.debug('** Un-registering Update Handler(s) **')
-    subscriptions.forEach((b) => b())
-    subscriptions = []
     const msg = 'Stopped.'
-    if (typeof server.setPluginStatus === 'function') {
-      server.setPluginStatus(msg)
-    } else {
-      server.setProviderStatus(msg)
-    }
+    server.setPluginStatus(msg)
   }
 
   const getVesselPosition = () => {
