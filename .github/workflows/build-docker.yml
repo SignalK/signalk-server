@@ -3,8 +3,8 @@ name: Build Docker development container
 on:
   push:
     branches:
-      - master
-      - 'build-docker'
+    - master
+    - "build-docker"
     tags:
       - '*'
       - '!v*'
@@ -34,6 +34,8 @@ jobs:
           cd ../server-api
           npm pack && mv *.tgz ../../
           cd ../streams
+          npm pack && mv *.tgz ../../
+          cd ../resources-provider-plugin
           npm pack && mv *.tgz ../../
           cd ../..
           jq '.workspaces=[]' package.json > _package.json && mv _package.json package.json

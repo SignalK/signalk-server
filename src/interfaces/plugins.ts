@@ -18,7 +18,8 @@
 import {
   PluginServerApp,
   PropertyValues,
-  PropertyValuesCallback
+  PropertyValuesCallback,
+  ResourceProvider
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -27,6 +28,7 @@ import express, { Request, Response } from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
+import { ResourcesApi } from '../api/resources'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
 import { DeltaInputHandler } from '../deltachain'
@@ -34,6 +36,7 @@ import { listAllSerialPorts, Ports } from '../serialports'
 const debug = createDebug('signalk-server:interfaces:plugins')
 
 import { modulesWithKeyword } from '../modules'
+import { SKVersion } from '../types'
 
 const put = require('../put')
 const _putPath = put.putPath
@@ -90,7 +93,7 @@ export interface ServerAPI extends PluginServerApp {
   debug: (msg: string) => void
   registerDeltaInputHandler: (handler: DeltaInputHandler) => void
   setProviderStatus: (msg: string) => void
-  handleMessage: (id: string, msg: any) => void
+  handleMessage: (id: string, msg: any, skVersion?: SKVersion) => void
   setProviderError: (msg: string) => void
   savePluginOptions: (
     configuration: object,
@@ -468,6 +471,9 @@ module.exports = (theApp: any) => {
         console.error(`${plugin.id}:no configuration data`)
         safeConfiguration = {}
       }
+      onStopHandlers[plugin.id].push(() =>
+        app.resourcesApi.unRegister(plugin.id)
+      )
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
@@ -540,6 +546,13 @@ module.exports = (theApp: any) => {
       getMetadata
     })
     appCopy.putPath = putPath
+
+    const resourcesApi: ResourcesApi = app.resourcesApi
+    _.omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager
+    appCopy.registerResourceProvider = (provider: ResourceProvider) => {
+      resourcesApi.register(plugin.id, provider)
+    }
+
     try {
       const pluginConstructor: (
         app: ServerAPI

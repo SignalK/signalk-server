@@ -1,6 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { IRouter, Request, Response } from 'express'
 import swaggerUi from 'swagger-ui-express'
 import { SERVERROUTESPREFIX } from '../constants'
+import { courseApiRecord } from './course/openApi'
+import { notificationsApiRecord } from './notifications/openApi'
+import { resourcesApiRecord } from './resources/openApi'
 import { securityApiRecord } from './security/openApi'
 import { discoveryApiRecord } from './discovery/openApi'
 import { appsApiRecord } from './apps/openApi'
@@ -24,7 +28,10 @@ interface ApiRecords {
 const apiDocs = [
   discoveryApiRecord,
   appsApiRecord,
-  securityApiRecord
+  securityApiRecord,
+  courseApiRecord,
+  notificationsApiRecord,
+  resourcesApiRecord
 ].reduce<ApiRecords>((acc, apiRecord: OpenApiRecord) => {
   acc[apiRecord.name] = apiRecord
   return acc

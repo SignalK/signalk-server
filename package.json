@@ -1,10 +1,10 @@
 {
   "name": "signalk-server",
-  "version": "1.46.3",
+  "version": "2.00.0-rc0",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --build",
     "build:all": "npm run build:workspaces && npm run build && npm run build-declaration",
     "build:workspaces": "npm run build --workspaces --if-present",
     "build-declaration": "tsc --declaration",
@@ -74,16 +74,20 @@
     "packages/server-admin-ui-dependencies",
     "packages/server-admin-ui",
     "packages/streams",
-    "packages/server-api"
+    "packages/server-api",
+    "packages/resources-provider-plugin"
   ],
   "dependencies": {
+    "@signalk/course-provider": "^1.0.0-beta.3",
     "@signalk/n2k-signalk": "^2.0.0",
     "@signalk/nmea0183-signalk": "^3.0.0",
+    "@signalk/resources-provider": "github:SignalK/resources-provider-plugin",
     "@signalk/server-admin-ui": "1.46.x",
     "@signalk/server-api": "1.39.x",
     "@signalk/signalk-schema": "1.5.1",
     "@signalk/streams": "2.x",
     "@types/debug": "^4.1.5",
+    "api-schema-builder": "^2.0.11",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.14.1",
@@ -132,7 +136,7 @@
     "ws": "^7.0.0"
   },
   "optionalDependencies": {
-    "@signalk/freeboard-sk": "^1.0.0",
+    "@signalk/freeboard-sk": "^2.0.0-beta.3",
     "@signalk/instrumentpanel": "0.x",
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
@@ -151,6 +155,7 @@
     "@types/mocha": "^10.0.1",
     "@types/ncp": "^2.0.5",
     "@types/node-fetch": "^2.5.3",
+    "@types/rmfr": "^2.0.1",
     "@types/semver": "^7.1.0",
     "@types/serialport": "^8.0.1",
     "@types/split": "^1.0.0",
@@ -172,6 +177,7 @@
     "mocha": "^10.2.0",
     "prettier": "^2.7.1",
     "rimraf": "^3.0.2",
+    "rmfr": "^2.0.0",
     "ts-node": "^10.9.1",
     "typedoc": "^0.23.23",
     "typescript": "^4.8.3"

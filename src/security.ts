@@ -184,6 +184,13 @@ export interface SecurityStrategy {
     password: string,
     cb: ICallback<SecurityConfig>
   ) => void
+
+  shouldAllowPut: (
+    req: Request,
+    context: string,
+    source: any,
+    path: string
+  ) => boolean
 }
 
 export class InvalidTokenError extends Error {

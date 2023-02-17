@@ -205,16 +205,21 @@ describe('Subscriptions', _ => {
     await sendDelta(getDelta({ context: self }), deltaUrl)
     await sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
 
-    //skip 2nd message that is delta from defaults
-    const echoedDelta = await wsPromiser.nthMessage(3)
-    assert(JSON.parse(echoedDelta).updates[0].source.pgn === 128275)
+    //wait 250 ms so that we've received everything over ws
+    await new Promise((resolve) => setTimeout(resolve, 250))
 
-    try {
-      await wsPromiser.nthMessage(4)
-      throw new Error('no more messages should arrive')
-    } catch (e) {
-      assert.strictEqual(e, 'timeout')
-    }
+    //retrieve all deltas thus far
+    const messages = wsPromiser.parsedMessages().slice(1)
+
+    //all deltas must have self context
+    messages.forEach((delta) => delta.context.should.equal(self))
+
+    //check for the delta we sent
+    messages
+      .findIndex(
+        (delta) => delta.updates[0].source && delta.updates[0].source.pgn
+      )
+      .should.be.at.least(0)
   }
 
   it('?subscribe=self subscription serves self data', async function () {
@@ -236,14 +241,19 @@ describe('Subscriptions', _ => {
     await sendDelta(getDelta({ context: self }), deltaUrl)
     await sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
 
-    //skip 2nd message that is delta from defaults
-    const echoedSelfDelta = await wsPromiser.nthMessage(3)
-    assert(JSON.parse(echoedSelfDelta).updates[0].source.pgn === 128275)
-
-    const echoedOtherDelta = await wsPromiser.nthMessage(4)
+    //wait so that we've received everything over ws
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    const deltas = wsPromiser.parsedMessages().slice(1)
+    const deltasWeSent = deltas.filter(
+      (d) => d.updates[0].source && d.updates[0].source.pgn === 128275
+    )
+   assert(
+      deltasWeSent.filter((d) => d.context === self).length === 1,
+      'Received self delta'
+    )
     assert(
-      JSON.parse(echoedOtherDelta).context === 'vessels.othervessel',
-      'Sends other vessel data'
+      deltasWeSent.filter((d) => d.context === 'vessels.othervessel').length === 1,
+      'Received other vessel delta'
     )
   })
 
@@ -393,7 +403,7 @@ describe('Subscriptions', _ => {
         )
         assert(delta.updates.length === 1, 'Receives just one update')
         assert(delta.updates[0].values.length === 1, 'Receives just one value')
-        assert(delta.context === 'vessels.' + self)
+        assert(delta.context === `vessels.${self}`)
         assert(delta.updates[0].timestamp, '2014-05-03T09:14:11.001Z')
 
         return wsPromiser.nthMessage(6) //othervessel, 1st delta
