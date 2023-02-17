@@ -1,6 +1,8 @@
 node_modules
 !test/plugin-test-config/node_modules/
 
+*.tsbuildinfo
+
 lib/
 
 .DS_Store

@@ -1,0 +1,18 @@
+{
+    "name": "lock",
+    "description": "this is the lock",
+    "feature": {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          23.435321561218167,
+          59.98480312764812
+        ]
+      },
+      "properties": {},
+      "id": ""
+    },
+    "timestamp": "2022-04-21T18:23:19.815Z",
+    "$source": "resources-provider"
+  }

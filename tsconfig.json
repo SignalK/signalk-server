@@ -6,12 +6,11 @@
     "esModuleInterop": true,
     "strict": true,
     "allowJs": true,
+    "typeRoots": ["./src/types", "./node_modules/@types"],
     "resolveJsonModule": true,
     "rootDir": "./src"
   },
-  "include": [
-    "./src/**/*"
-  ],
+  "include": ["./src/**/*"],
   "exclude": ["node_modules"],
   "typedocOptions": {
     "mode": "modules",
@@ -28,5 +27,13 @@
     "suppressExcessPropertyErrors": true,
     "suppressImplicitAnyIndexErrors": true,
     "module": "commonjs"
-  }
+  },
+  "references": [
+    {
+      "path": "./packages/server-api"
+    },
+    {
+      "path": "./packages/resources-provider-plugin"
+    }
+  ]
 }

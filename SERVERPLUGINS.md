@@ -408,7 +408,7 @@ Some easier to understand examples of SignalK plugins are:
 
 Internally, SignalK server builds a full data model. Plugins can access the server's delta stream (updates) and full model and provide additional data as deltas using the following functions.
 
-### `app.handleMessage(pluginId, delta)`
+### `app.handleMessage(pluginId, delta, skVersion = 'v1')`
 
 Allows the plugin to publish deltas to the server. These deltas are handled as any incoming deltas.
 
@@ -426,6 +426,8 @@ app.handleMessage('my-signalk-plugin', {
   ]
 })
 ```
+
+Deltas that use Signal K V2 paths (like the [Course API](http://localhost:3000/admin/openapi/?urls.primaryName=course) paths) should call `handleMessage` with the optional 3rd parameter set to `v2`. This prevents V2 API data getting mixed in V1 paths' data in Full model & the v1 http API. If you don't know that your data is V2 API data you can omit the third parameter, as the default is V1.
 
 ### `app.getSelfPath(path)`
 
@@ -709,7 +711,7 @@ app.registerDeltaInputHandler((delta, next) => {
 See [`RESOURCE_PROVIDER_PLUGINS`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
 
 ---
-### `app.resourcesApi.getResource(resource_type, resource_id)`
+### `app.resourcesApi.getResource(resource_type, resource_id, provider_id?)`
 
 Retrieve data for the supplied SignalK resource_type and resource_id.
 
@@ -718,7 +720,9 @@ _Note: Requires a registered Resource Provider for the supplied `resource_type`.
   - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
  or user defined resource types.
 
-  - `resource_id`: The id of the resource to retrieve _(e.g. `urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+  - `resource_id`: The id of the resource to retrieve _(e.g. `ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+
+  - `provider_id` (optional): The id of the Resource Provider plugin to specifically use. Can be specified when more than one provider has been registered for a reource type._(e.g. `resources-provider`)_
 
 - returns:  `Promise<{[key: string]: any}>` 
 
@@ -726,7 +730,7 @@ _Example:_
 ```javascript
 app.resourcesApi.getResource(
   'routes', 
-  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
 ).then (data => {
   // route data
   console.log(data);
@@ -738,7 +742,7 @@ app.resourcesApi.getResource(
 }
 ```
 
-### `app.resourcesApi.setResource(resource_type, resource_id, resource_data)`
+### `app.resourcesApi.setResource(resource_type, resource_id, resource_data, provider_id?)`
 
 Create / update value of the resource with the supplied SignalK resource_type and resource_id.
 
@@ -747,9 +751,11 @@ _Note: Requires a registered Resource Provider for the supplied `resource_type`.
   - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
  or user defined resource types.
 
-  - `resource_id`: The id of the resource to retrieve _(e.g. `urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+  - `resource_id`: The id of the resource to retrieve _(e.g. `ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
 
   - `resource_data`: A complete and valid resource record.
+
+  - `provider_id` (optional): The id of the Resource Provider plugin to specifically use. Can be specified when more than one provider has been registered for a reource type._(e.g. `resources-provider`)_
 
 - returns:  `Promise<void>` 
 
@@ -757,7 +763,7 @@ _Example:_
 ```javascript
 app.resourcesApi.setResource(
   'waypoints',
-  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
   {
     "position": {"longitude": 138.5, "latitude": -38.6}, 
     "feature": {
@@ -779,7 +785,7 @@ app.resourcesApi.setResource(
 }
 ```
 
-### `app.resourcesApi.deleteResource(resource_type, resource_id)`
+### `app.resourcesApi.deleteResource(resource_type, resource_id, provider_id?)`
 
 Delete the resource with the supplied SignalK resource_type and resource_id.
 
@@ -788,7 +794,9 @@ _Note: Requires a registered Resource Provider for the supplied `resource_type`.
 - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
 or user defined resource types.
 
-- `resource_id`: The id of the resource to retrieve _(e.g. `urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+- `resource_id`: The id of the resource to retrieve _(e.g. `ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+
+- `provider_id` (optional): The id of the Resource Provider plugin to specifically use. Can be specified when more than one provider has been registered for a reource type._(e.g. `resources-provider`)_
 
 - returns: `Promise<void>` 
 
@@ -796,7 +804,7 @@ _Example:_
 ```javascript
 app.resourcesApi.deleteResource(
   'notes', 
-  'urn:mrn:signalk:uuid:ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
 ).then ( () => {
   // success
   ...
@@ -807,7 +815,7 @@ app.resourcesApi.deleteResource(
 }
 ```
 
-### `app.resourcesApi.listResources(resource_type, params)`
+### `app.resourcesApi.listResources(resource_type, params, provider_id?)`
 
 Retrieve data for the supplied SignalK resource_type and resource_id.
 
@@ -817,6 +825,8 @@ _Note: Requires a registered Resource Provider for the supplied `resource_type`.
  or user defined resource types.
 
   - `params`: Object contining `key | value` pairs repesenting the parameters by which to filter the returned entries.
+
+  - `provider_id` (optional): The id of the Resource Provider plugin to specifically use. Can be specified when more than one provider has been registered for a reource type._(e.g. `resources-provider`)_
   
   __Note: The registered Resource Provider must support the supplied parameters for results to be filtered.__
 

@@ -1,6 +1,34 @@
 import { IRouter } from 'express'
 import { PropertyValuesCallback } from './propertyvalues'
 
+export interface Position {
+  latitude: number
+  longitude: number
+  altitude?: number
+}
+
+export interface ActionResult {
+  state: 'COMPLETED' | 'PENDING' | 'FAILED'
+  statusCode: number
+  message?: string
+  resultStatus?: number
+}
+
+export enum SKVersion {
+  v1 = 'v1',
+  v2 = 'v2'
+}
+
+export * from './deltas'
+import { DeltaMessage, DeltaSubscription } from './deltas'
+
+export * from './resourcetypes'
+export * from './resourcesapi'
+import { ResourceProviderRegistry } from './resourcesapi'
+
+export * from './autopilotapi'
+import { AutopilotProviderRegistry } from './autopilotapi'
+
 export { PropertyValue, PropertyValues, PropertyValuesCallback } from './propertyvalues'
 
 type Unsubscribe = () => {}
@@ -16,7 +44,8 @@ export interface PropertyValuesEmitter {
  * INCOMPLETE, work in progress.
  */
 
- export interface PluginServerApp extends PropertyValuesEmitter {}
+export interface PluginServerApp extends PropertyValuesEmitter, ResourceProviderRegistry {}
+
 
 /**
  * This is the API that a [server plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md) must implement.

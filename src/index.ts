@@ -25,11 +25,12 @@ if (typeof [].includes !== 'function') {
 import { PropertyValues } from '@signalk/server-api'
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import { Debugger } from 'debug'
-import express, { Request, Response } from 'express'
+import express, { IRouter, Request, Response } from 'express'
 import http from 'http'
 import https from 'https'
 import _ from 'lodash'
 import path from 'path'
+import { startApis } from './api'
 import { SelfIdentity, ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
@@ -43,11 +44,12 @@ import {
   getCertificateOptions,
   getSecurityConfig,
   saveSecurityConfig,
-  startSecurity
+  startSecurity,
+  WithSecurityStrategy
 } from './security.js'
 import { setupCors } from './cors'
 import SubscriptionManager from './subscriptionmanager'
-import { Delta } from './types'
+import { Delta, SKVersion } from './types'
 const debug = createDebug('signalk-server')
 
 const { StreamBundle } = require('./streambundle')
@@ -57,7 +59,12 @@ interface ServerOptions {
 }
 
 class Server {
-  app: ServerApp & SelfIdentity & WithConfig & SignalKMessageHub
+  app: ServerApp &
+    SelfIdentity &
+    WithConfig &
+    SignalKMessageHub &
+    WithSecurityStrategy &
+    IRouter
   constructor(opts: ServerOptions) {
     const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
     const bodyParser = require('body-parser')
@@ -83,9 +90,17 @@ class Server {
 
     app.propertyValues = new PropertyValues()
 
-    const deltachain = new DeltaChain(app.signalk.addDelta.bind(app.signalk))
-    app.registerDeltaInputHandler = (handler: DeltaInputHandler) =>
-      deltachain.register(handler)
+    const deltachainV1 = new DeltaChain(app.signalk.addDelta.bind(app.signalk))
+    const deltachainV2 = new DeltaChain((delta: Delta) =>
+      app.signalk.emit('delta', delta)
+    )
+    app.registerDeltaInputHandler = (handler: DeltaInputHandler) => {
+      const unRegisterHandlers = [
+        deltachainV1.register(handler),
+        deltachainV2.register(handler)
+      ]
+      return () => unRegisterHandlers.forEach((f) => f())
+    }
 
     app.providerStatus = {}
 
@@ -93,7 +108,8 @@ class Server {
       doSetProviderStatus(providerId, statusMessage, 'status', 'plugin')
     }
 
-    app.setPluginError = (providerId: string, errorMessage: string) => {      doSetProviderStatus(providerId, errorMessage, 'error', 'plugin')
+    app.setPluginError = (providerId: string, errorMessage: string) => {
+      doSetProviderStatus(providerId, errorMessage, 'error', 'plugin')
     }
 
     app.setProviderStatus = (providerId: string, statusMessage: string) => {
@@ -196,7 +212,11 @@ class Server {
     }
     app.activateSourcePriorities()
 
-    app.handleMessage = (providerId: string, data: any) => {
+    app.handleMessage = (
+      providerId: string,
+      data: any,
+      skVersion = SKVersion.v1
+    ) => {
       if (data && data.updates) {
         incDeltaStatistics(app, providerId)
 
@@ -223,7 +243,12 @@ class Server {
           }
         })
         try {
-          deltachain.process(toPreferredDelta(data, now, app.selfContext))
+          const preferredDelta = toPreferredDelta(data, now, app.selfContext)
+          if (skVersion == SKVersion.v1) {
+            deltachainV1.process(preferredDelta)
+          } else {
+            deltachainV2.process(preferredDelta)
+          }
         } catch (err) {
           console.error(err)
         }
@@ -349,8 +374,9 @@ class Server {
 
     app.intervals.push(startDeltaStatistics(app))
 
-    return new Promise((resolve, reject) => {
-      createServer(app, (err, server) => {
+    // eslint-disable-next-line no-async-promise-executor
+    return new Promise(async (resolve, reject) => {
+      createServer(app, async (err, server) => {
         if (err) {
           reject(err)
           return
@@ -364,6 +390,7 @@ class Server {
 
         sendBaseDeltas(app as unknown as ConfigApp)
 
+        await startApis(app)
         startInterfaces(app)
         startMdns(app)
         app.providers = require('./pipedproviders')(app).start()

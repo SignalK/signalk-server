@@ -79,7 +79,8 @@ export type Delta = any
 export type Path = Brand<string, 'path'>
 export type Context = Brand<string, 'context'>
 export type Value = object | number | string | null
-export interface Position {
-  latitude: number
-  longitude: number
+
+export enum SKVersion {
+  v1 = 'v1',
+  v2 = 'v2'
 }

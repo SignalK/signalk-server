@@ -3,9 +3,9 @@ chai.Should()
 chai.use(require('chai-things'))
 chai.use(require('@signalk/signalk-schema').chaiModule)
 const _ = require('lodash')
-const assert = require('assert')
 const freeport = require('freeport-promise')
 const { startServerP, sendDelta } = require('./servertestutilities')
+const { COURSE_API_INITIAL_DELTA_COUNT } = require('../lib/api/course/')
 
 const testDelta = {
   context: 'vessels.self',
@@ -201,6 +201,7 @@ describe('deltacache', () => {
         self.should.have.nested.property('name', 'TestBoat')
 
         delete self.imaginary
+        delete self.navigation.course //FIXME until in schema
         fullTree.should.be.validSignalK
       })
     })
@@ -209,8 +210,11 @@ describe('deltacache', () => {
   it('deltas ordered properly', function () {
     return serverP.then(server => {
       return deltaP.then(() => {
-        var deltas = server.app.deltaCache.getCachedDeltas(delta => true, null)
-        assert(deltas.length == expectedOrder.length)
+        // eslint-disable-next-line no-unused-vars
+        var deltas = server.app.deltaCache.getCachedDeltas((delta) => true, null)
+          .filter(delta => delta.updates[0].$source != 'courseApi')
+        // console.log(JSON.stringify(deltas, null, 2))
+        deltas.length.should.equal(expectedOrder.length)
         for (var i = 0; i < expectedOrder.length; i++) {
           if (!deltas[i].updates[0].meta) {
             deltas[i].updates[0].values[0].path.should.equal(
@@ -232,8 +236,10 @@ describe('deltacache', () => {
         const fullTree = server.app.deltaCache.buildFull(null, ['sources'])
         const self = _.get(fullTree, fullTree.self)
         delete self.imaginary
+        delete self.navigation.course //FIXME until in schema
         fullTree.should.be.validSignalK
         fullTree.sources.should.deep.equal({
+          courseApi: {},
           defaults: {},
           deltaFromHttp: {}
         })

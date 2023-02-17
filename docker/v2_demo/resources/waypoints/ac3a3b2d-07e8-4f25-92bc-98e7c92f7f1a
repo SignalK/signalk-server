@@ -1,0 +1,17 @@
+{
+    "name": "demo waypoint",
+    "description": "",
+    "feature": {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          23.455311064598344,
+          59.99716209068623
+        ]
+      },
+      "properties": {},
+      "id": ""
+    }
+  }
+  

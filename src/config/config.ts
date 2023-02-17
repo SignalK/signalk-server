@@ -29,6 +29,12 @@ const debug = createDebug('signalk-server:config')
 
 let disableWriteSettings = false
 
+// use dynamic path so that ts compiler does not detect this
+// json file, as ts compile needs to copy all (other) used
+// json files under /lib
+// tslint:disable-next-line
+const packageJson = require('../../' + 'package.json')
+
 export interface Config {
   getExternalHostname: () => string
   getExternalPort: (config: Config) => number
@@ -90,18 +96,21 @@ export function load(app: ConfigApp) {
   debug('appPath:' + config.appPath)
 
   try {
-    const pkg = require('../../package.json')
-    config.name = pkg.name
-    config.author = pkg.author
-    config.contributors = pkg.contributors
-    config.version = pkg.version
-    config.description = pkg.description
+    config.name = packageJson.name
+    config.author = packageJson.author
+    config.contributors = packageJson.contributors
+    config.version = packageJson.version
+    config.description = packageJson.description
 
     //if dependencies are installed from tarballs like in
     //master docker build the version will be like
     //file:signalk-server-admin-ui-1.44.1.tgz
     if (!process.env.SKIP_ADMINUI_VERSION_CHECK) {
-      checkPackageVersion('@signalk/server-admin-ui', pkg, app.config.appPath)
+      checkPackageVersion(
+        '@signalk/server-admin-ui',
+        packageJson,
+        app.config.appPath
+      )
     }
   } catch (err) {
     console.error('error parsing package.json', err)
@@ -502,5 +511,6 @@ module.exports = {
   writeDefaultsFile,
   readDefaultsFile,
   sendBaseDeltas,
-  writeBaseDeltasFile
+  writeBaseDeltasFile,
+  package: packageJson
 }
