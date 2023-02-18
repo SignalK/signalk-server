@@ -12,12 +12,15 @@ export type PropertyValuesCallback = (
   propValuesHistory: PropertyValue[]
 ) => void
 
+interface StreamTuple {
+  bus: Bus
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  stream: any
+}
+
 export class PropertyValues {
   private streams: {
-    [key: string]: {
-      bus: Bus
-      stream: any
-    }
+    [key: string]: StreamTuple
   } = {}
   private count = 0
 
@@ -41,17 +44,18 @@ export class PropertyValues {
   private getStreamTuple(propName: string) {
     let streamTuple = this.streams[propName]
     if (!streamTuple) {
-      streamTuple = {
-        bus: new Bacon.Bus(),
-        stream: null
-      }
-      streamTuple.stream = streamTuple.bus
+      const bus = new Bacon.Bus()
+      const stream = bus
         .scan([], (acc: PropertyValue[], v: PropertyValue) => {
           acc.push(v)
           this.count++
           return acc
         })
         .toProperty()
+      streamTuple = {
+        bus,
+        stream
+      }
       streamTuple.stream.subscribe(() => ({})) // start the stream eagerly
       streamTuple.bus.push(undefined)
       this.streams[propName] = streamTuple
