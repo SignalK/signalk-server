@@ -18,8 +18,8 @@ export interface Route {
 }
 
 export interface Waypoint {
-  name?: string,
-  description?: string,
+  name?: string
+  description?: string
   feature: {
     type: 'Feature'
     geometry: {

@@ -1,5 +1,9 @@
-
-export type SignalKResourceType = 'routes' | 'waypoints' |'notes' |'regions' |'charts'
+export type SignalKResourceType =
+  | 'routes'
+  | 'waypoints'
+  | 'notes'
+  | 'regions'
+  | 'charts'
 
 export const SIGNALKRESOURCETYPES: SignalKResourceType[] = [
   'routes',
@@ -8,32 +12,36 @@ export const SIGNALKRESOURCETYPES: SignalKResourceType[] = [
   'regions',
   'charts'
 ]
-export const isSignalKResourceType = (s: string) => SIGNALKRESOURCETYPES.includes(s as SignalKResourceType)
+export const isSignalKResourceType = (s: string) =>
+  SIGNALKRESOURCETYPES.includes(s as SignalKResourceType)
 
 export type ResourceType = SignalKResourceType | string
 
 export interface ResourcesApi {
-  register: (pluginId: string, provider: ResourceProvider) => void;
-  unRegister: (pluginId: string) => void;
+  register: (pluginId: string, provider: ResourceProvider) => void
+  unRegister: (pluginId: string) => void
   listResources: (
-    resType: SignalKResourceType, 
-    params: { [key: string]: any }, 
+    resType: SignalKResourceType,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    params: { [key: string]: any },
     providerId?: string
-  ) => Promise<{[id: string]: any}>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ) => Promise<{ [id: string]: any }>
   getResource: (
-    resType: SignalKResourceType, 
-    resId: string, 
+    resType: SignalKResourceType,
+    resId: string,
     providerId?: string
   ) => Promise<object>
   setResource: (
     resType: SignalKResourceType,
     resId: string,
-    data: { [key: string]: any }, 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data: { [key: string]: any },
     providerId?: string
   ) => Promise<void>
   deleteResource: (
-    resType: SignalKResourceType, 
-    resId: string, 
+    resType: SignalKResourceType,
+    resId: string,
     providerId?: string
   ) => Promise<void>
 }
@@ -44,15 +52,20 @@ export interface ResourceProvider {
 }
 
 export interface ResourceProviderMethods {
-  listResources: (query: { [key: string]: any }) => Promise<{[id: string]: any}>
+  listResources: (query: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    [key: string]: any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }) => Promise<{ [id: string]: any }>
   getResource: (id: string, property?: string) => Promise<object>
   setResource: (
     id: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: { [key: string]: any }
   ) => Promise<void>
   deleteResource: (id: string) => Promise<void>
 }
 
 export interface ResourceProviderRegistry {
-  registerResourceProvider: (provider: ResourceProvider) => void;
+  registerResourceProvider: (provider: ResourceProvider) => void
 }
