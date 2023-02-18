@@ -31,7 +31,7 @@ import { AutopilotProviderRegistry } from './autopilotapi'
 
 export { PropertyValue, PropertyValues, PropertyValuesCallback } from './propertyvalues'
 
-type Unsubscribe = () => {}
+type Unsubscribe = () => void
 export interface PropertyValuesEmitter {
   emitPropertyValue: (name: string, value: any) => void
   onPropertyValues: (name: string, cb: PropertyValuesCallback) => Unsubscribe
