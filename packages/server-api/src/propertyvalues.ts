@@ -5,6 +5,7 @@ export interface PropertyValue {
   timestamp: number // millis
   setter: string // plugin id, server
   name: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any
 }
 

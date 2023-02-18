@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { PropertyValue, PropertyValues } from './propertyvalues'
 
-const setupTest = (done: () => any, startAt: number) => {
+const setupTest = (done: () => void, startAt: number) => {
   const testValues = [
     {
       timestamp: Date.now(),
@@ -26,14 +26,14 @@ const setupTest = (done: () => any, startAt: number) => {
 }
 
 describe('PropertyValues', () => {
-  it('early subscriptions work', done => {
+  it('early subscriptions work', (done) => {
     const { pv, cb, testValues } = setupTest(done, 0)
     // subscribe, then emit
     pv.onPropertyValues('foo', cb)
     pv.emitPropertyValue(testValues[0])
   })
 
-  it('late subscriptions work', done => {
+  it('late subscriptions work', (done) => {
     const { pv, cb, testValues } = setupTest(done, 1)
     // emit, then subscribe
     pv.emitPropertyValue(testValues[0])
@@ -51,6 +51,7 @@ describe('PropertyValues', () => {
   })
 })
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const newPropertyValue = (value: any) => ({
   timestamp: Date.now(),
   setter: 'foobar',

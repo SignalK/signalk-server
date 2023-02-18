@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 export interface Bus {
   onValue: (callback: (value: any) => any) => () => void
   push: (v: any) => void

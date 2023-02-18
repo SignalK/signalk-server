@@ -20,19 +20,21 @@ export enum SKVersion {
 }
 
 export * from './deltas'
-import { DeltaMessage, DeltaSubscription } from './deltas'
-
 export * from './resourcetypes'
 export * from './resourcesapi'
 import { ResourceProviderRegistry } from './resourcesapi'
 
 export * from './autopilotapi'
-import { AutopilotProviderRegistry } from './autopilotapi'
 
-export { PropertyValue, PropertyValues, PropertyValuesCallback } from './propertyvalues'
+export {
+  PropertyValue,
+  PropertyValues,
+  PropertyValuesCallback
+} from './propertyvalues'
 
 type Unsubscribe = () => void
 export interface PropertyValuesEmitter {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   emitPropertyValue: (name: string, value: any) => void
   onPropertyValues: (name: string, cb: PropertyValuesCallback) => Unsubscribe
 }
@@ -44,8 +46,9 @@ export interface PropertyValuesEmitter {
  * INCOMPLETE, work in progress.
  */
 
-export interface PluginServerApp extends PropertyValuesEmitter, ResourceProviderRegistry {}
-
+export interface PluginServerApp
+  extends PropertyValuesEmitter,
+    ResourceProviderRegistry {}
 
 /**
  * This is the API that a [server plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md) must implement.
@@ -72,7 +75,7 @@ export interface Plugin {
    * in the admin UI
    * - when a plugin is Enabled in the admin UI
    */
-  start: (config: object, restart: (newConfiguration: object) => void) => any
+  start: (config: object, restart: (newConfiguration: object) => void) => void
 
   /**
    * Called to stop the plugin. Called when the user disables the plugin in the admin UI.
