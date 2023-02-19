@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // utility library functions
 
 import {
@@ -5,13 +6,14 @@ import {
   getCenterOfBounds,
   isPointInPolygon
 } from 'geolib'
+import { GeolibInputCoordinates } from 'geolib/es/types'
 import ngeohash from 'ngeohash'
 
 // check geometry is in bounds
 export const inBounds = (
   val: any,
   type: string,
-  polygon: number[]
+  polygon: GeolibInputCoordinates[]
 ): boolean => {
   let ok = false
   switch (type) {
@@ -165,8 +167,8 @@ export const processParameters = (params: any) => {
 }
 
 // convert bbox  string to array of points (polygon)
-export const toPolygon = (bbox: number[]) => {
-  const polygon = []
+export const toPolygon = (bbox: number[]): GeolibInputCoordinates[] => {
+  const polygon: GeolibInputCoordinates[] = []
   if (bbox.length === 4) {
     polygon.push([bbox[0], bbox[1]])
     polygon.push([bbox[0], bbox[3]])

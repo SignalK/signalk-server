@@ -25,9 +25,11 @@
         "build": "tsc",
         "build-declaration": "tsc --declaration --allowJs false",
         "watch": "npm run build -- -w",
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "start": "npm run build -- -w",
-        "format": "prettier --write src/*"
+        "prettier": "prettier -w src/",
+        "lint": "eslint -c .eslintrc.js --ext .ts --ext .js --fix src/",
+        "format": "npm run prettier && npm run lint",
+        "ci-lint": "eslint -c .eslintrc.js --ext .ts --ext .js src/ && prettier --check src/",
+        "test": "npm run build-declaration && npm run ci-lint"
     },
     "dependencies": {
         "geojson-validation": "^0.2.0",
@@ -39,7 +41,11 @@
         "@types/express": "^4.17.6",
         "@types/ngeohash": "^0.6.4",
         "@types/node-fetch": "^2.5.6",
-        "prettier": "^2.5.1",
+        "@typescript-eslint/eslint-plugin": "^5.52.0",
+        "@typescript-eslint/parser": "^5.52.0",
+        "eslint": "^8.34.0",
+        "eslint-config-prettier": "^8.6.0",
+        "prettier": "^2.8.4",
         "typescript": "^4.5.4"
     },
     "signalk-plugin-enabled-by-default": true
