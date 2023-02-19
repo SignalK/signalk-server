@@ -22,7 +22,14 @@ if (typeof [].includes !== 'function') {
   process.exit(-1)
 }
 
-import { PropertyValues } from '@signalk/server-api'
+import {
+  Delta,
+  PropertyValues,
+  SKVersion,
+  SourceRef,
+  Timestamp,
+  Update
+} from '@signalk/server-api'
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import { Debugger } from 'debug'
 import express, { IRouter, Request, Response } from 'express'
@@ -49,7 +56,6 @@ import {
 } from './security.js'
 import { setupCors } from './cors'
 import SubscriptionManager from './subscriptionmanager'
-import { Delta, SKVersion } from './types'
 const debug = createDebug('signalk-server')
 
 const { StreamBundle } = require('./streambundle')
@@ -227,7 +233,7 @@ class Server {
           data.context = 'vessels.' + app.selfId
         }
         const now = new Date()
-        data.updates.forEach((update: Delta) => {
+        data.updates.forEach((update: Update) => {
           if (typeof update.source !== 'undefined') {
             update.source.label = providerId
             if (!update.$source) {
@@ -235,11 +241,11 @@ class Server {
             }
           } else {
             if (typeof update.$source === 'undefined') {
-              update.$source = providerId
+              update.$source = providerId as SourceRef
             }
           }
           if (!update.timestamp || app.config.overrideTimestampWithNow) {
-            update.timestamp = now.toISOString()
+            update.timestamp = now.toISOString() as Timestamp
           }
         })
         try {

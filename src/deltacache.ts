@@ -20,15 +20,8 @@ const debug = createDebug('signalk-server:deltacache')
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import _, { isUndefined } from 'lodash'
 import { toDelta } from './streambundle'
-import {
-  Context,
-  ContextMatcher,
-  Delta,
-  NormalizedDelta,
-  SignalKServer,
-  SourceRef,
-  StreamBundle
-} from './types'
+import { ContextMatcher, SignalKServer, StreamBundle } from './types'
+import { Context, NormalizedDelta, SourceRef } from '@signalk/server-api'
 
 interface StringKeyed {
   [key: string]: any
@@ -77,7 +70,7 @@ export default class DeltaCache {
     this.lastModifieds[msg.context] = Date.now()
   }
 
-  setSourceDelta(key: string, delta: Delta) {
+  setSourceDelta(key: string, delta: any) {
     this.sourceDeltas[key] = delta
     this.app.signalk.addDelta(delta)
   }
@@ -132,7 +125,7 @@ export default class DeltaCache {
 
   buildFullFromDeltas(
     user: string,
-    deltas: Delta[] | undefined,
+    deltas: any[] | undefined,
     includeSources: boolean
   ) {
     const signalk = new FullSignalK(this.app.selfId, this.app.selfType)
@@ -185,7 +178,7 @@ export default class DeltaCache {
       return acc
     }, [])
 
-    deltas.sort((left: Delta, right: Delta) => {
+    deltas.sort((left: any, right: any) => {
       return (
         new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime()
       )
@@ -193,7 +186,7 @@ export default class DeltaCache {
 
     deltas = deltas.map(toDelta)
 
-    deltas = deltas.filter((delta: Delta) => {
+    deltas = deltas.filter((delta: any) => {
       return this.app.securityStrategy.filterReadDelta(user, delta)
     })
 

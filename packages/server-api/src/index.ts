@@ -19,6 +19,8 @@ export enum SKVersion {
   v2 = 'v2'
 }
 
+export type Brand<K, T> = K & { __brand: T }
+
 export * from './deltas'
 export * from './resourcetypes'
 export * from './resourcesapi'

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { SKVersion } from '@signalk/server-api'
 import { FullSignalK } from '@signalk/signalk-schema'
 import { Config } from './config/config'
 import DeltaCache from './deltacache'
-import { SKVersion } from './types'
 
 export interface ServerApp {
   started: boolean

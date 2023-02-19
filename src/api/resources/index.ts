@@ -3,10 +3,13 @@ import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:api:resources')
 
 import {
+  Delta,
   isSignalKResourceType,
+  Path,
   ResourceProvider,
   ResourceProviderMethods,
-  SignalKResourceType
+  SignalKResourceType,
+  SKVersion
 } from '@signalk/server-api'
 
 import { IRouter, NextFunction, Request, Response } from 'express'
@@ -16,7 +19,6 @@ import { WithSecurityStrategy } from '../../security'
 import { Responses } from '../'
 import { validate } from './validate'
 import { SignalKMessageHub } from '../../app'
-import { Delta, SKVersion } from '../../types'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 
@@ -722,7 +724,7 @@ export class ResourcesApi {
         {
           values: [
             {
-              path: `resources.${resType}.${resid}`,
+              path: `resources.${resType}.${resid}` as Path,
               value: resValue
             }
           ]
