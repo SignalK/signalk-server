@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-import { Position } from '@signalk/server-api'
+import { Position, WithContext } from '@signalk/server-api'
 import Bacon from 'baconjs'
 import { isPointWithinRadius } from 'geolib'
 import _, { forOwn, get, isString } from 'lodash'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
 import { toDelta } from './streambundle'
-import { ContextMatcher, Unsubscribes, WithContext } from './types'
+import { ContextMatcher, Unsubscribes } from './types'
 const debug = createDebug('signalk-server:subscriptionmanager')
 
 interface BusesMap {

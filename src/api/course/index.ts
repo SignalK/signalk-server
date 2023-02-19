@@ -9,10 +9,13 @@ import { SignalKMessageHub, WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
 
 import {
+  Delta,
   GeoJsonPoint,
+  PathValue,
   Position,
   Route,
-  SignalKResourceType
+  SignalKResourceType,
+  SKVersion
 } from '@signalk/server-api'
 import { isValidCoordinate } from 'geolib'
 import { Responses } from '../'
@@ -21,7 +24,6 @@ import { Store } from '../../serverstate/store'
 import { buildSchemaSync } from 'api-schema-builder'
 import courseOpenApi from './openApi.json'
 import { ResourcesApi } from '../resources'
-import { Delta, SKVersion } from '../../types'
 
 const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
 
@@ -859,7 +861,7 @@ export class CourseApi {
     return {
       updates: [
         {
-          values
+          values: values as PathValue[]
         }
       ]
     }

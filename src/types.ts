@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { WithContext } from '@signalk/server-api'
 import { FullSignalK } from '@signalk/signalk-schema'
 import { SecurityStrategy } from './security'
 import SubscriptionManager from './subscriptionmanager'
@@ -57,30 +58,4 @@ export interface MdnsAdvertisement {
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface Unsubscribes extends Array<() => void> {}
 
-export interface WithContext {
-  context: Context
-}
-
 export type ContextMatcher = (_: WithContext) => boolean
-
-export interface NormalizedDelta extends WithContext {
-  $source: SourceRef
-  source: Source
-  path: Path
-  value: Value
-  isMeta: boolean
-}
-
-export type Brand<K, T> = K & { __brand: T }
-
-export type SourceRef = Brand<string, 'sourceRef'>
-export type Source = Brand<string, 'source'>
-export type Delta = any
-export type Path = Brand<string, 'path'>
-export type Context = Brand<string, 'context'>
-export type Value = object | number | string | null
-
-export enum SKVersion {
-  v1 = 'v1',
-  v2 = 'v2'
-}

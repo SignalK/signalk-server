@@ -19,7 +19,8 @@ import {
   PluginServerApp,
   PropertyValues,
   PropertyValuesCallback,
-  ResourceProvider
+  ResourceProvider,
+  SKVersion
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -36,7 +37,6 @@ import { listAllSerialPorts, Ports } from '../serialports'
 const debug = createDebug('signalk-server:interfaces:plugins')
 
 import { modulesWithKeyword } from '../modules'
-import { SKVersion } from '../types'
 
 const put = require('../put')
 const _putPath = put.putPath

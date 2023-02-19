@@ -1,8 +1,30 @@
+import { Brand } from '.'
+
+export interface WithContext {
+  context: Context
+}
+
+export interface NormalizedDelta extends WithContext {
+  $source: SourceRef
+  source: Source
+  path: Path
+  value: Value
+  isMeta: boolean
+}
+
+export type SourceRef = Brand<string, 'sourceRef'>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Source = any
+export type Path = Brand<string, 'path'>
+export type Timestamp = Brand<string, 'timestamp'>
+export type Context = Brand<string, 'context'>
+export type Value = object | number | string | null | Notification
+
 // Delta subscription
 export interface DeltaSubscription {
-  context: string
+  context: Context
   subscribe: Array<{
-    path: string
+    path: Path
     period: number
     format: 'delta' | 'full'
     policy: 'instant' | 'ideal' | 'fixed'
@@ -10,16 +32,30 @@ export interface DeltaSubscription {
   }>
 }
 
+// "Classic" Delta with values
+export interface ValuesDelta {
+  context?: Context
+  updates: Update[]
+}
+
+export interface MetaDelta {
+  metas: Array<{ values: Meta[] }>
+}
+
 // Delta Message
-export interface DeltaMessage {
-  updates?: Array<{ values: Update[] }>
-  metas?: Array<{ values: Meta[] }>
+export type Delta = ValuesDelta | MetaDelta
+
+export interface Update {
+  timestamp?: Timestamp
+  source?: Source
+  $source?: SourceRef
+  values: PathValue[]
 }
 
 // Update delta
-export interface Update {
-  path: string
-  value: object | number | string | null | Notification
+export interface PathValue {
+  path: Path
+  value: Value
 }
 
 // Notification payload
