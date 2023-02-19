@@ -30,7 +30,15 @@ jobs:
     - name: server-api
       working-directory: ./packages/server-api
       run: |
+        npm run test
         npm run build
+
+    - name: resources-provider-plugin
+      working-directory: ./packages/resources-provider-plugin
+      run: |
+        npm run test
+        npm run build
+        npm run build-declaration
 
     - name: server-admin-ui
       working-directory: ./packages/server-admin-ui
