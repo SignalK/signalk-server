@@ -24,6 +24,7 @@ if (typeof [].includes !== 'function') {
 
 import {
   Delta,
+  DeltaInputHandler,
   PropertyValues,
   SKVersion,
   SourceRef,
@@ -42,7 +43,7 @@ import { SelfIdentity, ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
-import DeltaChain, { DeltaInputHandler } from './deltachain'
+import DeltaChain from './deltachain'
 import { getToPreferredDelta, ToPreferredDelta } from './deltaPriority'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
 import { checkForNewServerVersion } from './modules'

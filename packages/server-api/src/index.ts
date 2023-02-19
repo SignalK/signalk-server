@@ -90,3 +90,75 @@ export interface Plugin {
   signalKApiRoutes?: (router: IRouter) => IRouter
   enabledByDefault?: boolean
 }
+
+export type DeltaInputHandler = (
+  delta: object,
+  next: (delta: object) => void
+) => void
+
+export interface Ports {
+  byId: string[]
+  byPath: string[]
+  byOpenPlotter: string[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  serialports: any
+}
+
+export interface ServerAPI extends PluginServerApp {
+  getSelfPath: (path: string) => void
+  getPath: (path: string) => void
+  getMetadata: (path: string) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  putSelfPath: (aPath: string, value: any, updateCb: () => void) => Promise<any>
+  putPath: (
+    aPath: string,
+    value: number | string | object | boolean,
+    updateCb: (err?: Error) => void,
+    source: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ) => Promise<any>
+  //TSTODO convert queryRequest to ts
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  queryRequest: (requestId: string) => Promise<any>
+  error: (msg: string) => void
+  debug: (msg: string) => void
+  registerDeltaInputHandler: (handler: DeltaInputHandler) => void
+  setPluginStatus: (msg: string) => void
+  setPluginError: (msg: string) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handleMessage: (id: string, msg: any, skVersion?: SKVersion) => void
+  savePluginOptions: (
+    configuration: object,
+    cb: (err: NodeJS.ErrnoException | null) => void
+  ) => void
+  readPluginOptions: () => object
+  getDataDirPath: () => string
+  registerPutHandler: (
+    context: string,
+    path: string,
+    callback: () => void,
+    source: string
+  ) => void
+  registerActionHandler: (
+    context: string,
+    path: string,
+    callback: () => void,
+    source: string
+  ) => void
+  registerHistoryProvider: (provider: {
+    hasAnydata: (options: object, cb: (hasResults: boolean) => void) => void
+    getHistory: (
+      date: Date,
+      path: string,
+      cb: (deltas: object[]) => void
+    ) => void
+    streamHistory: (
+      // TSTODO propert type
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      spark: any,
+      options: object,
+      onDelta: (delta: object) => void
+    ) => void
+  }) => void
+  getSerialPorts: () => Promise<Ports>
+}

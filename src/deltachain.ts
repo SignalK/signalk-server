@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export type DeltaInputHandler = (
-  delta: object,
-  next: (delta: object) => void
-) => void
+
+import { DeltaInputHandler } from '@signalk/server-api'
 
 export default class DeltaChain {
   chain: any
