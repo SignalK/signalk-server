@@ -22,6 +22,7 @@ export enum SKVersion {
 export * from './deltas'
 export * from './resourcetypes'
 export * from './resourcesapi'
+export { ResourceProviderRegistry } from './resourcesapi'
 import { ResourceProviderRegistry } from './resourcesapi'
 
 export * from './autopilotapi'
