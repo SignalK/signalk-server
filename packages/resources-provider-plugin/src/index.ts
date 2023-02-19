@@ -1,13 +1,15 @@
 import {
   Plugin,
   PluginServerApp,
-  ResourceProviderRegistry,
+  ResourceProviderRegistry
 } from '@signalk/server-api'
 
 import { FileStore, getUuid } from './lib/filestorage'
 import { StoreRequestParams } from './types'
 
-interface ResourceProviderApp extends PluginServerApp, ResourceProviderRegistry {
+interface ResourceProviderApp
+  extends PluginServerApp,
+    ResourceProviderRegistry {
   statusMessage?: () => string
   error: (msg: string) => void
   debug: (msg: string) => void
@@ -15,7 +17,9 @@ interface ResourceProviderApp extends PluginServerApp, ResourceProviderRegistry 
   setPluginError: (pluginId: string, status?: string) => void
   setProviderStatus: (providerId: string, status?: string) => void
   setProviderError: (providerId: string, status?: string) => void
-  getSelfPath: (path: string) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getSelfPath: (path: string) => any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   savePluginOptions: (options: any, callback: () => void) => void
   config: { configPath: string }
 }
@@ -116,7 +120,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
 
   const db: FileStore = new FileStore(plugin.id, server.debug)
 
-  let config: any = {
+  let config = {
     standard: {
       routes: true,
       waypoints: true,
@@ -127,6 +131,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
     path: './resources'
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const doStartup = (options: any) => {
     try {
       server.debug(`${plugin.name} starting.......`)
@@ -149,6 +154,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
       })
 
       if (config.custom && Array.isArray(config.custom)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const customTypes = config.custom.map((i: any) => {
           return i.name
         })
@@ -202,7 +208,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
   }
 
   const getVesselPosition = () => {
-    const p: any = server.getSelfPath('navigation.position')
+    const p = server.getSelfPath('navigation.position')
     return p && p.value ? [p.value.longitude, p.value.latitude] : null
   }
 
@@ -213,12 +219,13 @@ module.exports = (server: ResourceProviderApp): Plugin => {
         server.registerResourceProvider({
           type: resType,
           methods: {
-            listResources: (params: object): any => {
+            listResources: (params: object) => {
               return apiGetResources(resType, params)
             },
             getResource: (id: string, property?: string) => {
               return db.getResource(resType, getUuid(id), property)
             },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             setResource: (id: string, value: any) => {
               return apiSetResource(resType, id, value)
             },
@@ -238,7 +245,9 @@ module.exports = (server: ResourceProviderApp): Plugin => {
 
   const apiGetResources = async (
     resType: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     params?: any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> => {
     if (typeof params.position === 'undefined') {
       params.position = getVesselPosition()
@@ -250,6 +259,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
   const apiSetResource = async (
     resType: string,
     id: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any
   ): Promise<void> => {
     server.debug(`*** apiSetResource:  ${resType}, ${id}, ${value}`)

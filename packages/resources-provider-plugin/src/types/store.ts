@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // ** Resource Store Interface
 export interface IResourceStore {
   savePath: string
   resources: any
-  init: (basePath: string) => Promise<any>
+  init: (basePath: string) => Promise<{ error: boolean; message: string }>
   getResources: (
     type: string,
     item: any,
