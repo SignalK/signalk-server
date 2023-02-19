@@ -16,11 +16,10 @@
  * limitations under the License.
 */
 import {
-  PluginServerApp,
   PropertyValues,
   PropertyValuesCallback,
   ResourceProvider,
-  SKVersion
+  ServerAPI
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -32,8 +31,7 @@ import path from 'path'
 import { ResourcesApi } from '../api/resources'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
-import { DeltaInputHandler } from '../deltachain'
-import { listAllSerialPorts, Ports } from '../serialports'
+import { listAllSerialPorts } from '../serialports'
 const debug = createDebug('signalk-server:interfaces:plugins')
 
 import { modulesWithKeyword } from '../modules'
@@ -75,58 +73,6 @@ interface PluginInfo extends Plugin {
   state: string
   enabledByDefault: boolean
   statusMessage: () => string | void
-}
-
-export interface ServerAPI extends PluginServerApp {
-  getSelfPath: (path: string) => void
-  getPath: (path: string) => void
-  getMetadata: (path: string) => void
-  putSelfPath: (aPath: string, value: any, updateCb: () => void) => Promise<any>
-  putPath: (
-    aPath: string,
-    value: number | string | object | boolean,
-    updateCb: (err?: Error) => void,
-    source: string
-  ) => Promise<any>
-  queryRequest: (requestId: string) => Promise<any>
-  error: (msg: string) => void
-  debug: (msg: string) => void
-  registerDeltaInputHandler: (handler: DeltaInputHandler) => void
-  setProviderStatus: (msg: string) => void
-  handleMessage: (id: string, msg: any, skVersion?: SKVersion) => void
-  setProviderError: (msg: string) => void
-  savePluginOptions: (
-    configuration: object,
-    cb: (err: NodeJS.ErrnoException | null) => void
-  ) => void
-  readPluginOptions: () => object
-  getDataDirPath: () => string
-  registerPutHandler: (
-    context: string,
-    path: string,
-    callback: () => void,
-    source: string
-  ) => void
-  registerActionHandler: (
-    context: string,
-    path: string,
-    callback: () => void,
-    source: string
-  ) => void
-  registerHistoryProvider: (provider: {
-    hasAnydata: (options: object, cb: (hasResults: boolean) => void) => void
-    getHistory: (
-      date: Date,
-      path: string,
-      cb: (deltas: object[]) => void
-    ) => void
-    streamHistory: (
-      spark: any,
-      options: object,
-      onDelta: (delta: object) => void
-    ) => void
-  }) => void
-  getSerialPorts: () => Promise<Ports>
 }
 
 interface ModuleMetadata {

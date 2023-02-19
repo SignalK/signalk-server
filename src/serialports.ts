@@ -15,14 +15,8 @@
  * limitations under the License.
 */
 
+import { Ports } from '@signalk/server-api'
 import fs from 'fs'
-
-export interface Ports {
-  byId: string[]
-  byPath: string[]
-  byOpenPlotter: string[]
-  serialports: any
-}
 
 export const listAllSerialPorts = (): Promise<Ports> => {
   return new Promise((resolve, reject) => {
