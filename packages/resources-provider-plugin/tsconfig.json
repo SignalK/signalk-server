@@ -28,5 +28,10 @@
       "suppressExcessPropertyErrors": true,
       "suppressImplicitAnyIndexErrors": true,
       "module": "commonjs"
-    }
+    },
+    "references": [
+      {
+        "path": "../server-api"
+      }
+    ]
 }
