@@ -134,7 +134,7 @@ export class FileStore implements IResourceStore {
     try {
       // return matching resources
       const rt = this.resources[type]
-      const files = await readdir(rt.path)
+      const files = await readdir(rt.path, { withFileTypes: true })
       // check resource count
       const fcount =
         params.limit && files.length > params.limit
@@ -142,18 +142,22 @@ export class FileStore implements IResourceStore {
           : files.length
       let count = 0
       for (const f in files) {
+        if (!files[f].isFile()) {
+          this.debug(`${files[f].name} is not a File => ignore.`)
+          continue
+        }
         if (++count > fcount) {
           break
         }
         try {
           const res = JSON.parse(
-            await readFile(path.join(rt.path, files[f]), 'utf8')
+            await readFile(path.join(rt.path, files[f].name), 'utf8')
           )
           // apply param filters
           if (passFilter(res, type, params)) {
-            const uuid = files[f]
+            const uuid = files[f].name
             result[uuid] = res
-            const stats = await stat(path.join(rt.path, files[f]))
+            const stats = await stat(path.join(rt.path, files[f].name))
             result[uuid].timestamp = stats.mtime
             result[uuid].$source = this.pkg.id
           }
