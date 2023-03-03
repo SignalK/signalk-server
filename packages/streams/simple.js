@@ -207,22 +207,14 @@ const dataTypeMapping = {
     return result.concat([new N2kToSignalK(options.subOptions)])
   },
   NMEA2000W2K_ASCII: (options) => {
-    const result = [
-      new W2k01(
-        {format: 'ascii', ...options.subOptions}
-      ),
-    ]
+    const result = [new W2k01({ format: 'ascii', ...options.subOptions })]
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
     }
     return result.concat([new N2kToSignalK(options.subOptions)])
   },
   NMEA2000W2K_ACTISENSE: (options) => {
-    const result = [
-      new W2k01(
-        {format: 'actisense', ...options.subOptions}
-      ),
-    ]
+    const result = [new W2k01({ format: 'actisense', ...options.subOptions })]
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
     }
@@ -300,11 +292,7 @@ function nmea2000input(subOptions, logging) {
         outEvent: 'w2k-1-out',
       }),
       new Liner(subOptions),
-      new W2k01(
-        subOptions,
-        'ascii',
-        'w2k-1-out'
-      ),
+      new W2k01(subOptions, 'ascii', 'w2k-1-out'),
     ]
   } else if (subOptions.type === 'w2k-1-n2k-actisense-canboatjs') {
     return [
@@ -312,11 +300,7 @@ function nmea2000input(subOptions, logging) {
         ...subOptions,
         outEvent: 'w2k-1-out',
       }),
-      new W2k01(
-        subOptions,
-        'actisense',
-        'w2k-1-out'
-      ),
+      new W2k01(subOptions, 'actisense', 'w2k-1-out'),
     ]
   } else if (subOptions.type === 'navlink2-udp-canboatjs') {
     return [new Udp(subOptions), new Liner(subOptions)]
