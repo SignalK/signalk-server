@@ -30,3 +30,4 @@ This will trigger GH action that
 - builds and publishes all the submodules whose version does not match the latest version in npm
 - builds and publishes the server
 - builds docker images tagged with version and `latest`
+- deploys the version at fly.io as https://demo.signalk.org/
