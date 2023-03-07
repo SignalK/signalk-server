@@ -80,6 +80,24 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+  resources-provider-plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: |
+          if [[ "$(npm view @signalk/resources-provider version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/resources-provider-plugin/package.json)" ]]; then
+            cd packages/resources-provider-plugin
+            npm install --package-lock-only
+            npm ci && npm cache clean --force
+            npm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
   signalk-server:
     runs-on: ubuntu-latest
     needs: [server-admin-ui, server-api, streams]

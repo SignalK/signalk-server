@@ -29,7 +29,8 @@
         "lint": "eslint -c .eslintrc.js --ext .ts --ext .js --fix src/",
         "format": "npm run prettier && npm run lint",
         "ci-lint": "eslint -c .eslintrc.js --ext .ts --ext .js src/ && prettier --check src/",
-        "test": "npm run build-declaration && npm run ci-lint"
+        "prepublishOnly": "npm run build && npm run build-declaration",
+        "test": "npm run build && npm run build-declaration && npm run ci-lint"
     },
     "dependencies": {
         "geojson-validation": "^0.2.0",

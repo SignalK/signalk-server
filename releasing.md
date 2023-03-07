@@ -9,6 +9,7 @@ Npm Packages are:
 - @signalk/server-admin-ui
 - @signalk/server-api
 - @signalk/streams
+- @signalk/resources-provider
 - signalk-server
 
 ### (1) Update package.json and git tag using npm version
