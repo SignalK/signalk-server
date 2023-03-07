@@ -30,9 +30,3 @@ This will trigger GH action that
 - builds and publishes all the submodules whose version does not match the latest version in npm
 - builds and publishes the server
 - builds docker images tagged with version and `latest`
-
-
-### (3) Create github release with release notes
-
-```PR_CHANGES_TOKEN=XXXX npm run release```
-
