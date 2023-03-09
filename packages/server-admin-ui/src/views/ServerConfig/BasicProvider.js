@@ -744,8 +744,12 @@ const NMEA2000 = (props) => {
               Yacht Devices RAW USB (canboatjs)
             </option>
             <option value="canbus-canboatjs">Canbus (canboatjs)</option>
-      <option value="w2k-1-n2k-ascii-canboatjs">W2K-1 N2K ASCII (canboatjs)</option>
-      <option value="w2k-1-n2k-actisense-canboatjs">W2K-1 N2K ACTISENSE (canboatjs)</option>
+            <option value="w2k-1-n2k-ascii-canboatjs">
+              W2K-1 N2K ASCII (canboatjs)
+            </option>
+            <option value="w2k-1-n2k-actisense-canboatjs">
+              W2K-1 N2K ACTISENSE (canboatjs)
+            </option>
             <option value="canbus" disabled={!props.hasAnalyzer}>
               Canbus (canboat)
             </option>
@@ -807,8 +811,8 @@ const NMEA2000 = (props) => {
           onChange={props.onChange}
         />
       )}
-    {(props.value.options.type === 'w2k-1-n2k-ascii-canboatjs' ||
-      props.value.options.type === 'w2k-1-n2k-actisense-canboatjs') && (
+      {(props.value.options.type === 'w2k-1-n2k-ascii-canboatjs' ||
+        props.value.options.type === 'w2k-1-n2k-actisense-canboatjs') && (
         <div>
           <HostInput value={props.value.options} onChange={props.onChange} />
           <PortInput value={props.value.options} onChange={props.onChange} />
