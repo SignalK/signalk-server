@@ -20,6 +20,7 @@ const TimestampThrottle = require('./timestamp-throttle')
 const CanboatJs = require('./canboatjs')
 const iKonvert = require('@canboat/canboatjs').iKonvert
 const Ydwg02 = require('@canboat/canboatjs').Ydwg02
+const W2k01 = require('@canboat/canboatjs').W2k01
 const gpsd = require('./gpsd')
 const pigpioSeatalk = require('./pigpio-seatalk')
 
@@ -58,7 +59,9 @@ function Simple(options) {
   if (options.type === 'NMEA2000' && options.subOptions) {
     if (
       options.subOptions.type === 'ngt-1-canboatjs' ||
-      options.subOptions.type === 'canbus-canboatjs'
+      options.subOptions.type === 'canbus-canboatjs' ||
+      options.subOptions.type === 'w2k-1-n2k-actisense-canboatjs' ||
+      options.subOptions.type === 'w2k-1-n2k-ascii-canboatjs'
     ) {
       mappingType = 'NMEA2000JS'
     } else if (
@@ -203,6 +206,20 @@ const dataTypeMapping = {
     }
     return result.concat([new N2kToSignalK(options.subOptions)])
   },
+  NMEA2000W2K_ASCII: (options) => {
+    const result = [new W2k01({ format: 'ascii', ...options.subOptions })]
+    if (options.type === 'FileStream') {
+      result.push(new TimestampThrottle())
+    }
+    return result.concat([new N2kToSignalK(options.subOptions)])
+  },
+  NMEA2000W2K_ACTISENSE: (options) => {
+    const result = [new W2k01({ format: 'actisense', ...options.subOptions })]
+    if (options.type === 'FileStream') {
+      result.push(new TimestampThrottle())
+    }
+    return result.concat([new N2kToSignalK(options.subOptions)])
+  },
   Multiplexed: (options) => [new MultiplexedLog(options.subOptions)],
 }
 
@@ -267,6 +284,23 @@ function nmea2000input(subOptions, logging) {
         outEvent: 'navlink2-out',
       }),
       new Liner(subOptions),
+    ]
+  } else if (subOptions.type === 'w2k-1-n2k-ascii-canboatjs') {
+    return [
+      new Tcp({
+        ...subOptions,
+        outEvent: 'w2k-1-out',
+      }),
+      new Liner(subOptions),
+      new W2k01(subOptions, 'ascii', 'w2k-1-out'),
+    ]
+  } else if (subOptions.type === 'w2k-1-n2k-actisense-canboatjs') {
+    return [
+      new Tcp({
+        ...subOptions,
+        outEvent: 'w2k-1-out',
+      }),
+      new W2k01(subOptions, 'actisense', 'w2k-1-out'),
     ]
   } else if (subOptions.type === 'navlink2-udp-canboatjs') {
     return [new Udp(subOptions), new Liner(subOptions)]
