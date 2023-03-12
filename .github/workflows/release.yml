@@ -169,7 +169,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Set TAG for build-args
         id: vars
-        run: echo ::set-output name=tag::$(echo ${GITHUB_REF#refs/*/} | sed 's/v//g')
+        run: echo ::set-output name=tag::$(echo ${GITHUB_REF#refs/*/})
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
