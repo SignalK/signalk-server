@@ -81,6 +81,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   resources-provider-plugin:
+    needs: server-api
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -100,7 +101,7 @@ jobs:
 
   signalk-server:
     runs-on: ubuntu-latest
-    needs: [server-admin-ui, server-api, streams]
+    needs: [server-admin-ui, server-api, streams, resources-provider-plugin]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
