@@ -91,7 +91,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: |
           if [[ "$(npm view @signalk/resources-provider version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/resources-provider-plugin/package.json)" ]]; then
-            //to disable workspaces, otherwise npm will not install @signalk/server-api
+            # to disable workspaces, otherwise npm will not install @signalk/server-api
             rm package.json
             cd packages/resources-provider-plugin
             npm install --package-lock-only
