@@ -79,8 +79,8 @@ class ServerUpdate extends Component {
             <CardBody>
               The server is running as a Docker container. You need to pull a
               new server version from{' '}
-              <a href="https://hub.docker.com/r/signalk/signalk-server/tags">
-                Docker Hub
+              <a href="https://github.com/SignalK/signalk-server/pkgs/container/signalk-server">
+                GitHub Container registry
               </a>{' '}
               to update.
             </CardBody>
