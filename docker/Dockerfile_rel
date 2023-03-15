@@ -1,4 +1,4 @@
-FROM signalk/signalk-server-base:latest
+FROM ghcr.io/signalk/signalk-server-base:latest
 
 ARG TAG
   
