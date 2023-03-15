@@ -1,7 +1,7 @@
 version: "2.2"
 services:
   signalk-server:
-    image: signalk/signalk-server
+    image: ghcr.io/signalk/signalk-server:latest
     container_name: signalk-server
     restart: unless-stopped
 #   ----------------------
