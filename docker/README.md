@@ -32,7 +32,7 @@ See `docker/docker-compose.yml` for reference / example if you want to use docke
 
 # Image details and used tags
 
-Signal K Server docker images are based on Ubuntu 20.04 LTS. During build process, Node 16.x is installed including tools required to install or compile plugins. Signalk support mDNS from docker, uses avahi for e.g. mDNS discovery. All required avahi tools and settings are available for user `node`, also from command line.
+Signal K Server docker images are based on Ubuntu 22.04 LTS. During build process, Node 18.x is installed including tools required to install or compile plugins. Signalk support mDNS from docker, uses avahi for e.g. mDNS discovery. All required avahi tools and settings are available for user `node`, also from command line.
 
 ## Release images
 
