@@ -32,7 +32,7 @@ import { Mode } from 'stat-mode'
 import { WithConfig } from './app'
 import { createDebug } from './debug'
 import dummysecurity from './dummysecurity'
-import { ICallback } from './types'
+import { Brand, ICallback } from './types'
 const debug = createDebug('signalk-server:security')
 
 export interface WithSecurityStrategy {
@@ -191,6 +191,10 @@ export interface SecurityStrategy {
     source: any,
     path: string
   ) => boolean
+
+  addAdminMiddleware: (pathExpression: string) => void
+  addAdminWriteMiddleware: (pathExpression: string) => void
+  addWriteMiddleware: (pathExpression: string) => void
 }
 
 export class InvalidTokenError extends Error {
