@@ -32,7 +32,7 @@ import { Mode } from 'stat-mode'
 import { WithConfig } from './app'
 import { createDebug } from './debug'
 import dummysecurity from './dummysecurity'
-import { Brand, ICallback } from './types'
+import { Context, Delta, ICallback, Path, Source } from './types'
 const debug = createDebug('signalk-server:security')
 
 export interface WithSecurityStrategy {
@@ -47,6 +47,13 @@ export interface LoginStatusResponse {
   allowDeviceAccessRequests?: boolean
   userLevel?: any
   username?: string
+  noUsers?: boolean
+}
+
+export enum Operation {
+  read = 'read',
+  write = 'write',
+  put = 'put'
 }
 
 export interface ACL {
@@ -112,9 +119,35 @@ export interface RequestStatusData {
   config: any
 }
 
+export enum Permissions {
+  admin = 'admin',
+  readwrite = 'readwrite',
+  readonly = 'readonly'
+}
+
+export interface LoginReply {
+  statusCode: number
+  token?: string
+  message?: string
+}
+
+export interface SKPrincipal {
+  identifier: string
+  permissions: Permissions
+}
+
+export interface SRequest extends Request {
+  skPrincipal?: SKPrincipal
+  skIsAuthenticated?: boolean
+  token?: string
+  lastTokenVerify?: number
+  userLoggedIn?: boolean
+}
+
 export interface SecurityStrategy {
   isDummy: () => boolean
   allowReadOnly: () => boolean
+  allowRestart: (req: SRequest) => boolean
   shouldFilterDeltas: () => boolean
   filterReadDelta: (user: any, delta: any) => any
   configFromArguments: boolean
@@ -132,7 +165,9 @@ export interface SecurityStrategy {
   getAccessRequestsResponse: any
 
   getLoginStatus: (req: Request) => LoginStatusResponse
-  allowRestart: (req: Request) => boolean
+  supportsLogin: () => boolean
+  login: (name: string, password: string) => Promise<LoginReply>
+  getAuthRequiredString: () => string
   allowConfigure: (req: Request) => boolean
 
   getConfig: (ss: SecurityConfig) => Omit<SecurityConfig, 'secretKey' | 'users'>
@@ -186,15 +221,29 @@ export interface SecurityStrategy {
   ) => void
 
   shouldAllowPut: (
-    req: Request,
-    context: string,
-    source: any,
-    path: string
+    req: SRequest,
+    context: Context,
+    source: Source,
+    path: Path
   ) => boolean
+  shouldAllowWrite: (req: SRequest, delta: Delta) => boolean
+  canAuthorizeWS: () => boolean
+  authorizeWS: (req: SRequest) => void
+  verifyWS: (spark: SRequest) => void
 
   addAdminMiddleware: (pathExpression: string) => void
   addAdminWriteMiddleware: (pathExpression: string) => void
   addWriteMiddleware: (pathExpression: string) => void
+  addReadonlyMiddleware: (pathExpression: string) => void
+
+  checkACL: (
+    id: string,
+    context: Context,
+    thePath: Path,
+    source: Source,
+    operation: Operation
+  ) => boolean
+  anyACLs: () => boolean
 }
 
 export class InvalidTokenError extends Error {

@@ -79,8 +79,14 @@ export type Delta = any
 export type Path = Brand<string, 'path'>
 export type Context = Brand<string, 'context'>
 export type Value = object | number | string | null
+export interface PathValue {
+  path: Path
+  value: Value
+}
 
 export enum SKVersion {
   v1 = 'v1',
   v2 = 'v2'
 }
+
+export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>

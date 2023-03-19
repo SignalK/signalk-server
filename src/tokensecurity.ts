@@ -16,18 +16,36 @@
 
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:tokensecurity')
-const jwt = require('jsonwebtoken')
-const _ = require('lodash')
-const bcrypt = require('bcryptjs')
-const getSourceId = require('@signalk/signalk-schema').getSourceId
-const { InvalidTokenError } = require('./security')
-const {
+import jwt, {
+  JwtPayload,
+  SignOptions,
+  VerifyCallback,
+  VerifyErrors
+} from 'jsonwebtoken'
+import _ from 'lodash'
+import bcrypt from 'bcryptjs'
+import { getSourceId } from '@signalk/signalk-schema'
+import {
+  InvalidTokenError,
+  LoginReply,
+  LoginStatusResponse,
+  Operation,
+  Permissions,
+  SecurityConfig,
+  SecurityStrategy,
+  SKPrincipal,
+  SRequest,
+  UserData
+} from './security'
+import {
   createRequest,
   updateRequest,
   findRequest,
   filterRequests
-} = require('./requestResponse')
-const ms = require('ms')
+} from './requestResponse'
+import ms from 'ms'
+import { randomBytes } from 'crypto'
+import { SelfIdentity } from './app'
 
 const CONFIG_PLUGINID = 'sk-simple-token-security-config'
 const passwordSaltRounds = 10
@@ -37,14 +55,31 @@ const permissionDeniedMessage =
 const skPrefix = '/signalk/v1'
 const skAuthPrefix = `${skPrefix}/auth`
 import { SERVERROUTESPREFIX } from './constants'
+import {
+  CookieOptions,
+  IRouter,
+  NextFunction,
+  Request,
+  Response
+} from 'express'
+import { Context, Delta, PartialBy, Path, Source, WithContext } from './types'
+import { SignalKMessageHub } from './app'
 
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
 
-module.exports = function (app, config) {
-  const strategy = {}
+module.exports = function (
+  app: {
+    getConfiguration: () => SecurityConfig
+  } & IRouter &
+    WithContext &
+    SignalKMessageHub &
+    SelfIdentity,
+  config: SecurityConfig
+) {
+  const strategy: Partial<SecurityStrategy> = {}
 
+  const expiration = '1d'
   let {
-    expiration = '1d',
     users = [],
     immutableConfig = false,
     allowDeviceAccessRequests = true,
@@ -53,8 +88,7 @@ module.exports = function (app, config) {
 
   const {
     allow_readonly = true,
-    secretKey = process.env.SECRETKEY ||
-      require('crypto').randomBytes(256).toString('hex'),
+    secretKey = process.env.SECRETKEY || randomBytes(256).toString('hex'),
     devices = [],
     acls = []
   } = config
@@ -90,7 +124,7 @@ module.exports = function (app, config) {
       process.env.ALLOW_NEW_USER_REGISTRATION === 'true'
   }
 
-  let options = {
+  let options: SecurityConfig = {
     allow_readonly,
     expiration,
     secretKey,
@@ -122,7 +156,7 @@ module.exports = function (app, config) {
     }
   }
 
-  function handlePermissionDenied(req, res) {
+  function handlePermissionDenied(req: Request, res: Response) {
     res.status(401)
     if (req.accepts('application/json') && !req.accepts('text/html')) {
       res.set('Content-Type', 'application/json')
@@ -133,7 +167,7 @@ module.exports = function (app, config) {
   }
 
   function writeAuthenticationMiddleware() {
-    return function (req, res, next) {
+    return function (req: SRequest, res: Response, next: NextFunction) {
       if (!getIsEnabled()) {
         return next()
       }
@@ -141,18 +175,18 @@ module.exports = function (app, config) {
       debug('skIsAuthenticated: ' + req.skIsAuthenticated)
       if (req.skIsAuthenticated) {
         if (
-          req.skPrincipal.permissions === 'admin' ||
-          req.skPrincipal.permissions === 'readwrite'
+          req.skPrincipal?.permissions === Permissions.admin ||
+          req.skPrincipal?.permissions === Permissions.readwrite
         ) {
           return next()
         }
       }
-      handlePermissionDenied(req, res, next)
+      handlePermissionDenied(req, res)
     }
   }
 
-  function adminAuthenticationMiddleware(redirect) {
-    return function (req, res, next) {
+  function adminAuthenticationMiddleware(redirect: boolean) {
+    return function (req: SRequest, res: Response, next: NextFunction) {
       if (!getIsEnabled()) {
         return next()
       }
@@ -163,19 +197,21 @@ module.exports = function (app, config) {
         } else if (req.skPrincipal.identifier === 'AUTO' && redirect) {
           res.redirect('/@signalk/server-admin-ui/#/login')
         } else {
-          handlePermissionDenied(req, res, next)
+          handlePermissionDenied(req, res)
         }
       } else if (redirect) {
         res.redirect('/@signalk/server-admin-ui/#/login')
       } else {
-        handlePermissionDenied(req, res, next)
+        handlePermissionDenied(req, res)
       }
     }
   }
 
   function setupApp() {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     app.use(require('body-parser').urlencoded({ extended: true }))
 
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     app.use(require('cookie-parser')())
 
     app.post(['/login', `${skAuthPrefix}/login`], (req, res) => {
@@ -189,7 +225,7 @@ module.exports = function (app, config) {
           const requestType = req.get('Content-Type')
 
           if (reply.statusCode === 200) {
-            let cookieOptions = { httpOnly: true }
+            const cookieOptions: CookieOptions = { httpOnly: true }
             if (remember) {
               cookieOptions.maxAge = ms(configuration.expiration || '1h')
             }
@@ -257,13 +293,16 @@ module.exports = function (app, config) {
     app.use(`${SERVERROUTESPREFIX}/loginStatus`, http_authorize(false, true))
 
     const no_redir = http_authorize(false)
-    app.use('/signalk/v1/api/*', function (req, res, next) {
-      no_redir(req, res, next)
-    })
-    app.put('/signalk/v1/*', writeAuthenticationMiddleware(false))
+    app.use(
+      '/signalk/v1/api/*',
+      function (req: Request, res: Response, next: NextFunction) {
+        no_redir(req, res, next)
+      }
+    )
+    app.put('/signalk/v1/*', writeAuthenticationMiddleware())
   }
 
-  function login(name, password) {
+  function login(name: string, password: string): Promise<LoginReply> {
     return new Promise((resolve, reject) => {
       debug('logging in user: ' + name)
       const configuration = getConfiguration()
@@ -286,7 +325,8 @@ module.exports = function (app, config) {
               expiresIn: theExpiration
             })
             resolve({ statusCode: 200, token })
-          } catch (err) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } catch (err: any) {
             resolve({
               statusCode: 500,
               message: 'Unable to sign token: ' + err.message
@@ -309,7 +349,9 @@ module.exports = function (app, config) {
   }
 
   strategy.getAuthRequiredString = () => {
-    return strategy.allowReadOnly() ? 'forwrite' : 'always'
+    return strategy.allowReadOnly && strategy.allowReadOnly()
+      ? 'forwrite'
+      : 'always'
   }
 
   strategy.supportsLogin = () => true
@@ -328,8 +370,8 @@ module.exports = function (app, config) {
 
   strategy.addWriteMiddleware = function (aPath) {
     app.use(aPath, http_authorize(false))
-    app.put(aPath, writeAuthenticationMiddleware(false))
-    app.post(aPath, writeAuthenticationMiddleware(false))
+    app.put(aPath, writeAuthenticationMiddleware())
+    app.post(aPath, writeAuthenticationMiddleware())
   }
 
   strategy.generateToken = function (req, res, next, id, theExpiration) {
@@ -346,17 +388,21 @@ module.exports = function (app, config) {
     return configuration.allow_readonly
   }
 
-  strategy.allowRestart = function (req) {
-    return req.skIsAuthenticated && req.skPrincipal.permissions === 'admin'
+  strategy.allowRestart = function (req: SRequest) {
+    return !!(
+      req.skIsAuthenticated && req?.skPrincipal?.permissions === 'admin'
+    )
   }
 
-  strategy.allowConfigure = function (req) {
-    return req.skIsAuthenticated && req.skPrincipal.permissions === 'admin'
+  strategy.allowConfigure = function (req: SRequest) {
+    return !!(
+      req.skIsAuthenticated && req?.skPrincipal?.permissions === 'admin'
+    )
   }
 
-  strategy.getLoginStatus = function (req) {
+  strategy.getLoginStatus = function (req: SRequest) {
     const configuration = getConfiguration()
-    const result = {
+    const result: LoginStatusResponse = {
       status: req.skIsAuthenticated ? 'loggedIn' : 'notLoggedIn',
       readOnlyAccess: configuration.allow_readonly,
       authenticationRequired: true,
@@ -364,8 +410,8 @@ module.exports = function (app, config) {
       allowDeviceAccessRequests: configuration.allowDeviceAccessRequests
     }
     if (req.skIsAuthenticated) {
-      result.userLevel = req.skPrincipal.permissions
-      result.username = req.skPrincipal.identifier
+      result.userLevel = req?.skPrincipal?.permissions
+      result.username = req?.skPrincipal?.identifier
     }
     if (configuration.users.length === 0) {
       result.noUsers = true
@@ -374,9 +420,12 @@ module.exports = function (app, config) {
   }
 
   strategy.getConfig = (aConfig) => {
-    delete aConfig.users
-    delete aConfig.secretKey
-    return aConfig
+    const copy: PartialBy<SecurityConfig, 'secretKey' | 'users'> = {
+      ...aConfig
+    }
+    delete copy.users
+    delete copy.secretKey
+    return copy
   }
 
   strategy.setConfig = (aConfig, newConfig) => {
@@ -401,7 +450,11 @@ module.exports = function (app, config) {
     }
   }
 
-  function addUser(theConfig, user, callback) {
+  function addUser(
+    theConfig: SecurityConfig,
+    user: UserData & { password: string },
+    callback: (err: Error, config?: SecurityConfig) => void
+  ) {
     assertConfigImmutability()
     bcrypt.hash(user.password, passwordSaltRounds, (err, hash) => {
       if (err) {
@@ -458,7 +511,8 @@ module.exports = function (app, config) {
       if (err) {
         callback(err)
       } else {
-        const user = theConfig.users[username]
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const user = (theConfig.users as any)[username]
         user.password = hash
         options = theConfig
         callback(err, theConfig)
@@ -519,42 +573,45 @@ module.exports = function (app, config) {
     options = theConfig
   }
 
-  strategy.shouldAllowWrite = function (req, delta) {
+  strategy.shouldAllowWrite = function (req, delta: Delta) {
     if (
-      req.skPrincipal &&
-      (req.skPrincipal.permissions === 'admin' ||
-        req.skPrincipal.permissions === 'readwrite')
+      req?.skPrincipal &&
+      (req?.skPrincipal?.permissions === 'admin' ||
+        req?.skPrincipal?.permissions === 'readwrite')
     ) {
       const context =
         delta.context === app.selfContext ? 'vessels.self' : delta.context
 
-      const notAllowed = delta.updates.find((update) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const notAllowed = delta.updates.find((update: any) => {
         let source = update.$source
         if (!source) {
           source = getSourceId(update.source)
         }
         return (
           (update.values &&
-            update.values.find((valuePath) => {
+            update.values.find((valuePath: { path: Path }) => {
               return (
+                strategy.checkACL &&
                 strategy.checkACL(
-                  req.skPrincipal.identifier,
+                  req?.skPrincipal?.identifier as string,
                   context,
                   valuePath.path,
                   source,
-                  'write'
+                  Operation.write
                 ) === false
               )
             })) ||
           (update.meta &&
-            update.meta.find((valuePath) => {
+            update.meta.find((valuePath: { path: Path }) => {
               return (
+                strategy.checkACL &&
                 strategy.checkACL(
-                  req.skPrincipal.identifier,
+                  req?.skPrincipal?.identifier as string,
                   context,
                   valuePath.path,
                   source,
-                  'write'
+                  Operation.write
                 ) === false
               )
             }))
@@ -573,14 +630,19 @@ module.exports = function (app, config) {
       (req.skPrincipal.permissions === 'admin' ||
         req.skPrincipal.permissions === 'readwrite')
     ) {
-      const context = _context === app.selfContext ? 'vessels.self' : _context
+      const context = (
+        _context === app.selfContext ? 'vessels.self' : _context
+      ) as Context
 
-      return strategy.checkACL(
-        req.skPrincipal.identifier,
-        context,
-        thePath,
-        source,
-        'put'
+      return !!(
+        strategy.checkACL &&
+        strategy.checkACL(
+          req.skPrincipal.identifier,
+          context,
+          thePath,
+          source,
+          Operation.put
+        )
       )
     }
     return false
@@ -588,7 +650,7 @@ module.exports = function (app, config) {
 
   strategy.anyACLs = () => {
     const configuration = getConfiguration()
-    return configuration.acls && configuration.acls.length
+    return !!(configuration.acls && configuration.acls.length)
   }
 
   strategy.filterReadDelta = (principal, delta) => {
@@ -604,20 +666,23 @@ module.exports = function (app, config) {
         delta.context === app.selfContext ? 'vessels.self' : delta.context
 
       filtered.updates = delta.updates
-        .map((update) => {
-          let res = (update.values || update.meta)
-            .map((valuePath) => {
-              return strategy.checkACL(
-                principal.identifier,
-                context,
-                valuePath.path,
-                update.source,
-                'read'
-              )
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((update: any) => {
+          const res = (update.values || update.meta)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .map((valuePath: { path: Path }) => {
+              return strategy.checkACL &&
+                strategy.checkACL(
+                  principal.identifier,
+                  context,
+                  valuePath.path,
+                  update.source,
+                  Operation.read
+                )
                 ? valuePath
                 : null
             })
-            .filter((vp) => vp != null)
+            .filter((vp: unknown) => vp != null)
           if (update.values) {
             update.values = res
             return update.values.length > 0 ? update : null
@@ -626,7 +691,7 @@ module.exports = function (app, config) {
             return update.meta.length > 0 ? update : null
           }
         })
-        .filter((update) => update != null)
+        .filter((update: unknown) => update != null)
       return filtered.updates.length > 0 ? filtered : null
     } else if (!principal) {
       return null
@@ -649,15 +714,15 @@ module.exports = function (app, config) {
     if (now - spark.lastTokenVerify > 60 * 1000) {
       debug('verify token')
       spark.lastTokenVerify = now
-      strategy.authorizeWS(spark)
+      strategy.authorizeWS && strategy.authorizeWS(spark)
     }
   }
 
-  function getAuthorizationFromHeaders(req) {
+  function getAuthorizationFromHeaders(req: Request) {
     if (req.headers) {
       let header = req.headers.authorization
       if (!header) {
-        header = req.headers['x-authorization']
+        header = req.headers['x-authorization'] as string | undefined
       }
       if (header && header.startsWith('Bearer ')) {
         return header.substring('Bearer '.length)
@@ -682,7 +747,7 @@ module.exports = function (app, config) {
 
     if (!token) {
       if (req.query && req.query.token) {
-        token = req.query.token
+        token = req.query.token as string
       } else {
         token = getAuthorizationFromHeaders(req)
       }
@@ -696,11 +761,11 @@ module.exports = function (app, config) {
     // `jwt-simple` throws errors if something goes wrong when decoding the JWT.
     //
     if (token) {
-      payload = jwt.verify(token, configuration.secretKey)
+      payload = jwt.verify(token, configuration.secretKey) as JwtPayload
 
       if (!payload) {
         error = new InvalidTokenError('Invalid access token')
-      } else if (Date.now() / 1000 > payload.exp) {
+      } else if (payload.exp && Date.now() / 1000 > payload.exp) {
         //
         // At this point we have decoded and verified the token. Check if it is
         // expired.
@@ -712,7 +777,10 @@ module.exports = function (app, config) {
 
     if (!token || error) {
       if (configuration.allow_readonly) {
-        req.skPrincipal = { identifier: 'AUTO', permissions: 'readonly' }
+        req.skPrincipal = {
+          identifier: 'AUTO',
+          permissions: Permissions.readonly
+        }
         return
       } else {
         if (!error) {
@@ -728,7 +796,7 @@ module.exports = function (app, config) {
     // this to invalidate a token.
     //
 
-    const principal = getPrincipal(payload)
+    const principal = getPrincipal(payload as { id: string; device: string })
     if (!principal) {
       error = new InvalidTokenError(
         `Invalid identity ${JSON.stringify(payload)}`
@@ -741,7 +809,13 @@ module.exports = function (app, config) {
     req.skIsAuthenticated = true
   }
 
-  strategy.checkACL = (id, context, thePath, source, operation) => {
+  strategy.checkACL = (
+    id: string,
+    context: Context,
+    thePath: Path,
+    source: Source,
+    operation: Operation
+  ) => {
     const configuration = getConfiguration()
 
     if (!configuration.acls || configuration.acls.length === 0) {
@@ -816,10 +890,13 @@ module.exports = function (app, config) {
 
   strategy.shouldFilterDeltas = () => {
     const configuration = getConfiguration()
-    return configuration.acls && configuration.acls.length > 0
+    return !!(configuration.acls && configuration.acls.length > 0)
   }
 
-  function getPrincipal(payload) {
+  function getPrincipal(payload: {
+    id?: string
+    device?: string
+  }): SKPrincipal | undefined {
     let principal
     if (payload.id) {
       const user = options.users.find(
@@ -828,7 +905,7 @@ module.exports = function (app, config) {
       if (user) {
         principal = {
           identifier: user.username,
-          permissions: user.type
+          permissions: user.type as Permissions
         }
       }
     } else if (payload.device && options.devices) {
@@ -838,16 +915,16 @@ module.exports = function (app, config) {
       if (device) {
         principal = {
           identifier: device.clientId,
-          permissions: device.permissions
+          permissions: device.permissions as Permissions
         }
       }
     }
     return principal
   }
 
-  function http_authorize(redirect, forLoginStatus) {
+  function http_authorize(redirect: boolean, forLoginStatus = false) {
     // debug('http_authorize: ' + redirect)
-    return function (req, res, next) {
+    return function (req: SRequest, res: Response, next: NextFunction) {
       let token = req.cookies.JAUTHENTICATION
 
       debug(`http_authorize: ${req.path} (forLogin: ${forLoginStatus})`)
@@ -863,10 +940,14 @@ module.exports = function (app, config) {
       }
 
       if (token) {
-        jwt.verify(token, configuration.secretKey, function (err, decoded) {
+        jwt.verify(token, configuration.secretKey, function (
+          err: VerifyErrors,
+          decoded: JwtPayload | string
+        ) {
           debug('verify')
           if (!err) {
-            const principal = getPrincipal(decoded)
+            const payload = decoded as { id?: string; device?: string }
+            const principal = getPrincipal(payload)
             if (principal) {
               debug('authorized')
               req.skPrincipal = principal
@@ -875,7 +956,7 @@ module.exports = function (app, config) {
               next()
               return
             } else {
-              debug('unknown user: ' + (decoded.id || decoded.device))
+              debug('unknown user: ' + (payload.id || payload.device))
             }
           } else {
             debug(`bad token: ${err.message} ${req.path}`)
@@ -888,12 +969,15 @@ module.exports = function (app, config) {
           } else {
             res.status(401).send('bad auth token')
           }
-        })
+        } as VerifyCallback<JwtPayload | string>)
       } else {
         debug('no token')
 
         if (configuration.allow_readonly && !forLoginStatus) {
-          req.skPrincipal = { identifier: 'AUTO', permissions: 'readonly' }
+          req.skPrincipal = {
+            identifier: 'AUTO',
+            permissions: Permissions.readonly
+          }
           req.skIsAuthenticated = true
           return next()
         } else {
@@ -932,7 +1016,8 @@ module.exports = function (app, config) {
     cb
   ) => {
     const request = findRequest(
-      (r) => r.state === 'PENDING' && r.accessIdentifier === identifier
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (r: any) => r.state === 'PENDING' && r.accessIdentifier === identifier
     )
     if (!request) {
       cb(new Error('not found'))
@@ -966,7 +1051,7 @@ module.exports = function (app, config) {
     if (status === 'approved') {
       if (request.clientRequest.accessRequest.clientId) {
         const payload = { device: identifier }
-        const jwtOptions = {}
+        const jwtOptions: SignOptions = {}
 
         const expiresIn = body.expiration || theConfig.expiration
         if (expiresIn !== 'NEVER') {
@@ -1015,7 +1100,8 @@ module.exports = function (app, config) {
         permission: approved ? 'APPROVED' : 'DENIED',
         token: request.token
       }
-    })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
       .then(() => {
         cb(null, theConfig)
         sendAccessRequestsUpdate()
@@ -1025,7 +1111,8 @@ module.exports = function (app, config) {
       })
   }
 
-  function validateAccessRequest(request) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function validateAccessRequest(request: any) {
     if (request.userId) {
       return !_.isUndefined(request.password)
     } else if (request.clientId) {
@@ -1048,7 +1135,11 @@ module.exports = function (app, config) {
         .then((request) => {
           const accessRequest = clientRequest.accessRequest
           if (!validateAccessRequest(accessRequest)) {
-            updateRequest(request.requestId, 'COMPLETED', { statusCode: 400 })
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            updateRequest(request.requestId, 'COMPLETED', {
+              statusCode: 400
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any)
               .then(resolve)
               .catch(reject)
             return
@@ -1066,7 +1157,11 @@ module.exports = function (app, config) {
           let alertMessage
           if (accessRequest.clientId) {
             if (!options.allowDeviceAccessRequests) {
-              updateRequest(request.requestId, 'COMPLETED', { statusCode: 403 })
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              updateRequest(request.requestId, 'COMPLETED', {
+                statusCode: 403
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } as any)
                 .then(resolve)
                 .catch(reject)
               return
@@ -1074,7 +1169,8 @@ module.exports = function (app, config) {
 
             if (
               findRequest(
-                (r) =>
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (r: any) =>
                   r.state === 'PENDING' &&
                   r.accessIdentifier === accessRequest.clientId
               )
@@ -1082,7 +1178,8 @@ module.exports = function (app, config) {
               updateRequest(request.requestId, 'COMPLETED', {
                 statusCode: 400,
                 message: `A device with clientId '${accessRequest.clientId}' has already requested access`
-              })
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } as any)
                 .then(resolve)
                 .catch(reject)
               return
@@ -1097,7 +1194,11 @@ module.exports = function (app, config) {
             alertMessage = `The device "${accessRequest.description}" has requested access to the server`
           } else {
             if (!options.allowNewUserRegistration) {
-              updateRequest(request.requestId, 'COMPLETED', { statusCode: 403 })
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              updateRequest(request.requestId, 'COMPLETED', {
+                statusCode: 403
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } as any)
                 .then(resolve)
                 .catch(reject)
               return
@@ -1110,7 +1211,8 @@ module.exports = function (app, config) {
               updateRequest(request.requestId, 'COMPLETED', {
                 statusCode: 400,
                 message: 'User already exists'
-              })
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } as any)
                 .then(resolve)
                 .catch(reject)
               return
@@ -1147,9 +1249,13 @@ module.exports = function (app, config) {
               }
             ]
           })
-          updateRequest(request.requestId, 'PENDING', { statusCode: 202 })
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          updateRequest(request.requestId, 'PENDING', {
+            statusCode: 202
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any)
             .then((reply) => {
-              resolve(reply, theConfig)
+              resolve(reply)
             })
             .catch(reject)
         })

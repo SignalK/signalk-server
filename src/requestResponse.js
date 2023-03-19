@@ -9,7 +9,14 @@ const pruneRequestTimeout = 60 * 60 * 1000
 const pruneIntervalRate = 15 * 60 * 1000
 let pruneInterval
 
-function createRequest(app, type, clientRequest, user, clientIp, updateCb) {
+export function createRequest(
+  app,
+  type,
+  clientRequest,
+  user,
+  clientIp,
+  updateCb
+) {
   return new Promise((resolve) => {
     const requestId = clientRequest.requestId
       ? clientRequest.requestId
@@ -52,7 +59,7 @@ function createReply(request) {
   return reply
 }
 
-function updateRequest(
+export function updateRequest(
   requestId,
   state,
   { statusCode = null, data = null, message = null, percentComplete = null }
@@ -102,11 +109,11 @@ export function queryRequest(requestId) {
   })
 }
 
-function findRequest(matcher) {
+export function findRequest(matcher) {
   return _.values(requests).find(matcher)
 }
 
-function filterRequests(type, state) {
+export function filterRequests(type, state) {
   return _.values(requests).filter(
     (r) => r.type === type && (state === null || r.state === state)
   )

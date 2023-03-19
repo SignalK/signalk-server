@@ -16,7 +16,7 @@ import { WithSecurityStrategy } from '../../security'
 import { Responses } from '../'
 import { validate } from './validate'
 import { SignalKMessageHub } from '../../app'
-import { Delta, SKVersion } from '../../types'
+import { Context, Delta, Path, SKVersion, Source } from '../../types'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 
@@ -279,9 +279,9 @@ export class ResourcesApi {
     const updateAllowed = (req: Request): boolean => {
       return server.securityStrategy.shouldAllowPut(
         req,
-        'vessels.self',
-        null,
-        'resources'
+        'vessels.self' as Context,
+        'resourcesApi' as Source,
+        'resources' as Path
       )
     }
 

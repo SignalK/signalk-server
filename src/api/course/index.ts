@@ -21,7 +21,7 @@ import { Store } from '../../serverstate/store'
 import { buildSchemaSync } from 'api-schema-builder'
 import courseOpenApi from './openApi.json'
 import { ResourcesApi } from '../resources'
-import { Delta, SKVersion } from '../../types'
+import { Context, Delta, Path, SKVersion, Source } from '../../types'
 
 const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
 
@@ -130,9 +130,9 @@ export class CourseApi {
   private updateAllowed(request: Request): boolean {
     return this.server.securityStrategy.shouldAllowPut(
       request,
-      'vessels.self',
-      null,
-      'navigation.course'
+      'vessels.self' as Context,
+      'courseApi' as Source,
+      'navigation.course' as Path
     )
   }
 
