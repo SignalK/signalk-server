@@ -1,4 +1,4 @@
-![signal-k-logo-tagline](https://user-images.githubusercontent.com/1049678/34687576-d3e9af3e-f4b7-11e7-875e-80fce5a6e62b.png)
+![Signal K logo](https://user-images.githubusercontent.com/5200296/226164888-d33b2349-e608-4bed-965f-ebe4339b4376.png)
 
 [![npm version](https://badge.fury.io/js/signalk-server.svg)](https://badge.fury.io/js/signalk-server)
 [![npm license](https://img.shields.io/npm/l/signalk-server.svg)](https://www.npmjs.com/package/signalk-server)
