@@ -173,7 +173,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_PAT }} # Personal access tokens (classic) with a scope of "write:packages" is needed to release ghcr.io package registry.
+          password: ${{ secrets.GHCR_PAT }} # Personal access tokens (classic) with a scope of "write:packages" is needed to release ghcr.io package registry.
       - name: Set TAG for build-args
         id: vars
         run: echo ::set-output name=tag::$(echo ${GITHUB_REF#refs/*/})
