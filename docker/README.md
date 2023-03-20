@@ -40,11 +40,15 @@ Release images `docker/Dockerfile_rel` are size optimized and there are only man
 
 Release images can be found from GitHub Container registry [SignalK/packages/container/package/signalk-server](https://github.com/orgs/SignalK/packages/container/package/signalk-server), tagged `latest` or e.g. `v1.40.0`. `latest` refers to last released version.
 
+During transition period, Release images can be also found from Docker Hub [signalk/signalk-server](https://hub.docker.com/r/signalk/signalk-server), tagged `latest` or e.g. `v1.40.0`. `latest` refers to last released version.
+
 ## Development images
 
 Development images `docker/Dockerfile`include all files from the Signal K server repository (1-to-1 copy) and these images are targeted mainly for development and testing. Development images are built off the files in the repo, including the submodules from `packages` directory.
 
 Development docker images can be found from GitHub Container registry [SignalK/packages/container/package/signalk-server](https://github.com/orgs/SignalK/packages/container/package/signalk-server), tagged with `<branch>` (mainly `master`) and `sha`
+
+During transition period, Development docker images can be also found from Docker Hub [signalk/signalk-server](https://hub.docker.com/r/signalk/signalk-server), tagged with `<branch>` (mainly `master`) and `sha`
 
 ## Directory structure
 
