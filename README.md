@@ -133,8 +133,11 @@ The first thing to do is create an admin account. This is done in the Settings -
 
 ![image](https://user-images.githubusercontent.com/5200296/226754646-3bc60ddb-245a-4bd2-ab2f-b5539bdefa77.png)
 
+Besides recommended from a security point of view, setting an admin account also enables the Restart button.
 
-Besides recommended from a security point of view, setting an admin account also enabled the Restart button.
+After creating the account, the server needs to be restarted.
+How to do that depends on how you are using Signal K Server: self installed from NPM, embedded on a commercial device or otherwise.
+Power cycling the device that Signal K Server is running on will always work.
 
 ### Setting up data connections
 
