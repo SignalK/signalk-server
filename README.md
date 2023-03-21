@@ -77,6 +77,10 @@ Also available, Docker images for Linux:
 
 * [Signal K docker images](https://github.com/SignalK/signalk-server/tree/master/docker)
 
+And an installer for Windows:
+
+* [https://github.com/SignalK/signalk-server-windows](https://github.com/SignalK/signalk-server-windows)
+
 Next level up is to use provisioning scripts:
 
 * [MarinePi Provisioning](https://github.com/tkurki/marinepi-provisioning) - Ansible scripts to setup RaspberryPi for boat use
@@ -85,7 +89,7 @@ Another level up, this document explains how to install Signal K Server, as well
 
 * [Installation on a RaspberryPi](https://github.com/SignalK/signalk-server-node/blob/master/raspberry_pi_installation.md)
 
-Ofcourse it is also possible to install (just) the Signal K Server application from either NPM or Github. Which is covered a few chapters further down below.
+Ofcourse it is also possible to install (just) the Signal K Server application from either NPM or Github. Which is covered a two chapters further down below.
 
 ## Other necessary hardware
 
