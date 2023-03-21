@@ -122,10 +122,10 @@ Open the Admin UI by navigating to http://[ipaddress]:3000/. Here is what it wil
 
 The top of the screen shows some actual stats. Below that is a pane showing all configured Connections & Plugins. These are the plugins shown in above screenshot:
 
-- sk-to-nmea0183 is the plugin that makes navigation data available on WiFi and/or LAN (TCP); typically used by apps on phones and tablets.
-- signalk-n2kais-nmea0183 is another plugin, does the same, but then for AIS data
-- venus is a plugin that connects to the data bus inside the Victron GX device
-- n2k-on-ve.can-socket is not a plugin but a data connection, that defines the Signal K Server connection to the NMEA2000 CAN-bus port.
+- `sk-to-nmea0183` is the plugin that makes navigation data available on WiFi and/or LAN (TCP); typically used by apps on phones and tablets.
+- `signalk-n2kais-nmea0183` is another plugin, does the same, but then for AIS data
+- `venus` is a plugin that connects to the data bus inside the Victron GX device
+- `n2k-on-ve.can-socket` is not a plugin but a data connection. This one defines the Signal K Server connection to the NMEA2000 CAN-bus port.
 
 ### Creating an admin account
 
