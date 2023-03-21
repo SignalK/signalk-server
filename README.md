@@ -127,6 +127,15 @@ The top of the screen shows some actual stats. Below that is a pane showing all 
 - venus is a plugin that connects to the data bus inside the Victron GX device
 - n2k-on-ve.can-socket is not a plugin but a data connection, that defines the Signal K Server connection to the NMEA2000 CAN-bus port.
 
+### Creating an admin account
+
+The first thing to do is create an admin account. This is done in the Settings -> Users page:
+
+![image](https://user-images.githubusercontent.com/5200296/226754646-3bc60ddb-245a-4bd2-ab2f-b5539bdefa77.png)
+
+
+Besides recommended from a security point of view, setting an admin account also enabled the Restart button.
+
 ### Setting up data connections
 
 This screenshot shows how to setup an NMEA0183 connection:
@@ -156,9 +165,9 @@ It is also possible to search for and browse Plugins and Webapps in the NPM regi
 
 ### Restarting Signal K Server
 
-After adding a Plugin, the server needs to be restarted. Easiest way to do that is to use the Restart button at the top right.
+After adding a Plugin, the server needs to be restarted, see Restart button at the top right.
 
-To see that, you first need to make an (admin) account in the Security menu.
+If the restart button is not showing, then usually thats because there is no user account created yet.
 
 ### Configuring Plugins
 
