@@ -220,7 +220,7 @@ To enable debugging without going through the Admin UI, see the file `~/.signalk
 - `ADMINUSER` force a account for admin user (username:password format).
 - `PRESERIALCOMMAND` command to run before opening a serial port.
 - `SIGNALK_NODE_SETTINGS` override the path to the settings file.
-- `SIGNALK_NODE_CONFIG_DIR` override the path to find server configuration files.
+- `SIGNALK_NODE_CONFIG_DIR` override the path to find server configuration. Includes all run-time changing content: configuration files, plugins, plugin configuration files, webapps, and so forth. Used when installing signalk-server on a read-only file system.
 
 ## Command line options
 
