@@ -382,9 +382,6 @@ The documents provide more details about developing Webapps or Plugings for Sign
 * [RESOURCE_PROVIDER_PLUGINS.md](RESOURCE_PROVIDER_PLUGINS.md)
 * [SECURITY.md](SECURITY.md)
 
-Documentation for the maintainers:
-* [releasing.md](releasing.md)
-
 ### Install from git
 
 ```
