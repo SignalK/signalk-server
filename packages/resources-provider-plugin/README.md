@@ -12,21 +12,21 @@ This plugin is a resource provider, facilitating the storage and retrieval of th
 - `resources/notes`
 - `resources/regions`   
 
-as well as providing the capability to serve custom resource types provisioned as additional paths under `/signalk/v1/api/resources`.
+as well as providing the capability to serve custom resource types provisioned as additional paths under `/signalk/v2/api/resources`.
 
-- _example:_ `resources/fishingZones`   
+- _example:_ `/signalk/v2/api/resources/fishingZones`   
 
 Each path is provisioned with `GET`, `PUT`, `POST` and `DELETE` operations enabled.
 
-Operation of all paths is as set out in the Signal K specification.
+Operation of all paths is as set out in the OpenAPI resources definition available in the Signal K server Admin console.
 
 
 ---
 ## Installation and Configuration:
 
-1. Install the plugin via the Signal K server __AppStore__
+Signal K server v2 includes this plugin as part of the installation / upgrade process.
 
-1. Re-start the Signal K server to load the plugin. The plugin will be active with all managed resource types enabled.
+By default the plugin is enabled with all standdard resource types enabled.
 
 1. `(optional)` De-select any resource types you want to disable.
 
