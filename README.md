@@ -12,7 +12,6 @@
 * [Community & support](#community--support)
 * [How to get Signal K Server](#how-to-get-signal-k-server)
 * [Other necessary hardware](#other-necessary-hardware)
-* [Installing from NPM](#installing-from-npm)
 * [Configuration and use](#configuration-and-use)
 * [Supported PGNs, Sentences and more](#supported-pgns-sentences-and-more)
 * [Environment variables](#environment-variables)
@@ -76,30 +75,21 @@ These prebuilt images for RaspberryPis take away most of the complexity involved
 * [OpenPlotter](https://openmarine.net/openplotter) by OpenMarine
 * [Venus OS for RaspberryPis](https://github.com/victronenergy/venus/wiki/raspberrypi-install-venus-image) by Victron Energy
 
-Also available, Docker images for Linux:
+You can run Signal K Server in Docker:
 
-* [Signal K docker images](https://github.com/SignalK/signalk-server/tree/master/docker)
+* [Docker quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/docker/README.md#quickstart)
 
 And an installer for Windows:
 
 * [https://github.com/SignalK/signalk-server-windows](https://github.com/SignalK/signalk-server-windows)
 
-Next level up is to use provisioning scripts:
-
-* [MarinePi Provisioning](https://github.com/tkurki/marinepi-provisioning) - Ansible scripts to setup RaspberryPi for boat use
-
 Another level up, this document explains how to install Signal K Server, as well as its dependencies, on a RaspberryPi that is already running Raspberry Pi OS:
 
 * [Installation on a RaspberryPi](https://github.com/SignalK/signalk-server-node/blob/master/raspberry_pi_installation.md)
 
-Ofcourse it is also possible to install (just) the Signal K Server application from either NPM or Github. Which is covered a two chapters further down below.
+Last, here is how to install the Signal K Server application from NPM:
 
-## Other necessary hardware
-
-Especially when running Signal K Server on a RaspberryPi, extra hardware, such as USB converters or HATs will be required.
-[This entry in the FAQ](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions#how-do-i-integrate-with-nmea2000-can-bus) lists how to connect to NMEA2000 / CAN-Bus.
-
-## Installing from NPM
+#### Installing from NPM
 
 Prerequisites:
 * Node.js version 16 with latest npm installed (signalk-server works for the time being on Node version >=10, but we are moving to the latest LTS version that is v16 in 9/2021)
@@ -113,6 +103,11 @@ Now you can start the server with sample data:
 To generate your own vessel settings file and configure the server to start automatically, run:
 
     $ sudo signalk-server-setup
+
+## Other necessary hardware
+
+Especially when running Signal K Server on a RaspberryPi, extra hardware, such as USB converters or HATs will be required.
+[This entry in the FAQ](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions#how-do-i-integrate-with-nmea2000-can-bus) lists how to connect to NMEA2000 / CAN-Bus.
 
 ## Configuration and use
 
