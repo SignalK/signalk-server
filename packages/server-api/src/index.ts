@@ -104,10 +104,17 @@ export interface Ports {
   serialports: any
 }
 
+export interface Metadata {
+  units?: string
+  description?: string
+}
+
 export interface ServerAPI extends PluginServerApp {
-  getSelfPath: (path: string) => void
-  getPath: (path: string) => void
-  getMetadata: (path: string) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getSelfPath: (path: string) => any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getPath: (path: string) => any
+  getMetadata: (path: string) => Metadata | undefined
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   putSelfPath: (aPath: string, value: any, updateCb: () => void) => Promise<any>
   putPath: (
