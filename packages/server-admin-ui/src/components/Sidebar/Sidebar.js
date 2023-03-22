@@ -268,10 +268,6 @@ const mapStateToProps = (state) => {
             url: '/serverConfiguration/datafiddler',
           },
           {
-            name: 'OpenApi',
-            url: `${window.location.protocol}//${window.location.host}/admin/openapi`,
-          },
-          {
             name: 'Backup/Restore',
             url: '/serverConfiguration/backuprestore',
           },
@@ -318,6 +314,18 @@ const mapStateToProps = (state) => {
     }
     result.items.push(security)
   }
+
+  result.items.push({
+    name: 'Documentation',
+    url: '/doc',
+    icon: 'icon-settings',
+    children: [
+      {
+        name: 'OpenApi',
+        url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
+      },
+    ],
+  })
 
   return result
 }
