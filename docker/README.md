@@ -11,7 +11,7 @@ Supported os/architectures:
 - linux/arm/v7
 - linux/arm64
 
-# Using the images
+# Quickstart
 
 You can start a local server on port 3000  with demo data with
 
