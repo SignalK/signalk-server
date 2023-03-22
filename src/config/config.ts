@@ -25,7 +25,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { SelfIdentity, SignalKMessageHub, WithConfig } from '../app'
 import { createDebug } from '../debug'
 import DeltaEditor from '../deltaeditor'
-import { getExternalPort  as getExtPort} from '../ports'
+import { getExternalPort as getExtPort } from '../ports'
 const debug = createDebug('signalk-server:config')
 
 let disableWriteSettings = false
@@ -91,7 +91,7 @@ export function load(app: ConfigApp) {
   const env = (app.env = process.env)
 
   config.getExternalHostname = getExternalHostname.bind(config, config)
-  config.getExternalPort = getExternalPort.bind(config, config, app)
+  config.getExternalPort = getExternalPort.bind(config, app)
 
   config.appPath = config.appPath || path.normalize(__dirname + '/../../')
   debug('appPath:' + config.appPath)
@@ -449,12 +449,7 @@ function getExternalHostname(config: Config) {
   }
 }
 
-function getExternalPort(config: Config, app: ConfigApp): any {
-  if (config.settings.proxy_port) {
-    return config.settings.proxy_port
-  } else if (config.port) {
-    return config.port
-  }
+function getExternalPort(app: ConfigApp): number {
   return getExtPort(app)
 }
 
