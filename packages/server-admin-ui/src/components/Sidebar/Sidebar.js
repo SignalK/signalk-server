@@ -84,7 +84,7 @@ class Sidebar extends Component {
       return (
         <NavItem key={key} className={classes.item}>
           {isExternal(url) ? (
-            <RsNavLink href={url} className={classes.link} active>
+            <RsNavLink href={url} className={classes.link}>
               <i className={classes.icon} />
               {item.name}
               {badge(item.badge)}
