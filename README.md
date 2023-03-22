@@ -14,7 +14,6 @@
 * [Other necessary hardware](#other-necessary-hardware)
 * [Installing from NPM](#installing-from-npm)
 * [Configuration and use](#configuration-and-use)
-* [FAQ](#faq)
 * [Supported PGNs, Sentences and more](#supported-pgns-sentences-and-more)
 * [Environment variables](#environment-variables)
 * [Settings files](#settings-files)
@@ -60,6 +59,8 @@ Signal K is more than just the Signal K Server, it is a comprehensive platform t
 
 See [Github Discussions](https://github.com/SignalK/signalk/discussions/) and [Slack (chat)](https://signalk-dev.slack.com/).
 New to Signal K Slack? Then [click here for an invite](https://join.slack.com/t/signalk-dev/shared_invite/zt-1leccop43-KrU7G6yBq9g91KXjZtNg1g).
+
+There is a [Signal K Server FAQ](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions) on the Wiki.
 
 ## How to get Signal K Server?
 
@@ -185,10 +186,6 @@ After the restart, the new Plugin needs to be enabled and configured. See the Se
 ![image](https://user-images.githubusercontent.com/5200296/226482046-dfb759dc-abbb-4987-a810-a24b77d0927e.png)
 
 ![image](https://user-images.githubusercontent.com/5200296/226482099-b9dd46ff-72a6-44e4-b384-1d15a4621e63.png)
-
-## FAQ
-
-The Signal K Server FAQ [is on the wiki](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions).
 
 ## Supported PGNs, sentences and more
 
