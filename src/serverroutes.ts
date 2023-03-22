@@ -105,7 +105,7 @@ module.exports = function (
   }
 
   // mount before the main /admin
-  mountSwaggerUi(app, '/admin/openapi')
+  mountSwaggerUi(app, '/doc/openapi')
 
   app.get('/admin/', (req: Request, res: Response) => {
     fs.readFile(
