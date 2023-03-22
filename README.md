@@ -11,7 +11,6 @@
 * [Signal K Platform](#signal-k-platform)
 * [Community & support](#community--support)
 * [How to get Signal K Server](#how-to-get-signal-k-server)
-* [Other necessary hardware](#other-necessary-hardware)
 * [Configuration and use](#configuration-and-use)
 * [Supported PGNs, Sentences and more](#supported-pgns-sentences-and-more)
 * [Environment variables](#environment-variables)
@@ -68,6 +67,8 @@ For the typical boater, not being a software developer nor electrical engineer, 
 * [Cerbo GX](https://www.victronenergy.com/panel-systems-remote-monitoring/cerbo-gx) and other GX Devices by Victron Energy  ([see Venus OS Large manual](https://www.victronenergy.com/live/venus-os:large))
 
 For a more technical DIY oriented boater, a RaspberryPi based setup offers a very cost-attractive alternative.
+Read [this FAQ entry](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions#how-do-i-integrate-with-nmea2000-can-bus) to learn how to connect a RaspberryPi to an NMEA2000 network.
+
 These prebuilt images for RaspberryPis take away most of the complexity involved from the software side:
 
 * [BBN Marine OS](https://github.com/bareboat-necessities/lysmarine_gen#what-is-lysmarine-bbn-edition)
@@ -102,11 +103,6 @@ Now you can start the server with sample data:
 To generate your own vessel settings file and configure the server to start automatically, run:
 
     $ sudo signalk-server-setup
-
-## Other necessary hardware
-
-Especially when running Signal K Server on a RaspberryPi, extra hardware, such as USB converters or HATs will be required.
-[This entry in the FAQ](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions#how-do-i-integrate-with-nmea2000-can-bus) lists how to connect to NMEA2000 / CAN-Bus.
 
 ## Configuration and use
 
