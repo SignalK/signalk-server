@@ -1,28 +1,13 @@
 import {
   Plugin,
-  PluginServerApp,
+  ServerAPI,
   ResourceProviderRegistry
 } from '@signalk/server-api'
 
 import { FileStore, getUuid } from './lib/filestorage'
 import { StoreRequestParams } from './types'
 
-interface ResourceProviderApp
-  extends PluginServerApp,
-    ResourceProviderRegistry {
-  statusMessage?: () => string
-  error: (msg: string) => void
-  debug: (msg: string) => void
-  setPluginStatus: (pluginId: string, status?: string) => void
-  setPluginError: (pluginId: string, status?: string) => void
-  setProviderStatus: (providerId: string, status?: string) => void
-  setProviderError: (providerId: string, status?: string) => void
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getSelfPath: (path: string) => any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  savePluginOptions: (options: any, callback: () => void) => void
-  config: { configPath: string }
-}
+interface ResourceProviderApp extends ServerAPI, ResourceProviderRegistry {}
 
 const CONFIG_SCHEMA = {
   properties: {
@@ -166,7 +151,11 @@ module.exports = (server: ResourceProviderApp): Plugin => {
       )
 
       // initialise resource storage
-      db.init({ settings: config, path: server.config.configPath })
+      const dpa = server.getDataDirPath().split('/')
+      const basePath = dpa.slice(0, dpa.length - 2).join('/')
+      server.debug(`basePath: ${basePath}`)
+
+      db.init({ settings: config, basePath: basePath })
         .then((res: { error: boolean; message: string }) => {
           if (res.error) {
             const msg = `*** ERROR: ${res.message} ***`
