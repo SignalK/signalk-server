@@ -31,11 +31,11 @@ export class FileStore implements IResourceStore {
   // check / create path to persist resources
   async init(config: any): Promise<{ error: boolean; message: string }> {
     if (typeof config.settings.path === 'undefined') {
-      this.savePath = config.path + '/resources'
+      this.savePath = config.basePath + '/resources'
     } else if (config.settings.path[0] == '/') {
       this.savePath = config.settings.path
     } else {
-      this.savePath = path.join(config.path, config.settings.path)
+      this.savePath = path.join(config.basePath, config.settings.path)
     }
     // std resources
     if (config.settings.standard) {
