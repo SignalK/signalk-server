@@ -16,7 +16,6 @@
 * [Supported PGNs, Sentences and more](#supported-pgns-sentences-and-more)
 * [Environment variables](#environment-variables)
 * [Settings files](#settings-files)
-* [Debugging](#debugging)
 * [Development](#development)
 * [Sponsoring Signal K](#sponsoring-signal-k)
 * [License](#license)
@@ -181,6 +180,14 @@ After the restart, the new Plugin needs to be enabled and configured. See the Se
 ![image](https://user-images.githubusercontent.com/5200296/226482046-dfb759dc-abbb-4987-a810-a24b77d0927e.png)
 
 ![image](https://user-images.githubusercontent.com/5200296/226482099-b9dd46ff-72a6-44e4-b384-1d15a4621e63.png)
+
+### Debug logs
+
+If the Admin UI is available, go to Server -> Server Log and enter the the names of the components you want to debug. With the Rembember debug setting enabled, the configured debug keys parameter is stored in a settings file, ie. survives a server restart.
+
+![image](https://user-images.githubusercontent.com/5200296/227020518-ac8b4355-5902-45a5-9d6c-0e9d1dc9e630.png)
+
+To enable debugging without going through the Admin UI, see the file `~/.signalk/debug` and add the required debug keys there. For example: `@signalk/aisreporter,signalk-server:udp-provider`.
 
 ## Supported PGNs, sentences and more
 
@@ -361,12 +368,6 @@ Note that the filtering takes place on *path level, not on delta level*: if a de
 There is no timeout for the highest priority source, it is handled always.
 
 Timeout for data from unlisted sources is 10 seconds.
-
-## Debugging
-
-If the Admin UI is available, go to Server -> Server Log and enter the the names of the compononets you want to debug.
-
-Otherwise, you can edit the file `~/.signalk/debug' and add them there. For example: `@signalk/aisreporter,signalk-server:udp-provider`
 
 ## Development
 
