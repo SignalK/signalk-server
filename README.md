@@ -41,10 +41,12 @@ For Marine vendors who build marine hardware and software, for example those dev
 
 Signal K Server is already running inside products developed by Victron Energy, Airmar Technology and others.
 
-### Software Developers
+### Software Developers & Boat Electronics Hobbyists
 There are many boaters who happen to be highly skilled software developers and engineers, who want to build software for themselves and share with others. If you are one of them, Signal K offers you a free, modern and open platform developed by boaters for other boaters like you. Signal K Server features an extensible [plugin framework](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md), [web applications](https://github.com/SignalK/signalk-server/blob/master/WEBAPPS.md) as well as a rich set of [REST](https://signalk.org/specification/1.7.0/doc/rest_api.html) and [Streaming APIs](https://signalk.org/specification/1.7.0/doc/streaming_api.html).
 
-Signal K Server takes care of all the complicated parts of protocol decode, and conversions to and from NMEA2000, NMEA0183 and many more protocols. It can also act as data hub for additional sensors. It makes the data available in JSON format according to the [Signal K standard specification](https://signalk.org/specification/latest/). This allows developers to bypass all the hurdles typically encountered when wanting to implement something for a boat. [Getting started with a plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md#getting-started-with-plugin-development) is surprisingly easy.
+Signal K Server takes care of all the complicated parts of protocol decode, and conversions to and from NMEA2000, NMEA0183 and many more protocols. It can also act as data hub for additional sensors, see the [Signal K SensESP project](https://github.com/SignalK/SensESP) for [ESP32](https://en.wikipedia.org/wiki/ESP32).
+
+Signal K Server makes the data available in JSON format according to the [Signal K standard specification](https://signalk.org/specification/latest/). This allows developers to bypass all the hurdles typically encountered when wanting to implement something for a boat. [Getting started with a plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md#getting-started-with-plugin-development) is surprisingly easy.
 
 ## Signal K Platform
 
