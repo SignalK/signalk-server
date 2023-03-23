@@ -233,13 +233,13 @@ To enable debugging without going through the Admin UI, see the file `~/.signalk
 
 The documents provide more details about developing Webapps or Plugings for Signal K Server, as well as working on the server itself:
 
-* [CONTRIBUTING.md](CONTRIBUTING.md)
-* [SERVERPLUGINS.md](SERVERPLUGINS.md)
-* [WEBAPPS.md](WEBAPPS.md)
-* [WORKING_WITH_COURSE_API.md](WORKING_WITH_COURSE_API.md)
-* [WORKING_WITH_RESOURCES_API.md](WORKING_WITH_RESOURCES_API.md)
-* [RESOURCE_PROVIDER_PLUGINS.md](RESOURCE_PROVIDER_PLUGINS.md)
-* [SECURITY.md](SECURITY.md)
+* [Contributing to this repo](CONTRIBUTING.md)
+* [Server Plugins](SERVERPLUGINS.md)
+* [Webapps](WEBAPPS.md)
+* [Working with the Course API](WORKING_WITH_COURSE_API.md)
+* [Working with the Resources API](WORKING_WITH_RESOURCES_API.md)
+* [Resource Provider Plugins](RESOURCE_PROVIDER_PLUGINS.md)
+* [Security](SECURITY.md)
 
 ### Install from git
 
