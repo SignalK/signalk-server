@@ -175,9 +175,13 @@ After the restart, the new Plugin needs to be enabled and configured. See the Se
 
 You can change the admin application's top left logo by placing a SVG file named `logo.svg` in the settings directory (default: $HOME/.signalk/).
 
-### Debug logs
+### Server Log
 
-If the Admin UI is available, go to Server -> Server Log and enter the the names of the components you want to debug. With the Rembember debug setting enabled, the configured debug keys parameter is stored in a settings file, ie. survives a server restart.
+If the Admin UI is available, go to Server -> Server Log to see the server's log. Different errors are logged there, so in case of trouble make sure to check not only the Admin UI but also the server log.
+
+To activate more details debug logging enter the the names of the components you want to debug. Some of the debug keys are listed with toggles to activate them.
+
+With the Remember debug setting enabled, the configured debug keys parameter is stored in a settings file, ie. survives a server restart.
 
 ![image](https://user-images.githubusercontent.com/5200296/227020518-ac8b4355-5902-45a5-9d6c-0e9d1dc9e630.png)
 
