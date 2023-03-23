@@ -57,7 +57,7 @@ Signal K is more than just the Signal K Server, it is a comprehensive platform t
 See [Github Discussions](https://github.com/SignalK/signalk/discussions/) and [Slack (chat)](https://signalk-dev.slack.com/).
 New to Signal K Slack? Then [click here for an invite](https://join.slack.com/t/signalk-dev/shared_invite/zt-1leccop43-KrU7G6yBq9g91KXjZtNg1g).
 
-There is a [Signal K Server FAQ](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions) on the Wiki.
+There is a [Signal K Server FAQ Frequently Asked Questions](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions) on the Wiki, including [How do I integrate with NMEA2000 (CAN bus)](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions#how-do-i-integrate-with-nmea2000-can-bus).
 
 ## How to get Signal K Server?
 
@@ -88,8 +88,6 @@ Another level up, this document explains how to install Signal K Server, as well
 * [Installation on a RaspberryPi](https://github.com/SignalK/signalk-server-node/blob/master/raspberry_pi_installation.md)
 
 Last, here is how to install the Signal K Server application from NPM:
-
-#### Installing from NPM
 
 Prerequisites:
 * Node.js version 16 with latest npm installed (signalk-server works for the time being on Node version >=10, but we are moving to the latest LTS version that is v16 in 9/2021)
