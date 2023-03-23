@@ -157,11 +157,9 @@ It is also possible to search for and browse Plugins and Webapps in the NPM regi
   * [Plugins](https://www.npmjs.com/search?q=keywords%3Asignalk-node-server-plugin)
   * [Webapps](https://www.npmjs.com/search?q=keywords:signalk-webapp)
 
-### Restarting Signal K Server
+### Restart after Configuration Changes and Plugin/Webapp Installation
 
-After adding a Plugin, the server needs to be restarted, see Restart button at the top right.
-
-If the restart button is not showing, then usually thats because there is no user account created yet.
+Most configuration changes and installing add-ons from the App store require a server restart to take effect. See Restart button at the top right or restart the server manually (details depend on your setup). If the restart button is not showing, that is usually because security is not activate and there is no Admin user.
 
 ### Configuring Plugins
 
