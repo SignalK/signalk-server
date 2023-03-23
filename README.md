@@ -173,6 +173,8 @@ After the restart, the new Plugin needs to be enabled and configured. See the Se
 
 ![image](https://user-images.githubusercontent.com/5200296/226482099-b9dd46ff-72a6-44e4-b384-1d15a4621e63.png)
 
+You can change the admin application's top left logo by placing a SVG file named `logo.svg` in the settings directory (default: $HOME/.signalk/).
+
 ### Debug logs
 
 If the Admin UI is available, go to Server -> Server Log and enter the the names of the components you want to debug. With the Rembember debug setting enabled, the configured debug keys parameter is stored in a settings file, ie. survives a server restart.
@@ -257,10 +259,6 @@ This small demo shows how to connect the Signal K Server WebSocket interface fro
 npm install -g wscat2
 wscat 'ws://localhost:3000/signalk/v1/stream?subscribe=all'
 ```
-
-### Custom logo
-
-You can change the admin application's top left logo by placing a SVG file named `logo.svg` in the settings directory (default: $HOME/.signalk/).
 
 ## Sponsoring Signal K
 
