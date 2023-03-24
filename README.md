@@ -228,6 +228,11 @@ To enable debugging without going through the Admin UI, see the file `~/.signalk
 
 - `-c`: same as env variable `SIGNALK_NODE_SETTINGS`
 - `-s`: same as env variable `SIGNALK_NODE_CONFIG_DIR`
+- `--sample-nmea0183-data`: starts signalk-server with sample NMEA0183 data.
+- `--sample-n2k-data`: starts signalk-server with sample NMEA2000 data.
+- `--override-timestamps`: overrides timestamps in the sample NMEA2000 data with current date and time. Doesn't apply nor makes a difference to NMEA0183 sample data.
+- `--securityenabled`: one of the ways to enable security. For a fresh install this makes the Admin UI force the user to create an admin account before he/she can continue further into the UI. See [SECURITY.md#enabling-security](https://github.com/SignalK/signalk-server/blob/master/SECURITY.md#enabling-security) for further details.
+
 
 ## Development
 
