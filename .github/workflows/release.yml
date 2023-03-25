@@ -157,7 +157,7 @@ jobs:
         id: docker_meta
         uses: docker/metadata-action@v4
         with:
-          images: signalk/signalk/signalk-server
+          images: signalk/signalk-server
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
