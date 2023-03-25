@@ -157,22 +157,21 @@ jobs:
         id: docker_meta
         uses: docker/metadata-action@v4
         with:
-          images: ghcr.io/signalk/signalk-server
+          images: signalk/signalk/signalk-server
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - name: Login to ghcr.io
+      - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          username: signalkci
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Set TAG for build-args
         id: vars
         run: echo ::set-output name=tag::$(echo ${GITHUB_REF#refs/*/})
       - name: Build and push
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v3
         with:
           file: ./docker/Dockerfile_rel
           platforms: linux/amd64,linux/arm/v7,linux/arm64

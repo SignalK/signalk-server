@@ -1,4 +1,4 @@
-FROM ghcr.io/signalk/signalk-server-base:latest AS base
+FROM signalk/signalk-server-base:latest AS base
 
 USER node
 RUN mkdir -p /home/node/.signalk/ \
