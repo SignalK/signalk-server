@@ -16,6 +16,10 @@ Supported os/architectures:
 You can start a local server on port 3000  with demo data with
 
 ```
+docker pull cr.signalk.io/signalk/signalk-server
+```
+
+```
 docker run --init -it --rm --name signalk-server --publish 3000:3000 --entrypoint /home/node/signalk/bin/signalk-server signalk/signalk-server --sample-nmea0183-data
 ```
 
@@ -38,17 +42,13 @@ Signal K Server docker images are based on Ubuntu 20.04 LTS. During build proces
 
 Release images `docker/Dockerfile_rel` are size optimized and there are only mandatory files in the images. During the release process updated npm packages in the server repo are built and published to npmjs. Release docker image is then built from the published npm packages like Signal K server is installed normally from npmjs.
 
-Release images can be found from GitHub Container registry [SignalK/packages/container/package/signalk-server](https://github.com/orgs/SignalK/packages/container/package/signalk-server), tagged `latest` or e.g. `v1.40.0`. `latest` refers to last released version.
-
-During transition period, Release images can be also found from Docker Hub [signalk/signalk-server](https://hub.docker.com/r/signalk/signalk-server), tagged `latest` or e.g. `v1.40.0`. `latest` refers to last released version.
+Release images can be found from Container registry [cr.signalk.io/signalk/signalk-server](https://cr.signalk.io/signalk/signalk-server), tagged `latest` or e.g. `v1.40.0`. `latest` refers to last released version.
 
 ## Development images
 
 Development images `docker/Dockerfile`include all files from the Signal K server repository (1-to-1 copy) and these images are targeted mainly for development and testing. Development images are built off the files in the repo, including the submodules from `packages` directory.
 
-Development docker images can be found from GitHub Container registry [SignalK/packages/container/package/signalk-server](https://github.com/orgs/SignalK/packages/container/package/signalk-server), tagged with `<branch>` (mainly `master`) and `sha`
-
-During transition period, Development docker images can be also found from Docker Hub [signalk/signalk-server](https://hub.docker.com/r/signalk/signalk-server), tagged with `<branch>` (mainly `master`) and `sha`
+Development docker images can be found from Container registry [cr.signalk.io/signalk/signalk-server](https://cr.signalk.io/signalk/signalk-server), tagged with `<branch>` (mainly `master`) and `sha`
 
 ## Directory structure
 
