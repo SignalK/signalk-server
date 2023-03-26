@@ -31,18 +31,15 @@ By default the plugin is enabled with all standdard resource types enabled.
 1. `(optional)` De-select any resource types you want to disable.
 
 1. `(optional)` Specify any custom resource paths you require.
-
-1. By default resources will be stored under the path `~/.signalk/resources`. You can define an alternative path in the plugin configuration screen. The path will be created if it does not exist.  _(Note: The path you enter is relative to the `~/.signalk` folder.)_
-
 1. Click __Submit__ 
 
-![image](https://user-images.githubusercontent.com/38519157/150449889-5049a624-821c-4f33-ba8b-596b6b643d07.png)
+![image](https://user-images.githubusercontent.com/38519157/227807566-966a5640-87e1-4db8-a7f2-aadf06deb3f3.png)
 
 ---
 
 ## Data Storage:
 
-Resources are stored in the server's filesystem under the path entered in the configuration screen.
+Resources are stored in the server's filesystem under the path `~/.signalk/plugin-config-data/resources-provider/resources`.
 
 A separate file is created for each resource with a name that reflects the resources `id`.
 

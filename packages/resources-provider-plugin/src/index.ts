@@ -11,12 +11,6 @@ interface ResourceProviderApp extends ServerAPI, ResourceProviderRegistry {}
 
 const CONFIG_SCHEMA = {
   properties: {
-    path: {
-      type: 'string',
-      title: 'Path to store resources:',
-      description: 'File system path relative to home/<user>/.signalk',
-      default: './resources'
-    },
     standard: {
       type: 'object',
       title: 'Resources (standard)',
@@ -61,10 +55,6 @@ const CONFIG_SCHEMA = {
 }
 
 const CONFIG_UISCHEMA = {
-  path: {
-    'ui:emptyValue': './resources',
-    'ui:help': ' '
-  },
   standard: {
     routes: {
       'ui:widget': 'checkbox',
@@ -151,11 +141,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
       )
 
       // initialise resource storage
-      const dpa = server.getDataDirPath().split('/')
-      const basePath = dpa.slice(0, dpa.length - 2).join('/')
-      server.debug(`basePath: ${basePath}`)
-
-      db.init({ settings: config, basePath: basePath })
+      db.init({ settings: config, basePath: server.getDataDirPath() })
         .then((res: { error: boolean; message: string }) => {
           if (res.error) {
             const msg = `*** ERROR: ${res.message} ***`
