@@ -99,9 +99,9 @@ module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
   return {
     start() {
-      startPlugins(theApp)
-
       ensureExists(path.join(theApp.config.configPath, 'plugin-config-data'))
+
+      startPlugins(theApp)
 
       theApp.use(
         backwardsCompat('/plugins/configure'),
