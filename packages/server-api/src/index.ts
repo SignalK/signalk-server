@@ -89,6 +89,8 @@ export interface Plugin {
   registerWithRouter?: (router: IRouter) => void
   signalKApiRoutes?: (router: IRouter) => IRouter
   enabledByDefault?: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getOpenApi?: () => any
 }
 
 export type DeltaInputHandler = (
