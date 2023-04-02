@@ -34,6 +34,7 @@ export const startServer = async () => {
     }
   })
   return {
+    server,
     createWsPromiser: () =>
       new WsPromiser(
         'ws://localhost:' +
@@ -81,6 +82,8 @@ export const startServer = async () => {
         },
         sendDeltaUrl
       ),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sendADelta: (delta: any) => sendDelta(delta, sendDeltaUrl),
     stop: () => server.stop()
   }
 }
