@@ -24,7 +24,7 @@ Raspbian, the Linux distribution for RPi, is based on Debian, which has a powerf
 
 Now, install node and npm
 
-    $ curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+    $ curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
     $ sudo apt-get install -y nodejs
 
 We want to make sure that we're using the latest version of npm:
@@ -35,7 +35,7 @@ Use the following command to check the install
 
     node -v && npm -v
 
-which will report, something like, `v16.13.2, 8.3.1` which are the versions of "node" and "npm"
+which will report, something like, `v18.15.0, 9.5.0` which are the versions of "node" and "npm"
 
 Finally we need to install a Bonjour (mDNS) service for Linux called Avahi, which allows Apps and other network devices to Discover the Signal K server. To do this we will use "apt" again ...
 
@@ -293,8 +293,8 @@ Click on update and the installation will start
 
 **Please note !**
 
-Starting with Signal K server version 1.41.0 the recommended Node.js version is 16. [16 is the active LTS](https://nodejs.org/en/about/releases/) (Long Term Support) version in Jan 2022, with End of Life set at 2024-04-30. Node 10 is past its end of life and won't receive any (security) updates.
-So if you are updating from a Signal K version <= V 1.40.0 [check out the Wiki](https://github.com/SignalK/signalk-server/wiki/Updating-to-Node.js-16) on how to. 
+Starting with Signal K server version 2.0.0 the recommended Node.js version is 18. [18 is the active LTS](https://nodejs.org/en/about/releases/) (Long Term Support) version in 2023.
+So if you are updating from a Signal K version <= V 1.40.0 [check out the Wiki](https://github.com/SignalK/signalk-server/wiki/Updating-to-Node.js-18) on how to. 
 
 ![server_during_update](https://user-images.githubusercontent.com/16189982/51401178-71a9e400-1b4a-11e9-86b9-1148442ba59c.png)
 

@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: '16.x'
+          node-version: '18.x'
           registry-url: 'https://registry.npmjs.org'
       - run: |
           if [[ "$(npm view @signalk/server-admin-ui-dependencies version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui-dependencies/package.json)" ]]; then
@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: '16.x'
+          node-version: '18.x'
           registry-url: 'https://registry.npmjs.org'
       - run: |
           if [[ "$(npm view @signalk/server-admin-ui version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui/package.json)" ]]; then
@@ -50,7 +50,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: '16.x'
+          node-version: '18.x'
           registry-url: 'https://registry.npmjs.org'
       - run: |
           if [[ "$(npm view @signalk/server-api version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-api/package.json)" ]]; then
@@ -68,7 +68,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: '16.x'
+          node-version: '18.x'
           registry-url: 'https://registry.npmjs.org'
       - run: |
           if [[ "$(npm view @signalk/streams version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/streams/package.json)" ]]; then
@@ -87,7 +87,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: '16.x'
+          node-version: '18.x'
           registry-url: 'https://registry.npmjs.org'
       - run: |
           if [[ "$(npm view @signalk/resources-provider version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/resources-provider-plugin/package.json)" ]]; then
@@ -108,7 +108,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: '16.x'
+          node-version: '18.x'
           registry-url: 'https://registry.npmjs.org'
       - name: Set tag variable
         id: vars
