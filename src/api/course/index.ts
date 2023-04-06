@@ -54,7 +54,6 @@ interface ActiveRoute extends DestinationBase {
   pointTotal: number
   reverse: boolean
   name: string
-  waypoints?: any[]
 }
 
 interface CourseInfo {
