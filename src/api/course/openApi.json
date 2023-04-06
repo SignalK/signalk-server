@@ -101,13 +101,6 @@
             "description": "Name of route.",
             "example": "Here to eternity."
           },
-          "waypoints": {
-            "type": "array",
-            "description": "Array of points that make up the route.",
-            "items": {
-              "$ref": "#/components/schemas/Location"
-            }
-          },
           "pointIndex": {
             "type": "number",
             "minimum": 0,
@@ -153,21 +146,6 @@
                 "$ref": "#/components/schemas/SignalKPosition"
               }
             ]
-          }
-        }
-      },
-      "Location": {
-        "type": "object",
-        "description": "Position with metadata.",
-        "required": ["position"],
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Location name / identifier",
-            "example": "Wpt001"
-          },
-          "position": {
-            "$ref": "#/components/schemas/SignalKPosition"
           }
         }
       },

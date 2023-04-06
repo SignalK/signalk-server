@@ -330,7 +330,6 @@ describe('Course Api', () => {
       delete data.startTime
       delete data.targetArrivalTime
       delete data.activeRoute.name
-      delete data.activeRoute.waypoints
       data.should.deep.equal({
         arrivalCircle: 0,
         activeRoute: {
