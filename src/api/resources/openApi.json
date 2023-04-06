@@ -367,9 +367,50 @@
               "properties": {
                 "description": "Additional feature properties",
                 "type": "object",
-                "additionalProperties": true
+                "additionalProperties": true,
+                "properties": {
+                  "points": {
+                    "type": "array",
+                    "title": "Route point details",
+                    "description": "Metadata for each point within the route. Array length MUST be the same as length of coordinates array!",
+                    "items": {
+                      "$ref":"#/components/schemas/RoutePointMeta"
+                    },
+                    "example": [
+                      {
+                      "name": "RtePt001"
+                      },
+                      {
+                      "name": "RtePt002"
+                      },
+                      {
+                        "name": "RtePt003"
+                      },
+                      {
+                        "name": "RtePt004"
+                      },
+                      {
+                        "name": "RtePt005"
+                      }
+                    ]
+                  }
+                }
               }
             }
+          }
+        }
+      },
+      "RoutePointMeta": {
+        "type": "object",
+        "title": "Route point metadata",
+        "description": "Attributes of a point within the route",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "description": "Point name / identifier",
+            "type": "string",
+            "example": "RtePt001"
           }
         }
       },
