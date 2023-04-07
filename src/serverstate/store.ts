@@ -1,13 +1,24 @@
 import { constants } from 'fs'
 import { access, mkdir, readFile, writeFile } from 'fs/promises'
 import path from 'path'
+import { WithConfig } from '../app'
+
+export const SERVERSTATEDIRNAME = 'serverState'
 
 export class Store {
   private filePath = ''
   private fileName = ''
 
-  constructor(filePath: string, fileName = 'settings.json') {
-    this.filePath = filePath
+  constructor(
+    server: WithConfig,
+    storePath: string,
+    fileName = 'settings.json'
+  ) {
+    this.filePath = path.join(
+      server.config.configPath,
+      SERVERSTATEDIRNAME,
+      storePath
+    )
     this.fileName = fileName
     this.init().catch((error) => {
       console.log(

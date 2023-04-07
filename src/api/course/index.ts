@@ -4,7 +4,7 @@ const debug = createDebug('signalk-server:api:course')
 
 import { IRouter, Request, Response } from 'express'
 import _ from 'lodash'
-import path from 'path'
+
 import { SignalKMessageHub, WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
 
@@ -89,9 +89,7 @@ export class CourseApi {
     private server: CourseApplication,
     private resourcesApi: ResourcesApi
   ) {
-    this.store = new Store(
-      path.join(server.config.configPath, 'serverstate/course')
-    )
+    this.store = new Store(server, 'course')
   }
 
   async start() {
