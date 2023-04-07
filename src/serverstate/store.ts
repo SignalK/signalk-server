@@ -3,6 +3,8 @@ import { access, mkdir, readFile, writeFile } from 'fs/promises'
 import path from 'path'
 import { WithConfig } from '../app'
 
+export const SERVERSTATEDIRNAME = 'serverState'
+
 export class Store {
   private filePath = ''
   private fileName = ''
@@ -14,7 +16,7 @@ export class Store {
   ) {
     this.filePath = path.join(
       server.config.configPath,
-      'serverState',
+      SERVERSTATEDIRNAME,
       storePath
     )
     this.fileName = fileName
