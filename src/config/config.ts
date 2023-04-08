@@ -38,7 +38,7 @@ const packageJson = require('../../' + 'package.json')
 
 export interface Config {
   getExternalHostname: () => string
-  getExternalPort: (config: Config) => number
+  getExternalPort: () => number
   port: number
   appPath: string
   configPath: string
