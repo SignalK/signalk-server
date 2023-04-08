@@ -20,10 +20,18 @@ jobs:
         with:
           username: signalkci
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to ghcr.io
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }} # Personal access tokens (classic) with a scope of "write:packages" is needed to release ghcr.io package registry. 
       - name: Build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           file: ./docker/Dockerfile_base
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
-          tags: signalk/signalk-server-base:latest
+          tags: |
+            signalk/signalk-server-base:latest
+            ghcr.io/signalk/signalk-server-base:latest
