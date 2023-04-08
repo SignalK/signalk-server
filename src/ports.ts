@@ -53,8 +53,5 @@ export function getExternalPort(app: WithConfig) {
   if (app.config.settings.proxy_port) {
     return app.config.settings.proxy_port
   }
-  if (app.config.port) {
-    return app.config.port
-  }
   return app.config.settings.ssl ? getSslPort(app) : getHttpPort(app)
 }
