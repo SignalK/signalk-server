@@ -25,7 +25,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { SelfIdentity, SignalKMessageHub, WithConfig } from '../app'
 import { createDebug } from '../debug'
 import DeltaEditor from '../deltaeditor'
-import { getExternalPort as getExtPort } from '../ports'
+import { getExternalPort } from '../ports'
 const debug = createDebug('signalk-server:config')
 
 let disableWriteSettings = false
@@ -447,10 +447,6 @@ function getExternalHostname(config: Config) {
   } catch (ex) {
     return 'hostname_not_available'
   }
-}
-
-function getExternalPort(app: ConfigApp): number {
-  return getExtPort(app)
 }
 
 function scanDefaults(deltaEditor: DeltaEditor, vpath: string, item: any) {
