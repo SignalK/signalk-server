@@ -374,14 +374,14 @@
                     "title": "Route point details",
                     "description": "Metadata for each point within the route. Array length MUST be the same as length of coordinates array!",
                     "items": {
-                      "$ref":"#/components/schemas/RoutePointMeta"
+                      "$ref": "#/components/schemas/RoutePointMeta"
                     },
                     "example": [
                       {
-                      "name": "RtePt001"
+                        "name": "RtePt001"
                       },
                       {
-                      "name": "RtePt002"
+                        "name": "RtePt002"
                       },
                       {
                         "name": "RtePt003"
