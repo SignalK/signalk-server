@@ -10,4 +10,4 @@ jobs:
         with:
           mode: exactly
           count: 1
-          labels: "fix, feature, doc, chore, test, ignore, other, dependencies"
+          labels: "fix, feature, doc, chore, test, ignore, other, dependencies, refactor"
