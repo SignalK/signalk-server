@@ -50,5 +50,8 @@ export function getExternalPort(app: WithConfig) {
   if (Number(process.env?.EXTERNALPORT) > 0) {
     return Number(process.env?.EXTERNALPORT)
   }
+  if (app.config.settings.proxy_port) {
+    return app.config.settings.proxy_port
+  }
   return app.config.settings.ssl ? getSslPort(app) : getHttpPort(app)
 }

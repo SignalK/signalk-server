@@ -25,6 +25,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { SelfIdentity, SignalKMessageHub, WithConfig } from '../app'
 import { createDebug } from '../debug'
 import DeltaEditor from '../deltaeditor'
+import { getExternalPort } from '../ports'
 const debug = createDebug('signalk-server:config')
 
 let disableWriteSettings = false
@@ -37,7 +38,7 @@ const packageJson = require('../../' + 'package.json')
 
 export interface Config {
   getExternalHostname: () => string
-  getExternalPort: (config: Config) => number
+  getExternalPort: () => number
   port: number
   appPath: string
   configPath: string
@@ -90,7 +91,7 @@ export function load(app: ConfigApp) {
   const env = (app.env = process.env)
 
   config.getExternalHostname = getExternalHostname.bind(config, config)
-  config.getExternalPort = getExternalPort.bind(config, config)
+  config.getExternalPort = getExternalPort.bind(config, app)
 
   config.appPath = config.appPath || path.normalize(__dirname + '/../../')
   debug('appPath:' + config.appPath)
@@ -446,18 +447,6 @@ function getExternalHostname(config: Config) {
   } catch (ex) {
     return 'hostname_not_available'
   }
-}
-
-function getExternalPort(config: Config): any {
-  if (process.env.EXTERNALPORT) {
-    return process.env.EXTERNALPORT
-  }
-  if (config.settings.proxy_port) {
-    return config.settings.proxy_port
-  } else if (config.port) {
-    return config.port
-  }
-  return ''
 }
 
 function scanDefaults(deltaEditor: DeltaEditor, vpath: string, item: any) {
