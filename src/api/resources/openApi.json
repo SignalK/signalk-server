@@ -369,19 +369,26 @@
                 "type": "object",
                 "additionalProperties": true,
                 "properties": {
-                  "points": {
+                  "coordinatesMeta": {
                     "type": "array",
                     "title": "Route point details",
                     "description": "Metadata for each point within the route. Array length MUST be the same as length of coordinates array!",
                     "items": {
-                      "$ref": "#/components/schemas/RoutePointMeta"
+                        "oneOf": [
+                          {
+                            "$ref": "#/components/schemas/RoutePointMeta"
+                          },
+                          {
+                            "$ref": "#/components/schemas/HrefAttribute"
+                          }
+                        ]           
                     },
                     "example": [
                       {
                         "name": "RtePt001"
                       },
                       {
-                        "name": "RtePt002"
+                        "href": "/resources/waypoints/ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
                       },
                       {
                         "name": "RtePt003"
