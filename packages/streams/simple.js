@@ -241,7 +241,6 @@ function nmea2000input(subOptions, logging) {
     return [
       new actisenseSerial({
         ...subOptions,
-        outEvent: 'nmea2000out',
         plainText: logging,
       }),
     ]

@@ -20,6 +20,9 @@ function N2KAnalyzer(options) {
   Transform.call(this, {
     objectMode: true,
   })
+
+  this.analyzerOutEvent = options.analyzerOutEvent || 'N2KAnalyzerOut'
+
   if (process.platform === 'win32') {
     this.analyzerProcess = require('child_process').spawn('cmd', [
       '/c',
@@ -47,7 +50,7 @@ function N2KAnalyzer(options) {
     try {
       parsed = JSON.parse(data)
       that.push(parsed)
-      options.app.emit('N2KAnalyzerOut', parsed)
+      options.app.emit(this.analyzerOutEvent, parsed)
     } catch (ex) {
       console.error(data)
       console.error(ex.stack)

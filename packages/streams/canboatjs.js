@@ -25,7 +25,7 @@ function CanboatJs(options) {
 
   this.fromPgn = new FromPgn(options)
   const createDebug = options.createDebug || require('debug')
-  const debug = createDebug('signalk:streams:nmea0183-signalk')
+  const debug = createDebug('signalk:streams:canboatjs')
 
   this.fromPgn.on('warning', (pgn, warning) => {
     debug(`[warning] ${pgn.pgn} ${warning}`)
@@ -36,6 +36,7 @@ function CanboatJs(options) {
   })
 
   this.app = options.app
+  this.analyzerOutEvent = options.analyzerOutEvent || 'N2KAnalyzerOut'
 }
 
 require('util').inherits(CanboatJs, Transform)
@@ -46,13 +47,13 @@ CanboatJs.prototype._transform = function (chunk, encoding, done) {
     if (pgnData) {
       pgnData.timestamp = new Date(Number(chunk.timestamp)).toISOString()
       this.push(pgnData)
-      this.app.emit('N2KAnalyzerOut', pgnData)
+      this.app.emit(this.analyzerOutEvent, pgnData)
     }
   } else {
     const pgnData = this.fromPgn.parse(chunk)
     if (pgnData) {
       this.push(pgnData)
-      this.app.emit('N2KAnalyzerOut', pgnData)
+      this.app.emit(this.analyzerOutEvent, pgnData)
     }
   }
   done()
