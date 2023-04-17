@@ -992,7 +992,7 @@
         ],
         "responses": {
           "default": {
-            "description": "List of route resources identified by their UUID",
+            "description": "An object containing Route resources, keyed by their UUID.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1122,7 +1122,7 @@
         ],
         "responses": {
           "default": {
-            "description": "List of waypoint resources identified by their UUID",
+            "description": "An object containing Waypoint resources, keyed by their UUID.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1252,7 +1252,7 @@
         ],
         "responses": {
           "default": {
-            "description": "List of region resources identified by their UUID",
+            "description": "An object containing Region resources, keyed by their UUID.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1393,7 +1393,7 @@
         ],
         "responses": {
           "default": {
-            "description": "List of note resources identified by their UUID",
+            "description": "An object containing Note resources, keyed by their UUID.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1509,7 +1509,7 @@
         "summary": "Retrieve chart resources",
         "responses": {
           "default": {
-            "description": "List of chart resources identified by their UUID",
+            "description": "An object containing Chart resources, keyed by their UUID.",
             "content": {
               "application/json": {
                 "schema": {
