@@ -76,4 +76,49 @@ describe('Resources Api', () => {
         returnedIds[0].should.equal(resourceIds[1])
       })
   })
+
+  it('Create route with route point metadata', async function() {
+    const {
+      post,
+      stop
+    } = await startServer()
+
+
+    const route = {
+      feature: { 
+        type: "Feature", 
+        geometry: {
+          type: "LineString",
+          coordinates: [[3.3452,65.4567],[3.3352, 65.5567],[3.3261,65.5777]]
+        },
+        properties: {
+          coordinatesMeta: [
+            {
+              name: "Start point",
+              description: "Start of route."
+            },
+            {
+              name: "Mid-point marker",
+              description: "Turn here."
+            },
+            {
+              name: "Destination",
+              description: "End of route."
+            }
+          ]
+        }
+      }
+    }
+
+    const { id } = await post('/resources/routes', route)
+      .then(response => {
+        response.status.should.equal(201)
+        return response.json()
+      })
+    id.length.should.equal(
+      'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length
+    )
+
+    stop()
+  })
 })

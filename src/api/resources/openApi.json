@@ -240,9 +240,57 @@
               "properties": {
                 "description": "Additional feature properties",
                 "type": "object",
-                "additionalProperties": true
+                "additionalProperties": true,
+                "properties": {
+                  "coordinatesMeta": {
+                    "type": "array",
+                    "title": "Route point details",
+                    "description": "Metadata for each point within the route. Array length MUST be the same as length of coordinates array!",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/RoutePointMeta"
+                        },
+                        {
+                          "$ref": "#/components/schemas/HrefAttribute"
+                        }
+                      ]
+                    },
+                    "example": [
+                      {
+                        "name": "RtePt001"
+                      },
+                      {
+                        "href": "/resources/waypoints/ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+                      },
+                      {
+                        "name": "RtePt003"
+                      },
+                      {
+                        "name": "RtePt004"
+                      },
+                      {
+                        "name": "RtePt005"
+                      }
+                    ]
+                  }
+                }
               }
             }
+          }
+        }
+      },
+      "RoutePointMeta": {
+        "type": "object",
+        "title": "Route point metadata",
+        "description": "Attributes of a point within the route",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "description": "Point name / identifier",
+            "type": "string",
+            "example": "RtePt001"
           }
         }
       },
@@ -817,7 +865,7 @@
         ],
         "responses": {
           "default": {
-            "description": "List of route resources identified by their UUID",
+            "description": "An object containing Route resources, keyed by their UUID.",
             "content": {
               "application/json": {
                 "schema": {
@@ -947,7 +995,7 @@
         ],
         "responses": {
           "default": {
-            "description": "List of waypoint resources identified by their UUID",
+            "description": "An object containing Waypoint resources, keyed by their UUID.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1077,7 +1125,7 @@
         ],
         "responses": {
           "default": {
-            "description": "List of region resources identified by their UUID",
+            "description": "An object containing Region resources, keyed by their UUID.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1218,7 +1266,7 @@
         ],
         "responses": {
           "default": {
-            "description": "List of note resources identified by their UUID",
+            "description": "An object containing Note resources, keyed by their UUID.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1334,7 +1382,7 @@
         "summary": "Retrieve chart resources",
         "responses": {
           "default": {
-            "description": "List of chart resources identified by their UUID",
+            "description": "An object containing Chart resources, keyed by their UUID.",
             "content": {
               "application/json": {
                 "schema": {
