@@ -374,14 +374,14 @@
                     "title": "Route point details",
                     "description": "Metadata for each point within the route. Array length MUST be the same as length of coordinates array!",
                     "items": {
-                        "oneOf": [
-                          {
-                            "$ref": "#/components/schemas/RoutePointMeta"
-                          },
-                          {
-                            "$ref": "#/components/schemas/HrefAttribute"
-                          }
-                        ]           
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/RoutePointMeta"
+                        },
+                        {
+                          "$ref": "#/components/schemas/HrefAttribute"
+                        }
+                      ]
                     },
                     "example": [
                       {
