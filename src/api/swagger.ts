@@ -83,7 +83,7 @@ export function mountSwaggerUi(app: IRouter & PluginManager, path: string) {
 
     if (apiDoc && apiDocPath !== undefined) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(apiDoc as any).servers = [
+      ;(apiDoc as any).servers = (apiDoc as any).servers ?? [
         {
           url: `${process.env.PROTOCOL ? 'https' : req.protocol}://${req.get(
             'Host'
