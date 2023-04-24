@@ -85,12 +85,7 @@ export function mountSwaggerUi(app: IRouter & PluginManager, path: string) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(apiDoc as any).servers = (apiDoc as any).servers ?? [
         {
-          url: `${process.env.PROTOCOL ? 'https' : req.protocol}://${req.get(
-            'Host'
-          )}${apiDocPath}`
-        },
-        {
-          url: `https://demo.signalk.org${apiDocPath}`
+          url: `${apiDocPath}`
         }
       ]
       res.json(apiDoc)
