@@ -918,7 +918,7 @@ Express does not have a public API for deregistering subrouters, so `stop` does 
 
 **Consider seriously providing an OpenApi description** for your plugin's API. This promotes further cooperation with other plugin/webapp authors. One way we can work together is by fleshing out new APIs within a plugin and then merge them in the Signal K specification for more cooperation.
 
-Implement `getOpenApi` in your plugin to expose your OpenApi to be included in the server's OpenApi UI tooling. See [testplugin](https://github.com/SignalK/signalk-server/tree/b82477e63ebdc14878164ce1ed3aedd80c5a8b0c/test/plugin-test-config/node_modules/testplugin) for an example.
+Implement `getOpenApi` in your plugin to expose your OpenApi to be included in the server's OpenApi UI tooling. The plugin's OpenApi description either not include `servers` property at all or specify only the path in the url. The server will provide servers if it is missing and relative, path only server urls work best in different environments. See [testplugin](https://github.com/SignalK/signalk-server/tree/b82477e63ebdc14878164ce1ed3aedd80c5a8b0c/test/plugin-test-config/node_modules/testplugin) for an example.
 
 ## Plugin configuration HTTP API
 

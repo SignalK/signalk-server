@@ -79,18 +79,13 @@ export function mountSwaggerUi(app: IRouter & PluginManager, path: string) {
       apiRecord = app.getPluginOpenApi(req.params.pluginId as PluginId)
     }
     const apiDoc = apiRecord?.apiDoc
-    const apiDocPath = apiRecord?.path
+    const apiPath = apiRecord?.path
 
-    if (apiDoc && apiDocPath !== undefined) {
+    if (apiDoc && apiPath !== undefined) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(apiDoc as any).servers = [
+      ;(apiDoc as any).servers = (apiDoc as any).servers ?? [
         {
-          url: `${process.env.PROTOCOL ? 'https' : req.protocol}://${req.get(
-            'Host'
-          )}${apiDocPath}`
-        },
-        {
-          url: `https://demo.signalk.org${apiDocPath}`
+          url: `${apiPath}`
         }
       ]
       res.json(apiDoc)
