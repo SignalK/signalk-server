@@ -75,7 +75,8 @@
     "packages/server-admin-ui",
     "packages/streams",
     "packages/server-api",
-    "packages/resources-provider-plugin"
+    "packages/resources-provider-plugin",
+    "packages/mock-autopilot-provider"
   ],
   "dependencies": {
     "@signalk/course-provider": "^1.0.0-beta.7",
@@ -120,6 +121,7 @@
     "lodash": "^4.17.4",
     "mdns-js": "^1.0.3",
     "minimist": "^1.1.0",
+    "mock-autopilot-provider": "^1.0.0",
     "moment": "^2.10.6",
     "morgan": "^1.5.0",
     "ms": "^2.1.2",
