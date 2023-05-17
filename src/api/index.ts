@@ -3,6 +3,7 @@ import { SignalKMessageHub, WithConfig } from '../app'
 import { WithSecurityStrategy } from '../security'
 import { CourseApi } from './course'
 import { ResourcesApi } from './resources'
+import { AutopilotApi } from './autopilot'
 
 export interface ApiResponse {
   state: 'FAILED' | 'COMPLETED' | 'PENDING'
@@ -43,5 +44,8 @@ export const startApis = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).resourcesApi = resourcesApi
   const courseApi = new CourseApi(app, resourcesApi)
-  Promise.all([resourcesApi.start(), courseApi.start()])
+  const autopilotApi = new AutopilotApi(app)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).autopilotApi = autopilotApi
+  Promise.all([resourcesApi.start(), courseApi.start(), autopilotApi.start()])
 }

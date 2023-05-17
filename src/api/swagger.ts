@@ -5,6 +5,7 @@ import { SERVERROUTESPREFIX } from '../constants'
 import { courseApiRecord } from './course/openApi'
 import { notificationsApiRecord } from './notifications/openApi'
 import { resourcesApiRecord } from './resources/openApi'
+import { autopilotApiRecord } from './autopilot/openApi'
 import { securityApiRecord } from './security/openApi'
 import { discoveryApiRecord } from './discovery/openApi'
 import { appsApiRecord } from './apps/openApi'
@@ -29,7 +30,8 @@ const apiDocs = [
   securityApiRecord,
   courseApiRecord,
   notificationsApiRecord,
-  resourcesApiRecord
+  resourcesApiRecord,
+  autopilotApiRecord
 ].reduce<ApiRecords>((acc, apiRecord: OpenApiRecord) => {
   acc[apiRecord.name] = apiRecord
   return acc

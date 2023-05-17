@@ -1,0 +1,423 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "version": "2.0.0",
+      "title": "Signal K Autopilot API",
+      "termsOfService": "http://signalk.org/terms/",
+      "license": {
+        "name": "Apache 2.0",
+        "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+      }
+    },
+    "externalDocs": {
+      "url": "http://signalk.org/specification/",
+      "description": "Signal K specification."
+    },
+    "servers": [
+      {
+        "url": "/signalk/v2/api/vessels/self/steering/autopilot"
+      }
+    ],
+    "tags": [
+      {
+        "name": "autopilot",
+        "description": "Signal K Autopilot API"
+      }
+    ],
+    "components": {
+      "schemas": {
+      },
+      "responses": {
+        "200ActionResponse": {
+          "description": "PUT OK response",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": ["COMPLETED"]
+                  },
+                  "statusCode": {
+                    "type": "number",
+                    "enum": [200]
+                  }
+                },
+                "required": ["statusCode", "state"]
+              }
+            }
+          }
+        },
+        "ErrorResponse": {
+          "description": "Failed operation",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Request error response",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": ["FAILED"]
+                  },
+                  "statusCode": {
+                    "type": "number",
+                    "enum": [400,404]
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": ["state", "statusCode", "message"]
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+      },
+      "securitySchemes": {
+        "bearerAuth": {
+          "type": "http",
+          "scheme": "bearer",
+          "bearerFormat": "JWT"
+        },
+        "cookieAuth": {
+          "type": "apiKey",
+          "in": "cookie",
+          "name": "JAUTHENTICATION"
+        }
+      }
+    },
+    "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+    "paths": {
+      "/config": {
+        "get": {
+          "tags": ["autopilot"],
+          "summary": "Retrieve autopilot configuration.",
+          "responses": {
+            "default": {
+              "description": "Autopilot configuration response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": ["state","mode","target","timestamp","$source"],
+                    "properties": {
+                      "state": {
+                        "type": "string",
+                        "description": "Autopilot state",
+                        "example": "disabled"
+                      },
+                      "mode": {
+                        "type": "string",
+                        "description": "Autopilot operational mode",
+                        "example": "compass"
+                      },
+                      "target": {
+                        "description": "Current target value (0-359)",
+                        "type": "number",
+                        "example": 24
+                      },
+                      "options": {
+                        "type": "object",
+                        "title": "Autopilot configuration options",
+                        "description": "A collection of configuration options and their vaild values.",
+                        "properties": {
+                          "state": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "List of valid State values"
+                          },
+                          "mode": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "List of valid Mode values"
+                          }
+                        }
+                      },
+  
+  
+                      "timestamp": {
+                        "type": "string"
+                      },
+                      "$source": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/engage": {
+        "put": {
+          "tags": ["autopilot"],
+          "summary": "Engage autopilot to steer vessel.",
+          "requestBody": {
+            "description": "API request payload",
+            "required": false
+          },
+          "responses": {
+            "200ActionResponse": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/disengage": {
+        "put": {
+          "tags": ["autopilot"],
+          "summary": "Disengage autopilot from steering vessel.",
+          "requestBody": {
+            "description": "API request payload",
+            "required": false
+          },
+          "responses": {
+            "200ActionResponse": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/state": {
+        "get": {
+          "tags": ["autopilot"],
+          "summary": "Retrieve autopilot state.",
+          "responses": {
+            "default": {
+              "description": "Autopilot state.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "put": {
+          "tags": ["autopilot"],
+          "summary": "Set autopilot state",
+          "requestBody": {
+            "description": "API request payload",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type" : "object",
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200ActionResponse": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/mode": {
+        "get": {
+          "tags": ["autopilot"],
+          "summary": "Retrieve autopilot mode.",
+          "responses": {
+            "default": {
+              "description": "Autopilot mode.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "put": {
+          "tags": ["autopilot"],
+          "summary": "Set autopilot mode",
+          "requestBody": {
+            "description": "API request payload",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type" : "object",
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200ActionResponse": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/target": {
+        "get": {
+          "tags": ["autopilot"],
+          "summary": "Retrieve autopilot target value.",
+          "responses": {
+            "default": {
+              "description": "Autopilot target value.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "number",
+                        "min": 0,
+                        "max": 359
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "put": {
+          "tags": ["autopilot"],
+          "summary": "Set autopilot target value.",
+          "requestBody": {
+            "description": "API request payload",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type" : "object",
+                  "properties": {
+                    "value": {
+                      "type": "number",
+                      "min": 0,
+                      "max": 359
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200ActionResponse": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/target/adjust": {
+        "put": {
+          "tags": ["autopilot"],
+          "summary": "Adjust autopilot target value by +/- value.",
+          "requestBody": {
+            "description": "API request payload",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type" : "object",
+                    "properties": {
+                    "value": {
+                      "type": "number",
+                      "min": -10,
+                      "max": 10
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200ActionResponse": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/tack/port": {
+        "put": {
+          "tags": ["autopilot"],
+          "summary": "Tack to port.",
+          "requestBody": {
+            "description": "API request payload",
+            "required": false
+          },
+          "responses": {
+            "200ActionResponse": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      },
+      "/tack/starboard": {
+        "put": {
+          "tags": ["autopilot"],
+          "summary": "Tack to starboard.",
+          "requestBody": {
+            "description": "API request payload",
+            "required": false
+          },
+          "responses": {
+            "200ActionResponse": {
+              "$ref": "#/components/responses/200ActionResponse"
+            },
+            "default": {
+              "$ref": "#/components/responses/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  }
+  
