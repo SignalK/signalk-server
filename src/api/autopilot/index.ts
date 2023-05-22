@@ -45,17 +45,13 @@ export class AutopilotApi {
     if (!this.autopilotProvider) {
       if (
         !provider.methods.getConfig ||
-        !provider.methods.getState ||
         !provider.methods.setState ||
-        !provider.methods.getMode ||
         !provider.methods.setMode ||
         !provider.methods.setTarget ||
         !provider.methods.adjustTarget ||
         !provider.methods.tack ||
         typeof provider.methods.getConfig !== 'function' ||
-        typeof provider.methods.getState !== 'function' ||
         typeof provider.methods.setState !== 'function' ||
-        typeof provider.methods.getMode !== 'function' ||
         typeof provider.methods.setMode !== 'function' ||
         typeof provider.methods.setTarget !== 'function' ||
         typeof provider.methods.adjustTarget !== 'function' ||
@@ -85,64 +81,7 @@ export class AutopilotApi {
     }
     debug(JSON.stringify(this.autopilotProvider))
   }
-  /*
-  getStates() {
-    debug(`** getStates()`)
-    if (!this.autopilotProvider) {
-      return Promise.reject(new Error(`o autopilot provider!`))
-    }
-    return this.autopilotProvider?.getStates()
-  }
-
-  setState(state: string) {
-    debug(`** setState(${state})`)
-    if (!this.autopilotProvider) {
-      return Promise.reject(new Error(`No autopilot provider!`))
-    }
-    return this.autopilotProvider?.setState(state)
-  }
-
-  getModes() {
-    debug(`** getModes()`)
-    if (!this.autopilotProvider) {
-      return Promise.reject(new Error(`No autopilot provider!`))
-    }
-    return this.autopilotProvider?.getModes()
-  }
-
-  setMode(mode: string) {
-    debug(`** setMode(${mode})`)
-    if (!this.autopilotProvider) {
-      return Promise.reject(new Error(`No autopilot provider!`))
-    }
-    return this.autopilotProvider?.setMode(mode)
-  }
-
-  setTarget(value: number) {
-    debug(`** setTarget(${value})`)
-    if (!this.autopilotProvider) {
-      return Promise.reject(new Error(`No autopilot provider!`))
-    }
-    return this.autopilotProvider?.setTarget(value)
-  }
-
-  adjustTarget(value: number) {
-    debug(`** adjustTarget(${value})`)
-    if (!this.autopilotProvider) {
-      return Promise.reject(new Error(`o autopilot provider!`))
-    }
-    return this.autopilotProvider?.adjustTarget(value)
-  }
-
-  tack(port: boolean) {
-    debug(`** tack(${port})`)
-    if (!this.autopilotProvider) {
-      return Promise.reject(new Error(`No autopilot provider!`))
-    }
-    return this.autopilotProvider?.tack(port)
-  }
-  */
-
+ 
   private initAutopilotRoutes(server: AutopilotApplication) {
     const updateAllowed = (req: Request): boolean => {
       
@@ -172,52 +111,6 @@ export class AutopilotApi {
             state: 'FAILED',
             statusCode: 404,
             message: `Error retrieving Autopilot configuration!`
-          })
-        }
-      }
-    )
-
-    // facilitate retrieval of autopilot state
-    server.get(
-      `${AUTOPILOT_API_PATH}/state`,
-      async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** GET ${AUTOPILOT_API_PATH}/state`)
-        if (!this.autopilotProvider) {
-          debug('** No provider found... calling next()...')
-          next()
-          return
-        }
-        try {
-          const retVal = await this.autopilotProvider?.getState()
-          res.json(retVal)
-        } catch (err) {
-          res.status(404).json({
-            state: 'FAILED',
-            statusCode: 404,
-            message: `Error retrieving Autopilot state!`
-          })
-        }
-      }
-    )
-
-    // facilitate retrieval of all valid autopilot modes
-    server.get(
-      `${AUTOPILOT_API_PATH}/mode`,
-      async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** GET ${AUTOPILOT_API_PATH}/mode`)
-        if (!this.autopilotProvider) {
-          debug('** No provider found... calling next()...')
-          next()
-          return
-        }
-        try {
-          const retVal = await this.autopilotProvider?.getMode()
-          res.json(retVal)
-        } catch (err) {
-          res.status(404).json({
-            state: 'FAILED',
-            statusCode: 404,
-            message: `Error retrieving Autopilot mode!`
           })
         }
       }
@@ -391,8 +284,7 @@ export class AutopilotApi {
 
         debug(req.body)
         if (
-          typeof req.body.value !== 'number' ||
-          !(req.body.value >= -10 && req.body.value <= 10)
+          typeof req.body.value !== 'number'
         ) {
           res.status(400).json(Responses.invalid)
           return
@@ -416,7 +308,7 @@ export class AutopilotApi {
       }
     )
 
-    // facilitate setting of autopilot target (-179 -> 359)
+    // facilitate setting of autopilot target (-pi -> 2*pi)
     server.put(
       `${AUTOPILOT_API_PATH}/target`,
       async (req: Request, res: Response, next: NextFunction) => {
@@ -435,7 +327,7 @@ export class AutopilotApi {
         debug(req.body)
         if (
           typeof req.body.value !== 'number' ||
-          !(req.body.value >= -179 && req.body.value < 360)
+          !(req.body.value >= (0-Math.PI) && req.body.value < Math.PI*2)
         ) {
           res.status(400).json(Responses.invalid)
           return

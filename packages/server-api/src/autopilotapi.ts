@@ -10,12 +10,10 @@ export interface AutopilotProvider {
 
 export interface AutopilotProviderMethods {
   pluginId?: string
-  engage: (enable: boolean) => Promise<void>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getConfig: () => Promise<{ [key: string]: any }>
-  getState: () => Promise<string>
+  engage: (enable: boolean) => Promise<void>
   setState: (state: string) => Promise<void>
-  getMode: () => Promise<string>
   setMode: (mode: string) => Promise<void>
   setTarget: (value: number) => Promise<void>
   adjustTarget: (value: number) => Promise<void>

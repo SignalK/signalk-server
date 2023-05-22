@@ -116,9 +116,9 @@
                         "example": "compass"
                       },
                       "target": {
-                        "description": "Current target value (0-359)",
+                        "description": "Current target value (radians)",
                         "type": "number",
-                        "example": 24
+                        "example": 1.25643
                       },
                       "options": {
                         "type": "object",
@@ -141,8 +141,6 @@
                           }
                         }
                       },
-  
-  
                       "timestamp": {
                         "type": "string"
                       },
@@ -194,27 +192,6 @@
         }
       },
       "/state": {
-        "get": {
-          "tags": ["autopilot"],
-          "summary": "Retrieve autopilot state.",
-          "responses": {
-            "default": {
-              "description": "Autopilot state.",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "value": {
-                        "type": "string"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
         "put": {
           "tags": ["autopilot"],
           "summary": "Set autopilot state",
@@ -245,27 +222,6 @@
         }
       },
       "/mode": {
-        "get": {
-          "tags": ["autopilot"],
-          "summary": "Retrieve autopilot mode.",
-          "responses": {
-            "default": {
-              "description": "Autopilot mode.",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "value": {
-                        "type": "string"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
         "put": {
           "tags": ["autopilot"],
           "summary": "Set autopilot mode",
@@ -296,34 +252,11 @@
         }
       },
       "/target": {
-        "get": {
-          "tags": ["autopilot"],
-          "summary": "Retrieve autopilot target value.",
-          "responses": {
-            "default": {
-              "description": "Autopilot target value.",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "value": {
-                        "type": "number",
-                        "min": 0,
-                        "max": 359
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
         "put": {
           "tags": ["autopilot"],
-          "summary": "Set autopilot target value.",
+          "summary": "Set autopilot target value (radians).",
           "requestBody": {
-            "description": "API request payload",
+            "description": "Target value in radians.",
             "required": true,
             "content": {
               "application/json": {
@@ -332,8 +265,9 @@
                   "properties": {
                     "value": {
                       "type": "number",
-                      "min": 0,
-                      "max": 359
+                      "description": "Target value in radians",
+                      "min": -3.141592653589793,
+                      "max": 6.283185307179586
                     }
                   }
                 }
@@ -353,9 +287,9 @@
       "/target/adjust": {
         "put": {
           "tags": ["autopilot"],
-          "summary": "Adjust autopilot target value by +/- value.",
+          "summary": "Adjust autopilot target value by +/- radians.",
           "requestBody": {
-            "description": "API request payload",
+            "description": "Adjustment value in radians.",
             "required": true,
             "content": {
               "application/json": {
@@ -364,8 +298,7 @@
                     "properties": {
                     "value": {
                       "type": "number",
-                      "min": -10,
-                      "max": 10
+                      "description": "Adjustment value in radians."
                     }
                   }
                 }

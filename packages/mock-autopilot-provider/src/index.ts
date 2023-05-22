@@ -86,7 +86,7 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
     },
     state: 'disabled',
     mode: 'gps',
-    target: 0
+    target: 1.25
   }
 
   const deltaPath = 'steering.autopilot'
@@ -105,16 +105,8 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
             apSetState(enable ? 'enabled' : 'disabled')
             return Promise.resolve()
           },
-          getState: (): Promise<string> => {
-            console.log(`${plugin.id} => getState()`)
-            return Promise.resolve(apConfig.state)
-          },
           setState: (state: string): Promise<void> => {
             return apSetState(state)
-          },
-          getMode: (): Promise<string> => {
-            console.log(`${plugin.id} => getMode()`)
-            return Promise.resolve(apConfig.mode)
           },
           setMode: (mode: string): Promise<void> => {
             return apSetMode(mode)
@@ -194,10 +186,10 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
 
   // set autopilot target
   const apSetTarget = (value: number): Promise<void> => {
-    if (value > 359) {
-      apConfig.target = 359
-    } else if (value < -179) {
-      apConfig.target = -179
+    if (value >= Math.PI*2) {
+      apConfig.target = Math.PI*2
+    } else if (value < 0-Math.PI) {
+      apConfig.target = 0-Math.PI
     } else {
       apConfig.target = value
     }
@@ -205,7 +197,7 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
     emitDeltas([
       {
         path: `${deltaPath}.target`,
-        value: (Math.PI/180) * apConfig.target
+        value: apConfig.target
       }
     ])
     return Promise.resolve()
