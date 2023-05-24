@@ -224,7 +224,11 @@ export class AlarmsApi {
   }
 
   // emit delta of specified version
-  private emitAlarmNotification(path: string, value: Notification | null, version: SKVersion ) {
+  private emitAlarmNotification(
+    path: string,
+    value: Notification | null,
+    version: SKVersion
+  ) {
     this.server.handleMessage(
       'alarmsApi',
       {
