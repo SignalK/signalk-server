@@ -2,6 +2,7 @@
 import { IRouter, NextFunction, Request, Response } from 'express'
 import swaggerUi from 'swagger-ui-express'
 import { SERVERROUTESPREFIX } from '../constants'
+import { alarmsApiRecord } from './alarms/openApi'
 import { courseApiRecord } from './course/openApi'
 import { notificationsApiRecord } from './notifications/openApi'
 import { resourcesApiRecord } from './resources/openApi'
@@ -24,12 +25,13 @@ interface ApiRecords {
 }
 
 const apiDocs = [
-  discoveryApiRecord,
+  alarmsApiRecord,
   appsApiRecord,
-  securityApiRecord,
   courseApiRecord,
+  discoveryApiRecord,
   notificationsApiRecord,
-  resourcesApiRecord
+  resourcesApiRecord,
+  securityApiRecord
 ].reduce<ApiRecords>((acc, apiRecord: OpenApiRecord) => {
   acc[apiRecord.name] = apiRecord
   return acc
