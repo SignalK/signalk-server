@@ -78,7 +78,7 @@
     "packages/resources-provider-plugin"
   ],
   "dependencies": {
-    "@signalk/course-provider": "^1.0.0-beta.7",
+    "@signalk/course-provider": "^1.0.0",
     "@signalk/n2k-signalk": "^2.0.0",
     "@signalk/nmea0183-signalk": "^3.0.0",
     "@signalk/resources-provider": "^1.0.0",
