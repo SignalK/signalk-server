@@ -60,7 +60,8 @@
 const Transform = require('stream').Transform
 const child_process = require('child_process')
 const shellescape = require('any-shell-escape')
-const SerialPort = require('serialport')
+const {SerialPort} = require('serialport')
+const { ReadlineParser } = require('@serialport/parser-readline')
 const isArray = require('lodash').isArray
 const isBuffer = require('lodash').isBuffer
 
@@ -104,7 +105,8 @@ SerialStream.prototype.start = function () {
     )
   }
 
-  this.serial = new SerialPort(this.options.device, {
+  this.serial = new SerialPort({
+    path: this.options.device,
     baudRate: this.options.baudrate,
   })
 
@@ -117,7 +119,7 @@ SerialStream.prototype.start = function () {
         `Connected to ${this.options.device}`
       )
       this.isFirstError = true
-      const parser = new SerialPort.parsers.Readline()
+      const parser = new ReadlineParser({ delimiter: '\r\n' })
       this.serial.pipe(parser).pipe(this)
     }.bind(this)
   )
