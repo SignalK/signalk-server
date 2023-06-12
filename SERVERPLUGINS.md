@@ -706,6 +706,49 @@ app.registerDeltaInputHandler((delta, next) => {
 })
 ```
 
+### `app.notify(path, value, pluginId)`
+
+Notifications API interface method for raising, updating and clearing notifications.
+
+  - `path`: Signal K path of the notification
+
+  - `value`: A valid `Notification` object or `null` if clearing a notification.
+
+  - `pluginId` The plugin identifier.
+  
+
+To raise or update a for a specified path, call the method with a valid `Notification` object as the `value`.
+
+- returns:  `string` value containing the `id` of the new / updated notification.
+
+_Example:_
+```javascript
+const alarmId = app.notify(
+  'myalarm', 
+  {
+	message: 'My cutom alarm text',
+	state: 'alert'
+  },
+  'myAlarmPlugin'
+)
+
+// alarmId = "ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+```
+
+To clear (cancel) a notification call the method with `null` as the `value`.
+
+- returns:  `void`.
+
+_Example: Clear notification_
+```javascript
+const alarmId = app.notify(
+  'myalarm', 
+  null,
+  'myAlarmPlugin'
+)
+```
+
+
 ### `app.registerResourceProvider(resourceProvider)`
 
 See [`RESOURCE_PROVIDER_PLUGINS`](./RESOURCE_PROVIDER_PLUGINS.md) for details.

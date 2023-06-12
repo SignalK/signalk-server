@@ -64,6 +64,7 @@ export interface Notification {
   method: ALARM_METHOD[]
   message: string
   data?: { [key: string]: object | number | string | null }
+  id?: string
 }
 
 // MetaMessage

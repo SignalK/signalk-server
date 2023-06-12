@@ -30,6 +30,7 @@ import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
 import { ResourcesApi } from '../api/resources'
+import { NotificationsApi } from '../api/notifications'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
 import { listAllSerialPorts } from '../serialports'
@@ -507,6 +508,13 @@ module.exports = (theApp: any) => {
     _.omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {
       resourcesApi.register(plugin.id, provider)
+    }
+
+    const notificationsApi: NotificationsApi = app.notificationsApi
+    _.omit(appCopy, 'notificationsApi') // don't expose the actual notifications api manager
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    appCopy.notify = (path: string, value: any, source: string) => {
+      notificationsApi.notify(path, value, source)
     }
 
     try {

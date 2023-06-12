@@ -1,0 +1,331 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "2.0.0",
+    "title": "Signal K Notifications API",
+    "termsOfService": "http://signalk.org/terms/",
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "externalDocs": {
+    "url": "http://signalk.org/specification/",
+    "description": "Signal K specification."
+  },
+  "servers": [
+    {
+      "url": "/signalk/v1/api/vessels/self/notifications"
+    }
+  ],
+  "tags": [
+    {
+      "name": "notifications",
+      "description": "Root path"
+    },
+    {
+      "name": "special",
+      "description": "Special Alarms"
+    },
+    {
+      "name": "course",
+      "description": "Course notifications"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "AlarmState": {
+        "type": "string",
+        "description": "Value describing the current state of the alarm.",
+        "example": "alert",
+        "enum": ["normal", "nominal", "alert", "warning", "alarm", "emergency"]
+      },
+      "AlarmMethod": {
+        "type": "array",
+        "minimum": 0,
+        "maximum": 2,
+        "uniqueItems": true,
+        "description": "Methods to use to raise the alarm.",
+        "example": ["sound"],
+        "items": {
+          "type": "string",
+          "enum": ["visual", "sound"]
+        }
+      },
+      "Alarm": {
+        "type": "object",
+        "required": ["state", "method", "message"],
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/AlarmState"
+          },
+          "method": {
+            "$ref": "#/components/schemas/AlarmMethod"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Notification": {
+        "type": "object",
+        "required": ["value"],
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/Alarm"
+          }
+        }
+      },
+      "Notifications": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/components/schemas/Alarm"
+        }
+      }
+    },
+    "responses": {
+      "ListResponse": {
+        "description": "Collection of notifications",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Notifications"
+            }
+          }
+        }
+      },
+      "200Ok": {
+        "description": "OK",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Notification"
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "description": "Failed operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "description": "Request error response",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["FAILED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [404]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["state", "statusCode", "message"]
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "tags": ["notifications"],
+        "summary": "Notifications endpoint.",
+        "description": "Root path for notifications.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ListResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/mob": {
+      "get": {
+        "tags": ["special"],
+        "summary": "Man overboard alarm.",
+        "description": "Alarm indicating person(s) overboard.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/fire": {
+      "get": {
+        "tags": ["special"],
+        "summary": "Fire onboard alarm.",
+        "description": "Alarm indicating there is a fire onboard.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/sinking": {
+      "get": {
+        "tags": ["special"],
+        "summary": "Sinking vessel alarm.",
+        "description": "Alarm indicating vessel is sinking.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/flooding": {
+      "get": {
+        "tags": ["special"],
+        "summary": "Floodingalarm.",
+        "description": "Alarm indicating that veseel is taking on water.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/collision": {
+      "get": {
+        "tags": ["special"],
+        "summary": "Collision alarm.",
+        "description": "Alarm indicating vessel has been involved in a collision.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/grounding": {
+      "get": {
+        "tags": ["special"],
+        "summary": "Grounding alarm.",
+        "description": "Alarm indicating vessel has run aground.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/listing": {
+      "get": {
+        "tags": ["special"],
+        "summary": "Listing alarm.",
+        "description": "Alarm indicating vessel is listing beyond acceptable parameters.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/adrift": {
+      "get": {
+        "tags": ["special"],
+        "summary": "Adrift alarm.",
+        "description": "Alarm indicating that the vessel is set adrift.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/piracy": {
+      "get": {
+        "tags": ["special"],
+        "summary": "Piracy alarm.",
+        "description": "Alarm indicating pirates have been encountered / boarded.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/abandon": {
+      "get": {
+        "tags": ["special"],
+        "summary": "Abandon alarm.",
+        "description": "Alarm indicating vessel has been abandoned.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/navigation/course/arrivalCircleEntered": {
+      "get": {
+        "tags": ["course"],
+        "summary": "Arrival circle entered.",
+        "description": "Set when arrival circle around destination point has been entered.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/navigation/course/perpendicularPassed": {
+      "get": {
+        "tags": ["course"],
+        "summary": "Perpendicular passed.",
+        "description": "Set when line perpendicular to destination point has been passed by the vessel.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    }
+  }
+}

@@ -7,7 +7,8 @@
     "license": {
       "name": "Apache 2.0",
       "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-    }
+    },
+    "description": "API for raising and actioning Notifications / Alarms. Notifications raised using this API are assigned an <b>id</b> which can be used for subsequent actions."
   },
   "externalDocs": {
     "url": "http://signalk.org/specification/",
@@ -15,91 +16,169 @@
   },
   "servers": [
     {
-      "url": "/signalk/v1/api/vessels/self/notifications"
+      "url": "/signalk/v2/api/notifications"
     }
   ],
   "tags": [
     {
       "name": "notifications",
-      "description": "Root path"
+      "description": "General actions."
     },
     {
-      "name": "special",
-      "description": "Special Alarms"
+      "name": "via path",
+      "description": "Action notifications via specified path."
     },
     {
-      "name": "course",
-      "description": "Course notifications"
+      "name": "via id",
+      "description": "Action notifications via supplied id."
+    },
+    {
+      "name": "alarms",
+      "description": "Standard, pre-defined alarms."
     }
   ],
   "components": {
     "schemas": {
-      "AlarmState": {
+      "UuidDef": {
         "type": "string",
-        "description": "Value describing the current state of the alarm.",
-        "example": "alert",
-        "enum": ["normal", "nominal", "alert", "warning", "alarm", "emergency"]
+        "pattern": "[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+        "example": "ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
       },
-      "AlarmMethod": {
+      "PathDef": {
+        "type": "string",
+        "description": "Notification path.",
+        "example": "notifications.mob"
+      },
+      "MethodDef": {
         "type": "array",
         "minimum": 0,
         "maximum": 2,
         "uniqueItems": true,
-        "description": "Methods to use to raise the alarm.",
+        "description": "How the alarm is actioned.",
         "example": ["sound"],
         "items": {
           "type": "string",
           "enum": ["visual", "sound"]
         }
       },
-      "Alarm": {
+      "SeverityDef": {
+        "type": "string",
+        "description": "Severity of the alarm.",
+        "example": "alert",
+        "enum": ["normal", "nominal", "alert", "warning", "alarm", "emergency"]
+      },
+      "MessageDef": {
+        "type": "string",
+        "description": "Notification message to display.",
+        "example": "My message!"
+      },
+      "TypeDef": {
+        "type": "string",
+        "description": "Type of notification.",
+        "example": "OverVoltage"
+      },
+      "DataDef": {
         "type": "object",
-        "required": ["state", "method", "message"],
+        "additionalProperties": true,
+        "description": "Data values associated with this notification."
+      },
+      "RequestModel": {
+        "type": "object",
         "properties": {
           "state": {
-            "$ref": "#/components/schemas/AlarmState"
-          },
-          "method": {
-            "$ref": "#/components/schemas/AlarmMethod"
+            "$ref": "#/components/schemas/SeverityDef"
           },
           "message": {
-            "type": "string"
+            "$ref": "#/components/schemas/MessageDef"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DataDef"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TypeDef"
           }
         }
       },
-      "Notification": {
+      "ResponseModel": {
+        "description": "Notification information",
         "type": "object",
-        "required": ["value"],
+        "required": ["timestamp", "$source"],
         "properties": {
+          "timestamp": {
+            "type": "string"
+          },
+          "$source": {
+            "type": "string"
+          },
           "value": {
-            "$ref": "#/components/schemas/Alarm"
+            "type": "object",
+            "required": ["method", "state", "message"],
+            "properties": {
+              "method": {
+                "$ref": "#/components/schemas/MethodDef"
+              },
+              "state": {
+                "$ref": "#/components/schemas/SeverityDef"
+              },
+              "message": {
+                "$ref": "#/components/schemas/MessageDef"
+              },
+              "data": {
+                "$ref": "#/components/schemas/DataDef"
+              },
+              "id": {
+                "$ref": "#/components/schemas/UuidDef"
+              },
+              "type": {
+                "$ref": "#/components/schemas/TypeDef"
+              }
+            }
           }
-        }
-      },
-      "Notifications": {
-        "type": "object",
-        "additionalProperties": {
-          "$ref": "#/components/schemas/Alarm"
         }
       }
     },
     "responses": {
-      "ListResponse": {
-        "description": "Collection of notifications",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Notifications"
-            }
-          }
-        }
-      },
       "200Ok": {
         "description": "OK",
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/Notification"
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["COMPLETED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [200]
+                }
+              },
+              "required": ["state", "statusCode"]
+            }
+          }
+        }
+      },
+      "201ActionResponse": {
+        "description": "Action response - success.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["COMPLETED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [201]
+                },
+                "id": {
+                  "$ref": "#/components/schemas/UuidDef"
+                }
+              },
+              "required": ["id", "statusCode", "state"]
             }
           }
         }
@@ -128,30 +207,105 @@
             }
           }
         }
+      },
+      "NotificationResponse": {
+        "description": "Notification information response.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ResponseModel"
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "Source": {
+        "name": "source",
+        "description": "The source that raised the notification at the defined path.",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "JAUTHENTICATION"
       }
     }
   },
+  "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
   "paths": {
     "/": {
       "get": {
         "tags": ["notifications"],
-        "summary": "Notifications endpoint.",
-        "description": "Root path for notifications.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/ListResponse"
+        "summary": "Filtered notification list keyed by id.",
+        "description": "Retrieve list of notifications filtered by the specified parameter.",
+        "parameters": [
+          {
+            "name": "type",
+            "description": "Filter results by notification type.",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/TypeDef"
+            }
           },
+          {
+            "name": "severity",
+            "description": "Filter results by alarm severity.",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SeverityDef"
+            }
+          },
+          {
+            "name": "key",
+            "description": "List results by provided key value.",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["path", "id"]
+            }
+          }
+        ],
+        "responses": {
           "default": {
-            "$ref": "#/components/responses/ErrorResponse"
+            "description": "An object containing notifications, keyed by their id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/ResponseModel"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
     "/mob": {
-      "get": {
-        "tags": ["special"],
+      "post": {
+        "tags": ["alarms"],
         "summary": "Man overboard alarm.",
-        "description": "Alarm indicating person(s) overboard.",
+        "description": "Raise a Man overboard alarm with system generated message including vessel position.",
         "responses": {
           "200": {
             "$ref": "#/components/responses/200Ok"
@@ -162,11 +316,55 @@
         }
       }
     },
-    "/fire": {
+    "/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "description": "Notification identifier.",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/UuidDef"
+          }
+        }
+      ],
       "get": {
-        "tags": ["special"],
-        "summary": "Fire onboard alarm.",
-        "description": "Alarm indicating there is a fire onboard.",
+        "tags": ["via id"],
+        "summary": "Retrieve notification information.",
+        "description": "Retrieve information for notification with supplied id.",
+        "responses": {
+          "default": {
+            "$ref": "#/components/responses/NotificationResponse"
+          }
+        }
+      },
+      "put": {
+        "tags": ["via id"],
+        "summary": "Action a notification.",
+        "description": "Raise or action the notification with the specified id.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestModel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["via id"],
+        "summary": "Clear notification.",
+        "description": "Clear the notification with the supplied id.",
         "responses": {
           "200": {
             "$ref": "#/components/responses/200Ok"
@@ -177,146 +375,54 @@
         }
       }
     },
-    "/sinking": {
+    "/*": {
       "get": {
-        "tags": ["special"],
-        "summary": "Sinking vessel alarm.",
-        "description": "Alarm indicating vessel is sinking.",
+        "tags": ["via path"],
+        "summary": "Retrieve notification information.",
+        "description": "Retrieve information for notification with supplied id.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Source"
+          }
+        ],
         "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
+          "default": {
+            "$ref": "#/components/responses/NotificationResponse"
+          }
+        }
+      },
+      "put": {
+        "tags": ["via path"],
+        "summary": "Action a notification.",
+        "description": "Raise or action a notification at the specified path.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestModel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/201ActionResponse"
           },
           "default": {
             "$ref": "#/components/responses/ErrorResponse"
           }
         }
-      }
-    },
-    "/flooding": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Floodingalarm.",
-        "description": "Alarm indicating that veseel is taking on water.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
+      },
+      "delete": {
+        "tags": ["via path"],
+        "summary": "Clear notification.",
+        "description": "Clear the specified notification.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Source"
           }
-        }
-      }
-    },
-    "/collision": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Collision alarm.",
-        "description": "Alarm indicating vessel has been involved in a collision.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/grounding": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Grounding alarm.",
-        "description": "Alarm indicating vessel has run aground.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/listing": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Listing alarm.",
-        "description": "Alarm indicating vessel is listing beyond acceptable parameters.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/adrift": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Adrift alarm.",
-        "description": "Alarm indicating that the vessel is set adrift.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/piracy": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Piracy alarm.",
-        "description": "Alarm indicating pirates have been encountered / boarded.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/abandon": {
-      "get": {
-        "tags": ["special"],
-        "summary": "Abandon alarm.",
-        "description": "Alarm indicating vessel has been abandoned.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/navigation/course/arrivalCircleEntered": {
-      "get": {
-        "tags": ["course"],
-        "summary": "Arrival circle entered.",
-        "description": "Set when arrival circle around destination point has been entered.",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/navigation/course/perpendicularPassed": {
-      "get": {
-        "tags": ["course"],
-        "summary": "Perpendicular passed.",
-        "description": "Set when line perpendicular to destination point has been passed by the vessel.",
+        ],
         "responses": {
           "200": {
             "$ref": "#/components/responses/200Ok"

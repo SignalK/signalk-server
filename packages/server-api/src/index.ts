@@ -22,6 +22,7 @@ export enum SKVersion {
 export type Brand<K, T> = K & { __brand: T }
 
 export * from './deltas'
+import { Notification } from './deltas'
 export * from './resourcetypes'
 export * from './resourcesapi'
 export { ResourceProviderRegistry } from './resourcesapi'
@@ -126,6 +127,7 @@ export interface ServerAPI extends PluginServerApp {
     source: string
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) => Promise<any>
+  notify: (path: string, value: Notification, source: string) => void
   //TSTODO convert queryRequest to ts
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   queryRequest: (requestId: string) => Promise<any>

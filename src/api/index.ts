@@ -3,12 +3,12 @@ import { SignalKMessageHub, WithConfig } from '../app'
 import { WithSecurityStrategy } from '../security'
 import { CourseApi } from './course'
 import { ResourcesApi } from './resources'
-import { AlarmsApi } from './alarms'
+import { NotificationsApi } from './notifications'
 
 export interface ApiResponse {
   state: 'FAILED' | 'COMPLETED' | 'PENDING'
   statusCode: number
-  message: string
+  message?: string
   requestId?: string
   href?: string
   token?: string
@@ -44,6 +44,12 @@ export const startApis = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).resourcesApi = resourcesApi
   const courseApi = new CourseApi(app, resourcesApi)
-  const alarmsApi = new AlarmsApi(app)
-  Promise.all([resourcesApi.start(), courseApi.start(), alarmsApi.start()])
+  const notificationsApi = new NotificationsApi(app)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).notificationsApi = notificationsApi
+  Promise.all([
+    resourcesApi.start(),
+    courseApi.start(),
+    notificationsApi.start()
+  ])
 }
