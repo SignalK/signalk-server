@@ -119,7 +119,7 @@ SerialStream.prototype.start = function () {
         `Connected to ${this.options.device}`
       )
       this.isFirstError = true
-      const parser = new ReadlineParser({ delimiter: '\r\n' })
+      const parser = new ReadlineParser()
       this.serial.pipe(parser).pipe(this)
     }.bind(this)
   )
