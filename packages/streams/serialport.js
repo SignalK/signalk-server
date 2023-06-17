@@ -60,7 +60,7 @@
 const Transform = require('stream').Transform
 const child_process = require('child_process')
 const shellescape = require('any-shell-escape')
-const {SerialPort} = require('serialport')
+const { SerialPort } = require('serialport')
 const { ReadlineParser } = require('@serialport/parser-readline')
 const isArray = require('lodash').isArray
 const isBuffer = require('lodash').isBuffer

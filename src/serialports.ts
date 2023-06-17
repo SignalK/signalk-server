@@ -17,7 +17,7 @@
 
 import { Ports } from '@signalk/server-api'
 import fs from 'fs'
-const {SerialPort} = require('serialport')
+import { SerialPort } from 'serialport'
 
 export const listAllSerialPorts = (): Promise<Ports> => {
   return new Promise((resolve, reject) => {
