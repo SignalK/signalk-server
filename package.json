@@ -45,25 +45,17 @@
     "marine",
     "nautic"
   ],
-  "author": "Teppo Kurki <teppo.kurki@iki.fi>",
   "contributors": [
     {
-      "name": "Fabian Tollenaar",
-      "email": "fabian@signalk.org"
+      "name": "Teppo Kurki",
+      "email": "teppo.kurki@iki.fi"
     },
     {
       "name": "Scott Bender",
       "email": "scott@scottbender.net"
     },
     {
-      "name": "Joachim Bakke"
-    },
-    {
-      "name": "Tim Mathews",
-      "email": "tim@signalk.org"
-    },
-    {
-      "name": "Pavel Kalian"
+      "name": "Adrian Panazzolo"
     }
   ],
   "license": "Apache-2.0",
