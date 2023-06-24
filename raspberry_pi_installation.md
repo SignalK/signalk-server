@@ -113,7 +113,7 @@ Stop the daemon temporarily with;
     $ sudo systemctl stop signalk.service
     $ sudo systemctl stop signalk.socket
 
-Start the deamon with;
+Start the daemon with;
 
     $ sudo systemctl start signalk.socket
     $ sudo systemctl start signalk.service
