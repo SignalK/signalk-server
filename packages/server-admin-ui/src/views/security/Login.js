@@ -11,12 +11,12 @@ import {
   Input,
   InputGroup,
   InputGroupAddon,
-  HelpBlock,
+  InputGroupText,
   Label,
 } from 'reactstrap'
 import { Link } from 'react-router-dom'
 import { connect } from 'react-redux'
-import { login, fetchAllData } from '../../actions'
+import { login } from '../../actions'
 import Dashboard from '../Dashboard/Dashboard'
 import EnableSecurity from './EnableSecurity'
 
@@ -28,6 +28,7 @@ class Login extends Component {
       loginErrorMessage: null,
     }
     this.handleInputChange = this.handleInputChange.bind(this)
+    this.handleInputKeyUp = this.handleInputKeyUp.bind(this)
     this.handleClick = this.handleClick.bind(this)
   }
 
@@ -56,6 +57,12 @@ class Login extends Component {
     this.setState({ [event.target.name]: value })
   }
 
+  handleInputKeyUp(event) {
+    if (event.key === 'Enter') {
+      this.handleClick()
+    }
+  }
+
   render() {
     if (
       this.props.loginStatus.status === 'notLoggedIn' &&
@@ -75,25 +82,31 @@ class Login extends Component {
                         <h1>Login</h1>
                         <p className="text-muted">Sign In to your account</p>
                         <InputGroup className="mb-3">
-                          <InputGroupAddon>
-                            <i className="icon-user" />
+                          <InputGroupAddon addonType="prepend">
+                            <InputGroupText>
+                              <i className="icon-user" />
+                            </InputGroupText>
                           </InputGroupAddon>
                           <Input
                             type="text"
                             name="username"
                             placeholder="Username"
                             onChange={this.handleInputChange}
+                            onKeyUp={this.handleInputKeyUp}
                           />
                         </InputGroup>
                         <InputGroup className="mb-4">
-                          <InputGroupAddon>
-                            <i className="icon-lock" />
+                          <InputGroupAddon addonType="prepend">
+                            <InputGroupText>
+                              <i className="icon-lock" />
+                            </InputGroupText>
                           </InputGroupAddon>
                           <Input
                             type="password"
                             name="password"
                             placeholder="Password"
                             onChange={this.handleInputChange}
+                            onKeyUp={this.handleInputKeyUp}
                           />
                         </InputGroup>
                         <Row>
@@ -135,9 +148,11 @@ class Login extends Component {
                             </Button>
                           </Col>
                           <Col xs="6" className="text-right">
-                            <p className="text-danger">
-                              {this.state.loginErrorMessage}
-                            </p>
+                            {this.state.loginErrorMessage && (
+                              <p className="text-danger">
+                                {this.state.loginErrorMessage}
+                              </p>
+                            )}
                             {!this.state.loginErrorMessage &&
                               this.props.loginStatus
                                 .allowNewUserRegistration && (

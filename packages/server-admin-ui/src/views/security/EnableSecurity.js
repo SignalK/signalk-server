@@ -11,10 +11,10 @@ import {
   Input,
   InputGroup,
   InputGroupAddon,
-  HelpBlock,
+  InputGroupText,
 } from 'reactstrap'
 import { connect } from 'react-redux'
-import { login, enableSecurity, fetchLoginStatus } from '../../actions'
+import { enableSecurity, fetchLoginStatus } from '../../actions'
 import Login from './Login'
 
 class EnableSecurity extends Component {
@@ -25,6 +25,7 @@ class EnableSecurity extends Component {
       errorMessage: null,
     }
     this.handleInputChange = this.handleInputChange.bind(this)
+    this.handleInputKeyUp = this.handleInputKeyUp.bind(this)
     this.handleClick = this.handleClick.bind(this)
   }
 
@@ -48,6 +49,11 @@ class EnableSecurity extends Component {
   handleInputChange(event) {
     this.setState({ [event.target.name]: event.target.value })
   }
+  handleInputKeyUp(event) {
+    if (event.key === 'Enter') {
+      this.handleClick()
+    }
+  }
 
   render() {
     return (
@@ -70,29 +76,35 @@ class EnableSecurity extends Component {
                           </p>
                         )}
                       {!this.props.loginStatus.securityWasEnabled && (
-                        <div>
+                        <Form>
                           <h1>Enable Security</h1>
                           <p className="text-muted">Create an admin account</p>
                           <InputGroup className="mb-3">
-                            <InputGroupAddon>
-                              <i className="icon-user" />
+                            <InputGroupAddon addonType="prepend">
+                              <InputGroupText>
+                                <i className="icon-user" />
+                              </InputGroupText>
                             </InputGroupAddon>
                             <Input
                               type="text"
                               name="username"
                               placeholder="Username"
                               onChange={this.handleInputChange}
+                              onKeyUp={this.handleInputKeyUp}
                             />
                           </InputGroup>
                           <InputGroup className="mb-4">
-                            <InputGroupAddon>
-                              <i className="icon-lock" />
+                            <InputGroupAddon addonType="prepend">
+                              <InputGroupText>
+                                <i className="icon-lock" />
+                              </InputGroupText>
                             </InputGroupAddon>
                             <Input
                               type="password"
                               name="password"
                               placeholder="Password"
                               onChange={this.handleInputChange}
+                              onKeyUp={this.handleInputKeyUp}
                             />
                           </InputGroup>
                           <Row>
@@ -118,7 +130,7 @@ class EnableSecurity extends Component {
                               </p>
                             </Col>
                           </Row>
-                        </div>
+                        </Form>
                       )}
                     </CardBody>
                   </Card>
