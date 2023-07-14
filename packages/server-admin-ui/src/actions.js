@@ -114,17 +114,20 @@ export function restart() {
   }
 }
 
-export const buildFetchAction = (endpoint, type, prefix) => async (dispatch) => {
-  const response = await authFetch(`${isUndefined(prefix) ? window.serverRoutesPrefix : prefix}${endpoint}`);
+export const buildFetchAction =
+  (endpoint, type, prefix) => async (dispatch) => {
+    const response = await authFetch(
+      `${isUndefined(prefix) ? window.serverRoutesPrefix : prefix}${endpoint}`
+    )
 
-  if(response.status === 200) {
-    const data = await response.json();
-    dispatch({
-      type,
-      data,
-    })
+    if (response.status === 200) {
+      const data = await response.json()
+      dispatch({
+        type,
+        data,
+      })
+    }
   }
-}
 
 export const fetchLoginStatus = buildFetchAction(
   '/loginStatus',
