@@ -211,7 +211,7 @@ class Settings extends Component {
                           by configuring allowed CORS origins below. The host
                           where this page is loaded from is automatically
                           included in the allowed CORS origins so that the Admin
-                          UI continues to work.
+                          UI continues to work. Changes to the Allowed CORS origins requires a server restart.
                         </Label>
                       </Col>
                     </FormGroup>{' '}
