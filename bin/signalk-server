@@ -16,6 +16,16 @@
  * limitations under the License.
 */
 
+const { engines } = require('../package.json');
+const semver = require('semver');
+
+const version = engines.node;
+
+if (!semver.satisfies(process.version, version)) {
+  console.log(`The installed version of node (${process.version}) is older than the required minimum version (${version}). See https://github.com/SignalK/signalk-server/wiki/Updating-to-Node.js-18 for more information how to upgrade.`);
+  process.exit(1);
+}
+
 const Server = require('../lib')
 const server = new Server()
 
