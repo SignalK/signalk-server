@@ -114,18 +114,17 @@ export function restart() {
   }
 }
 
-// Build actions that perform a basic authFetch to the backend. Pull #514.
-export const buildFetchAction = (endpoint, type, prefix) => (dispatch) =>
-  authFetch(
-    `${isUndefined(prefix) ? window.serverRoutesPrefix : prefix}${endpoint}`
-  )
-    .then((response) => response.json())
-    .then((data) =>
-      dispatch({
-        type,
-        data,
-      })
-    )
+export const buildFetchAction = (endpoint, type, prefix) => async (dispatch) => {
+  const response = await authFetch(`${isUndefined(prefix) ? window.serverRoutesPrefix : prefix}${endpoint}`);
+
+  if(response.status === 200) {
+    const data = await response.json();
+    dispatch({
+      type,
+      data,
+    })
+  }
+}
 
 export const fetchLoginStatus = buildFetchAction(
   '/loginStatus',
