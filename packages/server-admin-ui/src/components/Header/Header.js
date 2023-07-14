@@ -28,6 +28,10 @@ class Header extends Component {
       document.body.classList.toggle('sidebar-hidden', true)
       document.body.classList.toggle('sidebar-mobile-show', false)
     })
+
+    window.addEventListener('popstate', () => {
+      document.body.classList.toggle('sidebar-mobile-show', false)
+    });
   }
 
   toggleDropdown() {
