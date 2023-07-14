@@ -31,7 +31,7 @@ class Header extends Component {
 
     window.addEventListener('popstate', () => {
       document.body.classList.toggle('sidebar-mobile-show', false)
-    });
+    })
   }
 
   toggleDropdown() {
