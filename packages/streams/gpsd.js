@@ -42,7 +42,6 @@ function Gpsd(options) {
   const hostname = options.hostname || options.host || 'localhost'
   const noDataReceivedTimeout = options.noDataReceivedTimeout || 0
 
-
   function setProviderStatus(msg) {
     options.app.setProviderStatus(options.providerId, msg)
   }
@@ -64,17 +63,17 @@ function Gpsd(options) {
     },
     parse: false,
     reconnectThreshold: noDataReceivedTimeout,
-    reconnectInterval: noDataReceivedTimeout / 2
+    reconnectInterval: noDataReceivedTimeout / 2,
   })
 
   setProviderStatus(`Connecting to ${hostname}:${port}`)
 
-  this.listener.on('connected', () =>  {
+  this.listener.on('connected', () => {
     setProviderStatus(`Connected to ${hostname}:${port}`)
     this.listener.watch({
-      class : "WATCH",
+      class: 'WATCH',
       nmea: true,
-      json: false
+      json: false,
     })
   })
 
@@ -83,7 +82,7 @@ function Gpsd(options) {
     self.push(data)
   })
 
-  this.listener.connect();
+  this.listener.connect()
 }
 
 require('util').inherits(Gpsd, Transform)
