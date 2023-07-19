@@ -11,7 +11,6 @@ import { v4 as uuidv4 } from 'uuid'
 
 import { SignalKMessageHub, WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
-import { ApiResponse } from '../'
 
 import {
   ALARM_METHOD,
@@ -120,7 +119,7 @@ export class NotificationsApi {
     this.server.put(`${NOTI_API_PATH}/ack/*`, (req: Request, res: Response) => {
       debug(`** PUT ${NOTI_API_PATH}/ack/${req.params[0]}`)
       debug(`** params ${JSON.stringify(req.query)}`)
-      const source = req.query.source as string ?? $SRC
+      const source = (req.query.source as string) ?? $SRC
 
       try {
         const id = this.pathIsUuid(req.params[0])
@@ -163,7 +162,7 @@ export class NotificationsApi {
           statusCode: 400,
           message: (e as Error).message
         })
-      }     
+      }
     })
 
     // Create / update notification
@@ -319,7 +318,7 @@ export class NotificationsApi {
         } else {
           const notiPath = `notifications.` + req.params[0].split('/').join('.')
           let noti
-          if(source) {
+          if (source) {
             debug(`** filtering results by source: ${source}`)
             noti = this.getNotificationByPath(notiPath, source)
           } else {
@@ -347,8 +346,8 @@ export class NotificationsApi {
 
   /** Clear Notification with provided id
    * @param id: UUID of notification to clear
-  */
-  private clearNotificationWithId(id: string){
+   */
+  private clearNotificationWithId(id: string) {
     if (!this.idToPathMap.has(id)) {
       throw new Error(`Notification with id = ${id} NOT found!`)
     }
@@ -360,10 +359,10 @@ export class NotificationsApi {
     this.idToPathMap.delete(id)
   }
 
-  /** Clear Notification at `path` raised by the specified $source 
+  /** Clear Notification at `path` raised by the specified $source
    * @param path: signal k path in dot notation
    * @param source: $source value to use.
-  */
+   */
   private clearNotificationAtPath(path: string, source: string) {
     debug(`** path supplied: Clear ${path} from $source= ${source}`)
     // Get notification value for the supplied source
@@ -387,7 +386,7 @@ export class NotificationsApi {
    * @param value: value to assign to path
    * @param source: source identifier
    * @returns id assigned to notification
-  */
+   */
   private setNotificationAtPath(
     path: string,
     value: Notification,
@@ -419,7 +418,7 @@ export class NotificationsApi {
    * @param path: signal k path in dot notation
    * @param value: value to assign to path
    * @param source: source identifier
-  */
+   */
   private updateModel = (
     path: string,
     value: Notification | null,
@@ -472,9 +471,9 @@ export class NotificationsApi {
   }
 
   /** Get Signal K object from `self` at supplied path.
-   *  @param path: signal k path in dot notation 
+   *  @param path: signal k path in dot notation
    *  @returns signal k object
-  */
+   */
   private getSelfPath(path: string) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return _.get((this.server.signalk as any).self, path)
@@ -486,7 +485,7 @@ export class NotificationsApi {
      @param incPath: If true includes a path attribute containing the signal k path.
      @returns signal k object or null
   */
- private getNotificationById(id: string, incPath?: boolean) {
+  private getNotificationById(id: string, incPath?: boolean) {
     if (this.idToPathMap.has(id)) {
       const path = this.idToPathMap.get(id)
       debug(`getNotificationById(${id}) => ${path}`)
@@ -538,7 +537,7 @@ export class NotificationsApi {
    * @param o: signal k object
    * @param id: notification id
    * @returns astring containing the value of $source | undefined
-  */
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private sourceOfId(o: any, id: string) {
     let src
@@ -562,7 +561,7 @@ export class NotificationsApi {
    * @param o: signal k object
    * @param source: $source identifier of desired value.
    * @returns Notification | null
-  */
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private valueWithSource(o: any, source: string) {
     let v
