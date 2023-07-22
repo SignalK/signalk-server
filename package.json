@@ -161,7 +161,6 @@
     "chai-things": "^0.2.0",
     "eslint": "^8.24.0",
     "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-jsdoc": "^39.3.6",
     "eslint-plugin-prefer-arrow": "^1.2.3",
     "eslint-plugin-react": "^7.31.8",
     "freeport-promise": "^1.0.0",
