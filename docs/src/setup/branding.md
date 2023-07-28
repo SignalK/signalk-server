@@ -1,7 +1,8 @@
+# Branding
 
+## Add your Logo
 
-### Logo
-
-You can change the admin application's top left logo by placing a SVG file named `logo.svg` in the settings directory (default: $HOME/.signalk/).
+You can change the logo image displayed at the top left of the Admin UI screen.
+To do this, add an SVG file named `logo.svg` in the settings directory _(default: $HOME/.signalk/)_.
 
 

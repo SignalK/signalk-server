@@ -16,7 +16,7 @@ _Resource API architecture:_
 This de-coupling of request handling and data storage provides the flexibility to persist resource data in a variety of different storage types as well as Internet based services.
 
 
-_To see an example of a provider plugin see [resources-provider-plugin](https://github.com/SignalK/signalk-server/tree/master/packages/resources-provider-plugin)_
+_Note: Signal K server comes with the [resources-provider-plugin](https://github.com/SignalK/signalk-server/tree/master/packages/resources-provider-plugin) pre-installed which persists resource data to the local file system._
 
 
 ### Resources API:

@@ -2,13 +2,13 @@
 
 [Introduction](index.md)
   * [What's New in V2](whats_new.md)
-    * [Deprecations & Changes](breaking_changes.md)
+    * [Changes & Deprecations](breaking_changes.md)
 
 # Getting Started
 * [Installation](installation/install.md)
   * [Installing on Raspberry Pi](installation/raspberry_pi_installation.md)
   * [Updating your installation](installation/updating.md)
-  * [Command line & Environment](installation/command_line.md)
+  * [Runtime environment & options](installation/command_line.md)
 * [Security](security.md)
 # Setup
   * [Configuration](setup/configuration.md)
@@ -20,9 +20,11 @@
   * [Processing Data](develop/plugins/deltas.md)
   * [Server API](develop/plugins/server_plugin_api.md)
   * [Resource Providers](develop/plugins/resource_provider_plugins.md)
-  * [Publishing to the AppStore](develop/plugins/publishing.md)
+  * [Course Providers](develop/rest-api/course_calculations.md)
+* [Publishing to the AppStore](develop/plugins/publishing.md)
 * [REST APIs](./develop/rest-api/open_api.md)
   * [Course API](develop/rest-api/course_api.md)
+    * [Course Calulations](develop/rest-api/course_calculations.md)
   * [Resources API](develop/rest-api/resources_api.md)
   * [Notifications API]()
   * [Autopilot API]()

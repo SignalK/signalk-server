@@ -1,55 +1,87 @@
-# Updating your Raspberry Pi and Signal K Node Server
+# Updating your Installation
 
-Much as we would all like to be sailing 365 days a year, the reality is that we are down on our boats as and when we can and weeks and months can go by between using your Raspberry Pi and Signal K Node Server. Of course when you get back to the boat everything will continue to operate as it did when you left it, but Signal K (and the Raspberry Pi) are constantly evolving and if you wish to update to the latest builds, then you need to follow this process.
+Signal K Server is frequently updated to introduce new features and fix issues that have been reported.
+Sometime these updates require that NodeJS or other supporting software on your device to be upgraded to support the new functionality.
 
-Please bear in mind that the longer between updates the more data that will have to be downloaded and the longer the process will take. We would seriously recommend taking your Raspberry Pi home and updating it on a network with good broadband speed.
+Additionally your device's operating system are constantly evolving to address security issues as well as providing new capabilities. 
 
-The updates that need to be done can be broken down in to four key areas...
-
-1. The Raspberry Pi Linux Distro
-1. Node and NPM
-1. The Signal K Node Server
-1. Any Signal K Apps
-
-## Update Raspberry Pi Linux Distro
-
-Open the terminal window and enter the following commands...
-
-    $ sudo apt update
-    $ sudo apt dist-upgrade
-
-If you have not updated for a while, then the above commands may take a while to finish, just be patient and make sure everything completes correctly. After the two commands have completed Reboot your Raspberry Pi.
-
-## Update Node and NPM
-
-Open the terminal window and enter the following commands...
-
-    $ sudo apt upgrade nodejs
-    $ sudo npm install npm@latest -g
-
-This will update Nodejs and NPM to the version required by the server.
-
-## Update Signal K Node Server
-
-As seen in the picture above there was an update available at ”Server => Update”
-Click on that row and You will open next window
-
-![server_update](https://user-images.githubusercontent.com/16189982/51401114-4c1cda80-1b4a-11e9-8f1e-d12a9db542af.png)
-
-Click on update and the installation will start
-
-**Please note !**
-
-Starting with Signal K server version 2.0.0 the recommended Node.js version is 18. [18 is the active LTS](https://nodejs.org/en/about/releases/) (Long Term Support) version in 2023.
-So if you are updating from a Signal K version <= V 1.40.0 [check out the Wiki](https://github.com/SignalK/signalk-server/wiki/Updating-to-Node.js-18) on how to. 
-
-![server_during_update](https://user-images.githubusercontent.com/16189982/51401178-71a9e400-1b4a-11e9-86b9-1148442ba59c.png)
-
-After the installation restart the server.
-
-## Any Signal K Apps
-
-The apps are updated via the Admin UI ”Appstore => Updates” clicking on the ”download cloud” . After installation do a server restart.
+Regularly updating your installation will reduce both the volume of data download and the time taken to complete the process. Connecting your device to a network with good broadband speed before performing an update is recommended.
 
 
-Now your Signal K Node Server is updated.
+Updates fall into four categories:
+
+1. Device Operating system (e.g. RaspberryPi OS)
+1. NodeJS / NPM
+1. Signal K Server
+1. Signal K WebApps and Plugins
+
+
+## Update Device Operating System
+
+Instructions will vary depending on your device but for linux based systems such as the Raspberry Pi the following instrctions are used to update the OS.
+
+From a terminal window enter the following commands:
+```shell
+sudo apt update
+
+sudo apt dist-upgrade
+```
+
+If you have not performed an update for a while these commands may take a while to complete, just be patient and make sure everything completes correctly. 
+
+After the process has completed `restart` your device.
+
+
+
+## Update NodeJS and NPM
+
+To ensure the version of NodeJS on your device is supported by Signal K Server _[(see prerequisites)](install.md#prerequisites)_, check the installed version by
+entering the following in a terminal window:
+```bash
+node -v
+
+# example response
+v18.17.0
+```
+
+If the version of NodeJS displayed is lower than the version supported by Signal K Server then you can update it with the following command:
+```shell
+sudo apt upgrade nodejs
+```
+
+It is also recommended to update the version of the Node Package Manager (NPM).
+```shell
+sudo npm install -g npm@latest
+```
+
+
+## Update Signal K Server
+
+When an update is available for Signal K Server a visual indication is displayed in the Admin UI.
+
+**Important!**
+Before updating please ensure the version of NodeJS on your device is [supported by Signal K Server](install.md#prerequisites).
+
+_**If you are updating from Signal K Server version v1.40.0 or earlier please [read this first](https://github.com/SignalK/signalk-server/wiki/Updating-to-Node.js-18) before proceeding.**_
+
+Click on _Server -> Update_ to display information about the new version.
+
+![server_update](../img/server_update.png)
+
+Click **Update** to start the installation.
+
+After the installation is complete, click **Restart** to launch the updated Signal K Server.
+
+
+### WebApps and Plugins
+
+After updating Signal K Server some plugins and WebApps may also need to be updated.
+
+The AppStore is where WebApps and Plugins can be installed, removed or updated.
+Those with an update available will be listed in _Appstore -> Updates_ in the Admin UI.
+
+Clicking on the _download cloud_ button next to the WebApp / Plugin you wish to update.
+
+After all installations have been completed, click **Restart** to activate the updated WebApps and Plugins.
+
+

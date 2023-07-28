@@ -1,6 +1,5 @@
 
-
-<img src="https://next-images.opencollective.com/_next/image?url=%2Fstatic%2Fimages%2Fopencollective-icon.png&w=32&q=75" />**Open Collective**
+# Sponsor Signal K
 
 Signal K is all about creating open and interoperable marine data systems. We have created an open specification for representing marine related data, APIs and interfacing to use the data and free software that you can download and use.
 

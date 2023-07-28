@@ -1,5 +1,7 @@
+# Changes & Deprecations
 
-# Changes
+
+## Changes
 
 The following changes have been implemented with the introduction of **Resources API** and apply to applications using the `./signalk/v2/resources` endpoint.
 
@@ -41,7 +43,7 @@ Please see the [Resources OpenAPI definition](https://github.com/SignalK/signalk
 
 ---
 
-# Deprecations:
+## Deprecations:
 
 ### 1. courseGreatCircle, courseRhumbline paths
 

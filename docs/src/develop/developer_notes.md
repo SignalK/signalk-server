@@ -25,11 +25,20 @@ The use of APIs to perform operations addresses these issues providing the follo
 
 Currently, when v2 REST APIs emit deltas that contain v2 paths and structure, they do not end up in the full model. This means that these paths and values are only available via API GET requests.
 
+## Offline Use
+
+When operating on a vessel you should not assume that a connection to Internet services is available.
+Therefore, it is important that the WebApps and Plugins you create be _"self contained"_ and provide all the resources they require to operate _(i.e. fonts, stylesheets, images, etc)_. 
+
+For WebApps and Plugins that connect to Internet based services to provide data, they should be resilient to changes in the connection status to those services and where necessary display their status.
+
+
 ## Deprecations and Breaking Changes
 
 With the move towards REST APIs and the desire to improve the data model (and also fix some mistakes) it's inevitable that there will be deprecations and breaking changes.
 
 For example, when addressing duplicate Great Circle and Rhumbline course paths, the resultant changes will likley break compatibility with v1.
 
-For details about paths that are candidates for deprecation see [REST APIs](./rest-api/open_api.md).
+For details about paths that are flagged for deprecation see [Changes & Deprecations](../breaking_changes.md).
+
 

@@ -1,33 +1,33 @@
 ## Configuring Signal K Server
 
-Signal K server provides an Admin UI to allow you to easily configure your installation. 
+Signal K Server provides an Admin UI to allow you to easily configure your installation. 
 
-Open the Admin UI by opening a web browser on the device where Signal K server is installed and (if the defaults have not been changed) navigate to `http://localhost:3000`.
+Open the Admin UI using a web browser on the device where Signal K server is installed (if the defaults have not been changed) by navigating to `http://localhost:3000`.
 
 ### Create an Admin account
 
-If you ran the `signalk-server-setup` script you will be presented with a login screen.
+It is considered good practise to enable security and create an administrator account to controll access to your server and protect your data.
 
-- Click `Login` for the first time will prompt you to create a user and password.
+If you ran the `signalk-server-setup` script, security will be enabled and you will be presented with a login screen when accessing the Admin UI.
 
-Otherwise from the menu select `Security -> Users`:
+If the login screen is not displayed, click `Login` _(top right of screen)_ to display the prompt to create a user and password.
 
-From the **Users** screen:
+Alternatively, from the menu select _Security -> Users_ and then:
+
 1. Click **Add**
-1. Enter a **UserID**
+1. Enter a **user id**
 1. Enter a **password** and confirm it
 1. In **Permissions** select **Admin**
 1. Click **Apply**.
 
-_Besides being good practise from a security standpoint, when logged in with Admin account the `Restart` button is available making it easy to restart the server._
 
 After creating the account, the server needs to be restarted.
 
-How you restart the server will depend on the installation type (i.e. installed from NPM, embedded on a commercial device, etc). Power cycling the device that Signal K Server is always an option.
+How you restart the server will depend on the installation type _(i.e. installed from NPM, embedded on a commercial device, etc)_. Power cycling the device that Signal K Server is always an option.
 
 ### Set up data connections
 
-To get data into Signal K server you will need to configure one or more data connections via the `Server -> Data Connections` menu option.
+To get data into Signal K server you will need to configure one or more data connections via the _Server -> Data Connections_ menu option.
 
 From this screen you can add connections for various data types including:
 - NMEA2000
@@ -54,10 +54,7 @@ Plugins typically extend data acquisition, data processing or enable operations 
 
 Webapps provide a user interface to view / interact with data or perform operations enabling full featured solutions such as a Chartplotter.
 
-_Pictured below: Freeboard-SK webapp:_
-![image](https://user-images.githubusercontent.com/5200296/226479871-6f3769af-4fa4-43d6-871f-4a54bec372fa.png)
-
-To install, update or remove plugins and webapps select `Appstore` from the menu.
+To install, update or remove plugins and webapps select _Appstore_ from the menu.
 
 Select:
 
@@ -80,14 +77,14 @@ To view a list of Plugins and Webapps directly from the NPM registry select the 
 
 **_Note: A restart of the Signal K server is required after plugin(s) or / webapp(s) have been installed.or updated._**
 
-Click the `Restart` button at the top right of the screen to restart the server.
+Click the _Restart_ button at the top right of the screen to restart the server.
 
-After the server has restarted, the installed plugin(s) can be configued by selecting `Server -> Plugin Config` menu entry.
+After the server has restarted, the installed plugin(s) can be configued by selecting _Server -> Plugin Config_ menu entry.
 
 
 ### Trouble shooting and the Server Log
 
-If things are not working as expected after installing a plugin or webapp, select `Server -> Server Log` to view the server's log. If the errors logged there are not providing the information required, you can enable  debugging for individual components and plugins by toggling the switch to activate them.
+If things are not working as expected after installing a plugin or webapp, select _Server -> Server Log_ to view the server's log. If the errors logged there are not providing the information required, you can enable  debugging for individual components and plugins by toggling the switch to activate them.
 
 Enabling the `Remember debug setting` ensure your selections are remebered after a server restart.
 
