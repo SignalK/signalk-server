@@ -187,11 +187,9 @@ class Settings extends Component {
                     </FormGroup>
                     <FormGroup row>
                       <Col md="3">
-                        <Label htmlFor="text-input">
-                          Login Session Timeout
-                        </Label>
+                        <Label htmlFor="text-input">Remember Me timeout</Label>
                       </Col>
-                      <Col xs="12" md="2">
+                      <Col xs="12" md="3">
                         <Input
                           type="text"
                           name="expiration"
@@ -200,6 +198,12 @@ class Settings extends Component {
                         />
                         <FormText color="muted">
                           Examples: 60s, 1m, 1h, 1d
+                        </FormText>
+                      </Col>
+                      <Col md="6">
+                        <FormText color="muted">
+                          How long server keeps you logged when Remember Me is
+                          checked in login.
                         </FormText>
                       </Col>
                     </FormGroup>
