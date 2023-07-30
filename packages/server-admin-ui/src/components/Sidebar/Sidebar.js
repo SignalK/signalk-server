@@ -102,6 +102,7 @@ class Sidebar extends Component {
 
     // nav dropdown
     const navDropdown = (item, key) => {
+      console.log('****', item)
       return (
         <li key={key} className={activeRoute(item.url, props)}>
           <a
@@ -320,6 +321,10 @@ const mapStateToProps = (state) => {
     url: '/doc',
     icon: 'icon-settings',
     children: [
+      {
+        name: 'Server Guide',
+        url: `${window.location.protocol}//${window.location.host}/doc/server-guide`,
+      },
       {
         name: 'OpenApi',
         url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
