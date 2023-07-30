@@ -141,7 +141,7 @@ Input Type | Remark
 NMEA 2000 | Check possible hardware in the ”NMEA 2000 Source” drop down list
 NMEA 0183 | Check possible sources in the ”NMEA 0183 Source” drop down list
 SignalK | Check possible sources in the ”NMEA 0183 Source” drop down list
-SeaTalk(GPIO) | SeaTalk 1 data via a Raspberry GPIO pin, [documentation here](https://github.com/SignalK/signalk-server-node/blob/seatalk/Seatalk(GPIO).md)
+SeaTalk(GPIO) | SeaTalk 1 data via a Raspberry GPIO pin, [documentation here](https://github.com/SignalK/signalk-server/blob/master/Seatalk(GPIO).md)
 Filestream |Check possible data types in the ”Data Type” drop down list
 
 **NMEA2000**
