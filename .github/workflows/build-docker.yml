@@ -5,6 +5,7 @@ on:
     branches:
     - master
     - "build-docker"
+    - canboatjs-v2
     tags:
       - '*'
       - '!v*'
