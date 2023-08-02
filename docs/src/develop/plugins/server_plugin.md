@@ -16,6 +16,10 @@ For example, if the plugin you are looking to develop is providing access to inf
 
 Or if you are looking to perform course calculations or integrate with an auotpilot, you will want to review the _[Course API](../openapi/course_api.md)_ documentation prior to commencing your project.
 
+
+**OpenApi description for your plugin's API** 
+
+If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification.
 ---
 
 ## Getting Started with Plugin Development
@@ -220,7 +224,6 @@ A plugin can also contain the following optional functions:
 _Example:_
 ```javascript
 const openapi = require('./openApi.json');
-...
 
 plugin.getOpenApi = () => openapi;
 
@@ -296,6 +299,35 @@ To do this add the following to the `package.json`:
 ```json
   "signalk-plugin-enabled-by-default": true
 ```
+---
+
+## Add an OpenAPI Definition
+
+If your plugin exposes an API to interact with it then you should include an OpenAPI definition.
+
+You do this by creating an OpenAPI definition within the file `openApi.json` and then returning the content of the file with the `getOpenApi` method.
+
+_Example:_
+```javascript
+const openapi = require('./openApi.json');
+...
+
+plugin.getOpenApi = () => openapi;
+```
+
+This will include your plugin's OpenApi definition in the documentation in the server's Admin UI under _Documentation -> OpenAPI_. 
+
+Note: If the plugin's OpenApi description DOES NOT include a `servers` property, the API path presented in the documentation will be relative to the Signal K API path. You should include this property the plugin API is rooted elsewhere.
+_Example:_
+```JSON
+  "servers": [
+    {
+      "url": "/myapi/endpoint"
+    }
+  ],
+```
+
+See [testplugin](https://github.com/SignalK/signalk-server/tree/b82477e63ebdc14878164ce1ed3aedd80c5a8b0c/test/plugin-test-config/node_modules/testplugin) for an example.
 
 ---
 

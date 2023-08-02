@@ -4,7 +4,7 @@
 
 Internally, SignalK server builds a full data model. Plugins can access the server's delta stream (updates) and full model and provide additional data as deltas using the following functions.
 
-### `app.handleMessage(pluginId, delta, skVersion = 'v1')`
+#### `app.handleMessage(pluginId, delta, skVersion = 'v1')`
 
 Allows the plugin to publish deltas to the server. These deltas are handled as any incoming deltas.
 
@@ -25,7 +25,7 @@ app.handleMessage('my-signalk-plugin', {
 
 Deltas that use Signal K V2 paths (like the [Course API](http://localhost:3000/admin/openapi/?urls.primaryName=course) paths) should call `handleMessage` with the optional 3rd parameter set to `v2`. This prevents V2 API data getting mixed in V1 paths' data in Full model & the v1 http API. If you don't know that your data is V2 API data you can omit the third parameter, as the default is V1.
 
-### `app.getSelfPath(path)`
+#### `app.getSelfPath(path)`
 
 Get a Signal K path for the `vessels.self`'s full data model.
 
@@ -34,7 +34,7 @@ let uuid = app.getSelfPath('uuid');
 app.debug(uuid); // Should output something like urn:mrn:signalk:uuid:a9d2c3b1-611b-4b00-8628-0b89d014ed60
 ```
 
-### `app.getPath(path)`
+#### `app.getPath(path)`
 
 Get a Signal K path starting from the root of the full data model.
 
@@ -58,7 +58,7 @@ let baseStations = app.getPath('shore.basestations');
 }
 ```
 
-### `app.streambundle.getSelfBus(path)`
+#### `app.streambundle.getSelfBus(path)`
 
 Get a [Bacon JS](https://baconjs.github.io/) stream for `vessels.self`'s Signal K path. `path` argument is optional. If it is not provided the returned stream
 produces values for all paths. Stream values are objects with structure
@@ -113,7 +113,7 @@ Outputs:
 ...
 ```
 
-### `app.streambundle.getSelfStream(path)`
+#### `app.streambundle.getSelfStream(path)`
 
 Get a [Bacon JS](https://baconjs.github.io/) stream for `vessels.self`'s Signal K path. `path` argument is optional. If it is not provided the returned stream
 produces values for all paths. This is similar to `app.streambundle.getSelfBus(path)`, but the stream values are the `value` properties from incoming deltas.
@@ -132,12 +132,12 @@ Outputs:
   my-signalk-plugin { longitude: 24.7366563, latitude: 59.724980699999996 } +503ms
 ```
 
-### `app.streambundle.getBus(path)`
+#### `app.streambundle.getBus(path)`
 
 Get a [Bacon JS](https://baconjs.github.io/) stream for a Signal K path that will stream values from any context. `path` argument is optional. If it is not provided the returned stream
 produces values for all paths. Stream values are objects as in `app.streambundle.getSelfBus(path)`.
 
-### `app.streambundle.getAvailablePaths()`
+#### `app.streambundle.getAvailablePaths()`
 
 Get a list of paths currently available in the server
 
@@ -159,11 +159,11 @@ Get a list of paths currently available in the server
 ]
 ```
 
-### `app.error(message)`
+#### `app.error(message)`
 
 Report errors in a human-oriented message. Currently just logs the message, but in the future error messages hopefully will show up in the admin UI.
 
-### `app.debug(...)`
+#### `app.debug(...)`
 
 Log debug messages. This is the debug method from the [debug module](https://www.npmjs.com/package/debug). The npm module name is used as the debug name.
 
@@ -171,7 +171,7 @@ Log debug messages. This is the debug method from the [debug module](https://www
 
 *Do not use `debug` directly*. Using the debug function provided by the server makes sure that the plugin taps into the server's debug logging system, including the helper switches in Admin UI's Server Log page.
 
-### `app.savePluginOptions(options, callback)`
+#### `app.savePluginOptions(options, callback)`
 
 Save changes to the plugin's options.
 
@@ -184,7 +184,7 @@ app.savePluginOptions(options, () => {app.debug('Plugin options saved')});
 
 ```
 
-### `app.readPluginOptions()`
+#### `app.readPluginOptions()`
 
 Read plugin options from disk.
 
@@ -192,7 +192,7 @@ Read plugin options from disk.
 var options = app.readPluginOptions();
 ```
 
-### `app.getDataDirPath()`
+#### `app.getDataDirPath()`
 
 Returns the full path of the directory where the plugin can persist its internal data, like data files.
 
@@ -201,7 +201,7 @@ Example use:
 var myFile = require('path').join(app.getDataDirPath(), 'somefile.ext')
 ```
 
-### `app.registerPutHandler(context, path, callback, source)`
+#### `app.registerPutHandler(context, path, callback, source)`
 
 If a plugin wants to respond to [`PUT`](http://signalk.org/specification/1.3.0/doc/put.html) requests for a specific path, it can register an action handler.
 
@@ -284,7 +284,7 @@ plugin.start = function(options) {
 }
 ```
 
-### `app.registerDeltaInputHandler ((delta, next) => ...)`
+#### `app.registerDeltaInputHandler ((delta, next) => ...)`
 
 Register a function to intercept all delta messages *before* they are processed by the server. The plugin callback should call `next(delta)` with a modified delta if it wants to alter the incoming delta or call `next` with the original delta to process it normally. Not calling `next` will drop the incoming delta and will only show in delta statistics.
 Other, non-delta messages produced by provider pipe elements are emitted normally.
@@ -302,7 +302,72 @@ app.registerDeltaInputHandler((delta, next) => {
 })
 ```
 
-### `app.notify(path, value, pluginId)`
+
+#### `app.setPluginStatus(msg)`
+
+Set the current status of the plugin. The `msg` should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.
+
+```javascript
+app.setPluginStatus('Initializing');
+// Do something
+app.setPluginStatus('Done initializing');
+```
+
+Use this instead of deprecated `setProviderStatus`
+
+#### `app.setPluginError(msg)`
+
+Set the current error status of the plugin. The `msg` should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.
+
+```javascript
+app.setPluginError('Error connecting to database');
+```
+
+Use this instead of deprecated `setProviderError`
+
+#### `app.getSerialPorts() => Promise<Ports>`
+
+This returs a Promise which will resolve to a [Ports](src/serialports.ts#21) object which contains information about the serial ports available on the machine.
+
+---
+
+### Resources API Interface
+
+#### `app.registerResourceProvider(ResourceProvider)`
+
+Used by _Resource Provider plugins_ to register each resource type it handles.
+
+See [`Resource Provider Plugins`](../plugins/resource_provider_plugins.md#registering-as-a-resource-provider) for details.
+
+---
+
+### Course API Interface
+
+See [`Course API`](../rest-api/course_api.md) for details.
+
+
+#### `app.getCourse()`
+
+Retrieves the current course information. 
+
+It returns the same course information as the [`/course`](/doc/openapi/?urls.primaryName=course#/course/get_course) API endpoint.
+
+#### `app.setCourse(Destination)`
+
+Navigate to the specified position / waypoint. This function accepts the same parameters as the [`/course/destination`](/doc/openapi/?urls.primaryName=course#/destination/put_course_destination) API endpoint.
+
+
+#### `app.setRoute(RouteDest)`
+
+Follow a route in the specified direction and starting at the specified point. 
+This function accepts the same parameters as the [`/course/activeRoute`](/doc/openapi/?urls.primaryName=course#/activeRoute/put_course_activeRoute) API endpoint.
+
+
+---
+
+### Notifications API _(proposed)_
+
+#### `app.notify(path, value, pluginId)`
 
 Notifications API interface method for raising, updating and clearing notifications.
 
@@ -344,192 +409,27 @@ const alarmId = app.notify(
 )
 ```
 
-
-### `app.registerResourceProvider(resourceProvider)`
-
-See [`RESOURCE_PROVIDER_PLUGINS`](./RESOURCE_PROVIDER_PLUGINS.md) for details.
-
 ---
-### `app.resourcesApi.getResource(resource_type, resource_id, provider_id?)`
-
-Retrieve data for the supplied SignalK resource_type and resource_id.
-
-_Note: Requires a registered Resource Provider for the supplied `resource_type`._
-
-  - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
- or user defined resource types.
-
-  - `resource_id`: The id of the resource to retrieve _(e.g. `ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
-
-  - `provider_id` (optional): The id of the Resource Provider plugin to specifically use. Can be specified when more than one provider has been registered for a reource type._(e.g. `resources-provider`)_
-
-- returns:  `Promise<{[key: string]: any}>` 
-
-_Example:_
-```javascript
-app.resourcesApi.getResource(
-  'routes', 
-  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
-).then (data => {
-  // route data
-  console.log(data);
-  ...
-}).catch (error) { 
-  // handle error
-  console.log(error.message);
-  ...
-}
-```
-
-### `app.resourcesApi.setResource(resource_type, resource_id, resource_data, provider_id?)`
-
-Create / update value of the resource with the supplied SignalK resource_type and resource_id.
-
-_Note: Requires a registered Resource Provider for the supplied `resource_type`._
-
-  - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
- or user defined resource types.
-
-  - `resource_id`: The id of the resource to retrieve _(e.g. `ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
-
-  - `resource_data`: A complete and valid resource record.
-
-  - `provider_id` (optional): The id of the Resource Provider plugin to specifically use. Can be specified when more than one provider has been registered for a reource type._(e.g. `resources-provider`)_
-
-- returns:  `Promise<void>` 
-
-_Example:_
-```javascript
-app.resourcesApi.setResource(
-  'waypoints',
-  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
-  {
-    "position": {"longitude": 138.5, "latitude": -38.6}, 
-    "feature": {
-      "type":"Feature", 
-      "geometry": {
-        "type": "Point", 
-        "coordinates": [138.5, -38.6] 
-      }, 
-      "properties":{} 
-    }
-  }
-).then ( () => {
-  // success
-  ...
-}).catch (error) { 
-  // handle error
-  console.log(error.message);
-  ...
-}
-```
-
-### `app.resourcesApi.deleteResource(resource_type, resource_id, provider_id?)`
-
-Delete the resource with the supplied SignalK resource_type and resource_id.
-
-_Note: Requires a registered Resource Provider for the supplied `resource_type`._
-
-- `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
-or user defined resource types.
-
-- `resource_id`: The id of the resource to retrieve _(e.g. `ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
-
-- `provider_id` (optional): The id of the Resource Provider plugin to specifically use. Can be specified when more than one provider has been registered for a reource type._(e.g. `resources-provider`)_
-
-- returns: `Promise<void>` 
-
-_Example:_
-```javascript
-app.resourcesApi.deleteResource(
-  'notes', 
-  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
-).then ( () => {
-  // success
-  ...
-}).catch (error) { 
-  // handle error
-  console.log(error.message);
-  ...
-}
-```
-
-### `app.resourcesApi.listResources(resource_type, params, provider_id?)`
-
-Retrieve data for the supplied SignalK resource_type and resource_id.
-
-_Note: Requires a registered Resource Provider for the supplied `resource_type`._
-
-  - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
- or user defined resource types.
-
-  - `params`: Object contining `key | value` pairs repesenting the parameters by which to filter the returned entries.
-
-  - `provider_id` (optional): The id of the Resource Provider plugin to specifically use. Can be specified when more than one provider has been registered for a reource type._(e.g. `resources-provider`)_
-  
-  __Note: The registered Resource Provider must support the supplied parameters for results to be filtered.__
-
-- returns:  `Promise<{[key: string]: any}>` 
-
-_Example:_
-```javascript
-app.resourcesApi.listResources(
-  'waypoints', 
-  {region: 'fishing_zone'}
-).then (data => {
-  // success
-  console.log(data);
-  ...
-}).catch (error) { 
-  // handle error
-  console.log(error.message);
-  ...
-}
-```
-
-
----
-### `app.setPluginStatus(msg)`
-
-Set the current status of the plugin. The `msg` should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.
-
-```javascript
-app.setPluginStatus('Initializing');
-// Do something
-app.setPluginStatus('Done initializing');
-```
-
-Use this instead of deprecated `setProviderStatus`
-
-### `app.setPluginError(msg)`
-
-Set the current error status of the plugin. The `msg` should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.
-
-```javascript
-app.setPluginError('Error connecting to database');
-```
-
-Use this instead of deprecated `setProviderError`
-
-### `app.getSerialPorts() => Promise<Ports>`
-
-This returs a Promise which will resolve to a [Ports](src/serialports.ts#21) object which contains information about the serial ports available on the machine.
-
 
 ### PropertyValues
-```
+
+PropertyValues are a mechanism for passing configuration type values between different parties such as plugins and input connections running in the server process.
+
+A plugin can *emit* values and also register to *listen* for values emitted by others. 
+
+The difference between the _PropertyValues_ mechanism and _Event Emitters_ in NodeJs is that when you call `onPropertyValues` the callback will be invoked and passed an array containing all of the previous values for the property name, starting with the initial value of `undefined`. If nothing has emitted any values for the property name the callback will be called with a value of `undefined`.
+
+```bash
 app.emitPropertyValue: (name: string, value: any) => void
+
 onPropertyValues: (
   name: string,
   callback: (propValuesHistory: PropertyValue[]) => void
 ) => Unsubscribe
 ```
-PropertyValues are a mechanism for passing configuration type values between different parties such as plugins and input connections running in the server process.
-
-A plugin can *emit*  values and register to listen for others emitting them. The difference between the PropertyValues mechanism and Event Emitters in NodeJs is that when you call `onPropertyValues` the callback will get immdediately called with an array of all previous values for the property name, starting with the initial value of `undefined`. If nothing has emitted any values for the property name the callback will be called with a value of `undefined`.
 
 A PropertyValue has the following structure:
-```
+```javascript
 interface PropertyValue {
   timestamp: number // millis
   setter: string // plugin id, server, provider id
@@ -538,7 +438,7 @@ interface PropertyValue {
 }
 ```
 
-Note that the value can be also a function.
+_Note that the value can be also a function._
 
 This mechanism allows plugins to _offer_ extensions via _"Well Known Properties"_, for example 
 - additional [NMEA0183 sentence parsers for custom sentences](https://github.com/SignalK/nmea0183-signalk/pull/193) via `nmea0183sentenceParser`
@@ -546,8 +446,9 @@ This mechanism allows plugins to _offer_ extensions via _"Well Known Properties"
 
 Code handling incoming PropertyValues should be fully reactive: even if all emitters emit during their startup there is no defined load / startup order and plugins may emit when activated and started. This means that depending on a PropertyValue being there when your code starts or arriving after your code has started is not possible.
 
-PropertyValues is not meant for data passing on a regular basis, as the total history makes it a potential memory leak. There is a safeguard against accidentally emitting regularly with an upper bound for values per property name. New values will be ignored if it is reached and emits logged as errors.
+_PropertyValues_ is not meant for data passing on a regular basis, as the total history makes it a potential memory leak. There is a safeguard against accidentally emitting regularly with an upper bound for values per property name. New values will be ignored if it is reached and emits logged as errors.
 
+---
 
 ### Exposing custom HTTP paths & OpenApi
 
@@ -555,17 +456,19 @@ If a plugin has a function called `registerWithRouter(router)` (like the plugin'
 
 Express does not have a public API for deregistering subrouters, so `stop` does not do anything to the router.
 
-**Consider seriously providing an OpenApi description** for your plugin's API. This promotes further cooperation with other plugin/webapp authors. One way we can work together is by fleshing out new APIs within a plugin and then merge them in the Signal K specification for more cooperation.
+**Consider providing an OpenApi description** for your plugin's API. This promotes cooperation with other plugin/webapp authors by making it easy to find and use functionality that is built into plugins. It is also a means to avoid duplication, promote reuse and the possibility of including them in the Signal K specification.
 
-Implement `getOpenApi` in your plugin to expose your OpenApi to be included in the server's OpenApi UI tooling. The plugin's OpenApi description either not include `servers` property at all or specify only the path in the url. The server will provide servers if it is missing and relative, path only server urls work best in different environments. See [testplugin](https://github.com/SignalK/signalk-server/tree/b82477e63ebdc14878164ce1ed3aedd80c5a8b0c/test/plugin-test-config/node_modules/testplugin) for an example.
+See [Server Plugins](server_plugin.md#add-an-openapi-definition) for details.
 
-## Plugin configuration HTTP API
+---
 
-### `GET /plugins/`
+### Plugin configuration HTTP API
+
+#### `GET /plugins/`
 
 Get a list of installed plugins and their configuration data.
 
-### `GET /plugins/<pluginid>`
+#### `GET /plugins/<pluginid>`
 
 Get information from an installed plugin.
 
@@ -578,6 +481,6 @@ Example result:
 }
 ```
 
-### `POST /plugins/<pluginid>/configure`
+#### `POST /plugins/<pluginid>/configure`
 
 Save configuration data for a plugin. Stops and starts the plugin as a side effect.

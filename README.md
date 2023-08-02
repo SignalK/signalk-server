@@ -38,11 +38,11 @@ For Marine vendors who build marine hardware and software, for example those dev
 Signal K Server is already running inside products developed by Victron Energy, Airmar Technology and others.
 
 ### Software Developers & Boat Electronics Hobbyists
-There are many boaters who happen to be highly skilled software developers and engineers, who want to build software for themselves and share with others. If you are one of them, Signal K offers you a free, modern and open platform developed by boaters for other boaters like you. Signal K Server features an extensible [plugin framework](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md), [web applications](https://github.com/SignalK/signalk-server/blob/master/WEBAPPS.md) as well as a rich set of [REST](https://signalk.org/specification/1.7.0/doc/rest_api.html) and [Streaming APIs](https://signalk.org/specification/1.7.0/doc/streaming_api.html).
+There are many boaters who happen to be highly skilled software developers and engineers, who want to build software for themselves and share with others. If you are one of them, Signal K offers you a free, modern and open platform developed by boaters for other boaters like you. Signal K Server features an extensible [plugin framework](./docs/src/develop/plugins/server_plugin.md), [web applications](./docs/src/develop/webapps.md) as well as a rich set of [REST](https://signalk.org/specification/1.7.0/doc/rest_api.html) and [Streaming APIs](https://signalk.org/specification/1.7.0/doc/streaming_api.html).
 
 Signal K Server takes care of all the complicated parts of protocol decode, and conversions to and from NMEA2000, NMEA0183 and many more protocols. It can also act as data hub for additional sensors, see the [Signal K SensESP project](https://github.com/SignalK/SensESP) for [ESP32](https://en.wikipedia.org/wiki/ESP32).
 
-Signal K Server makes the data available in JSON format according to the [Signal K standard specification](https://signalk.org/specification/latest/). This allows developers to bypass all the hurdles typically encountered when wanting to implement something for a boat. [Getting started with a plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md#getting-started-with-plugin-development) is surprisingly easy.
+Signal K Server makes the data available in JSON format according to the [Signal K standard specification](https://signalk.org/specification/latest/). This allows developers to bypass all the hurdles typically encountered when wanting to implement something for a boat. [Getting started with a plugin](./docs/src/develop/plugins/server_plugin.md#getting-started-with-plugin-development) is surprisingly easy.
 
 ## Signal K Platform
 
@@ -85,7 +85,7 @@ And an installer for Windows:
 
 Another level up, this document explains how to install Signal K Server, as well as its dependencies, on a RaspberryPi that is already running Raspberry Pi OS:
 
-* [Installation on a RaspberryPi](https://github.com/SignalK/signalk-server-node/blob/master/raspberry_pi_installation.md)
+* [Installation on a RaspberryPi](./docs/src/installation/raspberry_pi_installation.md)
 
 Last, here is how to install the Signal K Server application from NPM:
 
@@ -232,7 +232,7 @@ To enable debugging without going through the Admin UI, see the file `~/.signalk
 - `--sample-nmea0183-data`: starts signalk-server with sample NMEA0183 data.
 - `--sample-n2k-data`: starts signalk-server with sample NMEA2000 data.
 - `--override-timestamps`: overrides timestamps in the sample NMEA2000 data with current date and time. Doesn't apply nor makes a difference to NMEA0183 sample data.
-- `--securityenabled`: one of the ways to enable security. For a fresh install this makes the Admin UI force the user to create an admin account before he/she can continue further into the UI. See [SECURITY.md#enabling-security](https://github.com/SignalK/signalk-server/blob/master/SECURITY.md#enabling-security) for further details.
+- `--securityenabled`: one of the ways to enable security. For a fresh install this makes the Admin UI force the user to create an admin account before he/she can continue further into the UI. See [ENABLING SECURITY](./docs/src/security.md#enabling-security) for further details.
 
 
 ## Development
@@ -245,7 +245,7 @@ The documents provide more details about developing Webapps or Plugings for Sign
 * [Server Plugins](docs/src/develop/plugins/server_plugin.md)
 * [Webapps](docs/src/develop/webapps.md)
 * [Working with the Course API](docs/src/develop/rest-api/course_api.md)
-* [Working with the Resources API](docs/src/develop/rest-api/course_api.md)
+* [Working with the Resources API](docs/src/develop/rest-api/resources_api.md)
 * [Resource Provider Plugins](docs/src/develop/plugins/resource_provider_plugins.md)
 * [Security](docs/src/security.md)
 
