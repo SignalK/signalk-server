@@ -15,7 +15,11 @@ import {
   Position,
   Route,
   SignalKResourceType,
-  SKVersion
+  SKVersion,
+  Destination,
+  ActiveRoute,
+  RouteDest,
+  CourseInfo
 } from '@signalk/server-api'
 import { isValidCoordinate } from 'geolib'
 import { Responses } from '../'
@@ -40,38 +44,6 @@ interface CourseApplication
     WithConfig,
     WithSecurityStrategy,
     SignalKMessageHub {}
-
-interface DestinationBase {
-  href?: string
-}
-interface Destination extends DestinationBase {
-  position?: Position
-  type?: string
-}
-interface ActiveRoute extends DestinationBase {
-  href: string //ActiveRoute always has href
-  pointIndex: number
-  pointTotal: number
-  reverse: boolean
-  name: string
-}
-
-interface CourseInfo {
-  startTime: string | null
-  targetArrivalTime: string | null
-  arrivalCircle: number
-  activeRoute: ActiveRoute | null
-  nextPoint: {
-    href?: string | null
-    type: string | null
-    position: Position | null
-  } | null
-  previousPoint: {
-    href?: string | null
-    type: string | null
-    position: Position | null
-  } | null
-}
 
 export class CourseApi {
   private courseInfo: CourseInfo = {
@@ -111,6 +83,48 @@ export class CourseApi {
       }
       resolve()
     })
+  }
+
+  /** Get course (exposed to plugins) */
+  getCourse(): CourseInfo {
+    debug(`** getCourse()`)
+    return this.courseInfo
+  }
+
+  /** Set / clear course (exposed to plugins)
+   * @param dest Setting to null clears the current destination
+   */
+  async setCourse(dest: (Destination & { arrivalCircle?: number }) | null) {
+    debug(`** setCourse(${dest})`)
+
+    if (!dest) {
+      this.clearDestination()
+      this.emitCourseInfo()
+      return
+    }
+
+    const result = await this.setDestination(dest)
+    if (result) {
+      this.emitCourseInfo()
+    }
+  }
+
+  /** Set / clear route (exposed to plugins)
+   * @param dest Setting to null clears the current destination
+   */
+  async setRoute(dest: RouteDest | null) {
+    debug(`** setCourse(${dest})`)
+
+    if (!dest) {
+      this.clearDestination()
+      this.emitCourseInfo()
+      return
+    }
+
+    const result = await this.activateRoute(dest)
+    if (result) {
+      this.emitCourseInfo()
+    }
   }
 
   private getVesselPosition() {
@@ -450,12 +464,7 @@ export class CourseApi {
     )
   }
 
-  private async activateRoute(route: {
-    href?: string
-    reverse?: boolean
-    pointIndex?: number
-    arrivalCircle?: number
-  }): Promise<boolean> {
+  private async activateRoute(route: RouteDest): Promise<boolean> {
     const { href, reverse } = route
     let rte: any
 
