@@ -1,0 +1,538 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Server API - Signal K Server Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="A Guide for users and developers.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../../index.html">Introduction</a></li><li class="chapter-item expanded "><a href="../../whats_new.html"><strong aria-hidden="true">1.</strong> What's New in V2</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../breaking_changes.html"><strong aria-hidden="true">1.1.</strong> Changes &amp; Deprecations</a></li></ol></li><li class="chapter-item expanded "><li class="part-title">Getting Started</li><li class="chapter-item expanded "><a href="../../installation/install.html"><strong aria-hidden="true">2.</strong> Installation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../installation/raspberry_pi_installation.html"><strong aria-hidden="true">2.1.</strong> Installing on Raspberry Pi</a></li><li class="chapter-item expanded "><a href="../../installation/updating.html"><strong aria-hidden="true">2.2.</strong> Updating your installation</a></li><li class="chapter-item expanded "><a href="../../installation/command_line.html"><strong aria-hidden="true">2.3.</strong> Runtime environment &amp; options</a></li></ol></li><li class="chapter-item expanded "><a href="../../security.html"><strong aria-hidden="true">3.</strong> Security</a></li><li class="chapter-item expanded affix "><li class="part-title">Setup</li><li class="chapter-item expanded "><a href="../../setup/configuration.html"><strong aria-hidden="true">4.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="../../setup/branding.html"><strong aria-hidden="true">5.</strong> Branding</a></li><li class="chapter-item expanded affix "><li class="part-title">Develop</li><li class="chapter-item expanded "><a href="../../develop/developer_notes.html"><strong aria-hidden="true">6.</strong> Notes for Developers</a></li><li class="chapter-item expanded "><a href="../../develop/webapps.html"><strong aria-hidden="true">7.</strong> WebApps</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/server_plugin.html"><strong aria-hidden="true">8.</strong> Plugins</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../develop/plugins/deltas.html"><strong aria-hidden="true">8.1.</strong> Processing Data</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/server_plugin_api.html" class="active"><strong aria-hidden="true">8.2.</strong> Server API</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/resource_provider_plugins.html"><strong aria-hidden="true">8.3.</strong> Resource Providers</a></li><li class="chapter-item expanded "><a href="../../develop/rest-api/course_calculations.html"><strong aria-hidden="true">8.4.</strong> Course Providers</a></li></ol></li><li class="chapter-item expanded "><a href="../../develop/plugins/publishing.html"><strong aria-hidden="true">9.</strong> Publishing to the AppStore</a></li><li class="chapter-item expanded "><a href="../../develop/rest-api/open_api.html"><strong aria-hidden="true">10.</strong> REST APIs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../develop/rest-api/course_api.html"><strong aria-hidden="true">10.1.</strong> Course API</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../develop/rest-api/course_calculations.html"><strong aria-hidden="true">10.1.1.</strong> Course Calulations</a></li></ol></li><li class="chapter-item expanded "><a href="../../develop/rest-api/resources_api.html"><strong aria-hidden="true">10.2.</strong> Resources API</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">10.3.</strong> Notifications API</div></li><li class="chapter-item expanded "><div><strong aria-hidden="true">10.4.</strong> Autopilot API</div></li></ol></li><li class="chapter-item expanded "><a href="../../develop/contributing.html"><strong aria-hidden="true">11.</strong> Contribute</a></li><li class="chapter-item expanded affix "><li class="part-title">Support</li><li class="chapter-item expanded "><a href="../../support/help.html"><strong aria-hidden="true">12.</strong> Help &amp; Support</a></li><li class="chapter-item expanded "><a href="../../support/sponsor.html"><strong aria-hidden="true">13.</strong> Sponsor</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Signal K Server Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="server-api-for-plugins"><a class="header" href="#server-api-for-plugins">Server API for plugins</a></h1>
+<p>Internally, SignalK server builds a full data model. Plugins can access the server's delta stream (updates) and full model and provide additional data as deltas using the following functions.</p>
+<h4 id="apphandlemessagepluginid-delta-skversion--v1"><a class="header" href="#apphandlemessagepluginid-delta-skversion--v1"><code>app.handleMessage(pluginId, delta, skVersion = 'v1')</code></a></h4>
+<p>Allows the plugin to publish deltas to the server. These deltas are handled as any incoming deltas.</p>
+<pre><code class="language-javascript">app.handleMessage('my-signalk-plugin', {
+  updates: [
+    {
+      values: [
+        {
+          path: 'navigation.courseOverGroundTrue',
+          value: Math.PI
+        }
+      ]
+    }
+  ]
+})
+</code></pre>
+<p>Deltas that use Signal K V2 paths (like the <a href="http://localhost:3000/admin/openapi/?urls.primaryName=course">Course API</a> paths) should call <code>handleMessage</code> with the optional 3rd parameter set to <code>v2</code>. This prevents V2 API data getting mixed in V1 paths' data in Full model &amp; the v1 http API. If you don't know that your data is V2 API data you can omit the third parameter, as the default is V1.</p>
+<h4 id="appgetselfpathpath"><a class="header" href="#appgetselfpathpath"><code>app.getSelfPath(path)</code></a></h4>
+<p>Get a Signal K path for the <code>vessels.self</code>'s full data model.</p>
+<pre><code class="language-javascript">let uuid = app.getSelfPath('uuid');
+app.debug(uuid); // Should output something like urn:mrn:signalk:uuid:a9d2c3b1-611b-4b00-8628-0b89d014ed60
+</code></pre>
+<h4 id="appgetpathpath"><a class="header" href="#appgetpathpath"><code>app.getPath(path)</code></a></h4>
+<p>Get a Signal K path starting from the root of the full data model.</p>
+<pre><code class="language-javascript">let baseStations = app.getPath('shore.basestations');
+
+// baseStations:
+
+{
+  'urn:mrn:imo:mmsi:2766140': {
+    url: 'basestations',
+    navigation: { position: [Object] },
+    mmsi: '2766140'
+  },
+  'urn:mrn:imo:mmsi:2766160': {
+    url: 'basestations',
+    navigation: { position: [Object] },
+    mmsi: '2766160'
+  },
+  ...
+}
+</code></pre>
+<h4 id="appstreambundlegetselfbuspath"><a class="header" href="#appstreambundlegetselfbuspath"><code>app.streambundle.getSelfBus(path)</code></a></h4>
+<p>Get a <a href="https://baconjs.github.io/">Bacon JS</a> stream for <code>vessels.self</code>'s Signal K path. <code>path</code> argument is optional. If it is not provided the returned stream
+produces values for all paths. Stream values are objects with structure</p>
+<pre><code class="language-javascript">  {
+    path: ...,
+    value: ...,
+    context: ...,
+    source: ...,
+    $source: ...,
+    timestamp: ...
+  }
+</code></pre>
+<p>For example:</p>
+<pre><code class="language-javascript">app.streambundle
+  .getSelfBus('navigation.position')
+  .forEach(pos =&gt; app.debug(pos));
+</code></pre>
+<p>Outputs:</p>
+<pre><code class="language-javascript">...
+{
+  path: 'navigation.position',
+  value: { longitude: 24.7366117, latitude: 59.72493 },
+  context: 'vessels.urn:mrn:signalk:uuid:a9d2c3b1-611b-4b00-8628-0b89d014ed60',
+  source: {
+    label: 'n2k-sample-data',
+    type: 'NMEA2000',
+    pgn: 129039,
+    src: '43'
+  },
+  '$source': 'n2k-sample-data.43',
+  timestamp: '2014-08-15T19:00:02.392Z'
+}
+{
+  path: 'navigation.position',
+  value: { longitude: 24.7366208, latitude: 59.7249198 },
+  context: 'vessels.urn:mrn:signalk:uuid:a9d2c3b1-611b-4b00-8628-0b89d014ed60',
+  source: {
+    label: 'n2k-sample-data',
+    type: 'NMEA2000',
+    pgn: 129025,
+    src: '160'
+  },
+  '$source': 'n2k-sample-data.160',
+  timestamp: '2014-08-15T19:00:02.544Z'
+}
+...
+</code></pre>
+<h4 id="appstreambundlegetselfstreampath"><a class="header" href="#appstreambundlegetselfstreampath"><code>app.streambundle.getSelfStream(path)</code></a></h4>
+<p>Get a <a href="https://baconjs.github.io/">Bacon JS</a> stream for <code>vessels.self</code>'s Signal K path. <code>path</code> argument is optional. If it is not provided the returned stream
+produces values for all paths. This is similar to <code>app.streambundle.getSelfBus(path)</code>, but the stream values are the <code>value</code> properties from incoming deltas.</p>
+<pre><code class="language-javascript">app.streambundle
+  .getSelfStream('navigation.position')
+  .forEach(pos =&gt; app.debug(pos));
+</code></pre>
+<p>Outputs:</p>
+<pre><code>  my-signalk-plugin { longitude: 24.736677, latitude: 59.7250108 } +600ms
+  my-signalk-plugin { longitude: 24.736645, latitude: 59.7249883 } +321ms
+  my-signalk-plugin { longitude: 24.7366563, latitude: 59.7249807 } +174ms
+  my-signalk-plugin { longitude: 24.7366563, latitude: 59.724980699999996 } +503ms
+</code></pre>
+<h4 id="appstreambundlegetbuspath"><a class="header" href="#appstreambundlegetbuspath"><code>app.streambundle.getBus(path)</code></a></h4>
+<p>Get a <a href="https://baconjs.github.io/">Bacon JS</a> stream for a Signal K path that will stream values from any context. <code>path</code> argument is optional. If it is not provided the returned stream
+produces values for all paths. Stream values are objects as in <code>app.streambundle.getSelfBus(path)</code>.</p>
+<h4 id="appstreambundlegetavailablepaths"><a class="header" href="#appstreambundlegetavailablepaths"><code>app.streambundle.getAvailablePaths()</code></a></h4>
+<p>Get a list of paths currently available in the server</p>
+<pre><code class="language-javascript">[
+  &quot;navigation.speedOverGround&quot;,
+  &quot;navigation.courseOverGroundTrue&quot;,
+  &quot;navigation.courseGreatCircle.nextPoint.position&quot;,
+  &quot;navigation.position&quot;,
+  &quot;navigation.gnss.antennaAltitude&quot;,
+  &quot;navigation.gnss.satellites&quot;,
+  &quot;navigation.gnss.horizontalDilution&quot;,
+  &quot;navigation.gnss.positionDilution&quot;,
+  &quot;navigation.gnss.geoidalSeparation&quot;,
+  &quot;navigation.gnss.type&quot;,&quot;navigation.gnss.methodQuality&quot;,
+  &quot;navigation.gnss.integrity&quot;,
+  &quot;navigation.magneticVariation&quot;,
+  ...
+]
+</code></pre>
+<h4 id="apperrormessage"><a class="header" href="#apperrormessage"><code>app.error(message)</code></a></h4>
+<p>Report errors in a human-oriented message. Currently just logs the message, but in the future error messages hopefully will show up in the admin UI.</p>
+<h4 id="appdebug"><a class="header" href="#appdebug"><code>app.debug(...)</code></a></h4>
+<p>Log debug messages. This is the debug method from the <a href="https://www.npmjs.com/package/debug">debug module</a>. The npm module name is used as the debug name.</p>
+<p><code>app.debug()</code> can take any type and will serialize it before outputting.</p>
+<p><em>Do not use <code>debug</code> directly</em>. Using the debug function provided by the server makes sure that the plugin taps into the server's debug logging system, including the helper switches in Admin UI's Server Log page.</p>
+<h4 id="appsavepluginoptionsoptions-callback"><a class="header" href="#appsavepluginoptionsoptions-callback"><code>app.savePluginOptions(options, callback)</code></a></h4>
+<p>Save changes to the plugin's options.</p>
+<pre><code class="language-javascript">var options = {
+  myConfigValue = 'Something the plugin calculated'
+};
+
+app.savePluginOptions(options, () =&gt; {app.debug('Plugin options saved')});
+
+</code></pre>
+<h4 id="appreadpluginoptions"><a class="header" href="#appreadpluginoptions"><code>app.readPluginOptions()</code></a></h4>
+<p>Read plugin options from disk.</p>
+<pre><code class="language-javascript">var options = app.readPluginOptions();
+</code></pre>
+<h4 id="appgetdatadirpath"><a class="header" href="#appgetdatadirpath"><code>app.getDataDirPath()</code></a></h4>
+<p>Returns the full path of the directory where the plugin can persist its internal data, like data files.</p>
+<p>Example use:</p>
+<pre><code class="language-javascript">var myFile = require('path').join(app.getDataDirPath(), 'somefile.ext')
+</code></pre>
+<h4 id="appregisterputhandlercontext-path-callback-source"><a class="header" href="#appregisterputhandlercontext-path-callback-source"><code>app.registerPutHandler(context, path, callback, source)</code></a></h4>
+<p>If a plugin wants to respond to <a href="http://signalk.org/specification/1.3.0/doc/put.html"><code>PUT</code></a> requests for a specific path, it can register an action handler.</p>
+<p>The action handler can handle the request synchronously or asynchronously.</p>
+<p>The passed callback should be a function taking the following arguments: <code>(context, path, value, callback)</code></p>
+<p>For synchronous actions the handler must return a value describing the response of the request: for example</p>
+<pre><code class="language-javascript">{
+  state: 'COMPLETED',
+  statusCode: 200
+}
+</code></pre>
+<p>or</p>
+<pre><code class="language-javascript">{
+ state:'COMPLETED',
+ statusCode: 400,
+ message:'Some Error Message'
+}
+</code></pre>
+<p>The <code>statusCode</code> value can be any valid HTTP response code.</p>
+<p>For asynchronous actions that may take considerable time and where the requester should not be kept waiting for the result the handler must return</p>
+<pre><code class="language-javascript">{ state: 'PENDING' }
+</code></pre>
+<p>When the action is finished the handler should call the <code>callback</code> function with the result with</p>
+<pre><code class="language-javascript">callback({ state: 'COMPLETED', statusCode: 200 })
+</code></pre>
+<p>or</p>
+<pre><code class="language-javascript">callback({
+  state:'COMPLETED',
+  statusCode: 400,
+  message:'Some Error Message'
+})
+</code></pre>
+<p>Synchronous example:</p>
+<pre><code class="language-javascript">function myActionHandler(context, path, value, callback) {
+  if(doSomething(context, path, value)){
+    return { state: 'COMPLETED', statusCode: 200 };
+  } else {
+    return { state: 'COMPLETED', statusCode: 400 };
+  }
+}
+
+plugin.start = function(options) {
+  app.registerPutHandler('vessels.self', 'some.path', myActionHandler, 'somesource.1');
+}
+</code></pre>
+<p>Asynchronous example:</p>
+<pre><code class="language-javascript">function myActionHandler(context, path, value, callback) {
+  doSomethingAsync(context, path, value, (result) =&gt;{
+    if(result) {
+      callback({ state: 'COMPLETED', result: 200 })
+    } else {
+      callback({ state: 'COMPLETED', result: 400 })
+    }
+  });
+  return { state: 'PENDING' };
+}
+
+plugin.start = function(options) {
+  app.registerPutHandler('vessels.self', 'some.path', myActionHandler);
+}
+</code></pre>
+<h4 id="appregisterdeltainputhandler-delta-next--"><a class="header" href="#appregisterdeltainputhandler-delta-next--"><code>app.registerDeltaInputHandler ((delta, next) =&gt; ...)</code></a></h4>
+<p>Register a function to intercept all delta messages <em>before</em> they are processed by the server. The plugin callback should call <code>next(delta)</code> with a modified delta if it wants to alter the incoming delta or call <code>next</code> with the original delta to process it normally. Not calling <code>next</code> will drop the incoming delta and will only show in delta statistics.
+Other, non-delta messages produced by provider pipe elements are emitted normally.</p>
+<pre><code class="language-javascript">app.registerDeltaInputHandler((delta, next) =&gt; {
+  delta.updates.forEach(update =&gt; {
+    update.values.forEach(pathValue =&gt; {
+      if(pathValue.startsWith(&quot;foo&quot;)) {
+        pathValue.path = &quot;bar&quot;
+      }
+    })
+  })
+  next(delta)
+})
+</code></pre>
+<h4 id="appsetpluginstatusmsg"><a class="header" href="#appsetpluginstatusmsg"><code>app.setPluginStatus(msg)</code></a></h4>
+<p>Set the current status of the plugin. The <code>msg</code> should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.</p>
+<pre><code class="language-javascript">app.setPluginStatus('Initializing');
+// Do something
+app.setPluginStatus('Done initializing');
+</code></pre>
+<p>Use this instead of deprecated <code>setProviderStatus</code></p>
+<h4 id="appsetpluginerrormsg"><a class="header" href="#appsetpluginerrormsg"><code>app.setPluginError(msg)</code></a></h4>
+<p>Set the current error status of the plugin. The <code>msg</code> should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.</p>
+<pre><code class="language-javascript">app.setPluginError('Error connecting to database');
+</code></pre>
+<p>Use this instead of deprecated <code>setProviderError</code></p>
+<h4 id="appgetserialports--promiseports"><a class="header" href="#appgetserialports--promiseports"><code>app.getSerialPorts() =&gt; Promise&lt;Ports&gt;</code></a></h4>
+<p>This returs a Promise which will resolve to a <a href="src/serialports.ts#21">Ports</a> object which contains information about the serial ports available on the machine.</p>
+<hr />
+<h3 id="resources-api-interface"><a class="header" href="#resources-api-interface">Resources API Interface</a></h3>
+<h4 id="appregisterresourceproviderresourceprovider"><a class="header" href="#appregisterresourceproviderresourceprovider"><code>app.registerResourceProvider(ResourceProvider)</code></a></h4>
+<p>Used by <em>Resource Provider plugins</em> to register each resource type it handles.</p>
+<p>See <a href="../plugins/resource_provider_plugins.html#registering-as-a-resource-provider"><code>Resource Provider Plugins</code></a> for details.</p>
+<hr />
+<h3 id="course-api-interface"><a class="header" href="#course-api-interface">Course API Interface</a></h3>
+<p>See <a href="../rest-api/course_api.html"><code>Course API</code></a> for details.</p>
+<h4 id="appgetcourse"><a class="header" href="#appgetcourse"><code>app.getCourse()</code></a></h4>
+<p>Retrieves the current course information. </p>
+<p>It returns the same course information as the <a href="/doc/openapi/?urls.primaryName=course#/course/get_course"><code>/course</code></a> API endpoint.</p>
+<h4 id="appsetcoursedestination"><a class="header" href="#appsetcoursedestination"><code>app.setCourse(Destination)</code></a></h4>
+<p>Navigate to the specified position / waypoint. This function accepts the same parameters as the <a href="/doc/openapi/?urls.primaryName=course#/destination/put_course_destination"><code>/course/destination</code></a> API endpoint.</p>
+<h4 id="appsetrouteroutedest"><a class="header" href="#appsetrouteroutedest"><code>app.setRoute(RouteDest)</code></a></h4>
+<p>Follow a route in the specified direction and starting at the specified point. 
+This function accepts the same parameters as the <a href="/doc/openapi/?urls.primaryName=course#/activeRoute/put_course_activeRoute"><code>/course/activeRoute</code></a> API endpoint.</p>
+<hr />
+<h3 id="notifications-api-proposed"><a class="header" href="#notifications-api-proposed">Notifications API <em>(proposed)</em></a></h3>
+<h4 id="appnotifypath-value-pluginid"><a class="header" href="#appnotifypath-value-pluginid"><code>app.notify(path, value, pluginId)</code></a></h4>
+<p>Notifications API interface method for raising, updating and clearing notifications.</p>
+<ul>
+<li>
+<p><code>path</code>: Signal K path of the notification</p>
+</li>
+<li>
+<p><code>value</code>: A valid <code>Notification</code> object or <code>null</code> if clearing a notification.</p>
+</li>
+<li>
+<p><code>pluginId</code> The plugin identifier.</p>
+</li>
+</ul>
+<p>To raise or update a for a specified path, call the method with a valid <code>Notification</code> object as the <code>value</code>.</p>
+<ul>
+<li>returns:  <code>string</code> value containing the <code>id</code> of the new / updated notification.</li>
+</ul>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">const alarmId = app.notify(
+  'myalarm', 
+  {
+	message: 'My cutom alarm text',
+	state: 'alert'
+  },
+  'myAlarmPlugin'
+)
+
+// alarmId = &quot;ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a&quot;
+</code></pre>
+<p>To clear (cancel) a notification call the method with <code>null</code> as the <code>value</code>.</p>
+<ul>
+<li>returns:  <code>void</code>.</li>
+</ul>
+<p><em>Example: Clear notification</em></p>
+<pre><code class="language-javascript">const alarmId = app.notify(
+  'myalarm', 
+  null,
+  'myAlarmPlugin'
+)
+</code></pre>
+<hr />
+<h3 id="propertyvalues"><a class="header" href="#propertyvalues">PropertyValues</a></h3>
+<p>PropertyValues are a mechanism for passing configuration type values between different parties such as plugins and input connections running in the server process.</p>
+<p>A plugin can <em>emit</em> values and also register to <em>listen</em> for values emitted by others. </p>
+<p>The difference between the <em>PropertyValues</em> mechanism and <em>Event Emitters</em> in NodeJs is that when you call <code>onPropertyValues</code> the callback will be invoked and passed an array containing all of the previous values for the property name, starting with the initial value of <code>undefined</code>. If nothing has emitted any values for the property name the callback will be called with a value of <code>undefined</code>.</p>
+<pre><code class="language-bash">app.emitPropertyValue: (name: string, value: any) =&gt; void
+
+onPropertyValues: (
+  name: string,
+  callback: (propValuesHistory: PropertyValue[]) =&gt; void
+) =&gt; Unsubscribe
+</code></pre>
+<p>A PropertyValue has the following structure:</p>
+<pre><code class="language-javascript">interface PropertyValue {
+  timestamp: number // millis
+  setter: string // plugin id, server, provider id
+  name: string
+  value: any
+}
+</code></pre>
+<p><em>Note that the value can be also a function.</em></p>
+<p>This mechanism allows plugins to <em>offer</em> extensions via <em>&quot;Well Known Properties&quot;</em>, for example </p>
+<ul>
+<li>additional <a href="https://github.com/SignalK/nmea0183-signalk/pull/193">NMEA0183 sentence parsers for custom sentences</a> via <code>nmea0183sentenceParser</code></li>
+<li>additional PGN definitions for propietary or custom PGNs</li>
+</ul>
+<p>Code handling incoming PropertyValues should be fully reactive: even if all emitters emit during their startup there is no defined load / startup order and plugins may emit when activated and started. This means that depending on a PropertyValue being there when your code starts or arriving after your code has started is not possible.</p>
+<p><em>PropertyValues</em> is not meant for data passing on a regular basis, as the total history makes it a potential memory leak. There is a safeguard against accidentally emitting regularly with an upper bound for values per property name. New values will be ignored if it is reached and emits logged as errors.</p>
+<hr />
+<h3 id="exposing-custom-http-paths--openapi"><a class="header" href="#exposing-custom-http-paths--openapi">Exposing custom HTTP paths &amp; OpenApi</a></h3>
+<p>If a plugin has a function called <code>registerWithRouter(router)</code> (like the plugin's <code>start</code> and <code>stop</code> functions) it will be called with an Express router as the parameter during plugin startup. The router will be mounted at <code>/plugins/&lt;pluginId&gt;</code> and you can use standard Express <code>.get</code> <code>.post</code> <code>.use</code> etc to add HTTP path handlers. Note that <code>GET /plugins/&lt;pluginid&gt;</code> and <code>POST /plugins/&lt;pluginid&gt;/configure</code> are reserved by server (see below).</p>
+<p>Express does not have a public API for deregistering subrouters, so <code>stop</code> does not do anything to the router.</p>
+<p><strong>Consider providing an OpenApi description</strong> for your plugin's API. This promotes cooperation with other plugin/webapp authors by making it easy to find and use functionality that is built into plugins. It is also a means to avoid duplication, promote reuse and the possibility of including them in the Signal K specification.</p>
+<p>See <a href="server_plugin.html#add-an-openapi-definition">Server Plugins</a> for details.</p>
+<hr />
+<h3 id="plugin-configuration-http-api"><a class="header" href="#plugin-configuration-http-api">Plugin configuration HTTP API</a></h3>
+<h4 id="get-plugins"><a class="header" href="#get-plugins"><code>GET /plugins/</code></a></h4>
+<p>Get a list of installed plugins and their configuration data.</p>
+<h4 id="get-pluginspluginid"><a class="header" href="#get-pluginspluginid"><code>GET /plugins/&lt;pluginid&gt;</code></a></h4>
+<p>Get information from an installed plugin.</p>
+<p>Example result:</p>
+<pre><code class="language-json">{
+  &quot;enabled&quot;: false,
+  &quot;id&quot;: &quot;marinetrafficreporter&quot;,
+  &quot;name&quot;: &quot;Marine Traffic Reporter&quot;
+}
+</code></pre>
+<h4 id="post-pluginspluginidconfigure"><a class="header" href="#post-pluginspluginidconfigure"><code>POST /plugins/&lt;pluginid&gt;/configure</code></a></h4>
+<p>Save configuration data for a plugin. Stops and starts the plugin as a side effect.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../develop/plugins/deltas.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../../develop/plugins/resource_provider_plugins.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../develop/plugins/deltas.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../../develop/plugins/resource_provider_plugins.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../searcher.js" type="text/javascript" charset="utf-8"></script>
+
+        <script src="../../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </body>
+</html>

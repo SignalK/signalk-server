@@ -1,0 +1,236 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Runtime environment &amp; options - Signal K Server Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="A Guide for users and developers.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">Introduction</a></li><li class="chapter-item expanded "><a href="../whats_new.html"><strong aria-hidden="true">1.</strong> What's New in V2</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../breaking_changes.html"><strong aria-hidden="true">1.1.</strong> Changes &amp; Deprecations</a></li></ol></li><li class="chapter-item expanded "><li class="part-title">Getting Started</li><li class="chapter-item expanded "><a href="../installation/install.html"><strong aria-hidden="true">2.</strong> Installation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../installation/raspberry_pi_installation.html"><strong aria-hidden="true">2.1.</strong> Installing on Raspberry Pi</a></li><li class="chapter-item expanded "><a href="../installation/updating.html"><strong aria-hidden="true">2.2.</strong> Updating your installation</a></li><li class="chapter-item expanded "><a href="../installation/command_line.html" class="active"><strong aria-hidden="true">2.3.</strong> Runtime environment &amp; options</a></li></ol></li><li class="chapter-item expanded "><a href="../security.html"><strong aria-hidden="true">3.</strong> Security</a></li><li class="chapter-item expanded affix "><li class="part-title">Setup</li><li class="chapter-item expanded "><a href="../setup/configuration.html"><strong aria-hidden="true">4.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="../setup/branding.html"><strong aria-hidden="true">5.</strong> Branding</a></li><li class="chapter-item expanded affix "><li class="part-title">Develop</li><li class="chapter-item expanded "><a href="../develop/developer_notes.html"><strong aria-hidden="true">6.</strong> Notes for Developers</a></li><li class="chapter-item expanded "><a href="../develop/webapps.html"><strong aria-hidden="true">7.</strong> WebApps</a></li><li class="chapter-item expanded "><a href="../develop/plugins/server_plugin.html"><strong aria-hidden="true">8.</strong> Plugins</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../develop/plugins/deltas.html"><strong aria-hidden="true">8.1.</strong> Processing Data</a></li><li class="chapter-item expanded "><a href="../develop/plugins/server_plugin_api.html"><strong aria-hidden="true">8.2.</strong> Server API</a></li><li class="chapter-item expanded "><a href="../develop/plugins/resource_provider_plugins.html"><strong aria-hidden="true">8.3.</strong> Resource Providers</a></li><li class="chapter-item expanded "><a href="../develop/rest-api/course_calculations.html"><strong aria-hidden="true">8.4.</strong> Course Providers</a></li></ol></li><li class="chapter-item expanded "><a href="../develop/plugins/publishing.html"><strong aria-hidden="true">9.</strong> Publishing to the AppStore</a></li><li class="chapter-item expanded "><a href="../develop/rest-api/open_api.html"><strong aria-hidden="true">10.</strong> REST APIs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../develop/rest-api/course_api.html"><strong aria-hidden="true">10.1.</strong> Course API</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../develop/rest-api/course_calculations.html"><strong aria-hidden="true">10.1.1.</strong> Course Calulations</a></li></ol></li><li class="chapter-item expanded "><a href="../develop/rest-api/resources_api.html"><strong aria-hidden="true">10.2.</strong> Resources API</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">10.3.</strong> Notifications API</div></li><li class="chapter-item expanded "><div><strong aria-hidden="true">10.4.</strong> Autopilot API</div></li></ol></li><li class="chapter-item expanded "><a href="../develop/contributing.html"><strong aria-hidden="true">11.</strong> Contribute</a></li><li class="chapter-item expanded affix "><li class="part-title">Support</li><li class="chapter-item expanded "><a href="../support/help.html"><strong aria-hidden="true">12.</strong> Help &amp; Support</a></li><li class="chapter-item expanded "><a href="../support/sponsor.html"><strong aria-hidden="true">13.</strong> Sponsor</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Signal K Server Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="runtime-environment--options"><a class="header" href="#runtime-environment--options">Runtime Environment &amp; Options</a></h1>
+<p>Signal K Server provides the following command line options and environment variables to configure your implementation.</p>
+<h2 id="command-line-options"><a class="header" href="#command-line-options">Command line options</a></h2>
+<table><thead><tr><th>Option</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>-s</code></td><td>Override path to the settings file. <em>(same as <code>SIGNALK_NODE_SETTINGS</code> environment variable)</em></td></tr>
+<tr><td><code>-c</code></td><td>Override the path to find server configuration. <em>(same as <code>SIGNALK_NODE_CONFIG_DIR</code> environment variable)</em></td></tr>
+<tr><td><code>--sample-nmea0183-data</code></td><td>Starts signalk-server with sample NMEA0183 data.</td></tr>
+<tr><td><code>--sample-n2k-data</code></td><td>Starts signalk-server with sample NMEA2000 data.</td></tr>
+<tr><td><code>--override-timestamps</code></td><td>Override timestamps in the sample NMEA2000 data with current date and time. Doesn't apply nor makes a difference to NMEA0183 sample data.</td></tr>
+<tr><td><code>--securityenabled</code></td><td>Enable security. For a fresh install this makes the Admin UI force the user to create an admin account before he/she can continue further into the UI. See <a href="../security.html#enabling-security">Security</a> for further details.</td></tr>
+</tbody></table>
+<h2 id="environment-variables"><a class="header" href="#environment-variables">Environment variables</a></h2>
+<table><thead><tr><th>Variable</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>PORT</code></td><td>Override the port for http/ws service (default is 3000).</td></tr>
+<tr><td><code>SSLPORT</code></td><td>Override the port for https/wss service. If defined forces ssl as default protocol <em>(default port is 3443)</em>.</td></tr>
+<tr><td><code>PROTOCOL</code></td><td>Override http/https where the server is accessed via https but the server sees http <em>(e.g. when Heroku handles https termination)</em></td></tr>
+<tr><td><code>EXTERNALPORT</code></td><td>The port used in /signalk response and Bonjour advertisement. Has precedence over configuration file.</td></tr>
+<tr><td><code>EXTERNALHOST</code></td><td>The host used in /signalk response and Bonjour advertisement. Has precedence over configuration file.</td></tr>
+<tr><td><code>FILEUPLOADSIZELIMIT</code></td><td>Override the file upload size limit <em>(default is '10mb')</em>.</td></tr>
+<tr><td><code>NMEA0183PORT</code></td><td>Override the port for the NMEA 0183 over tcp service <em>(default is 10110)</em>.</td></tr>
+<tr><td><code>TCPSTREAMPORT</code></td><td>Override the port for the Signal K Streaming (deltas) over TCP.</td></tr>
+<tr><td><code>TCPSTREAMADDRESS</code></td><td>Override the address the Signal K Stream (deltas) over TCP is listening on.</td></tr>
+<tr><td><code>DISABLEPLUGINS</code></td><td>Disable all plugins so that they can not be enabled <em>(default is false)</em>.</td></tr>
+<tr><td><code>DEFAULTENABLEDPLUGINS</code></td><td>A comma separated list of plugin ids that are overridden to be enabled by default if no setttings exist. Lower preference than <code>DISABLEPLUGINS</code>.</td></tr>
+<tr><td><code>PLUGINS_WITH_UPDATE_DISABLED</code></td><td>A comma separated list of plugin that will not be updated.</td></tr>
+<tr><td><code>SECURITYSTRATEGY</code></td><td>Override the security strategy module name.</td></tr>
+<tr><td><code>WSCOMPRESSION</code></td><td>Compress websocket messages <em>(default is false)</em>.</td></tr>
+<tr><td><code>MAXSENDBUFFERSIZE</code></td><td>The maximum number of bytes allowed in the server's send buffer of a WebSocket connection. The connection will be terminated if this is exceeded. Guards against slow or dysfunctional clients that can not cope with the message volume <em>(default is 512 * 1024 bytes)</em>.</td></tr>
+<tr><td><code>SIGNALK_SERVER_IS_UPDATABLE</code></td><td>Allows the server to be updated through the GUI even if it is not installed in the standard paths <em>(default is false)</em>. If set to true, the server must have been installed with <code>npm install -g signalk-server</code>.</td></tr>
+<tr><td><code>SIGNALK_DISABLE_SERVER_UPDATES</code></td><td>Disables server updates in the GUI <em>(default is false)</em>.</td></tr>
+<tr><td><code>DEBUG</code></td><td>A comma-separated list of tags for debugging the specified module <em>(e.g signalk-server*,signalk-provider-tcp)</em>. Can now be defined directly in the graphical interface.  More help on how to use the debug here: <code>https://www.npmjs.com/package/debug#wildcards</code></td></tr>
+<tr><td><code>IS_IN_DOCKER</code></td><td>Used to tell the server it is in Docker and not normally updateable <em>(default is false)</em>.</td></tr>
+<tr><td><code>NPMREGISTRYTIMEOUT</code></td><td>How long to wait for the registry when retrieving the App Store listing <em>(default is 20s)</em>.</td></tr>
+<tr><td><code>SECRETKEY</code></td><td>A secret string used to generate an authentication token <em>(the internal default autogenerated is a string of 512 hex chars like 'ef8307a4c7a4bd7...309d947bca3')</em></td></tr>
+<tr><td><code>ALLOW_DEVICE_ACCESS_REQUESTS</code></td><td>Used when a device needs to gain access to a secured Signal K server <em>(default is true)</em> (https://signalk.org/specification/1.4.0/doc/access_requests.html).</td></tr>
+<tr><td><code>ALLOW_NEW_USER_REGISTRATION</code></td><td><em>(default is true)</em>.</td></tr>
+<tr><td><code>ADMINUSER</code></td><td>Force an account for admin user <em>(username:password format)</em>.</td></tr>
+<tr><td><code>PRESERIALCOMMAND</code></td><td>Command to run before opening a serial port.</td></tr>
+<tr><td><code>SIGNALK_NODE_SETTINGS</code></td><td>Override the path to the settings file.</td></tr>
+<tr><td><code>SIGNALK_NODE_CONFIG_DIR</code></td><td>Override the path to find server configuration. Includes all run-time changing content: configuration files, plugins, plugin configuration files, webapps, and so forth.</td></tr>
+</tbody></table>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../installation/updating.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../security.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../installation/updating.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../security.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </body>
+</html>

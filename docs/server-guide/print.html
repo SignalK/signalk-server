@@ -1,0 +1,2526 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Signal K Server Documentation</title>
+        <meta name="robots" content="noindex" />
+
+
+        <!-- Custom HTML head -->
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="A Guide for users and developers.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">Introduction</a></li><li class="chapter-item expanded "><a href="whats_new.html"><strong aria-hidden="true">1.</strong> What's New in V2</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="breaking_changes.html"><strong aria-hidden="true">1.1.</strong> Changes &amp; Deprecations</a></li></ol></li><li class="chapter-item expanded "><li class="part-title">Getting Started</li><li class="chapter-item expanded "><a href="installation/install.html"><strong aria-hidden="true">2.</strong> Installation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="installation/raspberry_pi_installation.html"><strong aria-hidden="true">2.1.</strong> Installing on Raspberry Pi</a></li><li class="chapter-item expanded "><a href="installation/updating.html"><strong aria-hidden="true">2.2.</strong> Updating your installation</a></li><li class="chapter-item expanded "><a href="installation/command_line.html"><strong aria-hidden="true">2.3.</strong> Runtime environment &amp; options</a></li></ol></li><li class="chapter-item expanded "><a href="security.html"><strong aria-hidden="true">3.</strong> Security</a></li><li class="chapter-item expanded affix "><li class="part-title">Setup</li><li class="chapter-item expanded "><a href="setup/configuration.html"><strong aria-hidden="true">4.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="setup/branding.html"><strong aria-hidden="true">5.</strong> Branding</a></li><li class="chapter-item expanded affix "><li class="part-title">Develop</li><li class="chapter-item expanded "><a href="develop/developer_notes.html"><strong aria-hidden="true">6.</strong> Notes for Developers</a></li><li class="chapter-item expanded "><a href="develop/webapps.html"><strong aria-hidden="true">7.</strong> WebApps</a></li><li class="chapter-item expanded "><a href="develop/plugins/server_plugin.html"><strong aria-hidden="true">8.</strong> Plugins</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="develop/plugins/deltas.html"><strong aria-hidden="true">8.1.</strong> Processing Data</a></li><li class="chapter-item expanded "><a href="develop/plugins/server_plugin_api.html"><strong aria-hidden="true">8.2.</strong> Server API</a></li><li class="chapter-item expanded "><a href="develop/plugins/resource_provider_plugins.html"><strong aria-hidden="true">8.3.</strong> Resource Providers</a></li><li class="chapter-item expanded "><a href="develop/rest-api/course_calculations.html"><strong aria-hidden="true">8.4.</strong> Course Providers</a></li></ol></li><li class="chapter-item expanded "><a href="develop/plugins/publishing.html"><strong aria-hidden="true">9.</strong> Publishing to the AppStore</a></li><li class="chapter-item expanded "><a href="develop/rest-api/open_api.html"><strong aria-hidden="true">10.</strong> REST APIs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="develop/rest-api/course_api.html"><strong aria-hidden="true">10.1.</strong> Course API</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="develop/rest-api/course_calculations.html"><strong aria-hidden="true">10.1.1.</strong> Course Calulations</a></li></ol></li><li class="chapter-item expanded "><a href="develop/rest-api/resources_api.html"><strong aria-hidden="true">10.2.</strong> Resources API</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">10.3.</strong> Notifications API</div></li><li class="chapter-item expanded "><div><strong aria-hidden="true">10.4.</strong> Autopilot API</div></li></ol></li><li class="chapter-item expanded "><a href="develop/contributing.html"><strong aria-hidden="true">11.</strong> Contribute</a></li><li class="chapter-item expanded affix "><li class="part-title">Support</li><li class="chapter-item expanded "><a href="support/help.html"><strong aria-hidden="true">12.</strong> Help &amp; Support</a></li><li class="chapter-item expanded "><a href="support/sponsor.html"><strong aria-hidden="true">13.</strong> Sponsor</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Signal K Server Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <img src="./img/logo.png" width="75" > 
+<h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
+<p>Signal K Server is software designed to be deployed on a vessel to act as a central hub which:</p>
+<ol>
+<li>Collects data from devices and sensors on board </li>
+<li>Aggregates and exposes it using the <em><a href="https://signalk.org/specification/latest/">Signal K Data Standard</a></em></li>
+<li>Exposes the collected data via REST APIs and websocket protocols over a standard WiFi, LAN or Internet connection.</li>
+</ol>
+<p>Through implementation of the <em><a href="https://signalk.org/specification/latest/">Signal K Data Standard</a></em>, it enables data exchange between NMEA0183, NMEA2000 and other marine protocols facilitating two way communication between the various onboard systems. In addition it can also act as data hub for additional sensors ensuring their data appears within the single data model. <em>(Visit the <a href="https://github.com/SignalK/SensESP">Signal K SensESP project</a> for <a href="https://en.wikipedia.org/wiki/ESP32">ESP32</a> for details.).</em></p>
+<p>Data is made available to client applications / connections in JSON format making it widely accessible to Apps on phone / tablet devices and web applications.</p>
+<p>Signal K Server is also extensible, providing a plugin framework which allows developers to create solutions that integrate and extend its capabilities. These solutions can be published to <strong>npmjs</strong> and installed via the <strong>App Store</strong> in the server's web-based user interface.</p>
+<p><img src="img/server_only.png" alt="Server only setup" /></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="whats-new-in-version-2"><a class="header" href="#whats-new-in-version-2">What's new in Version 2.</a></h1>
+<p>Signal K Server version 2 introduces new REST APIs designed to perform specific operations <em>(e.g. set destination, advance to next point, etc)</em>.</p>
+<p>These APIs have been implemented to ensure the integrity of the underlying Signal K data model by maintaining values in all related paths associated with the operation. In this way a cohesive, reliable data set is presented to all connected applications and devices.</p>
+<p>The new APIs are mounted under <code>/signalk/v2/api</code>, their definition(s) available as OpenApi documents accessible via <em>Documentation -&gt; OpenAPI</em> in the server admin user interface. They coexist with <code>/signalk/v1/api</code> paths to ensure continued operation of applications.</p>
+<p>Some REST APIs provide an <code>interface</code> for use by plugins to enact operations in a managed way.</p>
+<p><em><strong>Important: The Signal K data paths maintained by the REST APIs should NOT be updated directly by any other plugin or process!</strong></em></p>
+<p>With the move towards operation based APIs some paths are flagged for deprecation. Please see <a href="./breaking_changes.html">Changes &amp; Deprecations</a> for details.</p>
+<hr />
+<h3 id="course-api"><a class="header" href="#course-api">Course API</a></h3>
+<p>Provides common course operations via <code>/signalk/v2/api/vessels/self/navigation/course</code>.</p>
+<p>See the <a href="./develop/rest-api/course_api.html">Course API</a> for details.</p>
+<hr />
+<h3 id="resources-api"><a class="header" href="#resources-api">Resources API</a></h3>
+<p>Provides operations for creating, maintaining and accessing resources such as routes, waypoints, etc via <code>/signalk/v2/api/resources</code>.</p>
+<p>See the <a href="./develop/rest-api/resources_api.html">Resources API</a> for details.</p>
+<hr />
+<h2 id="notes-for-developers"><a class="header" href="#notes-for-developers">Notes for Developers:</a></h2>
+<h3 id="nmea0183--nmea2000-message-processing"><a class="header" href="#nmea0183--nmea2000-message-processing">NMEA0183 / NMEA2000 message processing</a></h3>
+<p>The Course API and associated operations maintain all &quot;course&quot; related paths in the data model but this API is not the only source of course data. NMEA data streams are also a source of course data.</p>
+<p>In the past, plugins processing this data have directly populated various <code>v1</code> Signal K paths. Moving forward 
+these plugins should utilise interface provided by the Course API to perform the required operation.</p>
+<p>In practise this would mean collecting and processing data received from the relevant sentences / PGNs to compose a Course API request.</p>
+<h3 id="connection-with-v1-full-data-model"><a class="header" href="#connection-with-v1-full-data-model">Connection with v1 Full Data Model</a></h3>
+<p>In the current implementation of Signal K Server there is still only a single <code>stream</code> endpoint and all values emitted as deltas <em>(both <code>v1</code> &amp; <code>v2</code>)</em> will continue appear there.</p>
+<p>It should be noted, that while both <code>v1</code> &amp; <code>v2</code> deltas appear in the one stream, only <code>v1</code> deltas will populate the <em>full data model</em> and be available under the <code>/signalk/v1/api/</code> path!</p>
+<h3 id="stream-updates"><a class="header" href="#stream-updates">Stream updates</a></h3>
+<p>The new REST APIs emit <code>v2</code> deltas with values that are objects.</p>
+<p>For example, when a course is activated, deltas will be emitted for <code>navigation.course.previousPoint</code>, <code>navigation.course.nextPoint</code> and <code>navigation.course.activeRoute</code> where the value is an object.</p>
+<p><em>Example: v2 Delta</em></p>
+<pre><code class="language-JSON">{
+    &quot;path&quot;: &quot;navigation.course.previousPoint&quot;,
+    &quot;value&quot;: {
+        &quot;position&quot;: {
+           &quot;latitude&quot;: 65.0,
+           &quot;longitude&quot;: 3.754
+        },
+        &quot;type&quot;: &quot;Location&quot;,
+        &quot;href&quot;: null
+    }
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="changes--deprecations"><a class="header" href="#changes--deprecations">Changes &amp; Deprecations</a></h1>
+<h2 id="changes"><a class="header" href="#changes">Changes</a></h2>
+<p>The following changes have been implemented with the introduction of <strong>Resources API</strong> and apply to applications using the <code>./signalk/v2/resources</code> endpoint.</p>
+<p><em>Note: These changes DO NOT impact applications using the <code>./signalk/v1/resources</code> endpoint.</em></p>
+<h3 id="1-resource-id-prefix-assignment"><a class="header" href="#1-resource-id-prefix-assignment">1. Resource ID prefix assignment</a></h3>
+<p>The version 1 specification defined resource Ids with the following format <code>urn:mrn:signalk:uuid:&lt;UUIDv4&gt;</code>.</p>
+<p><em>e.g. <code>urn:mrn:signalk:uuid:18592f80-3425-43c2-937b-0be64b6be68c</code></em></p>
+<p>The Resource API has dropped the use the prefix and ids are now just a uuidv4 value.</p>
+<p><em>e.g. <code>18592f80-3425-43c2-937b-0be64b6be68c</code></em></p>
+<p>This format is used for both accessing a resource <em>e.g. <code>/signalk/v1/api/resources/waypoints/18592f80-3425-43c2-937b-0be64b6be68c</code></em> as well as the value within an <code>href</code> attribute.</p>
+<p><em>Example:</em></p>
+<pre><code>{
+   &quot;name&quot;: &quot;...&quot;,
+   &quot;descripton&quot;: &quot;...&quot;,
+   &quot;href&quot;: &quot;/resources/waypoints/18592f80-3425-43c2-937b-0be64b6be68c&quot;,
+   ...
+}
+</code></pre>
+<h3 id="2-resource-attributes"><a class="header" href="#2-resource-attributes">2. Resource Attributes</a></h3>
+<p>The Resources API has updated the definition of the following resources:</p>
+<ul>
+<li><code>routes</code>: removed the <code>start</code>, <code>end</code> properties.</li>
+<li><code>waypoints</code>: removed <code>position</code> attribute, added <code>name</code>, <code>description</code> and <code>type</code> attributes.</li>
+<li><code>regions</code>: removed <code>geohash</code> attribute, added <code>name</code> and <code>description</code> properties.</li>
+<li><code>notes</code>: removed <code>geohash</code> and <code>region</code> attributes, added <code>href</code> and <code>properties</code> attributes.</li>
+<li><code>charts</code>: There has been a significant changes to include support for WMS, WMTS and TileJSON sources. </li>
+</ul>
+<p>Please see the <a href="https://github.com/SignalK/signalk-server/blob/master/src/api/resources/openApi.json">Resources OpenAPI definition</a> for details.</p>
+<hr />
+<h2 id="deprecations"><a class="header" href="#deprecations">Deprecations:</a></h2>
+<h3 id="1-coursegreatcircle-courserhumbline-paths"><a class="header" href="#1-coursegreatcircle-courserhumbline-paths">1. courseGreatCircle, courseRhumbline paths</a></h3>
+<p>With the introduction of the Course API the following paths should now be considered deprecated:</p>
+<ul>
+<li><code>/signalk/v1/api/vessels/self/navigation/courseGreatCircle</code></li>
+<li><code>/signalk/v1/api/vessels/self/navigation/courseRhumbline</code></li>
+</ul>
+<p>_Note: The Course API does currently maintain values in these paths for the purposes of backward compatibility, but applications and plugins referencing these paths should plan to move to using the equivalent paths under <code>/signalk/v2/api/vessels/self/navigation/course</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
+<p>Signal K Server is a NodeJS application which can be installed on a variety of devices and operating systems.</p>
+<p>It is available for installation via:</p>
+<ol>
+<li>NPM package</li>
+<li>Docker image </li>
+<li>GitHub repository</li>
+</ol>
+<p>See the relevant section below for instructions based on your target system.</p>
+<h3 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites:</a></h3>
+<p><em>Signal K server requires NodeJs version &gt;= 18 be installed on the target system prior to commencing installation.</em></p>
+<hr />
+<h2 id="raspberry-pi-installation"><a class="header" href="#raspberry-pi-installation">Raspberry Pi Installation</a></h2>
+<p><a href="installation/raspberry_pi_installation.html">Install Signal K Server on Raspberry Pi</a> outlines the process for getting Signal K Server up and running <em>(including supporting services)</em> on Raspberry Pi OS.</p>
+<hr />
+<h2 id="using-docker"><a class="header" href="#using-docker">Using Docker</a></h2>
+<p>Signal K Server is available as a Docker image on <em>Docker Hub</em> and <em>cr.signalk.io/signalk/signalk-server</em>.</p>
+<p>To simply run a Signal K Server with some sample data on a device with docker installed, enter the following into a terminal:</p>
+<pre><code class="language-shell">docker run --rm signalk/signalk-server --publish 3000:3000
+</code></pre>
+<p>This will start an instance of Signal K Server on port 3000 which you can then access via the web based Admin UI by pointing your web browser at <code>http://localhost:3000</code>.</p>
+<p>If you are wanting to use docker to deploy Signal K Server on your vessel you will need to:</p>
+<ol>
+<li>Specify a location to persist the server's configuration so it is not lost between restarts</li>
+<li>Run the instance as a background process</li>
+</ol>
+<p><em>Example: Run as background process and store server configuration in the current folder:</em></p>
+<pre><code class="language-shell">docker run -d --init --name signalk-server -p 3000:3000 -v $(pwd):/home/node/.signalk signalk/signalk-server
+</code></pre>
+<p>You are ready to now <strong><a href="installation/../setup/configuration.html">configure</a></strong> your installation and connect data from devices on your boat.</p>
+<hr />
+<h2 id="installation-via-npm"><a class="header" href="#installation-via-npm">Installation via NPM</a></h2>
+<p>Signal K Server can be installed directly using NPM.</p>
+<p><em>Windows:</em></p>
+<ul>
+<li>See <a href="installation/install.html#installing-on-windows">Installing on Windows</a> below.</li>
+</ul>
+<p><em>Linux / macOS:</em></p>
+<pre><code class="language-shell">sudo npm install -g signalk-server
+</code></pre>
+<p>Once installation is complete, enter the following in a terminal window, to generate a settings file and configure the server to start automatically:</p>
+<pre><code class="language-shell">sudo signalk-server-setup
+</code></pre>
+<p>If you choose not to use <code>signalk-server-setup</code> you can start the server by entering the following in a terminal window:</p>
+<pre><code class="language-shell">signalk-server 
+</code></pre>
+<hr />
+<h2 id="installing-on-windows"><a class="header" href="#installing-on-windows">Installing on Windows</a></h2>
+<p>Please use the <a href="https://github.com/SignalK/signalk-server-windows">Signal K installer for Windows</a> to install Signal K Server on a Windows device.</p>
+<hr />
+<h2 id="install-using-git"><a class="header" href="#install-using-git">Install using Git</a></h2>
+<p>Installation from the GitHub repository is useful when developing plugins and components.</p>
+<p>To do this enter the following commands in a terminal window:</p>
+<pre><code class="language-shell"># Copy the files to your device
+git clone https://github.com/SignalK/signalk-server.git
+
+# change to the folder containing the downloaded files
+cd signalk-server
+
+# install the dependencies
+npm install
+
+# build all packages in the repository
+npm run build:all
+</code></pre>
+<p>To start Signal K Server with a sample configuration file and some sample data, enter the following into a terminal:
+<em>To use NMEA0183 sample data:</em></p>
+<pre><code class="language-shell">bin/nmea-from-file 
+</code></pre>
+<p><em>To use NMEA2000 sample data:</em></p>
+<pre><code class="language-shell">bin/n2k-from-file
+</code></pre>
+<p>The server will start playing back data from the specified sample file that can be viewed using the <em>Data Browser</em> in the Admin UI <em>(<code>http://localhost:3000</code>)</em> or via REST API / websocket connection.</p>
+<hr />
+<div style="break-before: page; page-break-before: always;"></div><h1 id="installation-on-raspberry-pi"><a class="header" href="#installation-on-raspberry-pi">Installation on Raspberry Pi</a></h1>
+<p>Installation of Signal K server can consists of the following steps:</p>
+<ol>
+<li>Install the tools and libraries required to run the Signal K server (the dependencies)</li>
+<li>Install a Signal K Server to process the Signal K data</li>
+<li>Run the Setup script.</li>
+</ol>
+<p><em><strong>Important:</strong> If you are updating a Signal K server installation, especially if upgrading an installed version &lt;= 1.40.0, <a href="installation/./updating.html">please check here first</a>.</em></p>
+<h3 id="prerequisites-1"><a class="header" href="#prerequisites-1">Prerequisites:</a></h3>
+<p>Raspberry Pi OS is installed on the device. </p>
+<p>For instructions on how to install the operating system <a href="https://www.raspberrypi.org/documentation/computers/getting-started.html#setting-up-your-raspberry-pi">can be found here.</a>.</p>
+<p><em>Note: It is also possible to perform a &quot;headless install&quot; using <code>Raspberry Pi OS Lite</code> since the GUI for Signal K is browser based.</em></p>
+<p>Once the OS installation has been completed, you are ready to commence.</p>
+<hr />
+<h2 id="install-the-dependencies"><a class="header" href="#install-the-dependencies">Install the Dependencies</a></h2>
+<ol>
+<li>
+<p>Log in to the RPi Desktop and open a terminal.</p>
+</li>
+<li>
+<p>Update the list of install packages.</p>
+<pre><code>$ sudo apt update
+</code></pre>
+</li>
+<li>
+<p>Install NodeJS and npm.</p>
+<pre><code>$ curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+$ sudo apt-get install -y nodejs
+</code></pre>
+</li>
+<li>
+<p>Ensure that we're using the latest version of npm.</p>
+<pre><code>$ sudo npm install -g npm@latest
+</code></pre>
+<p>Use the following command to check the versions of NodeJS and npm installed.</p>
+<pre><code>node -v &amp;&amp; npm -v
+</code></pre>
+<p>Ensure the reported versions are equal to or greater than <code>v18.15.0, 9.5.0</code> respectively.</p>
+</li>
+<li>
+<p>Install a Bonjour (mDNS) service for Linux called Avahi, which allows Apps and other network devices to Discover the Signal K server.</p>
+<pre><code>$ sudo apt install libnss-mdns avahi-utils libavahi-compat-libdnssd-dev
+</code></pre>
+</li>
+</ol>
+<h2 id="install-signal-k-server"><a class="header" href="#install-signal-k-server">Install Signal K Server</a></h2>
+<pre><code>$ sudo npm install -g signalk-server
+</code></pre>
+<p>You can test that installation was successful by starting the server using some 
+sample data.</p>
+<pre><code>$ signalk-server --sample-nmea0183-data
+</code></pre>
+<p>You should see the terminal output &quot;signalk-server running at 0.0.0.0:3000&quot; as shown below...</p>
+<pre><code>$ signalk-server --sample-nmea0183-data
+Using sample data from /usr/lib/node_modules/signalk-server/samples/plaka.log
+signalk-server running at 0.0.0.0:3000
+</code></pre>
+<p>The Signal K Node Server is now reading and publishing sample NMEA0183 data from the specified file.</p>
+<p>Using a Web browser enter the following URL: <code>http://127.0.0.1:3000/signalk</code> which should display the following information indicating the server is up and running.</p>
+<pre><code class="language-JSON">{
+    &quot;endpoints&quot;:{
+        &quot;v1&quot;:{
+            &quot;version&quot;:&quot;2.0.0&quot;,
+            &quot;signalk-http&quot;:&quot;http://127.0.0.1:3000/signalk/v1/api/&quot;,
+            &quot;signalk-ws&quot;:&quot;ws://127.0.0.1:3000/signalk/v1/stream&quot;,
+            &quot;signalk-tcp&quot;:&quot;tcp://127.0.0.1:3858&quot;
+        }
+    },
+    &quot;server&quot;:{
+        &quot;id&quot;:&quot;signalk-server-node&quot;,
+        &quot;version&quot;:&quot;2.0.0&quot;
+    }
+}
+</code></pre>
+<h2 id="run-the-setup-script"><a class="header" href="#run-the-setup-script">Run the Setup Script</a></h2>
+<p>Now that you have Signal K server installed, you will want to generate a settings file for your vessel
+and configure your RPi to start the server automatically. To do this run the setup script by entering the  following command and follow the prompts.</p>
+<pre><code>$ sudo signalk-server-setup
+</code></pre>
+<p>You can re-run this command at any time in the future to change the settings.</p>
+<p><em>Note: The setup script will enable security which will require you to <code>Login`` from the Admin UI. Clicking </code>Login` for the first time will prompt you to create a user and password.</em></p>
+<p>Signal K server will now be started automatically when your RPi boots up. </p>
+<p>If you want to temporarily stop the Signal K server, you can do so by entering the following commands:</p>
+<pre><code>$ sudo systemctl stop signalk.service
+$ sudo systemctl stop signalk.socket
+</code></pre>
+<p>To start Signal K server again enter the following commands:</p>
+<pre><code>$ sudo systemctl start signalk.service
+$ sudo systemctl start signalk.socket
+</code></pre>
+<p>To stop Signal K server from starting automatically enter the following commands:</p>
+<pre><code>$ sudo systemctl disable signalk.service
+$ sudo systemctl disable signalk.socket
+</code></pre>
+<p>You are ready to now <strong><a href="installation/../setup/configuration.html">configure</a></strong> your installation and connect data from devices on your boat.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="updating-your-installation"><a class="header" href="#updating-your-installation">Updating your Installation</a></h1>
+<p>Signal K Server is frequently updated to introduce new features and fix issues that have been reported.
+Sometime these updates require that NodeJS or other supporting software on your device to be upgraded to support the new functionality.</p>
+<p>Additionally your device's operating system are constantly evolving to address security issues as well as providing new capabilities. </p>
+<p>Regularly updating your installation will reduce both the volume of data download and the time taken to complete the process. Connecting your device to a network with good broadband speed before performing an update is recommended.</p>
+<p>Updates fall into four categories:</p>
+<ol>
+<li>Device Operating system (e.g. RaspberryPi OS)</li>
+<li>NodeJS / NPM</li>
+<li>Signal K Server</li>
+<li>Signal K WebApps and Plugins</li>
+</ol>
+<h2 id="update-device-operating-system"><a class="header" href="#update-device-operating-system">Update Device Operating System</a></h2>
+<p>Instructions will vary depending on your device but for linux based systems such as the Raspberry Pi the following instrctions are used to update the OS.</p>
+<p>From a terminal window enter the following commands:</p>
+<pre><code class="language-shell">sudo apt update
+
+sudo apt dist-upgrade
+</code></pre>
+<p>If you have not performed an update for a while these commands may take a while to complete, just be patient and make sure everything completes correctly. </p>
+<p>After the process has completed <code>restart</code> your device.</p>
+<h2 id="update-nodejs-and-npm"><a class="header" href="#update-nodejs-and-npm">Update NodeJS and NPM</a></h2>
+<p>To ensure the version of NodeJS on your device is supported by Signal K Server <em><a href="installation/install.html#prerequisites">(see prerequisites)</a></em>, check the installed version by
+entering the following in a terminal window:</p>
+<pre><code class="language-bash">node -v
+
+# example response
+v18.17.0
+</code></pre>
+<p>If the version of NodeJS displayed is lower than the version supported by Signal K Server then you can update it with the following command:</p>
+<pre><code class="language-shell">sudo apt upgrade nodejs
+</code></pre>
+<p>It is also recommended to update the version of the Node Package Manager (NPM).</p>
+<pre><code class="language-shell">sudo npm install -g npm@latest
+</code></pre>
+<h2 id="update-signal-k-server"><a class="header" href="#update-signal-k-server">Update Signal K Server</a></h2>
+<p>When an update is available for Signal K Server a visual indication is displayed in the Admin UI.</p>
+<p><strong>Important!</strong>
+Before updating please ensure the version of NodeJS on your device is <a href="installation/install.html#prerequisites">supported by Signal K Server</a>.</p>
+<p><em><strong>If you are updating from Signal K Server version v1.40.0 or earlier please <a href="https://github.com/SignalK/signalk-server/wiki/Updating-to-Node.js-18">read this first</a> before proceeding.</strong></em></p>
+<p>Click on <em>Server -&gt; Update</em> to display information about the new version.</p>
+<p><img src="installation/../img/server_update.png" alt="server_update" /></p>
+<p>Click <strong>Update</strong> to start the installation.</p>
+<p>After the installation is complete, click <strong>Restart</strong> to launch the updated Signal K Server.</p>
+<h3 id="webapps-and-plugins"><a class="header" href="#webapps-and-plugins">WebApps and Plugins</a></h3>
+<p>After updating Signal K Server some plugins and WebApps may also need to be updated.</p>
+<p>The AppStore is where WebApps and Plugins can be installed, removed or updated.
+Those with an update available will be listed in <em>Appstore -&gt; Updates</em> in the Admin UI.</p>
+<p>Clicking on the <em>download cloud</em> button next to the WebApp / Plugin you wish to update.</p>
+<p>After all installations have been completed, click <strong>Restart</strong> to activate the updated WebApps and Plugins.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="runtime-environment--options"><a class="header" href="#runtime-environment--options">Runtime Environment &amp; Options</a></h1>
+<p>Signal K Server provides the following command line options and environment variables to configure your implementation.</p>
+<h2 id="command-line-options"><a class="header" href="#command-line-options">Command line options</a></h2>
+<table><thead><tr><th>Option</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>-s</code></td><td>Override path to the settings file. <em>(same as <code>SIGNALK_NODE_SETTINGS</code> environment variable)</em></td></tr>
+<tr><td><code>-c</code></td><td>Override the path to find server configuration. <em>(same as <code>SIGNALK_NODE_CONFIG_DIR</code> environment variable)</em></td></tr>
+<tr><td><code>--sample-nmea0183-data</code></td><td>Starts signalk-server with sample NMEA0183 data.</td></tr>
+<tr><td><code>--sample-n2k-data</code></td><td>Starts signalk-server with sample NMEA2000 data.</td></tr>
+<tr><td><code>--override-timestamps</code></td><td>Override timestamps in the sample NMEA2000 data with current date and time. Doesn't apply nor makes a difference to NMEA0183 sample data.</td></tr>
+<tr><td><code>--securityenabled</code></td><td>Enable security. For a fresh install this makes the Admin UI force the user to create an admin account before he/she can continue further into the UI. See <a href="installation/../security.html#enabling-security">Security</a> for further details.</td></tr>
+</tbody></table>
+<h2 id="environment-variables"><a class="header" href="#environment-variables">Environment variables</a></h2>
+<table><thead><tr><th>Variable</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>PORT</code></td><td>Override the port for http/ws service (default is 3000).</td></tr>
+<tr><td><code>SSLPORT</code></td><td>Override the port for https/wss service. If defined forces ssl as default protocol <em>(default port is 3443)</em>.</td></tr>
+<tr><td><code>PROTOCOL</code></td><td>Override http/https where the server is accessed via https but the server sees http <em>(e.g. when Heroku handles https termination)</em></td></tr>
+<tr><td><code>EXTERNALPORT</code></td><td>The port used in /signalk response and Bonjour advertisement. Has precedence over configuration file.</td></tr>
+<tr><td><code>EXTERNALHOST</code></td><td>The host used in /signalk response and Bonjour advertisement. Has precedence over configuration file.</td></tr>
+<tr><td><code>FILEUPLOADSIZELIMIT</code></td><td>Override the file upload size limit <em>(default is '10mb')</em>.</td></tr>
+<tr><td><code>NMEA0183PORT</code></td><td>Override the port for the NMEA 0183 over tcp service <em>(default is 10110)</em>.</td></tr>
+<tr><td><code>TCPSTREAMPORT</code></td><td>Override the port for the Signal K Streaming (deltas) over TCP.</td></tr>
+<tr><td><code>TCPSTREAMADDRESS</code></td><td>Override the address the Signal K Stream (deltas) over TCP is listening on.</td></tr>
+<tr><td><code>DISABLEPLUGINS</code></td><td>Disable all plugins so that they can not be enabled <em>(default is false)</em>.</td></tr>
+<tr><td><code>DEFAULTENABLEDPLUGINS</code></td><td>A comma separated list of plugin ids that are overridden to be enabled by default if no setttings exist. Lower preference than <code>DISABLEPLUGINS</code>.</td></tr>
+<tr><td><code>PLUGINS_WITH_UPDATE_DISABLED</code></td><td>A comma separated list of plugin that will not be updated.</td></tr>
+<tr><td><code>SECURITYSTRATEGY</code></td><td>Override the security strategy module name.</td></tr>
+<tr><td><code>WSCOMPRESSION</code></td><td>Compress websocket messages <em>(default is false)</em>.</td></tr>
+<tr><td><code>MAXSENDBUFFERSIZE</code></td><td>The maximum number of bytes allowed in the server's send buffer of a WebSocket connection. The connection will be terminated if this is exceeded. Guards against slow or dysfunctional clients that can not cope with the message volume <em>(default is 512 * 1024 bytes)</em>.</td></tr>
+<tr><td><code>SIGNALK_SERVER_IS_UPDATABLE</code></td><td>Allows the server to be updated through the GUI even if it is not installed in the standard paths <em>(default is false)</em>. If set to true, the server must have been installed with <code>npm install -g signalk-server</code>.</td></tr>
+<tr><td><code>SIGNALK_DISABLE_SERVER_UPDATES</code></td><td>Disables server updates in the GUI <em>(default is false)</em>.</td></tr>
+<tr><td><code>DEBUG</code></td><td>A comma-separated list of tags for debugging the specified module <em>(e.g signalk-server*,signalk-provider-tcp)</em>. Can now be defined directly in the graphical interface.  More help on how to use the debug here: <code>https://www.npmjs.com/package/debug#wildcards</code></td></tr>
+<tr><td><code>IS_IN_DOCKER</code></td><td>Used to tell the server it is in Docker and not normally updateable <em>(default is false)</em>.</td></tr>
+<tr><td><code>NPMREGISTRYTIMEOUT</code></td><td>How long to wait for the registry when retrieving the App Store listing <em>(default is 20s)</em>.</td></tr>
+<tr><td><code>SECRETKEY</code></td><td>A secret string used to generate an authentication token <em>(the internal default autogenerated is a string of 512 hex chars like 'ef8307a4c7a4bd7...309d947bca3')</em></td></tr>
+<tr><td><code>ALLOW_DEVICE_ACCESS_REQUESTS</code></td><td>Used when a device needs to gain access to a secured Signal K server <em>(default is true)</em> (https://signalk.org/specification/1.4.0/doc/access_requests.html).</td></tr>
+<tr><td><code>ALLOW_NEW_USER_REGISTRATION</code></td><td><em>(default is true)</em>.</td></tr>
+<tr><td><code>ADMINUSER</code></td><td>Force an account for admin user <em>(username:password format)</em>.</td></tr>
+<tr><td><code>PRESERIALCOMMAND</code></td><td>Command to run before opening a serial port.</td></tr>
+<tr><td><code>SIGNALK_NODE_SETTINGS</code></td><td>Override the path to the settings file.</td></tr>
+<tr><td><code>SIGNALK_NODE_CONFIG_DIR</code></td><td>Override the path to find server configuration. Includes all run-time changing content: configuration files, plugins, plugin configuration files, webapps, and so forth.</td></tr>
+</tbody></table>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="security"><a class="header" href="#security">Security</a></h1>
+<h2 id="introduction-1"><a class="header" href="#introduction-1">Introduction</a></h2>
+<p>The umbrella term <em>Security</em> in Signal K server refers to the difference between running a server, that any one connected to the network can access and alter at will <strong>(unsecured)</strong> , and one with restrictions in place <strong>(secured)</strong>.</p>
+<p>The available security options relate to:</p>
+<ul>
+<li><strong>authentication</strong>: Users and / or connecting devices having to provide a credential to gain access to the server <em>(e.g. username &amp; password, access token, etc.)</em>.</li>
+<li><strong>access control</strong>: Based on the authentication, access is granted to only specific Signal K data and server configuration.</li>
+<li><strong>communications</strong>: Network traffic is encrypted and the identity of the server verified to protect against eavesdropping.</li>
+<li><strong>network services</strong>: Control which of the server's services/interfaces are configured and active <em>(e.g. does it allow unsecured read/write over the network)</em>.</li>
+</ul>
+<h2 id="enabling-security"><a class="header" href="#enabling-security">Enabling Security</a></h2>
+<p>When Signal K Server does not have security enabled, the <code>Login</code> option at the top right corner of the Admin UI will not be available.</p>
+<p>Security can be enabled in several ways:</p>
+<ol>
+<li>Through the <em>Security</em> menu option in the Admin UI</li>
+<li>Starting the server with the <code>--securityenabled</code> command line option</li>
+<li>Adding the following section in the settings file</li>
+</ol>
+<pre><code class="language-JSON">&quot;security&quot;: {
+    &quot;strategy&quot;: &quot;./tokensecurity&quot;,
+  }
+</code></pre>
+<p>When security is enabled, the next time you access the Admin UI it will prompt you to create an administrator account.</p>
+<p>Security configuration is stored in file called <code>security.json</code> which will be located in the server configuration directory.</p>
+<h2 id="disabling-security--lost-admin-credentials"><a class="header" href="#disabling-security--lost-admin-credentials">Disabling Security / Lost Admin Credentials</a></h2>
+<p>In case the administrator user credentials are lost, removing the <code>security.json</code> file and restarting the server will restore access to the Admin UI.</p>
+<h2 id="access-control"><a class="header" href="#access-control">Access Control</a></h2>
+<p>Access control lists <em>(acls)</em> allow for fine grained access to specific data in Signal K. They specify the permissions assigned to users for resources within specifc contexts and are defined within the <code>security.json</code> file.</p>
+<p>The following example defines acls for the self context allowing:</p>
+<ol>
+<li>
+<p>Anyone to read the paths <code>&quot;steering.*&quot;</code>, <code>&quot;navigation.*&quot;</code>, <code>&quot;name&quot;</code>, <code>&quot;design.aisShipType&quot;</code> and grants the admin user permission to write (update) those paths. </p>
+</li>
+<li>
+<p>The user <em>john</em> to read any data coming from the <code>actisense.35</code> $source.</p>
+</li>
+<li>
+<p>For all other paths, only the admin user to read and no one can write.</p>
+</li>
+</ol>
+<pre><code class="language-JSON">  &quot;acls&quot;: [
+    {
+      &quot;context&quot;: &quot;vessels.self&quot;,
+      &quot;resources&quot;: [
+        {
+          &quot;paths&quot;: [&quot;steering.*&quot;, &quot;navigation.*&quot;, &quot;name&quot;, &quot;design.aisShipType&quot;],
+          &quot;permissions&quot;: [
+            {
+              &quot;subject&quot;: &quot;any&quot;,
+              &quot;permission&quot;: &quot;read&quot;
+            },
+            {
+              &quot;subject&quot;: &quot;admin&quot;,
+              &quot;permission&quot;: &quot;write&quot;
+            }
+          ]
+        },
+        {
+          &quot;sources&quot;: [ &quot;actisense.35&quot; ],
+          &quot;permissions&quot;: [
+            {
+              &quot;subject&quot;: &quot;john&quot;,
+              &quot;permission&quot;: &quot;read&quot;
+            }
+          ]
+        },
+        {
+          &quot;paths&quot;: [&quot;*&quot;],
+          &quot;permissions&quot;: [
+            {
+              &quot;subject&quot;: &quot;admin&quot;,
+              &quot;permission&quot;: &quot;read&quot;
+            }
+          ]
+        }
+      ]
+    }
+  ]
+</code></pre>
+<p><em>Note: If there is no match is found for a specific path in the acl list, then permission will be denied to that path!</em></p>
+<h2 id="active-network-services"><a class="header" href="#active-network-services">Active network services</a></h2>
+<p>Signal K Server's main network services are:</p>
+<ul>
+<li>The <em>primary Signal K http / WebSocket interface</em>, with options to use TLS encryption and authentication <em>(read/write)</em></li>
+<li><em>NMEA0183 data over TCP</em> on port 10110 <em>(read only)</em></li>
+<li><em>Signal K over TCP</em> on port 8375 <em>(read/write)</em></li>
+</ul>
+<p>In addition the user may configure any number of TCP, UDP and Websocket connections, some of which allow write access to the server.</p>
+<p>The security implication of these connections is that with no security options turned on <em>devices connected to the network will have both read and write access to practically all of its data and settings</em>.</p>
+<p>People often dismiss local network access by saying that their boat's local network is secure enough. But one very common scenario is connecting your Signal K server <em>(e.g. a Raspberry Pi)</em> to a marina wifi.
+Many wifi networks allow communication between all connected computers, so your Signal K server will be advertising its services over MDNS to all other connected devices. </p>
+<p>So in the case that your server has a manually configured connection for <em>NMEA0183 over UDP</em>, NMEA0183 data broadcast by other devices will be received and written into your SIgnal K data.</p>
+<p>NMEA0183 connections over TCP and UDP are inherently unsafe. There are no options for authentication and / or secure communication. In comparison Signal K over TLS and HTTP / WebSockets can provide secure, authenticated read and write access to your data.</p>
+<div style="break-before: page; page-break-before: always;"></div><h2 id="configuring-signal-k-server"><a class="header" href="#configuring-signal-k-server">Configuring Signal K Server</a></h2>
+<p>Signal K Server provides an Admin UI to allow you to easily configure your installation. </p>
+<p>Open the Admin UI using a web browser on the device where Signal K server is installed (if the defaults have not been changed) by navigating to <code>http://localhost:3000</code>.</p>
+<h3 id="create-an-admin-account"><a class="header" href="#create-an-admin-account">Create an Admin account</a></h3>
+<p>It is considered good practise to enable security and create an administrator account to controll access to your server and protect your data.</p>
+<p>If you ran the <code>signalk-server-setup</code> script, security will be enabled and you will be presented with a login screen when accessing the Admin UI.</p>
+<p>If the login screen is not displayed, click <code>Login</code> <em>(top right of screen)</em> to display the prompt to create a user and password.</p>
+<p>Alternatively, from the menu select <em>Security -&gt; Users</em> and then:</p>
+<ol>
+<li>Click <strong>Add</strong></li>
+<li>Enter a <strong>user id</strong></li>
+<li>Enter a <strong>password</strong> and confirm it</li>
+<li>In <strong>Permissions</strong> select <strong>Admin</strong></li>
+<li>Click <strong>Apply</strong>.</li>
+</ol>
+<p>After creating the account, the server needs to be restarted.</p>
+<p>How you restart the server will depend on the installation type <em>(i.e. installed from NPM, embedded on a commercial device, etc)</em>. Power cycling the device that Signal K Server is always an option.</p>
+<h3 id="set-up-data-connections"><a class="header" href="#set-up-data-connections">Set up data connections</a></h3>
+<p>To get data into Signal K server you will need to configure one or more data connections via the <em>Server -&gt; Data Connections</em> menu option.</p>
+<p>From this screen you can add connections for various data types including:</p>
+<ul>
+<li>NMEA2000</li>
+<li>NMEA0183</li>
+<li>Signal K</li>
+<li>SeaTalk</li>
+<li>File Stream</li>
+</ul>
+<p>The options presented will vary based on the data type chosen.</p>
+<p><strong><em>NMEA2000</em></strong>: The processing of NMEA2000 PGNs is done by <a href="https://github.com/SignalK/n2k-signalk">n2k-signalk</a> via <a href="https://github.com/canboat/canboatjs">canboatjs</a>.</p>
+<p>Please refer to the <a href="https://canboat.github.io/canboat/canboat.html">Canboat PGN database</a> to see what PGNs are supported.</p>
+<p><strong><em>NMEA0183</em></strong>: The processing of NMEA0183 sentences is done by <a href="https://github.com/SignalK/signalk-parser-nmea0183">nmea0183-signalk</a></p>
+<h3 id="install-plugins-and-webapps"><a class="header" href="#install-plugins-and-webapps">Install Plugins and Webapps</a></h3>
+<p>Signal K server functionality can be extended through the use of plugins and webapps.</p>
+<p>Plugins typically extend data acquisition, data processing or enable operations (i.e. protocol conversion, etc).</p>
+<p>Webapps provide a user interface to view / interact with data or perform operations enabling full featured solutions such as a Chartplotter.</p>
+<p>To install, update or remove plugins and webapps select <em>Appstore</em> from the menu.</p>
+<p>Select:</p>
+<ul>
+<li>
+<p><code>Installed</code> to view a list of plugins and webapps currently installed.</p>
+</li>
+<li>
+<p><code>Updates</code> to view a list of plugins and webapps that have updates available.</p>
+</li>
+<li>
+<p><code>Available</code> to view a list of available plugins and webapps that can be filtered by categry.</p>
+</li>
+</ul>
+<p>The entries displayed with a blue icon are webapps, those with a green icon are plugins and those with both blue and green icons are plugins with a webapp providing a user interface.</p>
+<p><em>Note: An internet connection is required for Signal K Server to list, install and update AppStore listings.</em></p>
+<p>To install, click the <code>download</code> icon on the right hand side of the entry.</p>
+<p>To view a list of Plugins and Webapps directly from the NPM registry select the links below.</p>
+<ul>
+<li><a href="https://www.npmjs.com/search?q=keywords%3Asignalk-node-server-plugin">Plugins</a></li>
+<li><a href="https://www.npmjs.com/search?q=keywords:signalk-webapp">Webapps</a></li>
+</ul>
+<p><strong><em>Note: A restart of the Signal K server is required after plugin(s) or / webapp(s) have been installed.or updated.</em></strong></p>
+<p>Click the <em>Restart</em> button at the top right of the screen to restart the server.</p>
+<p>After the server has restarted, the installed plugin(s) can be configued by selecting <em>Server -&gt; Plugin Config</em> menu entry.</p>
+<h3 id="trouble-shooting-and-the-server-log"><a class="header" href="#trouble-shooting-and-the-server-log">Trouble shooting and the Server Log</a></h3>
+<p>If things are not working as expected after installing a plugin or webapp, select <em>Server -&gt; Server Log</em> to view the server's log. If the errors logged there are not providing the information required, you can enable  debugging for individual components and plugins by toggling the switch to activate them.</p>
+<p>Enabling the <code>Remember debug setting</code> ensure your selections are remebered after a server restart.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="branding"><a class="header" href="#branding">Branding</a></h1>
+<h2 id="add-your-logo"><a class="header" href="#add-your-logo">Add your Logo</a></h2>
+<p>You can change the logo image displayed at the top left of the Admin UI screen.
+To do this, add an SVG file named <code>logo.svg</code> in the settings directory <em>(default: $HOME/.signalk/)</em>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="notes-for-developers-1"><a class="header" href="#notes-for-developers-1">Notes for Developers</a></h1>
+<p>Signal K server has an extensible architecture that enables developers to add functionality to support new protocols, devices, information sources, etc.</p>
+<p>The information in this section aims to provide guidance, not only on how to develop plugins and applications to extend capability, but also how to do so in alignment with the Signal K server architecture. 
+By understanding the underlying architecture, the plugins and apps you create will ensure that the additional functionality and data will be discoverable and work in harmony with other solutions.</p>
+<h2 id="looking-ahead"><a class="header" href="#looking-ahead">Looking Ahead</a></h2>
+<p>Signal K server v2 marks the start of an evolution from the Signal K v1 approach of defining the paths, their hierarchy and the full data model schema, towards an approach centered around REST APIs (HTTP endpoints defined as OpenApi specifications).</p>
+<p>These APIs enact operations (i.e. activate a route, advance to next point, etc) rather just expose a generic data model with some well known paths. 
+They are available under the path <code>/signalk/v2/api</code> so they can coexist with v1 APIs. There is a connection with the Signal K full data model but, unlike the v1 APIs it is not 1:1, it is abstracted behind the interface.</p>
+<p>The reason for adopting this approach is to address the fact that many paths within a Signal K hierarchy are related, a change in the value of one path will require that the value of other paths be updated to ensure that the data model is consistent. 
+At present this relies on the plugin / application knowing which paths in the hierarchy are related. Additionally there may be other plugins / applications also updating some of the same paths which can cause the data model to become invalid, which then erodes trust in the data which impacts its use in navigation.</p>
+<p>The use of APIs to perform operations addresses these issues providing the following benefits:</p>
+<ol>
+<li>A standardised interface for all applications / plugins to perform an operation</li>
+<li>Provides clear ownership of the paths in the Signal K data model</li>
+<li>Ensures values are being maintained in all of the related paths.</li>
+<li>Increases trust in the data for use in all scenarios.</li>
+</ol>
+<h3 id="stream-interface"><a class="header" href="#stream-interface">Stream Interface</a></h3>
+<p>Currently, when v2 REST APIs emit deltas that contain v2 paths and structure, they do not end up in the full model. This means that these paths and values are only available via API GET requests.</p>
+<h2 id="offline-use"><a class="header" href="#offline-use">Offline Use</a></h2>
+<p>When operating on a vessel you should not assume that a connection to Internet services is available.
+Therefore, it is important that the WebApps and Plugins you create be <em>&quot;self contained&quot;</em> and provide all the resources they require to operate <em>(i.e. fonts, stylesheets, images, etc)</em>. </p>
+<p>For WebApps and Plugins that connect to Internet based services to provide data, they should be resilient to changes in the connection status to those services and where necessary display their status.</p>
+<h2 id="deprecations-and-breaking-changes"><a class="header" href="#deprecations-and-breaking-changes">Deprecations and Breaking Changes</a></h2>
+<p>With the move towards REST APIs and the desire to improve the data model (and also fix some mistakes) it's inevitable that there will be deprecations and breaking changes.</p>
+<p>For example, when addressing duplicate Great Circle and Rhumbline course paths, the resultant changes will likley break compatibility with v1.</p>
+<p>For details about paths that are flagged for deprecation see <a href="develop/../breaking_changes.html">Changes &amp; Deprecations</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="webapps-and-components"><a class="header" href="#webapps-and-components">WebApps and Components</a></h1>
+<h2 id="introduction-2"><a class="header" href="#introduction-2">Introduction</a></h2>
+<p>Signal K Server provides the following ways to add web-based user interfaces to enhance functionality and usability:</p>
+<ol>
+<li>
+<p><strong>Standalone WebApps</strong> are web applications that when launched, the server Admin UI disappears and the webapp controls the whole page (browser window / tab).</p>
+</li>
+<li>
+<p><strong>Embedded WebApps</strong>  are web applications that when launched, are <strong>embedded in the server Admin UI</strong>, leaving the toolbar and menu available to the user.
+<img src="develop/../img/vesselpositions.png" alt="vesselpositions" title="Vesselpositions Embedded Webapp" /></p>
+</li>
+<li>
+<p><strong>Embedded Plugin Configuration Forms</strong> are forms provided by a plugin that the server embeds within the <em>Plugin Config</em> screen to replace the generic form rendered using the plugin <em>configuration schema</em>. This allows a richer set of controls to be provided for the user to configure the plugin compared to the more generice server generated form provides. 
+<img src="develop/../img/calibration.png" alt="calibration" title="Calibration plugin configuration form" /></p>
+</li>
+<li>
+<p><strong>Embedded Components</strong> are individual UI components provided by a plugin or a webapp. They are listed in the <em>Addons</em> section at the bottom of the <em>Webapps</em> page of the Admin UI. More a concept than a fully implemented feature at this stage, the idea is to allow a plugin to add individual components to different parts of the server UI.</p>
+</li>
+</ol>
+<p>All Plugins, WebApps and Components can be installed via the <em>Appstore</em>.</p>
+<h2 id="webapp-structure"><a class="header" href="#webapp-structure">WebApp Structure</a></h2>
+<p>All WebApps (like plugins) are installed with <code>npm</code>, either from the npm registry or from your own Github repository. Only WebApps that are relevant for all users should be published to <code>npm</code> to be made available in the <em>Appstore</em> of all Signal K Servers.</p>
+<p><em>Note: Private plugins need not be published to <code>npm</code> - see the documentation for <a href="https://docs.npmjs.com/cli/v6/commands/npm-install">npm install</a> for details.</em> </p>
+<p>The basic structure of a webapp is: </p>
+<ul>
+<li>A folder named <code>public</code> that contains the html, JavaScript and resource files such as images, fonts and style sheets. This folder is automatically mounted by the server so that the webapp is available after installation and the server restarted.</li>
+<li><code>package.json</code> containing special keywords that classifies the webapp:
+<ul>
+<li><code>signalk-webapp</code> - standalone webapp</li>
+<li><code>signalk-embeddable-webapp</code> - embeddable webapp</li>
+<li><code>signalk-plugin-configurator</code> - plugin configuration form</li>
+</ul>
+</li>
+</ul>
+<p>This structure is all that is needed for a standalone webapp.</p>
+<p>You can also include the following section in <code>package.json</code> to control how your webapp appears in the <em>Webapps</em> list:</p>
+<pre><code class="language-JSON">  &quot;signalk&quot;: {
+    &quot;appIcon&quot;: &quot;./assets/icons/icon-72x72.png&quot;,
+    &quot;displayName&quot;: &quot;Freeboard-SK&quot;
+  },
+</code></pre>
+<p>where:</p>
+<ul>
+<li><code>appIcon</code> is the path (relative to the <code>public</code> directory) to an image within the package to display in the webapp list. The image should be at least 72x72 pixels in size.</li>
+<li><code>displayName</code> is the text you want to appear as the name in the webapp list. <em>(By default the <em>name</em> attribute in the <code>package.json</code> is used.)</em></li>
+</ul>
+<p>See also <a href="develop/./developer_notes.html#offline-use">Working Offline</a>.</p>
+<h2 id="embedded-components-and-admin-ui--server-interfaces"><a class="header" href="#embedded-components-and-admin-ui--server-interfaces">Embedded Components and Admin UI / Server interfaces</a></h2>
+<p>Embedded components are implemented using <a href="https://webpack.js.org/concepts/module-federation/">Webpack Federated Modules</a> and <a href="https://reactjs.org/docs/code-splitting.html">React Code Splitting</a>.</p>
+<p><em>Note: There is no keyword for a module that provides only embedded components, use <code>signalk-webapp</code> instead.</em></p>
+<p>You need to configured Webpack to create the necessary code for federation using <em>ModuleFederationPlugin</em> and expose the component with fixed names:</p>
+<ul>
+<li>embeddable webapp: <code>./AppPanel</code></li>
+<li>plugin configuration form: <code>./PluginConfigurationPanel</code></li>
+<li>embedded component: <code>./AddonPanel</code></li>
+</ul>
+<p>The ModuleFederationPlugin library name must match the package name and be a &quot;safe&quot; name for a webpack module like in <code>library: { type: 'var', name: packageJson.name.replace(/[-@/]/g, '_') },</code></p>
+<p>The exposed modules need to <code>export default</code> a React component - both class based components and stateless functional components can be used. The server dependencies like <code>reactstrap</code> can and should be used. Add <code>@signalk/server-admin-ui-dependencies</code> as a dependency to the webapp, it defines the depedencies used by the server admin UI.</p>
+<p>See the vesselpositions embedded webapp/component and Calibration plugin for examples of each. It is probably easier to start with either one and modify them to suit your needs. Don't forget to change the module id and name in package.json!</p>
+<h2 id="webapp--component-and-admin-ui--server-interfaces"><a class="header" href="#webapp--component-and-admin-ui--server-interfaces">WebApp / Component and Admin UI / Server interfaces</a></h2>
+<p>Standalone WebApps can use the server's APIs <em>(Signal K http and WebSocket APIs as well as any server specific endpoints)</em> but they need to implement everything else themselves.</p>
+<p>Embedded WebApps, Components and Plugin Configuration Forms work inside the Admin UI, so they can interact with both the Admin UI and the server using APIs exposed by the Admin UI as component properties.</p>
+<p>Embedded webapp properties:</p>
+<ul>
+<li>access to the login status of the browser user</li>
+<li>ability to render Login form instead of the webapp content</li>
+<li>getting and setting application data</li>
+<li>opening an automatically reconnecting WebSocket connection to the server</li>
+<li>getting Signal K data via <code>get</code></li>
+<li><a href="develop/packages/server-admin-ui/src/views/WebApps/Embedded.js">Embedded</a></li>
+</ul>
+<p>PluginConfigurationForm properties:</p>
+<ul>
+<li><code>configuration</code> : the configuration data of the plugin</li>
+<li><code>save</code>: function to save the configuration data</li>
+<li><a href="develop/packages/server-admin-ui/src/views/Configuration/EmbeddedPluginConfigurationForm.js">EmbeddedPluginConfigurationForm</a></li>
+</ul>
+<p><strong><em>Note: The documentation regarding embedded WebApps and Components provided at this time is rudimentary and should be considered under development as the concept is evolving.</em></strong></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="server-plugins"><a class="header" href="#server-plugins">Server plugins</a></h1>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>Signal K Node server plugins are components that extend functionality of the server.
+They are installed via the AppStore and configured via the Admin UI.</p>
+<p>Signal K server exposes an interface for plugins to use in order to interact with the full data model, emit delta messages and process requests.</p>
+<p>Plugins can also provide a webapp by placing the relavent files in a folder named <code>/public/</code> which the server will mount under <code>http://{skserver}:3000/{pluginId}</code>.</p>
+<p><strong>Note: With the move towards Signal K server providing APIs to perform operations, it is important that you consider how the proposed functionality provided by your plugin aligns with the Signal K architecture before starting development.</strong></p>
+<p>For example, if the plugin you are looking to develop is providing access to information such as <code>route,</code> <code>waypoint</code>, <code>POI</code>, or <code>charts</code> you should be creating a <em><a href="develop/plugins/./resource_provider_plugins.html">Resources Provider Plugin</a></em> for the <em><a href="develop/plugins/../openapi/resources_api.html">Resources API</a></em>.</p>
+<p>Or if you are looking to perform course calculations or integrate with an auotpilot, you will want to review the <em><a href="develop/plugins/../openapi/course_api.html">Course API</a></em> documentation prior to commencing your project.</p>
+<p><strong>OpenApi description for your plugin's API</strong> </p>
+<h2 id="if-your-plugin-provides-an-api-you-should-consider-providing-an-openapi-description-this-promotes-cooperation-with-other-pluginwebapp-authors-and-also-paves-the-way-for-incorporating-new-apis-piloted-within-a-plugin-into-the-signal-k-specification"><a class="header" href="#if-your-plugin-provides-an-api-you-should-consider-providing-an-openapi-description-this-promotes-cooperation-with-other-pluginwebapp-authors-and-also-paves-the-way-for-incorporating-new-apis-piloted-within-a-plugin-into-the-signal-k-specification">If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification.</a></h2>
+<h2 id="getting-started-with-plugin-development"><a class="header" href="#getting-started-with-plugin-development">Getting Started with Plugin Development</a></h2>
+<h3 id="prerequisites-2"><a class="header" href="#prerequisites-2">Prerequisites</a></h3>
+<p>To get started developing your plugin you will need the following:</p>
+<ul>
+<li>Signal K server instance on your device <em>(clone of GIT repository or docker instance)</em></li>
+<li>NodeJs version 18 or later and NPM installed</li>
+<li>SignalK server configuration folder. <em>(Created when Signal K server is started. default location is <code>$HOME/.signalk</code>)</em>. </li>
+</ul>
+<hr />
+<h3 id="setting-up-your-project"><a class="header" href="#setting-up-your-project">Setting up your project</a></h3>
+<ol>
+<li>Create a folder for your plugin code and create the necessary file structure:</li>
+</ol>
+<pre><code class="language-bash">mkdir my-pluin
+cd my-plugin
+npm init      # create package.json file
+</code></pre>
+<ol start="2">
+<li>Create the folders to hold your plugin code and webapp UI.</li>
+</ol>
+<pre><code class="language-bash">/my-plugin
+  /plugin     # plugin (javascript code / built typesrcipt code)
+    index.js
+    ..
+  /public     # web app UI
+    index.html
+    ..
+  /src        # typescript source code (not required if using javascript)
+    index.ts  
+    ...
+  package.json
+</code></pre>
+<ol start="3">
+<li>Update the <code>package.json</code> to reflect your project structure and add keywords to identify the package for the Signal K AppStore.</li>
+</ol>
+<pre><code class="language-JSON">{
+  &quot;name&quot;: &quot;my-plugin&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;description&quot;: &quot;My signalk plugin&quot;,
+  &quot;keywords&quot;: [
+    &quot;signalk-node-server-plugin&quot;,
+    &quot;signalk-category-ais&quot;
+  ],
+  &quot;signalk-plugin-enabled-by-default&quot;: false,
+  &quot;signalk&quot;: {
+    &quot;appIcon&quot;: &quot;./assets/icons/icon-72x72.png&quot;,
+    &quot;displayName&quot;: &quot;My Great WebApp&quot;
+  },
+  &quot;main&quot;: &quot;plugin/index.js&quot;,
+  ...
+}
+</code></pre>
+<ol start="4">
+<li><em>Optional:</em> Install any dependencies or third party packages.</li>
+</ol>
+<pre><code class="language-bash">npm i
+</code></pre>
+<h3 id="link-your-project-to-signal-k-server"><a class="header" href="#link-your-project-to-signal-k-server">Link your project to Signal K server.</a></h3>
+<p>Once you have developed your plugin code and are ready to debug, the most convenient way is to use <code>npm link</code> to link your plugin code to your instance of Signal K server. </p>
+<p>To do this, from within a terminal window:</p>
+<pre><code class="language-bash"># Ensure you are in the folder containing your built plugin code
+cd my_plugin_src
+
+# Create a link (may require the use of sudo)
+npm link
+
+# Change to the Signal K server configuration directory
+cd ~/.signalk
+
+# Link your plugin using the name in the package.json file 
+#(may require the use of sudo)
+npm link my-signalk-plugin-app
+</code></pre>
+<p>When you start Signal K server the plugin will now appear in the <strong>Plugin Config</strong> screen where it can be configured and enabled.</p>
+<h3 id="debugging"><a class="header" href="#debugging">Debugging</a></h3>
+<p>The simplest way to debug your plugin is to turn on <strong>Enable Debug log</strong> for your plugin in the <strong>Plugin Config</strong> screen.</p>
+<p>Alternatively, you can debug your plugin by starting the Signal K server with the <code>DEBUG</code> environment variable:</p>
+<pre><code class="language-bash">$ DEBUG=my-signalk-plugin signalk-server
+
+# sample output 
+my-signalk-plugin Plugin stopped +0ms
+my-signalk-plugin Plugin started +2ms
+</code></pre>
+<p>You can also view debug information about the plugin loading process:</p>
+<pre><code class="language-bash">$ DEBUG=signalk:interfaces:plugins signalk-server
+
+# sample output
+signalk:interfaces:plugins Registering plugin my-signalk-plugin +0ms
+signalk:interfaces:plugins Could not find options for plugin my-signalk-plugin, returning empty options:  +2ms
+</code></pre>
+<h4 id="sample-data"><a class="header" href="#sample-data">Sample Data</a></h4>
+<p>For development purposes, it's often nice to have some mocked data. SignalK comes with a synthesized NMEA2000 data set that can be used as sample data. </p>
+<p>You can enable this by adding <code>--sample-n2k-data</code> to the command line:</p>
+<pre><code class="language-bash">$ DEBUG=my-signalk-plugin signalk-server --sample-n2k-data
+</code></pre>
+<hr />
+<h2 id="start-coding"><a class="header" href="#start-coding">Start Coding</a></h2>
+<p>Signal K server plugins are NodeJs <code>javascript</code> or <code>typescript</code> projects that return an object that implements the <code>Plugin</code> interface. </p>
+<p>They are installed into the <code>node_modules</code> folder that resides inside the SignalK server's configuration directory <em>(<code>$HOME/.signalk</code> by default)</em>. </p>
+<p>A Signal K plugin is passed a reference to the Signal K server plugin interface which it can use to interact with the server.</p>
+<p>Folowing are code snippets that can be used as a template for plugin development ensuring the returned Plugin object contains the required  functions.</p>
+<h3 id="javascript"><a class="header" href="#javascript">Javascript</a></h3>
+<p>Create <code>index.js</code> with the following content:</p>
+<pre><code class="language-javascript">module.exports = (app) =&gt; {
+
+  const plugin = {
+    id: 'my-signalk-plugin',
+    name: 'My Great Plugin',
+    start: (settings, restartPlugin) =&gt; {
+      // start up code goes here.
+    },
+    stop: () =&gt; {
+      // shutdown code goes here.
+    },
+    schema: () =&gt; {
+      properties: {
+        // plugin configuration goes here
+      }
+    }
+  };
+
+  return plugin;
+};
+</code></pre>
+<h3 id="typescript"><a class="header" href="#typescript">Typescript</a></h3>
+<p>Create <code>index.js</code> with the following content:</p>
+<pre><code class="language-typescript">import { Plugin, PluginServerApp } from '@signalk/server-api';
+
+module.exports = (app: PluginServerApp): Plugin =&gt; {
+
+  const plugin: Plugin = {
+    id: 'my-signalk-plugin',
+    name: 'My Great Plugin',
+    start: (settings, restartPlugin) =&gt; {
+      // start up code goes here.
+    },
+    stop: () =&gt; {
+      // shutdown code goes here.
+    },
+    schema: () =&gt; {
+      properties: {
+        // plugin configuration goes here
+      }
+    }
+  };
+
+  return plugin;
+}
+</code></pre>
+<p>A plugin must return an object containing the following functions:</p>
+<ul>
+<li>
+<p><code>start(settings, restartPlugin)</code>: This function is called when the plugin is enabled or when the server starts (and the plugin is enabled). The <code>settings</code> parameter contains the configuration data entered via the <strong>Plugin Config</strong> screen. <code>restartPlugin</code> is a function that can be called by the plugin to restart itself.</p>
+</li>
+<li>
+<p><code>stop()</code>: This function is called when the plugin is disabled or after configuration changes. Use this function to &quot;clean up&quot; the resources consumed by the plugin i.e. unsubscribe from streams, stop timers / loops and close devices.</p>
+</li>
+<li>
+<p><code>schema()</code>: A function that returns an object defining the schema of the plugin's configuration data. It is used by the server to generate the user interface in the <strong>Plugin Config</strong> screen.</p>
+</li>
+</ul>
+<p><em>Note: When a plugin's configuration is changed the server will first call <code>stop()</code> to stop the plugin and then <code>start()</code> with the new configuration data.</em> </p>
+<p>A plugin can also contain the following optional functions:</p>
+<ul>
+<li>
+<p><code>uiSchema()</code>: A function that returns an object defining the attributes of the UI components displayed in the <strong>Plugin Config</strong> screen.</p>
+</li>
+<li>
+<p><code>getOpenApi()</code>: Function to return the OpenAPI definition. This should be implemented when your plugin provides HTTP endpoints for clients to call. Doing so makes the OPenAPI definition available in the server Admin UI under <code>Documentation -&gt; OpenAPI</code>.</p>
+</li>
+</ul>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">const openapi = require('./openApi.json');
+
+plugin.getOpenApi = () =&gt; openapi;
+
+</code></pre>
+<hr />
+<h2 id="plugin-configuration--schema"><a class="header" href="#plugin-configuration--schema">Plugin configuration / Schema</a></h2>
+<p>A plugin's <code>schema</code> function must return a <a href="http://json-schema.org/">JSON Schema</a> object decribing the structure of the configuration data. This is used by the server to render the plugin's configuration screen in the Admin UI. </p>
+<p>The configuration data is stored by the server under the following path <code>$SIGNALK_NODE_CONFIG_DIR/plugin-config-data/&lt;plugin-name&gt;.json</code>. <em>(Default value of SIGNALK_NODE_CONFIG_DIR is $HOME/.signalk.)</em></p>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">  plugin.schema = {
+    type: 'object',
+    required: ['some_string', 'some_other_number'],
+    properties: {
+      some_string: {
+        type: 'string',
+        title: 'Some string that the plugin needs'
+      },
+      some_number: {
+        type: 'number',
+        title: 'Some number that the plugin needs',
+        default: 60
+      },
+      some_other_number: {
+        type: 'number',
+        title: 'Some other number that the plugin needs',
+        default: 5
+      }
+    }
+  };
+</code></pre>
+<p>JSON Schema approach works reasonably well for simple to medium complex configuration data. </p>
+<p>It should ne noted that some JSON schema constructs are not supported. Refer (<a href="https://github.com/peterkelly/react-jsonschema-form-bs4/blob/v1.7.1-bs4/docs/index.md#json-schema-supporting-status">details</a>) for details. </p>
+<p>The server supports also <a href="https://github.com/SignalK/signalk-server/blob/master/WEBAPPS.md">custom plugin configuration components</a>, bypassing the automatic configuration format generation.</p>
+<p>The plugin is passed the configuration settings as the first parameter of the <code>start</code> function.</p>
+<pre><code class="language-javascript">plugin.start = (settings, restartPlugin) =&gt; {
+  // settings contains the plugin configuration
+  ...
+}
+</code></pre>
+<h3 id="ui-schema"><a class="header" href="#ui-schema">UI Schema</a></h3>
+<p>The plugin can define <code>uiSchema</code> by returning a <a href="https://github.com/mozilla-services/react-jsonschema-form#the-uischema-object">uiSchema object</a> which is used to control how the user interface is rendered in the Admin UI.</p>
+<p>_Example: Make all data in an object called 'myObject' collapsible:</p>
+<pre><code class="language-javascript">uiSchema['myObject'] = {
+  'ui:field': 'collapsible',
+  collapse: {
+    field: 'ObjectField',
+    wrapClassName: 'panel-group'
+  }
+}
+</code></pre>
+<p>For more information, see <a href="https://github.com/RxNT/react-jsonschema-form-extras#collapsible-fields-collapsible">react-jsonschema-form-extras</a></p>
+<h3 id="making-a-plugin-enabled-by-default"><a class="header" href="#making-a-plugin-enabled-by-default">Making a plugin enabled by default</a></h3>
+<p>If your plugin does not require any initial configuration, you can enable it to start when the Signal K server is restarted after the plugin is installed. </p>
+<p>To do this add the following to the <code>package.json</code>:</p>
+<pre><code class="language-json">  &quot;signalk-plugin-enabled-by-default&quot;: true
+</code></pre>
+<hr />
+<h2 id="add-an-openapi-definition"><a class="header" href="#add-an-openapi-definition">Add an OpenAPI Definition</a></h2>
+<p>If your plugin exposes an API to interact with it then you should include an OpenAPI definition.</p>
+<p>You do this by creating an OpenAPI definition within the file <code>openApi.json</code> and then returning the content of the file with the <code>getOpenApi</code> method.</p>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">const openapi = require('./openApi.json');
+...
+
+plugin.getOpenApi = () =&gt; openapi;
+</code></pre>
+<p>This will include your plugin's OpenApi definition in the documentation in the server's Admin UI under <em>Documentation -&gt; OpenAPI</em>. </p>
+<p>Note: If the plugin's OpenApi description DOES NOT include a <code>servers</code> property, the API path presented in the documentation will be relative to the Signal K API path. You should include this property the plugin API is rooted elsewhere.
+<em>Example:</em></p>
+<pre><code class="language-JSON">  &quot;servers&quot;: [
+    {
+      &quot;url&quot;: &quot;/myapi/endpoint&quot;
+    }
+  ],
+</code></pre>
+<p>See <a href="https://github.com/SignalK/signalk-server/tree/b82477e63ebdc14878164ce1ed3aedd80c5a8b0c/test/plugin-test-config/node_modules/testplugin">testplugin</a> for an example.</p>
+<hr />
+<h2 id="logging"><a class="header" href="#logging">Logging</a></h2>
+<p>To record deltas sent by the plugin in the server's data log, enable the <strong>Log plugin output</strong> in the plugin configuration screen. </p>
+<hr />
+<h2 id="removing-a-plugin"><a class="header" href="#removing-a-plugin">Removing a plugin</a></h2>
+<p>Plugins can be removed via the AppStore.</p>
+<p>You can also remove a plugin manually by:</p>
+<ol>
+<li>Deleting it's folder under <code>~/.signalk/node_modules</code></li>
+<li>Deleting it's entry from <code>~/.signalk/package.json</code></li>
+<li>Run <code>npm prune</code> from the <code>~/.signalk/</code> directory.</li>
+</ol>
+<p>Alternatively you can:</p>
+<ol>
+<li>Remove the folder <code>~/.signalk/node_modules</code></li>
+<li>Run <code>npm install</code> from the <code>~/.signalk/</code> directory.</li>
+</ol>
+<p>Finally you can remove the plugin setting file in <code>~/.signalk/plugin-config-data/</code>.</p>
+<hr />
+<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<p>Following are links to some published SignalK plugins that serve as an example of working plugins:</p>
+<ul>
+<li><a href="https://github.com/SignalK/set-system-time/blob/master/index.js">set-system-time</a></li>
+<li><a href="https://github.com/SignalK/aisreporter/issues">Ais Reporter</a></li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="processing-data-from-the-server"><a class="header" href="#processing-data-from-the-server">Processing data from the server</a></h1>
+<p>A plugin will generally want to:</p>
+<ol>
+<li>Subscribe to data published by the server <em>(i.e. received from a NMEA 2000 bus, etc)</em></li>
+<li>Emit data.</li>
+</ol>
+<p>In both cases the plugin will use <em>deltas</em> which the server uses to signal changes in the Signal K full data model. Delta messages contain the new value associated with a path (not the amount of change from the previous value.)_</p>
+<p><em>See the <a href="http://signalk.org/specification/1.7.0/doc/data_model.html#delta-format">Signal K Delta Specification</a> for details.</em></p>
+<p>Using the server API, plugins can either:</p>
+<ol>
+<li>Get the current value of a path in the full model or </li>
+<li>Subscribe to a path and access a stream of <em>deltas</em> that updates every time the value is updated. </li>
+</ol>
+<p>By specifying a context <em>e.g. 'vessels.self'</em> you can limit the number of delta messages received to those of host vesseel.
+To receive all deltas you can specify <code>*</code> as the context.</p>
+<p>You can also limit the deltas received by the path you supply.
+If you supply a specific path <em>e.g. navigation.position</em>, only updates in the value will be received.
+Since paths are hierarchical, paths can contain wildcards _e.g.<em>navigation.*</em> which will deliver deltas containing updates to all paths under <code>navigation</code>.</p>
+<p>The data received is formatted as per the following example:</p>
+<pre><code class="language-javascript">  {
+    path: 'navigation.position',
+    value: { longitude: 24.7366117, latitude: 59.72493 },
+    context: 'vessel.self',  
+    source: {
+        label: 'n2k-sample-data',
+        type: 'NMEA2000',
+        pgn: 129039,
+        src: '43'
+    },
+    $source: 'n2k-sample-data.43',
+    timestamp: '2014-08-15T19:00:02.392Z'
+  }
+</code></pre>
+<h2 id="reading-the-current-path-value"><a class="header" href="#reading-the-current-path-value">Reading the current path value</a></h2>
+<p>The server API provides the following methods for retrieving values from the full data model.</p>
+<ul>
+<li><code>getSelfPath(path)</code> returns the value of the supplied <code>path</code> in the <code>vessels.self</code> context.</li>
+</ul>
+<pre><code class="language-javascript">const value = app.getSelfPath('uuid');
+app.debug(value); // Should output something like urn:mrn:signalk:uuid:a9d2c3b1-611b-4b00-8628-0b89d014ed60
+</code></pre>
+<ul>
+<li><code>getPath(path)</code> returns the value of the path (including the context) starting from the <em>root</em> of the full data model.</li>
+</ul>
+<pre><code class="language-javascript">const baseStations = app.getPath('shore.basestations');
+</code></pre>
+<h2 id="subscribing-to-deltas"><a class="header" href="#subscribing-to-deltas">Subscribing to Deltas</a></h2>
+<p>A can subscribe to a stream of updates (deltas) by creating the subscription.</p>
+<p>Subcriptions are generally manged in the plugin <code>start()</code> and <code>stop()</code> methods to ensure the subscribtions are <em>unsubscribed</em> prior to the plugin stopping to ensure all resources are freed.</p>
+<p>The following example illustrates the pattern using the <code>subscriptionmanager</code> API method.</p>
+<pre><code class="language-javascript">let unsubscribes = [];
+
+plugin.start = (options, restartPlugin) =&gt; {
+  app.debug('Plugin started');
+  let localSubscription = {
+    context: '*', // Get data for all contexts
+    subscribe: [{
+      path: '*', // Get all paths
+      period: 5000 // Every 5000ms
+    }]
+  };
+
+  app.subscriptionmanager.subscribe(
+    localSubscription,
+    unsubscribes,
+    subscriptionError =&gt; {
+      app.error('Error:' + subscriptionError);
+    },
+    delta =&gt; {
+      delta.updates.forEach(u =&gt; {
+        app.debug(u);
+      });
+    }
+  );
+};
+
+plugin.stop = () =&gt; {
+  unsubscribes.forEach(f =&gt; f());
+  unsubscribes = [];
+};
+</code></pre>
+<p>In the <code>start()</code> method create a subscription definition <code>localSubscription</code> which is then passed to <code>app.subscriptionmanager.subscribe()</code> as the first argument, we also pass the <code>unsubscribes</code> array in the second argument.</p>
+<p>The third argument is a function that will be called when there's an error.</p>
+<p>The final argument is a function that will be called every time an update is received.</p>
+<p>In the <code>stop()</code> method each subcription in the <code>unsubscribes</code> array is <em>unsubscribed</em> and the resources released.</p>
+<h2 id="sending-deltas"><a class="header" href="#sending-deltas">Sending Deltas</a></h2>
+<p>A SignalK plugin can not only read deltas, but can also send them. This is done using the <code>handleMessage()</code> API method and supplying:</p>
+<ol>
+<li>The plugin id</li>
+<li>A formatted delta update message</li>
+<li>The Signal K version ['v1' or 'v2'] <em>(if omitted the default is 'v1')</em>. See <a href="develop/plugins/../openapi/index.html">REST APIs</a> for details.</li>
+</ol>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">app.handleMessage(
+    plugin.id,
+    {
+        updates: [{ 
+            values: [{
+                path: 'environment.outside.temperature',
+                value: -253
+            }] 
+        }]
+    },
+    'v1'
+  );
+</code></pre>
+<h2 id="sending-nmea-2000-data-from-a-plugin"><a class="header" href="#sending-nmea-2000-data-from-a-plugin">Sending NMEA 2000 data from a plugin</a></h2>
+<p>A SignalK plugin can not only emit deltas, but can also send data such as NMEA 2000 data.</p>
+<p>This is done using the <code>emit()</code> API and specifying the provider as well as the formatted data to send.</p>
+<p><em>Example: Send NMEA using Actisense serial format:</em></p>
+<pre><code class="language-javascript">  app.emit(
+    'nmea2000out',
+    '2017-04-15T14:57:58.468Z,0,262384,0,0,14,01,0e,00,88,b6,02,00,00,00,00,00,a2,08,00');
+</code></pre>
+<p><em>Example: Send NMEA using Canboat JSON format:</em></p>
+<pre><code class="language-javascript">  app.emit('nmea2000JsonOut', {
+    pgn: 130306,
+    'Wind Speed': speed,
+    'Wind Angle': angle &lt; 0 ? angle + Math.PI*2 : angle,
+    'Reference': &quot;Apparent&quot;
+  });
+</code></pre>
+<h3 id="sending-a-message-on-nmea2000-startup"><a class="header" href="#sending-a-message-on-nmea2000-startup">Sending a message on NMEA2000 startup</a></h3>
+<p>If you need to send an NMEA2000 message out at startup, <em>e.g get current state from a device</em> you will need to wait until the provider is ready before sending your message.</p>
+<p><em>Example: Send NMEA after the provider is ready:</em></p>
+<pre><code class="language-javascript">  app.on('nmea2000OutAvailable', () =&gt; {
+     app.emit(
+       'nmea2000out',
+       '2017-04-15T14:57:58.468Z,2,6,126720,%s,%s,4,a3,99,01,00');
+  });
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="server-api-for-plugins"><a class="header" href="#server-api-for-plugins">Server API for plugins</a></h1>
+<p>Internally, SignalK server builds a full data model. Plugins can access the server's delta stream (updates) and full model and provide additional data as deltas using the following functions.</p>
+<h4 id="apphandlemessagepluginid-delta-skversion--v1"><a class="header" href="#apphandlemessagepluginid-delta-skversion--v1"><code>app.handleMessage(pluginId, delta, skVersion = 'v1')</code></a></h4>
+<p>Allows the plugin to publish deltas to the server. These deltas are handled as any incoming deltas.</p>
+<pre><code class="language-javascript">app.handleMessage('my-signalk-plugin', {
+  updates: [
+    {
+      values: [
+        {
+          path: 'navigation.courseOverGroundTrue',
+          value: Math.PI
+        }
+      ]
+    }
+  ]
+})
+</code></pre>
+<p>Deltas that use Signal K V2 paths (like the <a href="http://localhost:3000/admin/openapi/?urls.primaryName=course">Course API</a> paths) should call <code>handleMessage</code> with the optional 3rd parameter set to <code>v2</code>. This prevents V2 API data getting mixed in V1 paths' data in Full model &amp; the v1 http API. If you don't know that your data is V2 API data you can omit the third parameter, as the default is V1.</p>
+<h4 id="appgetselfpathpath"><a class="header" href="#appgetselfpathpath"><code>app.getSelfPath(path)</code></a></h4>
+<p>Get a Signal K path for the <code>vessels.self</code>'s full data model.</p>
+<pre><code class="language-javascript">let uuid = app.getSelfPath('uuid');
+app.debug(uuid); // Should output something like urn:mrn:signalk:uuid:a9d2c3b1-611b-4b00-8628-0b89d014ed60
+</code></pre>
+<h4 id="appgetpathpath"><a class="header" href="#appgetpathpath"><code>app.getPath(path)</code></a></h4>
+<p>Get a Signal K path starting from the root of the full data model.</p>
+<pre><code class="language-javascript">let baseStations = app.getPath('shore.basestations');
+
+// baseStations:
+
+{
+  'urn:mrn:imo:mmsi:2766140': {
+    url: 'basestations',
+    navigation: { position: [Object] },
+    mmsi: '2766140'
+  },
+  'urn:mrn:imo:mmsi:2766160': {
+    url: 'basestations',
+    navigation: { position: [Object] },
+    mmsi: '2766160'
+  },
+  ...
+}
+</code></pre>
+<h4 id="appstreambundlegetselfbuspath"><a class="header" href="#appstreambundlegetselfbuspath"><code>app.streambundle.getSelfBus(path)</code></a></h4>
+<p>Get a <a href="https://baconjs.github.io/">Bacon JS</a> stream for <code>vessels.self</code>'s Signal K path. <code>path</code> argument is optional. If it is not provided the returned stream
+produces values for all paths. Stream values are objects with structure</p>
+<pre><code class="language-javascript">  {
+    path: ...,
+    value: ...,
+    context: ...,
+    source: ...,
+    $source: ...,
+    timestamp: ...
+  }
+</code></pre>
+<p>For example:</p>
+<pre><code class="language-javascript">app.streambundle
+  .getSelfBus('navigation.position')
+  .forEach(pos =&gt; app.debug(pos));
+</code></pre>
+<p>Outputs:</p>
+<pre><code class="language-javascript">...
+{
+  path: 'navigation.position',
+  value: { longitude: 24.7366117, latitude: 59.72493 },
+  context: 'vessels.urn:mrn:signalk:uuid:a9d2c3b1-611b-4b00-8628-0b89d014ed60',
+  source: {
+    label: 'n2k-sample-data',
+    type: 'NMEA2000',
+    pgn: 129039,
+    src: '43'
+  },
+  '$source': 'n2k-sample-data.43',
+  timestamp: '2014-08-15T19:00:02.392Z'
+}
+{
+  path: 'navigation.position',
+  value: { longitude: 24.7366208, latitude: 59.7249198 },
+  context: 'vessels.urn:mrn:signalk:uuid:a9d2c3b1-611b-4b00-8628-0b89d014ed60',
+  source: {
+    label: 'n2k-sample-data',
+    type: 'NMEA2000',
+    pgn: 129025,
+    src: '160'
+  },
+  '$source': 'n2k-sample-data.160',
+  timestamp: '2014-08-15T19:00:02.544Z'
+}
+...
+</code></pre>
+<h4 id="appstreambundlegetselfstreampath"><a class="header" href="#appstreambundlegetselfstreampath"><code>app.streambundle.getSelfStream(path)</code></a></h4>
+<p>Get a <a href="https://baconjs.github.io/">Bacon JS</a> stream for <code>vessels.self</code>'s Signal K path. <code>path</code> argument is optional. If it is not provided the returned stream
+produces values for all paths. This is similar to <code>app.streambundle.getSelfBus(path)</code>, but the stream values are the <code>value</code> properties from incoming deltas.</p>
+<pre><code class="language-javascript">app.streambundle
+  .getSelfStream('navigation.position')
+  .forEach(pos =&gt; app.debug(pos));
+</code></pre>
+<p>Outputs:</p>
+<pre><code>  my-signalk-plugin { longitude: 24.736677, latitude: 59.7250108 } +600ms
+  my-signalk-plugin { longitude: 24.736645, latitude: 59.7249883 } +321ms
+  my-signalk-plugin { longitude: 24.7366563, latitude: 59.7249807 } +174ms
+  my-signalk-plugin { longitude: 24.7366563, latitude: 59.724980699999996 } +503ms
+</code></pre>
+<h4 id="appstreambundlegetbuspath"><a class="header" href="#appstreambundlegetbuspath"><code>app.streambundle.getBus(path)</code></a></h4>
+<p>Get a <a href="https://baconjs.github.io/">Bacon JS</a> stream for a Signal K path that will stream values from any context. <code>path</code> argument is optional. If it is not provided the returned stream
+produces values for all paths. Stream values are objects as in <code>app.streambundle.getSelfBus(path)</code>.</p>
+<h4 id="appstreambundlegetavailablepaths"><a class="header" href="#appstreambundlegetavailablepaths"><code>app.streambundle.getAvailablePaths()</code></a></h4>
+<p>Get a list of paths currently available in the server</p>
+<pre><code class="language-javascript">[
+  &quot;navigation.speedOverGround&quot;,
+  &quot;navigation.courseOverGroundTrue&quot;,
+  &quot;navigation.courseGreatCircle.nextPoint.position&quot;,
+  &quot;navigation.position&quot;,
+  &quot;navigation.gnss.antennaAltitude&quot;,
+  &quot;navigation.gnss.satellites&quot;,
+  &quot;navigation.gnss.horizontalDilution&quot;,
+  &quot;navigation.gnss.positionDilution&quot;,
+  &quot;navigation.gnss.geoidalSeparation&quot;,
+  &quot;navigation.gnss.type&quot;,&quot;navigation.gnss.methodQuality&quot;,
+  &quot;navigation.gnss.integrity&quot;,
+  &quot;navigation.magneticVariation&quot;,
+  ...
+]
+</code></pre>
+<h4 id="apperrormessage"><a class="header" href="#apperrormessage"><code>app.error(message)</code></a></h4>
+<p>Report errors in a human-oriented message. Currently just logs the message, but in the future error messages hopefully will show up in the admin UI.</p>
+<h4 id="appdebug"><a class="header" href="#appdebug"><code>app.debug(...)</code></a></h4>
+<p>Log debug messages. This is the debug method from the <a href="https://www.npmjs.com/package/debug">debug module</a>. The npm module name is used as the debug name.</p>
+<p><code>app.debug()</code> can take any type and will serialize it before outputting.</p>
+<p><em>Do not use <code>debug</code> directly</em>. Using the debug function provided by the server makes sure that the plugin taps into the server's debug logging system, including the helper switches in Admin UI's Server Log page.</p>
+<h4 id="appsavepluginoptionsoptions-callback"><a class="header" href="#appsavepluginoptionsoptions-callback"><code>app.savePluginOptions(options, callback)</code></a></h4>
+<p>Save changes to the plugin's options.</p>
+<pre><code class="language-javascript">var options = {
+  myConfigValue = 'Something the plugin calculated'
+};
+
+app.savePluginOptions(options, () =&gt; {app.debug('Plugin options saved')});
+
+</code></pre>
+<h4 id="appreadpluginoptions"><a class="header" href="#appreadpluginoptions"><code>app.readPluginOptions()</code></a></h4>
+<p>Read plugin options from disk.</p>
+<pre><code class="language-javascript">var options = app.readPluginOptions();
+</code></pre>
+<h4 id="appgetdatadirpath"><a class="header" href="#appgetdatadirpath"><code>app.getDataDirPath()</code></a></h4>
+<p>Returns the full path of the directory where the plugin can persist its internal data, like data files.</p>
+<p>Example use:</p>
+<pre><code class="language-javascript">var myFile = require('path').join(app.getDataDirPath(), 'somefile.ext')
+</code></pre>
+<h4 id="appregisterputhandlercontext-path-callback-source"><a class="header" href="#appregisterputhandlercontext-path-callback-source"><code>app.registerPutHandler(context, path, callback, source)</code></a></h4>
+<p>If a plugin wants to respond to <a href="http://signalk.org/specification/1.3.0/doc/put.html"><code>PUT</code></a> requests for a specific path, it can register an action handler.</p>
+<p>The action handler can handle the request synchronously or asynchronously.</p>
+<p>The passed callback should be a function taking the following arguments: <code>(context, path, value, callback)</code></p>
+<p>For synchronous actions the handler must return a value describing the response of the request: for example</p>
+<pre><code class="language-javascript">{
+  state: 'COMPLETED',
+  statusCode: 200
+}
+</code></pre>
+<p>or</p>
+<pre><code class="language-javascript">{
+ state:'COMPLETED',
+ statusCode: 400,
+ message:'Some Error Message'
+}
+</code></pre>
+<p>The <code>statusCode</code> value can be any valid HTTP response code.</p>
+<p>For asynchronous actions that may take considerable time and where the requester should not be kept waiting for the result the handler must return</p>
+<pre><code class="language-javascript">{ state: 'PENDING' }
+</code></pre>
+<p>When the action is finished the handler should call the <code>callback</code> function with the result with</p>
+<pre><code class="language-javascript">callback({ state: 'COMPLETED', statusCode: 200 })
+</code></pre>
+<p>or</p>
+<pre><code class="language-javascript">callback({
+  state:'COMPLETED',
+  statusCode: 400,
+  message:'Some Error Message'
+})
+</code></pre>
+<p>Synchronous example:</p>
+<pre><code class="language-javascript">function myActionHandler(context, path, value, callback) {
+  if(doSomething(context, path, value)){
+    return { state: 'COMPLETED', statusCode: 200 };
+  } else {
+    return { state: 'COMPLETED', statusCode: 400 };
+  }
+}
+
+plugin.start = function(options) {
+  app.registerPutHandler('vessels.self', 'some.path', myActionHandler, 'somesource.1');
+}
+</code></pre>
+<p>Asynchronous example:</p>
+<pre><code class="language-javascript">function myActionHandler(context, path, value, callback) {
+  doSomethingAsync(context, path, value, (result) =&gt;{
+    if(result) {
+      callback({ state: 'COMPLETED', result: 200 })
+    } else {
+      callback({ state: 'COMPLETED', result: 400 })
+    }
+  });
+  return { state: 'PENDING' };
+}
+
+plugin.start = function(options) {
+  app.registerPutHandler('vessels.self', 'some.path', myActionHandler);
+}
+</code></pre>
+<h4 id="appregisterdeltainputhandler-delta-next--"><a class="header" href="#appregisterdeltainputhandler-delta-next--"><code>app.registerDeltaInputHandler ((delta, next) =&gt; ...)</code></a></h4>
+<p>Register a function to intercept all delta messages <em>before</em> they are processed by the server. The plugin callback should call <code>next(delta)</code> with a modified delta if it wants to alter the incoming delta or call <code>next</code> with the original delta to process it normally. Not calling <code>next</code> will drop the incoming delta and will only show in delta statistics.
+Other, non-delta messages produced by provider pipe elements are emitted normally.</p>
+<pre><code class="language-javascript">app.registerDeltaInputHandler((delta, next) =&gt; {
+  delta.updates.forEach(update =&gt; {
+    update.values.forEach(pathValue =&gt; {
+      if(pathValue.startsWith(&quot;foo&quot;)) {
+        pathValue.path = &quot;bar&quot;
+      }
+    })
+  })
+  next(delta)
+})
+</code></pre>
+<h4 id="appsetpluginstatusmsg"><a class="header" href="#appsetpluginstatusmsg"><code>app.setPluginStatus(msg)</code></a></h4>
+<p>Set the current status of the plugin. The <code>msg</code> should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.</p>
+<pre><code class="language-javascript">app.setPluginStatus('Initializing');
+// Do something
+app.setPluginStatus('Done initializing');
+</code></pre>
+<p>Use this instead of deprecated <code>setProviderStatus</code></p>
+<h4 id="appsetpluginerrormsg"><a class="header" href="#appsetpluginerrormsg"><code>app.setPluginError(msg)</code></a></h4>
+<p>Set the current error status of the plugin. The <code>msg</code> should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.</p>
+<pre><code class="language-javascript">app.setPluginError('Error connecting to database');
+</code></pre>
+<p>Use this instead of deprecated <code>setProviderError</code></p>
+<h4 id="appgetserialports--promiseports"><a class="header" href="#appgetserialports--promiseports"><code>app.getSerialPorts() =&gt; Promise&lt;Ports&gt;</code></a></h4>
+<p>This returs a Promise which will resolve to a <a href="develop/plugins/src/serialports.ts#21">Ports</a> object which contains information about the serial ports available on the machine.</p>
+<hr />
+<h3 id="resources-api-interface"><a class="header" href="#resources-api-interface">Resources API Interface</a></h3>
+<h4 id="appregisterresourceproviderresourceprovider"><a class="header" href="#appregisterresourceproviderresourceprovider"><code>app.registerResourceProvider(ResourceProvider)</code></a></h4>
+<p>Used by <em>Resource Provider plugins</em> to register each resource type it handles.</p>
+<p>See <a href="develop/plugins/../plugins/resource_provider_plugins.html#registering-as-a-resource-provider"><code>Resource Provider Plugins</code></a> for details.</p>
+<hr />
+<h3 id="course-api-interface"><a class="header" href="#course-api-interface">Course API Interface</a></h3>
+<p>See <a href="develop/plugins/../rest-api/course_api.html"><code>Course API</code></a> for details.</p>
+<h4 id="appgetcourse"><a class="header" href="#appgetcourse"><code>app.getCourse()</code></a></h4>
+<p>Retrieves the current course information. </p>
+<p>It returns the same course information as the <a href="develop/plugins//doc/openapi/?urls.primaryName=course#/course/get_course"><code>/course</code></a> API endpoint.</p>
+<h4 id="appsetcoursedestination"><a class="header" href="#appsetcoursedestination"><code>app.setCourse(Destination)</code></a></h4>
+<p>Navigate to the specified position / waypoint. This function accepts the same parameters as the <a href="develop/plugins//doc/openapi/?urls.primaryName=course#/destination/put_course_destination"><code>/course/destination</code></a> API endpoint.</p>
+<h4 id="appsetrouteroutedest"><a class="header" href="#appsetrouteroutedest"><code>app.setRoute(RouteDest)</code></a></h4>
+<p>Follow a route in the specified direction and starting at the specified point. 
+This function accepts the same parameters as the <a href="develop/plugins//doc/openapi/?urls.primaryName=course#/activeRoute/put_course_activeRoute"><code>/course/activeRoute</code></a> API endpoint.</p>
+<hr />
+<h3 id="notifications-api-proposed"><a class="header" href="#notifications-api-proposed">Notifications API <em>(proposed)</em></a></h3>
+<h4 id="appnotifypath-value-pluginid"><a class="header" href="#appnotifypath-value-pluginid"><code>app.notify(path, value, pluginId)</code></a></h4>
+<p>Notifications API interface method for raising, updating and clearing notifications.</p>
+<ul>
+<li>
+<p><code>path</code>: Signal K path of the notification</p>
+</li>
+<li>
+<p><code>value</code>: A valid <code>Notification</code> object or <code>null</code> if clearing a notification.</p>
+</li>
+<li>
+<p><code>pluginId</code> The plugin identifier.</p>
+</li>
+</ul>
+<p>To raise or update a for a specified path, call the method with a valid <code>Notification</code> object as the <code>value</code>.</p>
+<ul>
+<li>returns:  <code>string</code> value containing the <code>id</code> of the new / updated notification.</li>
+</ul>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">const alarmId = app.notify(
+  'myalarm', 
+  {
+	message: 'My cutom alarm text',
+	state: 'alert'
+  },
+  'myAlarmPlugin'
+)
+
+// alarmId = &quot;ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a&quot;
+</code></pre>
+<p>To clear (cancel) a notification call the method with <code>null</code> as the <code>value</code>.</p>
+<ul>
+<li>returns:  <code>void</code>.</li>
+</ul>
+<p><em>Example: Clear notification</em></p>
+<pre><code class="language-javascript">const alarmId = app.notify(
+  'myalarm', 
+  null,
+  'myAlarmPlugin'
+)
+</code></pre>
+<hr />
+<h3 id="propertyvalues"><a class="header" href="#propertyvalues">PropertyValues</a></h3>
+<p>PropertyValues are a mechanism for passing configuration type values between different parties such as plugins and input connections running in the server process.</p>
+<p>A plugin can <em>emit</em> values and also register to <em>listen</em> for values emitted by others. </p>
+<p>The difference between the <em>PropertyValues</em> mechanism and <em>Event Emitters</em> in NodeJs is that when you call <code>onPropertyValues</code> the callback will be invoked and passed an array containing all of the previous values for the property name, starting with the initial value of <code>undefined</code>. If nothing has emitted any values for the property name the callback will be called with a value of <code>undefined</code>.</p>
+<pre><code class="language-bash">app.emitPropertyValue: (name: string, value: any) =&gt; void
+
+onPropertyValues: (
+  name: string,
+  callback: (propValuesHistory: PropertyValue[]) =&gt; void
+) =&gt; Unsubscribe
+</code></pre>
+<p>A PropertyValue has the following structure:</p>
+<pre><code class="language-javascript">interface PropertyValue {
+  timestamp: number // millis
+  setter: string // plugin id, server, provider id
+  name: string
+  value: any
+}
+</code></pre>
+<p><em>Note that the value can be also a function.</em></p>
+<p>This mechanism allows plugins to <em>offer</em> extensions via <em>&quot;Well Known Properties&quot;</em>, for example </p>
+<ul>
+<li>additional <a href="https://github.com/SignalK/nmea0183-signalk/pull/193">NMEA0183 sentence parsers for custom sentences</a> via <code>nmea0183sentenceParser</code></li>
+<li>additional PGN definitions for propietary or custom PGNs</li>
+</ul>
+<p>Code handling incoming PropertyValues should be fully reactive: even if all emitters emit during their startup there is no defined load / startup order and plugins may emit when activated and started. This means that depending on a PropertyValue being there when your code starts or arriving after your code has started is not possible.</p>
+<p><em>PropertyValues</em> is not meant for data passing on a regular basis, as the total history makes it a potential memory leak. There is a safeguard against accidentally emitting regularly with an upper bound for values per property name. New values will be ignored if it is reached and emits logged as errors.</p>
+<hr />
+<h3 id="exposing-custom-http-paths--openapi"><a class="header" href="#exposing-custom-http-paths--openapi">Exposing custom HTTP paths &amp; OpenApi</a></h3>
+<p>If a plugin has a function called <code>registerWithRouter(router)</code> (like the plugin's <code>start</code> and <code>stop</code> functions) it will be called with an Express router as the parameter during plugin startup. The router will be mounted at <code>/plugins/&lt;pluginId&gt;</code> and you can use standard Express <code>.get</code> <code>.post</code> <code>.use</code> etc to add HTTP path handlers. Note that <code>GET /plugins/&lt;pluginid&gt;</code> and <code>POST /plugins/&lt;pluginid&gt;/configure</code> are reserved by server (see below).</p>
+<p>Express does not have a public API for deregistering subrouters, so <code>stop</code> does not do anything to the router.</p>
+<p><strong>Consider providing an OpenApi description</strong> for your plugin's API. This promotes cooperation with other plugin/webapp authors by making it easy to find and use functionality that is built into plugins. It is also a means to avoid duplication, promote reuse and the possibility of including them in the Signal K specification.</p>
+<p>See <a href="develop/plugins/server_plugin.html#add-an-openapi-definition">Server Plugins</a> for details.</p>
+<hr />
+<h3 id="plugin-configuration-http-api"><a class="header" href="#plugin-configuration-http-api">Plugin configuration HTTP API</a></h3>
+<h4 id="get-plugins"><a class="header" href="#get-plugins"><code>GET /plugins/</code></a></h4>
+<p>Get a list of installed plugins and their configuration data.</p>
+<h4 id="get-pluginspluginid"><a class="header" href="#get-pluginspluginid"><code>GET /plugins/&lt;pluginid&gt;</code></a></h4>
+<p>Get information from an installed plugin.</p>
+<p>Example result:</p>
+<pre><code class="language-json">{
+  &quot;enabled&quot;: false,
+  &quot;id&quot;: &quot;marinetrafficreporter&quot;,
+  &quot;name&quot;: &quot;Marine Traffic Reporter&quot;
+}
+</code></pre>
+<h4 id="post-pluginspluginidconfigure"><a class="header" href="#post-pluginspluginidconfigure"><code>POST /plugins/&lt;pluginid&gt;/configure</code></a></h4>
+<p>Save configuration data for a plugin. Stops and starts the plugin as a side effect.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="resource-provider-plugins"><a class="header" href="#resource-provider-plugins">Resource Provider plugins</a></h1>
+<h2 id="overview-1"><a class="header" href="#overview-1">Overview</a></h2>
+<p>The SignalK server <em>Resource API</em> provides a common set operations for clients to interact with routes, waypoints, charts, etc but it does NOT provide the ability to persist or retrieve resources to / from storage.</p>
+<p>This functionality needs to be provided by one or more server plugins that interface with the <em>Resource API</em> to facilitate the storage and retrieval of resource data.</p>
+<p>These plugins are called <strong>Provider Plugins</strong>.</p>
+<p><em>Resource API architecture:</em>
+<img src="develop/plugins/../../img/resource_provider.svg" width="275"/></p>
+<p>This de-coupling of request handling and data storage provides the flexibility to persist resource data in a variety of different storage types as well as Internet based services.</p>
+<p><em>Note: Signal K server comes with the <a href="https://github.com/SignalK/signalk-server/tree/master/packages/resources-provider-plugin">resources-provider-plugin</a> pre-installed which persists resource data to the local file system.</em></p>
+<h3 id="resources-api-1"><a class="header" href="#resources-api-1">Resources API:</a></h3>
+<p>The <em>Resources API</em> handles all client requests received via the <code>/signalk/v2/api/resources</code> path, before passing on the request to registered provider plugin(s). </p>
+<p>The <em>Resources API</em> performs the following operations when a request is received:</p>
+<ol>
+<li>Checks for registered provider(s) for the resource type <em>(i.e. route, waypoint, etc.)</em></li>
+<li>Checks that the required ResourceProvider methods are defined for the requested operation <em>(i.e. POST, PUT, GET, DELETE)</em></li>
+<li>Performs an access control check</li>
+<li><code>POST</code> and <code>PUT</code> requests for <strong>Standard</strong> <em>(Signal K defined)</em> resource types are checked for validity of the submitted:</li>
+</ol>
+<ul>
+<li><code>resource id</code></li>
+<li><code>resource data</code> against the OpenAPI definition.</li>
+</ul>
+<p>Only after successful completion of all these operations is the request passed on to the registered provider plugin(s).</p>
+<hr />
+<h2 id="provider-plugins"><a class="header" href="#provider-plugins">Provider plugins:</a></h2>
+<p>A resource provider plugin is a Signal K server plugin that implements the <strong>Resource Provider Interface</strong> which:</p>
+<ul>
+<li>Tells server the resource type(s) provided for by the plugin <em>(i.e. route, waypoint, etc.)</em></li>
+<li>Registers the methods used to action requests passed from the server and perform the writing, retrieval and deletion of resources from storage.</li>
+</ul>
+<p>Note: multiple providers can be registered for a resource type <em>(e.g. 2 x chart providers)</em></p>
+<p>The <code>ResourceProvider</code> interface is defined as follows in <em><code>@signalk/server-api</code></em>:</p>
+<pre><code class="language-typescript">interface ResourceProvider {
+  type: ResourceType
+  methods: ResourceProviderMethods
+}
+</code></pre>
+<p>where:</p>
+<ul>
+<li>
+<p><code>type</code>: The resource type provided for by the plugin. These can be either <strong>Standard</strong> <em>(Signal K defined)</em> or <strong>Custom</strong> <em>(user defined)</em> resource types <em>(e.g. <code>'routes'</code>, <code>'fishingZones'</code>)</em> </p>
+</li>
+<li>
+<p><code>methods</code>: An object implementing the <code>ResourceProviderMethods</code> interface defining the functions to which resource requests are passed by the SignalK server. <em>Note: The plugin <strong>MUST</strong> implement each method, even if that operation is NOT supported by the plugin!</em></p>
+</li>
+</ul>
+<p>The <code>ResourceProviderMethods</code> interface is defined as follows in <em><code>@signalk/server-api</code></em>:</p>
+<pre><code class="language-typescript">interface ResourceProviderMethods {
+  listResources: (query: { [key: string]: any }) =&gt; Promise&lt;{[id: string]: any}&gt;
+  getResource: (id: string, property?: string) =&gt; Promise&lt;object&gt;
+  setResource: (
+    id: string,
+    value: { [key: string]: any }
+  ) =&gt; Promise&lt;void&gt;
+  deleteResource: (id: string) =&gt; Promise&lt;void&gt;
+}
+</code></pre>
+<p><em><strong>Note: The Resource Provider is responsible for implementing the methods and returning data in the required format!</strong></em></p>
+<h3 id="provider-methods"><a class="header" href="#provider-methods">Provider Methods:</a></h3>
+<p><strong><code>listResources(query)</code></strong>: This method is called when a request is made for resource entries that match a specific criteria.</p>
+<p><em>Note: It is the responsibility of the resource provider plugin to filter the resources returned as per the supplied query parameters.</em></p>
+<ul>
+<li><code>query:</code> Object contining <code>key | value</code> pairs repesenting the parameters by which to filter the returned entries. <em>e.g. {region: 'fishing_zone'}</em></li>
+</ul>
+<p>returns: <code>Promise&lt;{[id: string]: any}&gt;</code></p>
+<p><em>Example: Return waypoints within the bounded area with lower left corner at E5.4 N25.7 &amp; upper right corner E6.9 &amp; N31.2:</em> </p>
+<pre><code>GET /signalk/v2/api/resources/waypoints?bbox=[5.4,25.7,6.9,31.2]
+</code></pre>
+<p><em>ResourceProvider method invocation:</em></p>
+<pre><code class="language-javascript">listResources(
+  {
+    bbox: '5.4,25.7,6.9,31.2'
+  }
+);
+</code></pre>
+<p><em>Returns:</em></p>
+<pre><code class="language-JSON">{
+  &quot;07894aba-f151-4099-aa4f-5e5773734b69&quot;: {
+    &quot;name&quot;:&quot;my Point&quot;,
+    &quot;description&quot;:&quot;A Signal K waypoint&quot;,
+    &quot;distance&quot;:124226.65183615577,
+    &quot;feature&quot;:{
+      &quot;type&quot;:&quot;Feature&quot;,
+      &quot;geometry&quot;:{
+        &quot;type&quot;:&quot;Point&quot;,
+        &quot;coordinates&quot;:[5.7,26.4]
+      },
+      &quot;properties&quot;:{}
+    },
+    &quot;timestamp&quot;:&quot;2023-01-01T05:02:54.561Z&quot;,
+    &quot;$source&quot;:&quot;resources-provider&quot;
+  },
+  &quot;0c894aba-d151-4099-aa4f-be5773734e99&quot;: {
+    &quot;name&quot;:&quot;another point&quot;,
+    &quot;description&quot;:&quot;Another Signal K waypoint&quot;,
+    &quot;distance&quot;:107226.84,
+    &quot;feature&quot;:{
+      &quot;type&quot;:&quot;Feature&quot;,
+      &quot;geometry&quot;:{
+        &quot;type&quot;:&quot;Point&quot;,
+        &quot;coordinates&quot;:[6.1,29.43]
+      },
+      &quot;properties&quot;:{}
+    },
+    &quot;timestamp&quot;:&quot;2023-01-01T05:02:54.561Z&quot;,
+    &quot;$source&quot;:&quot;resources-provider&quot;
+  }
+}
+</code></pre>
+<hr />
+<p><strong><code>getResource(id, property?)</code></strong>: This method is called when a request is made for a specific resource entry with the supplied <code>id</code>. If <code>property</code> is supplied then the value of the resource property is returned. If there is no resource associated with the id the call should return Promise.reject.</p>
+<ul>
+<li><code>id</code>: String containing the target resource entry id. <em>(e.g. '07894aba-f151-4099-aa4f-5e5773734b99')</em></li>
+<li><code>property</code> (optional):  Name of resource property for which to return the value (in dot notation). <em>e.g. feature.geometry.coordinates</em></li>
+</ul>
+<p>returns: <code>Promise&lt;object&gt;</code></p>
+<p><em>Example resource request:</em> </p>
+<pre><code>GET /signalk/v2/api/resources/routes/07894aba-f151-4099-aa4f-5e5773734b99
+</code></pre>
+<p><em>ResourceProvider method invocation:</em></p>
+<pre><code class="language-javascript">getResource(
+  '07894aba-f151-4099-aa4f-5e5773734b99'
+);
+</code></pre>
+<p><em>Returns:</em></p>
+<pre><code class="language-JSON">{
+  &quot;name&quot;:&quot;myRoute&quot;,
+  &quot;description&quot;:&quot;A Signal K route&quot;,
+  &quot;distance&quot;:124226.65183615577,
+  &quot;feature&quot;:{
+    &quot;type&quot;:&quot;Feature&quot;,
+    &quot;geometry&quot;:{
+      &quot;type&quot;:&quot;LineString&quot;,
+      &quot;coordinates&quot;:[[-8,-8],[-8.5,-8],[-8.5,-8.4],[-8.7,-8.3]]
+    },
+    &quot;properties&quot;:{}
+  },
+  &quot;timestamp&quot;:&quot;2023-01-01T05:02:54.561Z&quot;,
+  &quot;$source&quot;:&quot;resources-provider&quot;
+}
+</code></pre>
+<p><em>Example resource property value request:</em> </p>
+<pre><code>GET /signalk/v2/api/resources/routes/07894aba-f151-4099-aa4f-5e5773734b99/feature/geometry/type
+</code></pre>
+<p><em>ResourceProvider method invocation:</em></p>
+<pre><code class="language-javascript">getResource(
+  '07894aba-f151-4099-aa4f-5e5773734b99',
+  'feature.geometry.type'
+);
+</code></pre>
+<p><em>Returns:</em></p>
+<pre><code class="language-JSON">{
+  &quot;value&quot;: &quot;LineString&quot;,
+  &quot;timestamp&quot;:&quot;2023-01-01T05:02:54.561Z&quot;,
+  &quot;$source&quot;:&quot;resources-provider&quot;
+}
+</code></pre>
+<hr />
+<p><strong><code>setResource(id, value)</code></strong>: This method is called when a request is made to save / update a resource entry with the supplied id. The supplied data is a complete resource record.</p>
+<ul>
+<li>
+<p><code>id:</code> String containing the id of the resource entry created / updated. <em>e.g. '07894aba-f151-4099-aa4f-5e5773734b99'</em></p>
+</li>
+<li>
+<p><code>value:</code> Resource data to be stored.</p>
+</li>
+</ul>
+<p>returns: <code>Promise&lt;void&gt;</code></p>
+<p><em>Example PUT resource request:</em> </p>
+<pre><code>PUT /signalk/v2/api/resources/routes/07894aba-f151-4099-aa4f-5e5773734b99 {resource_data}
+</code></pre>
+<p><em>ResourceProvider method invocation:</em></p>
+<pre><code class="language-javascript">setResource(
+  '07894aba-f151-4099-aa4f-5e5773734b99',
+  {
+    name: 'test route', 
+    distance': 8000, 
+    feature: {
+      type: 'Feature', 
+      geometry: {
+        type: 'LineString',
+        coordinates: [[138.5, -38.6], [138.7, -38.2], [138.9, -38.0]]
+      },
+      properties:{}
+    }
+  }
+);
+</code></pre>
+<p><em>Example POST resource request:</em> </p>
+<pre><code>POST /signalk/v2/api/resources/routes {resource_data}
+</code></pre>
+<p><em>ResourceProvider method invocation:</em></p>
+<pre><code class="language-javascript">setResource(
+  '&lt;server_generated_id&gt;',
+  {
+    name: 'test route', 
+    distance': 8000, 
+    feature: {
+      type: 'Feature', 
+      geometry: {
+        type: 'LineString',
+        coordinates: [[138.5, -38.6], [138.7, -38.2], [138.9, -38.0]]
+      },
+      properties:{}
+    }
+  }
+);
+</code></pre>
+<hr />
+<p><strong><code>deleteResource(id)</code></strong>: This method is called when a request is made to remove the specific resource entry with the supplied resource id.</p>
+<ul>
+<li><code>id:</code> String containing the target resource entry id. <em>e.g. '07894aba-f151-4099-aa4f-5e5773734b99'</em></li>
+</ul>
+<p>returns: <code>Promise&lt;void&gt;</code></p>
+<p><em>Example resource request:</em> </p>
+<pre><code>DELETE /signalk/v2/api/resources/routes/07894aba-f151-4099-aa4f-5e5773734b99
+</code></pre>
+<p><em>ResourceProvider method invocation:</em></p>
+<pre><code class="language-javascript">deleteResource(
+  '07894aba-f151-4099-aa4f-5e5773734b99'
+);
+</code></pre>
+<hr />
+<h3 id="registering-as-a-resource-provider"><a class="header" href="#registering-as-a-resource-provider">Registering as a Resource Provider:</a></h3>
+<p>To register a plugin as a provider for one or more resource types with the SignalK server, it must call the server's <code>registerResourceProvider</code> function for each resource type being serviced during plugin startup. </p>
+<p>The function has the following signature:</p>
+<pre><code class="language-typescript">app.registerResourceProvider(resourceProvider: ResourceProvider)
+</code></pre>
+<p>where:</p>
+<ul>
+<li><code>resourceProvider</code>: is a reference to a <code>ResourceProvider</code> object containing the <strong>resource type</strong> and <strong>methods</strong> to receive the requests.</li>
+</ul>
+<p><em>Note: More than one plugin can be registered as a provider for a resource type.</em></p>
+<p><em>Example: Plugin registering as a routes &amp; waypoints provider.</em></p>
+<pre><code class="language-javascript">import { ResourceProvider } from '@signalk/server-api'
+
+module.exports = function (app) {
+
+  const plugin = {
+    id: 'mypluginid',
+    name: 'My Resource Providerplugin'
+  }
+
+  const routesProvider: ResourceProvider = {
+      type: 'routes',
+      methods: {
+        listResources: (params) =&gt; { 
+          fetchRoutes(params)
+          ... 
+        },
+        getResource: (id, property?) =&gt; { 
+          getRoute(id, property)
+          ... 
+        },
+        setResource: (id, value )=&gt; { 
+          saveRoute(id, value)
+          ... 
+        },
+        deleteResource: (id) =&gt; { 
+          deleteRoute(id, value)
+          ...
+        }
+      }
+    }
+
+  const waypointsProvider: ResourceProvider = {
+      type: 'waypoints',
+      methods: {
+        listResources: (params) =&gt; { 
+          fetchWaypoints(params)
+          ... 
+        },
+        getResource: (id, property?) =&gt; { 
+          getWaypoint(id, property)
+          ... 
+        },
+        setResource: (id, value )=&gt; { 
+          saveWaypoint(id, value)
+          ... 
+        },
+        deleteResource: (id) =&gt; { 
+          deleteWaypoint(id, value)
+          ...
+        }
+      }
+    }
+
+  plugin.start = function(options) {
+    ...
+    try {
+      app.registerResourceProvider(routesProvider)
+      app.registerResourceProvider(waypointsProvider)
+    }
+    catch (error) {
+      // handle error
+    }
+  }
+
+  return plugin
+}
+</code></pre>
+<h3 id="methods"><a class="header" href="#methods">Methods</a></h3>
+<p>A Resource Provider plugin must implement ALL methods to service the requests passed from the server.</p>
+<p>Each method should return a <strong>Promise</strong> on success and <code>throw</code> on error, if a request is not serviced or is not implemented.</p>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">// SignalK server plugin 
+module.exports = function (app) {
+
+  const plugin = {
+    id: 'mypluginid',
+    name: 'My Resource Providerplugin',
+    start: options =&gt; { 
+      ... 
+      app.registerResourceProvider({
+        type: 'waypoints',
+        methods: {
+          listResources: (params) =&gt; { 
+            return new Promise( (resolve, reject) =&gt; {
+              ...
+              if (ok) {
+                resolve(resource_list)
+              } else {
+                reject( new Error('Error fetching resources!'))
+              }
+            })
+          },
+          getResource: (id, property?) =&gt; { 
+            return new Promise( (resolve, reject) =&gt; {
+              ...
+              if (ok) {
+                resolve(resource_list)
+              } else {
+                reject( new Error('Error fetching resource with supplied id!'))
+              }
+            })
+          },
+          setResource: (id, value )=&gt; { 
+            throw( new Error('Not implemented!')) 
+          },
+          deleteResource: (id) =&gt; { 
+            throw( new Error('Not implemented!')) 
+          }
+        }
+      })
+    }
+
+  }
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="course-calculations-and-providers"><a class="header" href="#course-calculations-and-providers">Course Calculations and Providers</a></h1>
+<p>The <em>Course API</em> defines the path <code>/vessels/self/navigation/course/calcValues</code> to accommodate the calculated values related to course navigation.</p>
+<p>These paths are available to be populated by a &quot;course provider&quot; plugin that uses the course information set using the  <em>Course API</em>. This approach promotes the extensibility of Signal K server providing flexibility and interoperability. See <a href="develop/rest-api/course_calculations.html#course-provider-plugins">Course Provider Plugins</a> below.</p>
+<img src="develop/rest-api/../../img/course_provider.svg" width="300px"/>
+<h2 id="calculated-value-paths-calcvalues"><a class="header" href="#calculated-value-paths-calcvalues">Calculated value paths: <code>calcValues</code></a></h2>
+<p>The following paths are defined to hold values calculated using the information maintained by <em>Course API</em> operations:</p>
+<ul>
+<li>calcMethod: <em>(&quot;Rhumbline&quot; or &quot;GreatCircle&quot;)</em></li>
+<li>crossTrackError</li>
+<li>bearingTrackTrue</li>
+<li>bearingTrackMagnetic</li>
+<li>estimatedTimeOfArrival <em>(e.g. &quot;2022-04-22T05:02:56.484Z&quot;)</em></li>
+<li>distance</li>
+<li>bearingTrue</li>
+<li>bearingMagnetic</li>
+<li>velocityMadeGood</li>
+<li>timeToGo</li>
+<li>targetSpeed</li>
+<li>previousPoint.distance</li>
+</ul>
+<p><em>Example:</em></p>
+<pre><code>{
+  &quot;calcMethod&quot;: &quot;Rhumbline&quot;,
+  &quot;crossTrackError&quot;: 458.784,
+  &quot;bearingTrackTrue&quot;: 4.58491,
+  &quot;bearingTrackMagnetic&quot;: 4.51234,
+  &quot;estimatedTimeOfArrival&quot;: &quot;2022-04-22T05:02:56.484Z&quot;,
+  &quot;distance&quot;: 10157,
+  &quot;bearingTrue&quot;: 4.58491,
+  &quot;bearingMagnetic&quot;: 4.51234,
+  &quot;velocityMadeGood&quot;: 7.2653,
+  &quot;timeToGo&quot;: 8491,
+  &quot;targetSpeed&quot;: 2.2653,
+  &quot;previousPoint&quot;: {
+    &quot;distance&quot;: 10157
+  }
+}
+</code></pre>
+<h2 id="course-notifications"><a class="header" href="#course-notifications">Course Notifications</a></h2>
+<p>Calculated course values that cross a threshold should trigger a notification so that the necessary action can be taken.</p>
+<p>The Course API defines the following notifications which should be implemented by a course provider:</p>
+<ul>
+<li><code>navigation.course.arrivalCircleEntered</code></li>
+<li><code>navigation.course.perpendicularPassed</code></li>
+</ul>
+<h2 id="course-provider-plugins"><a class="header" href="#course-provider-plugins">Course Provider Plugins</a></h2>
+<p>Signal K server includes the <code>Course Data Provider</code> plugin as part of the installation to provide out-of-the-box support for course calculations nd notifications.</p>
+<p>This plugin can be replaced with others from the AppStore, or your own, to extend the number and types of calculations performed.</p>
+<p>If you are looking to develop a course provider plugin, following are the recommended guidlines:</p>
+<ol>
+<li>Ensure values are generated for ALL the defined paths (above)</li>
+<li>Values MUST be calculated using <code>/vessels/self/navigation/course</code> path values mainntained by the <em>Course API</em></li>
+<li>Ensure values are set to null when no destination is set or the value cannot be calculated</li>
+<li>Perform the calculations using a &quot;worker thread&quot; to minimise impact on the server &quot;main thread&quot;</li>
+<li>Ensure the worker is set up and shut down as part of plugin &quot;start&quot; and &quot;stop&quot; functions</li>
+<li>Raise the notifications outlined above.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="publishing-to-the-appstore"><a class="header" href="#publishing-to-the-appstore">Publishing to The AppStore</a></h1>
+<p>Plugins and WebApps are available in the AppStore when they have been published to <a href="https://www.npmjs.com/">npm repository</a> with the one or more of the following keywords in the <code>package.json</code> file:</p>
+<ul>
+<li><code>signalk-node-server-plugin</code></li>
+<li><code>signalk-webapp</code></li>
+</ul>
+<p>Additionally you can have your plugin appear within one or more AppStore categories by also adding the following keyword(s):</p>
+<ul>
+<li><code>signalk-category-chart-plotters</code></li>
+<li><code>signalk-category-nmea-2000</code></li>
+<li><code>signalk-category-nmea-0183</code></li>
+<li><code>signalk-category-instruments</code></li>
+<li><code>signalk-category-hardware</code></li>
+<li><code>signalk-category-ais</code></li>
+<li><code>signalk-category-notifications</code></li>
+<li><code>signalk-category-digital-switching</code></li>
+<li><code>signalk-category-utility</code></li>
+<li><code>signalk-category-cloud</code></li>
+<li><code>signalk-category-weather</code></li>
+<li><code>signalk-category-deprecated</code></li>
+<li><code>signalk-category-hidden</code> (won't show on the App Store)</li>
+</ul>
+<p>To have your plugin start automatically after being installed, without requiring any configuration via the <strong>Plugin Config</strong> screen add the following key to the <code>package.json</code> file:</p>
+<pre><code class="language-JSON">&quot;signalk-plugin-enabled-by-default&quot;: true
+</code></pre>
+<p>To control the way your WebApp is displayed in the Admin UI add a <code>signalk</code> key with the following attributes:</p>
+<pre><code class="language-JSON">  &quot;signalk&quot;: {
+    &quot;appIcon&quot;: &quot;./img/icon-72x72.png&quot;, // path to an image file to use as an icon.
+    &quot;displayName&quot;: &quot;My SK App&quot; // name to display in place of the package name.
+  }
+</code></pre>
+<p><em>Example: package.json</em></p>
+<pre><code class="language-JSON">{
+  &quot;name&quot;: &quot;my-signalk-plugin-app&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;description&quot;: &quot;My great signalk plugin-app&quot;,
+  &quot;keywords&quot;: [
+    &quot;signalk-node-server-plugin&quot;,
+    &quot;signalk-webapp&quot;,
+    &quot;signalk-category-ais&quot;
+  ],
+  &quot;signalk-plugin-enabled-by-default&quot;: true,
+  &quot;signalk&quot;: {
+    &quot;appIcon&quot;: &quot;./assets/icons/icon-72x72.png&quot;,
+    &quot;displayName&quot;: &quot;My Great WebApp&quot;
+  },
+  &quot;main&quot;: &quot;plugin/index.js&quot;,
+  &quot;scripts&quot;: {
+    &quot;test&quot;: &quot;echo \&quot;Error: no test specified\&quot; &amp;&amp; exit 1&quot;
+  },
+  &quot;author&quot;: &quot;&quot;,
+  &quot;license&quot;: &quot;ISC&quot;
+}
+</code></pre>
+<h4 id="publishing-your-plugin"><a class="header" href="#publishing-your-plugin">Publishing your Plugin</a></h4>
+<p>Once you have developed and tested your Plugin / WebApp you can publish it to make it visible in the AppStore.
+To do this, in a terminal session from within the folder containing <code>package.json</code>:</p>
+<pre><code class="language-bash">npm publish
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rest-apis"><a class="header" href="#rest-apis">REST APIs</a></h1>
+<p>REST APIs were introduced in Signal K server version 2 to provide a way for applications and plugins perform operations and ensure that the Signal K data model is consistent.</p>
+<p>They are mounted under the path <code>/signalk/v2/api</code> and OpenAPI definitions can be found under <em>Documentation -&gt; OpenAPI</em> in the server Admin UI. </p>
+<h3 id="apis-available-in-signal-k-server-v200-and-later"><a class="header" href="#apis-available-in-signal-k-server-v200-and-later">APIs available in Signal K server v2.0.0 and later:</a></h3>
+<table><thead><tr><th>API</th><th>Description</th><th>Endpoint</th></tr></thead><tbody>
+<tr><td><a href="develop/rest-api/./course_api.html">Course</a></td><td>Set a course, follow a route, advance to next point, etc.</td><td><code>course</code></td></tr>
+<tr><td><a href="develop/rest-api/./resources_api.html">Resources</a></td><td>Create, view, update and delete waypoints, routes, etc.</td><td><code>resources</code></td></tr>
+</tbody></table>
+<hr />
+<h4 id="following-is-a-list-of-proposed-apis-for-implementation"><a class="header" href="#following-is-a-list-of-proposed-apis-for-implementation">Following is a list of proposed APIs for implementation:</a></h4>
+<table><thead><tr><th>Proposed API</th><th>Description</th><th>Endpoint</th></tr></thead><tbody>
+<tr><td><em><code>Notifications</code></em></td><td>Provide the ability to raise, update and clear notifications from multiple sources. <em><a href="https://github.com/SignalK/signalk-server/pull/1560">View PR</a></em></td><td><code>notifications</code></td></tr>
+<tr><td><em><code>Autopilot</code></em></td><td>Provide the ability to send common commands to an autopilot via a provider plugin. <em><a href="https://github.com/SignalK/signalk-server/pull/1512">View PR</a></em></td><td><code>autopilot</code></td></tr>
+</tbody></table>
+<hr />
+<div style="break-before: page; page-break-before: always;"></div><h1 id="working-with-the-course-api"><a class="header" href="#working-with-the-course-api">Working with the Course API</a></h1>
+<h2 id="overview-2"><a class="header" href="#overview-2">Overview</a></h2>
+<p>The <em>Course API</em> provides common course operations under the path <code>/signalk/v2/api/vessels/self/navigation/course</code> ensuring that all related Signal K data model values are maintained and consistent. This provides a set of data that can be confidently used for <em>course calculations</em> and <em>autopilot operation</em>.</p>
+<p>Client applications use <code>HTTP</code> requests (<code>PUT</code>, <code>GET</code>,<code>DELETE</code>) to perform operations and retrieve course data. </p>
+<p>Additionally, the Course API persists course information on the server to ensure data is not lost in the event of a server restart.</p>
+<p><em>Note: You can view the <em>Course API</em> OpenAPI definition in the Admin UI (Documentation =&gt; OpenApi).</em></p>
+<hr />
+<h2 id="setting-a-course"><a class="header" href="#setting-a-course">Setting a Course</a></h2>
+<p>The Course API provides endpoints for:</p>
+<ol>
+<li>Navigate to a location <em>(lat, lon)</em></li>
+<li>Navigate to a waypoint <em>(href to waypoint resource)</em></li>
+<li>Follow a Route <em>(href to a route resource)</em>.</li>
+</ol>
+<h3 id="1-navigate-to-a-location"><a class="header" href="#1-navigate-to-a-location">1. Navigate to a Location</a></h3>
+<p>To navigate to a point submit a HTTP <code>PUT</code> request to <code>/signalk/v2/api/vessels/self/navigation/course/destination</code> and supply the latitude &amp; longitude of the destination point.</p>
+<pre><code class="language-typescript">HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/destination' {&quot;position&quot;: {&quot;latitude&quot;: -60.5, &quot;longitude&quot;: -166.7}}
+</code></pre>
+<h3 id="2-navigate-to-a-waypoint"><a class="header" href="#2-navigate-to-a-waypoint">2. Navigate to a Waypoint</a></h3>
+<p>To navigate to a point submit a HTTP <code>PUT</code> request to <code>/signalk/v2/api/vessels/self/navigation/course/destination</code> and supply a reference to a waypoint resource entry under <code>/resources/waypoints</code></p>
+<pre><code class="language-typescript">HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/destination' {&quot;href&quot;: &quot;/resources/waypoints/5242d307-fbe8-4c65-9059-1f9df1ee126f&quot;}
+</code></pre>
+<h3 id="3-follow-a-route"><a class="header" href="#3-follow-a-route">3. Follow a Route</a></h3>
+<p>To follow a route submit a HTTP <code>PUT</code> request to <code>/signalk/v2/api/vessels/self/navigation/course/activeRoute</code> and supply a reference to a route resource entry under <code>/resources/routes</code>.</p>
+<pre><code class="language-typescript">HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute' {&quot;href&quot;: &quot;/resources/routes/5242d307-fbe8-4c65-9059-1f9df1ee126f&quot;}
+</code></pre>
+<p>Additional parameters can be set when following a route including:</p>
+<ul>
+<li>Defining the point along the route to start at</li>
+<li>The direction to follow the route (forward / reverse)</li>
+</ul>
+<p><em>Example: Following a route in reverse direction:</em></p>
+<pre><code class="language-typescript">HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute' 
+{
+  &quot;href&quot;: &quot;/resources/routes/5242d307-fbe8-4c65-9059-1f9df1ee126f&quot;,
+  &quot;reverse&quot;: true
+}
+</code></pre>
+<h4 id="advancing-along-a-route"><a class="header" href="#advancing-along-a-route">Advancing along a Route</a></h4>
+<p>As progress along a route is made, you can use the following endpoints to update the destination.</p>
+<p>To set the destination to the next point along the route:</p>
+<pre><code class="language-typescript">HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/nextPoint'
+</code></pre>
+<p>To advance the destination to a point <code>n</code> places beyond the current destination point, supply a positive number representing the number of points to advance:</p>
+<pre><code class="language-typescript">HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/nextPoint' {&quot;value&quot;: 2}
+</code></pre>
+<p><em>Sets destination to the point after the next in sequence.</em></p>
+<p>To set the destination to the previous point along the route:</p>
+<pre><code class="language-typescript">HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/nextPoint' {&quot;value&quot;: -1}
+</code></pre>
+<p>To set the destination to a point <code>n</code> places prior the current destination point, supply a negative number representing the number of points prior:</p>
+<pre><code class="language-typescript">HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/nextPoint' {&quot;value&quot;: -2}
+</code></pre>
+<p><em>Sets destination to the point two prior to the current destination.</em></p>
+<p>To set the destination to a specific point along the route, supply the zero-based index of the point:</p>
+<p><em>Example: 4th point along the route.</em></p>
+<pre><code class="language-typescript">HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/pointIndex' {&quot;value&quot;: 3}
+</code></pre>
+<p><em>Value contains the 'zero-based' index of the point along the route (i.e. 0 = 1st point, 1 = 2nd point, etc.)</em></p>
+<p>To reverse the direction along the route:</p>
+<pre><code class="language-typescript">HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/reverse'
+</code></pre>
+<h4 id="delta-messages"><a class="header" href="#delta-messages">Delta Messages</a></h4>
+<p>The Course API emits delta messages with the following paths when course information has been changed.</p>
+<p><em>Note: Delta values reflect the relevant property of the Course Information data object as detailed  in the
+<a href="develop/rest-api/course_api.html#retrieving-course-information">Retrieving Course Information</a> section.</em></p>
+<ul>
+<li><code>navigation.course.startTime</code></li>
+<li><code>navigation.course.targetArrivalTime</code></li>
+<li><code>navigation.course.arrivalCircle</code></li>
+<li><code>navigation.course.activeRoute</code></li>
+<li><code>navigation.course.nextPoint</code></li>
+<li><code>navigation.course.previousPoint</code></li>
+</ul>
+<h2 id="retrieving-course-information"><a class="header" href="#retrieving-course-information">Retrieving Course Information</a></h2>
+<p>Course information is retrieved by submitting a HTTP <code>GET</code> request to <code>/signalk/v2/api/vessels/self/navigation/course</code>.</p>
+<pre><code class="language-typescript">HTTP GET 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course'
+</code></pre>
+<p>The contents of the response will reflect the operation used to set the current course. The <code>nextPoint</code> &amp; <code>previousPoint</code> sections will always contain values but <code>activeRoute</code> will only contain values when a route is being followed.</p>
+<h4 id="1-operation-navigate-to-a-location-lat-lon"><a class="header" href="#1-operation-navigate-to-a-location-lat-lon">1. Operation: Navigate to a location <em>(lat, lon)</em></a></h4>
+<p><em>Example response:</em></p>
+<pre><code class="language-JSON">{
+  &quot;startTime&quot;: &quot;2023-01-27T01:47:39.785Z&quot;,
+  &quot;targetArrivalTime&quot;: &quot;2022-06-10T01:29:27.592Z&quot;,
+  &quot;arrivalCircle&quot;: 4000,
+  &quot;activeRoute&quot;: null,
+  &quot;nextPoint&quot;: {
+    &quot;type&quot;: &quot;Location&quot;,
+    &quot;position&quot;: {
+      &quot;latitude&quot;: -34.92084502261776,
+      &quot;longitude&quot;: 131.54823303222656
+    }
+  },
+  &quot;previousPoint&quot;: {
+    &quot;type&quot;:&quot;VesselPosition&quot;,
+    &quot;position&quot;: {
+      &quot;latitude&quot;: -34.82084502261776,
+      &quot;longitude&quot;: 131.04823303222656
+    }
+  }
+}
+</code></pre>
+<h4 id="2-operation-navigate-to-a-waypoint-href-to-waypoint-resource"><a class="header" href="#2-operation-navigate-to-a-waypoint-href-to-waypoint-resource">2. Operation: Navigate to a waypoint <em>(href to waypoint resource)</em></a></h4>
+<p><em>Example response:</em></p>
+<pre><code class="language-JSON">{
+  &quot;startTime&quot;: &quot;2023-01-27T01:47:39.785Z&quot;,
+  &quot;targetArrivalTime&quot;: &quot;2022-06-10T01:29:27.592Z&quot;,
+  &quot;arrivalCircle&quot;: 4000,
+  &quot;activeRoute&quot;: null,
+  &quot;nextPoint&quot;: {
+    &quot;href&quot;: &quot;/resources/waypoints/f24d72e4-e04b-47b1-920f-66b78e7b033e&quot;,
+    &quot;type&quot;: &quot;Waypoint&quot;,
+    &quot;position&quot;: {
+      &quot;latitude&quot;: -34.92084502261776,
+      &quot;longitude&quot;: 131.54823303222656
+    }
+  },
+  &quot;previousPoint&quot;: {
+    &quot;type&quot;:&quot;VesselPosition&quot;,
+    &quot;position&quot;: {
+      &quot;latitude&quot;: -34.82084502261776,
+      &quot;longitude&quot;: 131.04823303222656
+    }
+  }
+}
+</code></pre>
+<h4 id="3-operation-follow-a-route-href-to-a-route-resource"><a class="header" href="#3-operation-follow-a-route-href-to-a-route-resource">3. Operation: Follow a Route <em>(href to a route resource)</em>.</a></h4>
+<p><em>Example response:</em></p>
+<pre><code class="language-JSON">{
+  &quot;startTime&quot;: &quot;2023-01-27T01:47:39.785Z&quot;,
+  &quot;targetArrivalTime&quot;: &quot;2022-06-10T01:29:27.592Z&quot;,
+  &quot;arrivalCircle&quot;: 1000,
+  &quot;activeRoute&quot;: {
+    &quot;href&quot;: &quot;/resources/routes/e24d72e4-e04b-47b1-920f-66b78e7b0331&quot;,
+    &quot;pointIndex&quot;: 0,
+    &quot;pointTotal&quot;: 5,
+    &quot;reverse&quot;: false,
+    &quot;name&quot;: &quot;my route&quot;,
+    &quot;waypoints&quot;: [
+      {
+        &quot;latitude&quot;: -34.92084502261776,
+        &quot;longitude&quot;: 131.54823303222656
+      },
+      {
+        &quot;latitude&quot;: -34.86621482446046,
+        &quot;longitude&quot;: 132.10166931152344,
+      },
+      {
+        &quot;latitude&quot;: -34.6309479733581,
+        &quot;longitude&quot;: 132.23350524902344
+      },
+      {
+        &quot;latitude&quot;: -34.63546778783319,
+        &quot;longitude&quot;: 131.8867492675781
+      },
+      {
+        &quot;latitude&quot;: -34.71000915922492,
+        &quot;longitude&quot;: 131.82289123535156
+      }
+    ]
+  },
+  &quot;nextPoint&quot;: {
+    &quot;type&quot;: &quot;RoutePoint&quot;,
+    &quot;position&quot;: {
+      &quot;latitude&quot;: -34.92084502261776,
+      &quot;longitude&quot;: 131.54823303222656
+    }
+  },
+  &quot;previousPoint&quot;: {
+    &quot;type&quot;:&quot;VesselPosition&quot;,
+    &quot;position&quot;: {
+      &quot;latitude&quot;: -34.82084502261776,
+      &quot;longitude&quot;: 131.04823303222656
+    }
+  }
+}
+</code></pre>
+<h2 id="cancelling-navigation"><a class="header" href="#cancelling-navigation">Cancelling navigation</a></h2>
+<p>To cancel the current course navigation and clear the course data</p>
+<pre><code class="language-typescript">HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/'
+</code></pre>
+<hr />
+<h2 id="course-calculations"><a class="header" href="#course-calculations">Course Calculations</a></h2>
+<p>Whilst not performing course calculations, the <em>Course API</em> defines the paths to accommodate the values calculated during course navigation.</p>
+<p>Click <a href="develop/rest-api/./course_calculations.html">here</a> for details.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="course-calculations-and-providers-1"><a class="header" href="#course-calculations-and-providers-1">Course Calculations and Providers</a></h1>
+<p>The <em>Course API</em> defines the path <code>/vessels/self/navigation/course/calcValues</code> to accommodate the calculated values related to course navigation.</p>
+<p>These paths are available to be populated by a &quot;course provider&quot; plugin that uses the course information set using the  <em>Course API</em>. This approach promotes the extensibility of Signal K server providing flexibility and interoperability. See <a href="develop/rest-api/course_calculations.html#course-provider-plugins">Course Provider Plugins</a> below.</p>
+<img src="develop/rest-api/../../img/course_provider.svg" width="300px"/>
+<h2 id="calculated-value-paths-calcvalues-1"><a class="header" href="#calculated-value-paths-calcvalues-1">Calculated value paths: <code>calcValues</code></a></h2>
+<p>The following paths are defined to hold values calculated using the information maintained by <em>Course API</em> operations:</p>
+<ul>
+<li>calcMethod: <em>(&quot;Rhumbline&quot; or &quot;GreatCircle&quot;)</em></li>
+<li>crossTrackError</li>
+<li>bearingTrackTrue</li>
+<li>bearingTrackMagnetic</li>
+<li>estimatedTimeOfArrival <em>(e.g. &quot;2022-04-22T05:02:56.484Z&quot;)</em></li>
+<li>distance</li>
+<li>bearingTrue</li>
+<li>bearingMagnetic</li>
+<li>velocityMadeGood</li>
+<li>timeToGo</li>
+<li>targetSpeed</li>
+<li>previousPoint.distance</li>
+</ul>
+<p><em>Example:</em></p>
+<pre><code>{
+  &quot;calcMethod&quot;: &quot;Rhumbline&quot;,
+  &quot;crossTrackError&quot;: 458.784,
+  &quot;bearingTrackTrue&quot;: 4.58491,
+  &quot;bearingTrackMagnetic&quot;: 4.51234,
+  &quot;estimatedTimeOfArrival&quot;: &quot;2022-04-22T05:02:56.484Z&quot;,
+  &quot;distance&quot;: 10157,
+  &quot;bearingTrue&quot;: 4.58491,
+  &quot;bearingMagnetic&quot;: 4.51234,
+  &quot;velocityMadeGood&quot;: 7.2653,
+  &quot;timeToGo&quot;: 8491,
+  &quot;targetSpeed&quot;: 2.2653,
+  &quot;previousPoint&quot;: {
+    &quot;distance&quot;: 10157
+  }
+}
+</code></pre>
+<h2 id="course-notifications-1"><a class="header" href="#course-notifications-1">Course Notifications</a></h2>
+<p>Calculated course values that cross a threshold should trigger a notification so that the necessary action can be taken.</p>
+<p>The Course API defines the following notifications which should be implemented by a course provider:</p>
+<ul>
+<li><code>navigation.course.arrivalCircleEntered</code></li>
+<li><code>navigation.course.perpendicularPassed</code></li>
+</ul>
+<h2 id="course-provider-plugins-1"><a class="header" href="#course-provider-plugins-1">Course Provider Plugins</a></h2>
+<p>Signal K server includes the <code>Course Data Provider</code> plugin as part of the installation to provide out-of-the-box support for course calculations nd notifications.</p>
+<p>This plugin can be replaced with others from the AppStore, or your own, to extend the number and types of calculations performed.</p>
+<p>If you are looking to develop a course provider plugin, following are the recommended guidlines:</p>
+<ol>
+<li>Ensure values are generated for ALL the defined paths (above)</li>
+<li>Values MUST be calculated using <code>/vessels/self/navigation/course</code> path values mainntained by the <em>Course API</em></li>
+<li>Ensure values are set to null when no destination is set or the value cannot be calculated</li>
+<li>Perform the calculations using a &quot;worker thread&quot; to minimise impact on the server &quot;main thread&quot;</li>
+<li>Ensure the worker is set up and shut down as part of plugin &quot;start&quot; and &quot;stop&quot; functions</li>
+<li>Raise the notifications outlined above.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="working-with-the-resources-api"><a class="header" href="#working-with-the-resources-api">Working with the Resources API</a></h1>
+<h2 id="overview-3"><a class="header" href="#overview-3">Overview</a></h2>
+<p>The SignalK specification defines a number of resources (routes, waypoints, notes, regions &amp; charts) each with its own path under the root <code>resources</code> path <em>(e.g. <code>/signalk/v2/api/resources/routes</code>)</em>.</p>
+<p>Additionally, the <code>/resources</code> path can be used to host other user defined resource types, each grouped within its own folder <em>(e.g. <code>/signalk/v2/api/resources/fishingZones</code>)</em>.</p>
+<p>The <em>Resources API</em> validates requests to these resource paths and passes them to a <a href="develop/rest-api/../plugins/resource_provider_plugins.html">Resource Provider plugin</a> for storage and retrieval. </p>
+<p>Client applications can then use <code>HTTP</code> requests to these paths to store (<code>POST</code>, <code>PUT</code>), retrieve (<code>GET</code>) and remove (<code>DELETE</code>) resource entries. </p>
+<p><em>Note: the ability to store resource entries is controlled by the server security settings so client applications may need to authenticate for write / delete operations to complete successfully.</em></p>
+<h3 id="retrieving-resources"><a class="header" href="#retrieving-resources">Retrieving Resources</a></h3>
+<hr />
+<p>Resource entries are retrived by submitting an HTTP <code>GET</code> request to the relevant path.</p>
+<p>For example to return a list of all available routes</p>
+<pre><code class="language-typescript">HTTP GET 'http://hostname:3000/signalk/v2/api/resources/routes'
+</code></pre>
+<p>or alternatively fetch a specific route.</p>
+<pre><code class="language-typescript">HTTP GET 'http://hostname:3000/signalk/v2/api/resources/routes/94052456-65fa-48ce-a85d-41b78a9d2111'
+</code></pre>
+<p>A filtered list of entries can be retrieved based on criteria such as:</p>
+<ul>
+<li>being within a bounded area</li>
+<li>distance from vessel</li>
+<li>total entries returned</li>
+</ul>
+<p>by supplying a query string containing <code>key | value</code> pairs in the request.</p>
+<p><em>Example 1: Retrieve waypoints within 50km of the vessel. Note: distance in meters value should be provided.</em></p>
+<pre><code class="language-typescript">HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?distance=50000'
+</code></pre>
+<p><em>Example 2: Retrieve up to 20 waypoints within 90km of the vessel.</em></p>
+<pre><code class="language-typescript">HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?distance=90000&amp;limit=20'
+</code></pre>
+<p><em>Example 3: Retrieve waypoints within a bounded area. Note: the bounded area is supplied as bottom left &amp; top right corner coordinates in the form swLongitude,swLatitude,neLongitude,neLatitude</em>.</p>
+<pre><code class="language-typescript">HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?bbox=[-135.5,38,-134,38.5]'
+</code></pre>
+<h3 id="deleting-resources"><a class="header" href="#deleting-resources">Deleting Resources</a></h3>
+<hr />
+<p>Resource entries are deleted by submitting an HTTP <code>DELETE</code> request to a path containing the <code>id</code> of the resource to delete.</p>
+<p><em>Example: Delete from storage the route with id <code>94052456-65fa-48ce-a85d-41b78a9d2111</code>.</em></p>
+<pre><code class="language-typescript">HTTP DELETE 'http://hostname:3000/signalk/v2/api/resources/routes/94052456-65fa-48ce-a85d-41b78a9d2111'
+</code></pre>
+<h3 id="creating--updating-resources"><a class="header" href="#creating--updating-resources">Creating / updating Resources</a></h3>
+<hr />
+<p><strong>Creating a new resource entry:</strong></p>
+<p>Resource entries are created by submitting an HTTP <code>POST</code> request to a path for the relevant resource type. </p>
+<pre><code class="language-typescript">HTTP POST 'http://hostname:3000/signalk/v2/api/resources/routes' {resource_data}
+</code></pre>
+<p>The new resource is created and its <code>id</code> (generated by the server) is returned in the response message.</p>
+<pre><code class="language-JSON">{
+  &quot;state&quot;: &quot;COMPLETED&quot;,
+  &quot;statusCode&quot;: 200,
+  &quot;id&quot;: &quot;94052456-65fa-48ce-a85d-41b78a9d2111&quot;
+}
+</code></pre>
+<p><em>Note: Each <code>POST</code> will generate a new <code>id</code> so if the resource data remains the same duplicate resources will be created.</em></p>
+<p><strong>Updating a resource entry:</strong></p>
+<p>Resource entries are updated by submitting an HTTP <code>PUT</code> request to a path for the relevant resource type that includes the resource <code>id</code>.</p>
+<pre><code class="language-typescript">HTTP PUT 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111'
+</code></pre>
+<p>As the <code>PUT</code> request replaces the record with the supplied <code>id</code>,  the submitted resource data should contain a complete record for the resource type being written.</p>
+<p>Each resource type has a specific set of attributes that are required to be supplied before the resource entry can be created or updated.</p>
+<p>If either the submitted resource data or the resource id are invalid then the operation is aborted._</p>
+<p><em>Note: the submitted resource data is validated against the OpenApi schema definition for the relevant resource type.</em></p>
+<hr />
+<h2 id="multiple-providers-for-a-resource-type"><a class="header" href="#multiple-providers-for-a-resource-type">Multiple Providers for a Resource Type</a></h2>
+<p>The Resources API will allow for multiple plugins to register as a provider for the same resource type.</p>
+<p>When this scenario occurs the server services request in the following ways:</p>
+<p><strong>Listing entries:</strong></p>
+<p>When a list of resources is requested </p>
+<p><em>for example:</em></p>
+<pre><code class="language-typescript">HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints'
+</code></pre>
+<p>each registered provider will be asked to return matching entries and the server aggregates the results and returns them to the client.</p>
+<hr />
+<p><strong>Requests for specific resources:</strong></p>
+<p>When a request is received for a specific resource </p>
+<p><em>for example:</em></p>
+<pre><code class="language-typescript">HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111'
+
+HTTP PUT 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111'
+
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111'
+</code></pre>
+<p>each registered provider will polled to determine which one owns the entry with the supplied id. The provider with the resource entry is then the target of the requested operation (<code>getResource()</code>, <code>setResource()</code>, <code>deleteResource()</code>).</p>
+<hr />
+<p><strong>Creating new resource entries:</strong></p>
+<p>When a request is received to create a new resource </p>
+<p><em>for example:</em></p>
+<pre><code class="language-typescript">HTTP POST 'http://hostname:3000/signalk/v2/api/resources/waypoints'
+</code></pre>
+<p>the first provider that was registered for that resource type will be the target of the requested operation (<code>setResource()</code>).</p>
+<hr />
+<p><strong>Specifying the resource provider to be the tartet of the request:</strong></p>
+<p>When multiple providers are registered for a resource type the client can specify which provider should be the target of the request by using the query parameter <code>provider</code>.</p>
+<p><em>Example:</em></p>
+<pre><code class="language-typescript">HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?provider=provider-plugin-id'
+
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111?provider=provider-plugin-id'
+
+HTTP PUT 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111?provider=provider-plugin-id'
+
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111?provider=provider-plugin-id'
+
+HTTP POST 'http://hostname:3000/signalk/v2/api/resources/waypoints?provider=provider-plugin-id'
+</code></pre>
+<p>the value assigned to <code>provider</code> is the <code>plugin id</code> of the resource provider plugin.</p>
+<p>The plugin id can be obtained from the Signal K server url <code>http://hostname:3000/plugins</code>.</p>
+<p><em>Example:</em></p>
+<pre><code class="language-typescript">HTTP GET 'http://hostname:3000/plugins'
+</code></pre>
+<pre><code class="language-JSON">[
+  {
+    &quot;id&quot;: &quot;sk-resources-fs&quot;,  // &lt;-- plugin id
+    &quot;name&quot;: &quot;Resources Provider&quot;,
+    &quot;packageName&quot;: &quot;sk-resources-fs&quot;,
+    &quot;version&quot;: &quot;1.3.0&quot;,
+    ...
+  },
+  ...
+]
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="contributing"><a class="header" href="#contributing">Contributing</a></h1>
+<p>Signal K server is an Open Source project and contributions are welcome.</p>
+<p>Contributions are made by creating Pull Requests in the <a href="https://github.com/SignalK/signalk-server">GitHub repository</a>.</p>
+<p><em><strong>Working on your first Pull Request?</strong></em> </p>
+<p>You can learn how from this <em>free</em> series <a href="https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github">How to Contribute to an Open Source Project on GitHub</a></p>
+<hr />
+<h3 id="submitting-a-pull-request-pr"><a class="header" href="#submitting-a-pull-request-pr">Submitting a Pull Request (PR)</a></h3>
+<p>Before you submit your Pull Request (PR) consider the following guidelines:</p>
+<ol>
+<li>
+<p><a href="https://help.github.com/articles/fork-a-repo/">Fork</a> the repository.</p>
+</li>
+<li>
+<p>Make your changes in a new git branch:</p>
+<pre><code class="language-shell">git checkout -b my-fix-branch master
+</code></pre>
+</li>
+<li>
+<p>Create your patch.</p>
+</li>
+<li>
+<p>Commit your changes using a descriptive commit message that follows the 
+<a href="https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#commits">conventions outlined here</a>. Whilst we are not 100% strict about this, it really helps when reviewing the PR and in making the commit history readable. The TL;DR of it is below.</p>
+<ul>
+<li>The subject line should be in the format <code>&lt;type&gt;: &lt;subject&gt;</code>, where <code>&lt;type&gt;</code> should be one of:
+<ul>
+<li>feat (feature)</li>
+<li>fix (bug fix)</li>
+<li>docs (documentation)</li>
+<li>style (formatting, missing semi colons, ...)</li>
+<li>refactor</li>
+<li>test (when adding missing tests)</li>
+<li>chore (maintain)</li>
+</ul>
+</li>
+<li><code>&lt;subject&gt;</code> should use imperative, present tense: &quot;change&quot; not &quot;changed&quot; or &quot;changes&quot;</li>
+<li>Examples of good Subject Lines:
+<ul>
+<li><code>doc: clarify meta.units behaviour</code></li>
+<li><code>chore: update keyswithmetadat.json</code></li>
+<li><code>style: whitespace</code></li>
+<li><code>fix: allow nextPoint to be an intermediate leaf</code></li>
+<li><code>feature: push design object fields under value/values</code></li>
+</ul>
+</li>
+<li>Message body should also be in imperative, present tense and <strong>include motivation for the change</strong> and <strong>differences to previous behaviour</strong>.</li>
+<li>Footer should reference any issues. If the PR should close issue(s) (assuming it is committed), use closes/fixes or resolves and the issue number. eg. &quot;closes #18&quot;, &quot;fixes #21 and resolves #23&quot;.</li>
+<li>Subject, Body and Footer are separated by a blank line.</li>
+</ul>
+</li>
+<li>
+<p>Push your branch to GitHub:</p>
+<pre><code class="language-shell">git push origin my-fix-branch
+</code></pre>
+</li>
+<li>
+<p>In GitHub, create a pull request.</p>
+</li>
+</ol>
+<ul>
+<li>Use the same guidelines as commit messages to write the PR title and description. The server's release notes are automatically generated from PR titles, so think about how you can make them informative and easy to understand. The description should tell how the change affects the server's behavior and motivation for doing the change.</li>
+<li>If we suggest changes to your PR we expect you to:
+<ul>
+<li>
+<p>Implement the agreed changes.</p>
+</li>
+<li>
+<p>Rebase your branch and force push to your GitHub repository (this will update your Pull Request):</p>
+<pre><code class="language-shell">git rebase master -i
+git push -f
+</code></pre>
+</li>
+</ul>
+</li>
+</ul>
+<h4 id="after-your-pull-request-is-merged"><a class="header" href="#after-your-pull-request-is-merged">After your pull request is merged</a></h4>
+<p>After your pull request is merged, you can safely delete your branch and pull the changes from the main (upstream) repository:</p>
+<ul>
+<li>
+<p>Delete the remote branch on GitHub either through the GitHub web UI or your local shell as follows:</p>
+<pre><code class="language-shell">git push origin --delete my-fix-branch
+</code></pre>
+</li>
+<li>
+<p>Check out the master branch:</p>
+<pre><code class="language-shell">git checkout master -f
+</code></pre>
+</li>
+<li>
+<p>Delete the local branch:</p>
+<pre><code class="language-shell">git branch -D my-fix-branch
+</code></pre>
+</li>
+<li>
+<p>Update your master with the latest upstream version:</p>
+<pre><code class="language-shell">git pull --ff upstream master
+</code></pre>
+</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h2 id="help--support"><a class="header" href="#help--support">Help &amp; Support</a></h2>
+<p>Signal K has an friendly and helpful community where you can find support and assistance whether you are trouble shooting issues or just have a question.</p>
+<p><strong>Join the discussion:</strong></p>
+<ul>
+<li>
+<p><a href="https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions"><strong>FAQ: Frequently Asked Questions</strong></a></p>
+<ul>
+<li>
+<p><a href="https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions#how-do-i-integrate-with-nmea2000-can-bus">How do I integrate with NMEA2000 (CAN bus)</a>.</p>
+</li>
+<li>
+<p><a href="https://github.com/SignalK/signalk-server/wiki/Installing-and-Updating-Node.js">Installing &amp; Updating NodeJS</a></p>
+</li>
+</ul>
+</li>
+<li>
+<p><a href="https://github.com/SignalK/signalk/discussions/"><strong>GitHub Discussions</strong></a></p>
+</li>
+<li>
+<p><a href="https://signalk-dev.slack.com/"><strong>Slack</strong></a>. <em>(New to Signal K Slack? Then <a href="https://join.slack.com/t/signalk-dev/shared_invite/zt-1leccop43-KrU7G6yBq9g91KXjZtNg1g">click here</a> for an invite.)</em></p>
+</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="sponsor-signal-k"><a class="header" href="#sponsor-signal-k">Sponsor Signal K</a></h1>
+<p>Signal K is all about creating open and interoperable marine data systems. We have created an open specification for representing marine related data, APIs and interfacing to use the data and free software that you can download and use.</p>
+<p>If you would like to contribute and help fund continued development <a href="https://opencollective.com/signalk">visit Signal K on Open Collective</a>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+    </body>
+</html>

@@ -1,0 +1,290 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Installing on Raspberry Pi - Signal K Server Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="A Guide for users and developers.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">Introduction</a></li><li class="chapter-item expanded "><a href="../whats_new.html"><strong aria-hidden="true">1.</strong> What's New in V2</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../breaking_changes.html"><strong aria-hidden="true">1.1.</strong> Changes &amp; Deprecations</a></li></ol></li><li class="chapter-item expanded "><li class="part-title">Getting Started</li><li class="chapter-item expanded "><a href="../installation/install.html"><strong aria-hidden="true">2.</strong> Installation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../installation/raspberry_pi_installation.html" class="active"><strong aria-hidden="true">2.1.</strong> Installing on Raspberry Pi</a></li><li class="chapter-item expanded "><a href="../installation/updating.html"><strong aria-hidden="true">2.2.</strong> Updating your installation</a></li><li class="chapter-item expanded "><a href="../installation/command_line.html"><strong aria-hidden="true">2.3.</strong> Runtime environment &amp; options</a></li></ol></li><li class="chapter-item expanded "><a href="../security.html"><strong aria-hidden="true">3.</strong> Security</a></li><li class="chapter-item expanded affix "><li class="part-title">Setup</li><li class="chapter-item expanded "><a href="../setup/configuration.html"><strong aria-hidden="true">4.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="../setup/branding.html"><strong aria-hidden="true">5.</strong> Branding</a></li><li class="chapter-item expanded affix "><li class="part-title">Develop</li><li class="chapter-item expanded "><a href="../develop/developer_notes.html"><strong aria-hidden="true">6.</strong> Notes for Developers</a></li><li class="chapter-item expanded "><a href="../develop/webapps.html"><strong aria-hidden="true">7.</strong> WebApps</a></li><li class="chapter-item expanded "><a href="../develop/plugins/server_plugin.html"><strong aria-hidden="true">8.</strong> Plugins</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../develop/plugins/deltas.html"><strong aria-hidden="true">8.1.</strong> Processing Data</a></li><li class="chapter-item expanded "><a href="../develop/plugins/server_plugin_api.html"><strong aria-hidden="true">8.2.</strong> Server API</a></li><li class="chapter-item expanded "><a href="../develop/plugins/resource_provider_plugins.html"><strong aria-hidden="true">8.3.</strong> Resource Providers</a></li><li class="chapter-item expanded "><a href="../develop/rest-api/course_calculations.html"><strong aria-hidden="true">8.4.</strong> Course Providers</a></li></ol></li><li class="chapter-item expanded "><a href="../develop/plugins/publishing.html"><strong aria-hidden="true">9.</strong> Publishing to the AppStore</a></li><li class="chapter-item expanded "><a href="../develop/rest-api/open_api.html"><strong aria-hidden="true">10.</strong> REST APIs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../develop/rest-api/course_api.html"><strong aria-hidden="true">10.1.</strong> Course API</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../develop/rest-api/course_calculations.html"><strong aria-hidden="true">10.1.1.</strong> Course Calulations</a></li></ol></li><li class="chapter-item expanded "><a href="../develop/rest-api/resources_api.html"><strong aria-hidden="true">10.2.</strong> Resources API</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">10.3.</strong> Notifications API</div></li><li class="chapter-item expanded "><div><strong aria-hidden="true">10.4.</strong> Autopilot API</div></li></ol></li><li class="chapter-item expanded "><a href="../develop/contributing.html"><strong aria-hidden="true">11.</strong> Contribute</a></li><li class="chapter-item expanded affix "><li class="part-title">Support</li><li class="chapter-item expanded "><a href="../support/help.html"><strong aria-hidden="true">12.</strong> Help &amp; Support</a></li><li class="chapter-item expanded "><a href="../support/sponsor.html"><strong aria-hidden="true">13.</strong> Sponsor</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Signal K Server Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="installation-on-raspberry-pi"><a class="header" href="#installation-on-raspberry-pi">Installation on Raspberry Pi</a></h1>
+<p>Installation of Signal K server can consists of the following steps:</p>
+<ol>
+<li>Install the tools and libraries required to run the Signal K server (the dependencies)</li>
+<li>Install a Signal K Server to process the Signal K data</li>
+<li>Run the Setup script.</li>
+</ol>
+<p><em><strong>Important:</strong> If you are updating a Signal K server installation, especially if upgrading an installed version &lt;= 1.40.0, <a href="./updating.html">please check here first</a>.</em></p>
+<h3 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites:</a></h3>
+<p>Raspberry Pi OS is installed on the device. </p>
+<p>For instructions on how to install the operating system <a href="https://www.raspberrypi.org/documentation/computers/getting-started.html#setting-up-your-raspberry-pi">can be found here.</a>.</p>
+<p><em>Note: It is also possible to perform a &quot;headless install&quot; using <code>Raspberry Pi OS Lite</code> since the GUI for Signal K is browser based.</em></p>
+<p>Once the OS installation has been completed, you are ready to commence.</p>
+<hr />
+<h2 id="install-the-dependencies"><a class="header" href="#install-the-dependencies">Install the Dependencies</a></h2>
+<ol>
+<li>
+<p>Log in to the RPi Desktop and open a terminal.</p>
+</li>
+<li>
+<p>Update the list of install packages.</p>
+<pre><code>$ sudo apt update
+</code></pre>
+</li>
+<li>
+<p>Install NodeJS and npm.</p>
+<pre><code>$ curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+$ sudo apt-get install -y nodejs
+</code></pre>
+</li>
+<li>
+<p>Ensure that we're using the latest version of npm.</p>
+<pre><code>$ sudo npm install -g npm@latest
+</code></pre>
+<p>Use the following command to check the versions of NodeJS and npm installed.</p>
+<pre><code>node -v &amp;&amp; npm -v
+</code></pre>
+<p>Ensure the reported versions are equal to or greater than <code>v18.15.0, 9.5.0</code> respectively.</p>
+</li>
+<li>
+<p>Install a Bonjour (mDNS) service for Linux called Avahi, which allows Apps and other network devices to Discover the Signal K server.</p>
+<pre><code>$ sudo apt install libnss-mdns avahi-utils libavahi-compat-libdnssd-dev
+</code></pre>
+</li>
+</ol>
+<h2 id="install-signal-k-server"><a class="header" href="#install-signal-k-server">Install Signal K Server</a></h2>
+<pre><code>$ sudo npm install -g signalk-server
+</code></pre>
+<p>You can test that installation was successful by starting the server using some 
+sample data.</p>
+<pre><code>$ signalk-server --sample-nmea0183-data
+</code></pre>
+<p>You should see the terminal output &quot;signalk-server running at 0.0.0.0:3000&quot; as shown below...</p>
+<pre><code>$ signalk-server --sample-nmea0183-data
+Using sample data from /usr/lib/node_modules/signalk-server/samples/plaka.log
+signalk-server running at 0.0.0.0:3000
+</code></pre>
+<p>The Signal K Node Server is now reading and publishing sample NMEA0183 data from the specified file.</p>
+<p>Using a Web browser enter the following URL: <code>http://127.0.0.1:3000/signalk</code> which should display the following information indicating the server is up and running.</p>
+<pre><code class="language-JSON">{
+    &quot;endpoints&quot;:{
+        &quot;v1&quot;:{
+            &quot;version&quot;:&quot;2.0.0&quot;,
+            &quot;signalk-http&quot;:&quot;http://127.0.0.1:3000/signalk/v1/api/&quot;,
+            &quot;signalk-ws&quot;:&quot;ws://127.0.0.1:3000/signalk/v1/stream&quot;,
+            &quot;signalk-tcp&quot;:&quot;tcp://127.0.0.1:3858&quot;
+        }
+    },
+    &quot;server&quot;:{
+        &quot;id&quot;:&quot;signalk-server-node&quot;,
+        &quot;version&quot;:&quot;2.0.0&quot;
+    }
+}
+</code></pre>
+<h2 id="run-the-setup-script"><a class="header" href="#run-the-setup-script">Run the Setup Script</a></h2>
+<p>Now that you have Signal K server installed, you will want to generate a settings file for your vessel
+and configure your RPi to start the server automatically. To do this run the setup script by entering the  following command and follow the prompts.</p>
+<pre><code>$ sudo signalk-server-setup
+</code></pre>
+<p>You can re-run this command at any time in the future to change the settings.</p>
+<p><em>Note: The setup script will enable security which will require you to <code>Login`` from the Admin UI. Clicking </code>Login` for the first time will prompt you to create a user and password.</em></p>
+<p>Signal K server will now be started automatically when your RPi boots up. </p>
+<p>If you want to temporarily stop the Signal K server, you can do so by entering the following commands:</p>
+<pre><code>$ sudo systemctl stop signalk.service
+$ sudo systemctl stop signalk.socket
+</code></pre>
+<p>To start Signal K server again enter the following commands:</p>
+<pre><code>$ sudo systemctl start signalk.service
+$ sudo systemctl start signalk.socket
+</code></pre>
+<p>To stop Signal K server from starting automatically enter the following commands:</p>
+<pre><code>$ sudo systemctl disable signalk.service
+$ sudo systemctl disable signalk.socket
+</code></pre>
+<p>You are ready to now <strong><a href="../setup/configuration.html">configure</a></strong> your installation and connect data from devices on your boat.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../installation/install.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../installation/updating.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../installation/install.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../installation/updating.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </body>
+</html>

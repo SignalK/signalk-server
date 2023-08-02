@@ -1,0 +1,480 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Plugins - Signal K Server Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="A Guide for users and developers.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../../index.html">Introduction</a></li><li class="chapter-item expanded "><a href="../../whats_new.html"><strong aria-hidden="true">1.</strong> What's New in V2</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../breaking_changes.html"><strong aria-hidden="true">1.1.</strong> Changes &amp; Deprecations</a></li></ol></li><li class="chapter-item expanded "><li class="part-title">Getting Started</li><li class="chapter-item expanded "><a href="../../installation/install.html"><strong aria-hidden="true">2.</strong> Installation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../installation/raspberry_pi_installation.html"><strong aria-hidden="true">2.1.</strong> Installing on Raspberry Pi</a></li><li class="chapter-item expanded "><a href="../../installation/updating.html"><strong aria-hidden="true">2.2.</strong> Updating your installation</a></li><li class="chapter-item expanded "><a href="../../installation/command_line.html"><strong aria-hidden="true">2.3.</strong> Runtime environment &amp; options</a></li></ol></li><li class="chapter-item expanded "><a href="../../security.html"><strong aria-hidden="true">3.</strong> Security</a></li><li class="chapter-item expanded affix "><li class="part-title">Setup</li><li class="chapter-item expanded "><a href="../../setup/configuration.html"><strong aria-hidden="true">4.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="../../setup/branding.html"><strong aria-hidden="true">5.</strong> Branding</a></li><li class="chapter-item expanded affix "><li class="part-title">Develop</li><li class="chapter-item expanded "><a href="../../develop/developer_notes.html"><strong aria-hidden="true">6.</strong> Notes for Developers</a></li><li class="chapter-item expanded "><a href="../../develop/webapps.html"><strong aria-hidden="true">7.</strong> WebApps</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/server_plugin.html" class="active"><strong aria-hidden="true">8.</strong> Plugins</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../develop/plugins/deltas.html"><strong aria-hidden="true">8.1.</strong> Processing Data</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/server_plugin_api.html"><strong aria-hidden="true">8.2.</strong> Server API</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/resource_provider_plugins.html"><strong aria-hidden="true">8.3.</strong> Resource Providers</a></li><li class="chapter-item expanded "><a href="../../develop/rest-api/course_calculations.html"><strong aria-hidden="true">8.4.</strong> Course Providers</a></li></ol></li><li class="chapter-item expanded "><a href="../../develop/plugins/publishing.html"><strong aria-hidden="true">9.</strong> Publishing to the AppStore</a></li><li class="chapter-item expanded "><a href="../../develop/rest-api/open_api.html"><strong aria-hidden="true">10.</strong> REST APIs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../develop/rest-api/course_api.html"><strong aria-hidden="true">10.1.</strong> Course API</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../develop/rest-api/course_calculations.html"><strong aria-hidden="true">10.1.1.</strong> Course Calulations</a></li></ol></li><li class="chapter-item expanded "><a href="../../develop/rest-api/resources_api.html"><strong aria-hidden="true">10.2.</strong> Resources API</a></li><li class="chapter-item expanded "><div><strong aria-hidden="true">10.3.</strong> Notifications API</div></li><li class="chapter-item expanded "><div><strong aria-hidden="true">10.4.</strong> Autopilot API</div></li></ol></li><li class="chapter-item expanded "><a href="../../develop/contributing.html"><strong aria-hidden="true">11.</strong> Contribute</a></li><li class="chapter-item expanded affix "><li class="part-title">Support</li><li class="chapter-item expanded "><a href="../../support/help.html"><strong aria-hidden="true">12.</strong> Help &amp; Support</a></li><li class="chapter-item expanded "><a href="../../support/sponsor.html"><strong aria-hidden="true">13.</strong> Sponsor</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Signal K Server Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="server-plugins"><a class="header" href="#server-plugins">Server plugins</a></h1>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>Signal K Node server plugins are components that extend functionality of the server.
+They are installed via the AppStore and configured via the Admin UI.</p>
+<p>Signal K server exposes an interface for plugins to use in order to interact with the full data model, emit delta messages and process requests.</p>
+<p>Plugins can also provide a webapp by placing the relavent files in a folder named <code>/public/</code> which the server will mount under <code>http://{skserver}:3000/{pluginId}</code>.</p>
+<p><strong>Note: With the move towards Signal K server providing APIs to perform operations, it is important that you consider how the proposed functionality provided by your plugin aligns with the Signal K architecture before starting development.</strong></p>
+<p>For example, if the plugin you are looking to develop is providing access to information such as <code>route,</code> <code>waypoint</code>, <code>POI</code>, or <code>charts</code> you should be creating a <em><a href="./resource_provider_plugins.html">Resources Provider Plugin</a></em> for the <em><a href="../openapi/resources_api.html">Resources API</a></em>.</p>
+<p>Or if you are looking to perform course calculations or integrate with an auotpilot, you will want to review the <em><a href="../openapi/course_api.html">Course API</a></em> documentation prior to commencing your project.</p>
+<p><strong>OpenApi description for your plugin's API</strong> </p>
+<h2 id="if-your-plugin-provides-an-api-you-should-consider-providing-an-openapi-description-this-promotes-cooperation-with-other-pluginwebapp-authors-and-also-paves-the-way-for-incorporating-new-apis-piloted-within-a-plugin-into-the-signal-k-specification"><a class="header" href="#if-your-plugin-provides-an-api-you-should-consider-providing-an-openapi-description-this-promotes-cooperation-with-other-pluginwebapp-authors-and-also-paves-the-way-for-incorporating-new-apis-piloted-within-a-plugin-into-the-signal-k-specification">If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification.</a></h2>
+<h2 id="getting-started-with-plugin-development"><a class="header" href="#getting-started-with-plugin-development">Getting Started with Plugin Development</a></h2>
+<h3 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h3>
+<p>To get started developing your plugin you will need the following:</p>
+<ul>
+<li>Signal K server instance on your device <em>(clone of GIT repository or docker instance)</em></li>
+<li>NodeJs version 18 or later and NPM installed</li>
+<li>SignalK server configuration folder. <em>(Created when Signal K server is started. default location is <code>$HOME/.signalk</code>)</em>. </li>
+</ul>
+<hr />
+<h3 id="setting-up-your-project"><a class="header" href="#setting-up-your-project">Setting up your project</a></h3>
+<ol>
+<li>Create a folder for your plugin code and create the necessary file structure:</li>
+</ol>
+<pre><code class="language-bash">mkdir my-pluin
+cd my-plugin
+npm init      # create package.json file
+</code></pre>
+<ol start="2">
+<li>Create the folders to hold your plugin code and webapp UI.</li>
+</ol>
+<pre><code class="language-bash">/my-plugin
+  /plugin     # plugin (javascript code / built typesrcipt code)
+    index.js
+    ..
+  /public     # web app UI
+    index.html
+    ..
+  /src        # typescript source code (not required if using javascript)
+    index.ts  
+    ...
+  package.json
+</code></pre>
+<ol start="3">
+<li>Update the <code>package.json</code> to reflect your project structure and add keywords to identify the package for the Signal K AppStore.</li>
+</ol>
+<pre><code class="language-JSON">{
+  &quot;name&quot;: &quot;my-plugin&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;description&quot;: &quot;My signalk plugin&quot;,
+  &quot;keywords&quot;: [
+    &quot;signalk-node-server-plugin&quot;,
+    &quot;signalk-category-ais&quot;
+  ],
+  &quot;signalk-plugin-enabled-by-default&quot;: false,
+  &quot;signalk&quot;: {
+    &quot;appIcon&quot;: &quot;./assets/icons/icon-72x72.png&quot;,
+    &quot;displayName&quot;: &quot;My Great WebApp&quot;
+  },
+  &quot;main&quot;: &quot;plugin/index.js&quot;,
+  ...
+}
+</code></pre>
+<ol start="4">
+<li><em>Optional:</em> Install any dependencies or third party packages.</li>
+</ol>
+<pre><code class="language-bash">npm i
+</code></pre>
+<h3 id="link-your-project-to-signal-k-server"><a class="header" href="#link-your-project-to-signal-k-server">Link your project to Signal K server.</a></h3>
+<p>Once you have developed your plugin code and are ready to debug, the most convenient way is to use <code>npm link</code> to link your plugin code to your instance of Signal K server. </p>
+<p>To do this, from within a terminal window:</p>
+<pre><code class="language-bash"># Ensure you are in the folder containing your built plugin code
+cd my_plugin_src
+
+# Create a link (may require the use of sudo)
+npm link
+
+# Change to the Signal K server configuration directory
+cd ~/.signalk
+
+# Link your plugin using the name in the package.json file 
+#(may require the use of sudo)
+npm link my-signalk-plugin-app
+</code></pre>
+<p>When you start Signal K server the plugin will now appear in the <strong>Plugin Config</strong> screen where it can be configured and enabled.</p>
+<h3 id="debugging"><a class="header" href="#debugging">Debugging</a></h3>
+<p>The simplest way to debug your plugin is to turn on <strong>Enable Debug log</strong> for your plugin in the <strong>Plugin Config</strong> screen.</p>
+<p>Alternatively, you can debug your plugin by starting the Signal K server with the <code>DEBUG</code> environment variable:</p>
+<pre><code class="language-bash">$ DEBUG=my-signalk-plugin signalk-server
+
+# sample output 
+my-signalk-plugin Plugin stopped +0ms
+my-signalk-plugin Plugin started +2ms
+</code></pre>
+<p>You can also view debug information about the plugin loading process:</p>
+<pre><code class="language-bash">$ DEBUG=signalk:interfaces:plugins signalk-server
+
+# sample output
+signalk:interfaces:plugins Registering plugin my-signalk-plugin +0ms
+signalk:interfaces:plugins Could not find options for plugin my-signalk-plugin, returning empty options:  +2ms
+</code></pre>
+<h4 id="sample-data"><a class="header" href="#sample-data">Sample Data</a></h4>
+<p>For development purposes, it's often nice to have some mocked data. SignalK comes with a synthesized NMEA2000 data set that can be used as sample data. </p>
+<p>You can enable this by adding <code>--sample-n2k-data</code> to the command line:</p>
+<pre><code class="language-bash">$ DEBUG=my-signalk-plugin signalk-server --sample-n2k-data
+</code></pre>
+<hr />
+<h2 id="start-coding"><a class="header" href="#start-coding">Start Coding</a></h2>
+<p>Signal K server plugins are NodeJs <code>javascript</code> or <code>typescript</code> projects that return an object that implements the <code>Plugin</code> interface. </p>
+<p>They are installed into the <code>node_modules</code> folder that resides inside the SignalK server's configuration directory <em>(<code>$HOME/.signalk</code> by default)</em>. </p>
+<p>A Signal K plugin is passed a reference to the Signal K server plugin interface which it can use to interact with the server.</p>
+<p>Folowing are code snippets that can be used as a template for plugin development ensuring the returned Plugin object contains the required  functions.</p>
+<h3 id="javascript"><a class="header" href="#javascript">Javascript</a></h3>
+<p>Create <code>index.js</code> with the following content:</p>
+<pre><code class="language-javascript">module.exports = (app) =&gt; {
+
+  const plugin = {
+    id: 'my-signalk-plugin',
+    name: 'My Great Plugin',
+    start: (settings, restartPlugin) =&gt; {
+      // start up code goes here.
+    },
+    stop: () =&gt; {
+      // shutdown code goes here.
+    },
+    schema: () =&gt; {
+      properties: {
+        // plugin configuration goes here
+      }
+    }
+  };
+
+  return plugin;
+};
+</code></pre>
+<h3 id="typescript"><a class="header" href="#typescript">Typescript</a></h3>
+<p>Create <code>index.js</code> with the following content:</p>
+<pre><code class="language-typescript">import { Plugin, PluginServerApp } from '@signalk/server-api';
+
+module.exports = (app: PluginServerApp): Plugin =&gt; {
+
+  const plugin: Plugin = {
+    id: 'my-signalk-plugin',
+    name: 'My Great Plugin',
+    start: (settings, restartPlugin) =&gt; {
+      // start up code goes here.
+    },
+    stop: () =&gt; {
+      // shutdown code goes here.
+    },
+    schema: () =&gt; {
+      properties: {
+        // plugin configuration goes here
+      }
+    }
+  };
+
+  return plugin;
+}
+</code></pre>
+<p>A plugin must return an object containing the following functions:</p>
+<ul>
+<li>
+<p><code>start(settings, restartPlugin)</code>: This function is called when the plugin is enabled or when the server starts (and the plugin is enabled). The <code>settings</code> parameter contains the configuration data entered via the <strong>Plugin Config</strong> screen. <code>restartPlugin</code> is a function that can be called by the plugin to restart itself.</p>
+</li>
+<li>
+<p><code>stop()</code>: This function is called when the plugin is disabled or after configuration changes. Use this function to &quot;clean up&quot; the resources consumed by the plugin i.e. unsubscribe from streams, stop timers / loops and close devices.</p>
+</li>
+<li>
+<p><code>schema()</code>: A function that returns an object defining the schema of the plugin's configuration data. It is used by the server to generate the user interface in the <strong>Plugin Config</strong> screen.</p>
+</li>
+</ul>
+<p><em>Note: When a plugin's configuration is changed the server will first call <code>stop()</code> to stop the plugin and then <code>start()</code> with the new configuration data.</em> </p>
+<p>A plugin can also contain the following optional functions:</p>
+<ul>
+<li>
+<p><code>uiSchema()</code>: A function that returns an object defining the attributes of the UI components displayed in the <strong>Plugin Config</strong> screen.</p>
+</li>
+<li>
+<p><code>getOpenApi()</code>: Function to return the OpenAPI definition. This should be implemented when your plugin provides HTTP endpoints for clients to call. Doing so makes the OPenAPI definition available in the server Admin UI under <code>Documentation -&gt; OpenAPI</code>.</p>
+</li>
+</ul>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">const openapi = require('./openApi.json');
+
+plugin.getOpenApi = () =&gt; openapi;
+
+</code></pre>
+<hr />
+<h2 id="plugin-configuration--schema"><a class="header" href="#plugin-configuration--schema">Plugin configuration / Schema</a></h2>
+<p>A plugin's <code>schema</code> function must return a <a href="http://json-schema.org/">JSON Schema</a> object decribing the structure of the configuration data. This is used by the server to render the plugin's configuration screen in the Admin UI. </p>
+<p>The configuration data is stored by the server under the following path <code>$SIGNALK_NODE_CONFIG_DIR/plugin-config-data/&lt;plugin-name&gt;.json</code>. <em>(Default value of SIGNALK_NODE_CONFIG_DIR is $HOME/.signalk.)</em></p>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">  plugin.schema = {
+    type: 'object',
+    required: ['some_string', 'some_other_number'],
+    properties: {
+      some_string: {
+        type: 'string',
+        title: 'Some string that the plugin needs'
+      },
+      some_number: {
+        type: 'number',
+        title: 'Some number that the plugin needs',
+        default: 60
+      },
+      some_other_number: {
+        type: 'number',
+        title: 'Some other number that the plugin needs',
+        default: 5
+      }
+    }
+  };
+</code></pre>
+<p>JSON Schema approach works reasonably well for simple to medium complex configuration data. </p>
+<p>It should ne noted that some JSON schema constructs are not supported. Refer (<a href="https://github.com/peterkelly/react-jsonschema-form-bs4/blob/v1.7.1-bs4/docs/index.md#json-schema-supporting-status">details</a>) for details. </p>
+<p>The server supports also <a href="https://github.com/SignalK/signalk-server/blob/master/WEBAPPS.md">custom plugin configuration components</a>, bypassing the automatic configuration format generation.</p>
+<p>The plugin is passed the configuration settings as the first parameter of the <code>start</code> function.</p>
+<pre><code class="language-javascript">plugin.start = (settings, restartPlugin) =&gt; {
+  // settings contains the plugin configuration
+  ...
+}
+</code></pre>
+<h3 id="ui-schema"><a class="header" href="#ui-schema">UI Schema</a></h3>
+<p>The plugin can define <code>uiSchema</code> by returning a <a href="https://github.com/mozilla-services/react-jsonschema-form#the-uischema-object">uiSchema object</a> which is used to control how the user interface is rendered in the Admin UI.</p>
+<p>_Example: Make all data in an object called 'myObject' collapsible:</p>
+<pre><code class="language-javascript">uiSchema['myObject'] = {
+  'ui:field': 'collapsible',
+  collapse: {
+    field: 'ObjectField',
+    wrapClassName: 'panel-group'
+  }
+}
+</code></pre>
+<p>For more information, see <a href="https://github.com/RxNT/react-jsonschema-form-extras#collapsible-fields-collapsible">react-jsonschema-form-extras</a></p>
+<h3 id="making-a-plugin-enabled-by-default"><a class="header" href="#making-a-plugin-enabled-by-default">Making a plugin enabled by default</a></h3>
+<p>If your plugin does not require any initial configuration, you can enable it to start when the Signal K server is restarted after the plugin is installed. </p>
+<p>To do this add the following to the <code>package.json</code>:</p>
+<pre><code class="language-json">  &quot;signalk-plugin-enabled-by-default&quot;: true
+</code></pre>
+<hr />
+<h2 id="add-an-openapi-definition"><a class="header" href="#add-an-openapi-definition">Add an OpenAPI Definition</a></h2>
+<p>If your plugin exposes an API to interact with it then you should include an OpenAPI definition.</p>
+<p>You do this by creating an OpenAPI definition within the file <code>openApi.json</code> and then returning the content of the file with the <code>getOpenApi</code> method.</p>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">const openapi = require('./openApi.json');
+...
+
+plugin.getOpenApi = () =&gt; openapi;
+</code></pre>
+<p>This will include your plugin's OpenApi definition in the documentation in the server's Admin UI under <em>Documentation -&gt; OpenAPI</em>. </p>
+<p>Note: If the plugin's OpenApi description DOES NOT include a <code>servers</code> property, the API path presented in the documentation will be relative to the Signal K API path. You should include this property the plugin API is rooted elsewhere.
+<em>Example:</em></p>
+<pre><code class="language-JSON">  &quot;servers&quot;: [
+    {
+      &quot;url&quot;: &quot;/myapi/endpoint&quot;
+    }
+  ],
+</code></pre>
+<p>See <a href="https://github.com/SignalK/signalk-server/tree/b82477e63ebdc14878164ce1ed3aedd80c5a8b0c/test/plugin-test-config/node_modules/testplugin">testplugin</a> for an example.</p>
+<hr />
+<h2 id="logging"><a class="header" href="#logging">Logging</a></h2>
+<p>To record deltas sent by the plugin in the server's data log, enable the <strong>Log plugin output</strong> in the plugin configuration screen. </p>
+<hr />
+<h2 id="removing-a-plugin"><a class="header" href="#removing-a-plugin">Removing a plugin</a></h2>
+<p>Plugins can be removed via the AppStore.</p>
+<p>You can also remove a plugin manually by:</p>
+<ol>
+<li>Deleting it's folder under <code>~/.signalk/node_modules</code></li>
+<li>Deleting it's entry from <code>~/.signalk/package.json</code></li>
+<li>Run <code>npm prune</code> from the <code>~/.signalk/</code> directory.</li>
+</ol>
+<p>Alternatively you can:</p>
+<ol>
+<li>Remove the folder <code>~/.signalk/node_modules</code></li>
+<li>Run <code>npm install</code> from the <code>~/.signalk/</code> directory.</li>
+</ol>
+<p>Finally you can remove the plugin setting file in <code>~/.signalk/plugin-config-data/</code>.</p>
+<hr />
+<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<p>Following are links to some published SignalK plugins that serve as an example of working plugins:</p>
+<ul>
+<li><a href="https://github.com/SignalK/set-system-time/blob/master/index.js">set-system-time</a></li>
+<li><a href="https://github.com/SignalK/aisreporter/issues">Ais Reporter</a></li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../develop/webapps.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../../develop/plugins/deltas.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../develop/webapps.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../../develop/plugins/deltas.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../searcher.js" type="text/javascript" charset="utf-8"></script>
+
+        <script src="../../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </body>
+</html>
