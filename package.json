@@ -71,7 +71,7 @@
   ],
   "dependencies": {
     "@signalk/course-provider": "^1.0.0",
-    "@signalk/n2k-signalk": "^3.0.0",
+    "@signalk/n2k-signalk": "^3.0.0-beta.1",
     "@signalk/nmea0183-signalk": "^3.0.0",
     "@signalk/resources-provider": "^1.0.0",
     "@signalk/server-admin-ui": "2.1.x",
