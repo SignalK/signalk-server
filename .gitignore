@@ -16,8 +16,6 @@ settings/ssl-cert.pem
 *.tgz
 work/
 
-docs/server-guide/
-
 test/plugin-test-config/.npmrc
 test/plugin-test-config/plugin-config-data/
 test/plugin-test-config/ssl-cert.pem

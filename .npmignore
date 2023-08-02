@@ -77,3 +77,4 @@ fly_io
 docs/src
 docs/book.toml
 docs/docker-compose.yml
+docs/build-docs.sh
