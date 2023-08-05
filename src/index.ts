@@ -375,7 +375,7 @@ class Server {
               {
                 path: 'notifications.server.newVersion',
                 value: {
-                  state: 'alert',
+                  state: 'normal',
                   method: [],
                   message: msg
                 }
