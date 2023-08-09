@@ -2,12 +2,149 @@
 
 # Server API for plugins
 
-Internally, SignalK server builds a full data model. Plugins can access the server's delta stream (updates) and full model and provide additional data as deltas using the following functions.
+SignalK server provides an interface to allow plugins to access / update the full data model, operations and send / receive deltas (updates).
+
+These functions are available via the `app` passed to the plugin when it is invoked.
+
+---
+
+### Accessing the Data Model
+
+#### `app.getPath(path)`
+
+Returns the entry for the provided path starting from the `root` of the full data model.
+
+_Example:_
+```javascript
+let baseStations = app.getPath('shore.basestations');
+
+// baseStations:
+{
+  'urn:mrn:imo:mmsi:2766140': {
+    url: 'basestations',
+    navigation: { position: {latitude: 45.2, longitude: 76.4} },
+    mmsi: '2766140'
+  },
+  'urn:mrn:imo:mmsi:2766160': {
+    url: 'basestations',
+    navigation: { position: {latitude: 46.9, longitude: 72.22} },
+    mmsi: '2766160'
+  }
+}
+```
+
+#### `app.getSelfPath(path)`
+
+Returns the entry for the provided path starting from `vessels.self` in the full data model.
+
+_Example:_
+```javascript
+let uuid = app.getSelfPath('uuid');
+// Note: This is synonymous with app.getPath('vessels.self.uuid')
+
+app.debug(uuid); 
+// urn:mrn:signalk:uuid:a9d2c3b1-611b-4b00-8628-0b89d014ed60
+```
+
+#### `app.registerPutHandler(context, path, callback, source)`
+
+Register a handler to action [`PUT`](http://signalk.org/specification/1.3.0/doc/put.html) requests for a specific path.
+ 
+The action handler can handle the request synchronously or asynchronously.
+
+The `callback` parameter should be a function which accepts the following arguments: 
+- `context`
+- `path`
+- `value`
+- `callback`
+
+For synchronous actions, the handler must return a value describing the response of the request:
+
+```javascript
+{
+  state: 'COMPLETED',
+  statusCode: 200
+}
+```
+
+ or
+
+ ```javascript
+{
+  state:'COMPLETED',
+  statusCode: 400,
+  message:'Some Error Message'
+}
+ ```
+
+ The `statusCode` value can be any valid HTTP response code.
+
+For asynchronous actions, that may take considerable time to complete and the requester should not be kept waiting for the result, the handler must return:
+
+```javascript
+{ state: 'PENDING' }
+```
+
+When the action has completed the handler should call the `callback` function with the result:
+
+```javascript
+callback({ state: 'COMPLETED', statusCode: 200 })
+```
+or
+
+```javascript
+callback({
+  state:'COMPLETED',
+  statusCode: 400,
+  message:'Some Error Message'
+})
+```
+
+_Example: Synchronous response:_
+```javascript
+function myActionHandler(context, path, value, callback) {
+  if(doSomething(context, path, value)){
+    return { state: 'COMPLETED', statusCode: 200 };
+  } else {
+    return { state: 'COMPLETED', statusCode: 400 };
+  }
+}
+
+plugin.start = (options) => {
+  app.registerPutHandler('vessels.self', 'some.path', myActionHandler, 'somesource.1');
+}
+```
+
+_Example: Asynchronous response:_
+```javascript
+function myActionHandler(context, path, value, callback) {
+
+  doSomethingAsync(context, path, value, (result) =>{
+    if(result) {
+      callback({ state: 'COMPLETED', result: 200 })
+    } else {
+      callback({ state: 'COMPLETED', result: 400 })
+    }
+  });
+
+  return { state: 'PENDING' };
+}
+
+plugin.start = (options) => {
+  app.registerPutHandler('vessels.self', 'some.path', myActionHandler);
+}
+```
+---
+
+### Working with Deltas
 
 #### `app.handleMessage(pluginId, delta, skVersion = 'v1')`
 
-Allows the plugin to publish deltas to the server. These deltas are handled as any incoming deltas.
+Emit a delta message. 
 
+_Note: These deltas are handled by the server in the same way as any other incoming deltas._
+
+_Example:_
 ```javascript
 app.handleMessage('my-signalk-plugin', {
   updates: [
@@ -15,54 +152,26 @@ app.handleMessage('my-signalk-plugin', {
       values: [
         {
           path: 'navigation.courseOverGroundTrue',
-          value: Math.PI
+          value: 1.0476934
         }
       ]
     }
   ]
-})
+});
 ```
 
-Deltas that use Signal K V2 paths (like the [Course API](http://localhost:3000/admin/openapi/?urls.primaryName=course) paths) should call `handleMessage` with the optional 3rd parameter set to `v2`. This prevents V2 API data getting mixed in V1 paths' data in Full model & the v1 http API. If you don't know that your data is V2 API data you can omit the third parameter, as the default is V1.
+Plugins emitting deltas that use Signal K v2 paths (like the [Course API](http://localhost:3000/admin/openapi/?urls.primaryName=course) paths) should call `handleMessage` with the optional `skVersion` parameter set to `v2`. This prevents v2 API data getting mixed in v1 paths' data in full data model & the v1 http API. 
 
-#### `app.getSelfPath(path)`
+Omitting the `skVersion` parameter will cause the delta to be sent as `v1`.
 
-Get a Signal K path for the `vessels.self`'s full data model.
 
-```javascript
-let uuid = app.getSelfPath('uuid');
-app.debug(uuid); // Should output something like urn:mrn:signalk:uuid:a9d2c3b1-611b-4b00-8628-0b89d014ed60
-```
+#### `app.streambundle.getBus(path)`
 
-#### `app.getPath(path)`
+Get a [Bacon JS](https://baconjs.github.io/) stream for a Signal K path that will stream values from any context. 
 
-Get a Signal K path starting from the root of the full data model.
+The `path` parameter is optional. If it is not provided the returned stream produces values for all paths.
 
-```javascript
-let baseStations = app.getPath('shore.basestations');
-
-// baseStations:
-
-{
-  'urn:mrn:imo:mmsi:2766140': {
-    url: 'basestations',
-    navigation: { position: [Object] },
-    mmsi: '2766140'
-  },
-  'urn:mrn:imo:mmsi:2766160': {
-    url: 'basestations',
-    navigation: { position: [Object] },
-    mmsi: '2766160'
-  },
-  ...
-}
-```
-
-#### `app.streambundle.getSelfBus(path)`
-
-Get a [Bacon JS](https://baconjs.github.io/) stream for `vessels.self`'s Signal K path. `path` argument is optional. If it is not provided the returned stream
-produces values for all paths. Stream values are objects with structure
-
+Stream values are objects with the following structure:
 ```javascript
   {
     path: ...,
@@ -74,16 +183,54 @@ produces values for all paths. Stream values are objects with structure
   }
 ```
 
-For example:
+_Example:_
+```javascript
+app.streambundle
+  .getBus('navigation.position')
+  .forEach(pos => app.debug(pos));
+  
+// output
+{
+  path: 'navigation.position',
+  value: { longitude: 24.7366117, latitude: 59.72493 },
+  context: 'vessels.urn:mrn:imo:mmsi:2766160',
+  source: {
+    label: 'n2k-sample-data',
+    type: 'NMEA2000',
+    pgn: 129039,
+    src: '43'
+  },
+  '$source': 'n2k-sample-data.43',
+  timestamp: '2014-08-15T19:00:02.392Z'
+}
+{
+  path: 'navigation.position',
+  value: { longitude: 24.82365, latitude: 58.159598 },
+  context: 'vessels.urn:mrn:imo:mmsi:2766140',
+  source: {
+    label: 'n2k-sample-data',
+    type: 'NMEA2000',
+    pgn: 129025,
+    src: '160'
+  },
+  '$source': 'n2k-sample-data.160',
+  timestamp: '2014-08-15T19:00:02.544Z'
+}
+```
+
+#### `app.streambundle.getSelfBus(path)`
+
+Get a [Bacon JS](https://baconjs.github.io/) stream for path from the `vessels.self` context. 
+
+The `path` parameter is optional. If it is not provided the returned stream contains values for all paths. 
+
+_Example:_
 ```javascript
 app.streambundle
   .getSelfBus('navigation.position')
   .forEach(pos => app.debug(pos));
-```
 
-Outputs:
-```javascript
-...
+// output
 {
   path: 'navigation.position',
   value: { longitude: 24.7366117, latitude: 59.72493 },
@@ -110,38 +257,40 @@ Outputs:
   '$source': 'n2k-sample-data.160',
   timestamp: '2014-08-15T19:00:02.544Z'
 }
-...
 ```
 
 #### `app.streambundle.getSelfStream(path)`
 
-Get a [Bacon JS](https://baconjs.github.io/) stream for `vessels.self`'s Signal K path. `path` argument is optional. If it is not provided the returned stream
-produces values for all paths. This is similar to `app.streambundle.getSelfBus(path)`, but the stream values are the `value` properties from incoming deltas.
+Get a [Bacon JS](https://baconjs.github.io/) stream for a path in the `vessels.self` context. 
 
+The `path` argument is optional. If it is not provided the returned stream produces values for all paths.
+
+_Note: This is similar to `app.streambundle.getSelfBus(path)`, except that the stream values contain only the `value` property from the incoming deltas._
+
+_Example:_
 ```javascript
 app.streambundle
   .getSelfStream('navigation.position')
   .forEach(pos => app.debug(pos));
-```
 
-Outputs:
-```
+// output
+
   my-signalk-plugin { longitude: 24.736677, latitude: 59.7250108 } +600ms
   my-signalk-plugin { longitude: 24.736645, latitude: 59.7249883 } +321ms
   my-signalk-plugin { longitude: 24.7366563, latitude: 59.7249807 } +174ms
   my-signalk-plugin { longitude: 24.7366563, latitude: 59.724980699999996 } +503ms
 ```
 
-#### `app.streambundle.getBus(path)`
-
-Get a [Bacon JS](https://baconjs.github.io/) stream for a Signal K path that will stream values from any context. `path` argument is optional. If it is not provided the returned stream
-produces values for all paths. Stream values are objects as in `app.streambundle.getSelfBus(path)`.
 
 #### `app.streambundle.getAvailablePaths()`
 
-Get a list of paths currently available in the server
+Get a list of available full data model paths maintained by the server.
 
+_Example:_
 ```javascript
+app.streambundle.getAvailablePaths();
+
+// returns
 [
   "navigation.speedOverGround",
   "navigation.courseOverGroundTrue",
@@ -155,138 +304,19 @@ Get a list of paths currently available in the server
   "navigation.gnss.type","navigation.gnss.methodQuality",
   "navigation.gnss.integrity",
   "navigation.magneticVariation",
-  ...
 ]
 ```
 
-#### `app.error(message)`
+#### `app.registerDeltaInputHandler ((delta, next) => {} )`
 
-Report errors in a human-oriented message. Currently just logs the message, but in the future error messages hopefully will show up in the admin UI.
+Register a function to intercept all delta messages _before_ they are processed by the server. 
 
-#### `app.debug(...)`
+The callback function should call `next(delta)` with either:
+- A modified delta (if it wants to alter the incoming delta) 
+- With the original delta to process it normally. 
 
-Log debug messages. This is the debug method from the [debug module](https://www.npmjs.com/package/debug). The npm module name is used as the debug name.
+_Note: Not calling `next(delta)` will cause the incoming delta to be dropped and will only show in delta statistics._
 
-`app.debug()` can take any type and will serialize it before outputting.
-
-*Do not use `debug` directly*. Using the debug function provided by the server makes sure that the plugin taps into the server's debug logging system, including the helper switches in Admin UI's Server Log page.
-
-#### `app.savePluginOptions(options, callback)`
-
-Save changes to the plugin's options.
-
-```javascript
-var options = {
-  myConfigValue = 'Something the plugin calculated'
-};
-
-app.savePluginOptions(options, () => {app.debug('Plugin options saved')});
-
-```
-
-#### `app.readPluginOptions()`
-
-Read plugin options from disk.
-
-```javascript
-var options = app.readPluginOptions();
-```
-
-#### `app.getDataDirPath()`
-
-Returns the full path of the directory where the plugin can persist its internal data, like data files.
-
-Example use:
-```javascript
-var myFile = require('path').join(app.getDataDirPath(), 'somefile.ext')
-```
-
-#### `app.registerPutHandler(context, path, callback, source)`
-
-If a plugin wants to respond to [`PUT`](http://signalk.org/specification/1.3.0/doc/put.html) requests for a specific path, it can register an action handler.
-
-The action handler can handle the request synchronously or asynchronously.
-
-The passed callback should be a function taking the following arguments: `(context, path, value, callback)`
-
-For synchronous actions the handler must return a value describing the response of the request: for example
-
-```javascript
-{
-  state: 'COMPLETED',
-  statusCode: 200
-}
-```
-
- or
-
- ```javascript
-{
-  state:'COMPLETED',
-  statusCode: 400,
-  message:'Some Error Message'
-}
- ```
-
- The `statusCode` value can be any valid HTTP response code.
-
-For asynchronous actions that may take considerable time and where the requester should not be kept waiting for the result the handler must return
-
-```javascript
-{ state: 'PENDING' }
-```
-
-When the action is finished the handler should call the `callback` function with the result with
-
-```javascript
-callback({ state: 'COMPLETED', statusCode: 200 })
-```
-or
-
-```javascript
-callback({
-  state:'COMPLETED',
-  statusCode: 400,
-  message:'Some Error Message'
-})
-```
-
-Synchronous example:
-```javascript
-function myActionHandler(context, path, value, callback) {
-  if(doSomething(context, path, value)){
-    return { state: 'COMPLETED', statusCode: 200 };
-  } else {
-    return { state: 'COMPLETED', statusCode: 400 };
-  }
-}
-
-plugin.start = function(options) {
-  app.registerPutHandler('vessels.self', 'some.path', myActionHandler, 'somesource.1');
-}
-```
-
-Asynchronous example:
-```javascript
-function myActionHandler(context, path, value, callback) {
-  doSomethingAsync(context, path, value, (result) =>{
-    if(result) {
-      callback({ state: 'COMPLETED', result: 200 })
-    } else {
-      callback({ state: 'COMPLETED', result: 400 })
-    }
-  });
-  return { state: 'PENDING' };
-}
-
-plugin.start = function(options) {
-  app.registerPutHandler('vessels.self', 'some.path', myActionHandler);
-}
-```
-
-#### `app.registerDeltaInputHandler ((delta, next) => ...)`
-
-Register a function to intercept all delta messages *before* they are processed by the server. The plugin callback should call `next(delta)` with a modified delta if it wants to alter the incoming delta or call `next` with the original delta to process it normally. Not calling `next` will drop the incoming delta and will only show in delta statistics.
 Other, non-delta messages produced by provider pipe elements are emitted normally.
 
 ```javascript
@@ -299,35 +329,98 @@ app.registerDeltaInputHandler((delta, next) => {
     })
   })
   next(delta)
-})
+});
 ```
 
+---
+
+### Configuration
+
+#### `app.savePluginOptions(options, callback)`
+
+Save changes to the plugin's configuration options.
+
+_Example:_
+```javascript
+let options = {
+  myConfigValue = 'Something the plugin calculated'
+};
+
+app.savePluginOptions(options, () => {app.debug('Plugin options saved')});
+```
+
+#### `app.readPluginOptions()`
+
+Read the stored plugin configuration options.
+
+_Example:_
+```javascript
+let options = app.readPluginOptions();
+```
+
+#### `app.getDataDirPath()`
+
+Returns the full path of the directory where the plugin can persist its internal data, e.g. data files, etc.
+
+_Example:_
+```javascript
+let myDataFile = require('path').join( app.getDataDirPath(), 'somedatafile.ext')
+```
+---
+
+### Messages and Debugging
 
 #### `app.setPluginStatus(msg)`
 
-Set the current status of the plugin. The `msg` should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.
+Set the current status of the plugin that is displayed in the plugin configuration UI and the Dashboard. 
 
+The `msg` parameter should be a short text message describing the current status of the plugin.
+
+_Example:_
 ```javascript
 app.setPluginStatus('Initializing');
 // Do something
 app.setPluginStatus('Done initializing');
 ```
 
-Use this instead of deprecated `setProviderStatus`
+_Note: Replaces deprecated `setProviderStatus()`_
 
 #### `app.setPluginError(msg)`
 
-Set the current error status of the plugin. The `msg` should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.
+Set the current error status of the plugin that is displayed in the plugin configuration UI and the Dashboard.
 
+The `msg` parameter should be a short text message describing the current status of the plugin.
+
+_Example:_
 ```javascript
 app.setPluginError('Error connecting to database');
 ```
 
-Use this instead of deprecated `setProviderError`
+_Note: Replaces deprecated `setProviderError()`_
+
+
+#### `app.debug(...)`
+
+Log debug messages. 
+
+This function exposes the `debug` method from the [debug module](https://www.npmjs.com/package/debug).
+The npm module name is used as the debug name.
+
+`app.debug()` can take any type and will serialize it before outputting.
+
+_Note: Do not use `debug` from the debug module directly! Using `app.debug()`provided by the server ensures that the plugin taps into the server's debug logging system, including the helper switches in Admin UI's Server Log page.
+
+#### `app.error(message)`
+
+Report errors in a human-oriented message. Currently just logs the message, but in the future error messages hopefully will show up in the admin UI.
+
+---
+
+### Serial Port
 
 #### `app.getSerialPorts() => Promise<Ports>`
 
-This returs a Promise which will resolve to a [Ports](src/serialports.ts#21) object which contains information about the serial ports available on the machine.
+This returns a Promise which will resolve to a Ports object which contains information about the serial ports available on the machine.
 
 ---
 
@@ -343,7 +436,7 @@ See [`Resource Provider Plugins`](../plugins/resource_provider_plugins.md#regist
 
 ### Course API Interface
 
-See [`Course API`](../rest-api/course_api.md) for details.
+The [`Course API`](../rest-api/course_api.md) provides the following functions for use by plugins.
 
 
 #### `app.getCourse()`
@@ -352,15 +445,20 @@ Retrieves the current course information.
 
 It returns the same course information as the [`/course`](/doc/openapi/?urls.primaryName=course#/course/get_course) API endpoint.
 
-#### `app.setCourse(Destination)`
 
-Navigate to the specified position / waypoint. This function accepts the same parameters as the [`/course/destination`](/doc/openapi/?urls.primaryName=course#/destination/put_course_destination) API endpoint.
+#### `app.setCourse(dest)`
+
+Set / Clear course to a specified position / waypoint. 
+
+- `dest`: Object containing destination position information as per [`/course/destination`](/doc/openapi/?urls.primaryName=course#/destination/put_course_destination) OR `null` = clear destintation.
 
 
-#### `app.setRoute(RouteDest)`
+#### `app.setRoute(rte)`
 
-Follow a route in the specified direction and starting at the specified point. 
-This function accepts the same parameters as the [`/course/activeRoute`](/doc/openapi/?urls.primaryName=course#/activeRoute/put_course_activeRoute) API endpoint.
+Follow / Cancel a route.
+in the specified direction and starting at the specified point.
+
+- `rte`: Object containing route information as per [`/course/activeRoute`](/doc/openapi/?urls.primaryName=course#/activeRoute/put_course_activeRoute) OR `null` = cancel route.
 
 
 ---
@@ -413,13 +511,13 @@ const alarmId = app.notify(
 
 ### PropertyValues
 
-PropertyValues are a mechanism for passing configuration type values between different parties such as plugins and input connections running in the server process.
+The _PropertyValues_ mechanism provides a means for passing configuration type values between different components running in the server process such as plugins and input connections.
 
-A plugin can *emit* values and also register to *listen* for values emitted by others. 
+A plugin can both *emit* values and *listen* for values emitted by others. 
 
-The difference between the _PropertyValues_ mechanism and _Event Emitters_ in NodeJs is that when you call `onPropertyValues` the callback will be invoked and passed an array containing all of the previous values for the property name, starting with the initial value of `undefined`. If nothing has emitted any values for the property name the callback will be called with a value of `undefined`.
+The difference between the _PropertyValues_ mechanism and _Event Emitters_ in NodeJs is that when  `onPropertyValues` is called, the `callback()` function will be invoked and passed an array containing all of the previous values for that _property name_, starting with the initial value of `undefined`. If no values have been emitted for that _property name_ the callback will be invoked with a value of `undefined`.
 
-```bash
+```typescript
 app.emitPropertyValue: (name: string, value: any) => void
 
 onPropertyValues: (
@@ -428,8 +526,8 @@ onPropertyValues: (
 ) => Unsubscribe
 ```
 
-A PropertyValue has the following structure:
-```javascript
+**PropertyValue** has the following structure:
+```typescript
 interface PropertyValue {
   timestamp: number // millis
   setter: string // plugin id, server, provider id
@@ -444,19 +542,32 @@ This mechanism allows plugins to _offer_ extensions via _"Well Known Properties"
 - additional [NMEA0183 sentence parsers for custom sentences](https://github.com/SignalK/nmea0183-signalk/pull/193) via `nmea0183sentenceParser`
 - additional PGN definitions for propietary or custom PGNs
 
-Code handling incoming PropertyValues should be fully reactive: even if all emitters emit during their startup there is no defined load / startup order and plugins may emit when activated and started. This means that depending on a PropertyValue being there when your code starts or arriving after your code has started is not possible.
+Code handling incoming _PropertyValues_ should be fully reactive due to:
+- Plugins being able to emit _PropertyValues_ when they activated and / or started
+- There being no defined load / startup order for plugins / connections.
 
-_PropertyValues_ is not meant for data passing on a regular basis, as the total history makes it a potential memory leak. There is a safeguard against accidentally emitting regularly with an upper bound for values per property name. New values will be ignored if it is reached and emits logged as errors.
+So even if all plugins / connections emit during their startup, you cannot depend on a specific _PropertyValue_ being available. It may be present when your code starts or it may arrive after your code has started.
+
+
+**Note: The _PropertyValues_ mechanism is not intended to be used for data passing on a regular basis, as the total history makes it a potential memory leak.**
+
+To safeguard against a component accidentally emitting regularly, via a fixed upper bound is enforced for the value array per _property name_. New values will be ignored if the upper bound is reached and are logged as errors.
 
 ---
 
 ### Exposing custom HTTP paths & OpenApi
 
-If a plugin has a function called `registerWithRouter(router)` (like the plugin's `start` and `stop` functions) it will be called with an Express router as the parameter during plugin startup. The router will be mounted at `/plugins/<pluginId>` and you can use standard Express `.get` `.post` `.use` etc to add HTTP path handlers. Note that `GET /plugins/<pluginid>` and `POST /plugins/<pluginid>/configure` are reserved by server (see below).
+Plugins are able to provide an API via a function called `registerWithRouter(router)`, which like the plugin's `start` and `stop` functions, will be called during plugin startup with an _Express_ router as the parameter. 
 
-Express does not have a public API for deregistering subrouters, so `stop` does not do anything to the router.
+The router will be mounted at `/plugins/<pluginId>` and you can use standard _Express_ _(`.get()` `.post()` `.use()`, etc)_ methods to add HTTP path handlers. 
 
-**Consider providing an OpenApi description** for your plugin's API. This promotes cooperation with other plugin/webapp authors by making it easy to find and use functionality that is built into plugins. It is also a means to avoid duplication, promote reuse and the possibility of including them in the Signal K specification.
+_Note: `GET /plugins/<pluginid>` and `POST /plugins/<pluginid>/configure` are reserved by server (see below)._
+
+It should be noted that _Express_ does not have a public API for deregistering subrouters, so `stop` does not do anything to the router.
+
+If a plugin does provide an API, it is strongly recommended that it provide an **OpenApi description** to document its operation.
+
+Doing so promotes interoperability with other plugins / webapps by making it easy to find and use the functionality built into plugins. It is also a means to avoid duplication, promote reuse and the possibility of including them in the Signal K specification.
 
 See [Server Plugins](server_plugin.md#add-an-openapi-definition) for details.
 

@@ -19,7 +19,8 @@ Or if you are looking to perform course calculations or integrate with an auotpi
 
 **OpenApi description for your plugin's API** 
 
-If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification.
+If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification. _See [Add OpenAPI definition](#add-an-openapi-definition)_ below.
+
 ---
 
 ## Getting Started with Plugin Development
@@ -147,7 +148,7 @@ They are installed into the `node_modules` folder that resides inside the Signal
 
 A Signal K plugin is passed a reference to the Signal K server plugin interface which it can use to interact with the server.
 
-Folowing are code snippets that can be used as a template for plugin development ensuring the returned Plugin object contains the required  functions.
+Following are code snippets that can be used as a template for plugin development ensuring the returned Plugin object contains the required  functions.
 
 ### Javascript
 
@@ -219,7 +220,24 @@ A plugin can also contain the following optional functions:
 
 - `uiSchema()`: A function that returns an object defining the attributes of the UI components displayed in the **Plugin Config** screen.
 
-- `getOpenApi()`: Function to return the OpenAPI definition. This should be implemented when your plugin provides HTTP endpoints for clients to call. Doing so makes the OPenAPI definition available in the server Admin UI under `Documentation -> OpenAPI`.
+- `registerWithRouter(router)`: This function (which is called during plugin startup) enables plugins to provide an API by registering paths with the Express router is passed as a parameter when invoked. It is strongly recommended that he plugin implement `getOpenAPI()` if this function is used.
+
+_Example:_
+```javascript
+plugin.registerWithRouter = (router) => {
+    router.get('/preferences', (req, res) => {
+    res.status(200).json({
+      preferences: {
+        color: 'red',
+        speed: 1.23
+      }
+    });
+  });
+};
+
+```
+
+- `getOpenApi()`: Function to return the OpenAPI definition. This should be implemented when your plugin provides HTTP endpoints for clients to call. Doing so makes the OpenAPI definition available in the server Admin UI under `Documentation -> OpenAPI`.
 
 _Example:_
 ```javascript

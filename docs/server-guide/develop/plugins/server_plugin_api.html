@@ -143,51 +143,131 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="server-api-for-plugins"><a class="header" href="#server-api-for-plugins">Server API for plugins</a></h1>
-<p>Internally, SignalK server builds a full data model. Plugins can access the server's delta stream (updates) and full model and provide additional data as deltas using the following functions.</p>
+<p>SignalK server provides an interface to allow plugins to access / update the full data model, operations and send / receive deltas (updates).</p>
+<p>These functions are available via the <code>app</code> passed to the plugin when it is invoked.</p>
+<hr />
+<h3 id="accessing-the-data-model"><a class="header" href="#accessing-the-data-model">Accessing the Data Model</a></h3>
+<h4 id="appgetpathpath"><a class="header" href="#appgetpathpath"><code>app.getPath(path)</code></a></h4>
+<p>Returns the entry for the provided path starting from the <code>root</code> of the full data model.</p>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">let baseStations = app.getPath('shore.basestations');
+
+// baseStations:
+{
+  'urn:mrn:imo:mmsi:2766140': {
+    url: 'basestations',
+    navigation: { position: {latitude: 45.2, longitude: 76.4} },
+    mmsi: '2766140'
+  },
+  'urn:mrn:imo:mmsi:2766160': {
+    url: 'basestations',
+    navigation: { position: {latitude: 46.9, longitude: 72.22} },
+    mmsi: '2766160'
+  }
+}
+</code></pre>
+<h4 id="appgetselfpathpath"><a class="header" href="#appgetselfpathpath"><code>app.getSelfPath(path)</code></a></h4>
+<p>Returns the entry for the provided path starting from <code>vessels.self</code> in the full data model.</p>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">let uuid = app.getSelfPath('uuid');
+// Note: This is synonymous with app.getPath('vessels.self.uuid')
+
+app.debug(uuid); 
+// urn:mrn:signalk:uuid:a9d2c3b1-611b-4b00-8628-0b89d014ed60
+</code></pre>
+<h4 id="appregisterputhandlercontext-path-callback-source"><a class="header" href="#appregisterputhandlercontext-path-callback-source"><code>app.registerPutHandler(context, path, callback, source)</code></a></h4>
+<p>Register a handler to action <a href="http://signalk.org/specification/1.3.0/doc/put.html"><code>PUT</code></a> requests for a specific path.</p>
+<p>The action handler can handle the request synchronously or asynchronously.</p>
+<p>The <code>callback</code> parameter should be a function which accepts the following arguments: </p>
+<ul>
+<li><code>context</code></li>
+<li><code>path</code></li>
+<li><code>value</code></li>
+<li><code>callback</code></li>
+</ul>
+<p>For synchronous actions, the handler must return a value describing the response of the request:</p>
+<pre><code class="language-javascript">{
+  state: 'COMPLETED',
+  statusCode: 200
+}
+</code></pre>
+<p>or</p>
+<pre><code class="language-javascript">{
+ state:'COMPLETED',
+ statusCode: 400,
+ message:'Some Error Message'
+}
+</code></pre>
+<p>The <code>statusCode</code> value can be any valid HTTP response code.</p>
+<p>For asynchronous actions, that may take considerable time to complete and the requester should not be kept waiting for the result, the handler must return:</p>
+<pre><code class="language-javascript">{ state: 'PENDING' }
+</code></pre>
+<p>When the action has completed the handler should call the <code>callback</code> function with the result:</p>
+<pre><code class="language-javascript">callback({ state: 'COMPLETED', statusCode: 200 })
+</code></pre>
+<p>or</p>
+<pre><code class="language-javascript">callback({
+  state:'COMPLETED',
+  statusCode: 400,
+  message:'Some Error Message'
+})
+</code></pre>
+<p><em>Example: Synchronous response:</em></p>
+<pre><code class="language-javascript">function myActionHandler(context, path, value, callback) {
+  if(doSomething(context, path, value)){
+    return { state: 'COMPLETED', statusCode: 200 };
+  } else {
+    return { state: 'COMPLETED', statusCode: 400 };
+  }
+}
+
+plugin.start = (options) =&gt; {
+  app.registerPutHandler('vessels.self', 'some.path', myActionHandler, 'somesource.1');
+}
+</code></pre>
+<p><em>Example: Asynchronous response:</em></p>
+<pre><code class="language-javascript">function myActionHandler(context, path, value, callback) {
+
+  doSomethingAsync(context, path, value, (result) =&gt;{
+    if(result) {
+      callback({ state: 'COMPLETED', result: 200 })
+    } else {
+      callback({ state: 'COMPLETED', result: 400 })
+    }
+  });
+
+  return { state: 'PENDING' };
+}
+
+plugin.start = (options) =&gt; {
+  app.registerPutHandler('vessels.self', 'some.path', myActionHandler);
+}
+</code></pre>
+<hr />
+<h3 id="working-with-deltas"><a class="header" href="#working-with-deltas">Working with Deltas</a></h3>
 <h4 id="apphandlemessagepluginid-delta-skversion--v1"><a class="header" href="#apphandlemessagepluginid-delta-skversion--v1"><code>app.handleMessage(pluginId, delta, skVersion = 'v1')</code></a></h4>
-<p>Allows the plugin to publish deltas to the server. These deltas are handled as any incoming deltas.</p>
+<p>Emit a delta message. </p>
+<p><em>Note: These deltas are handled by the server in the same way as any other incoming deltas.</em></p>
+<p><em>Example:</em></p>
 <pre><code class="language-javascript">app.handleMessage('my-signalk-plugin', {
   updates: [
     {
       values: [
         {
           path: 'navigation.courseOverGroundTrue',
-          value: Math.PI
+          value: 1.0476934
         }
       ]
     }
   ]
-})
+});
 </code></pre>
-<p>Deltas that use Signal K V2 paths (like the <a href="http://localhost:3000/admin/openapi/?urls.primaryName=course">Course API</a> paths) should call <code>handleMessage</code> with the optional 3rd parameter set to <code>v2</code>. This prevents V2 API data getting mixed in V1 paths' data in Full model &amp; the v1 http API. If you don't know that your data is V2 API data you can omit the third parameter, as the default is V1.</p>
-<h4 id="appgetselfpathpath"><a class="header" href="#appgetselfpathpath"><code>app.getSelfPath(path)</code></a></h4>
-<p>Get a Signal K path for the <code>vessels.self</code>'s full data model.</p>
-<pre><code class="language-javascript">let uuid = app.getSelfPath('uuid');
-app.debug(uuid); // Should output something like urn:mrn:signalk:uuid:a9d2c3b1-611b-4b00-8628-0b89d014ed60
-</code></pre>
-<h4 id="appgetpathpath"><a class="header" href="#appgetpathpath"><code>app.getPath(path)</code></a></h4>
-<p>Get a Signal K path starting from the root of the full data model.</p>
-<pre><code class="language-javascript">let baseStations = app.getPath('shore.basestations');
-
-// baseStations:
-
-{
-  'urn:mrn:imo:mmsi:2766140': {
-    url: 'basestations',
-    navigation: { position: [Object] },
-    mmsi: '2766140'
-  },
-  'urn:mrn:imo:mmsi:2766160': {
-    url: 'basestations',
-    navigation: { position: [Object] },
-    mmsi: '2766160'
-  },
-  ...
-}
-</code></pre>
-<h4 id="appstreambundlegetselfbuspath"><a class="header" href="#appstreambundlegetselfbuspath"><code>app.streambundle.getSelfBus(path)</code></a></h4>
-<p>Get a <a href="https://baconjs.github.io/">Bacon JS</a> stream for <code>vessels.self</code>'s Signal K path. <code>path</code> argument is optional. If it is not provided the returned stream
-produces values for all paths. Stream values are objects with structure</p>
+<p>Plugins emitting deltas that use Signal K v2 paths (like the <a href="http://localhost:3000/admin/openapi/?urls.primaryName=course">Course API</a> paths) should call <code>handleMessage</code> with the optional <code>skVersion</code> parameter set to <code>v2</code>. This prevents v2 API data getting mixed in v1 paths' data in full data model &amp; the v1 http API. </p>
+<p>Omitting the <code>skVersion</code> parameter will cause the delta to be sent as <code>v1</code>.</p>
+<h4 id="appstreambundlegetbuspath"><a class="header" href="#appstreambundlegetbuspath"><code>app.streambundle.getBus(path)</code></a></h4>
+<p>Get a <a href="https://baconjs.github.io/">Bacon JS</a> stream for a Signal K path that will stream values from any context. </p>
+<p>The <code>path</code> parameter is optional. If it is not provided the returned stream produces values for all paths.</p>
+<p>Stream values are objects with the following structure:</p>
 <pre><code class="language-javascript">  {
     path: ...,
     value: ...,
@@ -197,13 +277,48 @@ produces values for all paths. Stream values are objects with structure</p>
     timestamp: ...
   }
 </code></pre>
-<p>For example:</p>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">app.streambundle
+  .getBus('navigation.position')
+  .forEach(pos =&gt; app.debug(pos));
+  
+// output
+{
+  path: 'navigation.position',
+  value: { longitude: 24.7366117, latitude: 59.72493 },
+  context: 'vessels.urn:mrn:imo:mmsi:2766160',
+  source: {
+    label: 'n2k-sample-data',
+    type: 'NMEA2000',
+    pgn: 129039,
+    src: '43'
+  },
+  '$source': 'n2k-sample-data.43',
+  timestamp: '2014-08-15T19:00:02.392Z'
+}
+{
+  path: 'navigation.position',
+  value: { longitude: 24.82365, latitude: 58.159598 },
+  context: 'vessels.urn:mrn:imo:mmsi:2766140',
+  source: {
+    label: 'n2k-sample-data',
+    type: 'NMEA2000',
+    pgn: 129025,
+    src: '160'
+  },
+  '$source': 'n2k-sample-data.160',
+  timestamp: '2014-08-15T19:00:02.544Z'
+}
+</code></pre>
+<h4 id="appstreambundlegetselfbuspath"><a class="header" href="#appstreambundlegetselfbuspath"><code>app.streambundle.getSelfBus(path)</code></a></h4>
+<p>Get a <a href="https://baconjs.github.io/">Bacon JS</a> stream for path from the <code>vessels.self</code> context. </p>
+<p>The <code>path</code> parameter is optional. If it is not provided the returned stream contains values for all paths. </p>
+<p><em>Example:</em></p>
 <pre><code class="language-javascript">app.streambundle
   .getSelfBus('navigation.position')
   .forEach(pos =&gt; app.debug(pos));
-</code></pre>
-<p>Outputs:</p>
-<pre><code class="language-javascript">...
+
+// output
 {
   path: 'navigation.position',
   value: { longitude: 24.7366117, latitude: 59.72493 },
@@ -230,27 +345,30 @@ produces values for all paths. Stream values are objects with structure</p>
   '$source': 'n2k-sample-data.160',
   timestamp: '2014-08-15T19:00:02.544Z'
 }
-...
 </code></pre>
 <h4 id="appstreambundlegetselfstreampath"><a class="header" href="#appstreambundlegetselfstreampath"><code>app.streambundle.getSelfStream(path)</code></a></h4>
-<p>Get a <a href="https://baconjs.github.io/">Bacon JS</a> stream for <code>vessels.self</code>'s Signal K path. <code>path</code> argument is optional. If it is not provided the returned stream
-produces values for all paths. This is similar to <code>app.streambundle.getSelfBus(path)</code>, but the stream values are the <code>value</code> properties from incoming deltas.</p>
+<p>Get a <a href="https://baconjs.github.io/">Bacon JS</a> stream for a path in the <code>vessels.self</code> context. </p>
+<p>The <code>path</code> argument is optional. If it is not provided the returned stream produces values for all paths.</p>
+<p><em>Note: This is similar to <code>app.streambundle.getSelfBus(path)</code>, except that the stream values contain only the <code>value</code> property from the incoming deltas.</em></p>
+<p><em>Example:</em></p>
 <pre><code class="language-javascript">app.streambundle
   .getSelfStream('navigation.position')
   .forEach(pos =&gt; app.debug(pos));
-</code></pre>
-<p>Outputs:</p>
-<pre><code>  my-signalk-plugin { longitude: 24.736677, latitude: 59.7250108 } +600ms
+
+// output
+
+  my-signalk-plugin { longitude: 24.736677, latitude: 59.7250108 } +600ms
   my-signalk-plugin { longitude: 24.736645, latitude: 59.7249883 } +321ms
   my-signalk-plugin { longitude: 24.7366563, latitude: 59.7249807 } +174ms
   my-signalk-plugin { longitude: 24.7366563, latitude: 59.724980699999996 } +503ms
 </code></pre>
-<h4 id="appstreambundlegetbuspath"><a class="header" href="#appstreambundlegetbuspath"><code>app.streambundle.getBus(path)</code></a></h4>
-<p>Get a <a href="https://baconjs.github.io/">Bacon JS</a> stream for a Signal K path that will stream values from any context. <code>path</code> argument is optional. If it is not provided the returned stream
-produces values for all paths. Stream values are objects as in <code>app.streambundle.getSelfBus(path)</code>.</p>
 <h4 id="appstreambundlegetavailablepaths"><a class="header" href="#appstreambundlegetavailablepaths"><code>app.streambundle.getAvailablePaths()</code></a></h4>
-<p>Get a list of paths currently available in the server</p>
-<pre><code class="language-javascript">[
+<p>Get a list of available full data model paths maintained by the server.</p>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">app.streambundle.getAvailablePaths();
+
+// returns
+[
   &quot;navigation.speedOverGround&quot;,
   &quot;navigation.courseOverGroundTrue&quot;,
   &quot;navigation.courseGreatCircle.nextPoint.position&quot;,
@@ -263,96 +381,17 @@ produces values for all paths. Stream values are objects as in <code>app.streamb
   &quot;navigation.gnss.type&quot;,&quot;navigation.gnss.methodQuality&quot;,
   &quot;navigation.gnss.integrity&quot;,
   &quot;navigation.magneticVariation&quot;,
-  ...
 ]
 </code></pre>
-<h4 id="apperrormessage"><a class="header" href="#apperrormessage"><code>app.error(message)</code></a></h4>
-<p>Report errors in a human-oriented message. Currently just logs the message, but in the future error messages hopefully will show up in the admin UI.</p>
-<h4 id="appdebug"><a class="header" href="#appdebug"><code>app.debug(...)</code></a></h4>
-<p>Log debug messages. This is the debug method from the <a href="https://www.npmjs.com/package/debug">debug module</a>. The npm module name is used as the debug name.</p>
-<p><code>app.debug()</code> can take any type and will serialize it before outputting.</p>
-<p><em>Do not use <code>debug</code> directly</em>. Using the debug function provided by the server makes sure that the plugin taps into the server's debug logging system, including the helper switches in Admin UI's Server Log page.</p>
-<h4 id="appsavepluginoptionsoptions-callback"><a class="header" href="#appsavepluginoptionsoptions-callback"><code>app.savePluginOptions(options, callback)</code></a></h4>
-<p>Save changes to the plugin's options.</p>
-<pre><code class="language-javascript">var options = {
-  myConfigValue = 'Something the plugin calculated'
-};
-
-app.savePluginOptions(options, () =&gt; {app.debug('Plugin options saved')});
-
-</code></pre>
-<h4 id="appreadpluginoptions"><a class="header" href="#appreadpluginoptions"><code>app.readPluginOptions()</code></a></h4>
-<p>Read plugin options from disk.</p>
-<pre><code class="language-javascript">var options = app.readPluginOptions();
-</code></pre>
-<h4 id="appgetdatadirpath"><a class="header" href="#appgetdatadirpath"><code>app.getDataDirPath()</code></a></h4>
-<p>Returns the full path of the directory where the plugin can persist its internal data, like data files.</p>
-<p>Example use:</p>
-<pre><code class="language-javascript">var myFile = require('path').join(app.getDataDirPath(), 'somefile.ext')
-</code></pre>
-<h4 id="appregisterputhandlercontext-path-callback-source"><a class="header" href="#appregisterputhandlercontext-path-callback-source"><code>app.registerPutHandler(context, path, callback, source)</code></a></h4>
-<p>If a plugin wants to respond to <a href="http://signalk.org/specification/1.3.0/doc/put.html"><code>PUT</code></a> requests for a specific path, it can register an action handler.</p>
-<p>The action handler can handle the request synchronously or asynchronously.</p>
-<p>The passed callback should be a function taking the following arguments: <code>(context, path, value, callback)</code></p>
-<p>For synchronous actions the handler must return a value describing the response of the request: for example</p>
-<pre><code class="language-javascript">{
-  state: 'COMPLETED',
-  statusCode: 200
-}
-</code></pre>
-<p>or</p>
-<pre><code class="language-javascript">{
- state:'COMPLETED',
- statusCode: 400,
- message:'Some Error Message'
-}
-</code></pre>
-<p>The <code>statusCode</code> value can be any valid HTTP response code.</p>
-<p>For asynchronous actions that may take considerable time and where the requester should not be kept waiting for the result the handler must return</p>
-<pre><code class="language-javascript">{ state: 'PENDING' }
-</code></pre>
-<p>When the action is finished the handler should call the <code>callback</code> function with the result with</p>
-<pre><code class="language-javascript">callback({ state: 'COMPLETED', statusCode: 200 })
-</code></pre>
-<p>or</p>
-<pre><code class="language-javascript">callback({
-  state:'COMPLETED',
-  statusCode: 400,
-  message:'Some Error Message'
-})
-</code></pre>
-<p>Synchronous example:</p>
-<pre><code class="language-javascript">function myActionHandler(context, path, value, callback) {
-  if(doSomething(context, path, value)){
-    return { state: 'COMPLETED', statusCode: 200 };
-  } else {
-    return { state: 'COMPLETED', statusCode: 400 };
-  }
-}
-
-plugin.start = function(options) {
-  app.registerPutHandler('vessels.self', 'some.path', myActionHandler, 'somesource.1');
-}
-</code></pre>
-<p>Asynchronous example:</p>
-<pre><code class="language-javascript">function myActionHandler(context, path, value, callback) {
-  doSomethingAsync(context, path, value, (result) =&gt;{
-    if(result) {
-      callback({ state: 'COMPLETED', result: 200 })
-    } else {
-      callback({ state: 'COMPLETED', result: 400 })
-    }
-  });
-  return { state: 'PENDING' };
-}
-
-plugin.start = function(options) {
-  app.registerPutHandler('vessels.self', 'some.path', myActionHandler);
-}
-</code></pre>
-<h4 id="appregisterdeltainputhandler-delta-next--"><a class="header" href="#appregisterdeltainputhandler-delta-next--"><code>app.registerDeltaInputHandler ((delta, next) =&gt; ...)</code></a></h4>
-<p>Register a function to intercept all delta messages <em>before</em> they are processed by the server. The plugin callback should call <code>next(delta)</code> with a modified delta if it wants to alter the incoming delta or call <code>next</code> with the original delta to process it normally. Not calling <code>next</code> will drop the incoming delta and will only show in delta statistics.
-Other, non-delta messages produced by provider pipe elements are emitted normally.</p>
+<h4 id="appregisterdeltainputhandler-delta-next---"><a class="header" href="#appregisterdeltainputhandler-delta-next---"><code>app.registerDeltaInputHandler ((delta, next) =&gt; {} )</code></a></h4>
+<p>Register a function to intercept all delta messages <em>before</em> they are processed by the server. </p>
+<p>The callback function should call <code>next(delta)</code> with either:</p>
+<ul>
+<li>A modified delta (if it wants to alter the incoming delta) </li>
+<li>With the original delta to process it normally. </li>
+</ul>
+<p><em>Note: Not calling <code>next(delta)</code> will cause the incoming delta to be dropped and will only show in delta statistics.</em></p>
+<p>Other, non-delta messages produced by provider pipe elements are emitted normally.</p>
 <pre><code class="language-javascript">app.registerDeltaInputHandler((delta, next) =&gt; {
   delta.updates.forEach(update =&gt; {
     update.values.forEach(pathValue =&gt; {
@@ -362,22 +401,59 @@ Other, non-delta messages produced by provider pipe elements are emitted normall
     })
   })
   next(delta)
-})
+});
 </code></pre>
+<hr />
+<h3 id="configuration"><a class="header" href="#configuration">Configuration</a></h3>
+<h4 id="appsavepluginoptionsoptions-callback"><a class="header" href="#appsavepluginoptionsoptions-callback"><code>app.savePluginOptions(options, callback)</code></a></h4>
+<p>Save changes to the plugin's configuration options.</p>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">let options = {
+  myConfigValue = 'Something the plugin calculated'
+};
+
+app.savePluginOptions(options, () =&gt; {app.debug('Plugin options saved')});
+</code></pre>
+<h4 id="appreadpluginoptions"><a class="header" href="#appreadpluginoptions"><code>app.readPluginOptions()</code></a></h4>
+<p>Read the stored plugin configuration options.</p>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">let options = app.readPluginOptions();
+</code></pre>
+<h4 id="appgetdatadirpath"><a class="header" href="#appgetdatadirpath"><code>app.getDataDirPath()</code></a></h4>
+<p>Returns the full path of the directory where the plugin can persist its internal data, e.g. data files, etc.</p>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">let myDataFile = require('path').join( app.getDataDirPath(), 'somedatafile.ext')
+</code></pre>
+<hr />
+<h3 id="messages-and-debugging"><a class="header" href="#messages-and-debugging">Messages and Debugging</a></h3>
 <h4 id="appsetpluginstatusmsg"><a class="header" href="#appsetpluginstatusmsg"><code>app.setPluginStatus(msg)</code></a></h4>
-<p>Set the current status of the plugin. The <code>msg</code> should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.</p>
+<p>Set the current status of the plugin that is displayed in the plugin configuration UI and the Dashboard. </p>
+<p>The <code>msg</code> parameter should be a short text message describing the current status of the plugin.</p>
+<p><em>Example:</em></p>
 <pre><code class="language-javascript">app.setPluginStatus('Initializing');
 // Do something
 app.setPluginStatus('Done initializing');
 </code></pre>
-<p>Use this instead of deprecated <code>setProviderStatus</code></p>
+<p><em>Note: Replaces deprecated <code>setProviderStatus()</code></em></p>
 <h4 id="appsetpluginerrormsg"><a class="header" href="#appsetpluginerrormsg"><code>app.setPluginError(msg)</code></a></h4>
-<p>Set the current error status of the plugin. The <code>msg</code> should be a short message describing the current status of the plugin and will be displayed in the plugin configuration UI and the Dashboard.</p>
+<p>Set the current error status of the plugin that is displayed in the plugin configuration UI and the Dashboard.</p>
+<p>The <code>msg</code> parameter should be a short text message describing the current status of the plugin.</p>
+<p><em>Example:</em></p>
 <pre><code class="language-javascript">app.setPluginError('Error connecting to database');
 </code></pre>
-<p>Use this instead of deprecated <code>setProviderError</code></p>
+<p><em>Note: Replaces deprecated <code>setProviderError()</code></em></p>
+<h4 id="appdebug"><a class="header" href="#appdebug"><code>app.debug(...)</code></a></h4>
+<p>Log debug messages. </p>
+<p>This function exposes the <code>debug</code> method from the <a href="https://www.npmjs.com/package/debug">debug module</a>.
+The npm module name is used as the debug name.</p>
+<p><code>app.debug()</code> can take any type and will serialize it before outputting.</p>
+<p>_Note: Do not use <code>debug</code> from the debug module directly! Using <code>app.debug()</code>provided by the server ensures that the plugin taps into the server's debug logging system, including the helper switches in Admin UI's Server Log page.</p>
+<h4 id="apperrormessage"><a class="header" href="#apperrormessage"><code>app.error(message)</code></a></h4>
+<p>Report errors in a human-oriented message. Currently just logs the message, but in the future error messages hopefully will show up in the admin UI.</p>
+<hr />
+<h3 id="serial-port"><a class="header" href="#serial-port">Serial Port</a></h3>
 <h4 id="appgetserialports--promiseports"><a class="header" href="#appgetserialports--promiseports"><code>app.getSerialPorts() =&gt; Promise&lt;Ports&gt;</code></a></h4>
-<p>This returs a Promise which will resolve to a <a href="src/serialports.ts#21">Ports</a> object which contains information about the serial ports available on the machine.</p>
+<p>This returns a Promise which will resolve to a Ports object which contains information about the serial ports available on the machine.</p>
 <hr />
 <h3 id="resources-api-interface"><a class="header" href="#resources-api-interface">Resources API Interface</a></h3>
 <h4 id="appregisterresourceproviderresourceprovider"><a class="header" href="#appregisterresourceproviderresourceprovider"><code>app.registerResourceProvider(ResourceProvider)</code></a></h4>
@@ -385,15 +461,21 @@ app.setPluginStatus('Done initializing');
 <p>See <a href="../plugins/resource_provider_plugins.html#registering-as-a-resource-provider"><code>Resource Provider Plugins</code></a> for details.</p>
 <hr />
 <h3 id="course-api-interface"><a class="header" href="#course-api-interface">Course API Interface</a></h3>
-<p>See <a href="../rest-api/course_api.html"><code>Course API</code></a> for details.</p>
+<p>The <a href="../rest-api/course_api.html"><code>Course API</code></a> provides the following functions for use by plugins.</p>
 <h4 id="appgetcourse"><a class="header" href="#appgetcourse"><code>app.getCourse()</code></a></h4>
 <p>Retrieves the current course information. </p>
 <p>It returns the same course information as the <a href="/doc/openapi/?urls.primaryName=course#/course/get_course"><code>/course</code></a> API endpoint.</p>
-<h4 id="appsetcoursedestination"><a class="header" href="#appsetcoursedestination"><code>app.setCourse(Destination)</code></a></h4>
-<p>Navigate to the specified position / waypoint. This function accepts the same parameters as the <a href="/doc/openapi/?urls.primaryName=course#/destination/put_course_destination"><code>/course/destination</code></a> API endpoint.</p>
-<h4 id="appsetrouteroutedest"><a class="header" href="#appsetrouteroutedest"><code>app.setRoute(RouteDest)</code></a></h4>
-<p>Follow a route in the specified direction and starting at the specified point. 
-This function accepts the same parameters as the <a href="/doc/openapi/?urls.primaryName=course#/activeRoute/put_course_activeRoute"><code>/course/activeRoute</code></a> API endpoint.</p>
+<h4 id="appsetcoursedest"><a class="header" href="#appsetcoursedest"><code>app.setCourse(dest)</code></a></h4>
+<p>Set / Clear course to a specified position / waypoint. </p>
+<ul>
+<li><code>dest</code>: Object containing destination position information as per <a href="/doc/openapi/?urls.primaryName=course#/destination/put_course_destination"><code>/course/destination</code></a> OR <code>null</code> = clear destintation.</li>
+</ul>
+<h4 id="appsetrouterte"><a class="header" href="#appsetrouterte"><code>app.setRoute(rte)</code></a></h4>
+<p>Follow / Cancel a route.
+in the specified direction and starting at the specified point.</p>
+<ul>
+<li><code>rte</code>: Object containing route information as per <a href="/doc/openapi/?urls.primaryName=course#/activeRoute/put_course_activeRoute"><code>/course/activeRoute</code></a> OR <code>null</code> = cancel route.</li>
+</ul>
 <hr />
 <h3 id="notifications-api-proposed"><a class="header" href="#notifications-api-proposed">Notifications API <em>(proposed)</em></a></h3>
 <h4 id="appnotifypath-value-pluginid"><a class="header" href="#appnotifypath-value-pluginid"><code>app.notify(path, value, pluginId)</code></a></h4>
@@ -438,18 +520,18 @@ This function accepts the same parameters as the <a href="/doc/openapi/?urls.pri
 </code></pre>
 <hr />
 <h3 id="propertyvalues"><a class="header" href="#propertyvalues">PropertyValues</a></h3>
-<p>PropertyValues are a mechanism for passing configuration type values between different parties such as plugins and input connections running in the server process.</p>
-<p>A plugin can <em>emit</em> values and also register to <em>listen</em> for values emitted by others. </p>
-<p>The difference between the <em>PropertyValues</em> mechanism and <em>Event Emitters</em> in NodeJs is that when you call <code>onPropertyValues</code> the callback will be invoked and passed an array containing all of the previous values for the property name, starting with the initial value of <code>undefined</code>. If nothing has emitted any values for the property name the callback will be called with a value of <code>undefined</code>.</p>
-<pre><code class="language-bash">app.emitPropertyValue: (name: string, value: any) =&gt; void
+<p>The <em>PropertyValues</em> mechanism provides a means for passing configuration type values between different components running in the server process such as plugins and input connections.</p>
+<p>A plugin can both <em>emit</em> values and <em>listen</em> for values emitted by others. </p>
+<p>The difference between the <em>PropertyValues</em> mechanism and <em>Event Emitters</em> in NodeJs is that when  <code>onPropertyValues</code> is called, the <code>callback()</code> function will be invoked and passed an array containing all of the previous values for that <em>property name</em>, starting with the initial value of <code>undefined</code>. If no values have been emitted for that <em>property name</em> the callback will be invoked with a value of <code>undefined</code>.</p>
+<pre><code class="language-typescript">app.emitPropertyValue: (name: string, value: any) =&gt; void
 
 onPropertyValues: (
   name: string,
   callback: (propValuesHistory: PropertyValue[]) =&gt; void
 ) =&gt; Unsubscribe
 </code></pre>
-<p>A PropertyValue has the following structure:</p>
-<pre><code class="language-javascript">interface PropertyValue {
+<p><strong>PropertyValue</strong> has the following structure:</p>
+<pre><code class="language-typescript">interface PropertyValue {
   timestamp: number // millis
   setter: string // plugin id, server, provider id
   name: string
@@ -462,13 +544,22 @@ onPropertyValues: (
 <li>additional <a href="https://github.com/SignalK/nmea0183-signalk/pull/193">NMEA0183 sentence parsers for custom sentences</a> via <code>nmea0183sentenceParser</code></li>
 <li>additional PGN definitions for propietary or custom PGNs</li>
 </ul>
-<p>Code handling incoming PropertyValues should be fully reactive: even if all emitters emit during their startup there is no defined load / startup order and plugins may emit when activated and started. This means that depending on a PropertyValue being there when your code starts or arriving after your code has started is not possible.</p>
-<p><em>PropertyValues</em> is not meant for data passing on a regular basis, as the total history makes it a potential memory leak. There is a safeguard against accidentally emitting regularly with an upper bound for values per property name. New values will be ignored if it is reached and emits logged as errors.</p>
+<p>Code handling incoming <em>PropertyValues</em> should be fully reactive due to:</p>
+<ul>
+<li>Plugins being able to emit <em>PropertyValues</em> when they activated and / or started</li>
+<li>There being no defined load / startup order for plugins / connections.</li>
+</ul>
+<p>So even if all plugins / connections emit during their startup, you cannot depend on a specific <em>PropertyValue</em> being available. It may be present when your code starts or it may arrive after your code has started.</p>
+<p><strong>Note: The <em>PropertyValues</em> mechanism is not intended to be used for data passing on a regular basis, as the total history makes it a potential memory leak.</strong></p>
+<p>To safeguard against a component accidentally emitting regularly, via a fixed upper bound is enforced for the value array per <em>property name</em>. New values will be ignored if the upper bound is reached and are logged as errors.</p>
 <hr />
 <h3 id="exposing-custom-http-paths--openapi"><a class="header" href="#exposing-custom-http-paths--openapi">Exposing custom HTTP paths &amp; OpenApi</a></h3>
-<p>If a plugin has a function called <code>registerWithRouter(router)</code> (like the plugin's <code>start</code> and <code>stop</code> functions) it will be called with an Express router as the parameter during plugin startup. The router will be mounted at <code>/plugins/&lt;pluginId&gt;</code> and you can use standard Express <code>.get</code> <code>.post</code> <code>.use</code> etc to add HTTP path handlers. Note that <code>GET /plugins/&lt;pluginid&gt;</code> and <code>POST /plugins/&lt;pluginid&gt;/configure</code> are reserved by server (see below).</p>
-<p>Express does not have a public API for deregistering subrouters, so <code>stop</code> does not do anything to the router.</p>
-<p><strong>Consider providing an OpenApi description</strong> for your plugin's API. This promotes cooperation with other plugin/webapp authors by making it easy to find and use functionality that is built into plugins. It is also a means to avoid duplication, promote reuse and the possibility of including them in the Signal K specification.</p>
+<p>Plugins are able to provide an API via a function called <code>registerWithRouter(router)</code>, which like the plugin's <code>start</code> and <code>stop</code> functions, will be called during plugin startup with an <em>Express</em> router as the parameter. </p>
+<p>The router will be mounted at <code>/plugins/&lt;pluginId&gt;</code> and you can use standard <em>Express</em> <em>(<code>.get()</code> <code>.post()</code> <code>.use()</code>, etc)</em> methods to add HTTP path handlers. </p>
+<p><em>Note: <code>GET /plugins/&lt;pluginid&gt;</code> and <code>POST /plugins/&lt;pluginid&gt;/configure</code> are reserved by server (see below).</em></p>
+<p>It should be noted that <em>Express</em> does not have a public API for deregistering subrouters, so <code>stop</code> does not do anything to the router.</p>
+<p>If a plugin does provide an API, it is strongly recommended that it provide an <strong>OpenApi description</strong> to document its operation.</p>
+<p>Doing so promotes interoperability with other plugins / webapps by making it easy to find and use the functionality built into plugins. It is also a means to avoid duplication, promote reuse and the possibility of including them in the Signal K specification.</p>
 <p>See <a href="server_plugin.html#add-an-openapi-definition">Server Plugins</a> for details.</p>
 <hr />
 <h3 id="plugin-configuration-http-api"><a class="header" href="#plugin-configuration-http-api">Plugin configuration HTTP API</a></h3>

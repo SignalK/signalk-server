@@ -152,7 +152,8 @@ They are installed via the AppStore and configured via the Admin UI.</p>
 <p>For example, if the plugin you are looking to develop is providing access to information such as <code>route,</code> <code>waypoint</code>, <code>POI</code>, or <code>charts</code> you should be creating a <em><a href="./resource_provider_plugins.html">Resources Provider Plugin</a></em> for the <em><a href="../openapi/resources_api.html">Resources API</a></em>.</p>
 <p>Or if you are looking to perform course calculations or integrate with an auotpilot, you will want to review the <em><a href="../openapi/course_api.html">Course API</a></em> documentation prior to commencing your project.</p>
 <p><strong>OpenApi description for your plugin's API</strong> </p>
-<h2 id="if-your-plugin-provides-an-api-you-should-consider-providing-an-openapi-description-this-promotes-cooperation-with-other-pluginwebapp-authors-and-also-paves-the-way-for-incorporating-new-apis-piloted-within-a-plugin-into-the-signal-k-specification"><a class="header" href="#if-your-plugin-provides-an-api-you-should-consider-providing-an-openapi-description-this-promotes-cooperation-with-other-pluginwebapp-authors-and-also-paves-the-way-for-incorporating-new-apis-piloted-within-a-plugin-into-the-signal-k-specification">If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification.</a></h2>
+<p>If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification. <em>See <a href="#add-an-openapi-definition">Add OpenAPI definition</a></em> below.</p>
+<hr />
 <h2 id="getting-started-with-plugin-development"><a class="header" href="#getting-started-with-plugin-development">Getting Started with Plugin Development</a></h2>
 <h3 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h3>
 <p>To get started developing your plugin you will need the following:</p>
@@ -253,7 +254,7 @@ signalk:interfaces:plugins Could not find options for plugin my-signalk-plugin, 
 <p>Signal K server plugins are NodeJs <code>javascript</code> or <code>typescript</code> projects that return an object that implements the <code>Plugin</code> interface. </p>
 <p>They are installed into the <code>node_modules</code> folder that resides inside the SignalK server's configuration directory <em>(<code>$HOME/.signalk</code> by default)</em>. </p>
 <p>A Signal K plugin is passed a reference to the Signal K server plugin interface which it can use to interact with the server.</p>
-<p>Folowing are code snippets that can be used as a template for plugin development ensuring the returned Plugin object contains the required  functions.</p>
+<p>Following are code snippets that can be used as a template for plugin development ensuring the returned Plugin object contains the required  functions.</p>
 <h3 id="javascript"><a class="header" href="#javascript">Javascript</a></h3>
 <p>Create <code>index.js</code> with the following content:</p>
 <pre><code class="language-javascript">module.exports = (app) =&gt; {
@@ -321,8 +322,24 @@ module.exports = (app: PluginServerApp): Plugin =&gt; {
 <p><code>uiSchema()</code>: A function that returns an object defining the attributes of the UI components displayed in the <strong>Plugin Config</strong> screen.</p>
 </li>
 <li>
-<p><code>getOpenApi()</code>: Function to return the OpenAPI definition. This should be implemented when your plugin provides HTTP endpoints for clients to call. Doing so makes the OPenAPI definition available in the server Admin UI under <code>Documentation -&gt; OpenAPI</code>.</p>
+<p><code>registerWithRouter(router)</code>: This function (which is called during plugin startup) enables plugins to provide an API by registering paths with the Express router is passed as a parameter when invoked. It is strongly recommended that he plugin implement <code>getOpenAPI()</code> if this function is used.</p>
 </li>
+</ul>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">plugin.registerWithRouter = (router) =&gt; {
+    router.get('/preferences', (req, res) =&gt; {
+    res.status(200).json({
+      preferences: {
+        color: 'red',
+        speed: 1.23
+      }
+    });
+  });
+};
+
+</code></pre>
+<ul>
+<li><code>getOpenApi()</code>: Function to return the OpenAPI definition. This should be implemented when your plugin provides HTTP endpoints for clients to call. Doing so makes the OpenAPI definition available in the server Admin UI under <code>Documentation -&gt; OpenAPI</code>.</li>
 </ul>
 <p><em>Example:</em></p>
 <pre><code class="language-javascript">const openapi = require('./openApi.json');
