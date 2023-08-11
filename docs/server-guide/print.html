@@ -154,12 +154,12 @@
 <p>Through implementation of the <em><a href="https://signalk.org/specification/latest/">Signal K Data Standard</a></em>, it enables data exchange between NMEA0183, NMEA2000 and other marine protocols facilitating two way communication between the various onboard systems. In addition it can also act as data hub for additional sensors ensuring their data appears within the single data model. <em>(Visit the <a href="https://github.com/SignalK/SensESP">Signal K SensESP project</a> for <a href="https://en.wikipedia.org/wiki/ESP32">ESP32</a> for details.).</em></p>
 <p>Data is made available to client applications / connections in JSON format making it widely accessible to Apps on phone / tablet devices and web applications.</p>
 <p>Signal K Server is also extensible, providing a plugin framework which allows developers to create solutions that integrate and extend its capabilities. These solutions can be published to <strong>npmjs</strong> and installed via the <strong>App Store</strong> in the server's web-based user interface.</p>
-<p><img src="img/server_only.png" alt="Server only setup" /></p>
+<p><img src="img/server_only.svg" alt="Server only setup" /></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="whats-new-in-version-2"><a class="header" href="#whats-new-in-version-2">What's new in Version 2.</a></h1>
 <p>Signal K Server version 2 introduces new REST APIs designed to perform specific operations <em>(e.g. set destination, advance to next point, etc)</em>.</p>
 <p>These APIs have been implemented to ensure the integrity of the underlying Signal K data model by maintaining values in all related paths associated with the operation. In this way a cohesive, reliable data set is presented to all connected applications and devices.</p>
-<p>The new APIs are mounted under <code>/signalk/v2/api</code>, their definition(s) available as OpenApi documents accessible via <em>Documentation -&gt; OpenAPI</em> in the server admin user interface. They coexist with <code>/signalk/v1/api</code> paths to ensure continued operation of applications.</p>
-<p>Some REST APIs provide an <code>interface</code> for use by plugins to enact operations in a managed way.</p>
+<p>The new APIs are mounted under <code>/signalk/v2/api</code>, their definitions available as OpenApi documents accessible via <em>Documentation -&gt; OpenAPI</em> in the server admin user interface. They coexist with <code>/signalk/v1/api</code> paths to ensure continued operation of applications.</p>
+<p>Some REST APIs provide an <code>interface</code> for use by plugins via the <em><a href="./develop/plugins/server_plugin_api.html">Server Plugin API</a></em> to enable them to enact operations in a managed way.</p>
 <p><em><strong>Important: The Signal K data paths maintained by the REST APIs should NOT be updated directly by any other plugin or process!</strong></em></p>
 <p>With the move towards operation based APIs some paths are flagged for deprecation. Please see <a href="./breaking_changes.html">Changes &amp; Deprecations</a> for details.</p>
 <hr />
@@ -173,13 +173,8 @@
 <hr />
 <h2 id="notes-for-developers"><a class="header" href="#notes-for-developers">Notes for Developers:</a></h2>
 <h3 id="nmea0183--nmea2000-message-processing"><a class="header" href="#nmea0183--nmea2000-message-processing">NMEA0183 / NMEA2000 message processing</a></h3>
-<p>The Course API and associated operations maintain all &quot;course&quot; related paths in the data model but this API is not the only source of course data. NMEA data streams are also a source of course data.</p>
-<p>In the past, plugins processing this data have directly populated various <code>v1</code> Signal K paths. Moving forward 
-these plugins should utilise interface provided by the Course API to perform the required operation.</p>
-<p>In practise this would mean collecting and processing data received from the relevant sentences / PGNs to compose a Course API request.</p>
-<h3 id="connection-with-v1-full-data-model"><a class="header" href="#connection-with-v1-full-data-model">Connection with v1 Full Data Model</a></h3>
-<p>In the current implementation of Signal K Server there is still only a single <code>stream</code> endpoint and all values emitted as deltas <em>(both <code>v1</code> &amp; <code>v2</code>)</em> will continue appear there.</p>
-<p>It should be noted, that while both <code>v1</code> &amp; <code>v2</code> deltas appear in the one stream, only <code>v1</code> deltas will populate the <em>full data model</em> and be available under the <code>/signalk/v1/api/</code> path!</p>
+<p>Whilst the Course API and its associated operations provide a means of setting a course, NMEA data streams are the source of information when the course is set on a connected device.</p>
+<p>In the past, plugins processing NMEA data streams have directly populated the mapped <code>v1</code> Signal K paths based on the received sentence / PGN values. Moving forward these plugins should utilise the relevant <em><a href="./develop/plugins/server_plugin_api.html">Server Plugin API</a></em> methods to enact course operations.</p>
 <h3 id="stream-updates"><a class="header" href="#stream-updates">Stream updates</a></h3>
 <p>The new REST APIs emit <code>v2</code> deltas with values that are objects.</p>
 <p>For example, when a course is activated, deltas will be emitted for <code>navigation.course.previousPoint</code>, <code>navigation.course.nextPoint</code> and <code>navigation.course.activeRoute</code> where the value is an object.</p>
@@ -196,7 +191,12 @@ these plugins should utilise interface provided by the Course API to perform the
     }
 }
 </code></pre>
+<h4 id="connection-with-v1-full-data-model"><a class="header" href="#connection-with-v1-full-data-model">Connection with v1 Full Data Model</a></h4>
+<p>The current implementation of Signal K Server provides only a single <code>stream</code> endpoint <em>(<code>/signalk/v1/stream</code>)</em> and all values emitted as deltas <em>(both <code>v1</code> &amp; <code>v2</code>)</em> will continue appear there.</p>
+<p>It should be noted, that even though both <code>v1</code> &amp; <code>v2</code> deltas appear in the one stream, only <code>v1</code> deltas will populate the <em>full data model</em> and be available under the <code>/signalk/v1/api</code> path!</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="changes--deprecations"><a class="header" href="#changes--deprecations">Changes &amp; Deprecations</a></h1>
+<p>The introduction of new REST APIs in version 2 and the move to an operations based model has resulted in some version 1 paths being flagged for deprecation.</p>
+<p>It is recommended that applications and plugins referencing these deprecated paths update their operation to reference the version 2 paths.</p>
 <h2 id="changes"><a class="header" href="#changes">Changes</a></h2>
 <p>The following changes have been implemented with the introduction of <strong>Resources API</strong> and apply to applications using the <code>./signalk/v2/resources</code> endpoint.</p>
 <p><em>Note: These changes DO NOT impact applications using the <code>./signalk/v1/resources</code> endpoint.</em></p>
@@ -215,13 +215,13 @@ these plugins should utilise interface provided by the Course API to perform the
 }
 </code></pre>
 <h3 id="2-resource-attributes"><a class="header" href="#2-resource-attributes">2. Resource Attributes</a></h3>
-<p>The Resources API has updated the definition of the following resources:</p>
+<p>The Resources API has updated the definition of the following resources and may break applications that simply shift to using the <code>v2</code> api without catering for the changes:</p>
 <ul>
-<li><code>routes</code>: removed the <code>start</code>, <code>end</code> properties.</li>
-<li><code>waypoints</code>: removed <code>position</code> attribute, added <code>name</code>, <code>description</code> and <code>type</code> attributes.</li>
-<li><code>regions</code>: removed <code>geohash</code> attribute, added <code>name</code> and <code>description</code> properties.</li>
-<li><code>notes</code>: removed <code>geohash</code> and <code>region</code> attributes, added <code>href</code> and <code>properties</code> attributes.</li>
-<li><code>charts</code>: There has been a significant changes to include support for WMS, WMTS and TileJSON sources. </li>
+<li><strong>routes</strong>: removed the <code>start</code>, <code>end</code> properties.</li>
+<li><strong>waypoints</strong>: removed <code>position</code> attribute, added <code>name</code>, <code>description</code> and <code>type</code> attributes.</li>
+<li><strong>regions</strong>: removed <code>geohash</code> attribute, added <code>name</code> and <code>description</code> properties.</li>
+<li><strong>notes</strong>: removed <code>geohash</code> and <code>region</code> attributes, added <code>href</code> and <code>properties</code> attributes.</li>
+<li><strong>charts</strong>: There has been a significant changes to include support for WMS, WMTS and TileJSON sources. </li>
 </ul>
 <p>Please see the <a href="https://github.com/SignalK/signalk-server/blob/master/src/api/resources/openApi.json">Resources OpenAPI definition</a> for details.</p>
 <hr />
@@ -232,7 +232,7 @@ these plugins should utilise interface provided by the Course API to perform the
 <li><code>/signalk/v1/api/vessels/self/navigation/courseGreatCircle</code></li>
 <li><code>/signalk/v1/api/vessels/self/navigation/courseRhumbline</code></li>
 </ul>
-<p>_Note: The Course API does currently maintain values in these paths for the purposes of backward compatibility, but applications and plugins referencing these paths should plan to move to using the equivalent paths under <code>/signalk/v2/api/vessels/self/navigation/course</code>.</p>
+<p><em>Note: The Course API does currently maintain values in these paths for the purposes of backward compatibility, but applications and plugins referencing these paths should plan to move to using the equivalent paths under <code>/signalk/v2/api/vessels/self/navigation/course</code>.</em></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
 <p>Signal K Server is a NodeJS application which can be installed on a variety of devices and operating systems.</p>
 <p>It is available for installation via:</p>
@@ -2101,7 +2101,7 @@ To do this, in a terminal session from within the folder containing <code>packag
 <h4 id="following-is-a-list-of-proposed-apis-for-implementation"><a class="header" href="#following-is-a-list-of-proposed-apis-for-implementation">Following is a list of proposed APIs for implementation:</a></h4>
 <table><thead><tr><th>Proposed API</th><th>Description</th><th>Endpoint</th></tr></thead><tbody>
 <tr><td><em><code>Notifications</code></em></td><td>Provide the ability to raise, update and clear notifications from multiple sources. <em><a href="https://github.com/SignalK/signalk-server/pull/1560">View PR</a></em></td><td><code>notifications</code></td></tr>
-<tr><td><em><code>Autopilot</code></em></td><td>Provide the ability to send common commands to an autopilot via a provider plugin. <em><a href="https://github.com/SignalK/signalk-server/pull/1512">View PR</a></em></td><td><code>autopilot</code></td></tr>
+<tr><td><em><code>Autopilot</code></em></td><td>Provide the ability to send common commands to an autopilot via a provider plugin. <em><a href="https://github.com/SignalK/signalk-server/pull/1596">View PR</a></em></td><td><code>autopilot</code></td></tr>
 </tbody></table>
 <hr />
 <div style="break-before: page; page-break-before: always;"></div><h1 id="working-with-the-course-api"><a class="header" href="#working-with-the-course-api">Working with the Course API</a></h1>

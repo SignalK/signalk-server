@@ -78,3 +78,4 @@ docs/src
 docs/book.toml
 docs/docker-compose.yml
 docs/build-docs.sh
+docs/server-guide/**/*.dia

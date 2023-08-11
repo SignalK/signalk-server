@@ -143,6 +143,8 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="changes--deprecations"><a class="header" href="#changes--deprecations">Changes &amp; Deprecations</a></h1>
+<p>The introduction of new REST APIs in version 2 and the move to an operations based model has resulted in some version 1 paths being flagged for deprecation.</p>
+<p>It is recommended that applications and plugins referencing these deprecated paths update their operation to reference the version 2 paths.</p>
 <h2 id="changes"><a class="header" href="#changes">Changes</a></h2>
 <p>The following changes have been implemented with the introduction of <strong>Resources API</strong> and apply to applications using the <code>./signalk/v2/resources</code> endpoint.</p>
 <p><em>Note: These changes DO NOT impact applications using the <code>./signalk/v1/resources</code> endpoint.</em></p>
@@ -161,13 +163,13 @@
 }
 </code></pre>
 <h3 id="2-resource-attributes"><a class="header" href="#2-resource-attributes">2. Resource Attributes</a></h3>
-<p>The Resources API has updated the definition of the following resources:</p>
+<p>The Resources API has updated the definition of the following resources and may break applications that simply shift to using the <code>v2</code> api without catering for the changes:</p>
 <ul>
-<li><code>routes</code>: removed the <code>start</code>, <code>end</code> properties.</li>
-<li><code>waypoints</code>: removed <code>position</code> attribute, added <code>name</code>, <code>description</code> and <code>type</code> attributes.</li>
-<li><code>regions</code>: removed <code>geohash</code> attribute, added <code>name</code> and <code>description</code> properties.</li>
-<li><code>notes</code>: removed <code>geohash</code> and <code>region</code> attributes, added <code>href</code> and <code>properties</code> attributes.</li>
-<li><code>charts</code>: There has been a significant changes to include support for WMS, WMTS and TileJSON sources. </li>
+<li><strong>routes</strong>: removed the <code>start</code>, <code>end</code> properties.</li>
+<li><strong>waypoints</strong>: removed <code>position</code> attribute, added <code>name</code>, <code>description</code> and <code>type</code> attributes.</li>
+<li><strong>regions</strong>: removed <code>geohash</code> attribute, added <code>name</code> and <code>description</code> properties.</li>
+<li><strong>notes</strong>: removed <code>geohash</code> and <code>region</code> attributes, added <code>href</code> and <code>properties</code> attributes.</li>
+<li><strong>charts</strong>: There has been a significant changes to include support for WMS, WMTS and TileJSON sources. </li>
 </ul>
 <p>Please see the <a href="https://github.com/SignalK/signalk-server/blob/master/src/api/resources/openApi.json">Resources OpenAPI definition</a> for details.</p>
 <hr />
@@ -178,7 +180,7 @@
 <li><code>/signalk/v1/api/vessels/self/navigation/courseGreatCircle</code></li>
 <li><code>/signalk/v1/api/vessels/self/navigation/courseRhumbline</code></li>
 </ul>
-<p>_Note: The Course API does currently maintain values in these paths for the purposes of backward compatibility, but applications and plugins referencing these paths should plan to move to using the equivalent paths under <code>/signalk/v2/api/vessels/self/navigation/course</code>.</p>
+<p><em>Note: The Course API does currently maintain values in these paths for the purposes of backward compatibility, but applications and plugins referencing these paths should plan to move to using the equivalent paths under <code>/signalk/v2/api/vessels/self/navigation/course</code>.</em></p>
 
                     </main>
 

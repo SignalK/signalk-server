@@ -21,6 +21,6 @@ They are mounted under the path `/signalk/v2/api` and OpenAPI definitions can be
 | Proposed API       | Description | Endpoint    | 
 |---        |---            |---          |
 | _`Notifications`_ | Provide the ability to raise, update and clear notifications from multiple sources. _[View PR](https://github.com/SignalK/signalk-server/pull/1560)_| `notifications` |
-| _`Autopilot`_  | Provide the ability to send common commands to an autopilot via a provider plugin. _[View PR](https://github.com/SignalK/signalk-server/pull/1512)_ | `autopilot` |
+| _`Autopilot`_  | Provide the ability to send common commands to an autopilot via a provider plugin. _[View PR](https://github.com/SignalK/signalk-server/pull/1596)_ | `autopilot` |
 
 ---

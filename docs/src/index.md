@@ -14,7 +14,7 @@ Data is made available to client applications / connections in JSON format makin
 
 Signal K Server is also extensible, providing a plugin framework which allows developers to create solutions that integrate and extend its capabilities. These solutions can be published to **npmjs** and installed via the **App Store** in the server's web-based user interface.
 
-![Server only setup](img/server_only.png)
+![Server only setup](img/server_only.svg)
 
 
 

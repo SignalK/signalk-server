@@ -1,5 +1,8 @@
 # Changes & Deprecations
 
+The introduction of new REST APIs in version 2 and the move to an operations based model has resulted in some version 1 paths being flagged for deprecation.
+
+It is recommended that applications and plugins referencing these deprecated paths update their operation to reference the version 2 paths.
 
 ## Changes
 
@@ -31,12 +34,12 @@ _Example:_
 
 ### 2. Resource Attributes
 
-The Resources API has updated the definition of the following resources:
-- `routes`: removed the `start`, `end` properties.
-- `waypoints`: removed `position` attribute, added `name`, `description` and `type` attributes.
-- `regions`: removed `geohash` attribute, added `name` and `description` properties.
-- `notes`: removed `geohash` and `region` attributes, added `href` and `properties` attributes.
-- `charts`: There has been a significant changes to include support for WMS, WMTS and TileJSON sources. 
+The Resources API has updated the definition of the following resources and may break applications that simply shift to using the `v2` api without catering for the changes:
+- **routes**: removed the `start`, `end` properties.
+- **waypoints**: removed `position` attribute, added `name`, `description` and `type` attributes.
+- **regions**: removed `geohash` attribute, added `name` and `description` properties.
+- **notes**: removed `geohash` and `region` attributes, added `href` and `properties` attributes.
+- **charts**: There has been a significant changes to include support for WMS, WMTS and TileJSON sources. 
 
 Please see the [Resources OpenAPI definition](https://github.com/SignalK/signalk-server/blob/master/src/api/resources/openApi.json) for details.
 
@@ -51,4 +54,4 @@ With the introduction of the Course API the following paths should now be consid
 - `/signalk/v1/api/vessels/self/navigation/courseGreatCircle`
 - `/signalk/v1/api/vessels/self/navigation/courseRhumbline`
 
-_Note: The Course API does currently maintain values in these paths for the purposes of backward compatibility, but applications and plugins referencing these paths should plan to move to using the equivalent paths under `/signalk/v2/api/vessels/self/navigation/course`.
+_Note: The Course API does currently maintain values in these paths for the purposes of backward compatibility, but applications and plugins referencing these paths should plan to move to using the equivalent paths under `/signalk/v2/api/vessels/self/navigation/course`._
