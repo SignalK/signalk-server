@@ -11,7 +11,10 @@ const app = {
   },
   emit: () => {},
   on: () => {},
-  handleMessage: (id, delta) => console.log(JSON.stringify(delta))
+  handleMessage: (id, delta) => console.log(JSON.stringify(delta)),
+  propertyValues: {
+    onPropertyValues: () => undefined
+  }
 }
 
 new require('../lib/pipedproviders')(app).createPipedProvider({
