@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>REST APIs - Signal K Server Documentation</title>
+        <title>Notifications API - Signal K Server Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -81,7 +81,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../../index.html">Introduction</a></li><li class="chapter-item expanded "><a href="../../whats_new.html"><strong aria-hidden="true">1.</strong> What's New in V2</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../breaking_changes.html"><strong aria-hidden="true">1.1.</strong> Changes &amp; Deprecations</a></li></ol></li><li class="chapter-item expanded "><li class="part-title">Getting Started</li><li class="chapter-item expanded "><a href="../../installation/install.html"><strong aria-hidden="true">2.</strong> Installation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../installation/raspberry_pi_installation.html"><strong aria-hidden="true">2.1.</strong> Installing on Raspberry Pi</a></li><li class="chapter-item expanded "><a href="../../installation/updating.html"><strong aria-hidden="true">2.2.</strong> Updating your installation</a></li><li class="chapter-item expanded "><a href="../../installation/command_line.html"><strong aria-hidden="true">2.3.</strong> Runtime environment &amp; options</a></li></ol></li><li class="chapter-item expanded "><a href="../../security.html"><strong aria-hidden="true">3.</strong> Security</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../setup/generating_tokens.html"><strong aria-hidden="true">3.1.</strong> Generating tokens</a></li></ol></li><li class="chapter-item expanded "><li class="part-title">Setup</li><li class="chapter-item expanded "><a href="../../setup/configuration.html"><strong aria-hidden="true">4.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="../../setup/branding.html"><strong aria-hidden="true">5.</strong> Branding</a></li><li class="chapter-item expanded affix "><li class="part-title">Develop</li><li class="chapter-item expanded "><a href="../../develop/developer_notes.html"><strong aria-hidden="true">6.</strong> Notes for Developers</a></li><li class="chapter-item expanded "><a href="../../develop/webapps.html"><strong aria-hidden="true">7.</strong> WebApps</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/server_plugin.html"><strong aria-hidden="true">8.</strong> Plugins</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../develop/plugins/deltas.html"><strong aria-hidden="true">8.1.</strong> Processing Data</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/server_plugin_api.html"><strong aria-hidden="true">8.2.</strong> Server API</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/resource_provider_plugins.html"><strong aria-hidden="true">8.3.</strong> Resource Providers</a></li><li class="chapter-item expanded "><a href="../../develop/rest-api/course_calculations.html"><strong aria-hidden="true">8.4.</strong> Course Providers</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/autopilot_provider_plugins.html"><strong aria-hidden="true">8.5.</strong> Autopilot Providers</a></li></ol></li><li class="chapter-item expanded "><a href="../../develop/plugins/publishing.html"><strong aria-hidden="true">9.</strong> Publishing to the AppStore</a></li><li class="chapter-item expanded "><a href="../../develop/rest-api/open_api.html" class="active"><strong aria-hidden="true">10.</strong> REST APIs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../develop/rest-api/course_api.html"><strong aria-hidden="true">10.1.</strong> Course API</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../develop/rest-api/course_calculations.html"><strong aria-hidden="true">10.1.1.</strong> Course Calulations</a></li></ol></li><li class="chapter-item expanded "><a href="../../develop/rest-api/resources_api.html"><strong aria-hidden="true">10.2.</strong> Resources API</a></li><li class="chapter-item expanded "><a href="../../develop/rest-api/notifications_api.html"><strong aria-hidden="true">10.3.</strong> Notifications API</a></li><li class="chapter-item expanded "><a href="../../develop/rest-api/autopilot_api.html"><strong aria-hidden="true">10.4.</strong> Autopilot API</a></li></ol></li><li class="chapter-item expanded "><a href="../../develop/contributing.html"><strong aria-hidden="true">11.</strong> Contribute</a></li><li class="chapter-item expanded affix "><li class="part-title">Support</li><li class="chapter-item expanded "><a href="../../support/help.html"><strong aria-hidden="true">12.</strong> Help &amp; Support</a></li><li class="chapter-item expanded "><a href="../../support/sponsor.html"><strong aria-hidden="true">13.</strong> Sponsor</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../../index.html">Introduction</a></li><li class="chapter-item expanded "><a href="../../whats_new.html"><strong aria-hidden="true">1.</strong> What's New in V2</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../breaking_changes.html"><strong aria-hidden="true">1.1.</strong> Changes &amp; Deprecations</a></li></ol></li><li class="chapter-item expanded "><li class="part-title">Getting Started</li><li class="chapter-item expanded "><a href="../../installation/install.html"><strong aria-hidden="true">2.</strong> Installation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../installation/raspberry_pi_installation.html"><strong aria-hidden="true">2.1.</strong> Installing on Raspberry Pi</a></li><li class="chapter-item expanded "><a href="../../installation/updating.html"><strong aria-hidden="true">2.2.</strong> Updating your installation</a></li><li class="chapter-item expanded "><a href="../../installation/command_line.html"><strong aria-hidden="true">2.3.</strong> Runtime environment &amp; options</a></li></ol></li><li class="chapter-item expanded "><a href="../../security.html"><strong aria-hidden="true">3.</strong> Security</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../setup/generating_tokens.html"><strong aria-hidden="true">3.1.</strong> Generating tokens</a></li></ol></li><li class="chapter-item expanded "><li class="part-title">Setup</li><li class="chapter-item expanded "><a href="../../setup/configuration.html"><strong aria-hidden="true">4.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="../../setup/branding.html"><strong aria-hidden="true">5.</strong> Branding</a></li><li class="chapter-item expanded affix "><li class="part-title">Develop</li><li class="chapter-item expanded "><a href="../../develop/developer_notes.html"><strong aria-hidden="true">6.</strong> Notes for Developers</a></li><li class="chapter-item expanded "><a href="../../develop/webapps.html"><strong aria-hidden="true">7.</strong> WebApps</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/server_plugin.html"><strong aria-hidden="true">8.</strong> Plugins</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../develop/plugins/deltas.html"><strong aria-hidden="true">8.1.</strong> Processing Data</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/server_plugin_api.html"><strong aria-hidden="true">8.2.</strong> Server API</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/resource_provider_plugins.html"><strong aria-hidden="true">8.3.</strong> Resource Providers</a></li><li class="chapter-item expanded "><a href="../../develop/rest-api/course_calculations.html"><strong aria-hidden="true">8.4.</strong> Course Providers</a></li><li class="chapter-item expanded "><a href="../../develop/plugins/autopilot_provider_plugins.html"><strong aria-hidden="true">8.5.</strong> Autopilot Providers</a></li></ol></li><li class="chapter-item expanded "><a href="../../develop/plugins/publishing.html"><strong aria-hidden="true">9.</strong> Publishing to the AppStore</a></li><li class="chapter-item expanded "><a href="../../develop/rest-api/open_api.html"><strong aria-hidden="true">10.</strong> REST APIs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../develop/rest-api/course_api.html"><strong aria-hidden="true">10.1.</strong> Course API</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../develop/rest-api/course_calculations.html"><strong aria-hidden="true">10.1.1.</strong> Course Calulations</a></li></ol></li><li class="chapter-item expanded "><a href="../../develop/rest-api/resources_api.html"><strong aria-hidden="true">10.2.</strong> Resources API</a></li><li class="chapter-item expanded "><a href="../../develop/rest-api/notifications_api.html" class="active"><strong aria-hidden="true">10.3.</strong> Notifications API</a></li><li class="chapter-item expanded "><a href="../../develop/rest-api/autopilot_api.html"><strong aria-hidden="true">10.4.</strong> Autopilot API</a></li></ol></li><li class="chapter-item expanded "><a href="../../develop/contributing.html"><strong aria-hidden="true">11.</strong> Contribute</a></li><li class="chapter-item expanded affix "><li class="part-title">Support</li><li class="chapter-item expanded "><a href="../../support/help.html"><strong aria-hidden="true">12.</strong> Help &amp; Support</a></li><li class="chapter-item expanded "><a href="../../support/sponsor.html"><strong aria-hidden="true">13.</strong> Sponsor</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -142,31 +142,33 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="rest-apis"><a class="header" href="#rest-apis">REST APIs</a></h1>
-<p>REST APIs were introduced in Signal K server version 2 to provide a way for applications and plugins perform operations and ensure that the Signal K data model is consistent.</p>
-<p>They are mounted under the path <code>/signalk/v2/api</code> and OpenAPI definitions can be found under <em>Documentation -&gt; OpenAPI</em> in the server Admin UI. </p>
-<h3 id="apis-available-in-signal-k-server-v200-and-later"><a class="header" href="#apis-available-in-signal-k-server-v200-and-later">APIs available in Signal K server v2.0.0 and later:</a></h3>
-<table><thead><tr><th>API</th><th>Description</th><th>Endpoint</th></tr></thead><tbody>
-<tr><td><a href="./course_api.html">Course</a></td><td>Set a course, follow a route, advance to next point, etc.</td><td><code>course</code></td></tr>
-<tr><td><a href="./resources_api.html">Resources</a></td><td>Create, view, update and delete waypoints, routes, etc.</td><td><code>resources</code></td></tr>
-</tbody></table>
-<hr />
-<h4 id="following-is-a-list-of-proposed-apis-for-implementation"><a class="header" href="#following-is-a-list-of-proposed-apis-for-implementation">Following is a list of proposed APIs for implementation:</a></h4>
-<table><thead><tr><th>Proposed API</th><th>Description</th><th>Endpoint</th></tr></thead><tbody>
-<tr><td><em><code>Notifications</code></em></td><td>Provide the ability to raise, update and clear notifications from multiple sources. <em><a href="https://github.com/SignalK/signalk-server/pull/1560">View PR</a></em></td><td><code>notifications</code></td></tr>
-<tr><td><em><code>Autopilot</code></em></td><td>Provide the ability to send common commands to an autopilot via a provider plugin. <em><a href="https://github.com/SignalK/signalk-server/pull/1596">View PR</a></em></td><td><code>autopilot</code></td></tr>
-</tbody></table>
-<hr />
+                        <h1 id="notifications-api"><a class="header" href="#notifications-api">Notifications API</a></h1>
+<h4 id="under-development"><a class="header" href="#under-development">(Under Development)</a></h4>
+<p><em>Note: This API is currently under development and the information provided here is likely to change.</em></p>
+<p>The Signal K server Notifications API will provide a set of operations for raising, actioning and clearing notifications.</p>
+<p>It will implement:</p>
+<ul>
+<li>
+<p>Both HTTP endpoints for interactive use (<code>/signalk/v2/api/notifications</code>) and an interface for use by plugins and connection handlers to ensure effective management of notifications.</p>
+</li>
+<li>
+<p>The ability to action notifications (e.g. acknowledge, silence, etc) and preserve the resulting status so it is available to all connected devices.</p>
+</li>
+<li>
+<p>A unique <code>id</code> for each notification which can then be used to action it, regardless of the notification source.</p>
+</li>
+</ul>
+<p><a href="https://github.com/SignalK/signalk-server/pull/1560">View the PR</a> for more details.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../develop/plugins/publishing.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../develop/rest-api/resources_api.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next" href="../../develop/rest-api/course_api.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../../develop/rest-api/autopilot_api.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -176,11 +178,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../develop/plugins/publishing.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../develop/rest-api/resources_api.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next" href="../../develop/rest-api/course_api.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="../../develop/rest-api/autopilot_api.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
