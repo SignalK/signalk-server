@@ -5,7 +5,7 @@
 
 The SignalK specification defines the `autopilot` path under the `steering` schema group _(e.g. `/signalk/v2/api/vessels/self/steering/autopilot`)_, the majority of which will be populated by data provided by a connected autopilot device.
 
-The Autopilot API provides a mechanism for applications to issue requests via an [Autopilot Provider plugin](AUTOPILOT_PROVIDER_PLUGINS.md) to both send commands and retrieve information from a connected autopilot device. 
+The Autopilot API provides a mechanism for applications to issue requests via an [Autopilot Provider plugin](../plugins/autopilot_provider_plugins.md) to both send commands and retrieve information from a connected autopilot device. 
 
  _You can find plugins in the `App Store` section of the server admin UI._
 

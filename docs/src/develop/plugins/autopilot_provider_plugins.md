@@ -1,6 +1,6 @@
 # Autopilot Provider plugins
 
-_This document should be read in conjunction with [SERVERPLUGINS.md](./SERVERPLUGINS.md) as it contains additional information regarding the development of plugins that facilitate the sending and retrieval of data to autopilot devices._
+_This document should be read in conjunction with the [SERVER PLUGINS](./server_plugin.md) document as it contains additional information regarding the development of plugins that facilitate the sending and retrieval of data to autopilot devices._
 
 To see an example of a resource provider plugin see [mock-autopilot-provider](./packages/mock-autopilot-provider)
 
