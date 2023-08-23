@@ -3,7 +3,7 @@
 
 ## Overview
 
-The SignalK server _Resource API_ provides a common set operations for clients to interact with routes, waypoints, charts, etc but it does NOT provide the ability to persist or retrieve resources to / from storage.
+The Signal K server _Resource API_ provides a common set operations for clients to interact with routes, waypoints, charts, etc but it does NOT provide the ability to persist or retrieve resources to / from storage.
 
 This functionality needs to be provided by one or more server plugins that interface with the _Resource API_ to facilitate the storage and retrieval of resource data.
 
