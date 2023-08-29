@@ -166,6 +166,11 @@ SerialStream.prototype.start = function () {
         } else {
           that.serial.write(d + '\r\n')
         }
+        setImmediate(() => {
+          that.options.app.emit('connectionwrite', {
+            providerId: that.options.providerId,
+          })
+        })
         pendingWrites++
         that.serial.drain(onDrain)
       })
