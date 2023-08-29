@@ -74,16 +74,24 @@ const Dashboard = (props) => {
                 </Col>
                 <Col xs="12" md="6">
                   <div className="text-muted">
-                    Connection activity (deltas/second)
+                    Connection activity (input: deltas/second - output:
+                    messages/second)
                   </div>
                   <ul className="horizontal-bars type-2">
                     {Object.keys(providerStatistics || {}).map((providerId) => {
                       const providerStats = providerStatistics[providerId]
-                      const iconClass =
-                        'icon-feed text-primary' +
+                      const inputPulseIconClass =
+                        'icon-login text-primary' +
                         (providerStats.deltaRate > 50
                           ? ' fa-pulse-fast'
                           : providerStats.deltaRate > 0
+                          ? ' fa-pulse'
+                          : '')
+                      const outputPulseIconClass =
+                        'icon-logout text-primary' +
+                        (providerStats.writeRate > 50
+                          ? ' fa-pulse-fast'
+                          : providerStats.writeRate > 0
                           ? ' fa-pulse'
                           : '')
                       return (
@@ -95,7 +103,16 @@ const Dashboard = (props) => {
                             )
                           }
                         >
-                          <i className={iconClass} />
+                          <i className={inputPulseIconClass} />
+                          <i
+                            className={outputPulseIconClass}
+                            style={{
+                              transform: 'scaleX(-1)',
+                              visibility: providerStats.lastIntervalWriteCount
+                                ? ''
+                                : 'hidden',
+                            }}
+                          />
                           <span className="title">
                             {providerIdLink(providerId)}
                           </span>

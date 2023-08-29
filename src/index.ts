@@ -59,6 +59,7 @@ import { setupCors } from './cors'
 import SubscriptionManager from './subscriptionmanager'
 import { PluginId, PluginManager } from './interfaces/plugins'
 import { OpenApiDescription, OpenApiRecord } from './api/swagger'
+import { WithProviderStatistics } from './deltastats'
 const debug = createDebug('signalk-server')
 
 const { StreamBundle } = require('./streambundle')
@@ -74,7 +75,8 @@ class Server {
     SignalKMessageHub &
     PluginManager &
     WithSecurityStrategy &
-    IRouter
+    IRouter &
+    WithProviderStatistics
   constructor(opts: ServerOptions) {
     const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
     const bodyParser = require('body-parser')
@@ -329,6 +331,7 @@ class Server {
         }
       }
       expressAppEmit(eventName, ...args)
+      return true
     }
 
     this.app.intervals = []
