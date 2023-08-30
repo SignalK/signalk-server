@@ -4,7 +4,7 @@
 
 For a device to be able to interact with a Signal K server with security enabled, it is require to pass an access token with each request.
 
-_Examples include display / guage, temperature sensor or client with no user interface._
+_Examples include display / gauge, temperature sensor or client with no user interface._
 
 To get an access token the following methods can be used:
 1. The device can submit an [Access Request](https://signalk.org/specification/1.5.0/doc/access_requests.html) which needs to be actioned via the Signal K Server UI.
