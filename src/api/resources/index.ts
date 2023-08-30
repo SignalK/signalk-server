@@ -133,6 +133,10 @@ export class ResourcesApi {
         )
       }
       validate.resource(resType as SignalKResourceType, resId, 'PUT', data)
+    } else {
+      if (!resId) {
+        return Promise.reject(new Error(`No resource id provided!`))
+      }
     }
 
     let provider: string | undefined = undefined
@@ -140,6 +144,9 @@ export class ResourcesApi {
       provider = this.checkForProvider(resType, providerId)
     } else {
       provider = await this.getProviderForResourceId(resType, resId)
+      if (!provider) {
+        provider = this.checkForProvider(resType)
+      }
     }
     if (provider) {
       return this.resProvider[resType]?.get(provider)?.setResource(resId, data)
