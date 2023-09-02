@@ -231,7 +231,7 @@ class PluginCard extends Component {
                     </Label>
                   </Col>
                   <Col xs="3">
-                    Log plugin output
+                    Data Logging
                     <Label
                       style={labelStyle}
                       className="switch switch-text switch-primary"
