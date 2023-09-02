@@ -70,7 +70,7 @@ export interface Config {
     mdns?: boolean
     sslport?: number
     port?: number
-    keepMostRecentLogsOnly?: number
+    keepMostRecentLogsOnly?: boolean
     logCountToKeep?: number
     enablePluginLogging?: boolean
     loggingDirectory?: string
