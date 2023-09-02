@@ -481,7 +481,8 @@ module.exports = function (
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
       keepMostRecentLogsOnly:
-        app.config.settings.keepMostRecentLogsOnly || false,
+        isUndefined(app.config.settings.keepMostRecentLogsOnly) ||
+        app.config.settings.keepMostRecentLogsOnly,
       logCountToKeep: app.config.settings.logCountToKeep || 24,
       runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true'
     }
