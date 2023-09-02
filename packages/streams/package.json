@@ -24,7 +24,7 @@
   "dependencies": {
     "@canboat/canboatjs": "^2.0.0",
     "@signalk/client": "^2.3.0",
-    "@signalk/n2k-signalk": "^2.0.0",
+    "@signalk/n2k-signalk": "^3.0.0-beta.1",
     "@signalk/nmea0183-signalk": "^3.0.0",
     "@signalk/nmea0183-utilities": "^0.8.0",
     "@signalk/signalk-schema": "^1.5.0",
