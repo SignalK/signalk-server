@@ -31,7 +31,7 @@ class AppsList extends Component {
                 <a
                   href={app.npmUrl}
                   target="_blank"
-                  title="Open package on npmjs.com"
+                  title="See app documentation on npmjs.com"
                 >
                   <i className="icon-info" />
                 </a>
