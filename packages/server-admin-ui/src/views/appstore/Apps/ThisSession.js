@@ -22,8 +22,8 @@ class ThisSession extends Component {
         <div>
           <Card>
             <CardHeader>
-              <i className="fa fa-align-justify" /> Installed This Session
-              (restart required)
+              <i className="fa fa-align-justify" /> Activity This Session
+              (restart server when completed!)
             </CardHeader>
             <CardBody>
               <Table responsive bordered striped size="sm">
