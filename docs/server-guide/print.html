@@ -589,7 +589,7 @@ Many wifi networks allow communication between all connected computers, so your 
 <div style="break-before: page; page-break-before: always;"></div><h1 id="generating-tokens"><a class="header" href="#generating-tokens">Generating Tokens</a></h1>
 <h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
 <p>For a device to be able to interact with a Signal K server with security enabled, it is require to pass an access token with each request.</p>
-<p><em>Examples include display / guage, temperature sensor or client with no user interface.</em></p>
+<p><em>Examples include display / gauge, temperature sensor or client with no user interface.</em></p>
 <p>To get an access token the following methods can be used:</p>
 <ol>
 <li>The device can submit an <a href="https://signalk.org/specification/1.5.0/doc/access_requests.html">Access Request</a> which needs to be actioned via the Signal K Server UI.</li>
@@ -600,7 +600,7 @@ Many wifi networks allow communication between all connected computers, so your 
 <p>The <code>signalk-generate-token</code> utility is run from a terminal session on the Signal K Server and accepts the following parameters:</p>
 <ul>
 <li><code>-u &lt;username&gt;</code>: The user account against which the token is created.</li>
-<li><code>-e &lt;time to live&gt;</code>: The duration of time for which the token is valid. <em>Example:</em>
+<li><code>-e &lt;time to live&gt;</code>: The duration of time for which the token is valid.
 <ul>
 <li>1y = 1 year</li>
 <li>2h = 2 hours</li>
@@ -1538,6 +1538,115 @@ The npm module name is used as the debug name.</p>
 <h4 id="appregisterresourceproviderresourceprovider"><a class="header" href="#appregisterresourceproviderresourceprovider"><code>app.registerResourceProvider(ResourceProvider)</code></a></h4>
 <p>Used by <em>Resource Provider plugins</em> to register each resource type it handles.</p>
 <p>See <a href="develop/plugins/../plugins/resource_provider_plugins.html#registering-as-a-resource-provider"><code>Resource Provider Plugins</code></a> for details.</p>
+<h4 id="appresourcesapisetresourceresource_type-resource_id-resource_data-provider_id"><a class="header" href="#appresourcesapisetresourceresource_type-resource_id-resource_data-provider_id"><code>app.resourcesApi.setResource(resource_type, resource_id, resource_data, provider_id?)</code></a></h4>
+<p>Create / update value of the resource with the supplied SignalK resource_type and resource_id.</p>
+<p><em>Note: Requires a registered Resource Provider for the supplied <code>resource_type</code>.</em></p>
+<ul>
+<li>
+<p><code>resource_type</code>: Any Signal K <em>(i.e. <code>routes</code>,<code>waypoints</code>, <code>notes</code>, <code>regions</code> &amp; <code>charts</code>)</em>
+or user defined resource types.</p>
+</li>
+<li>
+<p><code>resource_id</code>: The resource identifier. <em>(e.g. <code>ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a</code>)</em></p>
+</li>
+<li>
+<p><code>resource_data</code>: A complete and valid resource record.</p>
+</li>
+<li>
+<p><code>provider_id</code> (optional): The id of the Resource Provider plugin to use to complete the request. Most commonly used for creating a new resource entry when more than one provider is registered for the specified resource type.</p>
+</li>
+<li>
+<p>returns:  <code>Promise&lt;void&gt;</code> </p>
+</li>
+</ul>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">app.resourcesApi.setResource(
+  'waypoints',
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
+  {
+    &quot;position&quot;: {&quot;longitude&quot;: 138.5, &quot;latitude&quot;: -38.6}, 
+    &quot;feature&quot;: {
+      &quot;type&quot;:&quot;Feature&quot;, 
+      &quot;geometry&quot;: {
+        &quot;type&quot;: &quot;Point&quot;, 
+        &quot;coordinates&quot;: [138.5, -38.6] 
+      }, 
+      &quot;properties&quot;:{} 
+    }
+  }
+).then ( () =&gt; {
+  // success
+  ...
+}).catch (error) { 
+  // handle error
+  console.log(error.message);
+  ...
+}
+</code></pre>
+<h4 id="appresourcesapideleteresourceresource_type-resource_id-provider_id"><a class="header" href="#appresourcesapideleteresourceresource_type-resource_id-provider_id"><code>app.resourcesApi.deleteResource(resource_type, resource_id, provider_id?)</code></a></h4>
+<p>Delete the resource with the supplied SignalK resource_type and resource_id.</p>
+<p><em>Note: Requires a registered Resource Provider for the supplied <code>resource_type</code>.</em></p>
+<ul>
+<li>
+<p><code>resource_type</code>: Any Signal K <em>(i.e. <code>routes</code>,<code>waypoints</code>, <code>notes</code>, <code>regions</code> &amp; <code>charts</code>)</em>
+or user defined resource types.</p>
+</li>
+<li>
+<p><code>resource_id</code>: The resource identifier. <em>(e.g. <code>ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a</code>)</em></p>
+</li>
+<li>
+<p><code>provider_id</code> (optional): The id of the Resource Provider plugin to use to complete the request.</p>
+</li>
+<li>
+<p>returns: <code>Promise&lt;void&gt;</code> </p>
+</li>
+</ul>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">app.resourcesApi.deleteResource(
+  'notes', 
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+).then ( () =&gt; {
+  // success
+  ...
+}).catch (error) { 
+  // handle error
+  console.log(error.message);
+  ...
+}
+</code></pre>
+<h4 id="appresourcesapilistresourcesresource_type-params-provider_id"><a class="header" href="#appresourcesapilistresourcesresource_type-params-provider_id"><code>app.resourcesApi.listResources(resource_type, params, provider_id?)</code></a></h4>
+<p>Retrieve collection of resource entries of the supplied resource_type matching the provided criteria.</p>
+<p><em>Note: Requires a registered Resource Provider for the supplied <code>resource_type</code>.</em></p>
+<ul>
+<li>
+<p><code>resource_type</code>: Any Signal K <em>(i.e. <code>routes</code>,<code>waypoints</code>, <code>notes</code>, <code>regions</code> &amp; <code>charts</code>)</em>
+or user defined resource types.</p>
+</li>
+<li>
+<p><code>params</code>: Object contining <code>key | value</code> pairs repesenting the crteria by which to filter the returned entries.</p>
+</li>
+<li>
+<p><code>provider_id</code> (optional): The id of the Resource Provider plugin to use to complete the request.</p>
+</li>
+</ul>
+<p><strong>Note: The registered Resource Provider must support the supplied parameters for results to be filtered.</strong></p>
+<ul>
+<li>returns:  <code>Promise&lt;{[key: string]: any}&gt;</code> </li>
+</ul>
+<p><em>Example:</em></p>
+<pre><code class="language-javascript">app.resourcesApi.listResources(
+  'waypoints', 
+  {region: 'fishing_zone'}
+).then (data =&gt; {
+  // success
+  console.log(data);
+  ...
+}).catch (error) { 
+  // handle error
+  console.log(error.message);
+  ...
+}
+</code></pre>
 <hr />
 <h3 id="course-api-interface"><a class="header" href="#course-api-interface">Course API Interface</a></h3>
 <p>The <a href="develop/plugins/../rest-api/course_api.html"><code>Course API</code></a> provides the following functions for use by plugins.</p>
