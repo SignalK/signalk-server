@@ -14,6 +14,8 @@
 # Setup
   * [Configuration](./setup/configuration.md)
   * [Branding](./setup/branding.md)
+# Feature How Tos
+  * [Anchor Alarm](./features/anchoralarm/anchoralarm.md)
 # Develop
 * [Notes for Developers](./develop/developer_notes.md)
 * [WebApps](./develop/webapps.md)
