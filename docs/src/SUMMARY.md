@@ -1,8 +1,6 @@
 # Signal K Server
 
 [Introduction](./index.md)
-  * [What's New in V2](./whats_new.md)
-    * [Changes & Deprecations](./breaking_changes.md)
 
 # Getting Started
 * [Installation](./installation/install.md)
@@ -13,11 +11,15 @@
   * [Generating tokens](./setup/generating_tokens.md)
 # Setup
   * [Configuration](./setup/configuration.md)
-  * [Branding](./setup/branding.md)
 # Feature How Tos
   * [Anchor Alarm](./features/anchoralarm/anchoralarm.md)
+# Support
+* [Help & Support](./support/help.md)
+* [Sponsor](./support/sponsor.md)
 # Develop
 * [Notes for Developers](./develop/developer_notes.md)
+* [What's New in V2](./whats_new.md)
+  * [Changes & Deprecations](./breaking_changes.md)
 * [WebApps](./develop/webapps.md)
 * [Plugins](./develop/plugins/server_plugin.md)
   * [Processing Data](./develop/plugins/deltas.md)
@@ -28,12 +30,9 @@
 * [Publishing to the AppStore](./develop/plugins/publishing.md)
 * [REST APIs](./develop/rest-api/open_api.md)
   * [Course API](./develop/rest-api/course_api.md)
-    * [Course Calulations](./develop/rest-api/course_calculations.md)
+    * [Course Calculations](./develop/rest-api/course_calculations.md)
   * [Resources API](./develop/rest-api/resources_api.md)
   * [Notifications API](./develop/rest-api/notifications_api.md)
   * [Autopilot API](./develop/rest-api/autopilot_api.md)
 * [Contribute](./develop/contributing.md)
-# Support
-* [Help & Support](./support/help.md)
-* [Sponsor](./support/sponsor.md)
 
