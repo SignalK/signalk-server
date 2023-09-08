@@ -1,10 +1,13 @@
 import dgram from 'dgram'
+import { promisify } from 'util'
+import { exec } from 'child_process'
 import { networkInterfaces } from 'os'
 import { createDebug } from '../debug'
 import { getExternalPort } from '../ports'
 const PUBLISH_PORT = 2053
 const MULTICAST_GROUP_IP = '239.2.1.1'
 const debug = createDebug('signalk-server:interfaces:mfd_webapps')
+const execP = promisify(exec)
 
 // For debugging you can use
 // tcpdump -i en0 -A  -v net 239.2.1.1
@@ -67,18 +70,27 @@ const send = (
   socket.bind(PUBLISH_PORT, fromAddress)
 }
 
-const getPublishToNavico = (protocol: string, port: number) => () => {
+const getPublishToNavico = (protocol: string, port: number) => async () => {
+  let addresses: string[] = []
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   for (const [name, infos] of Object.entries(networkInterfaces())) {
     for (const addressInfo of infos || []) {
       if (addressInfo.family === 'IPv4') {
-        send(
-          getPublishMessage(protocol, addressInfo.address, port),
-          addressInfo.address,
-          MULTICAST_GROUP_IP,
-          PUBLISH_PORT
-        )
+        addresses.push(addressInfo.address)
       }
     }
   }
+  if (process.env.MFD_ADDRESS_SCRIPT) {
+    addresses = (await execP(process.env.MFD_ADDRESS_SCRIPT)).stdout
+      .trim()
+      .split(',')
+  }
+  addresses.forEach((address) =>
+    send(
+      getPublishMessage(protocol, address, port),
+      address,
+      MULTICAST_GROUP_IP,
+      PUBLISH_PORT
+    )
+  )
 }

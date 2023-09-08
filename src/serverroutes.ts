@@ -1026,7 +1026,7 @@ module.exports = function (
           fieldname: string,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           file: any,
-          filename: string
+          { filename }
         ) => {
           try {
             if (!filename.endsWith('.backup')) {

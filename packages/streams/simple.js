@@ -76,6 +76,16 @@ function Simple(options) {
     ) {
       mappingType = 'NMEA2000YD'
     }
+    options.app.on('nmea2000out', () => {
+      setImmediate(() =>
+        options.app.emit('connectionwrite', { providerId: options.providerId })
+      )
+    })
+    options.app.on('nmea2000JsonOut', () => {
+      setImmediate(() =>
+        options.app.emit('connectionwrite', { providerId: options.providerId })
+      )
+    })
   }
 
   const pipeline = [].concat(

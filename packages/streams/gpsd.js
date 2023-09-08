@@ -31,7 +31,7 @@
  */
 
 const Transform = require('stream').Transform
-const gpsd = require('node-gpsd')
+const GpsdClient = require('node-gpsd-client')
 
 function Gpsd(options) {
   Transform.call(this, {
@@ -40,6 +40,7 @@ function Gpsd(options) {
 
   const port = options.port || 2947
   const hostname = options.hostname || options.host || 'localhost'
+  const noDataReceivedTimeout = options.noDataReceivedTimeout || 0
 
   function setProviderStatus(msg) {
     options.app.setProviderStatus(options.providerId, msg)
@@ -47,9 +48,9 @@ function Gpsd(options) {
 
   const createDebug = options.createDebug || require('debug')
 
-  this.listener = new gpsd.Listener({
-    port,
-    hostname,
+  this.listener = new GpsdClient({
+    port: port,
+    hostname: hostname,
     logger: {
       info: createDebug('signalk:streams:gpsd'),
       warn: console.warn,
@@ -61,12 +62,19 @@ function Gpsd(options) {
       },
     },
     parse: false,
+    reconnectThreshold: noDataReceivedTimeout,
+    reconnectInterval: noDataReceivedTimeout / 2,
   })
 
   setProviderStatus(`Connecting to ${hostname}:${port}`)
 
-  this.listener.connect(function () {
+  this.listener.on('connected', () => {
     setProviderStatus(`Connected to ${hostname}:${port}`)
+    this.listener.watch({
+      class: 'WATCH',
+      nmea: true,
+      json: false,
+    })
   })
 
   const self = this
@@ -74,10 +82,7 @@ function Gpsd(options) {
     self.push(data)
   })
 
-  this.listener.watch({
-    class: 'WATCH',
-    nmea: true,
-  })
+  this.listener.connect()
 }
 
 require('util').inherits(Gpsd, Transform)

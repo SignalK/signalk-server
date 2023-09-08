@@ -221,6 +221,7 @@ To enable debugging without going through the Admin UI, see the file `~/.signalk
 - `ALLOW_NEW_USER_REGISTRATION` (default is true).
 - `ADMINUSER` force a account for admin user (username:password format).
 - `PRESERIALCOMMAND` command to run before opening a serial port.
+- `MFD_ADDRESS_SCRIPT` command to run to provide a comma separate list of server addresses to advertise to (Navico) MFDs.
 - `SIGNALK_NODE_SETTINGS` override the path to the settings file.
 - `SIGNALK_NODE_CONFIG_DIR` override the path to find server configuration. Includes all run-time changing content: configuration files, plugins, plugin configuration files, webapps, and so forth.
 
@@ -240,7 +241,7 @@ To enable debugging without going through the Admin UI, see the file `~/.signalk
 
 The documents provide more details about developing Webapps or Plugings for Signal K Server, as well as working on the server itself:
 
-* [Contributing to this repo](CONTRIBUTING.md)
+* [Contributing to this repo](docs/CONTRIBUTING.md)
 * [Server Plugins](SERVERPLUGINS.md)
 * [Webapps](WEBAPPS.md)
 * [Working with the Course API](WORKING_WITH_COURSE_API.md)

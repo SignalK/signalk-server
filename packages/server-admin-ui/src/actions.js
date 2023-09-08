@@ -38,44 +38,40 @@ export function logout() {
   }
 }
 
-export function login(dispatch, username, password, rememberMe, callback) {
-  var payload = {
+export async function login(
+  dispatch,
+  username,
+  password,
+  rememberMe,
+  callback
+) {
+  const payload = {
     username: username,
     password: password,
     rememberMe: rememberMe,
   }
-  authFetch('/signalk/v1/auth/login', {
+  const request = await authFetch('/signalk/v1/auth/login', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
   })
-    .then((response) => {
-      if (response.status != 200) {
-        response.text().then((text) => {
-          dispatch({
-            type: 'LOGIN_FAILURE',
-            data: text,
-          })
-          callback(text)
-        })
-      } else {
-        return response.json()
-      }
+
+  const response = await request.json()
+  if (request.status !== 200) {
+    dispatch({
+      type: 'LOGIN_FAILURE',
+      data: response.message,
     })
-    .then((response) => {
-      if (response) {
-        fetchAllData(dispatch)
-        dispatch({
-          type: 'LOGIN_SUCCESS',
-        })
-        callback(null)
-      }
+    callback(response.message)
+  } else if (response) {
+    fetchAllData(dispatch)
+    dispatch({
+      type: 'LOGIN_SUCCESS',
     })
-    .catch(function (error) {
-      console.log(error)
-    })
+    callback(null)
+  }
 }
 
 export function enableSecurity(dispatch, userId, password, callback) {
@@ -114,18 +110,20 @@ export function restart() {
   }
 }
 
-// Build actions that perform a basic authFetch to the backend. Pull #514.
-export const buildFetchAction = (endpoint, type, prefix) => (dispatch) =>
-  authFetch(
-    `${isUndefined(prefix) ? window.serverRoutesPrefix : prefix}${endpoint}`
-  )
-    .then((response) => response.json())
-    .then((data) =>
+export const buildFetchAction =
+  (endpoint, type, prefix) => async (dispatch) => {
+    const response = await authFetch(
+      `${isUndefined(prefix) ? window.serverRoutesPrefix : prefix}${endpoint}`
+    )
+
+    if (response.status === 200) {
+      const data = await response.json()
       dispatch({
         type,
         data,
       })
-    )
+    }
+  }
 
 export const fetchLoginStatus = buildFetchAction(
   '/loginStatus',
