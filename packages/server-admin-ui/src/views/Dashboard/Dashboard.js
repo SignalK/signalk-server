@@ -123,7 +123,7 @@ const Dashboard = (props) => {
                           <span className="title">
                             {providerIdLink(providerId)}
                           </span>
-                          {providerStats.writeRate && (
+                          {providerStats.writeRate > 0 && (
                             <span className="value">
                               {' '}
                               <span className="text-muted small">
@@ -132,14 +132,14 @@ const Dashboard = (props) => {
                               {providerStats.writeRate}{' '}
                             </span>
                           )}
-                          {providerStats.deltaRate &&
-                            providerStats.writeRate && (
+                          {providerStats.deltaRate > 0 &&
+                            providerStats.writeRate > 0 && (
                               <span className="value">
                                 <span className="text-muted small">{','}</span>
                                 &#160;
                               </span>
                             )}
-                          {providerStats.deltaRate && (
+                          {providerStats.deltaRate > 0 && (
                             <span className="value">
                               {' '}
                               <span className="text-muted small">
