@@ -17,10 +17,21 @@ export function setupCors(
   corsDebug(`corsOrigins:${corsOrigins.toString()}`)
   const corsOptions: CorsOptions = {
     credentials: true,
-    origin: allowedCorsOrigins
+    origin: corsOrigins
   }
 
   app.use(cors(corsOptions))
+  app.use((req, res, next) => {
+    const origin = req.header('origin')
+    if (origin !== undefined && !corsOrigins.includes(origin)) {
+      corsDebug(
+        `${origin} is not present in corsOrigins: ${corsOrigins.toString()}`
+      )
+    } else {
+      corsDebug(`${origin} is allowed`)
+    }
+    next()
+  })
 }
 
 export const handleAdminUICORSOrigin = (
