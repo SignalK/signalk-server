@@ -1,8 +1,8 @@
 import React, { Component } from 'react'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
 import {
+  Alert,
   Button,
-  Container,
   Card,
   CardBody,
   CardHeader,
@@ -91,52 +91,58 @@ export default class PluginConfigurationList extends Component {
 
   render() {
     return (
-      <Container>
-        <Form
-          action=""
-          method="post"
-          encType="multipart/form-data"
-          className="form-horizontal"
-          onSubmit={(e) => {
-            e.preventDefault()
-          }}
-        >
-          <FormGroup row>
-            <Col xs="3" md="1" className={'col-form-label'}>
-              <Label htmlFor="select">Search</Label>
-            </Col>
-            <Col xs="12" md="4">
-              <Input
-                type="text"
-                name="search"
-                onChange={this.handleSearch}
-                value={this.state.search}
+      <Card>
+        <CardHeader>
+          <i className="fa fa-align-justify" />
+          <strong>Plugin Configuration</strong>
+        </CardHeader>
+        <CardBody>
+          <Form
+            action=""
+            method="post"
+            encType="multipart/form-data"
+            className="form-horizontal"
+            onSubmit={(e) => {
+              e.preventDefault()
+            }}
+          >
+            <FormGroup row>
+              <Col xs="3" md="1" className={'col-form-label'}>
+                <Label htmlFor="select">Search</Label>
+              </Col>
+              <Col xs="12" md="4">
+                <Input
+                  type="text"
+                  name="search"
+                  onChange={this.handleSearch}
+                  value={this.state.search}
+                />
+              </Col>
+            </FormGroup>
+          </Form>
+
+          {(this.state.searchResults || this.state.plugins).map((plugin, i) => {
+            const isOpen =
+              localStorage.getItem(openPluginStorageKey) === plugin.id
+            return (
+              <PluginCard
+                plugin={plugin}
+                isConfigurator={isConfigurator(plugin)}
+                key={i}
+                isOpen={isOpen}
+                toggleForm={this.toggleForm.bind(this, i, plugin.id)}
+                saveData={(data) => {
+                  if (plugin.data.configuration === undefined) {
+                    data.enabled = true
+                  }
+                  this.props.history.replace(`/serverConfiguration/plugins/-`)
+                  this.saveData(plugin.id, data, i)
+                }}
               />
-            </Col>
-          </FormGroup>
-        </Form>
-        {(this.state.searchResults || this.state.plugins).map((plugin, i) => {
-          //const isOpen = this.props.match.params.pluginid === plugin.id
-          const isOpen =
-            localStorage.getItem(openPluginStorageKey) === plugin.id
-          return (
-            <PluginCard
-              plugin={plugin}
-              isConfigurator={isConfigurator(plugin)}
-              key={i}
-              isOpen={isOpen}
-              toggleForm={this.toggleForm.bind(this, i, plugin.id)}
-              saveData={(data) => {
-                if (plugin.data.configuration === undefined) {
-                  data.enabled = true
-                }
-                this.props.history.replace(`/serverConfiguration/plugins/-`)
-                this.saveData(plugin.id, data, i)
-              }}
-            />
-          )
-        })}
-      </Container>
+            )
+          })}
+        </CardBody>
+      </Card>
     )
   }
 
@@ -166,12 +172,12 @@ class PluginCard extends Component {
   render() {
     const labelStyle = { marginLeft: '10px', marginBottom: '0px' }
     const { schema } = this.props.plugin
-    const noConfigurationRequired =
+    const configurationRequired =
       schema &&
       schema.properties &&
-      Object.keys(this.props.plugin.schema.properties).length == 0
-    const canbeEnabled =
-      this.props.plugin.data.configuration || noConfigurationRequired
+      Object.keys(schema?.properties).length != 0 &&
+      this.props.plugin.data.configuration == null
+
     return (
       <div
         ref={(card) => {
@@ -181,7 +187,7 @@ class PluginCard extends Component {
         <Card>
           <CardHeader>
             <Row>
-              <Col xs={4} onClick={this.props.toggleForm}>
+              <Col sm={4} onClick={this.props.toggleForm}>
                 <i
                   style={{ marginRight: '10px' }}
                   className={
@@ -190,22 +196,32 @@ class PluginCard extends Component {
                 />
                 {this.props.plugin.name}
               </Col>
-              {!this.props.plugin.data.configuration && !this.props.isOpen && (
-                <Col xs="2">
-                  <Button
-                    size="sm"
-                    color="primary"
-                    style={{ width: '100%' }}
-                    onClick={this.props.toggleForm}
-                  >
-                    Configure
-                  </Button>
-                </Col>
-              )}
-              {canbeEnabled && (
+              {configurationRequired && !this.props.isOpen && (
                 <Fragment>
-                  <Col xs="2">
-                    Enabled
+                  <Col sm={6} lg={3}>
+                    <div
+                      className="alert alert-warning mb-0 mt-2 mt-sm-0 pb-1 pt-1 btn-sm"
+                      role="alert"
+                    >
+                      <i className="fa fa-exclamation-triangle"></i> Plugin is
+                      disabled, configuration missing
+                    </div>
+                  </Col>
+                  <Col sm={2} className={'d-none d-sm-block'}>
+                    <Button
+                      size="sm"
+                      color="primary"
+                      style={{ width: '100%' }}
+                      onClick={this.props.toggleForm}
+                    >
+                      Configure
+                    </Button>
+                  </Col>
+                </Fragment>
+              )}
+              {!configurationRequired && (
+                <Fragment>
+                  <Col lg={2} className={'mt-2 mt-lg-0'}>
                     <Label
                       style={labelStyle}
                       className="switch switch-text switch-primary"
@@ -229,9 +245,9 @@ class PluginCard extends Component {
                       />
                       <span className="switch-handle" />
                     </Label>
+                    <span className="ml-1">Enabled</span>
                   </Col>
-                  <Col xs="3">
-                    Log plugin output
+                  <Col lg={2} className={'mt-2 mt-lg-0'}>
                     <Label
                       style={labelStyle}
                       className="switch switch-text switch-primary"
@@ -256,9 +272,9 @@ class PluginCard extends Component {
                       />
                       <span className="switch-handle" />
                     </Label>
+                    <span className="ml-1">Log plugin output</span>
                   </Col>
-                  <Col xs="3">
-                    Enable debug log
+                  <Col lg={2} className={'mt-2 mt-lg-0'}>
                     <Label
                       style={labelStyle}
                       className="switch switch-text switch-primary"
@@ -266,7 +282,7 @@ class PluginCard extends Component {
                       <Input
                         type="checkbox"
                         name="enableDebug"
-                        className="switch-input"
+                        className="switch-input "
                         onChange={(e) => {
                           this.props.saveData({
                             ...this.props.plugin.data,
@@ -282,6 +298,7 @@ class PluginCard extends Component {
                       />
                       <span className="switch-handle" />
                     </Label>
+                    <span className="ml-1">Enable debug log</span>
                   </Col>
                 </Fragment>
               )}
