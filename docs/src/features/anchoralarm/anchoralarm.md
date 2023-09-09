@@ -1,244 +1,325 @@
-# The Anchor alarm feature
+# Feature: Anchor Alarm
 
 ## Introduction
 
-This document explains how to setup the anchor alarm functionality on Signal K Server, as well as operate it using the WilhelmSK app.
-
-This document is part of a Feature Series:
+<!--This document is part of a Feature Series: 
 - [WiFi AIS and nav. data server]
-- Anchor alarm (this document)
+- Anchor alarm (this document)-->
 
-It is a super powerful anchor alarm:
-
-- uses GPS from your nav. system. Not your phone.
-- graphical map + satellite view
-- option to move the anchor
-- push notifications on iPhone (not Android), both remotely via internet, as well as local on the boat.
-- audible alarm on Fusion stereo, or via a common speaker connected to Yacht Devices N2K device, as well as other options
-- does not depend on phone having enough battery + GPS reception + waking you up
-- track is saved and shown on the map
-
-This is the main page in the WilhelmSK App, as used on a tablet:
-
-![WilhelmSK Main page](wsk.png)
+This document describes how to setup an anchor alarm using Signal K Server and the WilhelmSK app that:
+- Uses the GPS data from your navigation system, not your phone
+- Has a graphical map + satellite view
+- Vessel movement is saved and displayed as Track on a map
+- Provides the ability to move the anchor location
+- Sends push notifications to your iPhone (not Android), both remotely via the Internet and locally on the boat
+- Sound an audible alarm on a Fusion stereo or via a common speaker connected to a Yacht Devices N2K device
+- Does not depend on your phone having enough battery, GPS reception to wake you up
 
 
-# Prerequisites
+<img src="wsk.png" width=400px>
 
-- SignalK server installed, for example on a Victron GX device or RaspberryPi. See [here]() for details.
+_Image: WilhelmSK App on iPad._
+
+## Prerequisites
+
+- SignalK server installed, for example on a Victron GX device or RaspberryPi. See [Installation](../../installation/install.md) for details.
 - [WilhelmSK iOS App](https://itunes.apple.com/us/app/wilhelmsk/id1150499484?mt=8)
 
-For alternatives to the Wilhelm SK app, including Android - as well as generic web apps that run in your browser, see last chapter.
+For use with other Apps (Android, web apps, etc) see [Alternatives to WilhelmSK](#alternatives-to-wilhelmsk).
 
 
-# Configuration instructions
+## Configuration
 
 **Step 1.** Configure the Vessel data in SignalK server:
-![Vessel Data](vesseldata.png)
+<img src="vesseldata.png" width=600px>
+
+Be sure to set:
+- Boat length 
+- GPS Distance from Bow
+- GPS Distance from Center.
+
+#### Step 2. Install required Signal K Server plugins:
 
 
-This includes setting boat length, and location of the GPS relative to the boat.
+- Open the Signal K Admin UI and if necessary _Login_
+- Select _Appstore -> Available_ from the menu
+- Under _Available Apps_ select _All_ from the dropdown
 
-**Step 2.** Install plugins on Signal K server:
+<img src="appstore_available.png" width=600px>
 
-Login to Signal K Server, go to Appstore in the menu, and then the “Available” menu. There select “All”, and then search for- and install each of these plugins:
+Locate and install each of the following plugins:
+- **signalk-anchoralarm-plugin**
+- **signalk-push-notifications**
+- **signalk-alarm-silencer**
+- **@signalk/tracks-plugin**
 
-- signalk-anchoralarm-plugin (documentation on npmjs)
-- signalk-push-notifications (documentation on npmjs)
-- signalk-alarm-silencer (documentation on npmjs)
-- track plugin (documentation on npmjs)
+After installation is complete, restart the server. 
 
-After adding all the plugins, first restart the server. There is a restart button on the upper right of the page.If you do not see that restart button, then first set up a user: go to Security -> Users.
-
-Now go to the Server -> Plugin Config menu. Here you need to make sure (for each plugin!) that it is enabled as well as to click the Submit button. Otherwise some of them may seem to be enabled but are not.
-
-Here are the setting of each of the plugins:
-
-*Anchor Alarm plugin:*
-![Anchor Alarm plugin](anchoralarmplugin.jpg)
-
-Nothing needs to be changed, as most of those are used when enabling the anchor alarm. Do make sure to press Submit to enable it.
-
-*Alarm Silencer plugin:*
-![Alarm Silencer](alarmsilencer.jpg)
-
-Nothing to configure, but, again, make sure to press the Submit button once.
-
-*Push Notifications plugin:*
-![Push Notification plugin](pushnotificavtionplugin.jpg)
-
-The first two settings speak for themselves.
-
-The third one, the Local Push Port, defines a port used on the server. The background service of the WilhelmSK app connects to that to receive the local push notifications. It defaults to 3001 and would only need to be changed if it conflicts with something else, such as another plugin that already uses that same port number or something else on the device that hosts Signal K server. Note that it is not needed to set the same in the WilhelmSK app, it auto configures itself for that.
-
-For background: the remote push uses an Amazon RDS service for the push notifications. No special subscription-, account- or service creation at Amazon is required, as that comes included when buying the WilhelmSK app.
-
-Tracks plugin
-![Tracks plugin](tracks.jpg)
+_Note: The _Restart_ button only appears at the upper right of the screen when security has been enabled. (See [Enabling Security](../../security.md#enabling-security) for details.)_
 
 
+#### Step 3 Configure the plugins:
 
-Make sure to not overdo it with regards to the number of tracks and especially tracks of other ships that need to be kept in memory. Conservative settings are:
+Each of the plugins you installed in the previous step need to be configured and enabled. To do this:
+
+- Select `Server -> Plugin Config`` from the menu
+- Locate the plugin
+- Set the appropriate configuration values
+- Click _Submit_.
+- Ensure the plugin is _Enabled_.
+
+Following are details of how to configure each plugin:
+
+**_Anchor Alarm plugin:_**
+
+This plugin only needs to be enabled. 
+
+No configuration is required as the settings values are populated by WilhelmSK.
+
+<img src="./anchoralarmplugin.jpg" width=600px>
+
+
+**_Alarm Silencer plugin:_**
+
+This plugin only needs to be enabled. 
+
+No configuration options available.
+
+<img src="./alarmsilencer.jpg" width=600px>
+
+
+**_Push Notifications plugin:_**
+
+- To send notifications via an Internet connection check _Enable Remote Push_.
+
+_Note: The WilhelmSK app uses an Amazon RDS service to deliver push notifications. No additional accounts, etc are required as they are included with purchase._
+
+- _Local Push SSIDs_: Enter the SSID(s) of the WiFi network(s) on your boat which the devices that are to receive notifications are connected.
+
+- _Local Push Port_ specifies the port number that WilhelmSK app will receive the local push notifications. 
+The default value is _3001_ and only needs to be changed if that port number is already in use by another app / plugin on the Signal K Server.
+
+_Note: It is not necessary to set the same value in the WilhelmSK app, it auto configures itself._
+
+<img src="./pushnotificationplugin.jpg" width=350px>
+
+
+**_Tracks plugin_**
+
+This plugin keeps track of the position of vessels visible to the Signal K Server. This enables apps to display a track of vessel movements. 
+
+The configuration values chosen will determince the amount of resource required run the plugin (and potentially the performance of the Signal K Server) so please consider this when making entries.
+
+The following settings represent conservative values that are suitable for use with an anchor alarm:
 - Track resolution: 60000 (60 seconds)
 - Points to keep: 240 (4 hours)
 - Max idle time: 600 (10 minutes)
 - Max Radius: 1 meter (no other vessels).
 
-Note that this plugin stores the track all the time, not only when on anchor. Which comes in handy when you enable the the anchor alarm a while after having dropped the anchor.
+_Note: This plugin stores the track all the time, not only when on anchor. Which comes in handy when you enable the the anchor alarm a while after having dropped the anchor._
+
+<img src="./tracks.jpg" width=350px>
 
 
-*Step 3.* Connect WilhelmSK to your SignalK server
- 
-After installing the app, open it, and go to the connections menu:
-![Connections](connections.jpg)
+**_Step 4._** Connect WilhelmSK to your SignalK server
 
-One most systems, that should be as easy as selecting the entry with the name of your boat (as entered in the vessel data, in step 1 above), post fixed with (Discovered). If you can’t see it, check that the WilhelmSK App has network access permissions in the iOS settings:
+After installing the WilhelmSK app, go to the iOS settings screen and check that it has network access permissions.
 
-![WilhelmSK iOS settings](wsk_ios.jpg)
+<img src="./wsk_ios.jpg" width=350px>
 
-While there, make sure that Background App Refresh is enabled as well, its needed for local push notifications as well as raising alarm while you are not having the WilhelmSK app open on your phone or tablet.
+Also ensure that Background App Refresh also enabled as it is required for local push notifications and to raise an alarm while WilhelmSK app in not open on your phone or tablet.
 
-When going into to configuration of the selected connection you’ll see:
-![WilhelmSK Connection](wsk_connections.jpg)
+Once network access has been enabled, start the WilhelmSK app and go to the connections menu.
 
+<img src="./connections.jpg" width=350px>
 
-Enter the same user name and password that you use when logging into 
+Your boat's name _(as entered in the vessel data, in step 1 above)_ and suffixed with (Discovered) should appear in the list. _(If you can’t see it please ensure WilhelmSK has been granted network access permissions.)_
 
-And select “AutoConnect On This Network”. This will make WilhelmSK auto-select this connection when on the same wifi that you are currently on.
+Select your boat from the list and the configuration screen is displayed:
+
+<img src="./wsk_connections.jpg" width=350px>
+
+- Enter the user name and password that you use when logging into Signal K Server.
+
+- Select _AutoConnect On This Network_. This will cause WilhelmSK to auto-select this connection when on the currently connected WiFi network.
 
 With regards to the other available config options:
--nRequest Admin Access is used to request access to SignalK using a security token rather than user name and password. When using that, you’ll have to approve that in the SignalK admin UI.
-- Port 3000 is the standard port.
-- AutoConnect Default is used for a remote connection, which is out of scope of this manual.
+- _Request Admin Access_ provides an alternative to using user name and password using a security token instead. Selecting this option sends an Access Request to the SignalK Server. The request will then need to be approved in the _Security -> Access Requests_ screen of the Signal K Admin UI .
+- _Port_: 3000 is the standard port.
+- _AutoConnect Default_ is used for a remote connection, which is out of scope of this manual.
 
 Finally, verify your connection. Swipe left to back to the main menu and select the same connection:
 
-![Wilhelm SK connection](wsk_connection.jpg)
+<img src="./wsk_connection.jpg" width=350px>
+
+
+**_Step 5._** Enable WilhelmSK to receive push notifications
+
+From the _Settings_ menu select _Notifications_.
+
+<img src="./wsk_notifications.jpg" width=350px>
+
+Note that the actual monitoring of the GPS coordinates is done by Signal K Server itself, not the WilhelmSK app. The app is only used to configure the anchor location, enable the alarm and to receive the alarm notifications.
+
+It is also possible, and highly recommended, to add other notifications. For example via Fusion stereo, if installed, or by using a dry contact with audible alarm. _(These are out of scope of this manual.)_
+
+_Tip: For using the Fusion stereo: search the server plugins with the keyword Fusion._
 
 
 
-*Step 4.* Enable WilhelmSK push notification receiving
+## Using the Anchor Alarm
 
-Settings -> Notifications
-![WilhelmSK Notifications](wsk_notifications.jpg)
+Now that the connections have been configured, go to the main screen of the WilhelmSK App where you’ll see something similar to the following screenshot. 
 
+If data is being received from the Signal K server, green dots are displayed in the top right of each gauge to indicate that the value displayed is current.
 
-Note that the actual monitoring of the GPS coordinates is done by SignalK Server itself, ot the WilhelmSK App. The app is only used to configure the anchor location and enable the alarm, as well as to receive the alarm notifications.
+<img src="./wsk_screen.png" width=300px>
 
-Its also possible, and highly recommended, to add other notifications. For example via Fusion stereo if installed, or by using a dry contact with audible alarm. Those are for now out of scope of this manual.
+In case of incorrect username and/or password or other connection errors, these will be displayed at the top of the screen as warning.
 
-One tip for the Fusion stereo: search the server plugins for the keyword Fusion.
-
-# Audible, remote and other notifications
-
-In the rest of the chapters it is explained how to get notified of the alarm using WilhelmSK push notifications; both locally (not requiring internet) as well as remotely. But for most people that won’t be secure enough: the phone can decide to hide notifications, and so forth.
-
-Here is a list of other options
-
-## Audible alarms
-
-Audio using the audio jack on a raspberry pi
-This Signal K Server plugin produces audible notifications using a speaker connected to the Raspberry Pi running Signal K:
-https://www.npmjs.com/package/@meri-imperiumi/signalk-audio-notifications
-
-## Alarm to NMEA2000 network
-The anchor alarm can also be forwarded to the NMEA2000 network, to use that for notification of the crew. It requires another plugin to be installed and configured, the signalk-to-nmea2000 plugin.
-
-![MFD Notification](mfd_notification.png)
-
-##### Raymarine alarm compatibility:
-With the Raymarine options enabled in anove mentioned plugin, an audible alarm will be generated on the Raymarine SeaTalkNG Auxiliary Alarm Buzzer - A8061.
-
-Also it will show on Raymarine Axiom plotters. Note that the anchor alarm shows as a “Shallow anchor alarm” on Raymarine, as that the best fitting alarm that could be found. Interpret that as just an anchor alarm, which has nothing to do with shallow. Here is how it looks on the Raymarine plotter:
+<img src="./wsk_error.jpg" width=300px>
 
 
+With an established connection and data being received, swipe to the right a few times to display the anchor watch page.
 
-##### Garmin alarm compatibility:
+<img src="./wsk_phone.png" width=400px>
+
+
+Clicking the anchor on the top left of screen (next to the menu button), cycles through the sequence of arming / disarming the alarm:
+
+- White anchor indicates disarmed. Click when dropping the anchor and the color will change to yellow.
+- Yellow anchor indicates that the rode length is being calculated. Click when you have finished letting out the anchor and the colour will change to green.
+- Green anchor means the alarm is armed and ready. 
+
+Use the “four arrows icon” on the top left of screen to move the anchor location. 
+
+You can also change the alarm radius.
+
+Clicking the green anchor will prompt you to confirm that you want to disarm the alarm / raise the anchor.
+
+
+_TIP: To return to other pages (i.e. COG and AWA gauges) swipe left by holding the Course up/Head up/North up menu._
+
+---
+
+## Alarms & Notifications
+
+For most use cases, push notifications shouldn’t be the only means of receiving alarms as the phone can decide to hide notifications, etc so additional means of sounding the alarm should be employed. 
+
+Following are some alternatives.
+
+### Audible alarms using the Raspberry Pi audio connector
+
+To have the Signal K Server produce audible notifications using a speaker connected directly to the Raspberry Pi audio connector install the [signalk-audio-notifications](https://www.npmjs.com/package/@meri-imperiumi/signalk-audio-notifications) plugin.
+
+
+### Alarm to NMEA2000 network
+
+To have the Signal K Server forward the alarm to the NMEA2000 network to appear on connected devices, install and configure the [signalk-to-nmea2000](https://www.npmjs.com/package/signalk-to-nmea2000) plugin.
+
+
+#### Raymarine alarm compatibility
+
+With the Raymarine options enabled in the _signalk-to-nmea2000_ plugin, an audible alarm will be generated on the Raymarine SeaTalkNG Auxiliary Alarm Buzzer - A8061 and will display on Raymarine Axiom plotters.
+
+_Note: The anchor alarm will be displayed as a “Shallow anchor alarm” on Raymarine, as that is the most suitable alarm type. Interpret that as just an anchor alarm, which has nothing to do with shallow. Here is how it looks on the Raymarine plotter:
+
+<img src="./mfd_notification.png" >
+
+#### Garmin alarm compatibility
+
 Compatible
 
-###### Navico (B&G, Simrad, Lowrance) alarm compatibility:
+#### Navico (B&G, Simrad, Lowrance) alarm compatibility
+
 Not compatible
 
-##### Yacht Devices compatibility:
-The YDAB-01 is a very flexible and configurable device sold by Yacht Devices. It is wired onto the NMEA2000 network, and outputs to a simple 4 or 8 Ohm sound speaker (which needs to be purchased separately). It contains a 10W audio amplifier inside and a bank with 28 sound signals, which can be configured to trigger on the anchor alarm. https://www.yachtd.com/products/alarm_button.html
+#### Yacht Devices compatibility
 
-# Further background details
-This post on Panbo is a great resource with regards to the N2K Alert PGNs:
-https://panbo.com/nmea-2000-network-alert-pgns-seem-great-so-why-are-they-hardly-used/.
+The [YDAB-01](https://www.yachtd.com/products/alarm_button.html) is a very flexible and configurable device sold by Yacht Devices. 
 
-And this the thread on Slack where most of the information for this chapter was gathered: https://signalk-dev.slack.com/archives/C02EMP1RF/p1693086271207619
+It is connected to the NMEA2000 network and has a 10W audio amplifier which can output sound via a 4 or 8 Ohm speaker which directly connected. It has bank of 28 sound signals can be configured to sound on receipt of the anchor alarm. 
 
-## Remote notifications
+#### Additional information
 
-Plugin: signalk-pushover-notification-relay
-Signalk-node-server plugin that listens for change of state in SignalK notifications and sends the updates via the, paid, push message gateway Pushover (https://pushover.net/). The Pushover App is available for both Apple and Android phones and tablets.
-https://www.npmjs.com/package/signalk-pushover-notification-relay
+The following post on Panbo is a great resource with regards to the N2K Alert PGNs:
+[Link](https://panbo.com/nmea-2000-network-alert-pgns-seem-great-so-why-are-they-hardly-used/)
 
-Plugin: signalk-notifications-manager
-Similar to the previous listing, this plugin also works with Pushover.net to deliver notifications as push messages on your phone or tablet. But it does a bit more, it keeps a history of alerts, stored in a local database, as well as includes a Signal K web app to manage the notifications.
-https://www.npmjs.com/package/signalk-notifications
+Thread on Signal K Slack where most of the information for this chapter was gathered: 
+[Link](https://signalk-dev.slack.com/archives/C02EMP1RF/p1693086271207619)
 
-Plugin: signalk-clicksend-notifications-relay
-Forwards notifications to the (paid) Clicksend SMS gateway, which can deliver it to your phone.
-https://www.npmjs.com/package/signalk-clicksend-notification-relay
+### Remote notifications
 
-## Switching a relay
-Switching a relay requires diving a bit deeper into the various (and extensive!) automation options within Signal K Server. To start, see https://github.com/sbender9/signalk-switch-automation.
+There are a number of Signal K Server plugins which enable notifications to be sent remotely, following are just a few:
 
+#### signalk-pushover-notification-relay
 
+This plugin listens for a change of state in Signal K notifications and sends the updates to the Pushover App which is available for both Apple and Android phones and tablets.
 
+This is a paid service from [Pushover](https://pushover.net/). 
 
-# Using the Anchor Alarm
+_Plugin:_ [signalk-pushover-notification-relay](https://www.npmjs.com/package/signalk-pushover-notification-relay)
 
-Now, if you’re still in the settings menu, press gauges to go to the normal user section of the WilhelmSK App:
+#### signalk-notifications-manager
 
-![WilhelmSK screen](wsk_screen.png)
+This plugin also works with [Pushover](https://pushover.net/) to deliver notifications as push messages on your phone or tablet, but it also:
+- Keeps a history of alerts stored in a local database
+- Includes a Signal K web app to manage the notifications.
 
+_Plugin:_ [signalk-notifications-manager](https://www.npmjs.com/package/signalk-notifications)
 
+#### signalk-clicksend-notifications-relay
 
-You’ll see something similar to above screenshot. The green dots in the top right of each gauge indicate that data is coming in.
+This plugin forwards notifications via the (paid) Clicksend SMS gateway, which can deliver notifications to your phone.
 
-In case of username or password or other connection errors, these will be shown in a yellow warning bar:
+_Plugin:_ [signalk-clicksend-notifications-relay](https://www.npmjs.com/package/signalk-clicksend-notification-relay)
 
-![WilhelmSK error](wsk_error.jpg)
+### Switching a relay
 
+Operating a switch or relay provides a range of options for sounding an alarm but will require diving a bit deeper into the various (and extensive) automation options made available by Signal K Server. 
 
-
-Once all works, swipe to the right a few times to get to the anchor watch page:
-
-![WilhelmSK anchor alarm on a phone](wsk_phone.png)
+A good place to start is the [signalk-switch-automation](https://github.com/sbender9/signalk-switch-automation) plugin.
 
 
+---
 
-Clicking the anchor on the top left, right next to the three white bars that opens the menu, goes through the sequence of arming/disarming the alarm:
+## Alternatives to WilhelmSK
 
-- White anchor means disarmed. Click when dropping the anchor. It will turn yellow:
-- Yellow anchor means its calculating rode length. Click once finished letting out the anchor. It will turn green;
-- Green anchor means the alarm is armed and ready. Click again, and the app asks you to confirm to disarm the alarm / raise the anchor.
+As the data processing to "watch" the anchor and generate the alarm messages is performed by the Signal K Server,
+client applications, any client application that supports the _anchor-alarm_ plugin can be used to arm  / disarm and configure it.
 
-To set it up in more detail:
-Move the anchor location, by pressing the “four arrows icon” on top left.
-Change alarm radius
+Listed below are some other apps and supported operations:
 
-
-TIP: to return to the earlier pages, with all the gauges such as COG and AWA, swipe left by holding the Course up/Head up/North up menu.
-
-# Alternatives to WilhelmSK
-
-In the solution described above, Signal K Server watches the anchor. WilhelmSK App is used to arm, configure and disarm it.
-
-There are also other apps available for that, here is an overview:
-
-| | Arm/ disarm | Change radius | Move location | See tracks |
-| - |------------| --------------| --------------| -----------| 
-| Wilhelm SK iOS app| yes| yes| yes| yes |
-| Anchor alarm plugin web app| yes| no| no| no
-| Freeboard SK web app| yes| no| no| yes
-| Aqua map app (iOS & Android) | ? | ? | ?| ? | ?
+|  Client App    | Arm / disarm | Set radius     | Move location  | See track   | Plays sound |
+| -----------    | ------------ | -------------- | -------------- | ----------- |  ----------- | 
+|**Wilhelm SK**<br>(iOS)              | yes | yes | yes | yes | yes |
+|**Anchor alarm plugin**<br>(web app) | yes | yes | no  | no  | no  |
+|**Freeboard SK**<br>(web app)        | yes | yes | no  | yes | yes |
+|**Aqua Map**<br>(iOS & Android)      | ?   | ?   | ?   | ?   | ?   |
 
 
 
+### Anchor Alarm Plugin
 
+The anchor alarm plugin provides a web user interface available under _WebApps_ in the Signal K Server Admin UI.
+
+It provides the ability to arm / disarm and set the radius of the anchor alarm but does not display the alarm on screen or play a sound.
+
+<img src="./anchor_alarm_plugin_ui.png" width=300px>
+
+
+### Freeboard SK
+
+Freeboard SK provides the ability to arm / disarm and set the radius of the anchor alarm via its _Anchor Watch_ function.
+Additionally it will:
+- Display the alarm on screen 
+- Play a sound
+- Display a track.
+
+It is available under _WebApps_ in the Signal K Server Admin UI.
+
+<img src="./freeboardsk_anchor_watch.png" width=300px>
+<img src="./freeboardsk_anchor_alarm.png" width=300px>
 
 
 
