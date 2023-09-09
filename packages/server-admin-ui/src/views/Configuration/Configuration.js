@@ -211,6 +211,7 @@ class PluginCard extends Component {
                     <Button
                       size="sm"
                       color="primary"
+                      className="mt-0"
                       style={{ width: '100%' }}
                       onClick={this.props.toggleForm}
                     >
