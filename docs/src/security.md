@@ -17,7 +17,14 @@ The available security options relate to:
 When Signal K Server does not have security enabled, the `Login` option at the top right corner of the Admin UI will not be available.
 
 Security can be enabled in several ways:
-1. Through the _Security_ menu option in the Admin UI
+1. Using the Admin UI, select _Security -> Users_ and then:
+    - Click **Add**
+    - Enter a **user id**
+    - Enter a **password** and confirm it
+    - In **Permissions** select **Admin**
+    - Click **Apply**.
+    - Restart the Signal K Server.
+
 2. Starting the server with the `--securityenabled` command line option
 3. Adding the following section in the settings file
 

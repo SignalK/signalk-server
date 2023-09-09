@@ -144,7 +144,7 @@ Select your boat from the list and the configuration screen is displayed:
 - Select _AutoConnect On This Network_. This will cause WilhelmSK to auto-select this connection when on the currently connected WiFi network.
 
 With regards to the other available config options:
-- _Request Admin Access_ provides an alternative to using user name and password using a security token instead. Selecting this option sends an Access Request to the SignalK Server. The request will then need to be approved in the _Security -> Access Requests_ screen of the Signal K Admin UI .
+- _Request Admin Access_ provides an alternative to using user name and password using a security token instead. Selecting this option sends an [Access Request](../../setup/generating_tokens.md#access-requests) to the SignalK Server. The request will then need to be approved in the _Security -> Access Requests_ screen of the Signal K Admin UI .
 - _Port_: 3000 is the standard port.
 - _AutoConnect Default_ is used for a remote connection, which is out of scope of this manual.
 
