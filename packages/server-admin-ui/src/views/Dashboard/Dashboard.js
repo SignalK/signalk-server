@@ -74,8 +74,7 @@ const Dashboard = (props) => {
                 </Col>
                 <Col xs="12" md="6">
                   <div className="text-muted">
-                    Connection activity (input: deltas/second - output:
-                    messages/second)
+                    Connection activity
                   </div>
                   <ul className="horizontal-bars type-2">
                     {Object.keys(providerStatistics || {}).map((providerId) => {
