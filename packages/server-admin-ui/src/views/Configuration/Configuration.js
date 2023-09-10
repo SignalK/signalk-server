@@ -277,7 +277,7 @@ class PluginCard extends Component {
                       />
                       <span className="switch-handle" />
                     </Label>
-                    <span className="ml-1">Log plugin output</span>
+                    <span className="ml-1">Data logging</span>
                   </Col>
                   <Col lg={2} className={'mt-2 mt-lg-0'}>
                     <Label

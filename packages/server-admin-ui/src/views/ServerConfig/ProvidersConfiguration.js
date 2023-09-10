@@ -250,7 +250,7 @@ class ProvidersConfiguration extends Component {
                       <th>ID</th>
                       <th>Data Type</th>
                       <th>Enabled</th>
-                      <th>Logging</th>
+                      <th>Data Logging</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -299,7 +299,7 @@ class ProvidersConfiguration extends Component {
                   <th>ID</th>
                   <th>Data Type</th>
                   <th>Enabled</th>
-                  <th>Logging</th>
+                  <th>Data Logging</th>
                 </tr>
               </thead>
               <tbody>
