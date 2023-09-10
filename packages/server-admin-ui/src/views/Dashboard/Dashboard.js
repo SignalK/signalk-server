@@ -80,6 +80,12 @@ const Dashboard = (props) => {
                   <ul className="horizontal-bars type-2">
                     {Object.keys(providerStatistics || {}).map((providerId) => {
                       const providerStats = providerStatistics[providerId]
+                      let linkType = 'provider'
+                      try {
+                        linkType = providerStatus.find(
+                          (item) => item.id === providerId
+                        ).statusType
+                      } catch (error) {}
                       const inputPulseIconClass =
                         'icon-login' +
                         (providerStats.deltaRate > 50
@@ -121,7 +127,9 @@ const Dashboard = (props) => {
                             }}
                           />
                           <span className="title">
-                            {providerIdLink(providerId)}
+                            {linkType === 'plugin'
+                              ? pluginNameLink(providerId)
+                              : providerIdLink(providerId)}
                           </span>
                           {providerStats.writeRate > 0 && (
                             <span className="value">

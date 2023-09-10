@@ -19,3 +19,12 @@ form.rjsf div.row.array-item {
   background-color: aliceblue;
   margin-bottom: 3px;
 }
+
+@media (max-width: 767px) {
+  .container-fluid, .row {
+    padding:0 2px !important;
+  }
+  .navbar-header {
+    margin:0px;
+  }
+}
