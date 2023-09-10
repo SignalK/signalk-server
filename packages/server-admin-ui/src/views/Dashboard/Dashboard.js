@@ -134,10 +134,10 @@ const Dashboard = (props) => {
                           {providerStats.writeRate > 0 && (
                             <span className="value">
                               {' '}
-                              <span className="text-muted small">
-                                {'msg/s:'}
-                              </span>{' '}
                               {providerStats.writeRate}{' '}
+                              <span className="text-muted small">
+                                {'msg/s'}
+                              </span>{' '}
                             </span>
                           )}
                           {providerStats.deltaRate > 0 &&
@@ -150,9 +150,6 @@ const Dashboard = (props) => {
                           {providerStats.deltaRate > 0 && (
                             <span className="value">
                               {' '}
-                              <span className="text-muted small">
-                                {'delta/s:'}
-                              </span>{' '}
                               {providerStats.deltaRate}{' '}
                               <span className="text-muted small">
                                 (
@@ -161,6 +158,9 @@ const Dashboard = (props) => {
                                   100
                                 ).toFixed(0)}
                                 %)
+                              </span>{' '}
+                              <span className="text-muted small">
+                                {'deltas/s'}
                               </span>{' '}
                             </span>
                           )}
