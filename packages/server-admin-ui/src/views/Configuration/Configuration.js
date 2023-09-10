@@ -187,7 +187,11 @@ class PluginCard extends Component {
         <Card>
           <CardHeader>
             <Row>
-              <Col sm={4} onClick={this.props.toggleForm} className={'align-self-center'}>
+              <Col
+                sm={4}
+                onClick={this.props.toggleForm}
+                className={'align-self-center'}
+              >
                 <i
                   style={{ marginRight: '10px' }}
                   className={
