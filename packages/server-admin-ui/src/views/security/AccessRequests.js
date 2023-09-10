@@ -179,7 +179,7 @@ class AccessRequests extends Component {
                           value={this.state.selectedRequest.expiration}
                         />
                         <FormText color="muted">
-                          Exmaples: 60s, 1m, 1h, 1d, NEVER
+                          Examples: 60s, 1m, 1h, 1d, NEVER
                         </FormText>
                       </Col>
                     </FormGroup>
@@ -211,11 +211,11 @@ class AccessRequests extends Component {
                     </FormGroup>
                   </CardBody>
                   <CardFooter>
-                    <Row>
-                      <Col xs="4" md="1">
+                    <Row className={'ml-0 mr-0 d-flex justify-content-between justify-content-sm-start'}>
+                      <Col xs="4" md="2" className={'pl-0 pr-0'}>
                         <Button
-                          size="sm"
-                          color="danger"
+                          size="md"
+                          color="success"
                           onClick={this.handleAccessRequest.bind(
                             this,
                             this.state.selectedRequest.accessIdentifier,
@@ -228,16 +228,17 @@ class AccessRequests extends Component {
                                 this.state.selectedRequest.accessIdentifier
                               ) != -1
                                 ? 'fa fa-spinner fa-spin'
-                                : 'fa fa-plus-circle'
+                                : 'fa fa-check'
                             }
                           ></i>{' '}
                           Approve
                         </Button>
                       </Col>
-                      <Col xs="4" md="1">
+                      <Col xs="4" md="2" className={'pl-0 pr-0'}>
                         <Button
-                          size="sm"
-                          color="primary"
+                          size="md"
+                          color="danger"
+                          className="float-right float-sm-left"
                           onClick={this.handleAccessRequest.bind(
                             this,
                             this.state.selectedRequest.accessIdentifier,
