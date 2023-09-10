@@ -18,6 +18,7 @@ const { FileTimestampStream } = require('file-timestamp-stream')
 const path = require('path')
 let debug = require('debug')('signalk:streams:logging')
 const fs = require('fs')
+const { isUndefined } = require('lodash')
 
 const filenamePattern = /skserver\-raw\_\d\d\d\d\-\d\d\-\d\dT\d\d\.log/
 const loggers = {}
@@ -85,7 +86,10 @@ function getLogger(app, discriminator = '', logdir) {
     debug(`logging to ${fileName}`)
 
     let fileTimestampStream
-    if (app.config.settings.keepMostRecentLogsOnly) {
+    if (
+      isUndefined(app.config.settings.keepMostRecentLogsOnly) ||
+      app.config.settings.keepMostRecentLogsOnly
+    ) {
       // Delete old logs
       fileTimestampStream = new FileTimestampStreamWithDelete(
         app,
