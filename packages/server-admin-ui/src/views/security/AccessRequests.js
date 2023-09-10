@@ -146,32 +146,32 @@ class AccessRequests extends Component {
                   </CardHeader>
                   <CardBody>
                     <FormGroup row>
-                      <Col md="2">
+                      <Col md="4" lg="2">
                         <Label>Identifier</Label>
                       </Col>
-                      <Col xs="12" md="9">
+                      <Col xs="12" md="8">
                         <Label>
                           {this.state.selectedRequest.accessIdentifier}
                         </Label>
                       </Col>
                     </FormGroup>
                     <FormGroup row>
-                      <Col md="2">
+                      <Col md="4" lg="2">
                         <Label>Description</Label>
                       </Col>
-                      <Col xs="12" md="9">
+                      <Col xs="12" md="8">
                         <Label>
                           {this.state.selectedRequest.accessDescription}
                         </Label>
                       </Col>
                     </FormGroup>
                     <FormGroup row>
-                      <Col md="2">
+                      <Col md="4" lg="2">
                         <Label htmlFor="text-input">
                           Authentication Timeout
                         </Label>
                       </Col>
-                      <Col xs="12" md="9">
+                      <Col xs="12" md="8" lg="3">
                         <Input
                           type="text"
                           name="expiration"
@@ -184,10 +184,10 @@ class AccessRequests extends Component {
                       </Col>
                     </FormGroup>
                     <FormGroup row>
-                      <Col md="2">
+                      <Col md="4" lg="2">
                         <Label htmlFor="select">Permissions</Label>
                       </Col>
-                      <Col xs="12" md="2">
+                      <Col xs="12" md="8" lg="3">
                         {!this.state.selectedRequest.requestedPermissions && (
                           <Input
                             type="select"
