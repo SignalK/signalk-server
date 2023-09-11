@@ -146,32 +146,32 @@ class AccessRequests extends Component {
                   </CardHeader>
                   <CardBody>
                     <FormGroup row>
-                      <Col md="2">
+                      <Col md="4" lg="2">
                         <Label>Identifier</Label>
                       </Col>
-                      <Col xs="12" md="9">
+                      <Col xs="12" md="8">
                         <Label>
                           {this.state.selectedRequest.accessIdentifier}
                         </Label>
                       </Col>
                     </FormGroup>
                     <FormGroup row>
-                      <Col md="2">
+                      <Col md="4" lg="2">
                         <Label>Description</Label>
                       </Col>
-                      <Col xs="12" md="9">
+                      <Col xs="12" md="8">
                         <Label>
                           {this.state.selectedRequest.accessDescription}
                         </Label>
                       </Col>
                     </FormGroup>
                     <FormGroup row>
-                      <Col md="2">
+                      <Col md="4" lg="2">
                         <Label htmlFor="text-input">
                           Authentication Timeout
                         </Label>
                       </Col>
-                      <Col xs="12" md="9">
+                      <Col xs="12" md="8" lg="3">
                         <Input
                           type="text"
                           name="expiration"
@@ -179,15 +179,15 @@ class AccessRequests extends Component {
                           value={this.state.selectedRequest.expiration}
                         />
                         <FormText color="muted">
-                          Exmaples: 60s, 1m, 1h, 1d, NEVER
+                          Examples: 60s, 1m, 1h, 1d, NEVER
                         </FormText>
                       </Col>
                     </FormGroup>
                     <FormGroup row>
-                      <Col md="2">
+                      <Col md="4" lg="2">
                         <Label htmlFor="select">Permissions</Label>
                       </Col>
-                      <Col xs="12" md="2">
+                      <Col xs="12" md="8" lg="3">
                         {!this.state.selectedRequest.requestedPermissions && (
                           <Input
                             type="select"
@@ -211,11 +211,15 @@ class AccessRequests extends Component {
                     </FormGroup>
                   </CardBody>
                   <CardFooter>
-                    <Row>
-                      <Col xs="4" md="1">
+                    <Row
+                      className={
+                        'ml-0 mr-0 d-flex justify-content-between justify-content-sm-start'
+                      }
+                    >
+                      <Col xs="4" md="4" lg="2" className={'pl-0 pr-0 pr-md-2'}>
                         <Button
-                          size="sm"
-                          color="danger"
+                          size="md"
+                          color="success"
                           onClick={this.handleAccessRequest.bind(
                             this,
                             this.state.selectedRequest.accessIdentifier,
@@ -228,16 +232,22 @@ class AccessRequests extends Component {
                                 this.state.selectedRequest.accessIdentifier
                               ) != -1
                                 ? 'fa fa-spinner fa-spin'
-                                : 'fa fa-plus-circle'
+                                : 'fa fa-check'
                             }
                           ></i>{' '}
                           Approve
                         </Button>
                       </Col>
-                      <Col xs="4" md="1">
+                      <Col
+                        xs="4"
+                        md="8"
+                        lg="3"
+                        className={'pl-2 pl-lg-1 pr-0 pr-md-2'}
+                      >
                         <Button
-                          size="sm"
-                          color="primary"
+                          size="md"
+                          color="danger"
+                          className="float-right float-sm-left"
                           onClick={this.handleAccessRequest.bind(
                             this,
                             this.state.selectedRequest.accessIdentifier,
