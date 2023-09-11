@@ -73,9 +73,7 @@ const Dashboard = (props) => {
                   </div>
                 </Col>
                 <Col xs="12" md="6">
-                  <div className="text-muted">
-                    Connection activity
-                  </div>
+                  <div className="text-muted">Connection activity</div>
                   <ul className="horizontal-bars type-2">
                     {Object.keys(providerStatistics || {}).map((providerId) => {
                       const providerStats = providerStatistics[providerId]
