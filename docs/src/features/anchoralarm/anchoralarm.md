@@ -1,10 +1,15 @@
 # Feature: Anchor Alarm
 
-## Introduction
 
-<!--This document is part of a Feature Series: 
-- [WiFi AIS and nav. data server]
-- Anchor alarm (this document)-->
+## Contents
+
+- [Prerequisites](#prerequisites)
+- [Configuration](#configuration)
+- [Using the Anchor Alarm](#using-the-anchor-alarm)
+- [Alarms & Notifications](#alarms--notifications)
+- [Alternatives to WilhelmSK](#alternatives-to-wilhelmsk)
+
+## Introduction
 
 This document describes how to setup an anchor alarm using Signal K Server and the WilhelmSK app that:
 - Uses the GPS data from your navigation system, not your phone
