@@ -173,8 +173,8 @@ export interface ServerAPI extends PluginServerApp {
   }) => void
   getSerialPorts: () => Promise<Ports>
   getCourse: () => CourseInfo
-  setCourse: (
+  destination: (
     dest: (Destination & { arrivalCircle?: number }) | null
   ) => Promise<void>
-  setRoute: (dest: RouteDest | null) => Promise<void>
+  activeRoute: (dest: RouteDest | null) => Promise<void>
 }

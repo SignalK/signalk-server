@@ -94,8 +94,8 @@ export class CourseApi {
   /** Set / clear course (exposed to plugins)
    * @param dest Setting to null clears the current destination
    */
-  async setCourse(dest: (Destination & { arrivalCircle?: number }) | null) {
-    debug(`** setCourse(${dest})`)
+  async destination(dest: (Destination & { arrivalCircle?: number }) | null) {
+    debug(`** destination(${dest})`)
 
     if (!dest) {
       this.clearDestination()
@@ -112,8 +112,8 @@ export class CourseApi {
   /** Set / clear route (exposed to plugins)
    * @param dest Setting to null clears the current destination
    */
-  async setRoute(dest: RouteDest | null) {
-    debug(`** setCourse(${dest})`)
+  async activeRoute(dest: RouteDest | null) {
+    debug(`** activeRoute(${dest})`)
 
     if (!dest) {
       this.clearDestination()
