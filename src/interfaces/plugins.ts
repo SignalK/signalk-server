@@ -517,12 +517,12 @@ module.exports = (theApp: any) => {
     appCopy.getCourse = () => {
       return courseApi.getCourse()
     }
-    appCopy.destination = (
+    appCopy.setDestination = (
       dest: (Destination & { arrivalCircle?: number }) | null
     ) => {
       return courseApi.destination(dest)
     }
-    appCopy.activeRoute = (dest: RouteDest | null) => {
+    appCopy.activateRoute = (dest: RouteDest | null) => {
       return courseApi.activeRoute(dest)
     }
 
