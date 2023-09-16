@@ -27,7 +27,7 @@ export * from './resourcetypes'
 export * from './resourcesapi'
 export { ResourceProviderRegistry } from './resourcesapi'
 import { ResourceProviderRegistry } from './resourcesapi'
-import { Destination, RouteDest, CourseInfo } from './coursetypes'
+import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
 export * from './autopilotapi'
 
@@ -174,7 +174,7 @@ export interface ServerAPI extends PluginServerApp {
   getSerialPorts: () => Promise<Ports>
   getCourse: () => CourseInfo
   setDestination: (
-    dest: (Destination & { arrivalCircle?: number }) | null
+    dest: (PointDestination & { arrivalCircle?: number }) | null
   ) => Promise<void>
-  activateRoute: (dest: RouteDest | null) => Promise<void>
+  activateRoute: (dest: RouteDestination | null) => Promise<void>
 }

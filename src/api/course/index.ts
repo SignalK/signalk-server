@@ -16,9 +16,9 @@ import {
   Route,
   SignalKResourceType,
   SKVersion,
-  Destination,
+  PointDestination,
   ActiveRoute,
-  RouteDest,
+  RouteDestination,
   CourseInfo
 } from '@signalk/server-api'
 import { isValidCoordinate } from 'geolib'
@@ -94,7 +94,7 @@ export class CourseApi {
   /** Set / clear course (exposed to plugins)
    * @param dest Setting to null clears the current destination
    */
-  async destination(dest: (Destination & { arrivalCircle?: number }) | null) {
+  async destination(dest: (PointDestination & { arrivalCircle?: number }) | null) {
     debug(`** destination(${dest})`)
 
     if (!dest) {
@@ -112,7 +112,7 @@ export class CourseApi {
   /** Set / clear route (exposed to plugins)
    * @param dest Setting to null clears the current destination
    */
-  async activeRoute(dest: RouteDest | null) {
+  async activeRoute(dest: RouteDestination | null) {
     debug(`** activeRoute(${dest})`)
 
     if (!dest) {
@@ -464,7 +464,7 @@ export class CourseApi {
     )
   }
 
-  private async activateRoute(route: RouteDest): Promise<boolean> {
+  private async activateRoute(route: RouteDestination): Promise<boolean> {
     const { href, reverse } = route
     let rte: any
 
@@ -533,7 +533,7 @@ export class CourseApi {
   }
 
   private async setDestination(
-    dest: Destination & { arrivalCircle?: number }
+    dest: PointDestination & { arrivalCircle?: number }
   ): Promise<boolean> {
     const newCourse: CourseInfo = { ...this.courseInfo }
 

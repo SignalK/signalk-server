@@ -21,8 +21,8 @@ import {
   PropertyValuesCallback,
   ResourceProvider,
   ServerAPI,
-  Destination,
-  RouteDest
+  PointDestination,
+  RouteDestination
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -518,11 +518,11 @@ module.exports = (theApp: any) => {
       return courseApi.getCourse()
     }
     appCopy.setDestination = (
-      dest: (Destination & { arrivalCircle?: number }) | null
+      dest: (PointDestination & { arrivalCircle?: number }) | null
     ) => {
       return courseApi.destination(dest)
     }
-    appCopy.activateRoute = (dest: RouteDest | null) => {
+    appCopy.activateRoute = (dest: RouteDestination | null) => {
       return courseApi.activeRoute(dest)
     }
 

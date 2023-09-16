@@ -1,22 +1,20 @@
 import { Position } from '.'
 
-interface DestinationBase {
+export interface PointDestination {
   href?: string
-}
-
-export interface Destination extends DestinationBase {
   position?: Position
   type?: string
 }
 
-export interface RouteDest extends DestinationBase {
+export interface RouteDestination {
+  href: string
   reverse?: boolean
   pointIndex?: number
   arrivalCircle?: number
 }
 
-export interface ActiveRoute extends DestinationBase {
-  href: string //ActiveRoute always has href
+export interface ActiveRoute {
+  href: string
   pointIndex: number
   pointTotal: number
   reverse: boolean
