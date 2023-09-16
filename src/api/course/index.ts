@@ -104,7 +104,9 @@ export class CourseApi {
   /** Set course (exposed to plugins)
    * @param dest Setting to null clears the current destination
    */
-  async destination(dest: (PointDestination & { arrivalCircle?: number }) | null) {
+  async destination(
+    dest: (PointDestination & { arrivalCircle?: number }) | null
+  ) {
     debug(`** destination(${dest})`)
 
     if (!dest) {
