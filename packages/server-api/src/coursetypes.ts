@@ -27,13 +27,13 @@ export interface CourseInfo {
   arrivalCircle: number
   activeRoute: ActiveRoute | null
   nextPoint: {
-    href?: string | null
-    type: string | null
-    position: Position | null
+    href?: string
+    type: string
+    position: Position
   } | null
   previousPoint: {
-    href?: string | null
-    type: string | null
-    position: Position | null
+    href?: string
+    type: string
+    position: Position
   } | null
 }
