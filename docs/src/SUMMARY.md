@@ -35,5 +35,6 @@
   * [Resources API](./develop/rest-api/resources_api.md)
   * [Notifications API](./develop/rest-api/notifications_api.md)
   * [Autopilot API](./develop/rest-api/autopilot_api.md)
+  * [Anchor API](./develop/rest-api/anchor_api.md)
 * [Contribute](./develop/contributing.md)
 
