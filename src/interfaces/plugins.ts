@@ -517,6 +517,9 @@ module.exports = (theApp: any) => {
     appCopy.getCourse = () => {
       return courseApi.getCourse()
     }
+    appCopy.clearDestination = () => {
+      return courseApi.clearDestination()
+    }
     appCopy.setDestination = (
       dest: (PointDestination & { arrivalCircle?: number }) | null
     ) => {

@@ -91,16 +91,24 @@ export class CourseApi {
     return this.courseInfo
   }
 
-  /** Set / clear course (exposed to plugins)
+  /** Clear destination / route (exposed to plugins)  */
+  public clearDestination() {
+    this.courseInfo.startTime = null
+    this.courseInfo.targetArrivalTime = null
+    this.courseInfo.activeRoute = null
+    this.courseInfo.nextPoint = null
+    this.courseInfo.previousPoint = null
+    this.emitCourseInfo()
+  }
+
+  /** Set course (exposed to plugins)
    * @param dest Setting to null clears the current destination
    */
   async destination(dest: (PointDestination & { arrivalCircle?: number }) | null) {
     debug(`** destination(${dest})`)
 
     if (!dest) {
-      this.clearDestination()
-      this.emitCourseInfo()
-      return
+      throw new Error('No destination information supplied!')
     }
 
     const result = await this.setDestination(dest)
@@ -116,9 +124,7 @@ export class CourseApi {
     debug(`** activeRoute(${dest})`)
 
     if (!dest) {
-      this.clearDestination()
-      this.emitCourseInfo()
-      return
+      throw new Error('No route information supplied!')
     }
 
     const result = await this.activateRoute(dest)
@@ -265,7 +271,6 @@ export class CourseApi {
           return
         }
         this.clearDestination()
-        this.emitCourseInfo()
         res.status(200).json(Responses.ok)
       }
     )
@@ -607,14 +612,6 @@ export class CourseApi {
 
     this.courseInfo = newCourse
     return true
-  }
-
-  private clearDestination() {
-    this.courseInfo.startTime = null
-    this.courseInfo.targetArrivalTime = null
-    this.courseInfo.activeRoute = null
-    this.courseInfo.nextPoint = null
-    this.courseInfo.previousPoint = null
   }
 
   private isValidArrivalCircle(value: number | undefined): boolean {
