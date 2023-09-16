@@ -13,6 +13,7 @@
   * [Configuration](./setup/configuration.md)
 # Feature How Tos
   * [Anchor Alarm](./features/anchoralarm/anchoralarm.md)
+  * [NMEA0183 Server](./features/navdataserver/navdataserver.md)
 # Support
 * [Help & Support](./support/help.md)
 * [Sponsor](./support/sponsor.md)
