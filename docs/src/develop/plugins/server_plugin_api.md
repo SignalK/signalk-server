@@ -551,20 +551,23 @@ Retrieves the current course information.
 
 It returns the same course information as the [`/course`](/doc/openapi/?urls.primaryName=course#/course/get_course) API endpoint.
 
+#### `app.clearDestination()`
 
-#### `app.destination(dest)`
+Cancels navigation to the current point or route being followed. 
 
-Set / Clear course to a specified position / waypoint. 
+#### `app.setDestination(dest)`
 
-- `dest`: Object containing destination position information as per [`/course/destination`](/doc/openapi/?urls.primaryName=course#/destination/put_course_destination) OR `null` = clear destintation.
+Set course to a specified position / waypoint. 
+
+- `dest`: Object containing destination position information as per [`/course/destination`](/doc/openapi/?urls.primaryName=course#/destination/put_course_destination).
 
 
-#### `app.activeRoute(rte)`
+#### `app.activateRoute(rte)`
 
-Follow / Cancel a route.
+Follow a route.
 in the specified direction and starting at the specified point.
 
-- `rte`: Object containing route information as per [`/course/activeRoute`](/doc/openapi/?urls.primaryName=course#/activeRoute/put_course_activeRoute) OR `null` = cancel route.
+- `rte`: Object containing route information as per [`/course/activeRoute`](/doc/openapi/?urls.primaryName=course#/activeRoute/put_course_activeRoute).
 
 
 ---
