@@ -78,12 +78,12 @@ Embedded webapp properties:
 - getting and setting application data
 - opening an automatically reconnecting WebSocket connection to the server
 - getting Signal K data via `get`
-- [Embedded](packages/server-admin-ui/src/views/WebApps/Embedded.js)
+- [Embedded](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/src/views/Webapps/Embedded.js)
 
 PluginConfigurationForm properties:
 - `configuration` : the configuration data of the plugin
 - `save`: function to save the configuration data
-- [EmbeddedPluginConfigurationForm](packages/server-admin-ui/src/views/Configuration/EmbeddedPluginConfigurationForm.js)
+- [EmbeddedPluginConfigurationForm](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/src/views/Configuration/EmbeddedPluginConfigurationForm.js)
 
 
 **_Note: The documentation regarding embedded WebApps and Components provided at this time is rudimentary and should be considered under development as the concept is evolving._**
