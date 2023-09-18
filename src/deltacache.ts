@@ -266,7 +266,7 @@ function getLeafObject(
 ) {
   let current = start
 
-  for (const i in contextAndPathParts) {
+  for (let i = 0; i < contextAndPathParts.length; i++) {
     const p = contextAndPathParts[i]
     if (isUndefined(current[p])) {
       if (createIfMissing) {
