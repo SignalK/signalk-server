@@ -33,12 +33,45 @@ export default class DeltaCache {
   app: SignalKServer
   defaults: any
   sourceDeltas: StringKeyed = {}
+  cachedContextPaths: {
+    [context: string]: {
+      [path: string]: string[]
+    }
+  } = {}
 
   constructor(app: SignalKServer, streambundle: StreamBundle) {
     this.app = app
     streambundle.keys.onValue((key) => {
       streambundle.getBus(key).onValue(this.onValue.bind(this))
     })
+
+    // String.split() is heavy enough and called frequently enough
+    // to warrant caching the result. Has a noticeable effect
+    // on throughput of a server going full blast with the n2k
+    // sample data and the memory hit is negligible. The cache
+    // must be pruned, or AIS vessel data will stick forever.
+    // No fancy pruning, just clear & let it recreate.
+    setInterval(() => (this.cachedContextPaths = {}), 5 * 60 * 1000)
+  }
+
+  getContextAndPathParts(msg: NormalizedDelta): string[] {
+    let result
+    if (
+      this.cachedContextPaths[msg.context] &&
+      (result = this.cachedContextPaths[msg.context][msg.path])
+    ) {
+      return result
+    }
+
+    let contextAndPathParts = msg.context.split('.')
+    if (msg.path.length !== 0) {
+      contextAndPathParts = contextAndPathParts.concat(msg.path.split('.'))
+    }
+    if (!this.cachedContextPaths[msg.context]) {
+      this.cachedContextPaths[msg.context] = {}
+    }
+    this.cachedContextPaths[msg.context][msg.path] = contextAndPathParts
+    return contextAndPathParts
   }
 
   onValue(msg: NormalizedDelta) {
@@ -50,12 +83,11 @@ export default class DeltaCache {
     }
 
     const sourceRef = ensureHasDollarSource(msg)
-    let contextAndPathParts = msg.context.split('.')
-    if (msg.path.length !== 0) {
-      contextAndPathParts = contextAndPathParts.concat(msg.path.split('.'))
-    }
-    // debug(JSON.stringify(parts))
-    const leaf = getLeafObject(this.cache, contextAndPathParts, true)
+    const leaf = getLeafObject(
+      this.cache,
+      this.getContextAndPathParts(msg),
+      true
+    )
 
     if (msg.path.length !== 0) {
       leaf[sourceRef] = msg
