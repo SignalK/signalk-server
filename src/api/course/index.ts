@@ -86,13 +86,13 @@ export class CourseApi {
   }
 
   /** Get course (exposed to plugins) */
-  getCourse(): CourseInfo {
+  async getCourse(): Promise<CourseInfo> {
     debug(`** getCourse()`)
     return this.courseInfo
   }
 
   /** Clear destination / route (exposed to plugins)  */
-  public clearDestination() {
+  async clearDestination(): Promise<void> {
     this.courseInfo.startTime = null
     this.courseInfo.targetArrivalTime = null
     this.courseInfo.activeRoute = null
