@@ -33,3 +33,7 @@ export interface SelfIdentity {
   selfId: string
   selfContext: string
 }
+
+export interface WithFeatures {
+  apis: string[]
+}
