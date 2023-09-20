@@ -549,17 +549,23 @@ The [`Course API`](../rest-api/course_api.md) provides the following functions f
 
 Retrieves the current course information. 
 
-It returns the same course information as the [`/course`](/doc/openapi/?urls.primaryName=course#/course/get_course) API endpoint.
+- returns: Resolved Promise on success containing the same course information returned by the [`/course`](/doc/openapi/?urls.primaryName=course#/course/get_course) API endpoint.
+
 
 #### `app.clearDestination()`
 
-Cancels navigation to the current point or route being followed. 
+Cancels navigation to the current point or route being followed.
+
+- returns: Resolved Promise on success.
+
 
 #### `app.setDestination(dest)`
 
 Set course to a specified position / waypoint. 
 
 - `dest`: Object containing destination position information as per [`/course/destination`](/doc/openapi/?urls.primaryName=course#/destination/put_course_destination).
+
+- returns: Resolved Promise on success.
 
 
 #### `app.activateRoute(rte)`
@@ -569,6 +575,7 @@ in the specified direction and starting at the specified point.
 
 - `rte`: Object containing route information as per [`/course/activeRoute`](/doc/openapi/?urls.primaryName=course#/activeRoute/put_course_activeRoute).
 
+- returns: Resolved Promise on success.
 
 ---
 
