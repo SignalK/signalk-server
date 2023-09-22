@@ -125,7 +125,7 @@ class Server {
 
     // feature registration
     app.apiList = []
-    
+
     app.registerFeature = (type: string, id: string) => {
       if (type === 'api') {
         app.apiList.push(id)
