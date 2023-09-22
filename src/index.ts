@@ -123,7 +123,31 @@ class Server {
 
     app.providerStatus = {}
 
-    app.apis = []
+    // feature registration
+    app.apiList = []
+    
+    app.registerFeature = (type: string, id: string) => {
+      if (type === 'api') {
+        app.apiList.push(id)
+      }
+    }
+
+    // feature detection
+    app.getFeatures = () => {
+      const features = {
+        apis: [],
+        plugins: []
+      }
+      features.plugins = app.plugins.map((plugin: any) => {
+        return {
+          id: plugin.id,
+          name: plugin.name,
+          version: plugin.version
+        }
+      })
+      features.apis = app.apiList.slice()
+      return features
+    }
 
     // create first temporary pluginManager to get typechecks, as
     // app is any and not typechecked

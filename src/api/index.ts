@@ -47,9 +47,9 @@ export const startApis = (
   const resourcesApi = new ResourcesApi(app)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).resourcesApi = resourcesApi
-  app.apis.push('resources')
+  app.registerFeature('api', 'resources')
   const courseApi = new CourseApi(app, resourcesApi)
-  app.apis.push('course')
+  app.registerFeature('api', 'course')
   const featuresApi = new FeaturesApi(app)
   Promise.all([resourcesApi.start(), courseApi.start(), featuresApi.start()])
 }

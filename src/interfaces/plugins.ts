@@ -509,6 +509,8 @@ module.exports = (theApp: any) => {
       resourcesApi.register(plugin.id, provider)
     }
 
+    _.omit(appCopy, 'apiList') // don't expose the actual apiList
+
     try {
       const pluginConstructor: (
         app: ServerAPI

@@ -34,6 +34,16 @@ export interface SelfIdentity {
   selfContext: string
 }
 
-export interface WithFeatures {
+interface FeaturesCollection {
   apis: string[]
+  plugins: {
+    id: string
+    name: string
+    version: string
+  }
+}
+
+export interface WithFeatures {
+  getFeatures: () => FeaturesCollection
+  registerFeature: (type: string, id: string) => void
 }

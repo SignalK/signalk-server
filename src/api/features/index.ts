@@ -38,21 +38,6 @@ export class FeaturesApi {
     })
   }
 
-  // Exposed to plugins
-  public getFeatures() {
-    this.features.plugins = (this.server as any).plugins.map(
-      (plugin: any) => {
-        return {
-          id: plugin.id,
-          name: plugin.name,
-          version: plugin.version
-        }
-      }
-    )
-    this.features.apis = this.server.apis.slice()
-    return this.features
-  }
-
   private initApiRoutes() {
     debug(`** Initialise ${FEATURES_API_PATH} path handlers **`)
     // return Feature information
@@ -60,7 +45,7 @@ export class FeaturesApi {
       `${FEATURES_API_PATH}`,
       async (req: Request, res: Response) => {
         debug(`** GET ${FEATURES_API_PATH}`)
-        res.json(this.getFeatures())
+        res.json(this.server.getFeatures())
       }
     )
   }
