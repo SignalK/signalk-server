@@ -170,4 +170,13 @@ export interface ServerAPI extends PluginServerApp {
     ) => void
   }) => void
   getSerialPorts: () => Promise<Ports>
+  getFeatures: () => {
+    apis: string[]
+    plugins: {
+      id: string
+      name: string
+      version: string
+    }
+  }
+  registerFeature: (type: string, id: string) => void
 }
