@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc --build && npm run build:docs",
     "build:all": "npm run build:workspaces && npm run build && npm run build-declaration && npm run build:docs",
-    "build:docs": "USER_INFO=$(id -u):$(id -g) docker run --rm -v ${PWD}/docs:/book peaceiris/mdbook:v0.4.13 build",
+    "build:docs": "USER_INFO=$(id -u):$(id -g) docker run --rm -v ${PWD}/docs:/book peaceiris/mdbook:v0.4.34 build",
     "build:workspaces": "npm run build --workspaces --if-present",
     "build-declaration": "tsc --declaration",
     "watch": "npm run build -- -w",
