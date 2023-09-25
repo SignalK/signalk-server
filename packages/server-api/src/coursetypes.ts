@@ -1,10 +1,14 @@
-import { Position } from '.'
+import { Brand, Position } from '.'
 
-export interface PointDestination {
-  href?: string
-  position?: Position
-  type?: string
+export interface HrefDestination {
+  href: string
 }
+
+export interface PositionDestination {
+  position: Position
+}
+
+export type PointDestination = HrefDestination | PositionDestination
 
 export interface RouteDestination {
   href: string
@@ -21,6 +25,13 @@ export interface ActiveRoute {
   name: string
 }
 
+export type CoursePointType = Brand<string, 'coursepointtype'>
+export const COURSE_POINT_TYPES = {
+  VesselPosition: 'VesselPosition' as CoursePointType,
+  RoutePoint: 'RoutePoint' as CoursePointType,
+  Location: 'Location' as CoursePointType
+}
+
 export interface CourseInfo {
   startTime: string | null
   targetArrivalTime: string | null
@@ -28,12 +39,12 @@ export interface CourseInfo {
   activeRoute: ActiveRoute | null
   nextPoint: {
     href?: string
-    type: string
+    type: CoursePointType
     position: Position
   } | null
   previousPoint: {
     href?: string
-    type: string
+    type: CoursePointType
     position: Position
   } | null
 }

@@ -19,8 +19,11 @@ import {
   PointDestination,
   ActiveRoute,
   RouteDestination,
-  CourseInfo
+  CourseInfo,
+  COURSE_POINT_TYPES
 } from '@signalk/server-api'
+
+const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
 import { isValidCoordinate } from 'geolib'
 import { Responses } from '../'
 import { Store } from '../../serverstate/store'
@@ -224,7 +227,7 @@ export class CourseApi {
           if (position && position.value) {
             this.courseInfo.previousPoint = {
               position: position.value,
-              type: 'VesselPosition'
+              type: VesselPosition
             }
             this.emitCourseInfo(false, 'previousPoint')
             res.status(200).json(Responses.ok)
@@ -426,7 +429,7 @@ export class CourseApi {
             this.courseInfo.activeRoute.pointIndex as number,
             this.courseInfo.activeRoute.reverse
           ),
-          type: 'RoutePoint'
+          type: RoutePoint
         }
 
         // set previousPoint
@@ -436,7 +439,7 @@ export class CourseApi {
             if (position && position.value) {
               this.courseInfo.previousPoint = {
                 position: position.value,
-                type: 'VesselPosition'
+                type: VesselPosition
               }
             } else {
               res.status(400).json(Responses.invalid)
@@ -454,7 +457,7 @@ export class CourseApi {
               (this.courseInfo.activeRoute.pointIndex as number) - 1,
               this.courseInfo.activeRoute.reverse
             ),
-            type: 'RoutePoint'
+            type: RoutePoint
           }
         }
         this.emitCourseInfo()
@@ -500,7 +503,7 @@ export class CourseApi {
     }
     newCourse.activeRoute = activeRoute
     newCourse.nextPoint = {
-      type: `RoutePoint`,
+      type: RoutePoint,
       position: this.getRoutePoint(rte, pointIndex, !!reverse)
     }
     newCourse.startTime = new Date().toISOString()
@@ -516,7 +519,7 @@ export class CourseApi {
         if (position && position.value) {
           newCourse.previousPoint = {
             position: position.value,
-            type: 'VesselPosition'
+            type: VesselPosition
           }
         } else {
           throw new Error(`Error: Unable to retrieve vessel position!`)
@@ -531,7 +534,7 @@ export class CourseApi {
           activeRoute.pointIndex - 1,
           activeRoute.reverse
         ),
-        type: 'RoutePoint'
+        type: RoutePoint
       }
     }
 
@@ -550,7 +553,7 @@ export class CourseApi {
       newCourse.arrivalCircle = dest.arrivalCircle as number
     }
 
-    if (dest.href) {
+    if ('href' in dest) {
       const typedHref = this.parseHref(dest.href)
       if (typedHref) {
         debug(`fetching ${JSON.stringify(typedHref)}`)
@@ -579,11 +582,11 @@ export class CourseApi {
       } else {
         throw new Error(`Invalid href! (${dest.href})`)
       }
-    } else if (dest.position) {
+    } else if ("position" in dest) {
       if (isValidCoordinate(dest.position)) {
         newCourse.nextPoint = {
           position: dest.position,
-          type: 'Location'
+          type: Location
         }
       } else {
         throw new Error(`Error: position is not valid`)
@@ -601,7 +604,7 @@ export class CourseApi {
       if (position && position.value) {
         newCourse.previousPoint = {
           position: position.value,
-          type: 'VesselPosition'
+          type: VesselPosition
         }
       } else {
         throw new Error(
