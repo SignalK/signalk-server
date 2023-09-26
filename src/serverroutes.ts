@@ -108,11 +108,7 @@ module.exports = function (
   mountSwaggerUi(app, '/doc/openapi')
 
   // mount server-guide
-  app.use('/documentation',
-    express.static(
-      __dirname + '/../docs/built'
-    )
-  )
+  app.use('/documentation', express.static(__dirname + '/../docs/built'))
 
   app.get('/admin/', (req: Request, res: Response) => {
     fs.readFile(
