@@ -10,7 +10,8 @@
 * [Security](./security.md)
   * [Generating tokens](./setup/generating_tokens.md)
 # Setup
-  * [Configuration](./setup/configuration.md)
+* [Configuration](./setup/configuration.md)
+  * [Seatalk Connections](./setup/seatalk/seatalk.md)
 # Feature How Tos
   * [Anchor Alarm](./features/anchoralarm/anchoralarm.md)
   * [NMEA0183 Server](./features/navdataserver/navdataserver.md)

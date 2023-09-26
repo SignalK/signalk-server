@@ -8,7 +8,7 @@ Original idea is picked [from Thomas](https://github.com/Thomas-GeDaD/Seatalk1-R
 
 ### 2. Hardware
 
-![‎ST1_opto](https://github.com/SignalK/signalk-server/assets/16189982/da0ff2fa-7798-40d7-b61f-67634c202ee5)
+![ST1_opto_SK](./seatalk_circuit_1.jpg)
 
 The circuit is referring to [this optocoupler board](https://www.amazon.com/ARCELI-Optocoupler-Isolation-Converter-Photoelectric/dp/B07M78S8LB/ref=sr_1_2?dchild=1&keywords=pc817+optocoupler&qid=1593516071&sr=8-2) but a similar product can of course be used. The LED in the circuit will flicker when there is ST1 traffic. 
 
@@ -16,7 +16,7 @@ Choosing an optocoupler as the hardware interface is a smart way to avoid ground
 
 Do You want it simple ?  The simplest possible interface solution is according to the picture below. You use a small signal NPN transistor which shifts the DC level, from 12 V DC to 3,3 V DC, and inverts the signal.
 
-![ST1_Tr](https://user-images.githubusercontent.com/16189982/88704045-d6fe6e00-d10d-11ea-8f83-cb765e4c65f3.jpeg)
+![ST1_Tr](./seatalk_circuit_2.jpg)
 
 ### 3. Software
 
@@ -37,11 +37,11 @@ Please note that pigpio deamon provides, by default, a socket interface on port 
 
 Now go on add a connection for the optocoupler setup, in the admin GUI, with type ”Seatalk(GPIO)” according to the picture.
 
-<img src=https://github.com/SignalK/signalk-server/assets/16189982/51426017-99b5-46b4-8e93-62515a964635 width="35%" height="35%" />
+![ST1_connection_SK](./config.png)
 
 Select which pin, one of the green ones in the picture below. Invert "YES" is used if You have a different hardware interface which is inverting the input signal.
 
-![GPIO](https://user-images.githubusercontent.com/16189982/86477812-8469a600-bd49-11ea-8e55-4ee4400a2c17.png)
+![GPIO](./gpio.png)
 
 Restart the SignalK server and then use the ”Data Browser” in the admin GUI to confirm that You are receiving the SK data
  
