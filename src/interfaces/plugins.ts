@@ -20,7 +20,9 @@ import {
   PropertyValues,
   PropertyValuesCallback,
   ResourceProvider,
-  ServerAPI
+  ServerAPI,
+  PointDestination,
+  RouteDestination
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -30,6 +32,7 @@ import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
 import { ResourcesApi } from '../api/resources'
+import { CourseApi } from '../api/course'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
 import { listAllSerialPorts } from '../serialports'
@@ -507,6 +510,23 @@ module.exports = (theApp: any) => {
     _.omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {
       resourcesApi.register(plugin.id, provider)
+    }
+
+    const courseApi: CourseApi = app.courseApi
+    _.omit(appCopy, 'courseApi') // don't expose the actual course api manager
+    appCopy.getCourse = () => {
+      return courseApi.getCourse()
+    }
+    appCopy.clearDestination = () => {
+      return courseApi.clearDestination()
+    }
+    appCopy.setDestination = (
+      dest: (PointDestination & { arrivalCircle?: number }) | null
+    ) => {
+      return courseApi.destination(dest)
+    }
+    appCopy.activateRoute = (dest: RouteDestination | null) => {
+      return courseApi.activeRoute(dest)
     }
 
     try {

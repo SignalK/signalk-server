@@ -22,10 +22,12 @@ export enum SKVersion {
 export type Brand<K, T> = K & { __brand: T }
 
 export * from './deltas'
+export * from './coursetypes'
 export * from './resourcetypes'
 export * from './resourcesapi'
 export { ResourceProviderRegistry } from './resourcesapi'
 import { ResourceProviderRegistry } from './resourcesapi'
+import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
 export * from './autopilotapi'
 
@@ -170,4 +172,10 @@ export interface ServerAPI extends PluginServerApp {
     ) => void
   }) => void
   getSerialPorts: () => Promise<Ports>
+  getCourse: () => Promise<CourseInfo>
+  clearDestination: () => Promise<void>
+  setDestination: (
+    dest: (PointDestination & { arrivalCircle?: number }) | null
+  ) => Promise<void>
+  activateRoute: (dest: RouteDestination | null) => Promise<void>
 }

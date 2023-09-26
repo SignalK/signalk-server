@@ -43,5 +43,7 @@ export const startApis = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).resourcesApi = resourcesApi
   const courseApi = new CourseApi(app, resourcesApi)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).courseApi = courseApi
   Promise.all([resourcesApi.start(), courseApi.start()])
 }
