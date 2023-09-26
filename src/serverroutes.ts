@@ -108,9 +108,9 @@ module.exports = function (
   mountSwaggerUi(app, '/doc/openapi')
 
   // mount server-guide
-  app.use('/doc/server-guide', 
+  app.use('/documentation',
     express.static(
-      __dirname + '/../docs/server-guide'
+      __dirname + '/../docs/built'
     )
   )
 

@@ -7,7 +7,7 @@ multilingual = false
 src = "src"
 
 [build]
-build-dir = "server-guide"
+build-dir = "built"
 create-missing = false
 
 
