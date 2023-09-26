@@ -1,13 +1,13 @@
 # Notes for Developers
 
-Signal K server has an extensible architecture that enables developers to add functionality to support new protocols, devices, information sources, etc.
+Signal K Server has an extensible architecture that enables developers to add functionality to support new protocols, devices, information sources, etc.
 
 The information in this section aims to provide guidance, not only on how to develop plugins and applications to extend capability, but also how to do so in alignment with the Signal K specification, protocol and server architecture. 
 By understanding the underlying architecture, the plugins and apps you create will ensure that the additional functionality and data will be discoverable and work in harmony with other solutions.
 
 ## Looking Ahead
 
-Signal K server v2 marks the start of an evolution from the Signal K v1 approach of defining the paths, their hierarchy and the full data model schema, towards an approach centered around modular REST APIs (HTTP endpoints defined as OpenApi specifications).
+Signal K Server v2 marks the start of an evolution from the Signal K v1 approach of defining the paths, their hierarchy and the full data model schema, towards an approach centered around modular REST APIs (HTTP endpoints defined as OpenApi specifications).
 
 These APIs enact operations (i.e. activate a route, advance to next point, etc) rather just expose a generic data model with some well known paths. 
 They are available under the path `/signalk/v2/api` so they can coexist with v1 APIs. There is a connection with the Signal K full data model but, unlike the v1 APIs it is not 1:1, it is abstracted behind the interface.
@@ -25,7 +25,7 @@ The use of APIs to perform operations addresses these issues providing the follo
 
 ### Stream Interface
 
-Currently, when v2 REST APIs emit deltas that contain v2 paths and structure, but they do not end up in the full model. This means that these paths and values are **s**.
+Currently, when v2 REST APIs emit deltas that contain v2 paths and structure, but they do not end up in the full model. This means that these paths and values are only available via API GET requests.
 
 ## Offline Use
 
