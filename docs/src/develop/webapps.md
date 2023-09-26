@@ -13,11 +13,11 @@ There are four ways to add web-based user interfaces to the Signal K Server:
 
 **Embedded Webapps** are installed and listed like Standalone Webapps, but they open **embedded in the server admin UI**, leaving the header and footer available so that the user can perform login, restart server and use the admin UI's sidebar to navigate to a different part of the admin UI.
 
-![vesselpositions](img/vesselpositions.png?raw=true "Vesselpositions Embedded Webapp")
+![vesselpositions](../img/vesselpositions.png?raw=true "Vesselpositions Embedded Webapp")
 
 **Embedded Plugin Configuration Forms** are related to server plugins. A plugin provides a schema for the configuration data it uses. The server uses the schema - a description of the structure of the data used to configure the plugin - to generate configuration forms for the installed plugins. The generated form is often lackin in usability due to it being totally generic. To address this a plugin can provide its own **Configuration Form** that the server embeds within the Plugin Configuration of the server admin UI.
 
-![calibration](img/calibration.png?raw=true "Calibration plugin configuration form")
+![calibration](../img/calibration.png?raw=true "Calibration plugin configuration form")
 
 **Embedded Components** are individual UI components provided by a plugin or a webapp. They are currently available at the bottom of the Webapps page of the admin UI. The idea with embedding components would be to allow a plugin to add individual components to different parts of the server, but this is more an idea than a fully implemented feature at this stage.
 

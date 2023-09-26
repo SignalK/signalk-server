@@ -5,9 +5,9 @@
 
 The SignalK specification defines a number of resources (routes, waypoints, notes, regions & charts) each with its own path under the root `resources` path _(e.g. `/signalk/v2/api/resources/routes`)_.
 
-The SignalK server validates requests to these resource paths and passes them to a [Resource Provider plugin](RESOURCE_PROVIDER_PLUGINS.md) for storage and retrieval. 
+Additionally, the `/resources` path can be used to host other user defined resource types, each grouped within its own folder _(e.g. `/signalk/v2/api/resources/fishingZones`)_.
 
- _You can find plugins in the `App Store` section of the server admin UI._
+The _Resources API_ validates requests to these resource paths and passes them to a [Resource Provider plugin](../plugins/resource_provider_plugins.md) for storage and retrieval. 
 
 Client applications can then use `HTTP` requests to these paths to store (`POST`, `PUT`), retrieve (`GET`) and remove (`DELETE`) resource entries. 
 
@@ -110,7 +110,7 @@ _Note: the submitted resource data is validated against the OpenApi schema defin
 ---
 ## Multiple Providers for a Resource Type
 
-The ResourcesAPI will allow for multiple plugins to register as a provider fo a resource type.
+The Resources API will allow for multiple plugins to register as a provider for the same resource type.
 
 When this scenario occurs the server services request in the following ways:
 
