@@ -19,9 +19,11 @@ import { isUndefined, values } from 'lodash'
 import { EventEmitter } from 'node:events'
 
 const STATS_UPDATE_INTERVAL_SECONDS = 5
+export const CONNECTION_WRITE_EVENT_NAME = 'connectionwrite'
 
-interface ConnectionWriteEvent {
+export interface ConnectionWriteEvent {
   providerId: string
+  count?: number
 }
 
 class ProviderStats {
@@ -57,10 +59,13 @@ export function startDeltaStatistics(
   app.lastIntervalDeltaCount = 0
   app.providerStatistics = {}
 
-  app.on('connectionwrite', (msg: ConnectionWriteEvent) => {
+  app.on(CONNECTION_WRITE_EVENT_NAME, (msg: ConnectionWriteEvent) => {
     const stats =
       app.providerStatistics[msg.providerId] ||
       (app.providerStatistics[msg.providerId] = new ProviderStats())
+    if (msg.count !== undefined) {
+      stats.writeCount += msg.count
+    }
     stats.writeCount++
   })
 
