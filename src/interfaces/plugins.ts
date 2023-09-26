@@ -40,6 +40,10 @@ const debug = createDebug('signalk-server:interfaces:plugins')
 
 import { modulesWithKeyword } from '../modules'
 import { OpenApiDescription, OpenApiRecord } from '../api/swagger'
+import {
+  CONNECTION_WRITE_EVENT_NAME,
+  ConnectionWriteEvent
+} from '../deltastats'
 
 const put = require('../put')
 const _putPath = put.putPath
@@ -502,7 +506,13 @@ module.exports = (theApp: any) => {
       },
       getSerialPorts,
       supportsMetaDeltas: true,
-      getMetadata
+      getMetadata,
+      reportOutputMessages: (count?: number) => {
+        app.emit(CONNECTION_WRITE_EVENT_NAME, {
+          providerId: plugin.id,
+          count
+        } as ConnectionWriteEvent)
+      }
     })
     appCopy.putPath = putPath
 
