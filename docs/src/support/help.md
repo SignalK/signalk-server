@@ -13,7 +13,7 @@ Signal K has an friendly and helpful community where you can find support and as
 
 - [**GitHub Discussions**](https://github.com/SignalK/signalk/discussions/)
 
-- [**Slack**](https://signalk-dev.slack.com/). _(New to Signal K Slack? Then [click here](https://join.slack.com/t/signalk-dev/shared_invite/zt-1leccop43-KrU7G6yBq9g91KXjZtNg1g) for an invite.)_
+- [**Slack**](https://signalk-dev.slack.com/) _(New to Signal K Slack? [Click here](https://join.slack.com/t/signalk-dev/shared_invite/zt-1leccop43-KrU7G6yBq9g91KXjZtNg1g) for an invite.)_
 
 
 

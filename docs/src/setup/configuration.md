@@ -75,7 +75,7 @@ To view a list of Plugins and Webapps directly from the NPM registry select the 
   * [Plugins](https://www.npmjs.com/search?q=keywords%3Asignalk-node-server-plugin)
   * [Webapps](https://www.npmjs.com/search?q=keywords:signalk-webapp)
 
-**_Note: A restart of the Signal K server is required after plugin(s) or / webapp(s) have been installed.or updated._**
+**_Note: A restart of the Signal K server is required after plugins or webapps have been installed or updated._**
 
 Click the _Restart_ button at the top right of the screen to restart the server.
 

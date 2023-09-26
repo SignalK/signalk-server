@@ -6,7 +6,7 @@ The Signal K Server supports a variety of data connection types including _Seata
 
 A guide to SeaTalk can be found [here](http://boatprojects.blogspot.com/2012/12/beginners-guide-to-raymarines-seatalk.html).
 
-_Inspired by [Read SeaTalk1 from the Raspberry Pi GPIO using pigpio ](https://github.com/Thomas-GeDaD/Seatalk1-Raspi-reader)._
+_Inspired by [Read SeaTalk1 from the Raspberry Pi GPIO using pigpio](https://github.com/Thomas-GeDaD/Seatalk1-Raspi-reader)._
 
 ### Hardware
 
