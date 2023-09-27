@@ -102,6 +102,7 @@ class Sidebar extends Component {
 
     // nav dropdown
     const navDropdown = (item, key) => {
+      console.log('****', item)
       return (
         <li key={key} className={activeRoute(item.url, props)}>
           <a
@@ -283,7 +284,7 @@ const mapStateToProps = (state) => {
     var security = {
       name: 'Security',
       url: '/security',
-      icon: 'icon-settings',
+      icon: 'icon-shield',
       badge: accessRequestsBadge,
       children: [
         {
@@ -317,14 +318,14 @@ const mapStateToProps = (state) => {
 
   result.items.push({
     name: 'Documentation',
-    url: '/doc',
-    icon: 'icon-settings',
-    children: [
-      {
-        name: 'OpenApi',
-        url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
-      },
-    ],
+    url: `${window.location.protocol}//${window.location.host}/documentation`,
+    icon: 'icon-book-open',
+  })
+
+  result.items.push({
+    name: 'OpenApi',
+    url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
+    icon: 'icon-energy',
   })
 
   return result

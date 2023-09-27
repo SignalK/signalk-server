@@ -4,8 +4,9 @@
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
-    "build": "tsc --build",
-    "build:all": "npm run build:workspaces && npm run build && npm run build-declaration",
+    "build": "tsc --build && npm run build:docs",
+    "build:all": "npm run build:workspaces && npm run build && npm run build-declaration && npm run build:docs",
+    "build:docs": "USER_INFO=$(id -u):$(id -g) docker run --rm -v ${PWD}/docs:/book peaceiris/mdbook:v0.4.34 build",
     "build:workspaces": "npm run build --workspaces --if-present",
     "build-declaration": "tsc --declaration",
     "watch": "npm run build -- -w",
