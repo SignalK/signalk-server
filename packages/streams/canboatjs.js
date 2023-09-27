@@ -32,7 +32,7 @@ function CanboatJs(options) {
   })
 
   this.fromPgn.on('error', (pgn, err) => {
-    console.log(err)
+    console.error(pgn.input, err.message)
   })
 
   this.app = options.app

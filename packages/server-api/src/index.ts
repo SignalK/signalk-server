@@ -22,10 +22,12 @@ export enum SKVersion {
 export type Brand<K, T> = K & { __brand: T }
 
 export * from './deltas'
+export * from './coursetypes'
 export * from './resourcetypes'
 export * from './resourcesapi'
 export { ResourceProviderRegistry } from './resourcesapi'
 import { ResourceProviderRegistry } from './resourcesapi'
+import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
 export * from './autopilotapi'
 
@@ -170,6 +172,7 @@ export interface ServerAPI extends PluginServerApp {
     ) => void
   }) => void
   getSerialPorts: () => Promise<Ports>
+
   getFeatures: () => {
     apis: string[]
     plugins: {
@@ -179,4 +182,28 @@ export interface ServerAPI extends PluginServerApp {
     }
   }
   registerFeature: (type: string, id: string) => void
+
+  getCourse: () => Promise<CourseInfo>
+  clearDestination: () => Promise<void>
+  setDestination: (
+    dest: (PointDestination & { arrivalCircle?: number }) | null
+  ) => Promise<void>
+  activateRoute: (dest: RouteDestination | null) => Promise<void>
+
+  /**
+   * A plugin can report that it has handled output messages. This will
+   * update the output message rate and icon in the Dashboard.
+   *
+   * This is for traffic that the plugin is sending outside the server,
+   * for example network packets, http calls or messages sent to
+   * a broker. This should NOT be used for deltas that the plugin
+   * sends with handleMessage, they are reported as input from the
+   * server's perspective.
+   *
+   * @param count optional count of handled messages between the last
+   * call and this one. If omitted the call will count as one output
+   * message.
+   */
+
+  reportOutputMessages: (count?: number) => void
 }

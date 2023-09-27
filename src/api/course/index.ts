@@ -15,8 +15,15 @@ import {
   Position,
   Route,
   SignalKResourceType,
-  SKVersion
+  SKVersion,
+  PointDestination,
+  ActiveRoute,
+  RouteDestination,
+  CourseInfo,
+  COURSE_POINT_TYPES
 } from '@signalk/server-api'
+
+const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
 import { isValidCoordinate } from 'geolib'
 import { Responses } from '../'
 import { Store } from '../../serverstate/store'
@@ -40,38 +47,6 @@ interface CourseApplication
     WithConfig,
     WithSecurityStrategy,
     SignalKMessageHub {}
-
-interface DestinationBase {
-  href?: string
-}
-interface Destination extends DestinationBase {
-  position?: Position
-  type?: string
-}
-interface ActiveRoute extends DestinationBase {
-  href: string //ActiveRoute always has href
-  pointIndex: number
-  pointTotal: number
-  reverse: boolean
-  name: string
-}
-
-interface CourseInfo {
-  startTime: string | null
-  targetArrivalTime: string | null
-  arrivalCircle: number
-  activeRoute: ActiveRoute | null
-  nextPoint: {
-    href?: string | null
-    type: string | null
-    position: Position | null
-  } | null
-  previousPoint: {
-    href?: string | null
-    type: string | null
-    position: Position | null
-  } | null
-}
 
 export class CourseApi {
   private courseInfo: CourseInfo = {
@@ -111,6 +86,56 @@ export class CourseApi {
       }
       resolve()
     })
+  }
+
+  /** Get course (exposed to plugins) */
+  async getCourse(): Promise<CourseInfo> {
+    debug(`** getCourse()`)
+    return this.courseInfo
+  }
+
+  /** Clear destination / route (exposed to plugins)  */
+  async clearDestination(): Promise<void> {
+    this.courseInfo.startTime = null
+    this.courseInfo.targetArrivalTime = null
+    this.courseInfo.activeRoute = null
+    this.courseInfo.nextPoint = null
+    this.courseInfo.previousPoint = null
+    this.emitCourseInfo()
+  }
+
+  /** Set course (exposed to plugins)
+   * @param dest Setting to null clears the current destination
+   */
+  async destination(
+    dest: (PointDestination & { arrivalCircle?: number }) | null
+  ) {
+    debug(`** destination(${dest})`)
+
+    if (!dest) {
+      throw new Error('No destination information supplied!')
+    }
+
+    const result = await this.setDestination(dest)
+    if (result) {
+      this.emitCourseInfo()
+    }
+  }
+
+  /** Set / clear route (exposed to plugins)
+   * @param dest Setting to null clears the current destination
+   */
+  async activeRoute(dest: RouteDestination | null) {
+    debug(`** activeRoute(${dest})`)
+
+    if (!dest) {
+      throw new Error('No route information supplied!')
+    }
+
+    const result = await this.activateRoute(dest)
+    if (result) {
+      this.emitCourseInfo()
+    }
   }
 
   private getVesselPosition() {
@@ -202,7 +227,7 @@ export class CourseApi {
           if (position && position.value) {
             this.courseInfo.previousPoint = {
               position: position.value,
-              type: 'VesselPosition'
+              type: VesselPosition
             }
             this.emitCourseInfo(false, 'previousPoint')
             res.status(200).json(Responses.ok)
@@ -251,7 +276,6 @@ export class CourseApi {
           return
         }
         this.clearDestination()
-        this.emitCourseInfo()
         res.status(200).json(Responses.ok)
       }
     )
@@ -405,7 +429,7 @@ export class CourseApi {
             this.courseInfo.activeRoute.pointIndex as number,
             this.courseInfo.activeRoute.reverse
           ),
-          type: 'RoutePoint'
+          type: RoutePoint
         }
 
         // set previousPoint
@@ -415,7 +439,7 @@ export class CourseApi {
             if (position && position.value) {
               this.courseInfo.previousPoint = {
                 position: position.value,
-                type: 'VesselPosition'
+                type: VesselPosition
               }
             } else {
               res.status(400).json(Responses.invalid)
@@ -433,7 +457,7 @@ export class CourseApi {
               (this.courseInfo.activeRoute.pointIndex as number) - 1,
               this.courseInfo.activeRoute.reverse
             ),
-            type: 'RoutePoint'
+            type: RoutePoint
           }
         }
         this.emitCourseInfo()
@@ -450,12 +474,7 @@ export class CourseApi {
     )
   }
 
-  private async activateRoute(route: {
-    href?: string
-    reverse?: boolean
-    pointIndex?: number
-    arrivalCircle?: number
-  }): Promise<boolean> {
+  private async activateRoute(route: RouteDestination): Promise<boolean> {
     const { href, reverse } = route
     let rte: any
 
@@ -484,7 +503,7 @@ export class CourseApi {
     }
     newCourse.activeRoute = activeRoute
     newCourse.nextPoint = {
-      type: `RoutePoint`,
+      type: RoutePoint,
       position: this.getRoutePoint(rte, pointIndex, !!reverse)
     }
     newCourse.startTime = new Date().toISOString()
@@ -500,7 +519,7 @@ export class CourseApi {
         if (position && position.value) {
           newCourse.previousPoint = {
             position: position.value,
-            type: 'VesselPosition'
+            type: VesselPosition
           }
         } else {
           throw new Error(`Error: Unable to retrieve vessel position!`)
@@ -515,7 +534,7 @@ export class CourseApi {
           activeRoute.pointIndex - 1,
           activeRoute.reverse
         ),
-        type: 'RoutePoint'
+        type: RoutePoint
       }
     }
 
@@ -524,7 +543,7 @@ export class CourseApi {
   }
 
   private async setDestination(
-    dest: Destination & { arrivalCircle?: number }
+    dest: PointDestination & { arrivalCircle?: number }
   ): Promise<boolean> {
     const newCourse: CourseInfo = { ...this.courseInfo }
 
@@ -534,7 +553,7 @@ export class CourseApi {
       newCourse.arrivalCircle = dest.arrivalCircle as number
     }
 
-    if (dest.href) {
+    if ('href' in dest) {
       const typedHref = this.parseHref(dest.href)
       if (typedHref) {
         debug(`fetching ${JSON.stringify(typedHref)}`)
@@ -563,11 +582,11 @@ export class CourseApi {
       } else {
         throw new Error(`Invalid href! (${dest.href})`)
       }
-    } else if (dest.position) {
+    } else if ('position' in dest) {
       if (isValidCoordinate(dest.position)) {
         newCourse.nextPoint = {
           position: dest.position,
-          type: 'Location'
+          type: Location
         }
       } else {
         throw new Error(`Error: position is not valid`)
@@ -585,7 +604,7 @@ export class CourseApi {
       if (position && position.value) {
         newCourse.previousPoint = {
           position: position.value,
-          type: 'VesselPosition'
+          type: VesselPosition
         }
       } else {
         throw new Error(
@@ -598,14 +617,6 @@ export class CourseApi {
 
     this.courseInfo = newCourse
     return true
-  }
-
-  private clearDestination() {
-    this.courseInfo.startTime = null
-    this.courseInfo.targetArrivalTime = null
-    this.courseInfo.activeRoute = null
-    this.courseInfo.nextPoint = null
-    this.courseInfo.previousPoint = null
   }
 
   private isValidArrivalCircle(value: number | undefined): boolean {

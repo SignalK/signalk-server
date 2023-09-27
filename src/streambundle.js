@@ -25,7 +25,7 @@ function StreamBundle(app, selfId) {
   this.selfStreams = {}
   this.selfAllPathsStream = new Bacon.Bus()
   this.keys = new Bacon.Bus()
-  this.availableSelfPaths = []
+  this.availableSelfPaths = {}
   this.app = app
   this.metaSent = {}
 }
@@ -64,8 +64,8 @@ StreamBundle.prototype.pushDelta = function (delta) {
 }
 
 StreamBundle.prototype.push = function (path, pathValueWithSourceAndContext) {
-  if (this.availableSelfPaths.indexOf(path) === -1) {
-    this.availableSelfPaths.push(path)
+  if (!this.availableSelfPaths[path]) {
+    this.availableSelfPaths[path] = true
   }
   this.getBus().push(pathValueWithSourceAndContext)
   this.getBus(path).push(pathValueWithSourceAndContext)
@@ -117,7 +117,7 @@ StreamBundle.prototype.getSelfBus = function (path) {
 }
 
 StreamBundle.prototype.getAvailablePaths = function () {
-  return this.availableSelfPaths
+  return Object.keys(this.availableSelfPaths)
 }
 
 function toDelta(normalizedDeltaData) {
