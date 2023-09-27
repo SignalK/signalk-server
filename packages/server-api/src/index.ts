@@ -49,13 +49,14 @@ export interface PropertyValuesEmitter {
 /**
  * This is the API that the server exposes in the app object that
  * is passed in Plugin "constructor" call.
+ * 
  *
  * INCOMPLETE, work in progress.
  */
 
 export interface PluginServerApp
   extends PropertyValuesEmitter,
-    ResourceProviderRegistry {}
+    ServerAPI {}
 
 /**
  * This is the API that a [server plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md) must implement.
@@ -76,23 +77,53 @@ export interface Plugin {
   name: string
 
   /**
-   * Called to start the plugin with latest saved configuration. Called
+   * Called to start the plugin with the latest saved configuration. Called
    * - for enabled (by configuration or by default) plugins during server startup
-   * - after stop() when the configuration of an enabled plugin has been updated
-   * in the admin UI
+   * - when the configuration of an enabled plugin has been updated
+   * in the admin UI. The server first stops the plugin and then restarts it
+   * with the new configuration
    * - when a plugin is Enabled in the admin UI
+   * @param configuration 
+   * @param restart is a function that a plugin's code can call to set configuration
+   * to new values to restart the plugin
    */
-  start: (config: object, restart: (newConfiguration: object) => void) => void
+  start: (configuration: object, restart: (newConfiguration: object) => void) => void
 
   /**
    * Called to stop the plugin. Called when the user disables the plugin in the admin UI.
+   * Also called when new configuration is saved from the Admin UI to first stop the
+   * plugin, followed by a `start` call.
    */
   stop: () => void
+
+  /**
+   * 
+   * @returns A JSON Schema object or a function returning one. The schema describes
+   * the structure of the Plugin's configuration and is used to render the plugin configuration
+   * form in *Server => Plugin Config*
+   */
   schema: () => object | object
+
+  /**
+   * Optional additional configuration UI customisation
+   * 
+   * @returns An object defining the attributes of the UI components displayed in the Plugin Config screen
+   */
   uiSchema?: () => object | object
+
+  /**
+   * Register additional HTTP routes handled by the plugin
+   * @param router Express Router object
+   * @returns 
+   */
   registerWithRouter?: (router: IRouter) => void
   signalKApiRoutes?: (router: IRouter) => IRouter
   enabledByDefault?: boolean
+
+  /**
+   * A plugin can provide OpenApi documentation for http methods it exposes
+   * @returns OpenApi description of the plugin's http endpoints.
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getOpenApi?: () => any
 }
@@ -115,9 +146,25 @@ export interface Metadata {
   description?: string
 }
 
-export interface ServerAPI extends PluginServerApp {
+/**
+ * These are the methods that a Plugin can use to interact with
+ * the server: get and produce data, log debug and error messages,
+ * report the plugin's status and handle plugin's configuration.
+ */
+export interface ServerAPI extends ResourceProviderRegistry {
+  /**
+   * Get the value by path for self vessel.
+   * @param path 
+   * @returns 
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getSelfPath: (path: string) => any
+
+  /**
+   * 
+   * @param path 
+   * @returns 
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getPath: (path: string) => any
   getMetadata: (path: string) => Metadata | undefined
@@ -133,11 +180,54 @@ export interface ServerAPI extends PluginServerApp {
   //TSTODO convert queryRequest to ts
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   queryRequest: (requestId: string) => Promise<any>
+
+  /**
+   * Log an error 
+   * @group Logging & Status Reporting
+   * @param msg 
+   */
   error: (msg: string) => void
+
+  /**
+   * Log a diagnostic debug message. Ignored, unless plugin's debug logging
+   * is enabled in *Plugin Config*.
+   * @group Logging & Status Reporting
+   * @param msg 
+   */
   debug: (msg: string) => void
-  registerDeltaInputHandler: (handler: DeltaInputHandler) => void
+
+  /**
+   * A plugin can report that it has handled output messages. This will
+   * update the output message rate and icon in the Dashboard.
+   *
+   * This is for traffic that the plugin is sending outside the server,
+   * for example network packets, http calls or messages sent to
+   * a broker. This should NOT be used for deltas that the plugin
+   * sends with handleMessage, they are reported as input from the
+   * server's perspective.
+   * @group Logging & Status Reporting
+   *
+   * @param count optional count of handled messages between the last
+   * call and this one. If omitted the call will count as one output
+   * message.
+   */
+  reportOutputMessages: (count?: number) => void
+
+  /**
+   * Set plugin status message (displayed in the Dashboard)
+   * @group Logging & Status Reporting
+   * @param msg 
+   */
   setPluginStatus: (msg: string) => void
-  setPluginError: (msg: string) => void
+
+  /**
+   * Set plugin error message (displayed in the Dashboard)
+   * @group Logging & Status Reporting
+   * @param msg Pass undefined to erase a previously set error status
+   */
+  setPluginError: (msg?: string) => void
+
+  registerDeltaInputHandler: (handler: DeltaInputHandler) => void
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handleMessage: (id: string, msg: any, skVersion?: SKVersion) => void
   savePluginOptions: (
@@ -174,29 +264,39 @@ export interface ServerAPI extends PluginServerApp {
     ) => void
   }) => void
   getSerialPorts: () => Promise<Ports>
-  getCourse: () => Promise<CourseInfo>
-  clearDestination: () => Promise<void>
-  setDestination: (
-    dest: (PointDestination & { arrivalCircle?: number }) | null
-  ) => Promise<void>
-  activateRoute: (dest: RouteDestination | null) => Promise<void>
 
   /**
-   * A plugin can report that it has handled output messages. This will
-   * update the output message rate and icon in the Dashboard.
-   *
-   * This is for traffic that the plugin is sending outside the server,
-   * for example network packets, http calls or messages sent to
-   * a broker. This should NOT be used for deltas that the plugin
-   * sends with handleMessage, they are reported as input from the
-   * server's perspective.
-   *
-   * @param count optional count of handled messages between the last
-   * call and this one. If omitted the call will count as one output
-   * message.
+   * Get information about the current course
+   * @group Course
    */
+  getCourse: () => Promise<CourseInfo>
 
-  reportOutputMessages: (count?: number) => void
+  /**
+   * Clear current destination
+   * @group Course
+   */
+  clearDestination: () => Promise<void>
+
+  /**
+   * Set destination
+   * @group Course
+   * @param destination PointDestination: either a waypoint with href to the 
+   * waypoint resource or a position with longitude and latitude. 
+   * @returns 
+   */
+  setDestination: (
+    destination: (PointDestination & { arrivalCircle?: number }) | null
+  ) => Promise<void>
+
+  /**
+   * Activate a route
+   * @group Course
+   * @param dest A route resource href with options to rever the route,
+   * set next point in the route and set arrival circle.
+   * @returns Promise that is fulfilled when the route has been successfully
+   * activated.
+   */
+  activateRoute: (dest: RouteDestination | null) => Promise<void>
 }
 
 export const SERVER_API_DOCS_PATH = path.resolve(__dirname, '../docs')
