@@ -32,6 +32,7 @@ import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
 import { ResourcesApi } from '../api/resources'
+import { NotificationsApi } from '../api/notifications'
 import { CourseApi } from '../api/course'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
@@ -521,6 +522,12 @@ module.exports = (theApp: any) => {
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {
       resourcesApi.register(plugin.id, provider)
     }
+
+    const notificationsApi: NotificationsApi = app.notificationsApi
+    _.omit(appCopy, 'notificationsApi') // don't expose the actual notifications api manager
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    appCopy.notify = (path: string, value: any, source: string) => {
+      notificationsApi.notify(path, value, source)
 
     const courseApi: CourseApi = app.courseApi
     _.omit(appCopy, 'courseApi') // don't expose the actual course api manager

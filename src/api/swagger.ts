@@ -24,12 +24,12 @@ interface ApiRecords {
 }
 
 const apiDocs = [
-  discoveryApiRecord,
   appsApiRecord,
-  securityApiRecord,
   courseApiRecord,
+  discoveryApiRecord,
   notificationsApiRecord,
-  resourcesApiRecord
+  resourcesApiRecord,
+  securityApiRecord
 ].reduce<ApiRecords>((acc, apiRecord: OpenApiRecord) => {
   acc[apiRecord.name] = apiRecord
   return acc
