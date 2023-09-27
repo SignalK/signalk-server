@@ -414,7 +414,26 @@ _Note: Do not use `debug` from the debug module directly! Using `app.debug()`pro
 
 Report errors in a human-oriented message. Currently just logs the message, but in the future error messages hopefully will show up in the admin UI.
 
+
+#### `reportOutputMessages(count)`
+
+Report to the server that the plugin has sent data to other hosts so it can be displayed on the Dashboard.
+
+_Note: This function is for use when the plugin is sending data to hosts other than the Signal K server (e.g.
+network packets, http requests or messages sent to a broker)._
+
+_**This function should NOT be used for deltas that the plugin sends with `handleMessage()`!**_
+
+The `count` parameter is _optional_ and represents the number of messages sent between this call the previous
+call. If omitted the call will count as one output message.
+
+_Example:_
+```javascript
+app.reportOutputMessages(54);
+```
+
 ---
+
 
 ### Serial Port
 
