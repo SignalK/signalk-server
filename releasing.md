@@ -21,6 +21,7 @@ npm version [<newversion> | major | minor | patch | premajor | preminor | prepat
 
 - [Check the status in npm](http://registry.npmjs.org/-/package/signalk-server/dist-tags)
 - Set package.json version & git tag using `npm version` as usual but specify the version, for example `npm version 1.19.0-beta.2`
+- Prerelease version **MUST CONTAIN THE STRING beta** as the release actions branch on that
 
 ### (2) Push git tag
 

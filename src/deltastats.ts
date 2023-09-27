@@ -16,37 +16,88 @@
 */
 
 import { isUndefined, values } from 'lodash'
+import { EventEmitter } from 'node:events'
 
-export function startDeltaStatistics(app: any) {
+const STATS_UPDATE_INTERVAL_SECONDS = 5
+export const CONNECTION_WRITE_EVENT_NAME = 'connectionwrite'
+
+export interface ConnectionWriteEvent {
+  providerId: string
+  count?: number
+}
+
+class ProviderStats {
+  writeRate: number
+  writeCount: number
+  lastIntervalWriteCount: number
+  deltaRate: number
+  deltaCount: number
+  lastIntervalDeltaCount: number
+  constructor() {
+    this.writeRate =
+      this.writeCount =
+      this.lastIntervalWriteCount =
+      this.deltaRate =
+      this.deltaCount =
+      this.lastIntervalDeltaCount =
+        0
+  }
+}
+
+export interface WithProviderStatistics {
+  deltaCount: number
+  lastIntervalDeltaCount: number
+  providerStatistics: {
+    [providerId: string]: ProviderStats
+  }
+}
+
+export function startDeltaStatistics(
+  app: EventEmitter & WithProviderStatistics
+) {
   app.deltaCount = 0
   app.lastIntervalDeltaCount = 0
   app.providerStatistics = {}
 
+  app.on(CONNECTION_WRITE_EVENT_NAME, (msg: ConnectionWriteEvent) => {
+    const stats =
+      app.providerStatistics[msg.providerId] ||
+      (app.providerStatistics[msg.providerId] = new ProviderStats())
+    if (msg.count !== undefined) {
+      stats.writeCount += msg.count
+    }
+    stats.writeCount++
+  })
+
   return setInterval(() => {
     updateProviderPeriodStats(app)
+    const anyApp = app as any
     app.emit('serverevent', {
       type: 'SERVERSTATISTICS',
       from: 'signalk-server',
       data: {
-        deltaRate: (app.deltaCount - app.lastIntervalDeltaCount) / 5,
-        numberOfAvailablePaths: app.streambundle.getAvailablePaths().length,
-        wsClients: app.interfaces.ws ? app.interfaces.ws.numClients() : 0,
+        deltaRate:
+          (app.deltaCount - app.lastIntervalDeltaCount) /
+          STATS_UPDATE_INTERVAL_SECONDS,
+        numberOfAvailablePaths: anyApp.streambundle.getAvailablePaths().length,
+        wsClients: anyApp.interfaces.ws ? anyApp.interfaces.ws.numClients() : 0,
         providerStatistics: app.providerStatistics,
         uptime: process.uptime()
       }
     })
     app.lastIntervalDeltaCount = app.deltaCount
-  }, 5 * 1000)
+  }, STATS_UPDATE_INTERVAL_SECONDS * 1000)
 }
 
-export function incDeltaStatistics(app: any, providerId: any) {
+export function incDeltaStatistics(
+  app: WithProviderStatistics,
+  providerId: any
+) {
   app.deltaCount++
 
   const stats =
     app.providerStatistics[providerId] ||
-    (app.providerStatistics[providerId] = {
-      deltaCount: 0
-    })
+    (app.providerStatistics[providerId] = new ProviderStats())
   stats.deltaCount++
 }
 
@@ -60,8 +111,14 @@ function updateProviderPeriodStats(app: any) {
     }
   })
 
-  values(app.providerStatistics).forEach((stats: any) => {
-    stats.deltaRate = (stats.deltaCount - stats.lastIntervalDeltaCount) / 5
+  values(app.providerStatistics).forEach((stats: ProviderStats) => {
+    stats.deltaRate =
+      (stats.deltaCount - stats.lastIntervalDeltaCount) /
+      STATS_UPDATE_INTERVAL_SECONDS
     stats.lastIntervalDeltaCount = stats.deltaCount
+    stats.writeRate =
+      (stats.writeCount - stats.lastIntervalWriteCount) /
+      STATS_UPDATE_INTERVAL_SECONDS
+    stats.lastIntervalWriteCount = stats.writeCount
   })
 }

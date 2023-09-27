@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { SKVersion } from '@signalk/server-api'
 import { FullSignalK } from '@signalk/signalk-schema'
+import { EventEmitter } from 'node:events'
+
 import { Config } from './config/config'
 import DeltaCache from './deltacache'
 
@@ -17,9 +19,7 @@ export interface ServerApp {
   clients: number
 }
 
-export interface SignalKMessageHub {
-  emit: any
-  on: any
+export interface SignalKMessageHub extends EventEmitter {
   signalk: FullSignalK
   handleMessage: (id: string, Delta: any, skVersion?: SKVersion) => void
 }

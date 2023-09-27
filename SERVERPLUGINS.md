@@ -282,7 +282,7 @@ Here we loop though all the unsubscribe functions for our subscriptions and call
 
 Now restart the server and you should see deltas being output in your console.
 
-## Sending NMEA 2000 data from a plugin
+## Sending data out from a plugin
 
 A SignalK plugin can not only read deltas, but can also send data. The following examples show how you can emit NMEA 2000 data.
 
@@ -319,6 +319,29 @@ If you need to send an N2K message out at startup, e.g to get current state from
        '2017-04-15T14:57:58.468Z,2,6,126720,%s,%s,4,a3,99,01,00');
   });
 ```
+
+### Outbound data indication
+
+If you send data out, you might want to show that also on Server Admin UI, at Connection activity section.
+
+```javascript
+  setImmediate(() =>
+     app.emit('connectionwrite', { providerId: plugin.id })
+  )
+```
+
+## Inbound & Outbound data indicators on Server Admin UI
+
+Connection activity section on Server Admin UI is showing traffic status of Signal K connections and plugings. There are inbound and outbound icons in front of connection or plugins title.
+Icon has three statuses:
+- light blue until traffic is detected
+- pulsating dark blue when traffic is detected
+- solid dark blue when no active traffic is detected
+
+Inbound data: deltas/s<br>
+Outbound data: msg/s
+
+Inbound type is always deltas, data coming into the server. Outbound data can vary and depends on plugins structures, generically saying messages (deltas, nmeas sentences, etc...)
 
 ## Schema
 

@@ -53,6 +53,11 @@ TcpStream.prototype.pipe = function (pipeTo) {
       if (that.tcpStream) {
         that.debug('sending %s', d)
         that.tcpStream.write(d)
+        setImmediate(() => {
+          that.options.app.emit('connectionwrite', {
+            providerId: that.options.providerId,
+          })
+        })
       }
     })
   }

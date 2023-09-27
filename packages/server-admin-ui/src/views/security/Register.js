@@ -7,10 +7,11 @@ import {
   CardBody,
   CardFooter,
   Button,
+  Form,
   Input,
   InputGroup,
   InputGroupAddon,
-  FormText,
+  InputGroupText,
 } from 'reactstrap'
 
 class Register extends Component {
@@ -94,10 +95,12 @@ class Register extends Component {
                     </p>
                   )}
                   {!this.state.registrationSent && (
-                    <div>
+                    <Form>
                       <p className="text-muted">Create your account</p>
                       <InputGroup className="mb-3">
-                        <InputGroupAddon>@</InputGroupAddon>
+                        <InputGroupAddon addonType="prepend">
+                          <InputGroupText>@</InputGroupText>
+                        </InputGroupAddon>
                         <Input
                           name="email"
                           type="text"
@@ -106,8 +109,10 @@ class Register extends Component {
                         />
                       </InputGroup>
                       <InputGroup className="mb-3">
-                        <InputGroupAddon>
-                          <i className="icon-lock"></i>
+                        <InputGroupAddon addonType="prepend">
+                          <InputGroupText>
+                            <i className="icon-lock" />
+                          </InputGroupText>
                         </InputGroupAddon>
                         <Input
                           name="password"
@@ -116,9 +121,11 @@ class Register extends Component {
                           onChange={this.handleInputChange}
                         />
                       </InputGroup>
-                      <InputGroup className="mb-4">
-                        <InputGroupAddon>
-                          <i className="icon-lock"></i>
+                      <InputGroup className="mb-0">
+                        <InputGroupAddon addonType="prepend">
+                          <InputGroupText>
+                            <i className="icon-lock" />
+                          </InputGroupText>
                         </InputGroupAddon>
                         <Input
                           name="confirmPassword"
@@ -127,8 +134,12 @@ class Register extends Component {
                           onChange={this.handleInputChange}
                         />
                       </InputGroup>
-                      <p className="text-danger">{this.state.errorMessage}</p>
-                    </div>
+                      {this.state.errorMessage && (
+                        <p className="text-danger mt-3 mb-0">
+                          {this.state.errorMessage}
+                        </p>
+                      )}
+                    </Form>
                   )}
                 </CardBody>
                 {!this.state.registrationSent && (

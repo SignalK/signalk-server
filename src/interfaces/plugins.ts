@@ -20,7 +20,9 @@ import {
   PropertyValues,
   PropertyValuesCallback,
   ResourceProvider,
-  ServerAPI
+  ServerAPI,
+  PointDestination,
+  RouteDestination
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -31,6 +33,7 @@ import _ from 'lodash'
 import path from 'path'
 import { ResourcesApi } from '../api/resources'
 import { NotificationsApi } from '../api/notifications'
+import { CourseApi } from '../api/course'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
 import { listAllSerialPorts } from '../serialports'
@@ -38,6 +41,10 @@ const debug = createDebug('signalk-server:interfaces:plugins')
 
 import { modulesWithKeyword } from '../modules'
 import { OpenApiDescription, OpenApiRecord } from '../api/swagger'
+import {
+  CONNECTION_WRITE_EVENT_NAME,
+  ConnectionWriteEvent
+} from '../deltastats'
 
 const put = require('../put')
 const _putPath = put.putPath
@@ -500,7 +507,13 @@ module.exports = (theApp: any) => {
       },
       getSerialPorts,
       supportsMetaDeltas: true,
-      getMetadata
+      getMetadata,
+      reportOutputMessages: (count?: number) => {
+        app.emit(CONNECTION_WRITE_EVENT_NAME, {
+          providerId: plugin.id,
+          count
+        } as ConnectionWriteEvent)
+      }
     })
     appCopy.putPath = putPath
 
@@ -515,6 +528,22 @@ module.exports = (theApp: any) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     appCopy.notify = (path: string, value: any, source: string) => {
       notificationsApi.notify(path, value, source)
+
+    const courseApi: CourseApi = app.courseApi
+    _.omit(appCopy, 'courseApi') // don't expose the actual course api manager
+    appCopy.getCourse = () => {
+      return courseApi.getCourse()
+    }
+    appCopy.clearDestination = () => {
+      return courseApi.clearDestination()
+    }
+    appCopy.setDestination = (
+      dest: (PointDestination & { arrivalCircle?: number }) | null
+    ) => {
+      return courseApi.destination(dest)
+    }
+    appCopy.activateRoute = (dest: RouteDestination | null) => {
+      return courseApi.activeRoute(dest)
     }
 
     try {

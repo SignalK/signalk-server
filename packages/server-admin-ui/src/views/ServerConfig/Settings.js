@@ -273,7 +273,7 @@ class ServerSettings extends Component {
                 </FormGroup>
                 <FormGroup row>
                   <Col md="2">
-                    <Label>Keep only most recent logs</Label>
+                    <Label>Keep only most recent data log files</Label>
                   </Col>
                   <Col>
                     <FormGroup check>
