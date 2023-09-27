@@ -73,18 +73,29 @@ const Dashboard = (props) => {
                   </div>
                 </Col>
                 <Col xs="12" md="6">
-                  <div className="text-muted">
-                    Connection activity (deltas/second)
-                  </div>
+                  <div className="text-muted">Connection activity</div>
                   <ul className="horizontal-bars type-2">
                     {Object.keys(providerStatistics || {}).map((providerId) => {
                       const providerStats = providerStatistics[providerId]
-                      const iconClass =
-                        'icon-feed text-primary' +
+                      let linkType = 'provider'
+                      try {
+                        linkType = providerStatus.find(
+                          (item) => item.id === providerId
+                        ).statusType
+                      } catch (error) {}
+                      const inputPulseIconClass =
+                        'icon-login' +
                         (providerStats.deltaRate > 50
-                          ? ' fa-pulse-fast'
+                          ? ' text-primary fa-pulse-fast'
                           : providerStats.deltaRate > 0
-                          ? ' fa-pulse'
+                          ? ' text-primary fa-pulse'
+                          : '')
+                      const outputPulseIconClass =
+                        'icon-logout' +
+                        (providerStats.writeRate > 50
+                          ? ' text-primary fa-pulse-fast'
+                          : providerStats.writeRate > 0
+                          ? ' text-primary fa-pulse'
                           : '')
                       return (
                         <li
@@ -95,22 +106,61 @@ const Dashboard = (props) => {
                             )
                           }
                         >
-                          <i className={iconClass} />
+                          <i
+                            className={inputPulseIconClass}
+                            style={{
+                              color: providerStats.deltaCount
+                                ? '#039'
+                                : 'lightblue',
+                            }}
+                          />
+                          <i
+                            className={outputPulseIconClass}
+                            style={{
+                              transform: 'scaleX(-1)',
+                              color: providerStats.writeCount
+                                ? '#039'
+                                : 'lightblue',
+                            }}
+                          />
                           <span className="title">
-                            {providerIdLink(providerId)}
+                            {linkType === 'plugin'
+                              ? pluginNameLink(providerId)
+                              : providerIdLink(providerId)}
                           </span>
-                          <span className="value">
-                            {' '}
-                            {providerStats.deltaRate}{' '}
-                            <span className="text-muted small">
-                              (
-                              {(
-                                (providerStats.deltaRate / deltaRate) *
-                                100
-                              ).toFixed(0)}
-                              %)
+                          {providerStats.writeRate > 0 && (
+                            <span className="value">
+                              {' '}
+                              {providerStats.writeRate}{' '}
+                              <span className="text-muted small">
+                                {'msg/s'}
+                              </span>{' '}
                             </span>
-                          </span>
+                          )}
+                          {providerStats.deltaRate > 0 &&
+                            providerStats.writeRate > 0 && (
+                              <span className="value">
+                                <span className="text-muted small">{','}</span>
+                                &#160;
+                              </span>
+                            )}
+                          {providerStats.deltaRate > 0 && (
+                            <span className="value">
+                              {' '}
+                              {providerStats.deltaRate}{' '}
+                              <span className="text-muted small">
+                                (
+                                {(
+                                  (providerStats.deltaRate / deltaRate) *
+                                  100
+                                ).toFixed(0)}
+                                %)
+                              </span>{' '}
+                              <span className="text-muted small">
+                                {'deltas/s'}
+                              </span>{' '}
+                            </span>
+                          )}
                           <div className="bars">
                             <Progress
                               className="progress-xs"

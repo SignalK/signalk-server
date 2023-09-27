@@ -1,10 +1,7 @@
 import { IRouter } from 'express'
 import { createDebug } from './debug'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ACL, Device, SecurityConfig } from './security'
+import { SecurityConfig } from './security'
 import cors, { CorsOptions } from 'cors'
-
-type OriginCallback = (err: Error | null, origin?: string) => void
 
 export function setupCors(
   app: IRouter,
@@ -18,24 +15,23 @@ export function setupCors(
         .map((s: string) => s.trim().replace(/\/*$/, ''))
     : []
   corsDebug(`corsOrigins:${corsOrigins.toString()}`)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const corsOptions: CorsOptions = {
-    credentials: true
+    credentials: true,
+    origin: corsOrigins
   }
-  if (corsOrigins.length) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    corsOptions.origin = (origin: string | undefined, cb: OriginCallback) => {
-      if (origin === undefined || corsOrigins.indexOf(origin) >= 0) {
-        corsDebug(`${origin} OK`)
-        cb(null, origin)
-      } else {
-        const errorMsg = `${origin} not allowed`
-        corsDebug(errorMsg)
-        cb(new Error(errorMsg))
-      }
-    }
-  }
+
   app.use(cors(corsOptions))
+  app.use((req, res, next) => {
+    const origin = req.header('origin')
+    if (origin !== undefined && !corsOrigins.includes(origin)) {
+      corsDebug(
+        `${origin} is not present in corsOrigins: ${corsOrigins.toString()}`
+      )
+    } else {
+      corsDebug(`${origin} is allowed`)
+    }
+    next()
+  })
 }
 
 export const handleAdminUICORSOrigin = (

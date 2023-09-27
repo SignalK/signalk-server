@@ -13,6 +13,10 @@ FROM base AS tarballs_installed
 WORKDIR /home/node/signalk
 COPY *.tgz .
 USER root
+
+#Github Action seeing frequent econnresets, so retry more
+RUN npm config set fetch-retries 5
+
 RUN npm i -g signalk-server-*.tgz
 # move server-admin-ui that gets installed as sibling of signalk-server
 RUN mv /usr/lib/node_modules/@signalk/* /usr/lib/node_modules/signalk-server/node_modules/@signalk/

@@ -271,7 +271,7 @@ class LoggingInput extends Component {
     return (
       <FormGroup row>
         <Col xs="3" md="3">
-          <Label>Logging</Label>
+          <Label>Data Logging</Label>
         </Col>
         <Col xs="2" md="3">
           <Label className="switch switch-text switch-primary">

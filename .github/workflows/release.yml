@@ -195,8 +195,7 @@ jobs:
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy demo.signalk.org at fly.io
-        run: |
-          cd fly_io/demo_signalk_org
-          flyctl deploy --remote-only --build-arg SK_VERSION=${{ steps.vars.outputs.tag }}
+        working-directory: ./fly_io/demo_signalk_org
+        run: flyctl deploy --remote-only --build-arg SK_VERSION=${{ steps.vars.outputs.tag }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

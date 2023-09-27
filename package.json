@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "2.0.0-beta.6",
+  "version": "2.2.0",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
@@ -45,30 +45,22 @@
     "marine",
     "nautic"
   ],
-  "author": "Teppo Kurki <teppo.kurki@iki.fi>",
   "contributors": [
     {
-      "name": "Fabian Tollenaar",
-      "email": "fabian@signalk.org"
+      "name": "Teppo Kurki",
+      "email": "teppo.kurki@iki.fi"
     },
     {
       "name": "Scott Bender",
       "email": "scott@scottbender.net"
     },
     {
-      "name": "Joachim Bakke"
-    },
-    {
-      "name": "Tim Mathews",
-      "email": "tim@signalk.org"
-    },
-    {
-      "name": "Pavel Kalian"
+      "name": "Adrian Panazzolo"
     }
   ],
   "license": "Apache-2.0",
   "engines": {
-    "node": ">=10"
+    "node": ">=16"
   },
   "workspaces": [
     "packages/server-admin-ui-dependencies",
@@ -79,14 +71,14 @@
     "packages/mock-autopilot-provider"
   ],
   "dependencies": {
-    "@signalk/course-provider": "^1.0.0-beta.7",
+    "@signalk/course-provider": "^1.0.0",
     "@signalk/n2k-signalk": "^2.0.0",
     "@signalk/nmea0183-signalk": "^3.0.0",
     "@signalk/resources-provider": "^1.0.0",
-    "@signalk/server-admin-ui": "2.0.x",
-    "@signalk/server-api": "2.0.x",
+    "@signalk/server-admin-ui": "2.1.x",
+    "@signalk/server-api": "2.1.x",
     "@signalk/signalk-schema": "^1.7.1",
-    "@signalk/streams": "2.x",
+    "@signalk/streams": "^3.2.0",
     "api-schema-builder": "^2.0.11",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
@@ -101,8 +93,6 @@
     "cookie-parser": "^1.4.3",
     "cors": "^2.5.2",
     "debug": "^4.3.3",
-    "deep-get-set": "^1.1.0",
-    "dev-null-stream": "0.0.1",
     "devcert": "^1.2.2",
     "dnssd2": "1.0.0",
     "errorhandler": "^1.3.0",
@@ -128,7 +118,7 @@
     "ncp": "^2.0.0",
     "node-fetch": "^2.6.0",
     "primus": "^7.0.0",
-    "semver": "^7.1.1",
+    "semver": "^7.5.4",
     "split": "^1.0.0",
     "stat-mode": "^1.0.0",
     "swagger-ui-express": "^4.5.0",
@@ -142,9 +132,12 @@
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
     "@signalk/vesselpositions": "^1.0.0",
+    "@signalk/udp-nmea-plugin": "^2.0.0",
     "@signalk/zones": "^1.0.0",
+    "signalk-to-nmea2000": "^2.16.0",
+    "signalk-n2kais-to-nmea0183": "^1.3.1",
     "mdns": "^2.5.1",
-    "serialport": "^9.0.1"
+    "serialport": "^11.0.0"
   },
   "devDependencies": {
     "@types/busboy": "^1.5.0",
@@ -159,7 +152,7 @@
     "@types/node-fetch": "^2.5.3",
     "@types/rmfr": "^2.0.1",
     "@types/semver": "^7.1.0",
-    "@types/serialport": "^8.0.1",
+    "@types/serialport": "^8.0.2",
     "@types/split": "^1.0.0",
     "@types/swagger-ui-express": "^4.1.3",
     "@types/unzipper": "^0.10.5",
@@ -171,7 +164,6 @@
     "chai-things": "^0.2.0",
     "eslint": "^8.24.0",
     "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-jsdoc": "^39.3.6",
     "eslint-plugin-prefer-arrow": "^1.2.3",
     "eslint-plugin-react": "^7.31.8",
     "freeport-promise": "^1.0.0",
