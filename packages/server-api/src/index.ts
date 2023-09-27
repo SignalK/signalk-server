@@ -1,3 +1,5 @@
+import path from 'node:path'
+
 import { IRouter } from 'express'
 import { PropertyValuesCallback } from './propertyvalues'
 
@@ -196,3 +198,5 @@ export interface ServerAPI extends PluginServerApp {
 
   reportOutputMessages: (count?: number) => void
 }
+
+export const SERVER_API_DOCS_PATH = path.resolve(__dirname, '../docs')

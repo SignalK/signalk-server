@@ -50,6 +50,7 @@ import {
 } from './security'
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './types'
+import { SERVER_API_DOCS_PATH } from '@signalk/server-api'
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -107,8 +108,8 @@ module.exports = function (
   // mount before the main /admin
   mountSwaggerUi(app, '/doc/openapi')
 
-  // mount server-guide
   app.use('/documentation', express.static(__dirname + '/../docs/built'))
+  app.use('/server-api-docs', express.static(SERVER_API_DOCS_PATH))
 
   app.get('/admin/', (req: Request, res: Response) => {
     fs.readFile(
