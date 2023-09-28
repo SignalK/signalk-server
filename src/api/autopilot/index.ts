@@ -2,11 +2,6 @@
 import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:api:autopilot')
 
-import {
-  AutopilotProvider,
-  AutopilotProviderMethods
-} from '@signalk/server-api'
-
 import { IRouter, NextFunction, Request, Response } from 'express'
 import { WithSecurityStrategy } from '../../security'
 
@@ -23,374 +18,39 @@ interface AutopilotApplication
 }
 
 export class AutopilotApi {
-  private autopilotProvider: AutopilotProviderMethods | null = null
-
-  constructor(app: AutopilotApplication) {
-    this.initAutopilotRoutes(app)
-  }
+  constructor(private server: AutopilotApplication) {}
 
   async start() {
-    debug('starting... autopilot API')
+    this.initApiFacade()
     return Promise.resolve()
   }
 
-  register(pluginId: string, provider: AutopilotProvider) {
-    debug(`** Registering provider(s)....${pluginId} ${provider?.pilotType}`)
-    if (!provider) {
-      throw new Error(`Error registering provider ${pluginId}!`)
-    }
-    if (!provider.pilotType) {
-      throw new Error(`Invalid AutoPilotProvider.pilotType value!`)
-    }
-    if (!this.autopilotProvider) {
-      if (
-        !provider.methods.getConfig ||
-        !provider.methods.setState ||
-        !provider.methods.setMode ||
-        !provider.methods.setTarget ||
-        !provider.methods.adjustTarget ||
-        !provider.methods.tack ||
-        typeof provider.methods.getConfig !== 'function' ||
-        typeof provider.methods.setState !== 'function' ||
-        typeof provider.methods.setMode !== 'function' ||
-        typeof provider.methods.setTarget !== 'function' ||
-        typeof provider.methods.adjustTarget !== 'function' ||
-        typeof provider.methods.tack !== 'function'
-      ) {
-        throw new Error(`Error missing AutoPilotProvider.methods!`)
-      } else {
-        provider.methods.pluginId = pluginId
-        this.autopilotProvider = provider.methods
-      }
-      debug('AutoPilotProvider = ' + JSON.stringify(this.autopilotProvider))
-    } else {
-      const msg = `Error: Autopilot ${provider?.pilotType} already registered!`
-      debug(msg)
-      throw new Error(msg)
-    }
+  private updateAllowed(request: Request): boolean {
+    return this.server.securityStrategy.shouldAllowPut(
+      request,
+      'vessels.self',
+      null,
+      'steering.autopilot'
+    )
   }
 
-  unRegister(pluginId: string) {
-    if (!pluginId) {
-      return
-    }
-    debug(`** Un-registering ${pluginId} as autopilot provider....`)
-    if (this.autopilotProvider?.pluginId === pluginId) {
-      debug(`** Un-registering ${pluginId}....`)
-      this.autopilotProvider = null
-    }
-    debug(JSON.stringify(this.autopilotProvider))
-  }
- 
-  private initAutopilotRoutes(server: AutopilotApplication) {
-    const updateAllowed = (req: Request): boolean => {
-      
-      return server.securityStrategy.shouldAllowPut(
-        req,
-        'vessels.self',
-        null,
-        'resources'
-      )
-    }
+  private initApiFacade() {
+    debug(`** Initialise ${AUTOPILOT_API_PATH} facade **`)
 
-    // facilitate retrieval of autopilot configuration values
-    server.get(
-      `${AUTOPILOT_API_PATH}/config`,
+    this.server.use(
+      `${AUTOPILOT_API_PATH}`,
       async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** GET ${AUTOPILOT_API_PATH}/config`)
-        if (!this.autopilotProvider) {
-          debug('** No provider found... calling next()...')
+        debug(`** FACADE: ${AUTOPILOT_API_PATH}`)
+        if (req.method !== 'GET') {
+          debug(`** Checking update is allowed....`)
+          if (!this.updateAllowed(req)) {
+            res.status(403).json(Responses.unauthorised)
+          } else {
+            debug(`** Granted.....calling next()....`)
+            next()
+          }
+        } else {
           next()
-          return
-        }
-        try {
-          const retVal = await this.autopilotProvider?.getConfig()
-          res.json(retVal)
-        } catch (err) {
-          res.status(404).json({
-            state: 'FAILED',
-            statusCode: 404,
-            message: `Error retrieving Autopilot configuration!`
-          })
-        }
-      }
-    )
-
-    // engage / enable the autopilot
-    server.put(
-      `${AUTOPILOT_API_PATH}/engage`,
-      async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** PUT ${AUTOPILOT_API_PATH}/engage`)
-        if (!this.autopilotProvider) {
-          debug('** No provider found... calling next()...')
-          next()
-          return
-        }
-
-        if (!updateAllowed(req)) {
-          res.status(403).json(Responses.unauthorised)
-          return
-        }
-
-        debug(req.body)
-        try {
-          await this.autopilotProvider?.engage(true)
-
-          res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
-          })
-        } catch (err) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: `Error setting engaging the autopilot!`
-          })
-        }
-      }
-    )
-
-    // dis-engage / disable the autopilot
-    server.put(
-      `${AUTOPILOT_API_PATH}/disengage`,
-      async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** PUT ${AUTOPILOT_API_PATH}/disengage`)
-        if (!this.autopilotProvider) {
-          debug('** No provider found... calling next()...')
-          next()
-          return
-        }
-
-        if (!updateAllowed(req)) {
-          res.status(403).json(Responses.unauthorised)
-          return
-        }
-
-        debug(req.body)
-        try {
-          await this.autopilotProvider?.engage(false)
-
-          res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
-          })
-        } catch (err) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: `Error setting disengaging the autopilot!`
-          })
-        }
-      }
-    )
-
-    // facilitate setting of autopilot state
-    server.put(
-      `${AUTOPILOT_API_PATH}/state`,
-      async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** PUT ${AUTOPILOT_API_PATH}/state`)
-        if (!this.autopilotProvider) {
-          debug('** No provider found... calling next()...')
-          next()
-          return
-        }
-
-        if (!updateAllowed(req)) {
-          res.status(403).json(Responses.unauthorised)
-          return
-        }
-
-        debug(req.body)
-        if (typeof req.body.value === 'undefined') {
-          res.status(400).json(Responses.invalid)
-          return
-        }
-
-        try {
-          await this.autopilotProvider?.setState(req.body.value)
-
-          res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
-          })
-        } catch (err) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: `Error setting autopilot state!`
-          })
-        }
-      }
-    )
-
-    // facilitate setting of autopilot mode
-    server.put(
-      `${AUTOPILOT_API_PATH}/mode`,
-      async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** PUT ${AUTOPILOT_API_PATH}/mode`)
-        if (!this.autopilotProvider) {
-          debug('** No provider found... calling next()...')
-          next()
-          return
-        }
-
-        if (!updateAllowed(req)) {
-          res.status(403).json(Responses.unauthorised)
-          return
-        }
-
-        debug(req.body)
-        if (typeof req.body.value === 'undefined') {
-          res.status(400).json(Responses.invalid)
-          return
-        }
-
-        try {
-          await this.autopilotProvider?.setMode(req.body.value)
-
-          res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
-          })
-        } catch (err) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: `Error setting autopilot mode!`
-          })
-        }
-      }
-    )
-
-    // facilitate setting of autopilot increment / decrement (+/-10)
-    server.put(
-      `${AUTOPILOT_API_PATH}/target/adjust`,
-      async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** PUT ${AUTOPILOT_API_PATH}/adjustTarget`)
-        if (!this.autopilotProvider) {
-          debug('** No provider found... calling next()...')
-          next()
-          return
-        }
-
-        if (!updateAllowed(req)) {
-          res.status(403).json(Responses.unauthorised)
-          return
-        }
-
-        debug(req.body)
-        if (
-          typeof req.body.value !== 'number'
-        ) {
-          res.status(400).json(Responses.invalid)
-          return
-        }
-
-        try {
-          await this.autopilotProvider?.adjustTarget(req.body.value)
-
-          res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
-          })
-        } catch (err) {
-          res.status(404).json({
-            state: 'FAILED',
-            statusCode: 404,
-            message: `Error setting autopilot target!`
-          })
-        }
-      }
-    )
-
-    // facilitate setting of autopilot target (-pi -> 2*pi)
-    server.put(
-      `${AUTOPILOT_API_PATH}/target`,
-      async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** PUT ${AUTOPILOT_API_PATH}/target`)
-        if (!this.autopilotProvider) {
-          debug('** No provider found... calling next()...')
-          next()
-          return
-        }
-
-        if (!updateAllowed(req)) {
-          res.status(403).json(Responses.unauthorised)
-          return
-        }
-
-        debug(req.body)
-        if (
-          typeof req.body.value !== 'number' ||
-          !(req.body.value >= (0-Math.PI) && req.body.value < Math.PI*2)
-        ) {
-          res.status(400).json(Responses.invalid)
-          return
-        }
-
-        try {
-          await this.autopilotProvider?.setTarget(req.body.value)
-
-          res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
-          })
-        } catch (err) {
-          res.status(404).json({
-            state: 'FAILED',
-            statusCode: 404,
-            message: `Error setting autopilot target!`
-          })
-        }
-      }
-    )
-
-    // facilitate tack port / starboard
-    server.put(
-      `${AUTOPILOT_API_PATH}/tack/:direction`,
-      async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** PUT ${AUTOPILOT_API_PATH}/tack`)
-        if (!this.autopilotProvider) {
-          debug('** No provider found... calling next()...')
-          next()
-          return
-        }
-
-        if (!updateAllowed(req)) {
-          res.status(403).json(Responses.unauthorised)
-          return
-        }
-
-        debug(req.params.direction)
-        if (!['port','starboard'].includes(req.params.direction)) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 404,
-            message: `Invalid request path! (${req.params.direction})`
-          })
-          return
-        }
-
-        try {
-          await this.autopilotProvider?.tack(req.params.direction === 'port')
-
-          res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
-          })
-        } catch (err) {
-          res.status(404).json({
-            state: 'FAILED',
-            statusCode: 404,
-            message: `Error setting autopilot mode!`
-          })
         }
       }
     )

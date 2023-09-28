@@ -27,11 +27,11 @@ interface ApiRecords {
 const apiDocs = [
   discoveryApiRecord,
   appsApiRecord,
-  securityApiRecord,
+  autopilotApiRecord,
   courseApiRecord,
   notificationsApiRecord,
   resourcesApiRecord,
-  autopilotApiRecord
+  securityApiRecord
 ].reduce<ApiRecords>((acc, apiRecord: OpenApiRecord) => {
   acc[apiRecord.name] = apiRecord
   return acc
