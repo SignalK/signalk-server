@@ -70,8 +70,7 @@ _Example Data Connection:_
 
 ![GPIO](./gpio.png)
 
-- Set _Invert Signal_ based on the hardware interface you have used _(e.g. Select **Yes** if using the hardware setup above. Select **No** if using a hardware interface that does not invert the ST1 signal)_.
-
+- Set _Invert Signal_ based on the hardware interface you have used _(e.g. Select **No** if using the optocoupler hardware setup above. Select **Yes** if using a hardware interface that does invert the ST1 signal)_.
 
 - Click **Apply** to save your data connection settings.
 
