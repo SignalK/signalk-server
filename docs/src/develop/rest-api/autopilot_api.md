@@ -3,31 +3,21 @@
 
 ## Overview
 
-The SignalK specification defines the `autopilot` path under the `steering` schema group _(e.g. `/signalk/v2/api/vessels/self/steering/autopilot`)_, the majority of which will be populated by data provided by a connected autopilot device.
+The SignalK specification defines the `autopilot` path under the `steering` schema group _(e.g. `/signalk/v2/api/vessels/self/steering/autopilot`)_, for representing information from autopilot devices.
 
-The Autopilot API provides a mechanism for applications to issue requests to send commands and retrieve information from a connected autopilot device. 
+The Autopilot API provides a mechanism for applications to issue requests to autopilot devices (via a provider plugin) to perform common operations.
 
- _You can find plugins in the `App Store` section of the server admin UI._
-
-Client applications use `HTTP` requests to the API endpoints to issue commands and retrieve information. 
-
-
+ _Note: You can find autopilot provider plugins in the `App Store` section of the Signal K Server Admin UI._
 
 
 ### Retrieving Configuration
 
-
-Autopilot configuration settings and options are retrived by submitting an HTTP `GET` request to `/signalk/v2/api/vessels/self/steering/autopilot`.
+To retrieve the current configuration as well as a list of available options for `state` and `mode` selections, submit an HTTP `GET` request to `/signalk/v2/api/vessels/self/steering/autopilot`.
 
 ```typescript
-HTTP GET 'http://hostname:3000/s/signalk/v2/api/vessels/self/steering/autopilot'
+HTTP GET "/s/signalk/v2/api/vessels/self/steering/autopilot"
 ```
-
-The response will contain:
-- The valid option values which should be used when setting either `state` and / or `mode`
-- The current values of `state`, `mode` and `target`
-
-_Example:_
+_Response:_
 
 ```JSON
 {
@@ -37,194 +27,110 @@ _Example:_
   },
   "state":"disabled",
   "mode":"gps",
-  "target": 0
+  "target": 0,
+  "active": false
 }
 ```
 
-### Setting the State
-
-
-Autopilot state can be set by submitting an HTTP `PUT` request to `/signalk/v2/api/vessels/self/steering/autopilot/state` containing a value from the list of valid states.
-
-```typescript
-HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/steering/autopilot/state {"value": "enabled"}'
-```
-
-The response will contain the result of the request.
-
-_Example: success_
-
-```JSON
-{
-  "state": "COMPLETED",
-  "statusCode": 200
-}
-```
-
-_Example: failure_
-```JSON
-{
-  "state": "FAILED",
-  "statusCode": 400,
-  "message": "string"
-}
-```
-
+Where:
+- `options` contains arrays of valid `state` and `mode` selection options
+- `state` represents the current state of the device
+- `mode` represents the current mode of the device
+- `target` represents the current target value with respect to the selected `mode`
+- `active` will be true when the selected `state` indicates that the autopilot is engaged and steering the vessel.
 
 
 ### Setting the Mode
 
+Autopilot mode can be set by submitting an HTTP `PUT` request to the `mode` endpoint containing a value from the list of available modes.
 
-Autopilot mode can be set by submitting an HTTP `PUT` request to `/signalk/v2/api/vessels/self/steering/autopilot/mode` containing a value from the list of valid modes.
-
-```typescript
-HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/steering/autopilot/mode {"value": "gps"}'
 ```
-
-The response will contain the result of the request.
-
-_Example: success_
-
-```JSON
-{
-  "state": "COMPLETED",
-  "statusCode": 200
-}
+HTTP PUT "/signalk/v2/api/vessels/self/steering/autopilot/mode" {"value": "gps"}
 ```
-
-_Example: failure_
-```JSON
-{
-  "state": "FAILED",
-  "statusCode": 400,
-  "message": "string"
-}
-```
-
 
 ### Setting the Target
 
+Autopilot target value can be set by submitting an HTTP `PUT` request to the `target` endpoint containing the desired value in radians.
 
-Autopilot target value can be set by submitting an HTTP `PUT` request to `/signalk/v2/api/vessels/self/steering/autopilot/target` containing the desired value in radians.
+_Note: The value supplied should be a number within the valid range for the selected `mode`._
 
-```typescript
-HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/steering/autopilot/target {"value": 3.1412}'
+```
+HTTP PUT "signalk/v2/api/vessels/self/steering/autopilot/target" {"value": 1.1412}
 ```
 
-The response will contain the result of the request.
+The target value can be adjusted a +/- value by submitting an HTTP `PUT` request to the `target/adjust` endpoint with the value to add to the current `target` value in radians.
 
-_Example: success_
-
-```JSON
-{
-  "state": "COMPLETED",
-  "statusCode": 200
-}
+```
+HTTP PUT "signalk/v2/api/vessels/self/steering/autopilot/target/adjust" {"value": -0.1412}
 ```
 
-_Example: failure_
-```JSON
-{
-  "state": "FAILED",
-  "statusCode": 400,
-  "message": "string"
-}
+### Engaging / Disengaging the Autopilot
+
+#### Engaging the autopilot 
+
+An autopilot can be engaged by issuing one of the following requests:
+
+1. Submit an HTTP `POST` request to the `engage` endpoint
+
+  _Note: This will set the autopilot to a `state` as determined by the **provider plugin**._
+
+```
+HTTP PUT "/signalk/v2/api/vessels/self/steering/autopilot/engage"
 ```
 
-### Adjusting the Target value
+2. Submit an HTTP `PUT` request to the `state` endpoint supplying the desired a value from the list of available states.
 
-
-Autopilot target value can be adjusted a specified +/- value by submitting an HTTP `PUT` request to `/signalk/v2/api/vessels/self/steering/autopilot/target/adjust` containing the desired value in radians.
-
-```typescript
-HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/steering/autopilot/target/adjust {"value": -0.3474}'
+  Use this method to set the autopilot to a desired `state`.
+  
+```
+HTTP PUT "/signalk/v2/api/vessels/self/steering/autopilot/state" {"value": "enabled"}
 ```
 
-The response will contain the result of the request.
+#### Disengaging the autopilot 
 
-_Example: success_
+An autopilot can be disengaged by issuing one of the following requests:
 
-```JSON
-{
-  "state": "COMPLETED",
-  "statusCode": 200
-}
+1. Submit an HTTP `POST` request to the `disengage` endpoint
+
+  _Note: This will set the autopilot to a `state` as determined by the **provider plugin**._
+
+```
+HTTP PUT "/signalk/v2/api/vessels/self/steering/autopilot/disengage"
 ```
 
-_Example: failure_
-```JSON
-{
-  "state": "FAILED",
-  "statusCode": 400,
-  "message": "string"
-}
+2. Submit an HTTP `PUT` request to the `state` endpoint supplying the desired value from the list of available states.
+
+  Use this method to set the autopilot to a desired `state`.
+  
+```
+HTTP PUT "/signalk/v2/api/vessels/self/steering/autopilot/state" {"value": "disabled"}
 ```
 
 ### Perform Tack
 
-
-To send the command for the autopilot to perform a tack in the required direction, submit an HTTP `PUT` request to `/signalk/v2/api/vessels/self/steering/autopilot/tack/{direction}`.
+To send a command to the autopilot to perform a tack in the required direction, submit an HTTP `POST` request to `/tack/{direction}` where _direction_ is either `port` or `starboard`.
 
 _Example: Tack to Port_
-```typescript
-HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/steering/autopilot/tack/port'
+```
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilot/tack/port"
 ```
 
 _Example: Tack to Starboard_
-```typescript
-HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/steering/autopilot/tack/starboard'
 ```
-
-The response will contain the result of the request.
-
-_Example: success_
-
-```JSON
-{
-  "state": "COMPLETED",
-  "statusCode": 200
-}
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilot/tack/starboard"
 ```
-
-_Example: failure_
-```JSON
-{
-  "state": "FAILED",
-  "statusCode": 400,
-  "message": "string"
-}
 
 
 ### Perform Gybe
 
-To send the command for the autopilot to perform a gybe in the required direction, submit an HTTP `PUT` request to `/signalk/v2/api/vessels/self/steering/autopilot/gybe/{direction}`.
+To send a command to the autopilot to perform a gybe in the required direction, submit an HTTP `POST` request to `/gybe/{direction}` where _direction_ is either `port` or `starboard`.
 
 _Example: Gybe to Port_
-```typescript
-HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/steering/autopilot/gybe/port'
+```
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilot/gybe/port"
 ```
 
 _Example: Gybe to Starboard_
-```typescript
-HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/steering/autopilot/gybe/starboard'
 ```
-
-The response will contain the result of the request.
-
-_Example: success_
-
-```JSON
-{
-  "state": "COMPLETED",
-  "statusCode": 200
-}
-```
-
-_Example: failure_
-```JSON
-{
-  "state": "FAILED",
-  "statusCode": 400,
-  "message": "string"
-}
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilot/gybe/starboard"
 ```

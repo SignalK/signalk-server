@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/PR-SVG-20010719/DTD/svg10.dtd">
+<svg width="35cm" height="17cm" viewBox="-787 335 692 334" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <g id="Background">
+    <g>
+      <polygon style="fill: #d9d9cd; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" fill-rule="evenodd" points="-772.43,427.25 -735.617,427.25 -731.016,431.852 -731.016,514.68 -735.617,519.281 -772.43,519.281 -777.031,514.68 -777.031,431.852 "/>
+      <polygon style="fill: none; stroke-opacity: 1; stroke-width: 0.2; stroke: #000000" points="-772.43,427.25 -735.617,427.25 -731.016,431.852 -731.016,514.68 -735.617,519.281 -772.43,519.281 -777.031,514.68 -777.031,431.852 "/>
+      <polygon style="fill: #cdcdcd; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" fill-rule="evenodd" points="-767.828,431.852 -740.219,431.852 -735.617,436.453 -735.617,496.273 -740.219,500.875 -767.828,500.875 -772.43,496.273 -772.43,436.453 "/>
+      <polygon style="fill: none; stroke-opacity: 1; stroke-width: 0.2; stroke: #000000" points="-767.828,431.852 -740.219,431.852 -735.617,436.453 -735.617,496.273 -740.219,500.875 -767.828,500.875 -772.43,496.273 -772.43,436.453 "/>
+    </g>
+    <g>
+      <line style="fill: none; stroke-opacity: 1; stroke-width: 6; stroke: #000000" x1="-205.732" y1="525.541" x2="-340.695" y2="524.503"/>
+      <polygon style="fill: #000000; fill-opacity: 1; stroke-opacity: 1; stroke-width: 6; stroke: #000000" fill-rule="evenodd" points="-198.232,525.598 -208.27,530.521 -205.732,525.541 -208.193,520.522 "/>
+      <polygon style="fill: #000000; fill-opacity: 1; stroke-opacity: 1; stroke-width: 6; stroke: #000000" fill-rule="evenodd" points="-348.195,524.446 -338.157,519.523 -340.695,524.503 -338.234,529.522 "/>
+    </g>
+    <text font-size="13.5467" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="-786.906" y="398.554">
+      <tspan x="-786.906" y="398.554">Signal K</tspan>
+      <tspan x="-786.906" y="415.487">Client App</tspan>
+    </text>
+    <text font-size="13.5467" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:italic;font-weight:normal" x="-643.196" y="492.01">
+      <tspan x="-643.196" y="492.01">steering</tspan>
+      <tspan xml:space="preserve" x="-643.196" y="508.943">   .autopilot </tspan>
+      <tspan xml:space="preserve" x="-643.196" y="525.877">      .active </tspan>
+      <tspan xml:space="preserve" x="-643.196" y="542.81">      .mode </tspan>
+      <tspan xml:space="preserve" x="-643.196" y="559.743">      .state </tspan>
+      <tspan xml:space="preserve" x="-643.196" y="576.677">      .target </tspan>
+      <tspan x="-643.196" y="593.61"></tspan>
+    </text>
+    <g>
+      <rect style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke-dasharray: 4; stroke: #000000" x="-438" y="489.394" width="83.097" height="70" rx="0" ry="0"/>
+      <text font-size="12.8" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-396.452" y="520.275">
+        <tspan x="-396.452" y="520.275">autopilot</tspan>
+        <tspan x="-396.452" y="536.275">plugin</tspan>
+      </text>
+    </g>
+    <g>
+      <rect style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" x="-482" y="409" width="172" height="38" rx="0" ry="0"/>
+      <text font-size="12.8" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="-396" y="431.881">
+        <tspan x="-396" y="431.881"></tspan>
+      </text>
+    </g>
+    <text font-size="12.8" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="-443.689" y="430.288">
+      <tspan x="-443.689" y="430.288">Autopilot API</tspan>
+    </text>
+    <text font-size="12.8" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="-292" y="514.25">
+      <tspan x="-292" y="514.25">NMEA</tspan>
+    </text>
+    <text font-size="13.5467" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="-166.6" y="563.674">
+      <tspan x="-166.6" y="563.674">Autopilot</tspan>
+    </text>
+    <g>
+      <line style="fill: none; stroke-opacity: 1; stroke-width: 6; stroke: #000000" x1="-496.208" y1="428.015" x2="-716" y2="428.25"/>
+      <polygon style="fill: #000000; fill-opacity: 1; stroke-opacity: 1; stroke-width: 6; stroke: #000000" fill-rule="evenodd" points="-488.708,428.007 -498.703,433.018 -496.208,428.015 -498.714,423.018 "/>
+    </g>
+    <g>
+      <line style="fill: none; stroke-opacity: 1; stroke-width: 6; stroke: #000000" x1="-396.3" y1="475.187" x2="-396" y2="447"/>
+      <polygon style="fill: #000000; fill-opacity: 1; stroke-opacity: 1; stroke-width: 6; stroke: #000000" fill-rule="evenodd" points="-396.38,482.686 -401.273,472.633 -396.3,475.187 -391.274,472.74 "/>
+    </g>
+    <text font-size="12.8" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="-618" y="447.75">
+      <tspan x="-618" y="447.75">http </tspan>
+    </text>
+    <g>
+      <line style="fill: none; stroke-opacity: 1; stroke-width: 6; stroke: #000000" x1="-543.792" y1="524.267" x2="-438" y2="524.394"/>
+      <polygon style="fill: #000000; fill-opacity: 1; stroke-opacity: 1; stroke-width: 6; stroke: #000000" fill-rule="evenodd" points="-551.292,524.258 -541.286,519.27 -543.792,524.267 -541.298,529.27 "/>
+    </g>
+    <g>
+      <ellipse style="fill: #ffffff; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" cx="-191.524" cy="560.882" rx="17.0476" ry="17.0476"/>
+      <line style="fill: none; stroke-opacity: 1; stroke-width: 2; stroke: #000000" x1="-192.66" y1="550.653" x2="-183.568" y2="568.837"/>
+      <line style="fill: none; stroke-opacity: 1; stroke-width: 2; stroke: #000000" x1="-192.66" y1="550.653" x2="-199.479" y2="568.837"/>
+      <line style="fill: none; stroke-opacity: 1; stroke-width: 2; stroke: #000000" x1="-196.07" y1="559.745" x2="-188.114" y2="559.745"/>
+      <line style="fill: none; stroke-opacity: 1; stroke-width: 2; stroke: #000000" x1="-191.524" y1="525.65" x2="-191.524" y2="543.834"/>
+      <line style="fill: none; stroke-opacity: 1; stroke-width: 2; stroke: #000000" x1="-191.524" y1="577.929" x2="-191.524" y2="597.25"/>
+    </g>
+    <text font-size="12.8" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="-377.1" y="469.231">
+      <tspan x="-377.1" y="469.231">http </tspan>
+    </text>
+    <text font-size="12.8" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="-509.2" y="512.331">
+      <tspan x="-509.2" y="512.331">deltas </tspan>
+    </text>
+    <g>
+      <line style="fill: none; stroke-opacity: 1; stroke-width: 6; stroke: #000000" x1="-703.793" y1="520.054" x2="-640.096" y2="519.174"/>
+      <polygon style="fill: #000000; fill-opacity: 1; stroke-opacity: 1; stroke-width: 6; stroke: #000000" fill-rule="evenodd" points="-711.292,520.157 -701.362,515.02 -703.793,520.054 -701.224,525.019 "/>
+    </g>
+    <g>
+      <polyline style="fill: none; stroke-opacity: 1; stroke-width: 2; stroke: #000000" points="-396.452,569.13 -396.452,630.625 -729.089,630.625 "/>
+      <polygon style="fill: #000000; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" fill-rule="evenodd" points="-396.452,561.63 -391.452,571.63 -396.452,569.13 -401.452,571.63 "/>
+      <polygon style="fill: #000000; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" fill-rule="evenodd" points="-736.589,630.625 -726.589,625.625 -729.089,630.625 -726.589,635.625 "/>
+    </g>
+    <g>
+      <polygon style="fill: #d9d9cd; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" fill-rule="evenodd" points="-761.572,605.35 -741.352,605.35 -738.825,607.878 -738.825,653.373 -741.352,655.9 -761.572,655.9 -764.1,653.373 -764.1,607.878 "/>
+      <polygon style="fill: none; stroke-opacity: 1; stroke-width: 0.2; stroke: #000000" points="-761.572,605.35 -741.352,605.35 -738.825,607.878 -738.825,653.373 -741.352,655.9 -761.572,655.9 -764.1,653.373 -764.1,607.878 "/>
+      <polygon style="fill: #cdcdcd; fill-opacity: 1; stroke-opacity: 1; stroke-width: 2; stroke: #000000" fill-rule="evenodd" points="-759.045,607.878 -743.88,607.878 -741.352,610.405 -741.352,643.263 -743.88,645.79 -759.045,645.79 -761.572,643.263 -761.572,610.405 "/>
+      <polygon style="fill: none; stroke-opacity: 1; stroke-width: 0.2; stroke: #000000" points="-759.045,607.878 -743.88,607.878 -741.352,610.405 -741.352,643.263 -743.88,645.79 -759.045,645.79 -761.572,643.263 -761.572,610.405 "/>
+    </g>
+    <text font-size="13.5467" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:italic;font-weight:normal" x="-636.1" y="347.924">
+      <tspan x="-636.1" y="347.924">Generic actions:</tspan>
+      <tspan xml:space="preserve" x="-636.1" y="364.858">   engage </tspan>
+      <tspan xml:space="preserve" x="-636.1" y="381.791">   mode </tspan>
+      <tspan xml:space="preserve" x="-636.1" y="398.724">   state </tspan>
+      <tspan xml:space="preserve" x="-636.1" y="415.658">   etc.  </tspan>
+      <tspan x="-636.1" y="432.591"></tspan>
+    </text>
+    <text font-size="13.5467" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="-783.1" y="577.924">
+      <tspan x="-783.1" y="577.924">Plugin </tspan>
+      <tspan x="-783.1" y="594.858">WebApp</tspan>
+    </text>
+    <text font-size="13.5467" style="fill: #000000; fill-opacity: 1; stroke: none;text-anchor:start;font-family:sans-serif;font-style:italic;font-weight:normal" x="-654.1" y="648.924">
+      <tspan x="-654.1" y="648.924">Device specific actions.  </tspan>
+      <tspan x="-654.1" y="665.858"></tspan>
+    </text>
+  </g>
+</svg>
