@@ -1,9 +1,19 @@
-**Working on your first Pull Request?** You can learn how from this *free* series [How to Contribute to an Open Source Project on GitHub](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github)
+# Contributing
+
+Signal K server is an Open Source project and contributions are welcome.
+
+Contributions are made by creating Pull Requests in the [GitHub repository](https://github.com/SignalK/signalk-server).
+
+_**Working on your first Pull Request?**_ 
+
+You can learn how from this *free* series [How to Contribute to an Open Source Project on GitHub](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github)
+
+---
 
 ###  Submitting a Pull Request (PR)
 Before you submit your Pull Request (PR) consider the following guidelines:
 
-1. [Fork](https://help.github.com/articles/fork-a-repo/) the repo.
+1. [Fork](https://help.github.com/articles/fork-a-repo/) the repository.
 1. Make your changes in a new git branch:
 
      ```shell
@@ -11,8 +21,8 @@ Before you submit your Pull Request (PR) consider the following guidelines:
      ```
 
 1. Create your patch.
-1. Commit your changes using a descriptive commit message that follows 
-  [Angular commit message conventions](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#commits). We are not 100% strict about this, but it really helps when reviewing the PR and in making commit history readable. The TL;DR of it is below.
+1. Commit your changes using a descriptive commit message that follows the 
+  [conventions outlined here](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#commits). Whilst we are not 100% strict about this, it really helps when reviewing the PR and in making the commit history readable. The TL;DR of it is below.
     - The subject line should be in the format `<type>: <subject>`, where `<type>` should be one of:
         - feat (feature)
         - fix (bug fix)
@@ -38,10 +48,10 @@ Before you submit your Pull Request (PR) consider the following guidelines:
     git push origin my-fix-branch
     ```
 
-1. In GitHub, send a pull request to `signalk-server:master`.
+1. In GitHub, create a pull request.
 * Use the same guidelines as commit messages to write the PR title and description. The server's release notes are automatically generated from PR titles, so think about how you can make them informative and easy to understand. The description should tell how the change affects the server's behavior and motivation for doing the change.
 * If we suggest changes to your PR we expect you to:
-  * Once agreed implement the changes.
+  * Implement the agreed changes.
   * Rebase your branch and force push to your GitHub repository (this will update your Pull Request):
 
     ```shell
