@@ -102,12 +102,13 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "state",
-                    "mode",
-                    "target"
-                  ],
+                  "required": ["state", "mode", "target"],
                   "properties": {
+                    "active": {
+                      "type": "boolean",
+                      "description": "Autopilot is engaged and actively steering the vessel",
+                      "example": "true"
+                    },
                     "state": {
                       "type": "string",
                       "description": "Autopilot state",
@@ -126,7 +127,7 @@
                     "options": {
                       "type": "object",
                       "title": "Autopilot configuration options",
-                      "description": "A collection of configuration options and their vaild values.",
+                      "description": "A collection of configuration options and their vaild values",
                       "properties": {
                         "state": {
                           "type": "array",
@@ -134,7 +135,7 @@
                             "type": "string"
                           },
                           "description": "List of valid State values",
-                          "example": ["enabled","disabled"]
+                          "example": ["enabled", "disabled"]
                         },
                         "mode": {
                           "type": "array",
@@ -142,7 +143,7 @@
                             "type": "string"
                           },
                           "description": "List of valid Mode values",
-                          "example": ["compass","gps"]
+                          "example": ["compass", "gps"]
                         }
                       }
                     }

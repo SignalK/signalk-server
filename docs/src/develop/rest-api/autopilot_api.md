@@ -15,7 +15,7 @@ The Autopilot API provides a mechanism for applications to issue requests to aut
 To retrieve the current configuration as well as a list of available options for `state` and `mode` selections, submit an HTTP `GET` request to `/signalk/v2/api/vessels/self/steering/autopilot`.
 
 ```typescript
-HTTP GET "/s/signalk/v2/api/vessels/self/steering/autopilot"
+HTTP GET "/signalk/v2/api/vessels/self/steering/autopilot"
 ```
 _Response:_
 
