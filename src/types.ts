@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { WithContext } from '@signalk/server-api'
-import { FullSignalK } from '@signalk/signalk-schema'
 import { SecurityStrategy } from './security'
 import SubscriptionManager from './subscriptionmanager'
+import { FullSignalK } from './fullsignalk'
 
 export interface HelloMessage {
   name: string

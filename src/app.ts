@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { SKVersion } from '@signalk/server-api'
-import { FullSignalK } from '@signalk/signalk-schema'
 import { EventEmitter } from 'node:events'
 
 import { Config } from './config/config'
 import DeltaCache from './deltacache'
+import { FullSignalK } from './fullsignalk'
 
 export interface ServerApp {
   started: boolean

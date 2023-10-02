@@ -31,7 +31,6 @@ import {
   Timestamp,
   Update
 } from '@signalk/server-api'
-import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import { Debugger } from 'debug'
 import express, { IRouter, Request, Response } from 'express'
 import http from 'http'
@@ -60,6 +59,7 @@ import SubscriptionManager from './subscriptionmanager'
 import { PluginId, PluginManager } from './interfaces/plugins'
 import { OpenApiDescription, OpenApiRecord } from './api/swagger'
 import { WithProviderStatistics } from './deltastats'
+import { FullSignalK, getSourceId } from './fullsignalk'
 const debug = createDebug('signalk-server')
 
 const { StreamBundle } = require('./streambundle')

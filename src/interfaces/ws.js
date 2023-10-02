@@ -16,7 +16,7 @@
 const _ = require('lodash')
 const ports = require('../ports')
 const cookie = require('cookie')
-const { getSourceId, getMetadata } = require('@signalk/signalk-schema')
+const { getMetadata } = require('@signalk/signalk-schema')
 const { requestAccess, InvalidTokenError } = require('../security')
 const {
   findRequest,
@@ -26,6 +26,7 @@ const {
 const { putPath } = require('../put')
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
+import { getSourceId } from '../fullsignalk'
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
 const Primus = require('primus')

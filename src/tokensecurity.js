@@ -19,7 +19,6 @@ const debug = createDebug('signalk-server:tokensecurity')
 const jwt = require('jsonwebtoken')
 const _ = require('lodash')
 const bcrypt = require('bcryptjs')
-const getSourceId = require('@signalk/signalk-schema').getSourceId
 const { InvalidTokenError } = require('./security')
 const {
   createRequest,
@@ -37,6 +36,7 @@ const permissionDeniedMessage =
 const skPrefix = '/signalk/v1'
 const skAuthPrefix = `${skPrefix}/auth`
 import { SERVERROUTESPREFIX } from './constants'
+import { getSourceId } from './fullsignalk'
 
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
 
