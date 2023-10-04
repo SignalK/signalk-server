@@ -10,4 +10,7 @@ src = "src"
 build-dir = "built"
 create-missing = false
 
+[output.html]
+edit-url-template = "https://github.com/SignalK/signalk-server/tree/master/docs/src"
+
 
