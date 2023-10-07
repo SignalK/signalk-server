@@ -10,11 +10,15 @@ _Inspired by [Read SeaTalk1 from the Raspberry Pi GPIO using pigpio](https://git
 
 ### Hardware
 
-![ST1_opto_SK](./seatalk_circuit_1.jpg)
-
 Using an optocoupler as the hardware interface is recommended as it creates electrical isolation from hazardous voltages and avoids ground loops.
 
-The circuit above uses the [PC817 optocoupler](https://www.amazon.com/ARCELI-Optocoupler-Isolation-Converter-Photoelectric/dp/B07M78S8LB/ref=sr_1_2?dchild=1&keywords=pc817+optocoupler&qid=1593516071&sr=8-2) but any equivlent product can be used. The LED in the circuit will flicker when there is ST1 traffic. 
+The circuit below uses the [PC817 optocoupler board](https://www.amazon.com/ARCELI-Optocoupler-Isolation-Converter-Photoelectric/dp/B07M78S8LB/ref=sr_1_2?dchild=1&keywords=pc817+optocoupler&qid=1593516071&sr=8-2) but any equivlent product can be used. The LED in the circuit will flicker when there is ST1 traffic. 
+
+![ST1_opto_SK](./seatalk_circuit_3.jpg)
+
+If you are building the interface yourself use the below circuit instead. If you don't want any flickering just drop the LED at the input.
+
+![ST1_opto_SK](./seatalk_circuit_4.jpg)
 
 A simpler, non-electrically isolated, solution is detailed below, using a low signal NPN transistor which inverts and shifts the voltage from 12V DC to 3.3V DC.
 
@@ -70,8 +74,7 @@ _Example Data Connection:_
 
 ![GPIO](./gpio.png)
 
-- Set _Invert Signal_ based on the hardware interface you have used _(e.g. Select **Yes** if using the hardware setup above. Select **No** if using a hardware interface that does not invert the ST1 signal)_.
-
+- Set _Invert Signal_ based on the hardware interface you have used _(e.g. Select **No** if using the optocoupler hardware setup above. Select **Yes** if using a hardware interface that inverts the ST1 signal)_.
 
 - Click **Apply** to save your data connection settings.
 
