@@ -9,15 +9,20 @@ export function setupCors(
 ) {
   const corsDebug = createDebug('signalk-server:cors')
 
+  const corsOptions: CorsOptions = {
+    credentials: true,
+  }
   const corsOrigins = allowedCorsOrigins
     ? allowedCorsOrigins
         .split(',')
         .map((s: string) => s.trim().replace(/\/*$/, ''))
     : []
   corsDebug(`corsOrigins:${corsOrigins.toString()}`)
-  const corsOptions: CorsOptions = {
-    credentials: true,
-    origin: corsOrigins
+  // set origin only if corsOrigins are set so that
+  // we get the default cors module functionality
+  // for simple requests by default
+  if (corsOrigins.length) {
+    corsOptions.origin = corsOrigins
   }
 
   app.use(cors(corsOptions))
