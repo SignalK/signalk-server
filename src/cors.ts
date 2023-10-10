@@ -49,7 +49,11 @@ export const handleAdminUICORSOrigin = (
     securityConfig.allowedCorsOrigins.length > 0
   ) {
     allowedCorsOrigins = securityConfig.allowedCorsOrigins?.split(',')
-    if (allowedCorsOrigins.indexOf(securityConfig.adminUIOrigin) === -1) {
+    const adminUIOriginUrl = new URL(securityConfig.adminUIOrigin)
+    if (
+      allowedCorsOrigins.indexOf(securityConfig.adminUIOrigin) === -1 &&
+      adminUIOriginUrl.hostname !== 'localhost'
+    ) {
       allowedCorsOrigins.push(securityConfig.adminUIOrigin)
     }
   }
