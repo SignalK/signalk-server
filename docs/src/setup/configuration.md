@@ -42,9 +42,18 @@ The options presented will vary based on the data type chosen.
 
 Please refer to the [Canboat PGN database](https://canboat.github.io/canboat/canboat.html) to see what PGNs are supported.
 
+Use below command to get the path to a sample file with navigation data and AIS targets. The data type is Actisense NMEA 2000.
 
+```
+sudo find / -name "aava-n2k.data"
+```
 **_NMEA0183_**: The processing of NMEA0183 sentences is done by [nmea0183-signalk](https://github.com/SignalK/signalk-parser-nmea0183)
 
+To get the path for the sample file, data type NMEA 0183, use below command.
+
+```
+sudo find / -name "plaka.log"
+```
 
 ### Install Plugins and Webapps
 
