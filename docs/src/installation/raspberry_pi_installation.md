@@ -28,18 +28,16 @@ Once the OS installation has been completed, you are ready to commence.
 
 1. Update the list of install packages.
     ```
-    $ sudo apt update
+    sudo apt update
     ```
 
 1. Install NodeJS and npm.
-    ```
-    $ curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-    $ sudo apt-get install -y nodejs
-    ```
+
+    Follow [instructions for Ubuntu and Debian based distributions like Raspberry Pi OS at NodeSource Distributions](https://github.com/nodesource/distributions#installation-instructions).
 
 1. Ensure that we're using the latest version of npm.
     ```
-    $ sudo npm install -g npm@latest
+    sudo npm install -g npm@latest
     ```
     
     Use the following command to check the versions of NodeJS and npm installed.
@@ -51,25 +49,25 @@ Once the OS installation has been completed, you are ready to commence.
 
 1. Install a Bonjour (mDNS) service for Linux called Avahi, which allows Apps and other network devices to Discover the Signal K server.
     ```
-    $ sudo apt install libnss-mdns avahi-utils libavahi-compat-libdnssd-dev
+    sudo apt install libnss-mdns avahi-utils libavahi-compat-libdnssd-dev
     ```
     
 ## Install Signal K Server
 
 ```
-$ sudo npm install -g signalk-server
+sudo npm install -g signalk-server
 ```
     
 You can test that installation was successful by starting the server using some 
 sample data.
 
 ```
-$ signalk-server --sample-nmea0183-data
+signalk-server --sample-nmea0183-data
 ```
 
 You should see the terminal output "signalk-server running at 0.0.0.0:3000" as shown below...
 ``` 
-$ signalk-server --sample-nmea0183-data
+signalk-server --sample-nmea0183-data
 Using sample data from /usr/lib/node_modules/signalk-server/samples/plaka.log
 signalk-server running at 0.0.0.0:3000
 ```
