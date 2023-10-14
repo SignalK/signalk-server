@@ -112,20 +112,20 @@ Signal K server will now be started automatically when your RPi boots up.
 
 If you want to temporarily stop the Signal K server, you can do so by entering the following commands:
 ```
-$ sudo systemctl stop signalk.service
-$ sudo systemctl stop signalk.socket
+sudo systemctl stop signalk.service
+sudo systemctl stop signalk.socket
 ```
 
 To start Signal K server again enter the following commands:
 ```
-$ sudo systemctl start signalk.service
-$ sudo systemctl start signalk.socket
+sudo systemctl start signalk.service
+sudo systemctl start signalk.socket
 ```
 
 To stop Signal K server from starting automatically enter the following commands:
 ```
-$ sudo systemctl disable signalk.service
-$ sudo systemctl disable signalk.socket
+sudo systemctl disable signalk.service
+sudo systemctl disable signalk.socket
 ```
 
 
