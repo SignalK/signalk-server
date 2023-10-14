@@ -31,7 +31,7 @@ Once the OS installation has been completed, you are ready to commence.
     sudo apt update
     ```
 
-1. Install NodeJS and npm.
+1. Install NodeJS 18 and npm.
 
     Follow [instructions for Ubuntu and Debian based distributions like Raspberry Pi OS at NodeSource Distributions](https://github.com/nodesource/distributions#installation-instructions).
 
