@@ -33,19 +33,24 @@ export interface DeltaSubscription {
 }
 
 // "Classic" Delta with values
-export interface ValuesDelta {
+export interface Delta {
   context?: Context
-  updates: Update[]
+  updates: ValuesUpdate[] | MetaUpdate[]
 }
 
-export interface MetaDelta {
-  metas: Array<{ values: Meta[] }>
+export type Update = ValuesUpdate | MetaUpdate
+
+interface WithSources {
+  source?: Source
+  $source?: SourceRef
 }
 
-// Delta Message
-export type Delta = ValuesDelta | MetaDelta
+export interface MetaUpdate extends WithSources {
+  timestamp?: Timestamp
+  meta: MetaValue[]
+}
 
-export interface Update {
+export interface ValuesUpdate extends WithSources {
   timestamp?: Timestamp
   source?: Source
   $source?: SourceRef
