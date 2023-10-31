@@ -27,6 +27,9 @@ export * from './resourcetypes'
 export * from './resourcesapi'
 export { ResourceProviderRegistry } from './resourcesapi'
 import { ResourceProviderRegistry } from './resourcesapi'
+export * from './autopilotapi'
+import { AutopilotProviderRegistry } from './autopilotapi'
+export { AutopilotProviderRegistry } from './autopilotapi'
 import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
 export {
@@ -51,7 +54,8 @@ export interface PropertyValuesEmitter {
 
 export interface PluginServerApp
   extends PropertyValuesEmitter,
-    ResourceProviderRegistry {}
+    ResourceProviderRegistry,
+    AutopilotProviderRegistry {}
 
 /**
  * This is the API that a [server plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md) must implement.

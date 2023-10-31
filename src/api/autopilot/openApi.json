@@ -22,10 +22,44 @@
     {
       "name": "autopilot",
       "description": "Signal K Autopilot API"
+    },
+    {
+      "name": "providers",
+      "description": "Autopilot Providers"
     }
   ],
   "components": {
-    "schemas": {},
+    "schemas": {
+      "autopilotOptions": {
+        "type": "object",
+        "title": "Autopilot configuration options",
+        "description": "A collection of configuration options and their valid values",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "properties": {
+          "state": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of valid State values",
+            "example": ["enabled", "disabled"]
+          },
+          "mode": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of valid Mode values",
+            "example": ["compass", "gps"]
+          }
+        }
+      }
+    },
     "responses": {
       "200ActionResponse": {
         "description": "PUT OK response",
@@ -94,7 +128,7 @@
       "get": {
         "tags": ["autopilot"],
         "summary": "Retrieve autopilot information.",
-        "description": "Returns the current sate autopilot information including the available options for `state` and `mode`.",
+        "description": "Returns the current state autopilot information including the available options for `state` and `mode`.",
         "responses": {
           "default": {
             "description": "Autopilot configuration response",
@@ -104,7 +138,7 @@
                   "type": "object",
                   "required": ["state", "mode", "target"],
                   "properties": {
-                    "active": {
+                    "engaged": {
                       "type": "boolean",
                       "description": "Autopilot is engaged and actively steering the vessel",
                       "example": "true"
@@ -125,25 +159,75 @@
                       "example": 1.25643
                     },
                     "options": {
-                      "type": "object",
-                      "title": "Autopilot configuration options",
-                      "description": "A collection of configuration options and their vaild values",
-                      "properties": {
-                        "state": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
+                      "$ref": "#/components/schemas/autopilotOptions"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "error": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/options": {
+      "get": {
+        "tags": ["autopilot"],
+        "summary": "Retrieve autopilot options.",
+        "description": "Returns the selectable options and the values that can be applied (e.g. for`state` and `mode`).",
+        "responses": {
+          "default": {
+            "description": "Autopilot configuration response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/autopilotOptions"
+                }
+              }
+            }
+          },
+          "error": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/providers": {
+      "get": {
+        "tags": ["providers"],
+        "summary": "Retrieve provider information.",
+        "description": "Returns the autopilot provider details.",
+        "responses": {
+          "default": {
+            "description": "Autopilot provider information response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["providers", "primary"],
+                  "properties": {
+                    "primary": {
+                      "type": "string",
+                      "description": "ID of the primary provider.",
+                      "example": "my-pilot-provider"
+                    },
+                    "providers": {
+                      "type": "array",
+                      "description": "List of registered providers.",
+                      "items": {
+                        "type": "object",
+                        "required": ["id", "pilotType"],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "example": "my-pilot-provider"
                           },
-                          "description": "List of valid State values",
-                          "example": ["enabled", "disabled"]
-                        },
-                        "mode": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          },
-                          "description": "List of valid Mode values",
-                          "example": ["compass", "gps"]
+                          "pilotType": {
+                            "type": "string",
+                            "example": "my-pilot"
+                          }
                         }
                       }
                     }
@@ -153,6 +237,36 @@
             }
           },
           "error": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "post": {
+        "tags": ["providers"],
+        "summary": "Set primary provider.",
+        "requestBody": {
+          "description": "Supply valid provider id in `value`.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string",
+                    "description": "Value representing the id of the provider to set as primary.",
+                    "example": "my-pilot-provider-id"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200ActionResponse": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
             "$ref": "#/components/responses/ErrorResponse"
           }
         }
@@ -187,6 +301,33 @@
       }
     },
     "/state": {
+      "get": {
+        "tags": ["autopilot"],
+        "summary": "Retrieve the current state.",
+        "description": "Returns the current `state` value from the autopilot.",
+        "responses": {
+          "default": {
+            "description": "Autopilot value response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["value"],
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "example": "standby"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "error": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
       "put": {
         "tags": ["autopilot"],
         "summary": "Set autopilot state.",
@@ -219,6 +360,33 @@
       }
     },
     "/mode": {
+      "get": {
+        "tags": ["autopilot"],
+        "summary": "Retrieve the current mode.",
+        "description": "Returns the current `mode` value from the autopilot.",
+        "responses": {
+          "default": {
+            "description": "Autopilot value response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["value"],
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "example": "compass"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "error": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
       "put": {
         "tags": ["autopilot"],
         "summary": "Set autopilot mode",
@@ -251,6 +419,36 @@
       }
     },
     "/target": {
+      "get": {
+        "tags": ["autopilot"],
+        "summary": "Retrieve the current target value (radians).",
+        "description": "Value in radians of the current target value.",
+        "responses": {
+          "default": {
+            "description": "Autopilot value response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["value"],
+                  "properties": {
+                    "value": {
+                      "type": "number",
+                      "description": "Value in radians",
+                      "min": -3.141592653589793,
+                      "max": 6.283185307179586,
+                      "example": -1.23789
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "error": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
       "put": {
         "tags": ["autopilot"],
         "summary": "Set autopilot `target` value (radians).",
@@ -299,6 +497,8 @@
                   "value": {
                     "type": "number",
                     "description": "Value in radians.",
+                    "min": -0.1745,
+                    "max": 0.1745,
                     "example": -0.23789
                   }
                 }
