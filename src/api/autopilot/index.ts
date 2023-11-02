@@ -2,7 +2,7 @@
 import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:api:autopilot')
 
-import { IRouter, Request, Response } from 'express'
+import { IRouter, NextFunction, Request, Response } from 'express'
 import { WithSecurityStrategy } from '../../security'
 
 import { Responses } from '../'
@@ -231,24 +231,29 @@ export class AutopilotApi {
   private initApiEndpoints() {
     debug(`** Initialise ${AUTOPILOT_API_PATH} endpoints. **`)
 
+    this.server.use(
+      `${AUTOPILOT_API_PATH}/*`,
+      (req: Request, res: Response, next: NextFunction) => {
+        if (!this.primaryProvider) {
+          res.status(500)
+          res.json({ message: 'No autopilots available' })
+        } else if (['put', 'post'].includes(req.method)) {
+          res.status(401)
+        } else {
+          debug(`Autopilot ${req.method} ${req.path} ${req.body}`)
+          next()
+        }
+      }
+    )
+
     // get autopilot status & options
     this.server.get(
       `${AUTOPILOT_API_PATH}`,
       async (req: Request, res: Response) => {
-        debug(`** GET ${AUTOPILOT_API_PATH}`)
-        try {
-          this.checkforProvider()
-          const r = await this.primaryProvider?.getData()
-          debug(r)
-          // target, mode, state, engaged, options
-          return res.json(r)
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
-        }
+        const r = await this.primaryProvider?.getData()
+        debug(r)
+        // target, mode, state, engaged, options
+        res.json(r)
       }
     )
 
@@ -256,20 +261,10 @@ export class AutopilotApi {
     this.server.get(
       `${AUTOPILOT_API_PATH}/options`,
       async (req: Request, res: Response) => {
-        debug(`** GET ${AUTOPILOT_API_PATH}/options`)
-        try {
-          this.checkforProvider()
-          const r = await this.primaryProvider?.getData()
-          debug(r?.options)
-          // target, mode, state, engaged, options
-          return res.json(r?.options)
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
-        }
+        const r = await this.primaryProvider?.getData()
+        debug(r?.options)
+        // target, mode, state, engaged, options
+        res.json(r?.options)
       }
     )
 
@@ -277,10 +272,9 @@ export class AutopilotApi {
     this.server.get(
       `${AUTOPILOT_API_PATH}/providers`,
       async (req: Request, res: Response) => {
-        debug(`** GET ${AUTOPILOT_API_PATH}/providers`)
         res.status(200).json({
           providers: this.getProviders(),
-          primary: this.primaryProvider
+          primary: this.primaryProviderId
         })
       }
     )
@@ -289,32 +283,21 @@ export class AutopilotApi {
     this.server.post(
       `${AUTOPILOT_API_PATH}/providers/primary`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${AUTOPILOT_API_PATH}/providers/primary`)
-        debug('req.body:', req.body)
-        try {
-          this.parseOperationRequest(req)
-          if (!this.autopilotProviders.has(req.body.value)) {
-            debug('** Invalid provider id supplied...')
-            res.status(404).json({
-              state: 'FAILED',
-              statusCode: 404,
-              message: `Invalid provider id supplied!`
-            })
-            return
-          }
-          this.changeProvider(req.body.value)
-          return res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
+        if (!this.autopilotProviders.has(req.body.value)) {
+          debug('** Invalid provider id supplied...')
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 404,
+            message: `Invalid provider id supplied!`
           })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
+          return
         }
+        this.changeProvider(req.body.value)
+        return res.status(200).json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: Responses.ok
+        })
       }
     )
 
@@ -322,24 +305,14 @@ export class AutopilotApi {
     this.server.post(
       `${AUTOPILOT_API_PATH}/engage`,
       async (req: Request, res: Response) => {
-        debug(`** POST ${AUTOPILOT_API_PATH}/engage`)
-        try {
-          this.parseOperationRequest(req)
-          await this.primaryProvider?.engage()
-          // emit delta
-          this.emitDeltaMsg('engaged', true)
-          return res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
-          })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
-        }
+        await this.primaryProvider?.engage()
+        // emit delta
+        this.emitDeltaMsg('engaged', true)
+        return res.status(200).json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: Responses.ok
+        })
       }
     )
 
@@ -347,24 +320,14 @@ export class AutopilotApi {
     this.server.post(
       `${AUTOPILOT_API_PATH}/disengage`,
       async (req: Request, res: Response) => {
-        debug(`** POST ${AUTOPILOT_API_PATH}/disengage`)
-        try {
-          this.parseOperationRequest(req)
-          await this.primaryProvider?.disengage()
-          // emit delta
-          this.emitDeltaMsg('engaged', false)
-          return res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
-          })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
-        }
+        await this.primaryProvider?.disengage()
+        // emit delta
+        this.emitDeltaMsg('engaged', false)
+        return res.status(200).json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: Responses.ok
+        })
       }
     )
 
@@ -372,19 +335,9 @@ export class AutopilotApi {
     this.server.get(
       `${AUTOPILOT_API_PATH}/state`,
       async (req: Request, res: Response) => {
-        debug(`** GET ${AUTOPILOT_API_PATH}/state`)
-        try {
-          this.checkforProvider()
-          const r = await this.primaryProvider?.getState()
-          debug(r)
-          return res.json({ value: r })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
-        }
+        const r = await this.primaryProvider?.getState()
+        debug(r)
+        return res.json({ value: r })
       }
     )
 
@@ -392,34 +345,23 @@ export class AutopilotApi {
     this.server.put(
       `${AUTOPILOT_API_PATH}/state`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${AUTOPILOT_API_PATH}/state`)
-        debug('req.body:', req.body)
-        try {
-          this.parseOperationRequest(req)
-          if (typeof req.body.value === 'undefined') {
-            res.status(400).json({
-              state: 'FAILED',
-              statusCode: 400,
-              message: `Error: Invalid value supplied!`
-            })
-            return
-          }
-          // *** TO DO VALIDATE VALUE (in list of valid states)
-          await this.primaryProvider?.setState(req.body.value)
-          // emit delta
-          this.emitDeltaMsg('state', req.body.value)
-          return res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
+        if (typeof req.body.value === 'undefined') {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: `Error: Invalid value supplied!`
           })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
+          return
         }
+        // *** TO DO VALIDATE VALUE (in list of valid states)
+        await this.primaryProvider?.setState(req.body.value)
+        // emit delta
+        this.emitDeltaMsg('state', req.body.value)
+        return res.status(200).json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: Responses.ok
+        })
       }
     )
 
@@ -427,19 +369,9 @@ export class AutopilotApi {
     this.server.get(
       `${AUTOPILOT_API_PATH}/mode`,
       async (req: Request, res: Response) => {
-        debug(`** GET ${AUTOPILOT_API_PATH}/mode`)
-        try {
-          this.checkforProvider()
-          const r = await this.primaryProvider?.getMode()
-          debug(r)
-          return res.json({ value: r })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
-        }
+        const r = await this.primaryProvider?.getMode()
+        debug(r)
+        return res.json({ value: r })
       }
     )
 
@@ -447,34 +379,23 @@ export class AutopilotApi {
     this.server.put(
       `${AUTOPILOT_API_PATH}/mode`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${AUTOPILOT_API_PATH}/mode`)
-        debug('req.body:', req.body)
-        try {
-          this.parseOperationRequest(req)
-          if (typeof req.body.value === 'undefined') {
-            res.status(400).json({
-              state: 'FAILED',
-              statusCode: 400,
-              message: `Error: Invalid value supplied!`
-            })
-            return
-          }
-          // *** TO DO VALIDATE VALUE (in list of valid modes)
-          await this.primaryProvider?.setMode(req.body.value)
-          // emit delta
-          this.emitDeltaMsg('mode', req.body.value)
-          return res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
+        if (typeof req.body.value === 'undefined') {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: `Error: Invalid value supplied!`
           })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
+          return
         }
+        // *** TO DO VALIDATE VALUE (in list of valid modes)
+        await this.primaryProvider?.setMode(req.body.value)
+        // emit delta
+        this.emitDeltaMsg('mode', req.body.value)
+        return res.status(200).json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: Responses.ok
+        })
       }
     )
 
@@ -482,19 +403,9 @@ export class AutopilotApi {
     this.server.get(
       `${AUTOPILOT_API_PATH}/target`,
       async (req: Request, res: Response) => {
-        debug(`** GET ${AUTOPILOT_API_PATH}/target`)
-        try {
-          this.checkforProvider()
-          const r = await this.primaryProvider?.getTarget()
-          debug(r)
-          return res.json({ value: r })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
-        }
+        const r = await this.primaryProvider?.getTarget()
+        debug(r)
+        return res.json({ value: r })
       }
     )
 
@@ -502,34 +413,23 @@ export class AutopilotApi {
     this.server.put(
       `${AUTOPILOT_API_PATH}/target`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${AUTOPILOT_API_PATH}/target`)
-        debug('req.body:', req.body)
-        try {
-          this.parseOperationRequest(req)
-          if (typeof req.body.value !== 'number') {
-            res.status(400).json({
-              state: 'FAILED',
-              statusCode: 400,
-              message: `Error: Invalid value supplied!`
-            })
-            return
-          }
-          // *** TO DO VALIDATE VALUE -180 < value < 360 (in radians)
-          await this.primaryProvider?.setTarget(req.body.value)
-          // emit delta
-          this.emitDeltaMsg('target', req.body.value)
-          return res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
+        if (typeof req.body.value !== 'number') {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: `Error: Invalid value supplied!`
           })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
+          return
         }
+        // *** TO DO VALIDATE VALUE -180 < value < 360 (in radians)
+        await this.primaryProvider?.setTarget(req.body.value)
+        // emit delta
+        this.emitDeltaMsg('target', req.body.value)
+        return res.status(200).json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: Responses.ok
+        })
       }
     )
 
@@ -537,32 +437,21 @@ export class AutopilotApi {
     this.server.put(
       `${AUTOPILOT_API_PATH}/target/adjust`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${AUTOPILOT_API_PATH}/target/adjust`)
-        debug('req.body:', req.body)
-        try {
-          this.parseOperationRequest(req)
-          if (typeof req.body.value !== 'number') {
-            res.status(400).json({
-              state: 'FAILED',
-              statusCode: 400,
-              message: `Error: Invalid value supplied!`
-            })
-            return
-          }
-          // *** TO DO VALIDATE VALUE -10 <= value <= 10 (in radians)
-          await this.primaryProvider?.adjustTarget(req.body.value)
-          return res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
+        if (typeof req.body.value !== 'number') {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: `Error: Invalid value supplied!`
           })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
+          return
         }
+        // *** TO DO VALIDATE VALUE -10 <= value <= 10 (in radians)
+        await this.primaryProvider?.adjustTarget(req.body.value)
+        return res.status(200).json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: Responses.ok
+        })
       }
     )
 
@@ -570,22 +459,12 @@ export class AutopilotApi {
     this.server.post(
       `${AUTOPILOT_API_PATH}/tack/port`,
       async (req: Request, res: Response) => {
-        debug(`** POST ${AUTOPILOT_API_PATH}/tack/port`)
-        try {
-          this.parseOperationRequest(req)
-          await this.primaryProvider?.tack('port')
-          return res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
-          })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
-        }
+        await this.primaryProvider?.tack('port')
+        return res.status(200).json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: Responses.ok
+        })
       }
     )
 
@@ -593,22 +472,12 @@ export class AutopilotApi {
     this.server.post(
       `${AUTOPILOT_API_PATH}/tack/starboard`,
       async (req: Request, res: Response) => {
-        debug(`** POST ${AUTOPILOT_API_PATH}/tack/starboard`)
-        try {
-          this.parseOperationRequest(req)
-          await this.primaryProvider?.tack('starboard')
-          return res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
-          })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
-        }
+        await this.primaryProvider?.tack('starboard')
+        return res.status(200).json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: Responses.ok
+        })
       }
     )
 
@@ -616,22 +485,12 @@ export class AutopilotApi {
     this.server.post(
       `${AUTOPILOT_API_PATH}/gybe/port`,
       async (req: Request, res: Response) => {
-        debug(`** POST ${AUTOPILOT_API_PATH}/gybe/port`)
-        try {
-          this.parseOperationRequest(req)
-          await this.primaryProvider?.gybe('port')
-          return res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
-          })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
-        }
+        await this.primaryProvider?.gybe('port')
+        return res.status(200).json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: Responses.ok
+        })
       }
     )
 
@@ -639,48 +498,25 @@ export class AutopilotApi {
     this.server.post(
       `${AUTOPILOT_API_PATH}/gybe/starboard`,
       async (req: Request, res: Response) => {
-        debug(`** POST ${AUTOPILOT_API_PATH}/gybe/starboard`)
-        try {
-          this.parseOperationRequest(req)
-          await this.primaryProvider?.gybe('starboard')
-          return res.status(200).json({
-            state: 'COMPLETED',
-            statusCode: 200,
-            message: Responses.ok
-          })
-        } catch (err: any) {
-          res.status(err.statusCode ?? 400).json({
-            state: err.state ?? 'FAILED',
-            statusCode: err.statusCode ?? 400,
-            message: err.message ?? 'Autopilot provider error!'
-          })
-        }
+        await this.primaryProvider?.gybe('starboard')
+        return res.status(200).json({
+          state: 'COMPLETED',
+          statusCode: 200,
+          message: Responses.ok
+        })
       }
     )
-  }
 
-  /** Check for provider and update permission
-   * throws on error
-   */
-  private parseOperationRequest(req: Request) {
-    this.checkforProvider()
-    if (!this.updateAllowed(req)) {
-      debug('** Update NOT allowed...')
-      throw Responses.unauthorised
-    }
-  }
-
-  /** Check for an active provider
-   * throws on error
-   */
-  private checkforProvider() {
-    if (!this.primaryProvider) {
-      debug('** No provider found...')
-      throw {
-        message: `No Provider found!`,
-        statusCode: 404
+    this.server.use(
+      `${AUTOPILOT_API_PATH}/*`,
+      (err: any, req: Request, res: Response) => {
+        res.status(err.statusCode ?? 400).json({
+          state: err.state ?? 'FAILED',
+          statusCode: err.statusCode ?? 400,
+          message: err.message ?? 'Autopilot provider error!'
+        })
       }
-    }
+    )
   }
 
   // Returns an array of provider info
