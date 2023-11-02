@@ -30,11 +30,10 @@ type ProviderInfo = Array<{ id: string; pilotType: string }>
 export class AutopilotApi {
   private autopilotProviders: Map<string, AutopilotProvider> = new Map()
 
-  private primaryProvider!: string
+  private primaryProvider?: AutopilotProvider
+  private primaryProviderId?: string
 
-  constructor(private server: AutopilotApplication) {
-    this.primaryProvider = ''
-  }
+  constructor(private server: AutopilotApplication) {}
 
   // ***************** test ***************
   mockProviders() {
@@ -179,11 +178,10 @@ export class AutopilotApi {
     if (!provider) {
       throw new Error(`Error registering provider ${pluginId}!`)
     }
-    if (!provider.pilotType) {
-      throw new Error(`Invalid Provider.type value!`)
-    }
     if (!isAutopilotProvider(provider)) {
-      throw new Error(`Error missing Provider.methods!`)
+      throw new Error(
+        `${pluginId} is missing AutopilotProvider properties/methods`
+      )
     } else {
       if (!this.autopilotProviders.has(pluginId)) {
         this.autopilotProviders.set(pluginId, provider)
@@ -209,7 +207,7 @@ export class AutopilotApi {
       debug(`** Un-registering autopilot provider....`)
       this.autopilotProviders.delete(pluginId)
     }
-    if (pluginId === this.primaryProvider) {
+    if (pluginId === this.primaryProviderId) {
       if (this.autopilotProviders.size === 0) {
         debug(`** No autopilot providers registered!!!`)
         this.changeProvider('')
@@ -240,9 +238,7 @@ export class AutopilotApi {
         debug(`** GET ${AUTOPILOT_API_PATH}`)
         try {
           this.checkforProvider()
-          const r = await this.autopilotProviders
-            .get(this.primaryProvider)
-            ?.getData()
+          const r = await this.primaryProvider?.getData()
           debug(r)
           // target, mode, state, engaged, options
           return res.json(r)
@@ -263,9 +259,7 @@ export class AutopilotApi {
         debug(`** GET ${AUTOPILOT_API_PATH}/options`)
         try {
           this.checkforProvider()
-          const r = await this.autopilotProviders
-            .get(this.primaryProvider)
-            ?.getData()
+          const r = await this.primaryProvider?.getData()
           debug(r?.options)
           // target, mode, state, engaged, options
           return res.json(r?.options)
@@ -331,7 +325,7 @@ export class AutopilotApi {
         debug(`** POST ${AUTOPILOT_API_PATH}/engage`)
         try {
           this.parseOperationRequest(req)
-          await this.autopilotProviders.get(this.primaryProvider)?.engage()
+          await this.primaryProvider?.engage()
           // emit delta
           this.emitDeltaMsg('engaged', true)
           return res.status(200).json({
@@ -356,7 +350,7 @@ export class AutopilotApi {
         debug(`** POST ${AUTOPILOT_API_PATH}/disengage`)
         try {
           this.parseOperationRequest(req)
-          await this.autopilotProviders.get(this.primaryProvider)?.disengage()
+          await this.primaryProvider?.disengage()
           // emit delta
           this.emitDeltaMsg('engaged', false)
           return res.status(200).json({
@@ -381,9 +375,7 @@ export class AutopilotApi {
         debug(`** GET ${AUTOPILOT_API_PATH}/state`)
         try {
           this.checkforProvider()
-          const r = await this.autopilotProviders
-            .get(this.primaryProvider)
-            ?.getState()
+          const r = await this.primaryProvider?.getState()
           debug(r)
           return res.json({ value: r })
         } catch (err: any) {
@@ -413,9 +405,7 @@ export class AutopilotApi {
             return
           }
           // *** TO DO VALIDATE VALUE (in list of valid states)
-          await this.autopilotProviders
-            .get(this.primaryProvider)
-            ?.setState(req.body.value)
+          await this.primaryProvider?.setState(req.body.value)
           // emit delta
           this.emitDeltaMsg('state', req.body.value)
           return res.status(200).json({
@@ -440,9 +430,7 @@ export class AutopilotApi {
         debug(`** GET ${AUTOPILOT_API_PATH}/mode`)
         try {
           this.checkforProvider()
-          const r = await this.autopilotProviders
-            .get(this.primaryProvider)
-            ?.getMode()
+          const r = await this.primaryProvider?.getMode()
           debug(r)
           return res.json({ value: r })
         } catch (err: any) {
@@ -472,9 +460,7 @@ export class AutopilotApi {
             return
           }
           // *** TO DO VALIDATE VALUE (in list of valid modes)
-          await this.autopilotProviders
-            .get(this.primaryProvider)
-            ?.setMode(req.body.value)
+          await this.primaryProvider?.setMode(req.body.value)
           // emit delta
           this.emitDeltaMsg('mode', req.body.value)
           return res.status(200).json({
@@ -499,9 +485,7 @@ export class AutopilotApi {
         debug(`** GET ${AUTOPILOT_API_PATH}/target`)
         try {
           this.checkforProvider()
-          const r = await this.autopilotProviders
-            .get(this.primaryProvider)
-            ?.getTarget()
+          const r = await this.primaryProvider?.getTarget()
           debug(r)
           return res.json({ value: r })
         } catch (err: any) {
@@ -531,9 +515,7 @@ export class AutopilotApi {
             return
           }
           // *** TO DO VALIDATE VALUE -180 < value < 360 (in radians)
-          await this.autopilotProviders
-            .get(this.primaryProvider)
-            ?.setTarget(req.body.value)
+          await this.primaryProvider?.setTarget(req.body.value)
           // emit delta
           this.emitDeltaMsg('target', req.body.value)
           return res.status(200).json({
@@ -568,9 +550,7 @@ export class AutopilotApi {
             return
           }
           // *** TO DO VALIDATE VALUE -10 <= value <= 10 (in radians)
-          await this.autopilotProviders
-            .get(this.primaryProvider)
-            ?.adjustTarget(req.body.value)
+          await this.primaryProvider?.adjustTarget(req.body.value)
           return res.status(200).json({
             state: 'COMPLETED',
             statusCode: 200,
@@ -593,7 +573,7 @@ export class AutopilotApi {
         debug(`** POST ${AUTOPILOT_API_PATH}/tack/port`)
         try {
           this.parseOperationRequest(req)
-          await this.autopilotProviders.get(this.primaryProvider)?.tack('port')
+          await this.primaryProvider?.tack('port')
           return res.status(200).json({
             state: 'COMPLETED',
             statusCode: 200,
@@ -616,9 +596,7 @@ export class AutopilotApi {
         debug(`** POST ${AUTOPILOT_API_PATH}/tack/starboard`)
         try {
           this.parseOperationRequest(req)
-          await this.autopilotProviders
-            .get(this.primaryProvider)
-            ?.tack('starboard')
+          await this.primaryProvider?.tack('starboard')
           return res.status(200).json({
             state: 'COMPLETED',
             statusCode: 200,
@@ -641,7 +619,7 @@ export class AutopilotApi {
         debug(`** POST ${AUTOPILOT_API_PATH}/gybe/port`)
         try {
           this.parseOperationRequest(req)
-          await this.autopilotProviders.get(this.primaryProvider)?.gybe('port')
+          await this.primaryProvider?.gybe('port')
           return res.status(200).json({
             state: 'COMPLETED',
             statusCode: 200,
@@ -664,9 +642,7 @@ export class AutopilotApi {
         debug(`** POST ${AUTOPILOT_API_PATH}/gybe/starboard`)
         try {
           this.parseOperationRequest(req)
-          await this.autopilotProviders
-            .get(this.primaryProvider)
-            ?.gybe('starboard')
+          await this.primaryProvider?.gybe('starboard')
           return res.status(200).json({
             state: 'COMPLETED',
             statusCode: 200,
@@ -722,28 +698,26 @@ export class AutopilotApi {
   // action to take when provider changed
   private changeProvider(id: string) {
     debug('Changing primaryProvider to:', id)
-    this.primaryProvider = id
-    this.autopilotProviders
-      .get(this.primaryProvider)
-      ?.getData()
-      .then((data: AutopilotInfo) => {
-        this.server.handleMessage(
-          this.primaryProvider as string,
-          {
-            updates: [
-              {
-                values: [
-                  {
-                    path: `steering.autopilot` as Path,
-                    value: data
-                  }
-                ]
-              }
-            ]
-          },
-          SKVersion.v2
-        )
-      })
+    this.primaryProviderId = id
+    this.primaryProvider = this.autopilotProviders.get(id)
+    this.primaryProvider?.getData().then((data: AutopilotInfo) => {
+      this.server.handleMessage(
+        this.primaryProviderId as string,
+        {
+          updates: [
+            {
+              values: [
+                {
+                  path: `steering.autopilot` as Path,
+                  value: data
+                }
+              ]
+            }
+          ]
+        },
+        SKVersion.v2
+      )
+    })
   }
 
   // emit delta updates on operation success
@@ -760,7 +734,15 @@ export class AutopilotApi {
         }
       ]
     }
-    this.server.handleMessage(this.primaryProvider as string, msg, SKVersion.v2)
-    this.server.handleMessage(this.primaryProvider as string, msg, SKVersion.v1)
+    this.server.handleMessage(
+      this.primaryProviderId as string,
+      msg,
+      SKVersion.v2
+    )
+    this.server.handleMessage(
+      this.primaryProviderId as string,
+      msg,
+      SKVersion.v1
+    )
   }
 }
