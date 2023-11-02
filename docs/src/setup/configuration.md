@@ -42,19 +42,26 @@ The options presented will vary based on the data type chosen.
 
 Please refer to the [Canboat PGN database](https://canboat.github.io/canboat/canboat.html) to see what PGNs are supported.
 
-Use below command to get the path to a sample file with navigation data and AIS targets. The data type is Actisense NMEA 2000.
+**_NMEA0183_**: The processing of NMEA0183 sentences is done by [nmea0183-signalk](https://github.com/SignalK/signalk-parser-nmea0183)
+
+**Connection type "File Stream"**
+
+Sample files are available which can be set up as input for the server.
+
+Use below command to get the path to a NMEA 2000 file with navigation data and AIS targets.
 
 ```
 sudo find / -name "aava-n2k.data"
 ```
-**_NMEA0183_**: The processing of NMEA0183 sentences is done by [nmea0183-signalk](https://github.com/SignalK/signalk-parser-nmea0183)
+Set up according to picture.
+
+![SK_N2K_file](./SK_file_stream_N2K.png)
 
 To get the path for the sample file, data type NMEA 0183, use below command.
 
 ```
 sudo find / -name "plaka.log"
 ```
-
 ### Install Plugins and Webapps
 
 Signal K server functionality can be extended through the use of plugins and webapps.
