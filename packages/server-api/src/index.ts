@@ -30,6 +30,7 @@ import { ResourceProviderRegistry } from './resourcesapi'
 export * from './autopilotapi'
 import { AutopilotProviderRegistry } from './autopilotapi'
 export { AutopilotProviderRegistry } from './autopilotapi'
+export * from './autopilotapi.guard'
 import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
 export {

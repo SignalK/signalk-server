@@ -14,7 +14,8 @@ import {
   TackGybeDirection,
   SKVersion,
   Path,
-  Delta
+  Delta,
+  isAutopilotProvider
 } from '@signalk/server-api'
 
 export const AUTOPILOT_API_PATH = `/signalk/v2/api/vessels/self/steering/autopilot`
@@ -181,30 +182,7 @@ export class AutopilotApi {
     if (!provider.pilotType) {
       throw new Error(`Invalid Provider.type value!`)
     }
-    if (
-      !provider.getData ||
-      typeof provider.getData !== 'function' ||
-      !provider.getState ||
-      typeof provider.getState !== 'function' ||
-      !provider.setState ||
-      typeof provider.setState !== 'function' ||
-      !provider.getMode ||
-      typeof provider.getMode !== 'function' ||
-      !provider.setMode ||
-      typeof provider.setMode !== 'function' ||
-      !provider.setTarget ||
-      typeof provider.setTarget !== 'function' ||
-      !provider.adjustTarget ||
-      typeof provider.adjustTarget !== 'function' ||
-      !provider.engage ||
-      typeof provider.engage !== 'function' ||
-      !provider.disengage ||
-      typeof provider.disengage !== 'function' ||
-      !provider.tack ||
-      typeof provider.tack !== 'function' ||
-      !provider.gybe ||
-      typeof provider.gybe !== 'function'
-    ) {
+    if (!isAutopilotProvider(provider)) {
       throw new Error(`Error missing Provider.methods!`)
     } else {
       if (!this.autopilotProviders.has(pluginId)) {
