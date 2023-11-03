@@ -99,7 +99,7 @@ Now that you have Signal K server installed, you will want to generate a setting
 and configure your RPi to start the server automatically. To do this run the setup script by entering the  following command and follow the prompts.
 
 ```
-$ sudo signalk-server-setup
+sudo signalk-server-setup
 ```
 
 You can re-run this command at any time in the future to change the settings.
