@@ -159,8 +159,9 @@ export class AutopilotApi {
           }
         }
       },
-      true
+      false
     )
+    //setTimeout(() => this.unRegister('mock-plugin-1-id'), 5000)
   }
 
   async start() {
@@ -194,7 +195,7 @@ export class AutopilotApi {
       `AutoPilotProviders =`,
       this.autopilotProviders,
       'Active Provider:',
-      this.primaryProvider
+      this.primaryProviderId
     )
   }
 
@@ -202,21 +203,21 @@ export class AutopilotApi {
     if (!pluginId) {
       return
     }
-    debug(`** Un-registering ${pluginId} plugin as a autopilot provider....`)
+    debug(`** Un-register plugin .....${pluginId}`)
     if (this.autopilotProviders.has(pluginId)) {
-      debug(`** Un-registering autopilot provider....`)
+      debug(`** Un-registering autopilot provider....${pluginId}`)
       this.autopilotProviders.delete(pluginId)
     }
     if (pluginId === this.primaryProviderId) {
       if (this.autopilotProviders.size === 0) {
         debug(`** No autopilot providers registered!!!`)
-        this.changeProvider('')
+        this.changeProvider()
       } else {
         const keys = this.autopilotProviders.keys()
         this.changeProvider(keys.next().value)
       }
     }
-    debug(`primaryProvider = ${this.primaryProvider}`)
+    debug(`primaryProvider = ${this.primaryProviderId}`)
   }
 
   private updateAllowed(request: Request): boolean {
@@ -235,12 +236,20 @@ export class AutopilotApi {
       `${AUTOPILOT_API_PATH}/*`,
       (req: Request, res: Response, next: NextFunction) => {
         if (!this.primaryProvider) {
-          res.status(500)
-          res.json({ message: 'No autopilots available' })
-        } else if (['put', 'post'].includes(req.method)) {
-          res.status(401)
+          res.status(500).json({
+            state: 'FAILED',
+            statusCode: 500,
+            message: 'No autopilots available'
+          })
+        } else if (['PUT', 'POST'].includes(req.method)) {
+          debug(`Autopilot`, req.method, req.path, req.body)
+          if (!this.updateAllowed(req)) {
+            res.status(403).json(Responses.unauthorised)
+          } else {
+            next()
+          }
         } else {
-          debug(`Autopilot ${req.method} ${req.path} ${req.body}`)
+          debug(`Autopilot`, req.method, req.path, req.body)
           next()
         }
       }
@@ -250,10 +259,19 @@ export class AutopilotApi {
     this.server.get(
       `${AUTOPILOT_API_PATH}`,
       async (req: Request, res: Response) => {
-        const r = await this.primaryProvider?.getData()
-        debug(r)
-        // target, mode, state, engaged, options
-        res.json(r)
+        if (!this.primaryProvider) {
+          res.status(500)
+          res.json({
+            state: 'FAILED',
+            statusCode: 500,
+            message: 'No autopilots available'
+          })
+        } else {
+          const r = await this.primaryProvider?.getData()
+          debug(r)
+          // target, mode, state, engaged, options
+          res.json(r)
+        }
       }
     )
 
@@ -263,7 +281,6 @@ export class AutopilotApi {
       async (req: Request, res: Response) => {
         const r = await this.primaryProvider?.getData()
         debug(r?.options)
-        // target, mode, state, engaged, options
         res.json(r?.options)
       }
     )
@@ -507,6 +524,7 @@ export class AutopilotApi {
       }
     )
 
+    // error response
     this.server.use(
       `${AUTOPILOT_API_PATH}/*`,
       (err: any, req: Request, res: Response) => {
@@ -532,28 +550,33 @@ export class AutopilotApi {
   }
 
   // action to take when provider changed
-  private changeProvider(id: string) {
+  private changeProvider(id?: string) {
     debug('Changing primaryProvider to:', id)
-    this.primaryProviderId = id
-    this.primaryProvider = this.autopilotProviders.get(id)
-    this.primaryProvider?.getData().then((data: AutopilotInfo) => {
-      this.server.handleMessage(
-        this.primaryProviderId as string,
+    const msg: Delta = {
+      updates: [
         {
-          updates: [
+          values: [
             {
-              values: [
-                {
-                  path: `steering.autopilot` as Path,
-                  value: data
-                }
-              ]
+              path: `steering.autopilot` as Path,
+              value: null
             }
           ]
-        },
-        SKVersion.v2
-      )
-    })
+        }
+      ]
+    }
+    this.primaryProviderId = id
+    if (!id) {
+      this.primaryProvider = undefined
+      debug(msg.updates[0].values[0])
+      this.server.handleMessage('autopilotApi', msg, SKVersion.v2)
+    } else {
+      this.primaryProvider = this.autopilotProviders.get(id)
+      this.primaryProvider?.getData().then((data: AutopilotInfo) => {
+        msg.updates[0].values[0].value = data
+        debug(msg.updates[0].values[0])
+        this.server.handleMessage('autopilotApi', msg, SKVersion.v2)
+      })
+    }
   }
 
   // emit delta updates on operation success
@@ -570,15 +593,7 @@ export class AutopilotApi {
         }
       ]
     }
-    this.server.handleMessage(
-      this.primaryProviderId as string,
-      msg,
-      SKVersion.v2
-    )
-    this.server.handleMessage(
-      this.primaryProviderId as string,
-      msg,
-      SKVersion.v1
-    )
+    this.server.handleMessage('autopilotApi', msg, SKVersion.v2)
+    this.server.handleMessage('autopilotApi', msg, SKVersion.v1)
   }
 }
