@@ -192,9 +192,9 @@ export class AutopilotApi {
       this.changeProvider(pluginId)
     }
     debug(
-      `AutoPilotProviders =`,
-      this.autopilotProviders,
-      'Active Provider:',
+      `No. of AutoPilotProviders registered =`,
+      this.autopilotProviders.size,
+      'primaryProvider =',
       this.primaryProviderId
     )
   }
@@ -217,7 +217,12 @@ export class AutopilotApi {
         this.changeProvider(keys.next().value)
       }
     }
-    debug(`primaryProvider = ${this.primaryProviderId}`)
+    debug(
+      `No. of AutoPilotProviders registered =`,
+      this.autopilotProviders.size,
+      'primaryProvider =',
+      this.primaryProviderId
+    )
   }
 
   private updateAllowed(request: Request): boolean {
@@ -310,11 +315,7 @@ export class AutopilotApi {
           return
         }
         this.changeProvider(req.body.value)
-        return res.status(200).json({
-          state: 'COMPLETED',
-          statusCode: 200,
-          message: Responses.ok
-        })
+        return res.status(200).json(Responses.ok)
       }
     )
 
@@ -325,11 +326,7 @@ export class AutopilotApi {
         await this.primaryProvider?.engage()
         // emit delta
         this.emitDeltaMsg('engaged', true)
-        return res.status(200).json({
-          state: 'COMPLETED',
-          statusCode: 200,
-          message: Responses.ok
-        })
+        return res.status(200).json(Responses.ok)
       }
     )
 
@@ -340,11 +337,7 @@ export class AutopilotApi {
         await this.primaryProvider?.disengage()
         // emit delta
         this.emitDeltaMsg('engaged', false)
-        return res.status(200).json({
-          state: 'COMPLETED',
-          statusCode: 200,
-          message: Responses.ok
-        })
+        return res.status(200).json(Responses.ok)
       }
     )
 
@@ -370,15 +363,11 @@ export class AutopilotApi {
           })
           return
         }
-        // *** TO DO VALIDATE VALUE (in list of valid states)
+        // *** TO DO VALIDATE - Vaidated by plugin? (included in list of valid states)
         await this.primaryProvider?.setState(req.body.value)
         // emit delta
         this.emitDeltaMsg('state', req.body.value)
-        return res.status(200).json({
-          state: 'COMPLETED',
-          statusCode: 200,
-          message: Responses.ok
-        })
+        return res.status(200).json(Responses.ok)
       }
     )
 
@@ -404,15 +393,11 @@ export class AutopilotApi {
           })
           return
         }
-        // *** TO DO VALIDATE VALUE (in list of valid modes)
+        // *** TO DO VALIDATE - Vaidated by plugin? (included list of valid modes)
         await this.primaryProvider?.setMode(req.body.value)
         // emit delta
         this.emitDeltaMsg('mode', req.body.value)
-        return res.status(200).json({
-          state: 'COMPLETED',
-          statusCode: 200,
-          message: Responses.ok
-        })
+        return res.status(200).json(Responses.ok)
       }
     )
 
@@ -438,15 +423,18 @@ export class AutopilotApi {
           })
           return
         }
-        // *** TO DO VALIDATE VALUE -180 < value < 360 (in radians)
+        if (req.body.value < 0 - Math.PI || req.body.value > 2 * Math.PI) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: `Error: Value supplied is outside of the valid range (-PI < value < 2*PI radians).`
+          })
+          return
+        }
         await this.primaryProvider?.setTarget(req.body.value)
         // emit delta
         this.emitDeltaMsg('target', req.body.value)
-        return res.status(200).json({
-          state: 'COMPLETED',
-          statusCode: 200,
-          message: Responses.ok
-        })
+        return res.status(200).json(Responses.ok)
       }
     )
 
@@ -462,13 +450,11 @@ export class AutopilotApi {
           })
           return
         }
-        // *** TO DO VALIDATE VALUE -10 <= value <= 10 (in radians)
+        /* TO DO VALIDATE - Vaidated by plugin?
+         * SUPPLIED VALUE -10 <= value <= 10 (in radians)
+         * RESULTANT VALUE currentTarget + adjustment IS IN RANGE (-PI < value < 2*PI radians) */
         await this.primaryProvider?.adjustTarget(req.body.value)
-        return res.status(200).json({
-          state: 'COMPLETED',
-          statusCode: 200,
-          message: Responses.ok
-        })
+        return res.status(200).json(Responses.ok)
       }
     )
 
@@ -477,11 +463,7 @@ export class AutopilotApi {
       `${AUTOPILOT_API_PATH}/tack/port`,
       async (req: Request, res: Response) => {
         await this.primaryProvider?.tack('port')
-        return res.status(200).json({
-          state: 'COMPLETED',
-          statusCode: 200,
-          message: Responses.ok
-        })
+        return res.status(200).json(Responses.ok)
       }
     )
 
@@ -490,11 +472,7 @@ export class AutopilotApi {
       `${AUTOPILOT_API_PATH}/tack/starboard`,
       async (req: Request, res: Response) => {
         await this.primaryProvider?.tack('starboard')
-        return res.status(200).json({
-          state: 'COMPLETED',
-          statusCode: 200,
-          message: Responses.ok
-        })
+        return res.status(200).json(Responses.ok)
       }
     )
 
@@ -503,11 +481,7 @@ export class AutopilotApi {
       `${AUTOPILOT_API_PATH}/gybe/port`,
       async (req: Request, res: Response) => {
         await this.primaryProvider?.gybe('port')
-        return res.status(200).json({
-          state: 'COMPLETED',
-          statusCode: 200,
-          message: Responses.ok
-        })
+        return res.status(200).json(Responses.ok)
       }
     )
 
@@ -516,11 +490,7 @@ export class AutopilotApi {
       `${AUTOPILOT_API_PATH}/gybe/starboard`,
       async (req: Request, res: Response) => {
         await this.primaryProvider?.gybe('starboard')
-        return res.status(200).json({
-          state: 'COMPLETED',
-          statusCode: 200,
-          message: Responses.ok
-        })
+        return res.status(200).json(Responses.ok)
       }
     )
 
@@ -552,29 +522,20 @@ export class AutopilotApi {
   // action to take when provider changed
   private changeProvider(id?: string) {
     debug('Changing primaryProvider to:', id)
-    const msg: Delta = {
-      updates: [
-        {
-          values: [
-            {
-              path: `steering.autopilot` as Path,
-              value: null
-            }
-          ]
-        }
-      ]
-    }
     this.primaryProviderId = id
     if (!id) {
       this.primaryProvider = undefined
-      debug(msg.updates[0].values[0])
-      this.server.handleMessage('autopilotApi', msg, SKVersion.v2)
+      this.emitDeltaMsg('mode', null)
+      this.emitDeltaMsg('state', null)
+      this.emitDeltaMsg('target', null)
+      this.emitDeltaMsg('engaged', null)
     } else {
       this.primaryProvider = this.autopilotProviders.get(id)
       this.primaryProvider?.getData().then((data: AutopilotInfo) => {
-        msg.updates[0].values[0].value = data
-        debug(msg.updates[0].values[0])
-        this.server.handleMessage('autopilotApi', msg, SKVersion.v2)
+        this.emitDeltaMsg('mode', data.mode)
+        this.emitDeltaMsg('state', data.state)
+        this.emitDeltaMsg('target', data.target)
+        this.emitDeltaMsg('engaged', data.engaged)
       })
     }
   }
@@ -586,13 +547,14 @@ export class AutopilotApi {
         {
           values: [
             {
-              path: `steering.autopilot.${path}` as Path,
+              path: `steering.autopilot${path ? '.' + path : ''}` as Path,
               value: value
             }
           ]
         }
       ]
     }
+    debug(`delta:`, msg.updates[0])
     this.server.handleMessage('autopilotApi', msg, SKVersion.v2)
     this.server.handleMessage('autopilotApi', msg, SKVersion.v1)
   }
