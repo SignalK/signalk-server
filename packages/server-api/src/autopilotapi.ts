@@ -1,13 +1,33 @@
+export type AutopilotUpdateAttrib =
+  | 'mode'
+  | 'state'
+  | 'target'
+  | 'engaged'
+  | 'options'
+
+const AUTOPILOTUPDATEATTRIBS: AutopilotUpdateAttrib[] = [
+  'mode',
+  'state',
+  'target',
+  'engaged',
+  'options'
+]
+
+export const isAutopilotUpdateAttrib = (s: string) =>
+  AUTOPILOTUPDATEATTRIBS.includes(s as AutopilotUpdateAttrib)
+
+export type TackGybeDirection = 'port' | 'starboard'
+
 export interface AutopilotApi {
   register(
     pluginId: string,
     provider: AutopilotProvider,
-    prmary?: boolean
+    primary?: boolean
   ): void
   unRegister(pluginId: string): void
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  apUpdate(pluginId: string, attrib: AutopilotUpdateAttrib, value: any): void
 }
-
-export type TackGybeDirection = 'port' | 'starboard'
 
 /** @see {isAutopilotProvider} ts-auto-guard:type-guard */
 export interface AutopilotProvider {
@@ -26,8 +46,13 @@ export interface AutopilotProvider {
   gybe(direction: TackGybeDirection): Promise<void>
 }
 
+export interface AutopilotStateDef {
+  name: string // autopilot state
+  engaged: boolean // true if state indicates actively steering
+}
+
 export interface AutopilotOptions {
-  states: string[]
+  states: AutopilotStateDef[]
   modes: string[]
 }
 

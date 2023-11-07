@@ -3,7 +3,7 @@
 
 ## Overview
 
-The SignalK specification defines the `autopilot` path under the `steering` schema group _(e.g. `/signalk/v2/api/vessels/self/steering/autopilot`)_, for representing information from autopilot devices.
+The Signal K specification defines the `autopilot` path under the `steering` schema group _(e.g. `/signalk/v2/api/vessels/self/steering/autopilot`)_ for representing information from autopilot devices.
 
 The Autopilot API provides a mechanism for applications to issue requests to autopilot devices (via a provider plugin) to perform common operations.
 
@@ -11,9 +11,11 @@ The Autopilot API provides a mechanism for applications to issue requests to aut
 
 ## Multiple Autopilot Providers
 
-The Autopilot API supports the installation of multiple provider plugins with only the `primary` provider being the target of the requests made.
+The Autopilot API supports the installation of multiple provider plugins, with requests only being passed to the `primary` provider.
 
-The primary provider can be set via the API or by the provider plugin at start-up.
+The primary provider can be set in the following ways:
+- via an API request _(see [Setting the Primary Provider](#setting-the-primary-provider))_
+- by the plugin when it registers itself as a provider.
 
 ### Retrieving Provider Information
 
@@ -41,7 +43,7 @@ Where:
 
 ### Setting the Primary Provider
 
-To set the primary autopilot provider submit an HTTP `POST` request to `/signalk/v2/api/vessels/self/steering/autopilot/providers/primary` supplying the provider's plugin id.
+To set the primary autopilot provider submit an HTTP `POST` request to `/signalk/v2/api/vessels/self/steering/autopilot/providers/primary` supplying the provider's _**pluginId**_.
 
 ```typescript
 HTTP POST "/signalk/v2/api/vessels/self/steering/autopilot/providers/primary" {

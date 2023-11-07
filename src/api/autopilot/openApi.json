@@ -30,6 +30,27 @@
   ],
   "components": {
     "schemas": {
+      "autopilotStateOption": {
+        "type": "object",
+        "title": "Autopilot state option definition",
+        "description": "Autopilot `state` option and indication whether pilot is actively steering.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "State name / label",
+            "example": "enabled"
+          },
+          "engaged": {
+            "type": "boolean",
+            "description": "Set `true` if pilot is actively steering when in this `state`.",
+            "example": true
+          }
+        },
+        "example": [
+          { "name": "auto", "engaged": true },
+          { "name": "standby", "engaged": false }
+        ]
+      },
       "autopilotOptions": {
         "type": "object",
         "title": "Autopilot configuration options",
@@ -41,20 +62,19 @@
           }
         },
         "properties": {
-          "state": {
+          "states": {
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/autopilotStateOption"
             },
-            "description": "List of valid State values",
-            "example": ["enabled", "disabled"]
+            "description": "List of valid autopilot states."
           },
-          "mode": {
+          "modes": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "List of valid Mode values",
+            "description": "List of valid Mode values.",
             "example": ["compass", "gps"]
           }
         }
@@ -136,7 +156,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["state", "mode", "target"],
+                  "required": ["state", "mode", "target", "engaged"],
                   "properties": {
                     "engaged": {
                       "type": "boolean",
@@ -146,7 +166,7 @@
                     "state": {
                       "type": "string",
                       "description": "Autopilot state",
-                      "example": "disabled"
+                      "example": "auto"
                     },
                     "mode": {
                       "type": "string",

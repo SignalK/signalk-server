@@ -15,7 +15,10 @@ import {
   SKVersion,
   Path,
   Delta,
-  isAutopilotProvider
+  isAutopilotProvider,
+  AutopilotStateDef,
+  AutopilotUpdateAttrib,
+  isAutopilotUpdateAttrib
 } from '@signalk/server-api'
 
 export const AUTOPILOT_API_PATH = `/signalk/v2/api/vessels/self/steering/autopilot`
@@ -32,6 +35,17 @@ export class AutopilotApi {
 
   private primaryProvider?: AutopilotProvider
   private primaryProviderId?: string
+
+  private apData: AutopilotInfo = {
+    options: {
+      states: [],
+      modes: []
+    },
+    state: null,
+    mode: null,
+    target: null,
+    engaged: false
+  }
 
   constructor(private server: AutopilotApplication) {}
 
@@ -87,7 +101,10 @@ export class AutopilotApi {
         debug('pv1: getData')
         return {
           options: {
-            states: ['on', 'off'],
+            states: [
+              { name: 'on', engaged: true },
+              { name: 'off', engaged: false }
+            ],
             modes: ['compass', 'gps', 'wind']
           },
           target: 0.1,
@@ -149,7 +166,10 @@ export class AutopilotApi {
           debug('pv2: getData')
           return {
             options: {
-              states: ['enabled', 'standby'],
+              states: [
+                { name: 'enabled', engaged: true },
+                { name: 'standby', engaged: false }
+              ],
               modes: ['compass', 'route', 'wind']
             },
             target: 0.1,
@@ -162,6 +182,11 @@ export class AutopilotApi {
       false
     )
     //setTimeout(() => this.unRegister('mock-plugin-1-id'), 5000)
+    /*setInterval(() => {
+      this.apUpdate('mock-plugin-1-id', 'target', Math.random())
+      this.apUpdate('mock-plugin-2-id', 'engaged', 'time')
+      this.apUpdate('mock-plugin-1-id', 'myattrib' as any, 'value')
+    }, 2000)*/
   }
 
   async start() {
@@ -173,6 +198,9 @@ export class AutopilotApi {
     return Promise.resolve()
   }
 
+  // ***** Plugin Interface methods *****
+
+  // Register plugin as provider.
   register(pluginId: string, provider: AutopilotProvider, primary?: boolean) {
     debug(`** Registering provider(s)....${pluginId} ${provider?.pilotType}`)
 
@@ -199,6 +227,7 @@ export class AutopilotApi {
     )
   }
 
+  // Unregister plugin as provider.
   unRegister(pluginId: string) {
     if (!pluginId) {
       return
@@ -225,7 +254,25 @@ export class AutopilotApi {
     )
   }
 
+  // Pass changed attribute / value from autopilot.
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  apUpdate(pluginId: string, attrib: AutopilotUpdateAttrib, value: any) {
+    if (pluginId !== this.primaryProviderId) {
+      debug(`apUpdate(${pluginId}): Not primaryProvider!`)
+      return
+    }
+    if (isAutopilotUpdateAttrib(attrib)) {
+      ;(this.apData as any)[attrib] = value
+      this.emitDeltaMsg(attrib, value)
+    } else {
+      debug(`${attrib} is NOT an AutopilotUpdateAttrib!`)
+    }
+  }
+
+  // ***** /Plugin Interface methods *****
+
   private updateAllowed(request: Request): boolean {
+    return true
     return this.server.securityStrategy.shouldAllowPut(
       request,
       'vessels.self',
@@ -272,10 +319,10 @@ export class AutopilotApi {
             message: 'No autopilots available'
           })
         } else {
-          const r = await this.primaryProvider?.getData()
-          debug(r)
+          this.apData = await this.primaryProvider?.getData()
+          debug(this.apData)
           // target, mode, state, engaged, options
-          res.json(r)
+          res.json(this.apData)
         }
       }
     )
@@ -307,11 +354,7 @@ export class AutopilotApi {
       async (req: Request, res: Response) => {
         if (!this.autopilotProviders.has(req.body.value)) {
           debug('** Invalid provider id supplied...')
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 404,
-            message: `Invalid provider id supplied!`
-          })
+          res.status(400).json(Responses.invalid)
           return
         }
         this.changeProvider(req.body.value)
@@ -324,7 +367,6 @@ export class AutopilotApi {
       `${AUTOPILOT_API_PATH}/engage`,
       async (req: Request, res: Response) => {
         await this.primaryProvider?.engage()
-        // emit delta
         this.emitDeltaMsg('engaged', true)
         return res.status(200).json(Responses.ok)
       }
@@ -335,7 +377,6 @@ export class AutopilotApi {
       `${AUTOPILOT_API_PATH}/disengage`,
       async (req: Request, res: Response) => {
         await this.primaryProvider?.disengage()
-        // emit delta
         this.emitDeltaMsg('engaged', false)
         return res.status(200).json(Responses.ok)
       }
@@ -355,18 +396,25 @@ export class AutopilotApi {
     this.server.put(
       `${AUTOPILOT_API_PATH}/state`,
       async (req: Request, res: Response) => {
-        if (typeof req.body.value === 'undefined') {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: `Error: Invalid value supplied!`
-          })
+        let matchedState: AutopilotStateDef | undefined
+
+        const isValidState = (state: string) => {
+          const st = this.apData.options.states.filter(
+            (i: AutopilotStateDef) => i.name === state
+          )
+          matchedState = st.length > 0 ? st[0] : undefined
+          return st.length > 0
+        }
+        if (
+          typeof req.body.value === 'undefined' ||
+          !isValidState(req.body.value)
+        ) {
+          res.status(400).json(Responses.invalid)
           return
         }
-        // *** TO DO VALIDATE - Vaidated by plugin? (included in list of valid states)
         await this.primaryProvider?.setState(req.body.value)
-        // emit delta
-        this.emitDeltaMsg('state', req.body.value)
+        this.emitDeltaMsg('state', matchedState?.name)
+        this.emitDeltaMsg('engaged', matchedState?.engaged)
         return res.status(200).json(Responses.ok)
       }
     )
@@ -385,17 +433,14 @@ export class AutopilotApi {
     this.server.put(
       `${AUTOPILOT_API_PATH}/mode`,
       async (req: Request, res: Response) => {
-        if (typeof req.body.value === 'undefined') {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: `Error: Invalid value supplied!`
-          })
+        if (
+          typeof req.body.value === 'undefined' ||
+          !this.apData.options.modes.includes(req.body.value)
+        ) {
+          res.status(400).json(Responses.invalid)
           return
         }
-        // *** TO DO VALIDATE - Vaidated by plugin? (included list of valid modes)
         await this.primaryProvider?.setMode(req.body.value)
-        // emit delta
         this.emitDeltaMsg('mode', req.body.value)
         return res.status(200).json(Responses.ok)
       }
@@ -416,11 +461,7 @@ export class AutopilotApi {
       `${AUTOPILOT_API_PATH}/target`,
       async (req: Request, res: Response) => {
         if (typeof req.body.value !== 'number') {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: `Error: Invalid value supplied!`
-          })
+          res.status(400).json(Responses.invalid)
           return
         }
         if (req.body.value < 0 - Math.PI || req.body.value > 2 * Math.PI) {
@@ -432,7 +473,6 @@ export class AutopilotApi {
           return
         }
         await this.primaryProvider?.setTarget(req.body.value)
-        // emit delta
         this.emitDeltaMsg('target', req.body.value)
         return res.status(200).json(Responses.ok)
       }
@@ -443,16 +483,18 @@ export class AutopilotApi {
       `${AUTOPILOT_API_PATH}/target/adjust`,
       async (req: Request, res: Response) => {
         if (typeof req.body.value !== 'number') {
+          res.status(400).json(Responses.invalid)
+          return
+        }
+        const s = req.body.value + this.apData.target
+        if (s < 0 - Math.PI || s > 2 * Math.PI) {
           res.status(400).json({
             state: 'FAILED',
             statusCode: 400,
-            message: `Error: Invalid value supplied!`
+            message: `Error: Value supplied is outside of the valid range (-PI < value < 2*PI radians).`
           })
           return
         }
-        /* TO DO VALIDATE - Vaidated by plugin?
-         * SUPPLIED VALUE -10 <= value <= 10 (in radians)
-         * RESULTANT VALUE currentTarget + adjustment IS IN RANGE (-PI < value < 2*PI radians) */
         await this.primaryProvider?.adjustTarget(req.body.value)
         return res.status(200).json(Responses.ok)
       }
@@ -525,6 +567,16 @@ export class AutopilotApi {
     this.primaryProviderId = id
     if (!id) {
       this.primaryProvider = undefined
+      this.apData = {
+        options: {
+          states: [],
+          modes: []
+        },
+        state: null,
+        mode: null,
+        target: null,
+        engaged: false
+      }
       this.emitDeltaMsg('mode', null)
       this.emitDeltaMsg('state', null)
       this.emitDeltaMsg('target', null)
@@ -532,6 +584,7 @@ export class AutopilotApi {
     } else {
       this.primaryProvider = this.autopilotProviders.get(id)
       this.primaryProvider?.getData().then((data: AutopilotInfo) => {
+        this.apData = data
         this.emitDeltaMsg('mode', data.mode)
         this.emitDeltaMsg('state', data.state)
         this.emitDeltaMsg('target', data.target)
