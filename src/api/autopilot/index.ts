@@ -33,8 +33,8 @@ type ProviderInfo = Array<{ id: string; pilotType: string }>
 export class AutopilotApi {
   private autopilotProviders: Map<string, AutopilotProvider> = new Map()
 
-  private primaryProvider?: AutopilotProvider
-  private primaryProviderId?: string
+  private defaultProvider?: AutopilotProvider
+  private defaultProviderId?: string
 
   private apData: AutopilotInfo = {
     options: {
@@ -51,7 +51,7 @@ export class AutopilotApi {
 
   // ***************** test ***************
   mockProviders() {
-    this.register('mock-plugin-1-id', {
+    this.register('ap-plugin1', {
       pilotType: 'mock-pilot-type1',
       engage: async () => {
         debug('pv1: engage')
@@ -114,79 +114,75 @@ export class AutopilotApi {
         }
       }
     })
-    this.register(
-      'mock-plugin-2-id',
-      {
-        pilotType: 'mock-pilot-type2',
-        engage: async () => {
-          debug('pv2: engage')
-          return
-        },
-        disengage: async () => {
-          debug('pv2: disengage')
-          return
-        },
-        tack: async (direction: TackGybeDirection) => {
-          debug('pv2: tack', direction)
-          return
-        },
-        gybe: async (direction: TackGybeDirection) => {
-          debug('pv2: gybe', direction)
-          return
-        },
-        getTarget: async () => {
-          debug('pv1: getTarget')
-          return Math.PI
-        },
-        setTarget: async (value: number) => {
-          debug('pv2: target', value)
-          return
-        },
-        adjustTarget: async (value: number) => {
-          debug('pv2: adjustTarget', value)
-          return
-        },
-        setMode: async (mode: string) => {
-          debug('pv2: setMode', mode)
-          return
-        },
-        getMode: async () => {
-          debug('pv2: getMode, currentMode')
-          return 'currentMode'
-        },
-        setState: async (state: string) => {
-          debug('pv2: setState', state)
-          return
-        },
-        getState: async () => {
-          debug('pv2: getState, currentState')
-          return 'currentState'
-        },
-        getData: async () => {
-          debug('pv2: getData')
-          return {
-            options: {
-              states: [
-                { name: 'enabled', engaged: true },
-                { name: 'standby', engaged: false }
-              ],
-              modes: ['compass', 'route', 'wind']
-            },
-            target: 0.1,
-            state: 'standby',
-            mode: 'wind',
-            engaged: false
-          }
-        }
+    this.register('ap-plugin2', {
+      pilotType: 'mock-pilot-type2',
+      engage: async () => {
+        debug('pv2: engage')
+        return
       },
-      false
-    )
-    //setTimeout(() => this.unRegister('mock-plugin-1-id'), 5000)
+      disengage: async () => {
+        debug('pv2: disengage')
+        return
+      },
+      tack: async (direction: TackGybeDirection) => {
+        debug('pv2: tack', direction)
+        return
+      },
+      gybe: async (direction: TackGybeDirection) => {
+        debug('pv2: gybe', direction)
+        return
+      },
+      getTarget: async () => {
+        debug('pv1: getTarget')
+        return Math.PI
+      },
+      setTarget: async (value: number) => {
+        debug('pv2: target', value)
+        return
+      },
+      adjustTarget: async (value: number) => {
+        debug('pv2: adjustTarget', value)
+        return
+      },
+      setMode: async (mode: string) => {
+        debug('pv2: setMode', mode)
+        return
+      },
+      getMode: async () => {
+        debug('pv2: getMode, currentMode')
+        return 'currentMode'
+      },
+      setState: async (state: string) => {
+        debug('pv2: setState', state)
+        return
+      },
+      getState: async () => {
+        debug('pv2: getState, currentState')
+        return 'currentState'
+      },
+      getData: async () => {
+        debug('pv2: getData')
+        return {
+          options: {
+            states: [
+              { name: 'enabled', engaged: true },
+              { name: 'standby', engaged: false }
+            ],
+            modes: ['compass', 'route', 'wind']
+          },
+          target: 0.1,
+          state: 'standby',
+          mode: 'wind',
+          engaged: false
+        }
+      }
+    })
+    //setTimeout(() => this.unRegister('ap-plugin1'), 5000)
     /*setInterval(() => {
-      this.apUpdate('mock-plugin-1-id', 'target', Math.random())
-      this.apUpdate('mock-plugin-2-id', 'engaged', 'time')
-      this.apUpdate('mock-plugin-1-id', 'myattrib' as any, 'value')
-    }, 2000)*/
+      this.apUpdate('ap-plugin1', 'target', Math.random())
+      this.apUpdate('ap-plugin2', 'engaged', false)
+      this.apUpdate('ap-plugin1', 'target', Math.random(), 'dev1b')
+    }, 10000)*/
   }
 
   async start() {
@@ -201,7 +197,7 @@ export class AutopilotApi {
   // ***** Plugin Interface methods *****
 
   // Register plugin as provider.
-  register(pluginId: string, provider: AutopilotProvider, primary?: boolean) {
+  register(pluginId: string, provider: AutopilotProvider, asDefault?: boolean) {
     debug(`** Registering provider(s)....${pluginId} ${provider?.pilotType}`)
 
     if (!provider) {
@@ -216,14 +212,14 @@ export class AutopilotApi {
         this.autopilotProviders.set(pluginId, provider)
       }
     }
-    if (this.autopilotProviders.size === 1 || primary) {
+    if (asDefault) {
       this.changeProvider(pluginId)
     }
     debug(
       `No. of AutoPilotProviders registered =`,
       this.autopilotProviders.size,
-      'primaryProvider =',
-      this.primaryProviderId
+      'defaultProvider =',
+      this.defaultProviderId
     )
   }
 
@@ -237,7 +233,7 @@ export class AutopilotApi {
       debug(`** Un-registering autopilot provider....${pluginId}`)
       this.autopilotProviders.delete(pluginId)
     }
-    if (pluginId === this.primaryProviderId) {
+    if (pluginId === this.defaultProviderId) {
       if (this.autopilotProviders.size === 0) {
         debug(`** No autopilot providers registered!!!`)
         this.changeProvider()
@@ -249,21 +245,36 @@ export class AutopilotApi {
     debug(
       `No. of AutoPilotProviders registered =`,
       this.autopilotProviders.size,
-      'primaryProvider =',
-      this.primaryProviderId
+      'defaultProvider =',
+      this.defaultProviderId
     )
   }
 
   // Pass changed attribute / value from autopilot.
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  apUpdate(pluginId: string, attrib: AutopilotUpdateAttrib, value: any) {
-    if (pluginId !== this.primaryProviderId) {
-      debug(`apUpdate(${pluginId}): Not primaryProvider!`)
-      return
-    }
+  apUpdate(
+    pluginId: string,
+    attrib: AutopilotUpdateAttrib,
+    value: any,
+    deviceId?: string
+  ) {
     if (isAutopilotUpdateAttrib(attrib)) {
       ;(this.apData as any)[attrib] = value
-      this.emitDeltaMsg(attrib, value)
+      this.emitDeltaMsg(
+        attrib,
+        value,
+        pluginId ? `${pluginId}${deviceId ? '.' + deviceId : ''}` : undefined
+      )
+      try {
+        if (!this.defaultProviderId) {
+          this.initDefaultProvider(pluginId)
+        }
+        if (pluginId === this.defaultProviderId) {
+          this.emitDeltaMsg(attrib, value)
+        }
+      } catch (err) {
+        debug(`apUpdate():`, err)
+      }
     } else {
       debug(`${attrib} is NOT an AutopilotUpdateAttrib!`)
     }
@@ -272,7 +283,6 @@ export class AutopilotApi {
   // ***** /Plugin Interface methods *****
 
   private updateAllowed(request: Request): boolean {
-    return true
     return this.server.securityStrategy.shouldAllowPut(
       request,
       'vessels.self',
@@ -287,22 +297,31 @@ export class AutopilotApi {
     this.server.use(
       `${AUTOPILOT_API_PATH}/*`,
       (req: Request, res: Response, next: NextFunction) => {
-        if (!this.primaryProvider) {
+        debug(`Autopilot path`, req.method, req.params)
+        try {
+          if (
+            req.params[0].indexOf('providers') === -1 &&
+            !this.defaultProviderId
+          ) {
+            this.initDefaultProvider()
+          }
+          if (['PUT', 'POST'].includes(req.method)) {
+            debug(`Autopilot`, req.method, req.path, req.body)
+            if (!this.updateAllowed(req)) {
+              res.status(403).json(Responses.unauthorised)
+            } else {
+              next()
+            }
+          } else {
+            debug(`Autopilot`, req.method, req.path, req.query, req.body)
+            next()
+          }
+        } catch (err: any) {
           res.status(500).json({
             state: 'FAILED',
             statusCode: 500,
-            message: 'No autopilots available'
+            message: err.message ?? 'No autopilots available!'
           })
-        } else if (['PUT', 'POST'].includes(req.method)) {
-          debug(`Autopilot`, req.method, req.path, req.body)
-          if (!this.updateAllowed(req)) {
-            res.status(403).json(Responses.unauthorised)
-          } else {
-            next()
-          }
-        } else {
-          debug(`Autopilot`, req.method, req.path, req.body)
-          next()
         }
       }
     )
@@ -311,18 +330,21 @@ export class AutopilotApi {
     this.server.get(
       `${AUTOPILOT_API_PATH}`,
       async (req: Request, res: Response) => {
-        if (!this.primaryProvider) {
-          res.status(500)
-          res.json({
+        try {
+          if (!this.defaultProviderId) {
+            this.initDefaultProvider()
+          }
+          this.apData = (await this.useProvider(
+            req
+          )?.getData()) as AutopilotInfo
+          debug(this.apData)
+          res.json(this.apData)
+        } catch (err: any) {
+          res.status(500).json({
             state: 'FAILED',
             statusCode: 500,
-            message: 'No autopilots available'
+            message: err.message ?? 'No autopilots available!'
           })
-        } else {
-          this.apData = await this.primaryProvider?.getData()
-          debug(this.apData)
-          // target, mode, state, engaged, options
-          res.json(this.apData)
         }
       }
     )
@@ -331,7 +353,7 @@ export class AutopilotApi {
     this.server.get(
       `${AUTOPILOT_API_PATH}/options`,
       async (req: Request, res: Response) => {
-        const r = await this.primaryProvider?.getData()
+        const r = await this.useProvider(req)?.getData()
         debug(r?.options)
         res.json(r?.options)
       }
@@ -343,21 +365,22 @@ export class AutopilotApi {
       async (req: Request, res: Response) => {
         res.status(200).json({
           providers: this.getProviders(),
-          primary: this.primaryProviderId
+          defaultProvider: this.defaultProviderId
         })
       }
     )
 
-    // set primary autopilot provider
+    // set default autopilot provider
     this.server.post(
-      `${AUTOPILOT_API_PATH}/providers/primary`,
+      `${AUTOPILOT_API_PATH}/providers/:id`,
       async (req: Request, res: Response) => {
-        if (!this.autopilotProviders.has(req.body.value)) {
+        debug(`params:`, req.params)
+        if (!this.autopilotProviders.has(req.params.id)) {
           debug('** Invalid provider id supplied...')
           res.status(400).json(Responses.invalid)
           return
         }
-        this.changeProvider(req.body.value)
+        this.changeProvider(req.params.id)
         return res.status(200).json(Responses.ok)
       }
     )
@@ -366,7 +389,7 @@ export class AutopilotApi {
     this.server.post(
       `${AUTOPILOT_API_PATH}/engage`,
       async (req: Request, res: Response) => {
-        await this.primaryProvider?.engage()
+        await this.useProvider(req)?.engage()
         this.emitDeltaMsg('engaged', true)
         return res.status(200).json(Responses.ok)
       }
@@ -376,7 +399,7 @@ export class AutopilotApi {
     this.server.post(
       `${AUTOPILOT_API_PATH}/disengage`,
       async (req: Request, res: Response) => {
-        await this.primaryProvider?.disengage()
+        await this.useProvider(req)?.disengage()
         this.emitDeltaMsg('engaged', false)
         return res.status(200).json(Responses.ok)
       }
@@ -386,7 +409,7 @@ export class AutopilotApi {
     this.server.get(
       `${AUTOPILOT_API_PATH}/state`,
       async (req: Request, res: Response) => {
-        const r = await this.primaryProvider?.getState()
+        const r = await this.useProvider(req)?.getState()
         debug(r)
         return res.json({ value: r })
       }
@@ -412,7 +435,7 @@ export class AutopilotApi {
           res.status(400).json(Responses.invalid)
           return
         }
-        await this.primaryProvider?.setState(req.body.value)
+        await this.useProvider(req)?.setState(req.body.value)
         this.emitDeltaMsg('state', matchedState?.name)
         this.emitDeltaMsg('engaged', matchedState?.engaged)
         return res.status(200).json(Responses.ok)
@@ -423,7 +446,7 @@ export class AutopilotApi {
     this.server.get(
       `${AUTOPILOT_API_PATH}/mode`,
       async (req: Request, res: Response) => {
-        const r = await this.primaryProvider?.getMode()
+        const r = await this.useProvider(req)?.getMode()
         debug(r)
         return res.json({ value: r })
       }
@@ -440,7 +463,7 @@ export class AutopilotApi {
           res.status(400).json(Responses.invalid)
           return
         }
-        await this.primaryProvider?.setMode(req.body.value)
+        await this.useProvider(req)?.setMode(req.body.value)
         this.emitDeltaMsg('mode', req.body.value)
         return res.status(200).json(Responses.ok)
       }
@@ -450,7 +473,7 @@ export class AutopilotApi {
     this.server.get(
       `${AUTOPILOT_API_PATH}/target`,
       async (req: Request, res: Response) => {
-        const r = await this.primaryProvider?.getTarget()
+        const r = await this.useProvider(req)?.getTarget()
         debug(r)
         return res.json({ value: r })
       }
@@ -472,7 +495,7 @@ export class AutopilotApi {
           })
           return
         }
-        await this.primaryProvider?.setTarget(req.body.value)
+        await this.useProvider(req)?.setTarget(req.body.value)
         this.emitDeltaMsg('target', req.body.value)
         return res.status(200).json(Responses.ok)
       }
@@ -495,7 +518,7 @@ export class AutopilotApi {
           })
           return
         }
-        await this.primaryProvider?.adjustTarget(req.body.value)
+        await this.useProvider(req)?.adjustTarget(req.body.value)
         return res.status(200).json(Responses.ok)
       }
     )
@@ -504,7 +527,7 @@ export class AutopilotApi {
     this.server.post(
       `${AUTOPILOT_API_PATH}/tack/port`,
       async (req: Request, res: Response) => {
-        await this.primaryProvider?.tack('port')
+        await this.useProvider(req)?.tack('port')
         return res.status(200).json(Responses.ok)
       }
     )
@@ -513,7 +536,7 @@ export class AutopilotApi {
     this.server.post(
       `${AUTOPILOT_API_PATH}/tack/starboard`,
       async (req: Request, res: Response) => {
-        await this.primaryProvider?.tack('starboard')
+        await this.useProvider(req)?.tack('starboard')
         return res.status(200).json(Responses.ok)
       }
     )
@@ -522,7 +545,7 @@ export class AutopilotApi {
     this.server.post(
       `${AUTOPILOT_API_PATH}/gybe/port`,
       async (req: Request, res: Response) => {
-        await this.primaryProvider?.gybe('port')
+        await this.useProvider(req)?.gybe('port')
         return res.status(200).json(Responses.ok)
       }
     )
@@ -531,7 +554,7 @@ export class AutopilotApi {
     this.server.post(
       `${AUTOPILOT_API_PATH}/gybe/starboard`,
       async (req: Request, res: Response) => {
-        await this.primaryProvider?.gybe('starboard')
+        await this.useProvider(req)?.gybe('starboard')
         return res.status(200).json(Responses.ok)
       }
     )
@@ -539,14 +562,45 @@ export class AutopilotApi {
     // error response
     this.server.use(
       `${AUTOPILOT_API_PATH}/*`,
-      (err: any, req: Request, res: Response) => {
-        res.status(err.statusCode ?? 400).json({
-          state: err.state ?? 'FAILED',
-          statusCode: err.statusCode ?? 400,
-          message: err.message ?? 'Autopilot provider error!'
-        })
+      (err: any, req: Request, res: Response, next: NextFunction) => {
+        if (res.headersSent) {
+          return next({
+            state: 'FAILED',
+            statusCode: 500,
+            message: err.message ?? 'No autopilots available!'
+          })
+        }
+        res.status(500)
+        res.render('error', { error: err })
       }
     )
+  }
+
+  // returns provider to use.
+  private useProvider(req: Request): AutopilotProvider | undefined {
+    debug(`useProvider()`, req.query)
+    const id = req.query.provider as string
+    if (!id) {
+      if (
+        this.defaultProviderId &&
+        this.autopilotProviders.has(this.defaultProviderId)
+      ) {
+        debug(`Using default provider...`)
+        return this.autopilotProviders.get(
+          this.defaultProviderId
+        ) as AutopilotProvider
+      } else {
+        debug(`No default provider...`)
+        return
+      }
+    }
+    if (this.autopilotProviders.has(id)) {
+      debug(`Found provider...using ${id}`)
+      return this.autopilotProviders.get(id) as AutopilotProvider
+    } else {
+      debug('Cannot get Provider!')
+      return
+    }
   }
 
   // Returns an array of provider info
@@ -561,12 +615,36 @@ export class AutopilotApi {
     return providers
   }
 
-  // action to take when provider changed
+  /** Initialises the value of default provider to the supplied id.
+   * If id is not supplied sets first registered Provider as the default.
+   **/
+  private initDefaultProvider(id?: string) {
+    debug(`initDefaultProvider()...${id}`)
+    if (id && this.autopilotProviders.has(id)) {
+      this.defaultProviderId = id
+      this.defaultProvider = this.autopilotProviders.get(id)
+      debug(`Default Provider = ${this.defaultProviderId}`)
+      return
+    }
+    if (this.autopilotProviders.size !== 0) {
+      const k = this.autopilotProviders.keys()
+      this.defaultProviderId = k.next().value as string
+      this.defaultProvider = this.autopilotProviders.get(this.defaultProviderId)
+      debug(`Default Provider = ${this.defaultProviderId}`)
+    } else {
+      throw new Error('Cannot set defaultProvider....No providers registered!')
+    }
+  }
+
+  /** Change default provider to supplied id, update apData and emit delta(s)
+   * When no id is supplied === last provider unregistered
+   **/
   private changeProvider(id?: string) {
-    debug('Changing primaryProvider to:', id)
-    this.primaryProviderId = id
+    debug('Changing defaultProvider to:', id)
     if (!id) {
-      this.primaryProvider = undefined
+      this.defaultProviderId = undefined
+      this.defaultProvider = undefined
+      debug('defaultProvider = ', id)
       this.apData = {
         options: {
           states: [],
@@ -582,19 +660,29 @@ export class AutopilotApi {
       this.emitDeltaMsg('target', null)
       this.emitDeltaMsg('engaged', null)
     } else {
-      this.primaryProvider = this.autopilotProviders.get(id)
-      this.primaryProvider?.getData().then((data: AutopilotInfo) => {
+      if (!this.autopilotProviders.has(id)) {
+        debug(
+          `providerId not found!....${id}`,
+          'default = ',
+          this.defaultProviderId
+        )
+        return
+      }
+      this.defaultProviderId = id
+      this.defaultProvider = this.autopilotProviders.get(id)
+      this.defaultProvider?.getData().then((data: AutopilotInfo) => {
         this.apData = data
         this.emitDeltaMsg('mode', data.mode)
         this.emitDeltaMsg('state', data.state)
         this.emitDeltaMsg('target', data.target)
         this.emitDeltaMsg('engaged', data.engaged)
       })
+      debug('defaultProvider = ', this.defaultProviderId)
     }
   }
 
   // emit delta updates on operation success
-  private emitDeltaMsg(path: string, value: any) {
+  private emitDeltaMsg(path: string, value: any, source?: string) {
     const msg: Delta = {
       updates: [
         {
@@ -608,7 +696,7 @@ export class AutopilotApi {
       ]
     }
     debug(`delta:`, msg.updates[0])
-    this.server.handleMessage('autopilotApi', msg, SKVersion.v2)
-    this.server.handleMessage('autopilotApi', msg, SKVersion.v1)
+    this.server.handleMessage(source ?? 'autopilotApi', msg, SKVersion.v2)
+    this.server.handleMessage(source ?? 'autopilotApi', msg, SKVersion.v1)
   }
 }

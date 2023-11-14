@@ -22,11 +22,11 @@ export interface AutopilotApi {
   register(
     pluginId: string,
     provider: AutopilotProvider,
-    primary?: boolean
+    asDefault?: boolean
   ): void
   unRegister(pluginId: string): void
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  apUpdate(pluginId: string, attrib: AutopilotUpdateAttrib, value: any): void
+  apUpdate(pluginId: string, attrib: AutopilotUpdateAttrib, value: any, deviceId?: string): void
 }
 
 /** @see {isAutopilotProvider} ts-auto-guard:type-guard */

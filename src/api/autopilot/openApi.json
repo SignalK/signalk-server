@@ -128,7 +128,19 @@
         }
       }
     },
-    "parameters": {},
+    "parameters": {
+      "ProviderParam": {
+        "in": "query",
+        "name": "provider",
+        "description": "Plugin id of the autopilot provider to direct the request to (When multiple providers are registered).",
+        "style": "form",
+        "explode": false,
+        "schema": {
+          "type": "string",
+          "example": "my-provider"
+        }
+      }
+    },
     "securitySchemes": {
       "bearerAuth": {
         "type": "http",
@@ -145,6 +157,11 @@
   "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
   "paths": {
     "/": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "get": {
         "tags": ["autopilot"],
         "summary": "Retrieve autopilot information.",
@@ -193,6 +210,11 @@
       }
     },
     "/options": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "get": {
         "tags": ["autopilot"],
         "summary": "Retrieve autopilot options.",
@@ -226,11 +248,11 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["providers", "primary"],
+                  "required": ["providers", "default"],
                   "properties": {
-                    "primary": {
+                    "defaultProvider": {
                       "type": "string",
-                      "description": "ID of the primary provider.",
+                      "description": "ID of the default provider.",
                       "example": "my-pilot-provider"
                     },
                     "providers": {
@@ -260,28 +282,24 @@
             "$ref": "#/components/responses/ErrorResponse"
           }
         }
-      },
+      }
+    },
+    "/providers/{id}": {
       "post": {
         "tags": ["providers"],
-        "summary": "Set primary provider.",
-        "requestBody": {
-          "description": "Supply valid provider id in `value`.",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "value": {
-                    "type": "string",
-                    "description": "Value representing the id of the provider to set as primary.",
-                    "example": "my-pilot-provider-id"
-                  }
-                }
-              }
+        "summary": "Set the default provider.",
+        "description": "Sets the provider with the supplied `id` as the default.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "provider id",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           }
-        },
+        ],
         "responses": {
           "200ActionResponse": {
             "$ref": "#/components/responses/200ActionResponse"
@@ -293,6 +311,11 @@
       }
     },
     "/engage": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "post": {
         "tags": ["autopilot"],
         "summary": "Engage autopilot to steer vessel.",
@@ -307,6 +330,11 @@
       }
     },
     "/disengage": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "post": {
         "tags": ["autopilot"],
         "summary": "Disengage autopilot from steering vessel.",
@@ -321,6 +349,11 @@
       }
     },
     "/state": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "get": {
         "tags": ["autopilot"],
         "summary": "Retrieve the current state.",
@@ -380,6 +413,11 @@
       }
     },
     "/mode": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "get": {
         "tags": ["autopilot"],
         "summary": "Retrieve the current mode.",
@@ -439,6 +477,11 @@
       }
     },
     "/target": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "get": {
         "tags": ["autopilot"],
         "summary": "Retrieve the current target value (radians).",
@@ -503,6 +546,11 @@
       }
     },
     "/target/adjust": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "put": {
         "tags": ["autopilot"],
         "summary": "Adjust autopilot target value by +/- radians.",
@@ -537,6 +585,11 @@
       }
     },
     "/tack/port": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "post": {
         "tags": ["autopilot"],
         "summary": "Tack to port.",
@@ -551,6 +604,11 @@
       }
     },
     "/tack/starboard": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "post": {
         "tags": ["autopilot"],
         "summary": "Tack to starboard.",
@@ -565,6 +623,11 @@
       }
     },
     "/gybe/port": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "post": {
         "tags": ["autopilot"],
         "summary": "Gybe to port.",
@@ -579,6 +642,11 @@
       }
     },
     "/gybe/starboard": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderParam"
+        }
+      ],
       "post": {
         "tags": ["autopilot"],
         "summary": "Gybe to starboard.",

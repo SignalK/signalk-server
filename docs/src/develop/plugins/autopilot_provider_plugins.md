@@ -44,7 +44,10 @@ _Example response:_
 ```JSON
 {
   "options":{
-    "state":["enabled","disabled"],
+    "state":[
+        {"name":"enabled","engaged":true}, 
+        {"name":"disabled","engaged":false}
+    ],
     "mode":["gps","compass","wind"]
   },
   "state":"disabled",
@@ -54,6 +57,8 @@ _Example response:_
 }
 ```
 As per the example above, the `options` attribute contains the available values that can be supplied for both `state` and `mode`.
+
+The listed `state` options also indicate whether the autopilot is `engaged` and activley steering the vessel when in that state.
 
 The client app can then use these values when making a request to the associated API endpoint.
 
@@ -72,19 +77,13 @@ HTTP PUT "steering/autopilot/state" {value: "enabled"}
 
 Autopilot state refers to whether or not the autopilot is actively and steering the vessel.
 
-As autopilot devices and models will have a different number of states and labels, the Autopilot API provides the `steering/autopilot/engaged` path to insulate a client app from needing specific knowledge about the autopilot device in use. The client app can query the value of this path to determine whether or not the autopilot is engaged.
-
-The **provider plugin** MUST set the value of `steering/autopilot/engaged` to:
-- `true` when the selected state indicates that the autopilot is engaged and actively steering the vessel
-- `false` when the selected state indicates that the autopilot is disengaged and not steering the vessel.
-
-_**Note: It is the responsibility of the provider plugin to equate the available `state` options to whether the autopilot is `engaged` or not and set the path value accordingly.**_
+As autopilot devices and models will have a different number of states and labels, the available state options indicate whether the autopilot is `enaged` when in that state.
 
 To illustrate the expected behaviour consider an autopilot device with the following states: _off / standby / auto_ where _auto_ is the only state where the autopilot is actively steering the vessel.
 
 #### 1. Engaging the Autopilot
 
-To engage the autopilot and set the value `steering.autopilot.engaged` to `true`, issue one of the following requests:
+To engage the autopilot, issue one of the following requests:
 
 1. Specifically set the desired `state` 
 ```
@@ -101,7 +100,8 @@ _Result:_
     "steering": {
         "autopilot": {
             "engaged": true,
-            "state": "auto"
+            "state": "auto",
+            ...
         }
     }
 }
@@ -127,26 +127,7 @@ _Result:_
         "autopilot": {
             "engaged": false,
             "state": "standby"
-        }
-    }
-}
-```
-
-### Maintaining the Signal K Data Model
-
-The Signal K data model is updated by sending `delta` messages to the relevant `steering.autopilot` sub-paths.
-
-Maintaining these paths will help ensure the reliable operation of all connected clients.
-
-It is the responsibility to the **provider plugin** to ensure that, at a minimum, the following paths have valid values:
-```
-{ 
-    "steering": {
-        "autopilot": {
-            "state": <valid state option>,
-            "mode": <valid mode option>,
-            "target": <valid numeric value for the selected mode>,
-            "engaged": <true or false>
+            ...
         }
     }
 }
