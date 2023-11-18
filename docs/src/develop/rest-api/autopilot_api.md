@@ -3,83 +3,82 @@
 
 ## Overview
 
-The Signal K specification defines the `autopilot` path under the `steering` schema group _(e.g. `/signalk/v2/api/vessels/self/steering/autopilot`)_ for representing information from autopilot devices.
+The Autopilot API defines the `autopilots` path under the `steering` schema group _(e.g. `/signalk/v2/api/vessels/self/steering/autopilots`)_ for representing information from one or more autopilot devices.
 
-The Autopilot API provides a mechanism for applications to issue requests to autopilot devices (via a provider plugin) to perform common operations.
+The Autopilot API provides a mechanism for applications to issue requests to autopilot devices to perform common operations.
 
- _Note: You can find autopilot provider plugins in the `App Store` section of the Signal K Server Admin UI._
+Additionally, the use of multiple autopilot devices is supported, with each autopilot device individually addressable.
 
-The Autopilot API supports the use of multiple autopilot devices managed by one or more provider plugins.
+ _Note: Autopilot provider plugins are required to manage the communication with autopilot devices. See [Autopilot Provider Plugins](../plugins/autopilot_provider_plugins.md) for details._
 
-### Multi-Provider Operation
 
-When multiple autopilot devices are in use, one or more providers may be registered to manage the different devices.
 
-To ensure a consistent API calling profile and simplify client  operations when multiple providers are registered, one provider is assigned as the `default` and will be the target of requests that do not specify a provider / autopilot device. 
+### The Default Autopilot
 
-A provider plugin can request it be the `default` provider when it `registers` with the API.
+To ensure a consistent API calling profile and simplify client operations a `default` autopilot is assigned by the API and is accessible using the `./steering/autopilots/default` path.
 
-If no provider registers as the `default` and none has been set via the API _(see [Setting the Default Provider](#setting-the-default-provider))_, `default` will be assigned to the first provider:
+When only one autopilot is present, it is automatically assigned as the `default`.
 
-1. Registered _(if an API request is received before an `apUpdate()` call)_.
-2. To call `apUpdate()` _(if an API request has not been made)_.
+When multiple autopilot devices are present, you can assign an autopilot as the default using the `deafultPilot` API endpoint _(see [Setting the Default Provider](#setting-the-default-provider))_.
+
+If no `default pilot` is assigned:
+- When an update is received from a provider plugin, the autopilot generating the first update will be assigned as the `default`.
+- When an API request is received, the first autopilot device id listed by the first provider plugin registered, is assigned as the `default`.
 
 ---
 
-### Retrieving Provider Information
+### Retrieving List of Autopilots
 
-To retrieve a list of installed autopilot providers submit an HTTP `GET` request to `/signalk/v2/api/vessels/self/steering/autopilot/providers`.
+To retrieve a list of installed autopilot devices submit an HTTP `GET` request to `/signalk/v2/api/vessels/self/steering/autopilots`.
 
 ```typescript
-HTTP GET "/signalk/v2/api/vessels/self/steering/autopilot/providers"
+HTTP GET "/signalk/v2/api/vessels/self/steering/autopilots"
 ```
 _Response:_
 
 ```JSON
 {
-  "providers": [
-    {"id":"pypilot-provider","pilotType":"PyPilot"},
-    {"id":"raymarine-provider","pilotType":"Raymarine SmartPilot"}
-  ],
-  "defaultProvider":"pypilot-provider"
+  "pypilot-id": {
+    "provider":"pypilot-provider",
+    "isDefault": true
+  },
+  "raymarine-id": {
+    "provider":"raymarine-provider",
+    "isDefault": false
+  }
 }
 ```
 
-Where:
-- `providers` contains an array of autopilot provider plugin details
-- `defaultProvider` the identifier of the provider plugin that will be the target of requests made without specifying a provider to the Autopilot API.
-
-
 ### Setting the Default Provider
 
-To set the primary autopilot provider submit an HTTP `POST` request to `/signalk/v2/api/vessels/self/steering/autopilot/providers/primary/{pluginId}`.
+To set the primary autopilot provider submit an HTTP `POST` request to `/signalk/v2/api/vessels/self/steering/autopilots/defaultPilot/{id}` where `{id}` is the identifier of the autopilot to use as the default.
 
+_Example:_
 ```typescript
-HTTP POST "/signalk/v2/api/vessels/self/steering/autopilot/providers/primary/raymarine-provider"
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/defaultPilot/raymarine-id"
 ```
 
 The provider plugin with the supplied id will now be the target of requests made without specifying a provider to the Autopilot API.
 
-### Directing Requests to a Provider
+## Autopilot Operations
 
-To direct a request to a specific provider, you specify the provider id in the API endpoint as a query parameter.
+All API operations are accessible by issuing request to the path `/signalk/v2/api/vessels/self/steering/autopilots/{id}` where {id} is:
+1. The identifier of the autopilot device OR
+2. `default` to target the default autopilot.
 
 _Example:_
 ```typescript
-HTTP GET "/signalk/v2/api/vessels/self/steering/autopilot/options?provder=my-provider-id"
+HTTP GET "/signalk/v2/api/vessels/self/steering/autopilots/default/state"
 
-HTTP POST "/signalk/v2/api/vessels/self/steering/autopilot/target?provder=my-provider-id" {value: .0234}
+HTTP GET "/signalk/v2/api/vessels/self/steering/autopilots/pypilot-id/mode"
 ```
-
-## Autopilot Operations
-
 
 ### Retrieving Autopilot Status
 
-To retrieve the current autopilotconfiguration as well as a list of available options for `state` and `mode` selections, submit an HTTP `GET` request to `/signalk/v2/api/vessels/self/steering/autopilot`.
+To retrieve the current autopilot configuration as well as a list of available options for `state` and `mode` selections, submit an HTTP `GET` request to `/signalk/v2/api/vessels/self/steering/autopilots/{id}`.
 
 ```typescript
-HTTP GET "/signalk/v2/api/vessels/self/steering/autopilot"
+HTTP GET "/signalk/v2/api/vessels/self/steering/autopilots/{id}"
 ```
 _Response:_
 
@@ -109,7 +108,7 @@ Where:
 Autopilot state can be set by submitting an HTTP `PUT` request to the `state` endpoint containing a value from the list of available states.
 
 ```typescript
-HTTP PUT "/signalk/v2/api/vessels/self/steering/autopilot/state" {"value": "disabled"}
+HTTP PUT "/signalk/v2/api/vessels/self/steering/autopilots/{id}/state" {"value": "disabled"}
 ```
 
 ### Getting the Autopilot State
@@ -117,7 +116,7 @@ HTTP PUT "/signalk/v2/api/vessels/self/steering/autopilot/state" {"value": "disa
 The current autopilot state can be retrieved by submitting an HTTP `GET` request to the `state` endpoint.
 
 ```typescript
-HTTP GET "/signalk/v2/api/vessels/self/steering/autopilot/state"
+HTTP GET "/signalk/v2/api/vessels/self/steering/autopilots/{id}/state"
 ```
 
 _Response:_
@@ -133,7 +132,7 @@ _Response:_
 Autopilot mode can be set by submitting an HTTP `PUT` request to the `mode` endpoint containing a value from the list of available modes.
 
 ```typescript
-HTTP PUT "/signalk/v2/api/vessels/self/steering/autopilot/mode" {"value": "gps"}
+HTTP PUT "/signalk/v2/api/vessels/self/steering/autopilots/{id}/mode" {"value": "gps"}
 ```
 
 ### Getting the Autopilot Mode
@@ -141,7 +140,7 @@ HTTP PUT "/signalk/v2/api/vessels/self/steering/autopilot/mode" {"value": "gps"}
 The current autopilot mode can be retrieved by submitting an HTTP `GET` request to the `mode` endpoint.
 
 ```typescript
-HTTP GET "/signalk/v2/api/vessels/self/steering/autopilot/mode"
+HTTP GET "/signalk/v2/api/vessels/self/steering/autopilots/{id}/mode"
 ```
 
 _Response:_
@@ -159,13 +158,13 @@ Autopilot target value can be set by submitting an HTTP `PUT` request to the `ta
 _Note: The value supplied should be a number within the valid range for the selected `mode`._
 
 ```typescript
-HTTP PUT "signalk/v2/api/vessels/self/steering/autopilot/target" {"value": 1.1412}
+HTTP PUT "signalk/v2/api/vessels/self/steering/autopilots/{id}/target" {"value": 1.1412}
 ```
 
 The target value can be adjusted a +/- value by submitting an HTTP `PUT` request to the `target/adjust` endpoint with the value to add to the current `target` value in radians.
 
 ```typescript
-HTTP PUT "signalk/v2/api/vessels/self/steering/autopilot/target/adjust" {"value": -0.1412}
+HTTP PUT "signalk/v2/api/vessels/self/steering/autopilots/{id}/target/adjust" {"value": -0.1412}
 ```
 
 ### Getting the current Target value
@@ -173,7 +172,7 @@ HTTP PUT "signalk/v2/api/vessels/self/steering/autopilot/target/adjust" {"value"
 The current autopilot target value _(in radians)_ can be retrieved by submitting an HTTP `GET` request to the `target` endpoint.
 
 ```typescript
-HTTP GET "/signalk/v2/api/vessels/self/steering/autopilot/target"
+HTTP GET "/signalk/v2/api/vessels/self/steering/autopilots/{id}/target"
 ```
 
 _Response:_
@@ -191,7 +190,7 @@ _Response:_
 An autopilot can be engaged by [setting it to a speciifc `state`](#setting-the-state) but it can also be engaged more generically by submitting an HTTP `POST` request to the `engage` endpoint.
 
 ```typescript
-HTTP POST "/signalk/v2/api/vessels/self/steering/autopilot/engage"
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/{id}/engage"
 ```
 
 _Note: The resultant `state` into which the autopilot is placed will be determined by the **provider plugin** and the autopilot device it is communicating with._
@@ -201,7 +200,7 @@ _Note: The resultant `state` into which the autopilot is placed will be determin
 An autopilot can be disengaged by [setting it to a speciifc `state`](#setting-the-state) but it can also be disengaged more generically by submitting an HTTP `POST` request to the `disengage` endpoint.
 
 ```typescript
-HTTP POST "/signalk/v2/api/vessels/self/steering/autopilot/disengage"
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/{id}/disengage"
 ```
 
 _Note: The resultant `state` into which the autopilot is placed will be determined by the **provider plugin** and the autopilot device it is communicating with._
@@ -212,12 +211,12 @@ To send a command to the autopilot to perform a tack in the required direction, 
 
 _Example: Tack to Port_
 ```typescript
-HTTP POST "/signalk/v2/api/vessels/self/steering/autopilot/tack/port"
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/{id}/tack/port"
 ```
 
 _Example: Tack to Starboard_
 ```typescript
-HTTP POST "/signalk/v2/api/vessels/self/steering/autopilot/tack/starboard"
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/{id}/tack/starboard"
 ```
 
 
@@ -227,10 +226,10 @@ To send a command to the autopilot to perform a gybe in the required direction, 
 
 _Example: Gybe to Port_
 ```typescript
-HTTP POST "/signalk/v2/api/vessels/self/steering/autopilot/gybe/port"
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/{id}/gybe/port"
 ```
 
 _Example: Gybe to Starboard_
 ```typescript
-HTTP POST "/signalk/v2/api/vessels/self/steering/autopilot/gybe/starboard"
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/{id}/gybe/starboard"
 ```

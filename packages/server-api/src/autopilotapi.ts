@@ -19,31 +19,32 @@ export const isAutopilotUpdateAttrib = (s: string) =>
 export type TackGybeDirection = 'port' | 'starboard'
 
 export interface AutopilotApi {
-  register(
-    pluginId: string,
-    provider: AutopilotProvider,
-    asDefault?: boolean
-  ): void
+  register(pluginId: string, provider: AutopilotProvider): void
   unRegister(pluginId: string): void
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  apUpdate(pluginId: string, attrib: AutopilotUpdateAttrib, value: any, deviceId?: string): void
+  apUpdate(
+    pluginId: string,
+    deviceId: string,
+    attrib: AutopilotUpdateAttrib,
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    value: any
+  ): void
 }
 
 /** @see {isAutopilotProvider} ts-auto-guard:type-guard */
 export interface AutopilotProvider {
-  pilotType: string
-  getData(): Promise<AutopilotInfo>
-  getState(): Promise<string>
-  setState(state: string): Promise<void>
-  getMode(): Promise<string>
-  setMode(mode: string): Promise<void>
-  getTarget(): Promise<number>
-  setTarget(value: number): Promise<void>
-  adjustTarget(value: number): Promise<void>
-  engage(): Promise<void>
-  disengage(): Promise<void>
-  tack(direction: TackGybeDirection): Promise<void>
-  gybe(direction: TackGybeDirection): Promise<void>
+  getData(deviceId: string): Promise<AutopilotInfo>
+  getState(deviceId: string): Promise<string>
+  setState(state: string, deviceId: string): Promise<boolean>
+  getMode(deviceId: string): Promise<string>
+  setMode(mode: string, deviceId: string): Promise<void>
+  getTarget(deviceId: string): Promise<number>
+  setTarget(value: number, deviceId: string): Promise<void>
+  adjustTarget(value: number, deviceId: string): Promise<void>
+  engage(deviceId: string): Promise<void>
+  disengage(deviceId: string): Promise<void>
+  tack(direction: TackGybeDirection, deviceId: string): Promise<void>
+  gybe(direction: TackGybeDirection, deviceId: string): Promise<void>
 }
 
 export interface AutopilotStateDef {
@@ -65,5 +66,8 @@ export interface AutopilotInfo {
 }
 
 export interface AutopilotProviderRegistry {
-  registerAutopilotProvider(provider: AutopilotProvider): void
+  registerAutopilotProvider(
+    provider: AutopilotProvider,
+    devices: string[]
+  ): void
 }

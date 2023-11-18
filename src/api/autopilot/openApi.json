@@ -129,15 +129,13 @@
       }
     },
     "parameters": {
-      "ProviderParam": {
-        "in": "query",
-        "name": "provider",
-        "description": "Plugin id of the autopilot provider to direct the request to (When multiple providers are registered).",
-        "style": "form",
-        "explode": false,
+      "AutopilotIdParam": {
+        "name": "id",
+        "in": "path",
+        "description": "autopilot id",
+        "required": true,
         "schema": {
-          "type": "string",
-          "example": "my-provider"
+          "type": "string"
         }
       }
     },
@@ -157,11 +155,79 @@
   "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
   "paths": {
     "/": {
+      "get": {
+        "tags": ["providers"],
+        "summary": "Retrieve provider information.",
+        "description": "Returns the autopilot provider details and current defaults.",
+        "responses": {
+          "default": {
+            "description": "Autopilot provider information response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["providers", "default"],
+                  "properties": {
+                    "defaultDevice": {
+                      "type": "string",
+                      "description": "ID of the default autopilot device.",
+                      "example": "my-pilot"
+                    },
+                    "defaultProvider": {
+                      "type": "string",
+                      "description": "ID of the default provider.",
+                      "example": "my-pilot-provider"
+                    },
+                    "providers": {
+                      "type": "array",
+                      "description": "List of registered providers.",
+                      "items": {
+                        "type": "object",
+                        "required": ["id", "pilotType"],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "example": "my-pilot-provider"
+                          },
+                          "pilotType": {
+                            "type": "string",
+                            "example": "my-pilot"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "error": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/defaultPilot/{id}": {
       "parameters": [
         {
-          "$ref": "#/components/parameters/ProviderParam"
+          "$ref": "#/components/parameters/AutopilotIdParam"
         }
       ],
+      "post": {
+        "tags": ["providers"],
+        "summary": "Set the default autopilot device.",
+        "description": "Sets the autopilot with the supplied `id` as the default.",
+        "responses": {
+          "200ActionResponse": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/{id}": {
       "get": {
         "tags": ["autopilot"],
         "summary": "Retrieve autopilot information.",
@@ -209,10 +275,10 @@
         }
       }
     },
-    "/options": {
+    "/{id}/options": {
       "parameters": [
         {
-          "$ref": "#/components/parameters/ProviderParam"
+          "$ref": "#/components/parameters/AutopilotIdParam"
         }
       ],
       "get": {
@@ -236,84 +302,10 @@
         }
       }
     },
-    "/providers": {
-      "get": {
-        "tags": ["providers"],
-        "summary": "Retrieve provider information.",
-        "description": "Returns the autopilot provider details.",
-        "responses": {
-          "default": {
-            "description": "Autopilot provider information response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": ["providers", "default"],
-                  "properties": {
-                    "defaultProvider": {
-                      "type": "string",
-                      "description": "ID of the default provider.",
-                      "example": "my-pilot-provider"
-                    },
-                    "providers": {
-                      "type": "array",
-                      "description": "List of registered providers.",
-                      "items": {
-                        "type": "object",
-                        "required": ["id", "pilotType"],
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "example": "my-pilot-provider"
-                          },
-                          "pilotType": {
-                            "type": "string",
-                            "example": "my-pilot"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "error": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/providers/{id}": {
-      "post": {
-        "tags": ["providers"],
-        "summary": "Set the default provider.",
-        "description": "Sets the provider with the supplied `id` as the default.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "provider id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200ActionResponse": {
-            "$ref": "#/components/responses/200ActionResponse"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/engage": {
+    "/{id}/engage": {
       "parameters": [
         {
-          "$ref": "#/components/parameters/ProviderParam"
+          "$ref": "#/components/parameters/AutopilotIdParam"
         }
       ],
       "post": {
@@ -329,10 +321,10 @@
         }
       }
     },
-    "/disengage": {
+    "/{id}/disengage": {
       "parameters": [
         {
-          "$ref": "#/components/parameters/ProviderParam"
+          "$ref": "#/components/parameters/AutopilotIdParam"
         }
       ],
       "post": {
@@ -348,10 +340,10 @@
         }
       }
     },
-    "/state": {
+    "/{id}/state": {
       "parameters": [
         {
-          "$ref": "#/components/parameters/ProviderParam"
+          "$ref": "#/components/parameters/AutopilotIdParam"
         }
       ],
       "get": {
@@ -412,10 +404,10 @@
         }
       }
     },
-    "/mode": {
+    "/{id}/mode": {
       "parameters": [
         {
-          "$ref": "#/components/parameters/ProviderParam"
+          "$ref": "#/components/parameters/AutopilotIdParam"
         }
       ],
       "get": {
@@ -476,10 +468,10 @@
         }
       }
     },
-    "/target": {
+    "/{id}/target": {
       "parameters": [
         {
-          "$ref": "#/components/parameters/ProviderParam"
+          "$ref": "#/components/parameters/AutopilotIdParam"
         }
       ],
       "get": {
@@ -545,10 +537,10 @@
         }
       }
     },
-    "/target/adjust": {
+    "/{id}/target/adjust": {
       "parameters": [
         {
-          "$ref": "#/components/parameters/ProviderParam"
+          "$ref": "#/components/parameters/AutopilotIdParam"
         }
       ],
       "put": {
@@ -584,10 +576,10 @@
         }
       }
     },
-    "/tack/port": {
+    "/{id}/tack/port": {
       "parameters": [
         {
-          "$ref": "#/components/parameters/ProviderParam"
+          "$ref": "#/components/parameters/AutopilotIdParam"
         }
       ],
       "post": {
@@ -603,10 +595,10 @@
         }
       }
     },
-    "/tack/starboard": {
+    "/{id}/tack/starboard": {
       "parameters": [
         {
-          "$ref": "#/components/parameters/ProviderParam"
+          "$ref": "#/components/parameters/AutopilotIdParam"
         }
       ],
       "post": {
@@ -622,10 +614,10 @@
         }
       }
     },
-    "/gybe/port": {
+    "/{id}/gybe/port": {
       "parameters": [
         {
-          "$ref": "#/components/parameters/ProviderParam"
+          "$ref": "#/components/parameters/AutopilotIdParam"
         }
       ],
       "post": {
@@ -641,10 +633,10 @@
         }
       }
     },
-    "/gybe/starboard": {
+    "/{id}/gybe/starboard": {
       "parameters": [
         {
-          "$ref": "#/components/parameters/ProviderParam"
+          "$ref": "#/components/parameters/AutopilotIdParam"
         }
       ],
       "post": {

@@ -527,8 +527,11 @@ module.exports = (theApp: any) => {
 
     const autopilotApi: AutopilotApi = app.autopilotApi
     _.omit(appCopy, 'autopilotApi') // don't expose the actual autopilot api manager
-    appCopy.registerAutopilotProvider = (provider: AutopilotProvider) => {
-      autopilotApi.register(plugin.id, provider)
+    appCopy.registerAutopilotProvider = (
+      provider: AutopilotProvider,
+      devices: string[]
+    ) => {
+      autopilotApi.register(plugin.id, provider, devices)
     }
 
     const courseApi: CourseApi = app.courseApi

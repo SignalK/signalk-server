@@ -6,132 +6,340 @@ _This document should be read in conjunction with the [SERVER PLUGINS](./server_
 
 ## Overview
 
-The Signal K Autopilot API defines endpoints under the path `/signalk/v2/api/vessels/self/steering/autopilot` providing a way for all Signal K clients to perform common autopilot operations independent of the autopilot device in use. The API is defined in an [OpenAPI](/doc/openapi/?urls.primaryName=autopilot) document.
+The Signal K Autopilot API defines endpoints under the path `/signalk/v2/api/vessels/self/steering/autopilots` providing a way for all Signal K clients to perform common autopilot operations independent of the autopilot device in use. The API is defined in an [OpenAPI](/doc/openapi/?urls.primaryName=autopilot) document.
 
 Requests made to the Autopilot API are received by the Signal K Server, where they are validated and an authorisation check performed, before being passed on to a **provider plugin** to action the request on the autopilot device.
 
 This de-coupling of request handling and autopilot communication provides the flexibility to support a variety of autopilot devices and ensures interoperability and reliabilty.
 
-
-## Autopilot Provider Plugin
-
 Autopilot API requests are passed to a **provider plugin** which will process and action the request facilitating communication with the autopilot device.
 
 The following diagram provides an overview of the Autopilot API architectue.
-
 
 <img src="../../img/autopilot_provider.svg" width="600px">
 
 _Autopilot API architecture_
 
 
-To ensure reliable operation for all Signal K client apps, the Autopilot Provider plugin MUST:
+## Provider Plugins:
+
+An autopilot provider plugin is a Signal K server plugin that implements the **Autopilot Provider Interface** which:
+- Tells server the autopilot devices provided for by the plugin
+- Registers the methods used to action requests passed from the server to perform autopilot operations.
+
+Note: multiple providers can be registered and each provider can manage one or more autopilot devices.
+
+The `AutopilotProvider` interface is defined as follows in _`@signalk/server-api`_:
+
+```typescript
+interface AutopilotProvider {
+  getData(deviceId: string): Promise<AutopilotInfo>
+  getState(deviceId: string): Promise<string>
+  setState(state: string, deviceId: string): Promise<boolean>
+  getMode(deviceId: string): Promise<string>
+  setMode(mode: string, deviceId: string): Promise<void>
+  getTarget(deviceId: string): Promise<number>
+  setTarget(value: number, deviceId: string): Promise<void>
+  adjustTarget(value: number, deviceId: string): Promise<void>
+  engage(deviceId: string): Promise<void>
+  disengage(deviceId: string): Promise<void>
+  tack(direction: TackGybeDirection, deviceId: string): Promise<void>
+  gybe(direction: TackGybeDirection, deviceId: string): Promise<void>
+}
+```
+
+**Note: An Autopilot Provider plugin MUST:**
 - Implement all Autopilot API interface methods.
 - Facilitate communication on the target autopilot device to send commands and retrieve both status and configuration information
-- Map autopilot states to support `engage` and `disengage` operations and maintain the `engaged` path attribute. 
+- Map autopilot states to support `engage` and `disengage` operations and maintain the `engaged` path attribute.
 
 
-## Operation
+### Registering as an Autopilot Provider
 
-### Autopilot Options
+A provider plugin must register itself with the Autopilot API during start up by calling the `registerAutopilotProvider`.
 
-Autopilot device models from differnet manifacturers will likely have different `states` and `modes` of operation. To ensure that a client app can represent the valid states and modes, the **provider plugin** MUST return these values in the response to a `steering/autopilot` endpoint request.
+The function has the following signature:
 
+```typescript
+app.registerAutopilotProvider(provider: AutopilotProvider, devices: string[])
 ```
-HTTP GET "steering/autopilot"
-```
-_Example response:_
-```JSON
-{
-  "options":{
-    "state":[
-        {"name":"enabled","engaged":true}, 
-        {"name":"disabled","engaged":false}
-    ],
-    "mode":["gps","compass","wind"]
-  },
-  "state":"disabled",
-  "mode":"gps",
-  "target": 0,
-  "engaged": false
-}
-```
-As per the example above, the `options` attribute contains the available values that can be supplied for both `state` and `mode`.
+where:
 
-The listed `state` options also indicate whether the autopilot is `engaged` and activley steering the vessel when in that state.
+- `provider`: is a valid **AutopilotProvider** object
+- `devices`: is an array of identifiers for the autopilot devices managed by the plugin.
 
-The client app can then use these values when making a request to the associated API endpoint.
+_Example: Plugin registering as a routes & waypoints provider._
+```javascript
+import { AutopilotProvider } from '@signalk/server-api'
 
-_**If the client submits a request containing an invalid value an error response should be returned.**_
+module.exports = function (app) {
 
-_Example: Set the autopilot `mode:`_
-```
-HTTP PUT "steering/autopilot/mode" {value: "compass"}
-``` 
-_Example: Set the autopilot `state:`_
-```
-HTTP PUT "steering/autopilot/state" {value: "enabled"}
-``` 
-
-### Autopilot State
-
-Autopilot state refers to whether or not the autopilot is actively and steering the vessel.
-
-As autopilot devices and models will have a different number of states and labels, the available state options indicate whether the autopilot is `enaged` when in that state.
-
-To illustrate the expected behaviour consider an autopilot device with the following states: _off / standby / auto_ where _auto_ is the only state where the autopilot is actively steering the vessel.
-
-#### 1. Engaging the Autopilot
-
-To engage the autopilot, issue one of the following requests:
-
-1. Specifically set the desired `state` 
-```
-HTTP PUT "steering/autopilot/state" {value: "auto"}
-```
-
-2. The plugin determines `state` value to set
-```
-HTTP POST "steering/autopilot/engage"
-``` 
-_Result:_
-```JSON
-{
-    "steering": {
-        "autopilot": {
-            "engaged": true,
-            "state": "auto",
-            ...
-        }
+    const plugin = {
+    id: 'mypluginid',
+    name: 'My autopilot Provider plugin'
     }
-}
-```
 
-#### 2. Disengaging the Autopilot
-
-To disengage the autopilot and set the value `steering.autopilot.engaged` to `false`, issue one of the following requests:
-
-1. Specifically set the desired `state` 
-```
-HTTP PUT "steering/autopilot/state" {value: "standby"}
-```
-
-2. The plugin determines `state` value to set
-```
-HTTP POST "steering/autopilot/disengage"
-```
-_Result:_
-```JSON
-{
-    "steering": {
-        "autopilot": {
-            "engaged": false,
-            "state": "standby"
-            ...
-        }
+    const autopilotProvider: AutopilotProvider = {
+        getData: (deviceId: string) => { return ... },
+        getState: (deviceId: string) => { return ... },
+        setState: (state: string, deviceId: string) => { return true },
+        getMode: (deviceId: string) => { return ... },
+        setMode: (mode: string, deviceId: string) => { ... },
+        getTarget: (deviceId: string) => { return ... },
+        setTarget(value: number, deviceId: string) => { ... },
+        adjustTarget(value: number, deviceId: string) => { ... },
+        engage: (deviceId: string) => { ... },
+        disengage: (deviceId: string) => { ... },
+        tack:(direction: TackGybeDirection, deviceId: string) => { ... },
+        gybe:(direction: TackGybeDirection, deviceId: string) => { ... }
     }
+
+    const pilots = ['pilot1', 'pilot2']
+
+  plugin.start = function(options) {
+    ...
+    try {
+      app.registerAutopilotProvider(autopilotProvider, pilots)
+    }
+    catch (error) {
+      // handle error
+    }
+  }
+
+  return plugin
 }
 ```
+
+### Provider Methods:
+
+**`getData(deviceId)`**: This method returns an AutopilotInfo object containing the current data values and valid options for the supplied autopilot device identifier.
+
+- `deviceId:` identifier of the autopilot device to query.
+
+returns: `Promise<{AutopilotInfo}>`
+
+_Note: It is the responsibility of the autopilot provider plugin to map the value of `engaged` to the current `state`._
+
+
+_Example:_ 
+```
+GET signalk/v2/api/vessels/self/steering/autopilots/mypilot1
+```
+_AutopilotProvider method invocation:_
+```javascript
+getData('mypilot1');
+```
+
+_Returns:_
+```javascript
+{
+  options: {
+    states: [
+        {
+            name: 'auto' // autopilot state name
+            engaged: true // actively steering
+        },
+        {
+            name: 'standby' // autopilot state name
+            engaged: false // not actively steering
+        }
+    ]
+    modes: ['compass', 'gps', 'wind']
+},
+  target: 0.326
+  mode: 'compass'
+  state: 'auto'
+  engaged: true
+}
+```
+
+**`getState(deviceId)`**: This method returns the current state of the supplied autopilot device identifier.
+
+- `deviceId:` identifier of the autopilot device to query.
+
+returns: `Promise<{string}>`
+
+_Example:_ 
+```
+GET signalk/v2/api/vessels/self/steering/autopilots/mypilot1/state
+```
+_AutopilotProvider method invocation:_
+```javascript
+getState('mypilot1');
+```
+
+_Returns:_
+```javascript
+'auto'
+```
+
+**`setState(state, deviceI?)`**: This method sets the autopilot device with the supplied identifier to the supplied state value.
+
+- `state:` state value to set. Must be a valid state value.
+- `deviceId:` identifier of the autopilot device to query.
+
+returns: `Promise<{boolean}>` indicating whether the new state has engaged the pilot.
+
+throws on error or if supplied state value is invalid.
+
+_Example:_ 
+```javascript
+PUT signalk/v2/api/vessels/self/steering/autopilots/mypilot1/state {value: "standby"}
+```
+_AutopilotProvider method invocation:_
+```javascript
+setState('standby', 'mypilot1');
+```
+
+_Returns:_
+```javascript
+false
+```
+
+**`getMode(deviceId)`**: This method returns the current mode of the supplied autopilot device identifier.
+
+- `deviceId:` identifier of the autopilot device to query.
+
+returns: `Promise<{string}>`
+
+_Example:_ 
+```
+GET signalk/v2/api/vessels/self/steering/autopilots/mypilot1/mode
+```
+_AutopilotProvider method invocation:_
+```javascript
+getMode('mypilot1');
+```
+
+_Returns:_
+```javascript
+'compass'
+```
+
+**`setMode(mode, deviceId)`**: This method sets the autopilot device with the supplied identifier to the supplied mode value.
+
+- `mode:` mode value to set. Must be a valid mode value.
+- `deviceId:` identifier of the autopilot device to query.
+
+returns: `Promise<{void}>`
+
+throws on error or if supplied mode value is invalid.
+
+_Example:_ 
+```javascript
+PUT signalk/v2/api/vessels/self/steering/autopilots/mypilot1/mode {value: "gps"}
+```
+_AutopilotProvider method invocation:_
+```javascript
+setMode('gps', 'mypilot1');
+```
+
+**`setTarget(value, deviceId)`**: This method sets target for the autopilot device with the supplied identifier to the supplied value.
+
+- `value:` target value in radians.
+- `deviceId:` identifier of the autopilot device to query.
+
+returns: `Promise<{void}>`
+
+throws on error or if supplied target value is outside the valid range.
+
+_Example:_ 
+```javascript
+PUT signalk/v2/api/vessels/self/steering/autopilots/mypilot1/target {value: 0.361}
+```
+_AutopilotProvider method invocation:_
+```javascript
+setTarget(0.361, 'mypilot1');
+```
+
+**`adjustTarget(value, deviceId)`**: This method adjusts target for the autopilot device with the supplied identifier by the supplied value.
+
+- `value:` value in radians to add to current target value.
+- `deviceId:` identifier of the autopilot device to query.
+
+returns: `Promise<{void}>`
+
+throws on error or if supplied target value is outside the valid range.
+
+_Example:_ 
+```javascript
+PUT signalk/v2/api/vessels/self/steering/autopilots/mypilot1/target {value: 0.361}
+```
+_AutopilotProvider method invocation:_
+```javascript
+adjustTarget(0.0276, 'mypilot1');
+```
+
+**`engage(deviceId)`**: This method sets the state of the autopilot device with the supplied identifier to a state that is actively steering the vessel.
+
+- `deviceId:` identifier of the autopilot device to query.
+
+returns: `Promise<{void}>`
+
+throws on error.
+
+_Example:_ 
+```javascript
+POST signalk/v2/api/vessels/self/steering/autopilots/mypilot1/engage
+```
+_AutopilotProvider method invocation:_
+```javascript
+engage('mypilot1');
+```
+
+**`disengage(deviceId)`**: This method sets the state of the autopilot device with the supplied identifier to a state that is NOT actively steering the vessel.
+
+- `deviceId:` identifier of the autopilot device to query.
+
+returns: `Promise<{void}>`
+
+throws on error.
+
+_Example:_ 
+```javascript
+POST signalk/v2/api/vessels/self/steering/autopilots/mypilot1/disengage
+```
+_AutopilotProvider method invocation:_
+```javascript
+disengage('mypilot1');
+```
+
+**`tack(direction, deviceId)`**: This method instructs the autopilot device with the supplied identifier to perform a tack in the suplied direction.
+
+- `direction`: 'port' or 'starboard'
+- `deviceId:` identifier of the autopilot device to query.
+
+returns: `Promise<{void}>`
+
+throws on error.
+
+_Example:_ 
+```javascript
+POST signalk/v2/api/vessels/self/steering/autopilots/mypilot1/tack/port
+```
+_AutopilotProvider method invocation:_
+```javascript
+tack('port', 'mypilot1');
+```
+
+**`gybe(direction, deviceId)`**: This method instructs the autopilot device with the supplied identifier to perform a gybe in the suplied direction.
+
+- `direction`: 'port' or 'starboard'
+- `deviceId:` identifier of the autopilot device to query.
+
+returns: `Promise<{void}>`
+
+throws on error.
+
+_Example:_ 
+```javascript
+POST signalk/v2/api/vessels/self/steering/autopilots/mypilot1/gybe/starboard
+```
+_AutopilotProvider method invocation:_
+```javascript
+gybe('starboard', 'mypilot1');
+```
+
 
 ### Unhandled Operations
 
