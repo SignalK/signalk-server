@@ -23,7 +23,8 @@ import {
   AutopilotProvider,
   ServerAPI,
   PointDestination,
-  RouteDestination
+  RouteDestination,
+  AutopilotUpdateAttrib
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -532,6 +533,13 @@ module.exports = (theApp: any) => {
       devices: string[]
     ) => {
       autopilotApi.register(plugin.id, provider, devices)
+    }
+    appCopy.autopilotUpdate = (
+      deviceId: string,
+      attrib: AutopilotUpdateAttrib,
+      value: any
+    ) => {
+      autopilotApi.apUpdate(plugin.id, deviceId, attrib, value)
     }
 
     const courseApi: CourseApi = app.courseApi

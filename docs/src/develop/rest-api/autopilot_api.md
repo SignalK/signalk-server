@@ -5,36 +5,43 @@
 
 The Autopilot API defines the `autopilots` path under the `steering` schema group _(e.g. `/signalk/v2/api/vessels/self/steering/autopilots`)_ for representing information from one or more autopilot devices.
 
-The Autopilot API provides a mechanism for applications to issue requests to autopilot devices to perform common operations.
+The Autopilot API provides a mechanism for applications to issue requests to autopilot devices to perform common operations. Additionally, when multiple autopilot devices are present, each autopilot device is individually addressable.
 
-Additionally, the use of multiple autopilot devices is supported, with each autopilot device individually addressable.
+ _Note: Autopilot provider plugins are required to enable the API operation and provide communication with autopilot devices. See [Autopilot Provider Plugins](../plugins/autopilot_provider_plugins.md) for details._
 
- _Note: Autopilot provider plugins are required to manage the communication with autopilot devices. See [Autopilot Provider Plugins](../plugins/autopilot_provider_plugins.md) for details._
+## The `Default` Autopilot
+
+To ensure a consistent API calling profile and to simplify client operations, the Autopilot API will assign a `default` autopilot device which is accessible using the path `./steering/autopilots/default`.
+
+- When only one autopilot is present, it will be assigned as the `default`.
+
+- When multiple autopilots are present, and a `default` is yet to be assigned, one will be assigned when:
+  - An update is received from a provider plugin, the autopilot which is the source of the update will be assigned as the `default`.
+  - An API request is received, the first autopilot device registered, is assigned as the `default`.
+  - A request is sent to the `deafultPilot` API endpoint _(see [Setting the Default Autopilot](#setting-the-default-provider))_.
+
+### Setting the Default Autopilot
+
+To set / change the `default` autopilot, submit an HTTP `POST` request to `/signalk/v2/api/vessels/self/steering/autopilots/defaultPilot/{id}` where `{id}` is the identifier of the autopilot to use as the default.
+
+_Example:_
+```typescript
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/defaultPilot/raymarine-id"
+```
+
+The autopilot with the supplied id will now be the target of requests made to `./steering/autopilots/default/*`.
 
 
+## Listing the available Autopilots
 
-### The Default Autopilot
+To retrieve a list of installed autopilot devices, submit an HTTP `GET` request to `/signalk/v2/api/vessels/self/steering/autopilots`.
 
-To ensure a consistent API calling profile and simplify client operations a `default` autopilot is assigned by the API and is accessible using the `./steering/autopilots/default` path.
-
-When only one autopilot is present, it is automatically assigned as the `default`.
-
-When multiple autopilot devices are present, you can assign an autopilot as the default using the `deafultPilot` API endpoint _(see [Setting the Default Provider](#setting-the-default-provider))_.
-
-If no `default pilot` is assigned:
-- When an update is received from a provider plugin, the autopilot generating the first update will be assigned as the `default`.
-- When an API request is received, the first autopilot device id listed by the first provider plugin registered, is assigned as the `default`.
-
----
-
-### Retrieving List of Autopilots
-
-To retrieve a list of installed autopilot devices submit an HTTP `GET` request to `/signalk/v2/api/vessels/self/steering/autopilots`.
+The response will be an object containing all the registered autopilot devices, keyed by their identifier, detailing the `provider` it is registered by and whether it is assigned as the `default`.
 
 ```typescript
 HTTP GET "/signalk/v2/api/vessels/self/steering/autopilots"
 ```
-_Response:_
+_Example response: list of registered autopilots showing that `pypilot-id` is assigned as the `default`._
 
 ```JSON
 {
@@ -49,22 +56,47 @@ _Response:_
 }
 ```
 
-### Setting the Default Provider
+## Autopilot Deltas
 
-To set the primary autopilot provider submit an HTTP `POST` request to `/signalk/v2/api/vessels/self/steering/autopilots/defaultPilot/{id}` where `{id}` is the identifier of the autopilot to use as the default.
+Deltas emitted by the Autopilot API will have the base path `steering.autopilot` with the `$source` containing the autopilot device identifier.
 
-_Example:_
-```typescript
-HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/defaultPilot/raymarine-id"
+Additionally, a delta will be emitted with a `$source` value of `default` for each delta emitted by the autopilot assigned as the `dafault`.
+
+_Example: Deltas for `autopilot.engaged` from two autopilots (`raymarine-id` is `default`)._
+```JSON
+{
+  "context":"vessels.self",
+  "updates":[
+    {
+      "$source":"default",
+      "timestamp":"2023-11-19T06:12:47.820Z",
+      "values":[
+        {"path":"steering.autopilot.engaged","value":true}
+      ]
+    },
+    {
+      "$source":"pypilot-id",
+      "timestamp":"2023-11-19T06:12:47.820Z",
+      "values":[
+        {"path":"steering.autopilot.engaged","value":false}
+      ]
+    },
+    {
+      "$source":"raymarine-id",
+      "timestamp":"2023-11-19T06:12:47.820Z",
+      "values":[
+        {"path":"steering.autopilot.engaged","value":true}
+      ]
+    }
+  ]
+}
 ```
-
-The provider plugin with the supplied id will now be the target of requests made without specifying a provider to the Autopilot API.
 
 ## Autopilot Operations
 
-All API operations are accessible by issuing request to the path `/signalk/v2/api/vessels/self/steering/autopilots/{id}` where {id} is:
-1. The identifier of the autopilot device OR
-2. `default` to target the default autopilot.
+All API operations are invoked by issuing a request to:
+1. `/signalk/v2/api/vessels/self/steering/autopilots/default`
+2. `/signalk/v2/api/vessels/self/steering/autopilots/{id}`
 
 _Example:_
 ```typescript

@@ -70,4 +70,10 @@ export interface AutopilotProviderRegistry {
     provider: AutopilotProvider,
     devices: string[]
   ): void
+  autopilotUpdate(
+    deviceId: string,
+    attrib: AutopilotUpdateAttrib,
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    value: any
+  ): void
 }

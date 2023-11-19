@@ -15,17 +15,13 @@
   },
   "servers": [
     {
-      "url": "/signalk/v2/api/vessels/self/steering/autopilot"
+      "url": "/signalk/v2/api/vessels/self/steering/autopilots"
     }
   ],
   "tags": [
     {
       "name": "autopilot",
       "description": "Signal K Autopilot API"
-    },
-    {
-      "name": "providers",
-      "description": "Autopilot Providers"
     }
   ],
   "components": {
@@ -156,44 +152,29 @@
   "paths": {
     "/": {
       "get": {
-        "tags": ["providers"],
-        "summary": "Retrieve provider information.",
-        "description": "Returns the autopilot provider details and current defaults.",
+        "tags": ["autopilot"],
+        "summary": "Retrieve list of autopilots.",
+        "description": "Returns a list of autopilots indexed by their identifier.",
         "responses": {
           "default": {
-            "description": "Autopilot provider information response.",
+            "description": "Autopilot device list response.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["providers", "default"],
-                  "properties": {
-                    "defaultDevice": {
-                      "type": "string",
-                      "description": "ID of the default autopilot device.",
-                      "example": "my-pilot"
-                    },
-                    "defaultProvider": {
-                      "type": "string",
-                      "description": "ID of the default provider.",
-                      "example": "my-pilot-provider"
-                    },
-                    "providers": {
-                      "type": "array",
-                      "description": "List of registered providers.",
-                      "items": {
-                        "type": "object",
-                        "required": ["id", "pilotType"],
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "example": "my-pilot-provider"
-                          },
-                          "pilotType": {
-                            "type": "string",
-                            "example": "my-pilot"
-                          }
-                        }
+                  "additionalProperties": {
+                    "type": "object",
+                    "required": ["provider", "isDefault"],
+                    "properties": {
+                      "provider": {
+                        "type": "string",
+                        "description": "Provider plugin managing the autopilot device.",
+                        "example": "my-pilot-provider"
+                      },
+                      "isDefault": {
+                        "type": "boolean",
+                        "description": "Set to true when the autopilot is currently set as the default.",
+                        "example": "false"
                       }
                     }
                   }
@@ -214,7 +195,7 @@
         }
       ],
       "post": {
-        "tags": ["providers"],
+        "tags": ["autopilot"],
         "summary": "Set the default autopilot device.",
         "description": "Sets the autopilot with the supplied `id` as the default.",
         "responses": {
@@ -228,6 +209,11 @@
       }
     },
     "/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AutopilotIdParam"
+        }
+      ],
       "get": {
         "tags": ["autopilot"],
         "summary": "Retrieve autopilot information.",
@@ -310,7 +296,8 @@
       ],
       "post": {
         "tags": ["autopilot"],
-        "summary": "Engage autopilot to steer vessel.",
+        "summary": "Engage autopilot to steer vessel",
+        "description": "Provider plugin will set the autopilot to a `state` where it is actively steering the vessel. `state` selected is determined by the provider plugin.",
         "responses": {
           "200ActionResponse": {
             "$ref": "#/components/responses/200ActionResponse"
@@ -330,6 +317,8 @@
       "post": {
         "tags": ["autopilot"],
         "summary": "Disengage autopilot from steering vessel.",
+        "description": "Provider plugin will set the autopilot to a `state` where it is NOT actively steering the vessel. `state` selected is determined by the provider plugin.",
+
         "responses": {
           "200ActionResponse": {
             "$ref": "#/components/responses/200ActionResponse"
@@ -376,6 +365,7 @@
       "put": {
         "tags": ["autopilot"],
         "summary": "Set autopilot state.",
+        "description": "Set the autopilot to the supplied valid `state` value.",
         "requestBody": {
           "description": "Supply valid `state` value (as per response from autopilot information request).",
           "required": true,
@@ -440,6 +430,7 @@
       "put": {
         "tags": ["autopilot"],
         "summary": "Set autopilot mode",
+        "description": "Set the autopilot to the supplied valid `mode` value.",
         "requestBody": {
           "description": "Supply valid `mode` value (as per response from autopilot information request).",
           "required": true,
@@ -507,6 +498,7 @@
       "put": {
         "tags": ["autopilot"],
         "summary": "Set autopilot `target` value (radians).",
+        "description": "Value supplied must be in the valid range between -PI & 2*PI.",
         "requestBody": {
           "description": "Value in radians within the bounds of the current autopilot mode. (i.e. compass: 0 to 2*Pi, wind angle: -Pi to Pi)",
           "required": true,
@@ -546,6 +538,7 @@
       "put": {
         "tags": ["autopilot"],
         "summary": "Adjust autopilot target value by +/- radians.",
+        "description": "Value supplied will be added to the current target value. The result must be in the valid range between -PI & 2*PI.",
         "requestBody": {
           "description": "A value in radians to add to the current `target` value.",
           "required": true,
@@ -585,6 +578,7 @@
       "post": {
         "tags": ["autopilot"],
         "summary": "Tack to port.",
+        "description": "Execute a port tack.",
         "responses": {
           "200ActionResponse": {
             "$ref": "#/components/responses/200ActionResponse"
@@ -604,6 +598,7 @@
       "post": {
         "tags": ["autopilot"],
         "summary": "Tack to starboard.",
+        "description": "Execute a starboard tack.",
         "responses": {
           "200ActionResponse": {
             "$ref": "#/components/responses/200ActionResponse"
@@ -623,6 +618,7 @@
       "post": {
         "tags": ["autopilot"],
         "summary": "Gybe to port.",
+        "description": "Execute a gybe to port.",
         "responses": {
           "200ActionResponse": {
             "$ref": "#/components/responses/200ActionResponse"
@@ -642,6 +638,7 @@
       "post": {
         "tags": ["autopilot"],
         "summary": "Gybe to starboard.",
+        "description": "Execute a gybe to starboard.",
         "responses": {
           "200ActionResponse": {
             "$ref": "#/components/responses/200ActionResponse"

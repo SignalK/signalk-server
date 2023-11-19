@@ -51,7 +51,8 @@ interface AutopilotProvider {
 **Note: An Autopilot Provider plugin MUST:**
 - Implement all Autopilot API interface methods.
 - Facilitate communication on the target autopilot device to send commands and retrieve both status and configuration information
-- Map autopilot states to support `engage` and `disengage` operations and maintain the `engaged` path attribute.
+- Ensure the `engaged` path attribute value is maintained to reflect the operational status of the autopilot.
+- Map the `engage` and `disengage` operations to an appropriate autopilot device `state`.
 
 
 ### Registering as an Autopilot Provider
@@ -110,6 +111,32 @@ module.exports = function (app) {
 }
 ```
 
+### Updates from Autopilot device
+
+Updates from an autopilot device are sent to the Autopillot API via the `autopilotUpdate` interface method.
+
+Typically an autopilot provider plugin will call `autopilotUpdate` when receiving data from the autopilot device.
+
+_Note: All updates originating from the autopilot device, regardless of the communications protocol (NMEA2000, etc) should be sent to the Autopilot API using `autopilotUpdate`._
+
+The function has the following signature:
+
+```typescript
+app.autopilotUpdate(deviceID: string, attrib: AutopilotUpdateAttrib, value: any)
+```
+where:
+
+- `deviceId`: is the autopilot device identifier
+- `attrib`: is the attribute / path being updated
+- `value`: the new value.
+
+_Example:_
+```javascript
+app.autopilotUpdate('my-pilot', 'target', 1.52789)
+app.autopilotUpdate('my-pilot', 'mode', 'compass')
+```
+
+
 ### Provider Methods:
 
 **`getData(deviceId)`**: This method returns an AutopilotInfo object containing the current data values and valid options for the supplied autopilot device identifier.
@@ -153,6 +180,7 @@ _Returns:_
 }
 ```
 
+---
 **`getState(deviceId)`**: This method returns the current state of the supplied autopilot device identifier.
 
 - `deviceId:` identifier of the autopilot device to query.
@@ -173,12 +201,13 @@ _Returns:_
 'auto'
 ```
 
+---
 **`setState(state, deviceI?)`**: This method sets the autopilot device with the supplied identifier to the supplied state value.
 
 - `state:` state value to set. Must be a valid state value.
 - `deviceId:` identifier of the autopilot device to query.
 
-returns: `Promise<{boolean}>` indicating whether the new state has engaged the pilot.
+returns: `Promise<{boolean}>` indicating the new value of `engaged`.
 
 throws on error or if supplied state value is invalid.
 
@@ -196,6 +225,7 @@ _Returns:_
 false
 ```
 
+---
 **`getMode(deviceId)`**: This method returns the current mode of the supplied autopilot device identifier.
 
 - `deviceId:` identifier of the autopilot device to query.
@@ -216,6 +246,7 @@ _Returns:_
 'compass'
 ```
 
+---
 **`setMode(mode, deviceId)`**: This method sets the autopilot device with the supplied identifier to the supplied mode value.
 
 - `mode:` mode value to set. Must be a valid mode value.
@@ -234,6 +265,7 @@ _AutopilotProvider method invocation:_
 setMode('gps', 'mypilot1');
 ```
 
+---
 **`setTarget(value, deviceId)`**: This method sets target for the autopilot device with the supplied identifier to the supplied value.
 
 - `value:` target value in radians.
@@ -252,6 +284,7 @@ _AutopilotProvider method invocation:_
 setTarget(0.361, 'mypilot1');
 ```
 
+---
 **`adjustTarget(value, deviceId)`**: This method adjusts target for the autopilot device with the supplied identifier by the supplied value.
 
 - `value:` value in radians to add to current target value.
@@ -270,6 +303,7 @@ _AutopilotProvider method invocation:_
 adjustTarget(0.0276, 'mypilot1');
 ```
 
+---
 **`engage(deviceId)`**: This method sets the state of the autopilot device with the supplied identifier to a state that is actively steering the vessel.
 
 - `deviceId:` identifier of the autopilot device to query.
@@ -287,6 +321,7 @@ _AutopilotProvider method invocation:_
 engage('mypilot1');
 ```
 
+---
 **`disengage(deviceId)`**: This method sets the state of the autopilot device with the supplied identifier to a state that is NOT actively steering the vessel.
 
 - `deviceId:` identifier of the autopilot device to query.
@@ -304,6 +339,7 @@ _AutopilotProvider method invocation:_
 disengage('mypilot1');
 ```
 
+---
 **`tack(direction, deviceId)`**: This method instructs the autopilot device with the supplied identifier to perform a tack in the suplied direction.
 
 - `direction`: 'port' or 'starboard'
@@ -322,6 +358,7 @@ _AutopilotProvider method invocation:_
 tack('port', 'mypilot1');
 ```
 
+---
 **`gybe(direction, deviceId)`**: This method instructs the autopilot device with the supplied identifier to perform a gybe in the suplied direction.
 
 - `direction`: 'port' or 'starboard'
@@ -343,7 +380,7 @@ gybe('starboard', 'mypilot1');
 
 ### Unhandled Operations
 
-A **provider plugin** MUST implement ALL Autopilot API interface methods, regardless of whether the operation is supported or not.
+A provider plugin **MUST** implement **ALL** Autopilot API interface methods, regardless of whether the operation is supported or not.
 
 For an operation that is not supported by the autopilot device, then the plugin should `throw` an exception.
 
@@ -351,7 +388,7 @@ _Example:_
 ```typescript
 { 
     // unsupported operation method definition
-    gybe: async (d) => {
+    gybe: async (d, id) => {
         throw new Error('Unsupprted operation!)
     }
 }

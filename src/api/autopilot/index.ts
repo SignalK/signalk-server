@@ -11,7 +11,7 @@ import { SignalKMessageHub } from '../../app'
 import {
   AutopilotProvider,
   AutopilotInfo,
-  TackGybeDirection,
+  TackGybeDirection, // ** test only **
   SKVersion,
   Path,
   Delta,
@@ -112,7 +112,7 @@ export class AutopilotApi {
               options: {
                 states: [
                   { name: 'auto', engaged: true },
-                  { name: 'stnadby', engaged: false }
+                  { name: 'standby', engaged: false }
                 ],
                 modes: ['compass', 'nav', 'wind']
               },
@@ -194,11 +194,11 @@ export class AutopilotApi {
     )
     //setTimeout(() => this.unRegister('ap-plugin1'), 5000)
     //this.apUpdate('ap-plugin1', 'dev1a', 'target', Math.random())
-    /*setInterval(() => {
-      this.apUpdate('ap-plugin1', 'dev1a', 'target', Math.random())
-      this.apUpdate('ap-plugin2', 'dev2a', 'engaged', false)
-      this.apUpdate('ap-plugin1', 'dev1b', 'target', Math.random())
-    }, 5000)*/
+    //setInterval(() => {
+    this.apUpdate('ap-plugin1', 'dev1a', 'target', Math.random())
+    this.apUpdate('ap-plugin2', 'dev2a', 'engaged', false)
+    this.apUpdate('ap-plugin1', 'dev1b', 'target', Math.random())
+    //}, 5000)*/
   }
 
   async start() {
