@@ -51,7 +51,7 @@ class Embedded extends Component {
           return r
         }),
       openWebsocket: (params) => {
-        const knownParams = ['subscribe', 'sendCachedValues']
+        const knownParams = ['subscribe', 'sendCachedValues', 'events']
         const queryParam = knownParams
           .map((p, i) => [i, params[p]])
           .filter((x) => x[1] !== undefined)

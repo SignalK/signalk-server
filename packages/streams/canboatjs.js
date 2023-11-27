@@ -29,10 +29,12 @@ function CanboatJs(options) {
 
   this.fromPgn.on('warning', (pgn, warning) => {
     debug(`[warning] ${pgn.pgn} ${warning}`)
+    options.app.emit(`canboatjs:warning`, warning)
   })
 
   this.fromPgn.on('error', (pgn, err) => {
     console.error(pgn.input, err.message)
+    options.app.emit(`canboatjs:error`, err)
   })
 
   this.app = options.app
@@ -48,12 +50,16 @@ CanboatJs.prototype._transform = function (chunk, encoding, done) {
       pgnData.timestamp = new Date(Number(chunk.timestamp)).toISOString()
       this.push(pgnData)
       this.app.emit(this.analyzerOutEvent, pgnData)
+    } else {
+      this.app.emit('canboatjs:unparsed:object', chunk)
     }
   } else {
     const pgnData = this.fromPgn.parse(chunk)
     if (pgnData) {
       this.push(pgnData)
       this.app.emit(this.analyzerOutEvent, pgnData)
+    } else {
+      this.app.emit('canboatjs:unparsed:data', chunk)
     }
   }
   done()
