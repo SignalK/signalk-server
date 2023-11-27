@@ -26,6 +26,7 @@ const {
 const { putPath } = require('../put')
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
+import { startEvents, startServerEvents } from '../events'
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
 const Primus = require('primus')
@@ -678,7 +679,20 @@ function handleRealtimeConnection(app, spark, onChange) {
 
   if (spark.query.serverevents === 'all') {
     spark.hasServerEvents = true
-    startServerEvents(app, spark)
+    startServerEvents(
+      app,
+      spark,
+      wrapWithverifyWS(app.securityStrategy, spark, spark.write.bind(spark))
+    )
+  }
+
+  if (spark.query.events) {
+    startEvents(
+      app,
+      spark,
+      wrapWithverifyWS(app.securityStrategy, spark, spark.write.bind(spark)),
+      spark.query.events
+    )
   }
 }
 
@@ -696,49 +710,6 @@ function sendLatestDeltas(app, deltaCache, selfContext, spark) {
       sendMetaData(app, spark, delta)
       spark.write(delta)
     })
-}
-
-function startServerEvents(app, spark) {
-  const onServerEvent = wrapWithverifyWS(
-    app.securityStrategy,
-    spark,
-    spark.write.bind(spark)
-  )
-  app.on('serverevent', onServerEvent)
-  spark.onDisconnects.push(() => {
-    app.removeListener('serverevent', onServerEvent)
-  })
-  try {
-    spark.write({
-      type: 'VESSEL_INFO',
-      data: {
-        name: app.config.vesselName,
-        mmsi: app.config.vesselMMSI,
-        uuid: app.config.vesselUUID
-      }
-    })
-  } catch (e) {
-    if (e.code !== 'ENOENT') {
-      console.error(e)
-    }
-  }
-  Object.keys(app.lastServerEvents).forEach((propName) => {
-    spark.write(app.lastServerEvents[propName])
-  })
-  spark.write({
-    type: 'DEBUG_SETTINGS',
-    data: app.logging.getDebugSettings()
-  })
-  if (app.securityStrategy.canAuthorizeWS()) {
-    spark.write({
-      type: 'RECEIVE_LOGIN_STATUS',
-      data: app.securityStrategy.getLoginStatus(spark.request)
-    })
-  }
-  spark.write({
-    type: 'SOURCEPRIORITIES',
-    data: app.config.settings.sourcePriorities || {}
-  })
 }
 
 function startServerLog(app, spark) {

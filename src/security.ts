@@ -191,6 +191,8 @@ export interface SecurityStrategy {
     source: any,
     path: string
   ) => boolean
+
+  addAdminMiddleware: (path: string) => void
 }
 
 export class InvalidTokenError extends Error {

@@ -17,12 +17,12 @@
 */
 import {
   Brand,
+  PointDestination,
   PropertyValues,
   PropertyValuesCallback,
   ResourceProvider,
-  ServerAPI,
-  PointDestination,
-  RouteDestination
+  RouteDestination,
+  ServerAPI
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -31,19 +31,20 @@ import express, { Request, Response } from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
-import { ResourcesApi } from '../api/resources'
 import { CourseApi } from '../api/course'
+import { ResourcesApi } from '../api/resources'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
 import { listAllSerialPorts } from '../serialports'
 const debug = createDebug('signalk-server:interfaces:plugins')
 
-import { modulesWithKeyword } from '../modules'
 import { OpenApiDescription, OpenApiRecord } from '../api/swagger'
 import {
   CONNECTION_WRITE_EVENT_NAME,
   ConnectionWriteEvent
 } from '../deltastats'
+import { EventsActorId } from '../events'
+import { modulesWithKeyword } from '../modules'
 
 const put = require('../put')
 const _putPath = put.putPath
@@ -568,6 +569,11 @@ module.exports = (theApp: any) => {
     }
 
     appCopy.handleMessage = handleMessageWrapper(app, plugin.id)
+    const boundEventMethods = (app as any).wrappedEmitter.bindMethodsById(
+      `plugin:${plugin.id}` as EventsActorId
+    )
+    _.assign(appCopy, boundEventMethods)
+
     appCopy.savePluginOptions = (configuration, cb) => {
       savePluginOptions(
         plugin.id,
