@@ -42,171 +42,8 @@ export class AutopilotApi {
 
   constructor(private server: AutopilotApplication) {}
 
-  // ***************** test ***************
-  mockProviders() {
-    this.register(
-      'ap-plugin1',
-      {
-        engage: async () => {
-          debug('pv1: engage')
-          return
-        },
-        disengage: async () => {
-          debug('pv1: disengage')
-          return
-        },
-        tack: async (direction: TackGybeDirection) => {
-          debug('pv1: tack', direction)
-          return
-        },
-        gybe: async (direction: TackGybeDirection) => {
-          debug('pv1: gybe', direction)
-          return
-        },
-        getTarget: async () => {
-          debug('pv1: getTarget')
-          return Math.PI
-        },
-        setTarget: async (value: number) => {
-          debug('pv1: target', value)
-          return
-        },
-        adjustTarget: async (value: number) => {
-          debug('pv1: adjustTarget', value)
-          return
-        },
-        setMode: async (mode: string) => {
-          debug('pv1: setMode', mode)
-          return
-        },
-        getMode: async () => {
-          debug('pv1: getMode, currentMode')
-          return 'currentMode'
-        },
-        getState: async () => {
-          debug('pv1: getState, currentState')
-          return 'currentState'
-        },
-        setState: async (state: string) => {
-          debug('pv1: setState', state)
-          return state === 'on' ? true : false
-        },
-        getData: async (id: string) => {
-          debug('pv1: getData', id)
-          if (id === 'dev1a') {
-            return {
-              options: {
-                states: [
-                  { name: 'on', engaged: true },
-                  { name: 'off', engaged: false }
-                ],
-                modes: ['compass', 'gps', 'wind']
-              },
-              target: 0.1,
-              state: 'on',
-              mode: 'compass',
-              engaged: true
-            }
-          } else {
-            return {
-              options: {
-                states: [
-                  { name: 'auto', engaged: true },
-                  { name: 'standby', engaged: false }
-                ],
-                modes: ['compass', 'nav', 'wind']
-              },
-              target: 0.2,
-              state: 'standby',
-              mode: 'wind',
-              engaged: false
-            }
-          }
-        }
-      },
-      ['dev2a']
-    )
-    this.register(
-      'ap-plugin2',
-      {
-        engage: async () => {
-          debug('pv2: engage')
-          return
-        },
-        disengage: async () => {
-          debug('pv2: disengage')
-          return
-        },
-        tack: async (direction: TackGybeDirection) => {
-          debug('pv2: tack', direction)
-          return
-        },
-        gybe: async (direction: TackGybeDirection) => {
-          debug('pv2: gybe', direction)
-          return
-        },
-        getTarget: async () => {
-          debug('pv1: getTarget')
-          return Math.PI
-        },
-        setTarget: async (value: number) => {
-          debug('pv2: target', value)
-          return
-        },
-        adjustTarget: async (value: number) => {
-          debug('pv2: adjustTarget', value)
-          return
-        },
-        setMode: async (mode: string) => {
-          debug('pv2: setMode', mode)
-          return
-        },
-        getMode: async () => {
-          debug('pv2: getMode, currentMode')
-          return 'currentMode'
-        },
-        setState: async (state: string) => {
-          debug('pv2: setState', state)
-          return state === 'enabled' ? true : false
-        },
-        getState: async () => {
-          debug('pv2: getState, currentState')
-          return 'currentState'
-        },
-        getData: async () => {
-          debug('pv2: getData')
-          return {
-            options: {
-              states: [
-                { name: 'enabled', engaged: true },
-                { name: 'standby', engaged: false }
-              ],
-              modes: ['compass', 'route', 'wind']
-            },
-            target: 0.1,
-            state: 'standby',
-            mode: 'wind',
-            engaged: false
-          }
-        }
-      },
-      ['dev1a', 'dev1b']
-    )
-    //setTimeout(() => this.unRegister('ap-plugin1'), 5000)
-    //this.apUpdate('ap-plugin1', 'dev1a', 'target', Math.random())
-    //setInterval(() => {
-    this.apUpdate('ap-plugin1', 'dev1a', 'target', Math.random())
-    this.apUpdate('ap-plugin2', 'dev2a', 'engaged', false)
-    this.apUpdate('ap-plugin1', 'dev1b', 'target', Math.random())
-    //}, 5000)*/
-  }
-
   async start() {
     this.initApiEndpoints()
-
-    // ***************** test ***************
-    this.mockProviders()
-
     return Promise.resolve()
   }
 
@@ -302,10 +139,13 @@ export class AutopilotApi {
           this.emitDeltaMsg(attrib, value, DEFAULTIDPATH)
         }
       } catch (err) {
-        debug(`ERROR apUpdate():`, err)
+        debug(`ERROR apUpdate(): ${pluginId}->${deviceId}`, err)
       }
     } else {
-      debug(`ERROR apUpdate():`, `${attrib} is NOT an AutopilotUpdateAttrib!`)
+      debug(
+        `ERROR apUpdate(): ${pluginId}->${deviceId}`,
+        `${attrib} is NOT an AutopilotUpdateAttrib!`
+      )
     }
   }
 
@@ -378,6 +218,13 @@ export class AutopilotApi {
           .then((data: AutopilotInfo) => {
             res.json(data)
           })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
+          })
       }
     )
 
@@ -389,6 +236,13 @@ export class AutopilotApi {
           .getData(req.params.id)
           .then((r: AutopilotInfo) => {
             res.json(r.options)
+          })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
           })
       }
     )
@@ -402,6 +256,13 @@ export class AutopilotApi {
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
+          })
       }
     )
 
@@ -414,6 +275,13 @@ export class AutopilotApi {
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
+          })
       }
     )
 
@@ -425,6 +293,13 @@ export class AutopilotApi {
           .getState(req.params.id)
           .then((r: string) => {
             res.json({ value: r })
+          })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
           })
       }
     )
@@ -447,6 +322,9 @@ export class AutopilotApi {
             }
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
+          .catch(() => {
+            res.status(Responses.invalid.statusCode).json(Responses.invalid)
+          })
       }
     )
 
@@ -458,6 +336,13 @@ export class AutopilotApi {
           .getMode(req.params.id)
           .then((r: string) => {
             res.json({ value: r })
+          })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
           })
       }
     )
@@ -475,6 +360,9 @@ export class AutopilotApi {
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
+          .catch(() => {
+            res.status(Responses.invalid.statusCode).json(Responses.invalid)
+          })
       }
     )
 
@@ -486,6 +374,13 @@ export class AutopilotApi {
           .getTarget(req.params.id)
           .then((r: number) => {
             res.json({ value: r })
+          })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
           })
       }
     )
@@ -511,6 +406,9 @@ export class AutopilotApi {
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
+          .catch(() => {
+            res.status(Responses.invalid.statusCode).json(Responses.invalid)
+          })
       }
     )
 
@@ -527,6 +425,9 @@ export class AutopilotApi {
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
+          .catch(() => {
+            res.status(Responses.invalid.statusCode).json(Responses.invalid)
+          })
       }
     )
 
@@ -538,6 +439,13 @@ export class AutopilotApi {
           .tack('port', req.params.id)
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
+          })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
           })
       }
     )
@@ -551,6 +459,13 @@ export class AutopilotApi {
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
+          })
       }
     )
 
@@ -563,6 +478,13 @@ export class AutopilotApi {
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
+          })
       }
     )
 
@@ -574,6 +496,13 @@ export class AutopilotApi {
           .gybe('starboard', req.params.id)
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
+          })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
           })
       }
     )
@@ -690,7 +619,7 @@ export class AutopilotApi {
         }
       ]
     }
-    debug(`delta:`, msg.updates[0])
+    debug(`delta -> ${source}:`, msg.updates[0])
     this.server.handleMessage(source, msg, SKVersion.v2)
     this.server.handleMessage(source, msg, SKVersion.v1)
   }
