@@ -11,7 +11,6 @@ import { SignalKMessageHub } from '../../app'
 import {
   AutopilotProvider,
   AutopilotInfo,
-  TackGybeDirection, // ** test only **
   SKVersion,
   Path,
   Delta,
@@ -152,7 +151,7 @@ export class AutopilotApi {
   // ***** /Plugin Interface methods *****
 
   private updateAllowed(request: Request): boolean {
-    return this.server.securityStrategy.shouldAllowPut(
+      return this.server.securityStrategy.shouldAllowPut(
       request,
       'vessels.self',
       null,
