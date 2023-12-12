@@ -194,6 +194,29 @@
           "$ref": "#/components/parameters/AutopilotIdParam"
         }
       ],
+      "get": {
+        "tags": ["autopilot"],
+        "summary": "Get the default autopilot device id.",
+        "description": "Returns the device id of the autopilot assigned as the default.",
+        "responses": {
+          "default": {
+            "description": "Autopilot configuration response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["id"],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": ["autopilot"],
         "summary": "Set the default autopilot device.",

@@ -134,9 +134,6 @@ export class AutopilotApi {
           this.initDefaults(deviceId)
         }
         this.emitDeltaMsg(attrib, value, deviceId)
-        if (deviceId === this.defaultDeviceId) {
-          this.emitDeltaMsg(attrib, value, DEFAULTIDPATH)
-        }
       } catch (err) {
         debug(`ERROR apUpdate(): ${pluginId}->${deviceId}`, err)
       }
@@ -151,7 +148,7 @@ export class AutopilotApi {
   // ***** /Plugin Interface methods *****
 
   private updateAllowed(request: Request): boolean {
-      return this.server.securityStrategy.shouldAllowPut(
+    return this.server.securityStrategy.shouldAllowPut(
       request,
       'vessels.self',
       null,
@@ -192,6 +189,15 @@ export class AutopilotApi {
     this.server.get(`${AUTOPILOT_API_PATH}`, (req: Request, res: Response) => {
       res.status(200).json(this.getDevices())
     })
+
+    // get default autopilot device
+    this.server.get(
+      `${AUTOPILOT_API_PATH}/defaultPilot`,
+      (req: Request, res: Response) => {
+        debug(`params:`, req.params)
+        res.status(Responses.ok.statusCode).json({ id: this.defaultDeviceId })
+      }
+    )
 
     // set default autopilot device
     this.server.post(

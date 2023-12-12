@@ -18,7 +18,7 @@ To ensure a consistent API calling profile and to simplify client operations, th
 - When multiple autopilots are present, and a `default` is yet to be assigned, one will be assigned when:
   - An update is received from a provider plugin, the autopilot which is the source of the update will be assigned as the `default`.
   - An API request is received, the first autopilot device registered, is assigned as the `default`.
-  - A request is sent to the `deafultPilot` API endpoint _(see [Setting the Default Autopilot](#setting-the-default-provider))_.
+  - A request is sent to the `defaultPilot` API endpoint _(see [Setting the Default Autopilot](#setting-the-default-provider))_.
 
 ### Setting the Default Autopilot
 
@@ -31,6 +31,22 @@ HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/defaultPilot/raymari
 
 The autopilot with the supplied id will now be the target of requests made to `./steering/autopilots/default/*`.
 
+
+### Getting the Default Autopilot
+
+To get the id of the `default` autopilot, submit an HTTP `GET` request to `/signalk/v2/api/vessels/self/steering/autopilots/defaultPilot`.
+
+_Example:_
+```typescript
+HTTP GET "/signalk/v2/api/vessels/self/steering/autopilots/defaultPilot"
+```
+
+_Response:_
+```JSON
+{
+  "id":"raymarine-id"
+}
+```
 
 ## Listing the available Autopilots
 
@@ -60,20 +76,11 @@ _Example response: list of registered autopilots showing that `pypilot-id` is as
 
 Deltas emitted by the Autopilot API will have the base path `steering.autopilot` with the `$source` containing the autopilot device identifier.
 
-Additionally, a delta will be emitted with a `$source` value of `default` for each delta emitted by the autopilot assigned as the `dafault`.
-
-_Example: Deltas for `autopilot.engaged` from two autopilots (`raymarine-id` is `default`)._
+_Example: Deltas for `autopilot.engaged` from two autopilots (`raymarine-id`)._
 ```JSON
 {
   "context":"vessels.self",
   "updates":[
-    {
-      "$source":"default",
-      "timestamp":"2023-11-19T06:12:47.820Z",
-      "values":[
-        {"path":"steering.autopilot.engaged","value":true}
-      ]
-    },
     {
       "$source":"pypilot-id",
       "timestamp":"2023-11-19T06:12:47.820Z",
