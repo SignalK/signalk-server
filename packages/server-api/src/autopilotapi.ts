@@ -1,20 +1,38 @@
+import { PathValue } from "./deltas"
+
 export type AutopilotUpdateAttrib =
   | 'mode'
   | 'state'
   | 'target'
   | 'engaged'
   | 'options'
+  | 'alarm'
 
 const AUTOPILOTUPDATEATTRIBS: AutopilotUpdateAttrib[] = [
   'mode',
   'state',
   'target',
   'engaged',
-  'options'
+  'options',
+  'alarm'
 ]
 
 export const isAutopilotUpdateAttrib = (s: string) =>
   AUTOPILOTUPDATEATTRIBS.includes(s as AutopilotUpdateAttrib)
+
+export type AutopilotAlarm =
+  | 'waypointAdvance'
+  | 'waypointArrival'
+  | 'routeComplete'
+
+const AUTOPILOTALARMS: AutopilotAlarm[] = [
+  'waypointAdvance',
+  'waypointArrival',
+  'routeComplete'
+]
+
+export const isAutopilotAlarm = (s: string) =>
+  AUTOPILOTALARMS.includes(s as AutopilotAlarm)
 
 export type TackGybeDirection = 'port' | 'starboard'
 
@@ -28,6 +46,12 @@ export interface AutopilotApi {
     attrib: AutopilotUpdateAttrib,
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     value: any
+  ): void
+  apAlarm(
+    pluginId: string,
+    deviceId: string,
+    alarmName: AutopilotAlarm,
+    value: PathValue
   ): void
 }
 
@@ -75,5 +99,10 @@ export interface AutopilotProviderRegistry {
     attrib: AutopilotUpdateAttrib,
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     value: any
+  ): void
+  autopilotAlarm(
+    deviceId: string,
+    alarmName: AutopilotAlarm,
+    value: PathValue
   ): void
 }

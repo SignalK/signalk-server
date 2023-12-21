@@ -13,10 +13,13 @@ import {
   AutopilotInfo,
   SKVersion,
   Path,
+  PathValue,
   Delta,
   isAutopilotProvider,
   AutopilotUpdateAttrib,
-  isAutopilotUpdateAttrib
+  isAutopilotUpdateAttrib,
+  AutopilotAlarm,
+  isAutopilotAlarm
 } from '@signalk/server-api'
 
 const AUTOPILOT_API_PATH = `/signalk/v2/api/vessels/self/steering/autopilots`
@@ -107,6 +110,7 @@ export class AutopilotApi {
       this.defaultDeviceId = undefined
       this.defaultProviderId = undefined
       this.defaultProvider = undefined
+      this.emitDeltaMsg('defaultPilot', this.defaultDeviceId, 'autopilotApi')
     }
 
     debug(
@@ -142,6 +146,30 @@ export class AutopilotApi {
         `ERROR apUpdate(): ${pluginId}->${deviceId}`,
         `${attrib} is NOT an AutopilotUpdateAttrib!`
       )
+    }
+  }
+
+  // Pass alarm / notification from autopilot.
+  apAlarm(
+    pluginId: string,
+    deviceId: string = pluginId + '.default',
+    alarmName: AutopilotAlarm,
+    value: PathValue
+  ) {
+    if (isAutopilotAlarm(alarmName)) {
+      debug(`Alarm -> ${deviceId}:`, value)
+      this.server.handleMessage(deviceId, {
+        updates: [
+          {
+            values: [
+              {
+                path: `notifications.steering.autopilot.${alarmName}` as Path,
+                value: value
+              }
+            ]
+          }
+        ]
+      })
     }
   }
 
@@ -587,6 +615,7 @@ export class AutopilotApi {
         this.defaultDeviceId
       ) as string
       this.defaultProvider = this.autopilotProviders.get(this.defaultProviderId)
+      this.emitDeltaMsg('defaultPilot', this.defaultDeviceId, 'autopilotApi')
       debug(`Default Device = ${this.defaultDeviceId}`)
       debug(`Default Provider = ${this.defaultProviderId}`)
       return
@@ -600,6 +629,7 @@ export class AutopilotApi {
         this.defaultDeviceId
       ) as string
       this.defaultProvider = this.autopilotProviders.get(this.defaultProviderId)
+      this.emitDeltaMsg('defaultPilot', this.defaultDeviceId, 'autopilotApi')
       debug(`Default Device = ${this.defaultDeviceId}`)
       debug(`Default Provider = ${this.defaultProviderId}`)
       return
@@ -628,4 +658,5 @@ export class AutopilotApi {
     this.server.handleMessage(source, msg, SKVersion.v2)
     this.server.handleMessage(source, msg, SKVersion.v1)
   }
+
 }
