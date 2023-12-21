@@ -24,11 +24,18 @@ export type AutopilotAlarm =
   | 'waypointAdvance'
   | 'waypointArrival'
   | 'routeComplete'
+  | 'xte'
+  | 'heading'
+  | 'wind'
+  
 
 const AUTOPILOTALARMS: AutopilotAlarm[] = [
   'waypointAdvance',
   'waypointArrival',
-  'routeComplete'
+  'routeComplete',
+  'xte',
+  'heading',
+  'wind'
 ]
 
 export const isAutopilotAlarm = (s: string) =>
