@@ -122,7 +122,7 @@ _Note: All updates originating from the autopilot device, regardless of the comm
 The function has the following signature:
 
 ```typescript
-app.autopilotUpdate(deviceID: string, attrib: AutopilotUpdateAttrib, value: any)
+app.autopilotUpdate(deviceID: string, attrib: AutopilotUpdateAttrib, value: Value)
 ```
 where:
 
@@ -134,6 +134,41 @@ _Example:_
 ```javascript
 app.autopilotUpdate('my-pilot', 'target', 1.52789)
 app.autopilotUpdate('my-pilot', 'mode', 'compass')
+```
+
+### Alarms from Autopilot device
+
+Alarms from an autopilot device are sent to the Autopillot API via the `autopilotAlarm` interface method.
+
+An autopilot provider plugin will call `autopilotAlarm` when the data received data from the autopilot device is an alarm.
+
+_Note: A set of normalised alarm names are defined and alarm messages from the autopilot device should be mapped to one of the following:_
+
+- `waypointAdvance`
+- `waypointArrival`
+- `routeComplete`
+- `xte`
+- `heading`
+- `wind`
+
+The function has the following signature:
+
+```typescript
+app.autopilotAlarm(deviceID: string, alarmName: AutopilotAlarm, value: Notification)
+```
+where:
+
+- `deviceId`: is the autopilot device identifier
+- `alarmName`: string containing a normalised alarm name.
+- `value`: is a Signal K Notification object.
+
+_Example:_
+```javascript
+app.autopilotAlarm('my-pilot', 'waypointAdvance', {
+  state: 'alert'
+  method: ['sound']
+  message: 'Waypoint Advance'
+})
 ```
 
 

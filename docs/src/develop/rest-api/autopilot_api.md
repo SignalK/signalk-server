@@ -99,6 +99,45 @@ _Example: Deltas for `autopilot.engaged` from two autopilots (`raymarine-id`)._
 }
 ```
 
+
+## Autopilot Notifications
+
+The Autopilot API will provide notifications under the path `notifications.steering.autopilot` with the `$source` containing the autopilot device identifier.
+
+A set of normalised notification paths are defined to provide a consistant way for client apps to receive and process alarm messages.
+
+- `waypointAdvance`
+- `waypointArrival`
+- `routeComplete`
+- `xte`
+- `heading`
+- `wind`
+
+_Example:_
+```JSON
+{
+  "context":"vessels.self",
+  "updates":[
+    {
+      "$source":"pypilot-id",
+      "timestamp":"2023-11-19T06:12:47.820Z",
+      "values":[
+        {
+          "path": "notifications.steering.autopilot.waypointAdvance",
+          "value": {
+            "state": "alert",
+            "method": ["sound"],
+            "message": "Waypoint Advance"
+          }
+        }
+      ]
+    }
+  ]
+}
+
+
+```
+
 ## Autopilot Operations
 
 All API operations are invoked by issuing a request to:
