@@ -25,7 +25,9 @@ import {
   PointDestination,
   RouteDestination,
   AutopilotUpdateAttrib,
-  AutopilotAlarm
+  AutopilotAlarm,
+  Value,
+  Notification
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -538,14 +540,14 @@ module.exports = (theApp: any) => {
     appCopy.autopilotUpdate = (
       deviceId: string,
       attrib: AutopilotUpdateAttrib,
-      value: any
+      value: Value
     ) => {
       autopilotApi.apUpdate(plugin.id, deviceId, attrib, value)
     }
     appCopy.autopilotAlarm = (
       deviceId: string,
       alarmName: AutopilotAlarm,
-      value: any
+      value: Notification
     ) => {
       autopilotApi.apAlarm(plugin.id, deviceId, alarmName, value)
     }

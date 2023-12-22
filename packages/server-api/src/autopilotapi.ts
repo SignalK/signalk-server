@@ -1,4 +1,4 @@
-import { PathValue } from "./deltas"
+import { Notification, Value } from './deltas'
 
 export type AutopilotUpdateAttrib =
   | 'mode'
@@ -27,7 +27,6 @@ export type AutopilotAlarm =
   | 'xte'
   | 'heading'
   | 'wind'
-  
 
 const AUTOPILOTALARMS: AutopilotAlarm[] = [
   'waypointAdvance',
@@ -46,19 +45,17 @@ export type TackGybeDirection = 'port' | 'starboard'
 export interface AutopilotApi {
   register(pluginId: string, provider: AutopilotProvider): void
   unRegister(pluginId: string): void
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   apUpdate(
     pluginId: string,
     deviceId: string,
     attrib: AutopilotUpdateAttrib,
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    value: any
+    value: Value
   ): void
   apAlarm(
     pluginId: string,
     deviceId: string,
     alarmName: AutopilotAlarm,
-    value: PathValue
+    value: Notification
   ): void
 }
 
@@ -104,12 +101,11 @@ export interface AutopilotProviderRegistry {
   autopilotUpdate(
     deviceId: string,
     attrib: AutopilotUpdateAttrib,
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    value: any
+    value: Value
   ): void
   autopilotAlarm(
     deviceId: string,
     alarmName: AutopilotAlarm,
-    value: PathValue
+    value: Notification
   ): void
 }

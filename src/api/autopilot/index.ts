@@ -13,7 +13,8 @@ import {
   AutopilotInfo,
   SKVersion,
   Path,
-  PathValue,
+  Value,
+  Notification,
   Delta,
   isAutopilotProvider,
   AutopilotUpdateAttrib,
@@ -122,12 +123,11 @@ export class AutopilotApi {
   }
 
   // Pass changed attribute / value from autopilot.
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   apUpdate(
     pluginId: string,
     deviceId: string = pluginId + '.default',
     attrib: AutopilotUpdateAttrib,
-    value: any
+    value: Value
   ) {
     if (deviceId && !this.deviceToProvider.has(deviceId)) {
       this.deviceToProvider.set(deviceId, pluginId)
@@ -154,7 +154,7 @@ export class AutopilotApi {
     pluginId: string,
     deviceId: string = pluginId + '.default',
     alarmName: AutopilotAlarm,
-    value: PathValue
+    value: Notification
   ) {
     if (isAutopilotAlarm(alarmName)) {
       debug(`Alarm -> ${deviceId}:`, value)
@@ -658,5 +658,4 @@ export class AutopilotApi {
     this.server.handleMessage(source, msg, SKVersion.v2)
     this.server.handleMessage(source, msg, SKVersion.v1)
   }
-
 }
