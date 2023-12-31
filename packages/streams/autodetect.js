@@ -137,10 +137,12 @@ function ToTimestamped(deMultiplexer, options) {
 }
 require('util').inherits(ToTimestamped, Transform)
 
+// runs only once, self-assigns the actual transform functions
+// on first call
 ToTimestamped.prototype._transform = function (msg, encoding, done) {
   const line = msg.toString()
   this.multiplexedFormat =
-    line.length > 16 && line.charAt(13) === ';' && line.charAt(15) === ';'
+    line.length > 16 && line.charAt(13) === ';' && line.split(';').length >= 3
   if (this.multiplexedFormat) {
     if (this.options.noThrottle) {
       this.deMultiplexer.toTimestamped.pipe(this.deMultiplexer.splitter)
