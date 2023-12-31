@@ -178,7 +178,11 @@ ToTimestamped.prototype.handleMixed = function (msg, encoding, done) {
 ToTimestamped.prototype.handleMultiplexed = function (msg, encoding, done) {
   const line = msg.toString()
   const parts = line.split(';')
-  this.push({ timestamp: parts[0], discriminator: parts[1], data: parts[2] })
+  this.push({
+    timestamp: parts[0],
+    discriminator: parts[1],
+    data: parts.slice(2).join(';'),
+  })
   done()
 }
 
