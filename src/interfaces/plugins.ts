@@ -184,6 +184,11 @@ module.exports = (theApp: any) => {
         .then(([schema, uiSchema]) => {
           const status = providerStatus.find((p: any) => p.id === plugin.name)
           const statusMessage = status ? status.message : ''
+          if (schema === undefined) {
+            console.error(
+              `Error: plugin ${plugin.id} is missing configuration schema`
+            )
+          }
           resolve({
             id: plugin.id,
             name: plugin.name,
@@ -191,7 +196,7 @@ module.exports = (theApp: any) => {
             keywords: plugin.keywords,
             version: plugin.version,
             description: plugin.description,
-            schema,
+            schema: schema || {},
             statusMessage,
             uiSchema,
             state: plugin.state,
