@@ -140,10 +140,12 @@ function ToTimestamped(deMultiplexer, options) {
 }
 require('util').inherits(ToTimestamped, Transform)
 
+// runs only once, self-assigns the actual transform functions
+// on first call
 ToTimestamped.prototype._transform = function (msg, encoding, done) {
   const line = msg.toString()
   this.multiplexedFormat =
-    line.length > 16 && line.charAt(13) === ';' && line.charAt(15) === ';'
+    line.length > 16 && line.charAt(13) === ';' && line.split(';').length >= 3
   if (this.multiplexedFormat) {
     if (this.options.noThrottle) {
       this.deMultiplexer.toTimestamped.pipe(this.deMultiplexer.splitter)
@@ -179,7 +181,11 @@ ToTimestamped.prototype.handleMixed = function (msg, encoding, done) {
 ToTimestamped.prototype.handleMultiplexed = function (msg, encoding, done) {
   const line = msg.toString()
   const parts = line.split(';')
-  this.push({ timestamp: parts[0], discriminator: parts[1], data: parts[2] })
+  this.push({
+    timestamp: parts[0],
+    discriminator: parts[1],
+    data: parts.slice(2).join(';'),
+  })
   done()
 }
 
