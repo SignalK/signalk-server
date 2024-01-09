@@ -135,8 +135,12 @@ _Example:_
   ]
 }
 
-
 ```
+
+## Autopilot offline / unreachable
+
+If an autopilot device is not connected or unreachable, the provider for that autopilot device will set the `state` of the device to `off-line`.
+
 
 ## Autopilot Operations
 

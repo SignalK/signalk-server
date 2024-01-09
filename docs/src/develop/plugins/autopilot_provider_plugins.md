@@ -53,6 +53,7 @@ interface AutopilotProvider {
 - Facilitate communication on the target autopilot device to send commands and retrieve both status and configuration information
 - Ensure the `engaged` path attribute value is maintained to reflect the operational status of the autopilot.
 - Map the `engage` and `disengage` operations to an appropriate autopilot device `state`.
+- Set the state as `off-line` if the autopilot device is not connected or unreachable.
 
 
 ### Registering as an Autopilot Provider
@@ -216,7 +217,7 @@ _Returns:_
 ```
 
 ---
-**`getState(deviceId)`**: This method returns the current state of the supplied autopilot device identifier.
+**`getState(deviceId)`**: This method returns the current state of the supplied autopilot device identifier. If the autopilot device is not connected or unreachable then `off-line` should be returned.
 
 - `deviceId:` identifier of the autopilot device to query.
 

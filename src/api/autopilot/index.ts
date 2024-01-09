@@ -38,7 +38,6 @@ interface AutopilotList {
 export class AutopilotApi {
   private autopilotProviders: Map<string, AutopilotProvider> = new Map()
 
-  private defaultProvider?: AutopilotProvider
   private defaultProviderId?: string
   private defaultDeviceId?: string
   private deviceToProvider: Map<string, string> = new Map()
@@ -110,7 +109,6 @@ export class AutopilotApi {
       debug(`** Resetting defaults .....`)
       this.defaultDeviceId = undefined
       this.defaultProviderId = undefined
-      this.defaultProvider = undefined
       this.emitDeltaMsg('defaultPilot', this.defaultDeviceId, 'autopilotApi')
     }
 
@@ -614,7 +612,6 @@ export class AutopilotApi {
       this.defaultProviderId = this.deviceToProvider.get(
         this.defaultDeviceId
       ) as string
-      this.defaultProvider = this.autopilotProviders.get(this.defaultProviderId)
       this.emitDeltaMsg('defaultPilot', this.defaultDeviceId, 'autopilotApi')
       debug(`Default Device = ${this.defaultDeviceId}`)
       debug(`Default Provider = ${this.defaultProviderId}`)
@@ -628,7 +625,6 @@ export class AutopilotApi {
       this.defaultProviderId = this.deviceToProvider.get(
         this.defaultDeviceId
       ) as string
-      this.defaultProvider = this.autopilotProviders.get(this.defaultProviderId)
       this.emitDeltaMsg('defaultPilot', this.defaultDeviceId, 'autopilotApi')
       debug(`Default Device = ${this.defaultDeviceId}`)
       debug(`Default Provider = ${this.defaultProviderId}`)
