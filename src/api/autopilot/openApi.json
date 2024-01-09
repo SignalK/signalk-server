@@ -671,6 +671,46 @@
           }
         }
       }
+    },
+    "/{id}/dodge/port": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AutopilotIdParam"
+        }
+      ],
+      "post": {
+        "tags": ["autopilot"],
+        "summary": "Turn to port.",
+        "description": "Manual override turn to port.",
+        "responses": {
+          "200ActionResponse": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/{id}/dodge/starboard": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AutopilotIdParam"
+        }
+      ],
+      "post": {
+        "tags": ["autopilot"],
+        "summary": "Turn to starboard.",
+        "description": "Manual override turn to starboard.",
+        "responses": {
+          "200ActionResponse": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
     }
   }
 }

@@ -73,6 +73,7 @@ export interface AutopilotProvider {
   disengage(deviceId: string): Promise<void>
   tack(direction: TackGybeDirection, deviceId: string): Promise<void>
   gybe(direction: TackGybeDirection, deviceId: string): Promise<void>
+  dodge(direction: TackGybeDirection, deviceId: string): Promise<void>
 }
 
 export interface AutopilotStateDef {

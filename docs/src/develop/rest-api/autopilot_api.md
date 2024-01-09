@@ -315,3 +315,20 @@ _Example: Gybe to Starboard_
 ```typescript
 HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/{id}/gybe/starboard"
 ```
+
+
+
+### Dodging / overriding
+
+To send a command to the autopilot to manually override the rudder position two (2) degrees in the requested direction in order to avoid an obstacle, 
+submit an HTTP `POST` request to `/dodge/{direction}` where _direction_ is either `port` or `starboard`.
+
+_Example: Dodge to Port_
+```typescript
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/{id}/dodge/port"
+```
+
+_Example: Gybe to Starboard_
+```typescript
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/{id}/dodge/starboard"
+```

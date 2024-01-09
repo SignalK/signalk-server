@@ -538,6 +538,44 @@ export class AutopilotApi {
       }
     )
 
+    // dodge to port
+    this.server.post(
+      `${AUTOPILOT_API_PATH}/:id/dodge/port`,
+      (req: Request, res: Response) => {
+        this.useProvider(req)
+          .dodge('port', req.params.id)
+          .then(() => {
+            res.status(Responses.ok.statusCode).json(Responses.ok)
+          })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
+          })
+      }
+    )
+
+    // dodge to starboard
+    this.server.post(
+      `${AUTOPILOT_API_PATH}/:id/dodge/starboard`,
+      (req: Request, res: Response) => {
+        this.useProvider(req)
+          .dodge('starboard', req.params.id)
+          .then(() => {
+            res.status(Responses.ok.statusCode).json(Responses.ok)
+          })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
+          })
+      }
+    )
+
     // error response
     this.server.use(
       `${AUTOPILOT_API_PATH}/*`,

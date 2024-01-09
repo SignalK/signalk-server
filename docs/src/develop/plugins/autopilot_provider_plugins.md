@@ -45,6 +45,7 @@ interface AutopilotProvider {
   disengage(deviceId: string): Promise<void>
   tack(direction: TackGybeDirection, deviceId: string): Promise<void>
   gybe(direction: TackGybeDirection, deviceId: string): Promise<void>
+  dodge(direction: TackGybeDirection, deviceId: string): Promise<void>
 }
 ```
 
@@ -376,7 +377,7 @@ disengage('mypilot1');
 ```
 
 ---
-**`tack(direction, deviceId)`**: This method instructs the autopilot device with the supplied identifier to perform a tack in the suplied direction.
+**`tack(direction, deviceId)`**: This method instructs the autopilot device with the supplied identifier to perform a tack in the supplied direction.
 
 - `direction`: 'port' or 'starboard'
 - `deviceId:` identifier of the autopilot device to query.
@@ -395,7 +396,7 @@ tack('port', 'mypilot1');
 ```
 
 ---
-**`gybe(direction, deviceId)`**: This method instructs the autopilot device with the supplied identifier to perform a gybe in the suplied direction.
+**`gybe(direction, deviceId)`**: This method instructs the autopilot device with the supplied identifier to perform a gybe in the supplied direction.
 
 - `direction`: 'port' or 'starboard'
 - `deviceId:` identifier of the autopilot device to query.
@@ -411,6 +412,25 @@ POST signalk/v2/api/vessels/self/steering/autopilots/mypilot1/gybe/starboard
 _AutopilotProvider method invocation:_
 ```javascript
 gybe('starboard', 'mypilot1');
+```
+
+---
+**`dodge(direction, deviceId)`**: This method instructs the autopilot device with the supplied identifier to manually override the rudder position by two (2) degrees in the supplied direction.
+
+- `direction`: 'port' or 'starboard'
+- `deviceId:` identifier of the autopilot device to query.
+
+returns: `Promise<{void}>`
+
+throws on error.
+
+_Example:_ 
+```javascript
+POST signalk/v2/api/vessels/self/steering/autopilots/mypilot1/dodge/starboard
+```
+_AutopilotProvider method invocation:_
+```javascript
+dodge('starboard', 'mypilot1');
 ```
 
 
