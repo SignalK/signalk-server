@@ -2,6 +2,8 @@
 
 ### Introduction
 
+Please note that this setup will [not, for the moment, run on a Raspberry Pi 5](https://github.com/SignalK/signalk-server/issues/1658) !! 
+
 The Signal K Server supports a variety of data connection types including _Seatalk (GPIO)_ which provides the ability to receive Raymarine Seatalk 1 (ST1) data, via simple DIY hardware connected to a Raspberry Pi GPIO, and convert it to Signal K deltas. This information can then be forwarded by the Signal K Server to a NMEA 0183 or NMEA 2000 network using appropriate hardware and plugins. 
 
 A guide to SeaTalk can be found [here](http://boatprojects.blogspot.com/2012/12/beginners-guide-to-raymarines-seatalk.html).
