@@ -51,7 +51,10 @@ CanboatJs.prototype._transform = function (chunk, encoding, done) {
       this.push(pgnData)
       this.app.emit(this.analyzerOutEvent, pgnData)
     } else {
-      this.app.emit('canboatjs:unparsed:object', chunk)
+      this.app.emit(
+        'canboatjs:unparsed:object',
+        Buffer.isBuffer(chunk) ? chunk.toString('hex') : chunk
+      )
     }
   } else {
     const pgnData = this.fromPgn.parse(chunk)
@@ -59,7 +62,10 @@ CanboatJs.prototype._transform = function (chunk, encoding, done) {
       this.push(pgnData)
       this.app.emit(this.analyzerOutEvent, pgnData)
     } else {
-      this.app.emit('canboatjs:unparsed:data', chunk)
+      this.app.emit(
+        'canboatjs:unparsed:data',
+        Buffer.isBuffer(chunk) ? chunk.toString('hex') : chunk
+      )
     }
   }
   done()
