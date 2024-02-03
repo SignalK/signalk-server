@@ -82,21 +82,21 @@ const Dashboard = (props) => {
                         linkType = providerStatus.find(
                           (item) => item.id === providerId
                         ).statusType
-                      } catch (error) {}
+                      } catch (error) { }
                       const inputPulseIconClass =
                         'icon-login' +
                         (providerStats.deltaRate > 50
                           ? ' text-primary fa-pulse-fast'
                           : providerStats.deltaRate > 0
-                          ? ' text-primary fa-pulse'
-                          : '')
+                            ? ' text-primary fa-pulse'
+                            : '')
                       const outputPulseIconClass =
                         'icon-logout' +
                         (providerStats.writeRate > 50
                           ? ' text-primary fa-pulse-fast'
                           : providerStats.writeRate > 0
-                          ? ' text-primary fa-pulse'
-                          : '')
+                            ? ' text-primary fa-pulse'
+                            : '')
                       if (linkType === 'provider') {
                         return (
                           <li
@@ -174,7 +174,7 @@ const Dashboard = (props) => {
                       }
                     })}
                   </ul>
-                  <br></br> 
+                  <br></br>
                   <div className="text-muted">Plugins activity</div>
                   <ul className="horizontal-bars type-2">
                     {Object.keys(providerStatistics || {}).sort().map((providerId) => {
@@ -184,21 +184,21 @@ const Dashboard = (props) => {
                         linkType = providerStatus.find(
                           (item) => item.id === providerId
                         ).statusType
-                      } catch (error) {}
+                      } catch (error) { }
                       const inputPulseIconClass =
                         'icon-login' +
                         (providerStats.deltaRate > 50
                           ? ' text-primary fa-pulse-fast'
                           : providerStats.deltaRate > 0
-                          ? ' text-primary fa-pulse'
-                          : '')
+                            ? ' text-primary fa-pulse'
+                            : '')
                       const outputPulseIconClass =
                         'icon-logout' +
                         (providerStats.writeRate > 50
                           ? ' text-primary fa-pulse-fast'
                           : providerStats.writeRate > 0
-                          ? ' text-primary fa-pulse'
-                          : '')
+                            ? ' text-primary fa-pulse'
+                            : '')
                       if (linkType === 'plugin') {
                         return (
                           <li
@@ -309,8 +309,8 @@ const Dashboard = (props) => {
                         const lastError =
                           status.lastError && status.lastError != status.message
                             ? status.lastErrorTimeStamp +
-                              ': ' +
-                              status.lastError
+                            ': ' +
+                            status.lastError
                             : ''
                         return (
                           <tr
@@ -318,10 +318,10 @@ const Dashboard = (props) => {
                             onClick={() => {
                               props.history.push(
                                 '/serverConfiguration/' +
-                                  (status.statusType === 'plugin'
-                                    ? 'plugins/'
-                                    : 'connections/') +
-                                  status.id
+                                (status.statusType === 'plugin'
+                                  ? 'plugins/'
+                                  : 'connections/') +
+                                status.id
                               )
                             }}
                           >
