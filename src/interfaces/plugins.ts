@@ -23,7 +23,6 @@ import {
   ResourceProvider,
   AutopilotProvider,
   ServerAPI,
-  PointDestination,
   RouteDestination,
   AutopilotUpdateAttrib,
   AutopilotAlarm,
