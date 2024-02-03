@@ -102,7 +102,6 @@ class Sidebar extends Component {
 
     // nav dropdown
     const navDropdown = (item, key) => {
-      console.log('****', item)
       return (
         <li key={key} className={activeRoute(item.url, props)}>
           <a

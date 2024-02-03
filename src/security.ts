@@ -27,7 +27,7 @@ import {
 } from 'fs'
 import _ from 'lodash'
 import path from 'path'
-import { certificateFor } from 'devcert'
+import { generate } from 'selfsigned'
 import { Mode } from 'stat-mode'
 import { WithConfig } from './app'
 import { createDebug } from './debug'
@@ -191,6 +191,8 @@ export interface SecurityStrategy {
     source: any,
     path: string
   ) => boolean
+
+  addAdminMiddleware: (path: string) => void
 }
 
 export class InvalidTokenError extends Error {
@@ -356,18 +358,20 @@ export function createCertificateOptions(
 ) {
   const location = app.config.configPath ? app.config.configPath : './settings'
   debug(`Creating certificate files in ${location}`)
-  certificateFor(['localhost'])
-    .then(({ key, cert }) => {
-      writeFileSync(keyFile, key)
+  generate(
+    [{ name: 'commonName', value: 'localhost' }],
+    { days: 3650 },
+    function (err, pems) {
+      writeFileSync(keyFile, pems.private)
       chmodSync(keyFile, '600')
-      writeFileSync(certFile, cert)
+      writeFileSync(certFile, pems.cert)
       chmodSync(certFile, '600')
       cb(null, {
-        key: key,
-        cert: cert
+        key: pems.private,
+        cert: pems.cert
       })
-    })
-    .catch(console.error)
+    }
+  )
 }
 
 export function requestAccess(

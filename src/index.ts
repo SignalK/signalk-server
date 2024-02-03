@@ -32,7 +32,6 @@ import {
   Update
 } from '@signalk/server-api'
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
-import { Debugger } from 'debug'
 import express, { IRouter, Request, Response } from 'express'
 import http from 'http'
 import https from 'https'
@@ -60,6 +59,8 @@ import SubscriptionManager from './subscriptionmanager'
 import { PluginId, PluginManager } from './interfaces/plugins'
 import { OpenApiDescription, OpenApiRecord } from './api/swagger'
 import { WithProviderStatistics } from './deltastats'
+import { pipedProviders } from './pipedproviders'
+import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 const debug = createDebug('signalk-server')
 
 const { StreamBundle } = require('./streambundle')
@@ -76,7 +77,8 @@ class Server {
     PluginManager &
     WithSecurityStrategy &
     IRouter &
-    WithProviderStatistics
+    WithProviderStatistics &
+    WithWrappedEmitter
   constructor(opts: ServerOptions) {
     const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
     const bodyParser = require('body-parser')
@@ -316,23 +318,10 @@ class Server {
     const self = this
     const app = this.app
 
-    const eventDebugs: { [key: string]: Debugger } = {}
-    const expressAppEmit = app.emit.bind(app)
-    app.emit = (eventName: string, ...args: any[]) => {
-      if (eventName !== 'serverlog') {
-        let eventDebug = eventDebugs[eventName]
-        if (!eventDebug) {
-          eventDebugs[eventName] = eventDebug = createDebug(
-            `signalk-server:events:${eventName}`
-          )
-        }
-        if (eventDebug.enabled) {
-          eventDebug(args)
-        }
-      }
-      expressAppEmit(eventName, ...args)
-      return true
-    }
+    app.wrappedEmitter = wrapEmitter(app)
+    app.emit = app.wrappedEmitter.emit
+    app.on = app.wrappedEmitter.addListener as any
+    app.addListener = app.wrappedEmitter.addListener as any
 
     this.app.intervals = []
 
@@ -432,7 +421,7 @@ class Server {
         await startApis(app)
         startInterfaces(app)
         startMdns(app)
-        app.providers = require('./pipedproviders')(app).start()
+        app.providers = pipedProviders(app as any).start()
 
         const primaryPort = getPrimaryPort(app)
         debug(`primary port:${primaryPort}`)
@@ -599,7 +588,7 @@ function startMdns(app: ServerApp & WithConfig) {
   }
 }
 
-function startInterfaces(app: ServerApp & WithConfig) {
+function startInterfaces(app: ServerApp & WithConfig & WithWrappedEmitter) {
   debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
   const availableInterfaces = require('./interfaces')
   _.forIn(availableInterfaces, (theInterface: any, name: string) => {
@@ -609,14 +598,34 @@ function startInterfaces(app: ServerApp & WithConfig) {
       (app.config.settings.interfaces || {})[name]
     ) {
       debug(`Loading interface '${name}'`)
-      app.interfaces[name] = theInterface(app)
-      if (app.interfaces[name] && _.isFunction(app.interfaces[name].start)) {
+      const boundEventMethods = app.wrappedEmitter.bindMethodsById(
+        `interface:${name}` as EventsActorId
+      )
+
+      const appCopy = {
+        ...app,
+        ...boundEventMethods
+      }
+      const handler = {
+        set(obj: any, prop: any, value: any) {
+          ;(app as any)[prop] = value
+          return true
+        },
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        get(target: any, prop: string | symbol, receiver: any) {
+          return (app as any)[prop]
+        }
+      }
+      const _interface = (appCopy.interfaces[name] = theInterface(
+        new Proxy(appCopy, handler)
+      ))
+      if (_interface && _.isFunction(_interface.start)) {
         if (
-          _.isUndefined(app.interfaces[name].forceInactive) ||
-          !app.interfaces[name].forceInactive
+          _.isUndefined(_interface.forceInactive) ||
+          !_interface.forceInactive
         ) {
           debug(`Starting interface '${name}'`)
-          app.interfaces[name].data = app.interfaces[name].start()
+          _interface.data = _interface.start()
         } else {
           debug(`Not starting interface '${name}' by forceInactive`)
         }

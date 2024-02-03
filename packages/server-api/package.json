@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-api",
-  "version": "2.1.0",
+  "version": "2.3.0",
   "description": "signalk-server Typescript API for plugins etc with relevant implementation classes",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

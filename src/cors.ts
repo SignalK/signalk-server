@@ -9,15 +9,29 @@ export function setupCors(
 ) {
   const corsDebug = createDebug('signalk-server:cors')
 
+  const corsOptions: CorsOptions = {
+    credentials: true
+  }
+
   const corsOrigins = allowedCorsOrigins
     ? allowedCorsOrigins
         .split(',')
         .map((s: string) => s.trim().replace(/\/*$/, ''))
     : []
-  corsDebug(`corsOrigins:${corsOrigins.toString()}`)
-  const corsOptions: CorsOptions = {
-    credentials: true,
-    origin: corsOrigins
+
+  // default wildcard cors configuration does not work
+  // with credentials:include client requests, so add
+  // our own wildcard rule that will match all origins
+  // but respond with that origin, not the default *
+  if (allowedCorsOrigins?.startsWith('*')) {
+    corsOptions.origin = (origin: string | undefined, cb) => cb(null, origin)
+    corsDebug('Allowing all origins')
+  } else if (corsOrigins.length > 0) {
+    // set origin only if corsOrigins are set so that
+    // we get the default cors module functionality
+    // for simple requests by default
+    corsOptions.origin = corsOrigins
+    corsDebug(`corsOrigins:${corsOrigins.toString()}`)
   }
 
   app.use(cors(corsOptions))
@@ -44,7 +58,11 @@ export const handleAdminUICORSOrigin = (
     securityConfig.allowedCorsOrigins.length > 0
   ) {
     allowedCorsOrigins = securityConfig.allowedCorsOrigins?.split(',')
-    if (allowedCorsOrigins.indexOf(securityConfig.adminUIOrigin) === -1) {
+    const adminUIOriginUrl = new URL(securityConfig.adminUIOrigin)
+    if (
+      allowedCorsOrigins.indexOf(securityConfig.adminUIOrigin) === -1 &&
+      adminUIOriginUrl.hostname !== 'localhost'
+    ) {
       allowedCorsOrigins.push(securityConfig.adminUIOrigin)
     }
   }

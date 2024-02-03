@@ -15,10 +15,11 @@
  */
 
 import { PropertyValues, PropertyValuesCallback } from '@signalk/server-api'
-import { createDebug } from './debug'
 import _ from 'lodash'
 import { Duplex, Writable } from 'stream'
 import { SignalKMessageHub, WithConfig } from './app'
+import { createDebug } from './debug'
+import { EventsActorId, WithWrappedEmitter } from './events'
 
 class DevNull extends Writable {
   constructor() {
@@ -59,9 +60,10 @@ interface PipedProviderConfig {
 
 class PipedProvider {}
 
-module.exports = function (
+export function pipedProviders(
   app: SignalKMessageHub &
-    WithConfig & {
+    WithConfig &
+    WithWrappedEmitter & {
       propertyValues: PropertyValues
       setProviderError: (providerId: string, msg: string) => void
     }
@@ -78,11 +80,15 @@ module.exports = function (
       })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onPropertyValues = (name: string, cb: (value: any) => void) =>
-      app.propertyValues.onPropertyValues(name, cb)
+      propertyValues.onPropertyValues(name, cb)
+    const boundEventMethods = app.wrappedEmitter.bindMethodsById(
+      `connection:${providerConfig.id}` as EventsActorId
+    )
     const appFacade = {
       emitPropertyValue,
       onPropertyValues,
       ...sanitizedApp,
+      ...boundEventMethods,
       toJSON: () => 'appFacade'
     }
 
