@@ -106,11 +106,7 @@ const Dashboard = (props) => {
                           return (
                             <li
                               key={providerId}
-                              onClick={() =>
-                                props.history.push(
-                                  `/dashboard`
-                                )
-                              }
+                              onClick={() => props.history.push(`/dashboard`)}
                             >
                               <i
                                 className={inputPulseIconClass}
@@ -229,11 +225,7 @@ const Dashboard = (props) => {
                           return (
                             <li
                               key={providerId}
-                              onClick={() =>
-                                props.history.push(
-                                  `/dashboard`
-                                )
-                              }
+                              onClick={() => props.history.push(`/dashboard`)}
                             >
                               <i
                                 className={inputPulseIconClass}
