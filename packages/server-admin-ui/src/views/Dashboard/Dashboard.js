@@ -108,7 +108,7 @@ const Dashboard = (props) => {
                               key={providerId}
                               onClick={() =>
                                 props.history.push(
-                                  `/serverConfiguration/providers/${providerId}`
+                                  `/dashboard`
                                 )
                               }
                             >
@@ -231,7 +231,7 @@ const Dashboard = (props) => {
                               key={providerId}
                               onClick={() =>
                                 props.history.push(
-                                  `/serverConfiguration/providers/${providerId}`
+                                  `/dashboard`
                                 )
                               }
                             >
