@@ -393,7 +393,13 @@ function pluginNameLink(id) {
 }
 
 function providerIdLink(id) {
-  return <a href={'#/serverConfiguration/connections/' + id}>{id}</a>
+  if (id === 'defaults') {
+    return <a href={'#/serverConfiguration/settings'}>{id}</a>
+  } else if (id.startsWith('ws.')) {
+    return <a href={'#/security/devices'}>{id}</a>
+  } else {
+    return <a href={'#/serverConfiguration/connections/' + id}>{id}</a>
+  }
 }
 
 export default connect(
