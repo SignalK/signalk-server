@@ -73,7 +73,7 @@ const Dashboard = (props) => {
                   </div>
                 </Col>
                 <Col xs="12" md="6">
-                  <div className="text-muted">Connections activity</div>
+                  <div className="text-muted" style={{ fontSize: 17 }}>Connections activity</div>
                   <ul className="horizontal-bars type-2">
                     {Object.keys(providerStatistics || {}).sort().map((providerId) => {
                       const providerStats = providerStatistics[providerId]
@@ -175,7 +175,7 @@ const Dashboard = (props) => {
                     })}
                   </ul>
                   <br></br>
-                  <div className="text-muted">Plugins activity</div>
+                  <div className="text-muted" style={{ fontSize: 17 }}>Plugins activity</div>
                   <ul className="horizontal-bars type-2">
                     {Object.keys(providerStatistics || {}).sort().map((providerId) => {
                       const providerStats = providerStatistics[providerId]
