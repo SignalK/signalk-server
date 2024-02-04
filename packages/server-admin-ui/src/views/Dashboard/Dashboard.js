@@ -30,6 +30,7 @@ const Dashboard = (props) => {
   const uptimeD = Math.floor(uptime / (60 * 60 * 24))
   const uptimeH = Math.floor((uptime % (60 * 60 * 24)) / (60 * 60))
   const uptimeM = Math.floor((uptime % (60 * 60)) / 60)
+  let isPlugins = false
   let errors = ''
   if (errorCount > 0) {
     errors = `(${errorCount} errors)`
@@ -181,9 +182,24 @@ const Dashboard = (props) => {
                       })}
                   </ul>
                   <br></br>
-                  <div className="text-muted" style={{ fontSize: 17 }}>
-                    Plugins activity
-                  </div>
+                  {Object.keys(providerStatistics || {})
+                    .sort()
+                    .map((providerId) => {
+                      let linkType = 'provider'
+                      try {
+                        linkType = providerStatus.find(
+                          (item) => item.id === providerId
+                        ).statusType
+                      } catch (error) {}
+                      if (linkType === 'plugin') {
+                        isPlugins = true
+                      }
+                    })}
+                  {isPlugins ? (
+                    <div className="text-muted" style={{ fontSize: 17 }}>
+                      Plugin activity
+                    </div>
+                  ) : null}
                   <ul className="horizontal-bars type-2">
                     {Object.keys(providerStatistics || {})
                       .sort()
