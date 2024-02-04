@@ -326,10 +326,4 @@ class PluginCard extends Component {
       </div>
     )
   }
-
-  componentDidMount() {
-    if (this.props.isOpen) {
-      window.scrollTo({ top: this.card.offsetTop - 54, behavior: 'smooth' })
-    }
-  }
 }
