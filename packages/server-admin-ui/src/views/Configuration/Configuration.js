@@ -122,8 +122,7 @@ export default class PluginConfigurationList extends Component {
           </Form>
 
           {(this.state.searchResults || this.state.plugins).map((plugin, i) => {
-            const isOpen =
-              localStorage.getItem(openPluginStorageKey) === plugin.id
+            const isOpen = this.props.match.params.pluginid === plugin.id
             return (
               <PluginCard
                 plugin={plugin}
@@ -131,11 +130,11 @@ export default class PluginConfigurationList extends Component {
                 key={i}
                 isOpen={isOpen}
                 toggleForm={this.toggleForm.bind(this, i, plugin.id)}
+                history={this.props.history}
                 saveData={(data) => {
                   if (plugin.data.configuration === undefined) {
                     data.enabled = true
                   }
-                  this.props.history.replace(`/serverConfiguration/plugins/-`)
                   this.saveData(plugin.id, data, i)
                 }}
               />
@@ -314,7 +313,10 @@ class PluginCard extends Component {
               {!this.props.isConfigurator && (
                 <PluginConfigurationForm
                   plugin={this.props.plugin}
-                  onSubmit={this.props.saveData}
+                  onSubmit={(data) => {
+                    this.props.saveData(data)
+                    this.props.history.replace(`/serverConfiguration/plugins/-`)
+                  }}
                 />
               )}
               {this.props.isConfigurator && (
