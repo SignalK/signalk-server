@@ -35,6 +35,93 @@ const Dashboard = (props) => {
   if (errorCount > 0) {
     errors = `(${errorCount} errors)`
   }
+
+  const getLinkType = (providerId) => {
+    try {
+      return providerStatus.find((item) => item.id === providerId).statusType
+    } catch (err) {
+      return 'provider'
+    }
+  }
+
+  const inputPulseIconClass = (providerStats) => {
+    return (
+      'icon-login' +
+      (providerStats.deltaRate > 50
+        ? ' text-primary fa-pulse-fast'
+        : providerStats.deltaRate > 0
+        ? ' text-primary fa-pulse'
+        : '')
+    )
+  }
+
+  const outputPulseIconClass = (providerStats) => {
+    return (
+      'icon-logout' +
+      (providerStats.writeRate > 50
+        ? ' text-primary fa-pulse-fast'
+        : providerStats.writeRate > 0
+        ? ' text-primary fa-pulse'
+        : '')
+    )
+  }
+
+  const renderer = (providerId, providerStats, linkType) => {
+    return (
+      <li key={providerId} onClick={() => props.history.push(`/dashboard`)}>
+        <i
+          className={inputPulseIconClass(providerStats)}
+          style={{
+            color: providerStats.deltaCount ? '#039' : 'lightblue',
+          }}
+        />
+        <i
+          className={outputPulseIconClass(providerStats)}
+          style={{
+            transform: 'scaleX(-1)',
+            color: providerStats.writeCount ? '#039' : 'lightblue',
+          }}
+        />
+        <span className="title">
+          {linkType === 'plugin'
+            ? pluginNameLink(providerId)
+            : providerIdLink(providerId)}
+        </span>
+        {providerStats.writeRate > 0 && (
+          <span className="value">
+            {' '}
+            {providerStats.writeRate}{' '}
+            <span className="text-muted small">{'msg/s'}</span>{' '}
+          </span>
+        )}
+        {providerStats.deltaRate > 0 && providerStats.writeRate > 0 && (
+          <span className="value">
+            <span className="text-muted small">{','}</span>
+            &#160;
+          </span>
+        )}
+        {providerStats.deltaRate > 0 && (
+          <span className="value">
+            {' '}
+            {providerStats.deltaRate}{' '}
+            <span className="text-muted small">
+              ({((providerStats.deltaRate / deltaRate) * 100).toFixed(0)}
+              %)
+            </span>{' '}
+            <span className="text-muted small">{'deltas/s'}</span>{' '}
+          </span>
+        )}
+        <div className="bars">
+          <Progress
+            className="progress-xs"
+            color="warning"
+            value={(providerStats.deltaRate / deltaRate) * 100}
+          />
+        </div>
+      </li>
+    )
+  }
+
   return (
     <div className="animated fadeIn">
       {props.websocketStatus === 'open' && (
@@ -82,98 +169,8 @@ const Dashboard = (props) => {
                       .sort()
                       .map((providerId) => {
                         const providerStats = providerStatistics[providerId]
-                        let linkType = 'provider'
-                        try {
-                          linkType = providerStatus.find(
-                            (item) => item.id === providerId
-                          ).statusType
-                        } catch (error) {}
-                        const inputPulseIconClass =
-                          'icon-login' +
-                          (providerStats.deltaRate > 50
-                            ? ' text-primary fa-pulse-fast'
-                            : providerStats.deltaRate > 0
-                            ? ' text-primary fa-pulse'
-                            : '')
-                        const outputPulseIconClass =
-                          'icon-logout' +
-                          (providerStats.writeRate > 50
-                            ? ' text-primary fa-pulse-fast'
-                            : providerStats.writeRate > 0
-                            ? ' text-primary fa-pulse'
-                            : '')
-                        if (linkType === 'provider') {
-                          return (
-                            <li
-                              key={providerId}
-                              onClick={() => props.history.push(`/dashboard`)}
-                            >
-                              <i
-                                className={inputPulseIconClass}
-                                style={{
-                                  color: providerStats.deltaCount
-                                    ? '#039'
-                                    : 'lightblue',
-                                }}
-                              />
-                              <i
-                                className={outputPulseIconClass}
-                                style={{
-                                  transform: 'scaleX(-1)',
-                                  color: providerStats.writeCount
-                                    ? '#039'
-                                    : 'lightblue',
-                                }}
-                              />
-                              <span className="title">
-                                {providerIdLink(providerId)}
-                              </span>
-                              {providerStats.writeRate > 0 && (
-                                <span className="value">
-                                  {' '}
-                                  {providerStats.writeRate}{' '}
-                                  <span className="text-muted small">
-                                    {'msg/s'}
-                                  </span>{' '}
-                                </span>
-                              )}
-                              {providerStats.deltaRate > 0 &&
-                                providerStats.writeRate > 0 && (
-                                  <span className="value">
-                                    <span className="text-muted small">
-                                      {','}
-                                    </span>
-                                    &#160;
-                                  </span>
-                                )}
-                              {providerStats.deltaRate > 0 && (
-                                <span className="value">
-                                  {' '}
-                                  {providerStats.deltaRate}{' '}
-                                  <span className="text-muted small">
-                                    (
-                                    {(
-                                      (providerStats.deltaRate / deltaRate) *
-                                      100
-                                    ).toFixed(0)}
-                                    %)
-                                  </span>{' '}
-                                  <span className="text-muted small">
-                                    {'deltas/s'}
-                                  </span>{' '}
-                                </span>
-                              )}
-                              <div className="bars">
-                                <Progress
-                                  className="progress-xs"
-                                  color="warning"
-                                  value={
-                                    (providerStats.deltaRate / deltaRate) * 100
-                                  }
-                                />
-                              </div>
-                            </li>
-                          )
+                        if (getLinkType(providerId) === 'provider') {
+                          return renderer(providerId, providerStats, 'provider')
                         }
                       })}
                   </ul>
@@ -181,13 +178,7 @@ const Dashboard = (props) => {
                   {Object.keys(providerStatistics || {})
                     .sort()
                     .map((providerId) => {
-                      let linkType = 'provider'
-                      try {
-                        linkType = providerStatus.find(
-                          (item) => item.id === providerId
-                        ).statusType
-                      } catch (error) {}
-                      if (linkType === 'plugin') {
+                      if (getLinkType(providerId) === 'plugin') {
                         isPlugins = true
                       }
                     })}
@@ -201,98 +192,8 @@ const Dashboard = (props) => {
                       .sort()
                       .map((providerId) => {
                         const providerStats = providerStatistics[providerId]
-                        let linkType = 'provider'
-                        try {
-                          linkType = providerStatus.find(
-                            (item) => item.id === providerId
-                          ).statusType
-                        } catch (error) {}
-                        const inputPulseIconClass =
-                          'icon-login' +
-                          (providerStats.deltaRate > 50
-                            ? ' text-primary fa-pulse-fast'
-                            : providerStats.deltaRate > 0
-                            ? ' text-primary fa-pulse'
-                            : '')
-                        const outputPulseIconClass =
-                          'icon-logout' +
-                          (providerStats.writeRate > 50
-                            ? ' text-primary fa-pulse-fast'
-                            : providerStats.writeRate > 0
-                            ? ' text-primary fa-pulse'
-                            : '')
-                        if (linkType === 'plugin') {
-                          return (
-                            <li
-                              key={providerId}
-                              onClick={() => props.history.push(`/dashboard`)}
-                            >
-                              <i
-                                className={inputPulseIconClass}
-                                style={{
-                                  color: providerStats.deltaCount
-                                    ? '#039'
-                                    : 'lightblue',
-                                }}
-                              />
-                              <i
-                                className={outputPulseIconClass}
-                                style={{
-                                  transform: 'scaleX(-1)',
-                                  color: providerStats.writeCount
-                                    ? '#039'
-                                    : 'lightblue',
-                                }}
-                              />
-                              <span className="title">
-                                {pluginNameLink(providerId)}
-                              </span>
-                              {providerStats.writeRate > 0 && (
-                                <span className="value">
-                                  {' '}
-                                  {providerStats.writeRate}{' '}
-                                  <span className="text-muted small">
-                                    {'msg/s'}
-                                  </span>{' '}
-                                </span>
-                              )}
-                              {providerStats.deltaRate > 0 &&
-                                providerStats.writeRate > 0 && (
-                                  <span className="value">
-                                    <span className="text-muted small">
-                                      {','}
-                                    </span>
-                                    &#160;
-                                  </span>
-                                )}
-                              {providerStats.deltaRate > 0 && (
-                                <span className="value">
-                                  {' '}
-                                  {providerStats.deltaRate}{' '}
-                                  <span className="text-muted small">
-                                    (
-                                    {(
-                                      (providerStats.deltaRate / deltaRate) *
-                                      100
-                                    ).toFixed(0)}
-                                    %)
-                                  </span>{' '}
-                                  <span className="text-muted small">
-                                    {'deltas/s'}
-                                  </span>{' '}
-                                </span>
-                              )}
-                              <div className="bars">
-                                <Progress
-                                  className="progress-xs"
-                                  color="warning"
-                                  value={
-                                    (providerStats.deltaRate / deltaRate) * 100
-                                  }
-                                />
-                              </div>
-                            </li>
-                          )
+                        if (getLinkType(providerId) === 'plugin') {
+                          return renderer(providerId, providerStats, 'plugin')
                         }
                       })}
                   </ul>
