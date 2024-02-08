@@ -30,7 +30,6 @@ const Dashboard = (props) => {
   const uptimeD = Math.floor(uptime / (60 * 60 * 24))
   const uptimeH = Math.floor((uptime % (60 * 60 * 24)) / (60 * 60))
   const uptimeM = Math.floor((uptime % (60 * 60)) / 60)
-  let isPlugins = false
   let errors = ''
   if (errorCount > 0) {
     errors = `(${errorCount} errors)`
@@ -168,32 +167,33 @@ const Dashboard = (props) => {
                     {Object.keys(providerStatistics || {})
                       .sort()
                       .map((providerId) => {
-                        const providerStats = providerStatistics[providerId]
                         if (getLinkType(providerId) === 'provider') {
-                          return renderer(providerId, providerStats, 'provider')
+                          return renderer(
+                            providerId,
+                            providerStatistics[providerId],
+                            'provider'
+                          )
                         }
                       })}
                   </ul>
                   <br></br>
-                  {Object.keys(providerStatistics || {})
-                    .sort()
-                    .map((providerId) => {
-                      if (getLinkType(providerId) === 'plugin') {
-                        isPlugins = true
-                      }
-                    })}
-                  {isPlugins ? (
-                    <div className="text-muted" style={{ fontSize: 17 }}>
-                      Plugin activity
-                    </div>
-                  ) : null}
+                  <div className="text-muted" style={{ fontSize: 17 }}>
+                    {Object.keys(providerStatistics || {}).some(
+                      (providerId) => getLinkType(providerId) === 'plugin'
+                    )
+                      ? 'Plugin activity'
+                      : null}
+                  </div>
                   <ul className="horizontal-bars type-2">
                     {Object.keys(providerStatistics || {})
                       .sort()
                       .map((providerId) => {
-                        const providerStats = providerStatistics[providerId]
                         if (getLinkType(providerId) === 'plugin') {
-                          return renderer(providerId, providerStats, 'plugin')
+                          return renderer(
+                            providerId,
+                            providerStatistics[providerId],
+                            'plugin'
+                          )
                         }
                       })}
                   </ul>
