@@ -160,7 +160,7 @@ const Dashboard = (props) => {
                   </div>
                 </Col>
                 <Col xs="12" md="6">
-                  <div className="text-muted" style={{ fontSize: 17 }}>
+                  <div className="text-muted" style={{ fontSize: '1rem' }}>
                     Connections activity
                   </div>
                   <ul className="horizontal-bars type-2">
@@ -177,7 +177,7 @@ const Dashboard = (props) => {
                       })}
                   </ul>
                   <br></br>
-                  <div className="text-muted" style={{ fontSize: 17 }}>
+                  <div className="text-muted" style={{ fontSize: '1rem' }}>
                     {Object.keys(providerStatistics || {}).some(
                       (providerId) => getLinkType(providerId) === 'plugin'
                     )
