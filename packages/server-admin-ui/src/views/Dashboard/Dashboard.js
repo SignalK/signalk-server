@@ -65,7 +65,7 @@ const Dashboard = (props) => {
     )
   }
 
-  const renderer = (providerId, providerStats, linkType) => {
+  const activityRenderer = (providerId, providerStats, linkType) => {
     return (
       <li key={providerId} onClick={() => props.history.push(`/dashboard`)}>
         <i
@@ -121,6 +121,36 @@ const Dashboard = (props) => {
     )
   }
 
+  const statusRenderer = (status, statusClass, lastError) => {
+    return (
+      <tr
+        key={status.id}
+        onClick={() => {
+          props.history.push(
+            '/serverConfiguration/' +
+              (status.statusType === 'plugin' ? 'plugins/' : 'connections/') +
+              status.id
+          )
+        }}
+      >
+        <td>
+          {status.statusType === 'plugin'
+            ? pluginNameLink(status.id)
+            : providerIdLink(status.id)}
+        </td>
+        <td>
+          <p className="text-danger">{lastError}</p>
+        </td>
+        <td>
+          <p className={statusClass}>
+            {(status.message || '').substring(0, 80)}
+            {status.message.length > 80 ? '...' : ''}
+          </p>
+        </td>
+      </tr>
+    )
+  }
+
   return (
     <div className="animated fadeIn">
       {props.websocketStatus === 'open' && (
@@ -168,7 +198,7 @@ const Dashboard = (props) => {
                       .sort()
                       .map((providerId) => {
                         if (getLinkType(providerId) === 'provider') {
-                          return renderer(
+                          return activityRenderer(
                             providerId,
                             providerStatistics[providerId],
                             'provider'
@@ -189,7 +219,7 @@ const Dashboard = (props) => {
                       .sort()
                       .map((providerId) => {
                         if (getLinkType(providerId) === 'plugin') {
-                          return renderer(
+                          return activityRenderer(
                             providerId,
                             providerStatistics[providerId],
                             'plugin'
@@ -219,49 +249,19 @@ const Dashboard = (props) => {
                     </thead>
                     <tbody>
                       {providerStatus.map((status) => {
-                        let statusClass
-                        if (status.type === 'status') {
-                          statusClass = 'text-success'
-                        } else if (status.type === 'warning') {
-                          statusClass = 'text-warning'
-                        } else {
-                          statusClass = 'text-danger'
+                        const statusClasses = {
+                          status: 'text-success',
+                          warning: 'text-warning',
+                          error: 'text-danger',
                         }
+                        const statusClass = statusClasses[status.type]
                         const lastError =
                           status.lastError && status.lastError != status.message
                             ? status.lastErrorTimeStamp +
                               ': ' +
                               status.lastError
                             : ''
-                        return (
-                          <tr
-                            key={status.id}
-                            onClick={() => {
-                              props.history.push(
-                                '/serverConfiguration/' +
-                                  (status.statusType === 'plugin'
-                                    ? 'plugins/'
-                                    : 'connections/') +
-                                  status.id
-                              )
-                            }}
-                          >
-                            <td>
-                              {status.statusType === 'plugin'
-                                ? pluginNameLink(status.id)
-                                : providerIdLink(status.id)}
-                            </td>
-                            <td>
-                              <p className="text-danger">{lastError}</p>
-                            </td>
-                            <td>
-                              <p className={statusClass}>
-                                {(status.message || '').substring(0, 80)}
-                                {status.message.length > 80 ? '...' : ''}
-                              </p>
-                            </td>
-                          </tr>
-                        )
+                        return statusRenderer(status, statusClass, lastError)
                       })}
                     </tbody>
                   </Table>
