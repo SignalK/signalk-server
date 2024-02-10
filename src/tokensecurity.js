@@ -44,7 +44,7 @@ module.exports = function (app, config) {
   const strategy = {}
 
   let {
-    expiration = 'NEVER',
+    expiration = '1y',
     users = [],
     immutableConfig = false,
     allowDeviceAccessRequests = true,
