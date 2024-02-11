@@ -280,11 +280,13 @@ module.exports = function (app, config) {
         } else if (matches === true) {
           const payload = { id: user.username }
           const theExpiration = configuration.expiration || '1h'
-          debug('jwt expiration: ' + theExpiration)
+          const jwtOptions = {}
+          if (theExpiration !== 'NEVER') {
+            jwtOptions.expiresIn = theExpiration
+          }
+          debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
           try {
-            const token = jwt.sign(payload, configuration.secretKey, {
-              expiresIn: theExpiration
-            })
+            const token = jwt.sign(payload, configuration.secretKey, jwtOptions)
             resolve({ statusCode: 200, token })
           } catch (err) {
             resolve({
