@@ -255,7 +255,7 @@ const mapStateToProps = (state) => {
             url: '/serverConfiguration/plugins/' + (openPlugin || '-'),
           },
           {
-            name: 'Server Log',
+            name: 'Server Logs',
             url: '/serverConfiguration/log',
           },
           {
