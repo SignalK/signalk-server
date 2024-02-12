@@ -220,22 +220,6 @@ const mapStateToProps = (state) => {
         name: 'Appstore',
         url: '/appstore',
         icon: 'icon-basket',
-        children: [
-          {
-            name: 'Available',
-            url: '/appstore/apps',
-            badge: availableBadge,
-          },
-          {
-            name: 'Installed',
-            url: '/appstore/installed',
-          },
-          {
-            name: 'Updates',
-            url: '/appstore/updates',
-            badge: updatesBadge,
-          },
-        ],
       },
       {
         name: 'Server',

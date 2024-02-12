@@ -1,0 +1,135 @@
+.appstore {
+  padding: 20px;
+  height: 100%;
+
+  .section {
+    margin: 20px 0;
+  }
+
+  &__warning {
+    .message__container {
+      padding: 10px;
+      color: #9d8641;
+      border: 1px solid #9d8641;
+      background-color: #fff2cd;
+      p {
+        span {
+          margin-right: 5px;
+        }
+        margin: 0;
+      }
+      i {
+        margin-right: 5px;
+      }
+    }
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+
+    .title__container {
+      display: flex;
+      align-items: center;
+
+      .title {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0 10px 0 0;
+      }
+
+      button {
+        margin: 0 5px;
+        border-radius: 5px;
+      }
+    }
+
+    .search {
+      margin: 10px 0;
+      min-width: 300px;
+      position: relative;
+
+      &__icon {
+        position: absolute;
+        margin-left: 5px;
+        padding: 10px;
+        color: grey;
+      }
+      &__input {
+        padding: 10px;
+        width: 100%;
+        text-indent: 30px;
+      }
+    }
+  }
+
+  &__tags {
+    button {
+      margin: 5px 5px;
+      border-radius: 30px;
+    }
+
+    button.active {
+      border: #a4b7c1;
+      color: #151b1e;
+      background-color: #a4b7c1;
+    }
+  }
+
+  &__grid {
+    display: flex;
+    flex-flow: column;
+    flex: 1 1 auto;
+    height: 600px;
+    background-color: white;
+
+    .cell-type {
+      .tag {
+        font-size: 10px;
+        padding: 5px;
+        border: solid 1px grey;
+        border-radius: 10px;
+        margin: 3px;
+      }
+    }
+
+    .cell-name {
+      display: flex;
+      flex-direction: column;
+
+      .name {
+        font-weight: 700;
+      }
+      .version {
+        color: grey;
+
+        .link {
+          cursor: pointer;
+          color: blue;
+          margin-left: 5px;
+        }
+      }
+    }
+
+    .cell-description {
+      color: grey;
+      font-size: 12px;
+      white-space: normal;
+    }
+    .cell-action {
+      svg {
+        cursor: pointer;
+        margin: 0 5px;
+      }
+    }
+    .cell__renderer.center {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+    }
+  }
+}
