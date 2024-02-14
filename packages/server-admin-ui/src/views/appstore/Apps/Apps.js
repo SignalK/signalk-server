@@ -4,10 +4,9 @@ import { Button, Input } from 'reactstrap'
 import { AgGridReact } from 'ag-grid-react' // React Grid Logic
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faMagnifyingGlass,
-  faTriangleExclamation,
-} from '@fortawesome/free-solid-svg-icons'
+import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+
+import WarningBox from './WarningBox'
 
 /* Cell rendering */
 import TypeCellRenderer from '../Grid/TypeCellRenderer'
@@ -21,7 +20,7 @@ import 'ag-grid-community/styles/ag-theme-quartz.css' // Theme
 
 /* FIXME: Temporary simply to code to be replace with data coming from backend */
 const tags = [
-  'Alls',
+  'All',
   'AIS',
   'Chart Plotters',
   'Cloud',
@@ -38,8 +37,8 @@ const tags = [
 /** Main component */
 const Apps = function (props) {
   /** State */
-  const [selectedView, setSelectedView] = useState('Alls')
-  const [selectedTag, setSelectedTag] = useState('Alls')
+  const [selectedView, setSelectedView] = useState('All')
+  const [selectedTag, setSelectedTag] = useState('All')
 
   /* Effects / Watchers */
   useEffect(() => {
@@ -55,8 +54,7 @@ const Apps = function (props) {
   }, [])
 
   useEffect(() => {
-    console.log('SelectedTag', selectedTag)
-    if (selectedView === 'Alls') {
+    if (selectedView === 'All') {
       refreshGridData(selectedTag, allAppList())
     } else if (selectedView === 'Installed')
       refreshGridData(selectedTag, installedAppList())
@@ -145,7 +143,7 @@ const Apps = function (props) {
    * Set the rowData with the filter selected
    */
   const refreshGridData = useCallback((item, gridData) => {
-    if (!item || item === 'Alls') return setRowData(gridData)
+    if (!item || item === 'All') return setRowData(gridData)
     let newData = []
     newData = gridData.filter((el) => el.categories.includes(item))
     setRowData(newData)
@@ -169,24 +167,18 @@ const Apps = function (props) {
   return (
     <div className="appstore animated fadeIn">
       <section className="appstore__warning section">
-        <div className="message__container">
-          <p className="message">
-            <span>
-              <FontAwesomeIcon icon={faTriangleExclamation} />
-            </span>
-            Sorry you need to restart the server every time you install or
-            update a plugin. We will improve this in the future.
-          </p>
-        </div>
+        <WarningBox>
+          Please restart the server after installing or updating a plugin.
+        </WarningBox>
       </section>
       <header className="appstore__header">
         <div className="title__container">
           <h3 className="title">Apps & Plugins</h3>
           <Button
-            color={selectedView === 'Alls' ? 'primary' : 'secondary'}
-            onClick={() => setSelectedView('Alls')}
+            color={selectedView === 'All' ? 'primary' : 'secondary'}
+            onClick={() => setSelectedView('All')}
           >
-            Alls
+            All
           </Button>
           <Button
             color={selectedView === 'Installed' ? 'primary' : 'secondary'}
