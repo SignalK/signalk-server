@@ -3,7 +3,11 @@ import { Button } from 'reactstrap'
 import { NavLink } from 'react-router-dom'
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faGear, faTrashCan } from '@fortawesome/free-solid-svg-icons'
+import {
+  faGear,
+  faTrashCan,
+  faCloudArrowDown,
+} from '@fortawesome/free-solid-svg-icons'
 
 export default function ActionCellRenderer(props) {
   const handleInstallClick = async () => {
@@ -35,15 +39,34 @@ export default function ActionCellRenderer(props) {
     }
   }
 
+  const handleUpdateClick = async () => {
+    /* TODO: To be implemented
+    
+    Install the new version 
+    */
+  }
+
   return (
     <div className="cell__renderer cell-action center">
       {props.data.installed ? (
         <>
+          {props.data.updateAvailable && (
+            <FontAwesomeIcon
+              className="icon__update"
+              icon={faCloudArrowDown}
+              onClick={handleUpdateClick}
+            />
+          )}
+
           <NavLink to={`/serverConfiguration/plugins/${props.data.name}`}>
-            <FontAwesomeIcon icon={faGear} />
+            <FontAwesomeIcon className="icon__config" icon={faGear} />
           </NavLink>
 
-          <FontAwesomeIcon icon={faTrashCan} onClick={handleRemoveClick} />
+          <FontAwesomeIcon
+            className="icon__remove"
+            icon={faTrashCan}
+            onClick={handleRemoveClick}
+          />
         </>
       ) : (
         <Button color="primary" onClick={handleInstallClick}>

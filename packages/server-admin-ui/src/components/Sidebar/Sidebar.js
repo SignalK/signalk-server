@@ -155,15 +155,14 @@ class Sidebar extends Component {
 const mapStateToProps = (state) => {
   var appUpdates = state.appStore.updates.length
   var updatesBadge = null
-  var availableBadge = null
   var serverUpdateBadge = null
   var accessRequestsBadge = null
 
   if (appUpdates > 0) {
     updatesBadge = {
-      variant: 'danger',
+      variant: 'success',
       text: `${appUpdates}`,
-      color: 'danger',
+      color: 'success',
     }
   }
 
@@ -176,7 +175,7 @@ const mapStateToProps = (state) => {
   }
 
   if (!state.appStore.storeAvailable) {
-    updatesBadge = availableBadge = {
+    updatesBadge = {
       variant: 'danger',
       text: 'OFFLINE',
     }
@@ -220,6 +219,7 @@ const mapStateToProps = (state) => {
         name: 'Appstore',
         url: '/appstore',
         icon: 'icon-basket',
+        badge: updatesBadge,
       },
       {
         name: 'Server',

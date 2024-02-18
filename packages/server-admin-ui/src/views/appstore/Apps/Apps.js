@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { connect } from 'react-redux'
-import { Button, Input } from 'reactstrap'
+import { Badge, Button, Input } from 'reactstrap'
 import { AgGridReact } from 'ag-grid-react' // React Grid Logic
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -57,7 +57,10 @@ const Apps = function (props) {
     if (selectedView === 'All') {
       refreshGridData(selectedTag, allAppList())
     } else if (selectedView === 'Installed')
-      refreshGridData(selectedTag, installedAppList())
+      refreshGridData(
+        selectedTag,
+        allAppList().filter((el) => el.installed)
+      )
     return () => {}
   }, [
     selectedTag,
@@ -67,25 +70,20 @@ const Apps = function (props) {
   ])
 
   const allAppList = () => {
-    const installedApp = props.appStore.installed.map((app) => ({
-      ...app,
-      installed: true,
-    }))
+    const installedApp = props.appStore.installed.map((app) => {
+      return {
+        ...app,
+        installed: true,
+        updateAvailable:
+          app.installedVersion !== app.version ? app.version : null,
+      }
+    })
     const availableApp = props.appStore.available.map((app) => ({
       ...app,
       installed: false,
     }))
 
     return [...installedApp, ...availableApp]
-  }
-
-  const installedAppList = () => {
-    const installedApp = props.appStore.installed.map((app) => ({
-      ...app,
-      installed: true,
-    }))
-
-    return [...installedApp]
   }
 
   /** Grid Element */
@@ -186,6 +184,11 @@ const Apps = function (props) {
           >
             Installed
           </Button>
+          {props.appStore.updates.length > 0 && (
+            <Badge color="success" className="badge__update">
+              {props.appStore.updates.length}
+            </Badge>
+          )}
         </div>
         <div className="search">
           <FontAwesomeIcon className="search__icon" icon={faMagnifyingGlass} />
@@ -217,7 +220,7 @@ const Apps = function (props) {
             ref={gridRef}
             rowData={rowData}
             columnDefs={colDefs}
-            rowHeight={100}
+            rowHeight={80}
             autoSizeStrategy={autoSizeStrategy}
             onGridReady={onGridReady}
             style={{ width: '100%', height: '100%' }}

@@ -44,6 +44,12 @@
         margin: 0 5px;
         border-radius: 5px;
       }
+
+      .badge__update {
+        color: white;
+        font-size: 10px;
+        border-radius: 3px;
+      }
     }
 
     .search {
@@ -87,6 +93,7 @@
 
     .cell-type {
       .tag {
+        color: grey;
         font-size: 10px;
         padding: 5px;
         border: solid 1px grey;
@@ -102,8 +109,25 @@
       .name {
         font-weight: 700;
       }
-      .version {
+
+      .version__container {
+        display: flex;
+        width: 80%;
         color: grey;
+
+        .version {
+          color: grey;
+        }
+
+        .version--update {
+          color: green;
+          font-weight: 700;
+        }
+
+        .update__arrow {
+          height: 10px;
+          margin: 0 5px;
+        }
 
         .link {
           cursor: pointer;
@@ -118,12 +142,24 @@
       font-size: 12px;
       white-space: normal;
     }
+
     .cell-action {
       svg {
+        font-size: 15px;
         cursor: pointer;
         margin: 0 5px;
       }
+      path {
+        color: grey;
+      }
+
+      .icon__update {
+        path {
+          color: green;
+        }
+      }
     }
+
     .cell__renderer.center {
       display: flex;
       justify-content: center;
