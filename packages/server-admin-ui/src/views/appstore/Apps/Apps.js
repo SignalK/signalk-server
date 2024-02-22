@@ -2,37 +2,19 @@ import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { connect } from 'react-redux'
 import { Badge, Button, Input } from 'reactstrap'
 import { AgGridReact } from 'ag-grid-react' // React Grid Logic
-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 
+/* Javascript files */
+import columnDefs from '../Grid/columnDefs'
+
+/* Components */
 import WarningBox from './WarningBox'
 
-/* Cell rendering */
-import TypeCellRenderer from '../Grid/TypeCellRenderer'
-import NameCellRenderer from '../Grid/NameCellRenderer'
-import ActionCellRenderer from '../Grid/ActionCellRenderer'
-
 /* Styling */
-import './Apps.scss'
+import '../appStore.scss'
 import 'ag-grid-community/styles/ag-grid.css' // Core CSS
 import 'ag-grid-community/styles/ag-theme-quartz.css' // Theme
-
-/* FIXME: Temporary simply to code to be replace with data coming from backend */
-const tags = [
-  'All',
-  'AIS',
-  'Chart Plotters',
-  'Cloud',
-  'Digital Switching',
-  'Hardware support',
-  'Instruments',
-  'NMEA 2000',
-  'NMEA 0183',
-  'Notifications',
-  'Utility',
-  'Weather',
-]
 
 /** Main component */
 const Apps = function (props) {
@@ -69,6 +51,12 @@ const Apps = function (props) {
     props.appStore.available,
   ])
 
+  /**
+   * Computed properties returning the whole app list,
+   * including plugins and webapp applications
+   *
+   * @returns {Array} allAppList - the whole app list of available app and installed apps
+   */
   const allAppList = () => {
     const installedApp = props.appStore.installed.map((app) => {
       return {
@@ -87,40 +75,9 @@ const Apps = function (props) {
   }
 
   /** Grid Element */
-  // Column Definitions: Defines & controls grid columns.
+
   const gridRef = useRef()
-  const [colDefs, setColDefs] = useState([
-    {
-      field: 'name',
-      header: 'Name',
-      cellRenderer: NameCellRenderer,
-      sort: true,
-    },
-    {
-      colId: 'description',
-      field: 'description',
-      header: 'Description',
-      cellClass: 'cell-description',
-      wrapText: true,
-      sort: false,
-    },
-    { colId: 'author', field: 'author', header: 'Author', wrapText: true },
-    {
-      colId: 'type',
-      field: 'type',
-      header: 'Type',
-      cellRenderer: TypeCellRenderer,
-      width: 60,
-      sort: false,
-    },
-    {
-      field: 'action',
-      header: 'Action',
-      cellRenderer: ActionCellRenderer,
-      width: 60,
-      sort: false,
-    },
-  ])
+  const [colDefs, setColDefs] = useState([...columnDefs])
   const [rowData, setRowData] = useState(() => allAppList())
 
   const autoSizeStrategy = {
@@ -158,17 +115,39 @@ const Apps = function (props) {
     })
   }
 
+  /** Callback called when the grid is ready */
   const onGridReady = () => {
     toggleColumnsOnMobile(window.innerWidth < 786)
+  }
+
+  /* Show different warning message
+  whether if the store is available or if an app was installed or removed
+  */
+  let warningHeader
+
+  if (!props.appStore.storeAvailable) {
+    warningHeader = (
+      <WarningBox>
+        You probably don't have Internet connectivity and Appstore can not be
+        reached.
+      </WarningBox>
+    )
+  } else if (props.appStore.installing.length > 0) {
+    warningHeader = (
+      <WarningBox>
+        Please restart the server after installing or updating a plugin.
+      </WarningBox>
+    )
   }
 
   return (
     <div className="appstore animated fadeIn">
       <section className="appstore__warning section">
-        <WarningBox>
-          Please restart the server after installing or updating a plugin.
-        </WarningBox>
+        {/* TODO: Display warning message saying if the appstore is not available */}
+
+        {warningHeader}
       </section>
+
       <header className="appstore__header">
         <div className="title__container">
           <h3 className="title">Apps & Plugins</h3>
@@ -202,7 +181,7 @@ const Apps = function (props) {
       </header>
 
       <section className="appstore__tags section">
-        {tags.map((item) => (
+        {props.appStore.categories?.map((item) => (
           <Button
             key={item}
             className={selectedTag === item ? 'active' : undefined}

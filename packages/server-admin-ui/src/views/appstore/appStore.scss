@@ -88,7 +88,7 @@
     display: flex;
     flex-flow: column;
     flex: 1 1 auto;
-    height: 600px;
+    height: 80%;
     background-color: white;
 
     .cell-type {
@@ -120,7 +120,7 @@
         }
 
         .version--update {
-          color: green;
+          color: #00cd79;
           font-weight: 700;
         }
 
@@ -144,18 +144,34 @@
     }
 
     .cell-action {
+      .button__install:hover {
+        background-color: transparent;
+        border: #003399 solid 2px;
+        color: #003399;
+      }
+      p.status {
+        text-align: center;
+        width: 100%;
+        margin: 10px 0;
+      }
+
+      div.progress {
+        width: 100%;
+      }
+
       svg {
         font-size: 15px;
         cursor: pointer;
         margin: 0 5px;
       }
+
       path {
         color: grey;
       }
 
       .icon__update {
         path {
-          color: green;
+          color: #00cd79;
         }
       }
     }
