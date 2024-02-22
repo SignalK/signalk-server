@@ -71,7 +71,6 @@
     "packages/resources-provider-plugin"
   ],
   "dependencies": {
-    "@meri-imperiumi/signalk-teltonika-rutx11": "^0.6.0",
     "@signalk/course-provider": "^1.0.0",
     "@signalk/n2k-signalk": "^3.0.0",
     "@signalk/nmea0183-signalk": "^3.0.0",
@@ -131,13 +130,13 @@
     "@signalk/instrumentpanel": "0.x",
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
-    "@signalk/udp-nmea-plugin": "^2.0.0",
     "@signalk/vesselpositions": "^1.0.0",
+    "@signalk/udp-nmea-plugin": "^2.0.0",
     "@signalk/zones": "^1.0.0",
-    "mdns": "^2.5.1",
-    "serialport": "^11.0.0",
+    "signalk-to-nmea2000": "^2.16.0",
     "signalk-n2kais-to-nmea0183": "^1.3.1",
-    "signalk-to-nmea2000": "^2.16.0"
+    "mdns": "^2.5.1",
+    "serialport": "^11.0.0"
   },
   "devDependencies": {
     "@types/busboy": "^1.5.0",
