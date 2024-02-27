@@ -11,7 +11,9 @@ export default function NameCellRenderer(props) {
     <div className="cell__renderer cell-name">
       <span className="name">{props.value}</span>
       <div className="version__container">
-        <p className="version">v{props.data.installedVersion}</p>
+        <p className="version">
+          v{props.data.installedVersion || props.data.version}
+        </p>
         {props.data.updateAvailable && (
           <>
             <span className="update__arrow">

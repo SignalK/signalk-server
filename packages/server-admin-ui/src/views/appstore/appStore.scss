@@ -2,11 +2,40 @@
   padding: 20px;
   height: 100%;
 
-  .section {
-    margin: 20px 0;
+  .card {
+    height: 100%;
+  }
+
+  button {
+    border-radius: 5px;
+    margin: 5px 5px;
+
+    &.btn-outline-primary {
+      color: #26363e;
+      border-color: #26363e;
+
+      &:hover {
+        background-color: #26363e;
+        color: white;
+      }
+    }
+
+    &.active.btn.btn-outline-primary {
+      background-color: #26363e;
+    }
+    &.btn-primary {
+      background-color: #26363e;
+    }
+  }
+
+  .card-body {
+    display: flex;
+    flex-direction: column;
   }
 
   &__warning {
+    margin: 10px 0;
+
     .message__container {
       padding: 10px;
       color: #9d8641;
@@ -34,15 +63,8 @@
       display: flex;
       align-items: center;
 
-      .title {
-        font-size: 24px;
-        font-weight: 700;
+      .card-title {
         margin: 0 10px 0 0;
-      }
-
-      button {
-        margin: 0 5px;
-        border-radius: 5px;
       }
 
       .badge__update {
@@ -50,11 +72,16 @@
         font-size: 10px;
         border-radius: 3px;
       }
+
+      button {
+        margin: 0 5px;
+      }
     }
 
+    // TODO: Improve responsiseness on the search bar
     .search {
       margin: 10px 0;
-      min-width: 300px;
+      min-width: 200px;
       position: relative;
 
       &__icon {
@@ -76,20 +103,21 @@
       margin: 5px 5px;
       border-radius: 30px;
     }
-
-    button.active {
-      border: #a4b7c1;
-      color: #151b1e;
-      background-color: #a4b7c1;
-    }
   }
 
   &__grid {
-    display: flex;
-    flex-flow: column;
     flex: 1 1 auto;
-    height: 80%;
     background-color: white;
+    max-height: 80%;
+    margin-top: 20px;
+
+    /* Center header on type and action to the center*/
+    div[col-id='type'],
+    div[col-id='action'] {
+      .ag-header-cell-label {
+        justify-content: center;
+      }
+    }
 
     .cell-type {
       .tag {
@@ -144,18 +172,18 @@
     }
 
     .cell-action {
-      .button__install:hover {
-        background-color: transparent;
-        border: #003399 solid 2px;
-        color: #003399;
+      .proress__wrapper {
+        display: flex;
+        flex-direction: column;
+        // justify-content: center;
       }
-      p.status {
+      .progress__status {
         text-align: center;
         width: 100%;
         margin: 10px 0;
       }
 
-      div.progress {
+      .progress__bar {
         width: 100%;
       }
 

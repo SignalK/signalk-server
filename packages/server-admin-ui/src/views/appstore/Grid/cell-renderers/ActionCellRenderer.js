@@ -56,7 +56,7 @@ function ActionCellRenderer(props) {
       status = progressingApp.isRemove ? 'Removing' : 'Installing'
       progress = (
         <Progress
-          className="progress-sm"
+          className="progress-sm progress__bar"
           animated
           color="success"
           value="100"
@@ -70,10 +70,10 @@ function ActionCellRenderer(props) {
     }
 
     content = (
-      <>
-        <p className="status">{status}</p>
+      <div className="progress__wrapper">
+        <p className="progress__status">{status}</p>
         {progress}
-      </>
+      </div>
     )
   } else {
     content = props.data.installed ? (

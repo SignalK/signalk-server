@@ -1,6 +1,14 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { connect } from 'react-redux'
-import { Badge, Button, Input } from 'reactstrap'
+import {
+  Card,
+  CardTitle,
+  CardHeader,
+  CardBody,
+  Badge,
+  Button,
+  Input,
+} from 'reactstrap'
 import { AgGridReact } from 'ag-grid-react' // React Grid Logic
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
@@ -26,7 +34,7 @@ const Apps = function (props) {
   useEffect(() => {
     const handleResize = () => {
       // Perform actions on window resize
-      toggleColumnsOnMobile(window.innerWidth < 786)
+      toggleColumnsOnMobile(window.innerWidth)
     }
 
     window.addEventListener('resize', handleResize)
@@ -75,7 +83,6 @@ const Apps = function (props) {
   }
 
   /** Grid Element */
-
   const gridRef = useRef()
   const [colDefs, setColDefs] = useState([...columnDefs])
   const [rowData, setRowData] = useState(() => allAppList())
@@ -105,20 +112,24 @@ const Apps = function (props) {
   })
 
   /** Hide columns if widown is small than a threshold */
-  const toggleColumnsOnMobile = (hide) => {
+  const toggleColumnsOnMobile = (innerWidth) => {
     gridRef.current.api.applyColumnState({
       state: [
-        { colId: 'description', hide },
-        { colId: 'author', hide },
-        { colId: 'type', hide },
+        { colId: 'description', hide: innerWidth < 768 },
+        { colId: 'author', hide: innerWidth < 991 },
+        { colId: 'type', hide: innerWidth < 1024 },
       ],
     })
   }
 
   /** Callback called when the grid is ready */
-  const onGridReady = () => {
-    toggleColumnsOnMobile(window.innerWidth < 786)
-  }
+  const onGridReady = useCallback((params) => {
+    window.addEventListener('resize', () => {
+      setTimeout(() => {
+        params.api.sizeColumnsToFit()
+      })
+    })
+  }, [])
 
   /* Show different warning message
   whether if the store is available or if an app was installed or removed
@@ -135,7 +146,8 @@ const Apps = function (props) {
   } else if (props.appStore.installing.length > 0) {
     warningHeader = (
       <WarningBox>
-        Please restart the server after installing or updating a plugin.
+        Please restart the server after installing, updating or deleting a
+        plugin
       </WarningBox>
     )
   }
@@ -148,64 +160,73 @@ const Apps = function (props) {
         {warningHeader}
       </section>
 
-      <header className="appstore__header">
-        <div className="title__container">
-          <h3 className="title">Apps & Plugins</h3>
-          <Button
-            color={selectedView === 'All' ? 'primary' : 'secondary'}
-            onClick={() => setSelectedView('All')}
-          >
-            All
-          </Button>
-          <Button
-            color={selectedView === 'Installed' ? 'primary' : 'secondary'}
-            onClick={() => setSelectedView('Installed')}
-          >
-            Installed
-          </Button>
-          {props.appStore.updates.length > 0 && (
-            <Badge color="success" className="badge__update">
-              {props.appStore.updates.length}
-            </Badge>
-          )}
-        </div>
-        <div className="search">
-          <FontAwesomeIcon className="search__icon" icon={faMagnifyingGlass} />
-          <Input
-            id="search-text-box"
-            className="search__input"
-            placeholder="Search by plugin or App name..."
-            onInput={onSearchTextBoxChanged}
-          />
-        </div>
-      </header>
+      <Card>
+        <CardHeader className="appstore__header">
+          <div className="title__container">
+            <CardTitle>Apps & Plugins</CardTitle>
+            {/* <h3 className="title"></h3> */}
+            <Button
+              color={selectedView === 'All' ? 'primary' : 'secondary'}
+              onClick={() => setSelectedView('All')}
+            >
+              All
+            </Button>
+            <Button
+              color={selectedView === 'Installed' ? 'primary' : 'secondary'}
+              onClick={() => setSelectedView('Installed')}
+            >
+              Installed
+            </Button>
+            {props.appStore.updates.length > 0 && (
+              <Badge color="success" className="badge__update">
+                {props.appStore.updates.length}
+              </Badge>
+            )}
+          </div>
+          <div className="search">
+            <FontAwesomeIcon
+              className="search__icon"
+              icon={faMagnifyingGlass}
+            />
+            <Input
+              id="search-text-box"
+              className="search__input"
+              placeholder="Search by plugin or App name..."
+              onInput={onSearchTextBoxChanged}
+            />
+          </div>
+        </CardHeader>
 
-      <section className="appstore__tags section">
-        {props.appStore.categories?.map((item) => (
-          <Button
-            key={item}
-            className={selectedTag === item ? 'active' : undefined}
-            outline
-            onClick={() => setSelectedTag(item)}
-          >
-            {item}
-          </Button>
-        ))}
-      </section>
+        <CardBody>
+          <section className="appstore__tags section">
+            {props.appStore.categories?.map((item) => (
+              <Button
+                key={item}
+                color="primary"
+                className={selectedTag === item ? 'active' : undefined}
+                outline
+                onClick={() => setSelectedTag(item)}
+              >
+                {item}
+              </Button>
+            ))}
+          </section>
 
-      <section className="appstore__grid section">
-        <div className="ag-theme-quartz" style={{ height: '100%' }}>
-          <AgGridReact
-            ref={gridRef}
-            rowData={rowData}
-            columnDefs={colDefs}
-            rowHeight={80}
-            autoSizeStrategy={autoSizeStrategy}
-            onGridReady={onGridReady}
-            style={{ width: '100%', height: '100%' }}
-          />
-        </div>
-      </section>
+          <section className="appstore__grid section">
+            <div className="ag-theme-quartz" style={{ height: '100%' }}>
+              <AgGridReact
+                ref={gridRef}
+                rowData={rowData}
+                columnDefs={colDefs}
+                rowHeight={80}
+                autoSizeStrategy={autoSizeStrategy}
+                onGridReady={onGridReady}
+                style={{ width: '100%', height: '100%' }}
+              />
+            </div>
+          </section>
+        </CardBody>
+      </Card>
     </div>
   )
 }
