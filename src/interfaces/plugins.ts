@@ -695,27 +695,24 @@ module.exports = (theApp: any) => {
       res.json(getPluginOptions(plugin.id))
     })
 
-    if (typeof plugin.registerWithRouter == 'function') {
-      if (typeof plugin.getOpenApi == 'function') {
-        app.setPluginOpenApi(plugin.id, plugin.getOpenApi())
-      }
-    }
-
     if (typeof plugin.signalKApiRoutes === 'function') {
       app.use('/signalk/v1/api', plugin.signalKApiRoutes(express.Router()))
     }
   }
 
   function doRegisterWithRouter(app: any, plugin: PluginInfo, router: Router) {
-    router.use((req, res, next) => {
-      const stopHandlers = onStopHandlers[plugin.id]
-
-      if (stopHandlers.length > 0) next()
-      else res.status(500).send(plugin.id + ' has stopped')
-    })
-
     if (typeof plugin.registerWithRouter === 'function') {
+      debug('Activating routing for ' + plugin.id)
+      router.use((req, res, next) => {
+        const stopHandlers = onStopHandlers[plugin.id]
+
+        if (stopHandlers.length > 0) next()
+        else res.status(500).send(plugin.id + ' has stopped')
+      })
       plugin.registerWithRouter(router)
+      if (typeof plugin.getOpenApi == 'function') {
+        app.setPluginOpenApi(plugin.id, plugin.getOpenApi())
+      }
     }
 
     app.use(backwardsCompat('/plugins/' + plugin.id), router)
