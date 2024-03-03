@@ -11,7 +11,6 @@ RUN npm config rm proxy \
   && npm config set fetch-retries 5 \
   && npm config set fetch-retry-mintimeout 60000 \
   && npm config set fetch-retry-maxtimeout 120000 \
-  && npm config set strict-ssl false \
   && npm cache clean -f
 
 FROM base AS tarballs_installed

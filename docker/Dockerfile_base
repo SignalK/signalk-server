@@ -13,7 +13,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
   && npm config set fetch-retries 5 \
   && npm config set fetch-retry-mintimeout 60000 \
   && npm config set fetch-retry-maxtimeout 120000 \
-  && npm config set strict-ssl false \
   && npm cache clean -f \
   && npm install npm@latest -g \
   && sudo setcap cap_net_raw+eip $(eval readlink -f `which node`)
