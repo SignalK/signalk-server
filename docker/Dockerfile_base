@@ -6,8 +6,14 @@ RUN groupadd --gid 1000 node \
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install git python3 python2 build-essential avahi-daemon avahi-discover avahi-utils libnss-mdns mdns-scan libavahi-compat-libdnssd-dev sysstat procps nano curl libcap2-bin sudo \
   && groupadd -r docker -g 998 && groupadd -r i2c -g 997 && groupadd -r spi -g 999 && usermod -a -G dialout,i2c,spi,netdev,docker node
   
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
   && DEBIAN_FRONTEND=noninteractive apt-get -y install nodejs \
+  && npm config rm proxy \
+  && npm config rm https-proxy \
+  && npm config set fetch-retries 5 \
+  && npm config set fetch-retry-mintimeout 60000 \
+  && npm config set fetch-retry-maxtimeout 120000 \
+  && npm config set strict-ssl false \
   && npm cache clean -f \
   && npm install npm@latest -g \
   && sudo setcap cap_net_raw+eip $(eval readlink -f `which node`)

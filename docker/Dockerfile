@@ -7,15 +7,17 @@ RUN mkdir -p /home/node/.signalk/ \
 WORKDIR /home/node/signalk
 
 RUN npm config rm proxy \
-  && npm config rm https-proxy
+  && npm config rm https-proxy \
+  && npm config set fetch-retries 5 \
+  && npm config set fetch-retry-mintimeout 60000 \
+  && npm config set fetch-retry-maxtimeout 120000 \
+  && npm config set strict-ssl false \
+  && npm cache clean -f
 
 FROM base AS tarballs_installed
 WORKDIR /home/node/signalk
 COPY *.tgz .
 USER root
-
-#Github Action seeing frequent econnresets, so retry more
-RUN npm config set fetch-retries 5
 
 RUN npm i -g signalk-server-*.tgz
 # move server-admin-ui that gets installed as sibling of signalk-server
