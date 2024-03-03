@@ -402,7 +402,16 @@ function readSettingsFile(app: ConfigApp) {
     }
   } else {
     debug('Using settings file: ' + settings)
-    app.config.settings = require(settings)
+    try {
+      app.config.settings = require(settings)
+    } catch (e: any) {
+      console.error(
+        `Error reading settings file ${settings}, using empty settings`
+      )
+      app.config.settings = {
+        pipedProviders: []
+      }
+    }
   }
   if (_.isUndefined(app.config.settings.pipedProviders)) {
     app.config.settings.pipedProviders = []
