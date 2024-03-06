@@ -191,7 +191,11 @@ module.exports = function (app, config) {
           if (reply.statusCode === 200) {
             let cookieOptions = { httpOnly: true }
             if (remember) {
-              cookieOptions.maxAge = ms(configuration.expiration || '1h')
+              cookieOptions.maxAge = ms(
+                configuration.expiration === 'NEVER'
+                  ? '10y'
+                  : configuration.expiration || '1h'
+              )
             }
             res.cookie('JAUTHENTICATION', reply.token, cookieOptions)
 
