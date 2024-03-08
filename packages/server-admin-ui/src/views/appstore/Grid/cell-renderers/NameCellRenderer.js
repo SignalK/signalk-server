@@ -11,17 +11,17 @@ export default function NameCellRenderer(props) {
     <div className="cell__renderer cell-name">
       <span className="name">{props.value}</span>
       <div className="version__container">
-        <p className="version">
+        <span className="version">
           v{props.data.installedVersion || props.data.version}
-        </p>
+        </span>
         {props.data.updateAvailable && (
           <>
             <span className="update__arrow">
               <FontAwesomeIcon icon={faArrowRight} />
             </span>
-            <p className="version version--update">
+            <span className="version version--update">
               v{props.data.updateAvailable}
-            </p>
+            </span>
           </>
         )}
         {props.data.npmUrl && (

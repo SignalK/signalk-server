@@ -9,6 +9,7 @@ export default [
     headerName: 'Name',
     cellRenderer: NameCellRenderer,
     sortable: true,
+    autoHeight: true,
   },
   {
     colId: 'description',
@@ -17,6 +18,7 @@ export default [
     cellClass: 'cell-description',
     wrapText: true,
     sortable: false,
+    autoHeight: true,
   },
   { colId: 'author', field: 'author', headerName: 'Author', wrapText: true },
   {
