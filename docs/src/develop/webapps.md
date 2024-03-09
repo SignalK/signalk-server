@@ -87,3 +87,33 @@ PluginConfigurationForm properties:
 
 
 **_Note: The documentation regarding embedded WebApps and Components provided at this time is rudimentary and should be considered under development as the concept is evolving._**
+
+## Authentication and Session Management
+
+Per [the specification](https://signalk.org/specification/1.7.0/doc/security.html#authentication-via-http) the server provides the endpoint `/signalk/v1/auth/login` for logging in. A successful request will
+- set an authentication cookie
+- return an authentication token
+
+For **cookie based, shared sessions** all a webapp needs to do is use `credentials: "include"` when making api calls with [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch#sending_a_request_with_credentials_included). Cookies are included automatically in the initial WebSocket opening HTTP request, so the same works automatically for WebSocket connections.
+
+The session cookie's value is the same as the token value: it is a JWT token that includes a validity period and is signed by the server. The server is stateless: JWT is verified for each request for a valid signature and time. Validity period is governed by server's security `expires` configuration value that can be changed in Admin UI's Security section.
+
+The login endpoint has an optional `rememberMe` request parameter. By default, without `rememberMe` set to true, the cookie is erased on browser restarts per standard browser behavior. When true the response's set cookie header includes MaxAge value based on the server's `expires` value. This makes the cookie persist over browser restarts.
+
+As the cookie is set to be [`HttpOnly`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#security) webapp JavaScript has no access to it. Including it in server requests and persisting its value is managed by the browser, governed by the `Set-Cookie` headers sent by the server.
+
+For **token based sessions** a webapp may manage the authentication token itself. It must include it explicitly in fetch call headers.
+As JavaScript has no access to headers but cookies are included automatically by browsers when opening WebSocket connections the server will use the server-set, HttpOnly cookie. Normally browsers do not allow shadowing the server-set cookie with a new value. The only option for WebSocket connections is using a query parameter to override the cookie with a token.
+
+The order that the server uses for finding the JWT token is
+1. query parameter `token`
+2. request header `authorization`
+3. authorization cookie (name managed by the server)
+
+Token-based session management is currently discouraged, because it may result in **session confusion**: all login calls set the shared session cookie for all webapps that are using cookie based, shared sessions.
+
+Each webapp acting separately, managing its authentication token independently, means that
+- each application needs to implement token management separately so that closing and reopening the webapp during a browser session does not require the user to reauthenticate
+- when navigating between the different webapps the user needs to authenticate to each one separately
+
+The server's Admin UI is a regular webapp using cookie based sessions, there is no separate authentication mechanism.
