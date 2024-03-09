@@ -74,10 +74,15 @@ const Apps = function (props) {
           app.installedVersion !== app.version ? app.version : null,
       }
     })
-    const availableApp = props.appStore.available.map((app) => ({
-      ...app,
-      installed: false,
-    }))
+
+    // Filter out the one that are already installed
+    const alreadyInstalled = installedApp.map((el) => el.name)
+    const availableApp = props.appStore.available
+      .filter((app) => !alreadyInstalled.includes(app.name))
+      .map((app) => ({
+        ...app,
+        installed: false,
+      }))
 
     return [...installedApp, ...availableApp]
   }
