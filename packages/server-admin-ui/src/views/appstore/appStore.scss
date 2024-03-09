@@ -26,6 +26,10 @@
     &.btn-primary {
       background-color: #26363e;
     }
+
+    &.btn.btn-secondary {
+      background-color: #d3d3d3;
+    }
   }
 
   .card-body {
@@ -78,22 +82,33 @@
       }
     }
 
-    // TODO: Improve responsiseness on the search bar
-    .search {
-      margin: 10px 0;
-      min-width: 200px;
-      position: relative;
+    .action__container {
+      display: flex;
+      align-items: center;
+      margin-top: 5px;
 
-      &__icon {
-        position: absolute;
-        margin-left: 5px;
-        padding: 10px;
-        color: grey;
+      button {
+        margin: 0;
       }
-      &__input {
-        padding: 10px;
-        width: 100%;
-        text-indent: 30px;
+
+      // TODO: Improve responsiseness on the search bar
+      .search {
+        min-width: 200px;
+        margin-left: 5px;
+        height: 100%;
+        position: relative;
+
+        &__icon {
+          position: absolute;
+          margin-left: 5px;
+          padding: 10px;
+          color: grey;
+        }
+        &__input {
+          padding: 10px;
+          width: 100%;
+          text-indent: 30px;
+        }
       }
     }
   }
@@ -103,14 +118,19 @@
       margin: 5px 5px;
       border-radius: 30px;
     }
+    margin-bottom: 20px;
   }
 
   &__grid {
     flex: 1 1 auto;
     background-color: white;
     max-height: 80%;
-    margin-top: 20px;
+    font-size: 12px;
 
+    .grid__action {
+      display: flex;
+      justify-content: flex-end;
+    }
     /* Center header on type and action to the center*/
     div[col-id='type'],
     div[col-id='action'] {
@@ -119,14 +139,8 @@
       }
     }
 
-    .ag-cell {
-      line-height: 1.5em;
-      padding: 8px;
-    }
-
     .cell-type {
       .tag {
-        color: grey;
         font-size: 10px;
         padding: 5px;
         border: solid 1px grey;
@@ -138,19 +152,14 @@
     .cell-name {
       display: flex;
       flex-direction: column;
-
       .name {
-        font-weight: 700;
+        font-size: 14px;
+        color: black;
       }
 
       .version__container {
         display: flex;
         width: 80%;
-        color: grey;
-
-        .version {
-          color: grey;
-        }
 
         .version--update {
           color: #00cd79;

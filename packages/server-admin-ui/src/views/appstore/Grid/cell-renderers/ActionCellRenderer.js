@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react'
 import { Button, Progress } from 'reactstrap'
-import { NavLink } from 'react-router-dom'
 import { connect } from 'react-redux'
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -86,9 +85,9 @@ function ActionCellRenderer(props) {
           />
         )}
 
-        <NavLink to={`/serverConfiguration/plugins/${props.data.name}`}>
+        {/* <NavLink to={`/serverConfiguration/plugins/${props.data.name}`}>
           <FontAwesomeIcon className="icon__config" icon={faGear} />
-        </NavLink>
+        </NavLink> */}
 
         <FontAwesomeIcon
           className="icon__remove"

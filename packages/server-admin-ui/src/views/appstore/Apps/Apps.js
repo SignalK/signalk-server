@@ -21,14 +21,13 @@ import WarningBox from './WarningBox'
 
 /* Styling */
 import '../appStore.scss'
-import 'ag-grid-community/styles/ag-grid.css' // Core CSS
-import 'ag-grid-community/styles/ag-theme-quartz.css' // Theme
 
 /** Main component */
 const Apps = function (props) {
   /** State */
   const [selectedView, setSelectedView] = useState('All')
   const [selectedTag, setSelectedTag] = useState('All')
+  const [clickedUpdateAll, setClickedUpdateAll] = useState(false)
 
   /* Effects / Watchers */
   useEffect(() => {
@@ -136,6 +135,14 @@ const Apps = function (props) {
     })
   }, [])
 
+  const handleUpdateAll = () => {
+    if (!clickedUpdateAll) {
+      console.log('Update all')
+
+      setClickedUpdateAll(true)
+    }
+  }
+
   /* Show different warning message
   whether if the store is available or if an app was installed or removed
   */
@@ -159,11 +166,7 @@ const Apps = function (props) {
 
   return (
     <div className="appstore animated fadeIn">
-      <section className="appstore__warning section">
-        {/* TODO: Display warning message saying if the appstore is not available */}
-
-        {warningHeader}
-      </section>
+      <section className="appstore__warning section">{warningHeader}</section>
 
       <Card>
         <CardHeader className="appstore__header">
@@ -188,17 +191,30 @@ const Apps = function (props) {
               </Badge>
             )}
           </div>
-          <div className="search">
-            <FontAwesomeIcon
-              className="search__icon"
-              icon={faMagnifyingGlass}
-            />
-            <Input
-              id="search-text-box"
-              className="search__input"
-              placeholder="Search by plugin or App name..."
-              onInput={onSearchTextBoxChanged}
-            />
+
+          <div className="action__container">
+            {selectedView == 'Installed' &&
+              props.appStore.updates.length > 0 && (
+                <Button
+                  color={clickedUpdateAll ? 'secondary' : 'success'}
+                  onClick={handleUpdateAll}
+                >
+                  Update all
+                </Button>
+              )}
+
+            <div className="search">
+              <FontAwesomeIcon
+                className="search__icon"
+                icon={faMagnifyingGlass}
+              />
+              <Input
+                id="search-text-box"
+                className="search__input"
+                placeholder="Search by plugin or App name..."
+                onInput={onSearchTextBoxChanged}
+              />
+            </div>
           </div>
         </CardHeader>
 
@@ -216,9 +232,11 @@ const Apps = function (props) {
               </Button>
             ))}
           </section>
-
           <section className="appstore__grid section">
-            <div className="ag-theme-quartz" style={{ height: '100%' }}>
+            <div
+              className="ag-theme-quartz ag-theme-signalk"
+              style={{ height: '100%' }}
+            >
               <AgGridReact
                 ref={gridRef}
                 rowData={rowData}
