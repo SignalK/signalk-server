@@ -46,6 +46,52 @@ where:
 
 See also [Working Offline](./developer_notes.md#offline-use).
 
+## Application Data: Storing Webapp Data on the Server
+
+Application Data is only supported if security is turned on. It supports two namespaces, one for *global data* and one for *user specific data*. For example, a client might want to store boat specific gauge configuration globally so that other users have access to it. Otherwise, it could use the user area to store user specific preferences.
+
+The data is structured and manipulated in JSON format.
+
+Global storage: `/signalk/v1/applicationData/global/:appid/:version`
+User storage: `/signalk/v1/applicationData/user/:appid/:version`
+
+There are two ways to update or add stored data:
+
+* You can POST any json data to any path:
+
+```
+POST /signalk/v1/applicationData/user/my-application/1.0/unitPreferences
+{
+  "shortDistance": "m",
+  "longDistance": "km"
+}
+```
+
+* You can also use json patch format (http://jsonpatch.com):
+
+```
+POST /signalk/v1/applicationData/user/my-application/1.0
+[
+  { "op": "add", "path": "/unitPreferences", "value": { "shortDistace": "m" } },
+  { "op": "add", "path": "/unitPreferences/longDistance", "value": "km"}
+]
+```
+
+Use an HTTP GET request to retrieve data from the server:
+
+`GET /signalk/v1/applicationData/user/my-application/1.0/unitPreferences/shortDistance`
+
+You can just GET the list of keys:
+```
+GET /signalk/v1/applicationData/user/my-application/1.0/unitPreferences?keys=true
+[ "longDistance", "shortDistance"]
+```
+
+You get can a list of available versions:
+```
+GET /signalk/v1/applicationData/user/my-application
+[ "1.0", "1.1"]
+```
 
 ## Embedded Components and Admin UI / Server interfaces
 
