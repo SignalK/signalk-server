@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react'
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { connect } from 'react-redux'
 import {
   Card,
@@ -27,7 +27,10 @@ const Apps = function (props) {
   /** State */
   const [selectedView, setSelectedView] = useState('All')
   const [selectedTag, setSelectedTag] = useState('All')
-  const [clickedUpdateAll, setClickedUpdateAll] = useState(false)
+
+  const clickedUpdateAll = useMemo(() => {
+    return props.appStore.updates.length === 0
+  }, [props.appStore.updates])
 
   /* Effects / Watchers */
   useEffect(() => {
@@ -135,11 +138,26 @@ const Apps = function (props) {
     })
   }, [])
 
+  // Update all handler
   const handleUpdateAll = () => {
-    if (!clickedUpdateAll) {
-      console.log('Update all')
+    // If the button is not disabled
 
-      setClickedUpdateAll(true)
+    if (!clickedUpdateAll) {
+      if (confirm(`Are you sure you want to update all plugins ?`)) {
+        // Iterate over all apps to be updated
+        for (const app of rowData) {
+          if (app.updateAvailable && app.installed) {
+            props.appStore.installing[name] = true
+            fetch(
+              `${window.serverRoutesPrefix}/appstore/install/${app.name}/${app.version}`,
+              {
+                method: 'POST',
+                credentials: 'include',
+              }
+            )
+          } else continue
+        }
+      }
     }
   }
 
@@ -193,15 +211,14 @@ const Apps = function (props) {
           </div>
 
           <div className="action__container">
-            {selectedView == 'Installed' &&
-              props.appStore.updates.length > 0 && (
-                <Button
-                  color={clickedUpdateAll ? 'secondary' : 'success'}
-                  onClick={handleUpdateAll}
-                >
-                  Update all
-                </Button>
-              )}
+            {selectedView == 'Installed' && (
+              <Button
+                color={clickedUpdateAll ? 'secondary' : 'success'}
+                onClick={handleUpdateAll}
+              >
+                Update all
+              </Button>
+            )}
 
             <div className="search">
               <FontAwesomeIcon
@@ -241,7 +258,6 @@ const Apps = function (props) {
                 ref={gridRef}
                 rowData={rowData}
                 columnDefs={colDefs}
-                // rowHeight={60}
                 autoSizeStrategy={autoSizeStrategy}
                 onGridReady={onGridReady}
                 style={{ width: '100%', height: '100%' }}

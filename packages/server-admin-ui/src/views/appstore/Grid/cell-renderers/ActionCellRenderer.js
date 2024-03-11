@@ -85,7 +85,8 @@ function ActionCellRenderer(props) {
           />
         )}
 
-        {/* <NavLink to={`/serverConfiguration/plugins/${props.data.name}`}>
+        {/* TODO: Not implemented yet
+         <NavLink to={`/serverConfiguration/plugins/${props.data.name}`}>
           <FontAwesomeIcon className="icon__config" icon={faGear} />
         </NavLink> */}
 

@@ -37,7 +37,6 @@ export default [
     cellRenderer: TypeCellRenderer,
     maxWidth: 100,
     sortable: false,
-    // cellStyle: { 'justify-content': 'center' },
   },
   {
     field: 'action',
