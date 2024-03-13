@@ -112,12 +112,12 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - name: Set tag variable
         id: vars
-        run: echo ::set-output name=tag::$(echo ${GITHUB_REF#refs/*/})    
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Install, build & publish
         run: |
           npm install --package-lock-only
           npm ci && npm cache clean --force
-          if [[ "${{ steps.vars.outputs.tag }}" == *beta* ]];
+          if [[ "$tag" == *beta* ]];
             then
               npm publish --tag beta
             else
@@ -134,11 +134,11 @@ jobs:
     steps:
       - name: Build Changelog
         id: github_release
-        uses: mikepenz/release-changelog-builder-action@v1
+        uses: mikepenz/release-changelog-builder-action@v4
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
 
-      - name: Create Release
+      - name: Create Release (archived, need to be updated to use the new action)
         uses: actions/create-release@v1
         with:
           tag_name: ${{ github.ref }}
@@ -177,14 +177,14 @@ jobs:
           password: ${{ secrets.GHCR_PAT }} # Personal access tokens (classic) with a scope of "write:packages" is needed to release ghcr.io package registry.
       - name: Set TAG for build-args
         id: vars
-        run: echo ::set-output name=tag::$(echo ${GITHUB_REF#refs/*/})
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           file: ./docker/Dockerfile_rel
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
-          tags: ${{ steps.docker_meta.outputs.tags }}
+          tags: $tag
           build-args: |
             TAG=${{ steps.vars.outputs.tag }}
 
@@ -198,9 +198,9 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Set TAG for build-arg
         id: vars
-        run: echo ::set-output name=tag::$(echo ${GITHUB_REF#refs/*/})
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Deploy demo.signalk.org at fly.io
         working-directory: ./fly_io/demo_signalk_org
-        run: flyctl deploy --remote-only --build-arg SK_VERSION=${{ steps.vars.outputs.tag }}
+        run: flyctl deploy --remote-only --build-arg SK_VERSION=$tag
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
