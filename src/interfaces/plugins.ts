@@ -27,7 +27,7 @@ import {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
-import express, { Request, Response, Router } from 'express'
+import express, { Request, Response } from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
@@ -423,12 +423,10 @@ module.exports = (theApp: any) => {
     plugin: PluginInfo,
     location: string,
     configuration: any,
-    router: Router,
     restart: (newConfiguration: any) => void
   ) {
     debug('Starting plugin %s from %s', plugin.name, location)
     try {
-      doRegisterWithRouter(app, plugin, router)
       app.setPluginStatus(plugin.id, null)
 
       if (plugin.enableDebug) {
@@ -611,14 +609,7 @@ module.exports = (theApp: any) => {
           console.error(err)
         } else {
           stopPlugin(plugin)
-          doPluginStart(
-            app,
-            plugin,
-            location,
-            newConfiguration,
-            router,
-            restart
-          )
+          doPluginStart(app, plugin, location, newConfiguration, restart)
         }
       })
     }
@@ -635,21 +626,20 @@ module.exports = (theApp: any) => {
     plugin.keywords = metadata.keywords
     plugin.packageLocation = location
 
-    plugin.enableLogging = startupOptions.enableLogging
-    app.plugins.push(plugin)
-    app.pluginsMap[plugin.id] = plugin
-
-    const router = express.Router()
     if (startupOptions && startupOptions.enabled) {
       doPluginStart(
         app,
         plugin,
         location,
         startupOptions.configuration,
-        router,
         restart
       )
     }
+    plugin.enableLogging = startupOptions.enableLogging
+    app.plugins.push(plugin)
+    app.pluginsMap[plugin.id] = plugin
+
+    const router = express.Router()
     router.get('/', (req: Request, res: Response) => {
       const currentOptions = getPluginOptions(plugin.id)
       const enabledByDefault = isEnabledByPackageEnableDefault(
@@ -679,14 +669,7 @@ module.exports = (theApp: any) => {
         plugin.enableLogging = options.enableLogging
         plugin.enableDebug = options.enableDebug
         if (options.enabled) {
-          doPluginStart(
-            app,
-            plugin,
-            location,
-            options.configuration,
-            router,
-            restart
-          )
+          doPluginStart(app, plugin, location, options.configuration, restart)
         }
       })
     })
@@ -695,27 +678,17 @@ module.exports = (theApp: any) => {
       res.json(getPluginOptions(plugin.id))
     })
 
-    if (typeof plugin.signalKApiRoutes === 'function') {
-      app.use('/signalk/v1/api', plugin.signalKApiRoutes(express.Router()))
-    }
-  }
-
-  function doRegisterWithRouter(app: any, plugin: PluginInfo, router: Router) {
-    if (typeof plugin.registerWithRouter === 'function') {
-      debug('Activating routing for ' + plugin.id)
-      router.use((req, res, next) => {
-        const stopHandlers = onStopHandlers[plugin.id]
-
-        if (stopHandlers.length > 0) next()
-        else res.status(500).send(plugin.id + ' has stopped')
-      })
+    if (typeof plugin.registerWithRouter == 'function') {
       plugin.registerWithRouter(router)
       if (typeof plugin.getOpenApi == 'function') {
         app.setPluginOpenApi(plugin.id, plugin.getOpenApi())
       }
     }
-
     app.use(backwardsCompat('/plugins/' + plugin.id), router)
+
+    if (typeof plugin.signalKApiRoutes === 'function') {
+      app.use('/signalk/v1/api', plugin.signalKApiRoutes(express.Router()))
+    }
   }
 }
 
