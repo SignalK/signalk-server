@@ -138,14 +138,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
 
-      - name: Create Release (archived, need to be updated to use the new action)
-        uses: actions/create-release@v1
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          body: ${{steps.github_release.outputs.changelog}}
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
+          name: ${{ github.ref }}
+          body_path: ${{steps.github_release.outputs.changelog}}
+          token: ${{ secrets.RELEASE_PAT }}
 
   docker_image:
     runs-on: ubuntu-latest
