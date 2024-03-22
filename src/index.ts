@@ -38,7 +38,13 @@ import https from 'https'
 import _ from 'lodash'
 import path from 'path'
 import { startApis } from './api'
-import { SelfIdentity, ServerApp, SignalKMessageHub, WithConfig } from './app'
+import {
+  SelfIdentity,
+  ServerApp,
+  SignalKMessageHub,
+  WithConfig,
+  WithFeatures
+} from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
@@ -73,6 +79,7 @@ class Server {
   app: ServerApp &
     SelfIdentity &
     WithConfig &
+    WithFeatures &
     SignalKMessageHub &
     PluginManager &
     WithSecurityStrategy &
@@ -117,6 +124,32 @@ class Server {
     }
 
     app.providerStatus = {}
+
+    // feature registration
+    app.apiList = []
+
+    app.registerFeature = (type: string, id: string) => {
+      if (type === 'api' && !app.apiList.includes(id)) {
+        app.apiList.push(id)
+      }
+    }
+
+    // feature detection
+    app.getFeatures = () => {
+      const features = {
+        apis: [],
+        plugins: []
+      }
+      features.plugins = app.plugins.map((plugin: any) => {
+        return {
+          id: plugin.id,
+          name: plugin.name,
+          version: plugin.version
+        }
+      })
+      features.apis = app.apiList.slice()
+      return features
+    }
 
     // create first temporary pluginManager to get typechecks, as
     // app is any and not typechecked

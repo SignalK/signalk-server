@@ -528,6 +528,8 @@ module.exports = (theApp: any) => {
       resourcesApi.register(plugin.id, provider)
     }
 
+    _.omit(appCopy, 'apiList') // don't expose the actual apiList
+
     const courseApi: CourseApi = app.courseApi
     _.omit(appCopy, 'courseApi') // don't expose the actual course api manager
     appCopy.getCourse = () => {

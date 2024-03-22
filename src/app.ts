@@ -33,3 +33,17 @@ export interface SelfIdentity {
   selfId: string
   selfContext: string
 }
+
+interface FeaturesCollection {
+  apis: string[]
+  plugins: {
+    id: string
+    name: string
+    version: string
+  }
+}
+
+export interface WithFeatures {
+  getFeatures: () => FeaturesCollection
+  registerFeature: (type: string, id: string) => void
+}

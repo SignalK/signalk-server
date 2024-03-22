@@ -1,7 +1,8 @@
 import { IRouter } from 'express'
-import { SignalKMessageHub, WithConfig } from '../app'
+import { SignalKMessageHub, WithConfig, WithFeatures } from '../app'
 import { WithSecurityStrategy } from '../security'
 import { CourseApi } from './course'
+import { FeaturesApi } from './features'
 import { ResourcesApi } from './resources'
 
 export interface ApiResponse {
@@ -37,7 +38,11 @@ export const Responses = {
 }
 
 export const startApis = (
-  app: SignalKMessageHub & WithSecurityStrategy & IRouter & WithConfig
+  app: SignalKMessageHub &
+    WithSecurityStrategy &
+    IRouter &
+    WithConfig &
+    WithFeatures
 ) => {
   const resourcesApi = new ResourcesApi(app)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -45,5 +50,6 @@ export const startApis = (
   const courseApi = new CourseApi(app, resourcesApi)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).courseApi = courseApi
-  Promise.all([resourcesApi.start(), courseApi.start()])
+  const featuresApi = new FeaturesApi(app)
+  Promise.all([resourcesApi.start(), courseApi.start(), featuresApi.start()])
 }
