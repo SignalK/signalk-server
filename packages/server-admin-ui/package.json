@@ -49,6 +49,7 @@
     "sass-loader": "^13.2.0",
     "simple-line-icons": "^2.5.5",
     "style-loader": "^2.0.0",
+    "sync-fetch": "^0.5.2",
     "webpack": "^5.0.0",
     "webpack-bundle-analyzer": "^3.9.0",
     "webpack-cli": "^4.2.0"
