@@ -67,12 +67,17 @@ const Dashboard = (props) => {
   }
 
   const renderActivity = (providerId, providerStats, linkType) => {
-    let device = providerId;
+    let device = providerId
     if (providerId.startsWith('ws.')) {
-      const devices = syncFetch(`${window.serverRoutesPrefix}/security/devices`, {
-        credentials: 'include',
-      }).json()
-      device = devices.find((d) => d.clientId === providerId.slice(3)).description
+      const devices = syncFetch(
+        `${window.serverRoutesPrefix}/security/devices`,
+        {
+          credentials: 'include',
+        }
+      ).json()
+      device = devices.find(
+        (d) => d.clientId === providerId.slice(3)
+      ).description
       if (device.trim() === '') {
         device = providerId
       }
