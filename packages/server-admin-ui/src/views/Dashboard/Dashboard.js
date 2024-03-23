@@ -73,6 +73,9 @@ const Dashboard = (props) => {
         credentials: 'include',
       }).json()
       device = devices.find((d) => d.clientId === providerId.slice(3)).description
+      if (device.trim() === '') {
+        device = providerId
+      }
     }
     return (
       <li key={providerId} onClick={() => props.history.push(`/dashboard`)}>
