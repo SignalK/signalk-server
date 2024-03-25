@@ -9,6 +9,7 @@ export default [
     headerName: 'Name',
     cellRenderer: NameCellRenderer,
     sortable: false,
+    wrapText: true,
     autoHeight: true,
   },
   {

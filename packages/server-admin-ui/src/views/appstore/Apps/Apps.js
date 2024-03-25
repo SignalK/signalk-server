@@ -228,7 +228,7 @@ const Apps = function (props) {
               <Input
                 id="search-text-box"
                 className="search__input"
-                placeholder="Search by plugin or App name..."
+                placeholder="Search ..."
                 onInput={onSearchTextBoxChanged}
               />
             </div>
