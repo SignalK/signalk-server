@@ -3,11 +3,7 @@ import { Button, Progress } from 'reactstrap'
 import { connect } from 'react-redux'
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faGear,
-  faTrashCan,
-  faCloudArrowDown,
-} from '@fortawesome/free-solid-svg-icons'
+import { faTrashCan, faCloudArrowDown } from '@fortawesome/free-solid-svg-icons'
 
 function ActionCellRenderer(props) {
   const progressingApp = useMemo(() => {

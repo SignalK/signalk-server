@@ -28,10 +28,6 @@ const Apps = function (props) {
   const [selectedView, setSelectedView] = useState('All')
   const [selectedTag, setSelectedTag] = useState('All')
 
-  const clickedUpdateAll = useMemo(() => {
-    return props.appStore.updates.length === 0
-  }, [props.appStore.updates])
-
   /* Effects / Watchers */
   useEffect(() => {
     const handleResize = () => {
@@ -46,12 +42,16 @@ const Apps = function (props) {
   }, [])
 
   useEffect(() => {
-    if (selectedView === 'All') {
-      refreshGridData(selectedTag, allAppList())
-    } else if (selectedView === 'Installed')
+    if (selectedView === 'All') refreshGridData(selectedTag, allAppList())
+    else if (selectedView === 'Installed')
       refreshGridData(
         selectedTag,
         allAppList().filter((el) => el.installed)
+      )
+    else if (selectedView === 'Updates')
+      refreshGridData(
+        selectedTag,
+        allAppList().filter((el) => el.updateAvailable)
       )
     return () => {}
   }, [
@@ -203,22 +203,25 @@ const Apps = function (props) {
             >
               Installed
             </Button>
-            {props.appStore.updates.length > 0 && (
-              <Badge color="success" className="badge__update">
-                {props.appStore.updates.length}
-              </Badge>
-            )}
+            <Button
+              color={selectedView === 'Updates' ? 'primary' : 'secondary'}
+              onClick={() => setSelectedView('Updates')}
+            >
+              Updates
+              {props.appStore.updates.length > 0 && (
+                <span className="badge__update">
+                  {props.appStore.updates.length}
+                </span>
+              )}
+            </Button>
           </div>
 
           <div className="action__container">
-            {selectedView == 'Installed' && (
-              <Button
-                color={clickedUpdateAll ? 'secondary' : 'success'}
-                onClick={handleUpdateAll}
-              >
+            {selectedView == 'Updates' && props.appStore.updates.length > 0 ? (
+              <Button color="success" onClick={handleUpdateAll}>
                 Update all
               </Button>
-            )}
+            ) : undefined}
 
             <div className="search">
               <FontAwesomeIcon
