@@ -174,7 +174,7 @@ const mapStateToProps = (state) => {
     }
   }
 
-  if (!state.appStore.storeAvailable) {
+  if (state.appStore.storeAvailable === false) {
     updatesBadge = {
       variant: 'danger',
       text: 'OFFLINE',

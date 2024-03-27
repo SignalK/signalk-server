@@ -162,7 +162,7 @@ const Apps = function (props) {
   */
   let warningHeader
 
-  if (!props.appStore.storeAvailable) {
+  if (props.appStore.storeAvailable === false) {
     warningHeader = (
       <WarningBox>
         You probably don't have Internet connectivity and Appstore can not be
