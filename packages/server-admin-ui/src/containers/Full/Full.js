@@ -81,7 +81,8 @@ class Full extends Component {
                   component={loginOrOriginal(Playground, true)}
                 />
                 <Route
-                  path="/appstore/:view"
+                  path="/appstore"
+                  name="Appstore"
                   component={loginOrOriginal(Apps)}
                 />
                 <Route

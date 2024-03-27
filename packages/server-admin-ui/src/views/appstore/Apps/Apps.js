@@ -1,183 +1,273 @@
-import React, { Component } from 'react'
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { connect } from 'react-redux'
 import {
-  Button,
   Card,
+  CardTitle,
   CardHeader,
   CardBody,
-  Form,
-  FormGroup,
-  Col,
+  Button,
   Input,
-  Label,
 } from 'reactstrap'
-import ThisSession from './ThisSession'
-import AppsList from './AppsList'
+import { AgGridReact } from 'ag-grid-react' // React Grid Logic
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 
-const viewParams = {
-  apps: {
-    listName: 'available',
-    title: 'Available Apps',
-    defaultCategory: 'New/Updated',
-  },
-  installed: {
-    listName: 'installed',
-    title: 'Installed Apps',
-    defaultCategory: 'All',
-  },
-  updates: {
-    listName: 'updates',
-    title: 'Available Updates',
-    defaultCategory: 'All',
-  },
-}
+/* Javascript files */
+import columnDefs from '../Grid/columnDefs'
 
-class AppTable extends Component {
-  constructor(props) {
-    super(props)
+/* Components */
+import WarningBox from './WarningBox'
 
-    const viewData = viewParams[this.props.match.params.view]
+/* Styling */
+import '../appStore.scss'
 
-    let categorized = this.categorize(viewData.defaultCategory)
+/** Main component */
+const Apps = function (props) {
+  /** State */
+  const [selectedView, setSelectedView] = useState('All')
+  const [selectedTag, setSelectedTag] = useState('All')
 
-    this.state = {
-      category: viewData.defaultCategory,
-      categorized: categorized,
-      search: '',
+  /* Effects / Watchers */
+  useEffect(() => {
+    const handleResize = () => {
+      // Perform actions on window resize
+      toggleColumnsOnMobile(window.innerWidth)
     }
 
-    this.handleCategoryChange = this.handleCategoryChange.bind(this)
-    this.handleSearch = this.handleSearch.bind(this)
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (selectedView === 'All') refreshGridData(selectedTag, deriveAppList())
+    else if (selectedView === 'Installed')
+      refreshGridData(
+        selectedTag,
+        deriveAppList().filter((el) => el.installed)
+      )
+    else if (selectedView === 'Updates')
+      refreshGridData(
+        selectedTag,
+        deriveAppList().filter((el) => el.updateAvailable)
+      )
+    return () => {}
+  }, [
+    selectedTag,
+    selectedView,
+    props.appStore.installed,
+    props.appStore.available,
+  ])
+
+  /**
+   * Computed properties returning the whole app list,
+   * including plugins and webapp applications
+   *
+   * @returns {Array} deriveAppList - the whole app list of available app and installed apps
+   */
+  const deriveAppList = () => {
+    const installedApp = props.appStore.installed.map((app) => {
+      return {
+        ...app,
+        installed: true,
+        updateAvailable:
+          app.installedVersion !== app.version ? app.version : null,
+      }
+    })
+
+    // Filter out the one that are already installed
+    const alreadyInstalled = installedApp.map((el) => el.name)
+    const availableApp = props.appStore.available
+      .filter((app) => !alreadyInstalled.includes(app.name))
+      .map((app) => ({
+        ...app,
+        installed: false,
+      }))
+
+    return [...installedApp, ...availableApp]
   }
 
-  categorize(category) {
-    const viewData = viewParams[this.props.match.params.view]
-    const apps = this.props.appStore[viewData.listName]
-    return category === 'All'
-      ? apps
-      : apps.filter((app) => app.categories.indexOf(category) !== -1)
+  /** Grid Element */
+  const gridRef = useRef()
+  const [colDefs, setColDefs] = useState([...columnDefs])
+  const [rowData, setRowData] = useState(() => deriveAppList())
+
+  const autoSizeStrategy = {
+    type: 'fitGridWidth',
+    defaultMinWidth: 100,
+    columnLimits: [],
   }
 
-  componentDidUpdate() {
-    if (!this.state.categorized || !this.state.categorized.length) {
-      const categorized = this.categorize(this.state.category)
-      if (categorized && categorized.length) {
-        this.setState({ categorized })
+  /** Methods */
+  const onSearchTextBoxChanged = useCallback(() => {
+    gridRef.current.api.setGridOption(
+      'quickFilterText',
+      document.getElementById('search-text-box').value
+    )
+  }, [])
+
+  /**
+   * Set the rowData with the filter selected
+   */
+  const refreshGridData = useCallback((item, gridData) => {
+    if (!item || item === 'All') return setRowData(gridData)
+    let newData = []
+    newData = gridData.filter((el) => el.categories.includes(item))
+    setRowData(newData)
+  })
+
+  /** Hide columns if widow is small than a threshold */
+  const toggleColumnsOnMobile = (innerWidth) => {
+    gridRef.current.api.applyColumnState({
+      state: [
+        { colId: 'description', hide: innerWidth < 768 },
+        { colId: 'author', hide: innerWidth < 991 },
+        { colId: 'type', hide: innerWidth < 1024 },
+      ],
+    })
+  }
+
+  /** Callback called when the grid is ready */
+  const onGridReady = useCallback((params) => {
+    window.addEventListener('resize', () => {
+      setTimeout(() => {
+        params.api.sizeColumnsToFit()
+      })
+    })
+  }, [])
+
+  // Update all handler
+  const handleUpdateAll = () => {
+    if (confirm(`Are you sure you want to update all plugins ?`)) {
+      // Iterate over all apps to be updated
+      for (const app of rowData) {
+        if (app.updateAvailable && app.installed) {
+          props.appStore.installing[name] = true
+          fetch(
+            `${window.serverRoutesPrefix}/appstore/install/${app.name}/${app.version}`,
+            {
+              method: 'POST',
+              credentials: 'include',
+            }
+          )
+        } else continue
       }
     }
   }
 
-  handleCategoryChange(event) {
-    let searchResults
-    let categorized = this.categorize(event.target.value)
+  /* 
+  Show different warning message
+  whether if the store is available or if an app was installed or removed
+  */
+  let warningHeader
 
-    if (this.state.search.length > 0) {
-      searchResults = this.searchApps(categorized, this.state.search)
-    }
-
-    this.setState({
-      category: event.target.value,
-      categorized,
-      searchResults,
-    })
-  }
-
-  searchApps(apps, searchString) {
-    const lowerCase = searchString.toLowerCase()
-    return apps.filter((app) => {
-      return (
-        app.keywords.filter((k) => k.toLowerCase().includes(lowerCase))
-          .length ||
-        app.name.toLowerCase().includes(lowerCase) ||
-        (app.description &&
-          app.description.toLowerCase().includes(lowerCase)) ||
-        (app.author && app.author.toLowerCase().includes(lowerCase))
-      )
-    })
-  }
-
-  handleSearch(event) {
-    let searchResults = null
-    const search = event.target.value
-    if (search.length !== 0) {
-      searchResults = this.searchApps(this.state.categorized, search)
-    }
-
-    this.setState({ search, searchResults })
-  }
-
-  render() {
-    const viewData = viewParams[this.props.match.params.view]
-    return (
-      <div className="animated fadeIn">
-        <ThisSession installingApps={this.props.appStore.installing} />
-        {!this.props.appStore.storeAvailable && (
-          <Card className="border-warning">
-            <CardHeader>Appstore not available</CardHeader>
-            <CardBody>
-              You probably don't have Internet connectivity and Appstore can not
-              be reached.
-            </CardBody>
-          </Card>
-        )}
-        {this.props.appStore.storeAvailable && (
-          <Card>
-            <CardHeader>
-              <i className="fa fa-align-justify" /> {viewData.title}
-            </CardHeader>
-            <CardBody>
-              <Form
-                action=""
-                method="post"
-                encType="multipart/form-data"
-                className="form-horizontal"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                }}
-              >
-                <FormGroup row>
-                  <Col xs="12" md="3">
-                    <Input
-                      type="select"
-                      value={this.state.category}
-                      name="context"
-                      onChange={this.handleCategoryChange}
-                    >
-                      {this.props.appStore.categories.map((key) => {
-                        return (
-                          <option disabled={key == '---'} key={key} value={key}>
-                            {key}
-                          </option>
-                        )
-                      })}
-                    </Input>
-                  </Col>
-                  <Col xs="3" md="1" className={'col-form-label'}>
-                    <Label htmlFor="select">Search</Label>
-                  </Col>
-                  <Col xs="12" md="4">
-                    <Input
-                      type="text"
-                      name="search"
-                      onChange={this.handleSearch}
-                      value={this.state.search}
-                    />
-                  </Col>
-                </FormGroup>
-              </Form>
-              <AppsList
-                apps={this.state.searchResults || this.state.categorized}
-                storeAvailable={this.props.appStore.storeAvailable}
-                listName={viewData.listName}
-              />
-            </CardBody>
-          </Card>
-        )}
-      </div>
+  if (props.appStore.storeAvailable === false) {
+    warningHeader = (
+      <WarningBox>
+        You probably don't have Internet connectivity and Appstore can not be
+        reached.
+      </WarningBox>
+    )
+  } else if (props.appStore.installing.length > 0) {
+    warningHeader = (
+      <WarningBox>
+        Please restart the server after installing, updating or deleting a
+        plugin
+      </WarningBox>
     )
   }
+
+  return (
+    <div className="appstore animated fadeIn">
+      <section className="appstore__warning section">{warningHeader}</section>
+
+      <Card>
+        <CardHeader className="appstore__header">
+          <div className="title__container">
+            <CardTitle>Apps & Plugins</CardTitle>
+            {/* <h3 className="title"></h3> */}
+            <Button
+              color={selectedView === 'All' ? 'primary' : 'secondary'}
+              onClick={() => setSelectedView('All')}
+            >
+              All
+            </Button>
+            <Button
+              color={selectedView === 'Installed' ? 'primary' : 'secondary'}
+              onClick={() => setSelectedView('Installed')}
+            >
+              Installed
+            </Button>
+            <Button
+              color={selectedView === 'Updates' ? 'primary' : 'secondary'}
+              onClick={() => setSelectedView('Updates')}
+            >
+              Updates
+              {props.appStore.updates.length > 0 && (
+                <span className="badge__update">
+                  {props.appStore.updates.length}
+                </span>
+              )}
+            </Button>
+          </div>
+
+          <div className="action__container">
+            {selectedView == 'Updates' && props.appStore.updates.length > 0 ? (
+              <Button color="success" onClick={handleUpdateAll}>
+                Update all
+              </Button>
+            ) : undefined}
+
+            <div className="search">
+              <FontAwesomeIcon
+                className="search__icon"
+                icon={faMagnifyingGlass}
+              />
+              <Input
+                id="search-text-box"
+                className="search__input"
+                placeholder="Search ..."
+                onInput={onSearchTextBoxChanged}
+              />
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardBody>
+          <section className="appstore__tags section">
+            {props.appStore.categories?.map((item) => (
+              <Button
+                key={item}
+                color="primary"
+                className={selectedTag === item ? 'active' : undefined}
+                outline
+                onClick={() => setSelectedTag(item)}
+              >
+                {item}
+              </Button>
+            ))}
+          </section>
+          <section className="appstore__grid section">
+            <div
+              className="ag-theme-quartz ag-theme-signalk"
+              style={{ height: '100%' }}
+            >
+              <AgGridReact
+                ref={gridRef}
+                rowData={rowData}
+                columnDefs={colDefs}
+                autoSizeStrategy={autoSizeStrategy}
+                onGridReady={onGridReady}
+                style={{ width: '100%', height: '100%' }}
+              />
+            </div>
+          </section>
+        </CardBody>
+      </Card>
+    </div>
+  )
 }
 
 const mapStateToProps = ({ appStore }) => ({ appStore })
-
-export default connect(mapStateToProps)(AppTable)
+export default connect(mapStateToProps)(Apps)

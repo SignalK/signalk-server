@@ -61,11 +61,9 @@ function getCategories(thePackage: NpmPackageData): string[] {
 }
 
 function getAvailableCategories() {
-  let normal = Object.values(CAT_KEYWORDS_TO_NAMES)
-  normal = normal.slice(0, normal.length - 1).sort() // take out Deprecated
-  return ['All', NEW_CATEGORY, '---']
-    .concat(normal)
-    .concat(['---', 'Uncategorized', 'Deprecated'])
+  const normal = Object.values(CAT_KEYWORDS_TO_NAMES).slice(0).sort()
+
+  return ['All', ...normal]
 }
 
 const CAT_KEYWORDS_TO_NAMES: {
@@ -81,8 +79,7 @@ const CAT_KEYWORDS_TO_NAMES: {
   'signalk-category-digital-switching': 'Digital Switching',
   'signalk-category-utility': 'Utility',
   'signalk-category-cloud': 'Cloud',
-  'signalk-category-weather': 'Weather',
-  CAT_DEPRECATED: 'Deprecated'
+  'signalk-category-weather': 'Weather'
 }
 
 const DEFAULT_MODULE_CAT_KEYWORDS: {
