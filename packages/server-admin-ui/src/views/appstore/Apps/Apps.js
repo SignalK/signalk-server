@@ -5,7 +5,6 @@ import {
   CardTitle,
   CardHeader,
   CardBody,
-  Badge,
   Button,
   Input,
 } from 'reactstrap'
@@ -42,16 +41,16 @@ const Apps = function (props) {
   }, [])
 
   useEffect(() => {
-    if (selectedView === 'All') refreshGridData(selectedTag, allAppList())
+    if (selectedView === 'All') refreshGridData(selectedTag, deriveAppList())
     else if (selectedView === 'Installed')
       refreshGridData(
         selectedTag,
-        allAppList().filter((el) => el.installed)
+        deriveAppList().filter((el) => el.installed)
       )
     else if (selectedView === 'Updates')
       refreshGridData(
         selectedTag,
-        allAppList().filter((el) => el.updateAvailable)
+        deriveAppList().filter((el) => el.updateAvailable)
       )
     return () => {}
   }, [
@@ -65,9 +64,9 @@ const Apps = function (props) {
    * Computed properties returning the whole app list,
    * including plugins and webapp applications
    *
-   * @returns {Array} allAppList - the whole app list of available app and installed apps
+   * @returns {Array} deriveAppList - the whole app list of available app and installed apps
    */
-  const allAppList = () => {
+  const deriveAppList = () => {
     const installedApp = props.appStore.installed.map((app) => {
       return {
         ...app,
@@ -92,7 +91,7 @@ const Apps = function (props) {
   /** Grid Element */
   const gridRef = useRef()
   const [colDefs, setColDefs] = useState([...columnDefs])
-  const [rowData, setRowData] = useState(() => allAppList())
+  const [rowData, setRowData] = useState(() => deriveAppList())
 
   const autoSizeStrategy = {
     type: 'fitGridWidth',
@@ -118,7 +117,7 @@ const Apps = function (props) {
     setRowData(newData)
   })
 
-  /** Hide columns if widown is small than a threshold */
+  /** Hide columns if widow is small than a threshold */
   const toggleColumnsOnMobile = (innerWidth) => {
     gridRef.current.api.applyColumnState({
       state: [
@@ -140,28 +139,25 @@ const Apps = function (props) {
 
   // Update all handler
   const handleUpdateAll = () => {
-    // If the button is not disabled
-
-    if (!clickedUpdateAll) {
-      if (confirm(`Are you sure you want to update all plugins ?`)) {
-        // Iterate over all apps to be updated
-        for (const app of rowData) {
-          if (app.updateAvailable && app.installed) {
-            props.appStore.installing[name] = true
-            fetch(
-              `${window.serverRoutesPrefix}/appstore/install/${app.name}/${app.version}`,
-              {
-                method: 'POST',
-                credentials: 'include',
-              }
-            )
-          } else continue
-        }
+    if (confirm(`Are you sure you want to update all plugins ?`)) {
+      // Iterate over all apps to be updated
+      for (const app of rowData) {
+        if (app.updateAvailable && app.installed) {
+          props.appStore.installing[name] = true
+          fetch(
+            `${window.serverRoutesPrefix}/appstore/install/${app.name}/${app.version}`,
+            {
+              method: 'POST',
+              credentials: 'include',
+            }
+          )
+        } else continue
       }
     }
   }
 
-  /* Show different warning message
+  /* 
+  Show different warning message
   whether if the store is available or if an app was installed or removed
   */
   let warningHeader
