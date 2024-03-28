@@ -6,9 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTrashCan, faCloudArrowDown } from '@fortawesome/free-solid-svg-icons'
 
 function ActionCellRenderer(props) {
-  const progressingApp = useMemo(() => {
-    return props.appStore.installing.find((el) => el.name === props.data.name)
-  }, [props.appStore.installing])
+  const app = props.data
 
   const handleInstallClick = () => {
     fetch(
@@ -33,16 +31,16 @@ function ActionCellRenderer(props) {
   let status
   let progress
 
-  if (progressingApp) {
+  if (app.installing) {
     // Read the status of the progressing app
     // If the app has progressed we show the status
 
     if (
-      progressingApp.isInstalling ||
-      progressingApp.isRemoving ||
-      progressingApp.isWaiting
+      app.isInstalling ||
+      app.isRemoving ||
+      app.isWaiting
     ) {
-      status = progressingApp.isRemove ? 'Removing' : 'Installing'
+      status = app.isRemove ? 'Removing' : 'Installing'
       progress = (
         <Progress
           className="progress-sm progress__bar"
@@ -51,11 +49,11 @@ function ActionCellRenderer(props) {
           value="100"
         />
       )
-    } else if (progressingApp.installFailed) {
+    } else if (app.installFailed) {
       status = 'Failed'
-    } else if (progressingApp.isRemove) {
+    } else if (app.isRemove) {
       status = 'Removed'
-    } else if (progressingApp.installedVersion) {
+    } else if (app.installedVersion) {
       status = 'Updated'
     } else {
       status = 'Installed'
