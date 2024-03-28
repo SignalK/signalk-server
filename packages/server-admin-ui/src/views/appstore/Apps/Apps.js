@@ -133,7 +133,7 @@ const Apps = function (props) {
   }, [])
 
   const handleUpdateAll = () => {
-    if (confirm(`Are you sure you want to update all plugins ?`)) {
+    if (confirm(`Are you sure you want to install all updates?`)) {
       // Iterate over all apps to be updated
       for (const app of rowData) {
         if (app.updateAvailable && app.installed) {
