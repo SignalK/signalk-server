@@ -153,27 +153,16 @@ const Apps = function (props) {
   Show different warning message
   whether if the store is available or if an app was installed or removed
   */
-  let warningHeader
-
+  let warning
   if (props.appStore.storeAvailable === false) {
-    warningHeader = (
-      <WarningBox>
-        You probably don't have Internet connectivity and Appstore can not be
-        reached.
-      </WarningBox>
-    )
+    warning = `You probably don't have Internet connectivity and Appstore can not be reached.`
   } else if (props.appStore.installing.length > 0) {
-    warningHeader = (
-      <WarningBox>
-        Please restart the server after installing, updating or deleting a
-        plugin
-      </WarningBox>
-    )
+    warning = 'Please restart the server after installing, updating or deleting a plugin'
   }
 
   return (
     <div className="appstore animated fadeIn">
-      <section className="appstore__warning section">{warningHeader}</section>
+      <section className="appstore__warning section">{warning && <WarningBox>{warning}</WarningBox>}</section>
 
       <Card>
         <CardHeader className="appstore__header">
