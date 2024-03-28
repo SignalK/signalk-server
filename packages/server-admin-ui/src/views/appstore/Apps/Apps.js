@@ -85,7 +85,6 @@ const Apps = function (props) {
 
   /** Grid Element */
   const gridRef = useRef()
-  const [colDefs, setColDefs] = useState([...columnDefs])
   const [rowData, setRowData] = useState(() => deriveAppList())
 
   const autoSizeStrategy = {
@@ -238,7 +237,7 @@ const Apps = function (props) {
               <AgGridReact
                 ref={gridRef}
                 rowData={rowData}
-                columnDefs={colDefs}
+                columnDefs={columnDefs}
                 autoSizeStrategy={autoSizeStrategy}
                 onGridReady={onGridReady}
                 style={{ width: '100%', height: '100%' }}
