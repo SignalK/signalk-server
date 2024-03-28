@@ -6,14 +6,10 @@ export default function TypeCellRenderer(props) {
   return (
     <div className="cell__renderer cell-type center">
       {plugin && (
-        <p>
           <span className="tag">Plugin</span>
-        </p>
       )}
       {app && (
-        <p>
           <span className="tag">App</span>
-        </p>
       )}
     </div>
   )
