@@ -10,12 +10,7 @@ function ActionCellRenderer(props) {
     return props.appStore.installing.find((el) => el.name === props.data.name)
   }, [props.appStore.installing])
 
-  const updateInstalling = (name, value) => {
-    props.appStore.installing[name] = value
-  }
-
   const handleInstallClick = () => {
-    updateInstalling(props.data.name, true)
     fetch(
       `${window.serverRoutesPrefix}/appstore/install/${props.data.name}/${props.data.version}`,
       {
@@ -26,7 +21,6 @@ function ActionCellRenderer(props) {
   }
 
   const handleRemoveClick = () => {
-    updateInstalling(props.data.name, true)
     if (confirm(`Are you sure you want to uninstall ${props.data.name}?`)) {
       fetch(`${window.serverRoutesPrefix}/appstore/remove/${props.data.name}`, {
         method: 'POST',
