@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import { Button, Progress } from 'reactstrap'
 import { connect } from 'react-redux'
 
