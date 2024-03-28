@@ -41,17 +41,21 @@ const Apps = function (props) {
   }, [])
 
   useEffect(() => {
-    if (selectedView === 'All') refreshGridData(selectedTag, deriveAppList())
-    else if (selectedView === 'Installed')
+    if (selectedView === 'All') {
+      refreshGridData(selectedTag, deriveAppList())
+    } else if (selectedView === 'Installed') {
       refreshGridData(
         selectedTag,
-        deriveAppList().filter((el) => el.installed)
+        deriveAppList().filter((el) => el.installedVersion || el.installing)
       )
-    else if (selectedView === 'Updates')
+    } else if (selectedView === 'Updates') {
       refreshGridData(
         selectedTag,
-        deriveAppList().filter((el) => el.updateAvailable)
+        deriveAppList().filter(
+          (el) => el.installedVersion && el.version !== el.installedVersion
+        )
       )
+    }
     return () => {}
   }, [
     selectedTag,
@@ -60,32 +64,23 @@ const Apps = function (props) {
     props.appStore.available,
   ])
 
-  /**
-   * Computed properties returning the whole app list,
-   * including plugins and webapp applications
-   *
-   * @returns {Array} deriveAppList - the whole app list of available app and installed apps
-   */
   const deriveAppList = () => {
-    const installedApp = props.appStore.installed.map((app) => {
-      return {
-        ...app,
-        installed: true,
-        updateAvailable:
-          app.installedVersion !== app.version ? app.version : null,
-      }
-    })
-
-    // Filter out the one that are already installed
-    const alreadyInstalled = installedApp.map((el) => el.name)
-    const availableApp = props.appStore.available
-      .filter((app) => !alreadyInstalled.includes(app.name))
-      .map((app) => ({
-        ...app,
-        installed: false,
-      }))
-
-    return [...installedApp, ...availableApp]
+    const allApps = props.appStore.available.reduce((acc, app) => {
+      acc[app.name] = app
+      return acc
+    }, {})
+    props.appStore.installed.forEach(
+      (app) =>
+        (allApps[app.name] = {
+          ...app,
+          installed: true,
+          newVersion: app.installedVersion !== app.version ? app.version : null,
+        })
+    )
+    props.appStore.installing.forEach(
+      (app) => (allApps[app.name].installing = true)
+    )
+    return Object.values(allApps)
   }
 
   /** Grid Element */
@@ -137,13 +132,11 @@ const Apps = function (props) {
     })
   }, [])
 
-  // Update all handler
   const handleUpdateAll = () => {
     if (confirm(`Are you sure you want to update all plugins ?`)) {
       // Iterate over all apps to be updated
       for (const app of rowData) {
         if (app.updateAvailable && app.installed) {
-          props.appStore.installing[name] = true
           fetch(
             `${window.serverRoutesPrefix}/appstore/install/${app.name}/${app.version}`,
             {
@@ -151,7 +144,7 @@ const Apps = function (props) {
               credentials: 'include',
             }
           )
-        } else continue
+        }
       }
     }
   }

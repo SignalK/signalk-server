@@ -59,9 +59,12 @@ function ActionCellRenderer(props) {
       )
     } else if (progressingApp.installFailed) {
       status = 'Failed'
+    } else if (progressingApp.isRemove) {
+      status = 'Removed'
+    } else if (progressingApp.installedVersion) {
+      status = 'Updated'
     } else {
-      status = 'Installed '
-      status = progressingApp.isRemove ? 'Removed' : 'Installed'
+      status = 'Installed'
     }
 
     content = (
