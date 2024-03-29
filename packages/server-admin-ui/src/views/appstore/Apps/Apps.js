@@ -156,12 +156,15 @@ const Apps = function (props) {
   if (props.appStore.storeAvailable === false) {
     warning = `You probably don't have Internet connectivity and Appstore can not be reached.`
   } else if (props.appStore.installing.length > 0) {
-    warning = 'Please restart the server after installing, updating or deleting a plugin'
+    warning =
+      'Please restart the server after installing, updating or deleting a plugin'
   }
 
   return (
     <div className="appstore animated fadeIn">
-      <section className="appstore__warning section">{warning && <WarningBox>{warning}</WarningBox>}</section>
+      <section className="appstore__warning section">
+        {warning && <WarningBox>{warning}</WarningBox>}
+      </section>
 
       <Card>
         <CardHeader className="appstore__header">

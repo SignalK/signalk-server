@@ -35,11 +35,7 @@ function ActionCellRenderer(props) {
     // Read the status of the progressing app
     // If the app has progressed we show the status
 
-    if (
-      app.isInstalling ||
-      app.isRemoving ||
-      app.isWaiting
-    ) {
+    if (app.isInstalling || app.isRemoving || app.isWaiting) {
       status = app.isRemove ? 'Removing' : 'Installing'
       progress = (
         <Progress
