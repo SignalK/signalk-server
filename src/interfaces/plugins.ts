@@ -110,6 +110,10 @@ module.exports = (theApp: any) => {
 
       startPlugins(theApp)
 
+      theApp.listFeaturePlugins = async (enabledOnly?: boolean) => {
+        return await listFeaturePlugins(enabledOnly)
+      }
+
       theApp.use(
         backwardsCompat('/plugins/configure'),
         express.static(getPluginConfigPublic(theApp))
@@ -135,6 +139,32 @@ module.exports = (theApp: any) => {
           })
       })
     }
+  }
+
+  function listFeaturePlugins(enabledOnly?: boolean) {
+    const providerStatus = theApp.getProviderStatus()
+    return Promise.allSettled(
+      _.sortBy(theApp.plugins, [
+        (plugin: PluginInfo) => {
+          return plugin.name
+        }
+      ]).map((plugin: PluginInfo) =>
+        getPluginResponseInfo(plugin, providerStatus)
+      )
+    ).then((pa) => {
+      return pa
+        .filter((p: any) => {
+          return enabledOnly === true ? p.value.data.enabled ?? false : true
+        })
+        .map((p: any) => {
+          return {
+            id: p.value.id,
+            name: p.value.name,
+            version: p.value.version,
+            enabled: p.value.data.enabled ?? false
+          }
+        })
+    })
   }
 
   function getPluginResponseInfo(plugin: PluginInfo, providerStatus: any) {

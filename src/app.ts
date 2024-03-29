@@ -40,10 +40,11 @@ interface FeaturesCollection {
     id: string
     name: string
     version: string
+    enabled: boolean
   }
 }
 
 export interface WithFeatures {
-  getFeatures: () => FeaturesCollection
-  registerFeature: (type: string, id: string) => void
+  getFeatures: (enabledOnly?: boolean) => FeaturesCollection
+  registerFeature: (featureId: string) => void
 }

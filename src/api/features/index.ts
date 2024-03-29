@@ -28,11 +28,10 @@ export class FeaturesApi {
     plugins: []
   }
 
-  constructor(private server: FeaturesApplication) {}
+  constructor(private app: FeaturesApplication) {}
 
   async start() {
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise<void>(async (resolve) => {
+    return new Promise<void>((resolve) => {
       this.initApiRoutes()
       resolve()
     })
@@ -41,11 +40,15 @@ export class FeaturesApi {
   private initApiRoutes() {
     debug(`** Initialise ${FEATURES_API_PATH} path handlers **`)
     // return Feature information
-    this.server.get(
+    this.app.get(
       `${FEATURES_API_PATH}`,
       async (req: Request, res: Response) => {
         debug(`** GET ${FEATURES_API_PATH}`)
-        res.json(this.server.getFeatures())
+        res.json(
+          await this.app.getFeatures(
+            typeof req.query.enabled !== 'undefined' ? true : false
+          )
+        )
       }
     )
   }

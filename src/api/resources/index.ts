@@ -18,7 +18,7 @@ import { WithSecurityStrategy } from '../../security'
 
 import { Responses } from '../'
 import { validate } from './validate'
-import { SignalKMessageHub, WithFeatures } from '../../app'
+import { SignalKMessageHub } from '../../app'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 
@@ -27,7 +27,6 @@ export const skUuid = () => `${uuidv4()}`
 interface ResourceApplication
   extends IRouter,
     WithSecurityStrategy,
-    WithFeatures,
     SignalKMessageHub {}
 
 export class ResourcesApi {
@@ -35,7 +34,6 @@ export class ResourcesApi {
     {}
 
   constructor(app: ResourceApplication) {
-    app.registerFeature('api', 'resources')
     this.initResourceRoutes(app)
   }
 

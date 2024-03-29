@@ -27,7 +27,6 @@ const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
 import { isValidCoordinate } from 'geolib'
 import { Responses } from '../'
 import { Store } from '../../serverstate/store'
-import { WithFeatures } from '../../app'
 
 import { buildSchemaSync } from 'api-schema-builder'
 import courseOpenApi from './openApi.json'
@@ -47,7 +46,6 @@ interface CourseApplication
   extends IRouter,
     WithConfig,
     WithSecurityStrategy,
-    WithFeatures,
     SignalKMessageHub {}
 
 export class CourseApi {
@@ -67,7 +65,6 @@ export class CourseApi {
     private resourcesApi: ResourcesApi
   ) {
     this.store = new Store(server, 'course')
-    server.registerFeature('api', 'course')
   }
 
   async start() {

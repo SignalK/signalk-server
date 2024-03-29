@@ -126,27 +126,22 @@ class Server {
     // feature registration
     app.apiList = []
 
-    app.registerFeature = (type: string, id: string) => {
-      if (type === 'api' && !app.apiList.includes(id)) {
-        app.apiList.push(id)
+    app.registerFeature = (featureId: string): boolean => {
+      if (!app.apiList.includes(featureId)) {
+        app.apiList.push(featureId)
+        return true
+      } else {
+        debug(`featureId (${featureId}) is already registered!`)
+        return false
       }
     }
 
     // feature detection
-    app.getFeatures = () => {
-      const features = {
-        apis: [],
-        plugins: []
+    app.getFeatures = async (enabledOnly?: boolean) => {
+      return {
+        apis: app.apiList.slice(),
+        plugins: await app.listFeaturePlugins(enabledOnly)
       }
-      features.plugins = app.plugins.map((plugin: any) => {
-        return {
-          id: plugin.id,
-          name: plugin.name,
-          version: plugin.version
-        }
-      })
-      features.apis = app.apiList.slice()
-      return features
     }
 
     // create first temporary pluginManager to get typechecks, as
