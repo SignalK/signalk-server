@@ -21,7 +21,6 @@
     "@fortawesome/free-solid-svg-icons": "^6.5.1",
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@signalk/server-admin-ui-dependencies": "1.0.1",
-    "ag-grid-react": "^31.0.3",
     "ansi-to-html": "^0.6.14",
     "babel-loader": "^8.1.0",
     "bootstrap": "^4.5.3",

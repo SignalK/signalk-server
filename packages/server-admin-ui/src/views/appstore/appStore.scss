@@ -6,6 +6,12 @@
     height: 100%;
   }
 
+  td[col-id='type'],
+  td[col-id='action'] {
+    height: 100%;
+    vertical-align: middle;
+  }
+
   button {
     border-radius: 5px;
     margin: 5px 5px;
@@ -126,18 +132,11 @@
     flex: 1 1 auto;
     background-color: white;
     max-height: 80%;
-    font-size: 12px;
+    font-size: 14px;
 
     .grid__action {
       display: flex;
       justify-content: flex-end;
-    }
-    /* Center header on type and action to the center*/
-    div[col-id='type'],
-    div[col-id='action'] {
-      .ag-header-cell-label {
-        justify-content: center;
-      }
     }
 
     .cell-type {
@@ -182,7 +181,7 @@
 
     .cell-description {
       color: grey;
-      font-size: 12px;
+      font-size: 14px;
       white-space: normal;
     }
 

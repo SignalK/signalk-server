@@ -64,7 +64,7 @@ function ActionCellRenderer(props) {
   } else {
     content = props.data.installed ? (
       <>
-        {props.data.updateAvailable && (
+        {props.data.newVersion && (
           <FontAwesomeIcon
             className="icon__update"
             icon={faCloudArrowDown}
