@@ -13,7 +13,8 @@ describe('modulesWithKeyword', () => {
   it('returns a list of modules with one "installed" update in config dir', () => {
     const expectedModules = [
       '@signalk/instrumentpanel',
-      '@signalk/freeboard-sk'
+      '@signalk/freeboard-sk',
+      '@mxtommy/kip'
     ]
     const updateInstalledModule = '@signalk/instrumentpanel'
 
