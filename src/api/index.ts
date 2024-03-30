@@ -37,6 +37,10 @@ export const Responses = {
   }
 }
 
+export type SIGNALK_API = 'resources' | 'course' | 'autopilot' | 'anchor'
+export const SIGNALK_API_LIST: Array<SIGNALK_API> = ['resources', 'course', 'autopilot', 'anchor']
+export const apiList: Array<SIGNALK_API> = []
+
 export const startApis = (
   app: SignalKMessageHub &
     WithSecurityStrategy &
@@ -47,12 +51,12 @@ export const startApis = (
   const resourcesApi = new ResourcesApi(app)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).resourcesApi = resourcesApi
-  app.registerFeature('resources')
+  apiList.push('resources')
 
   const courseApi = new CourseApi(app, resourcesApi)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).courseApi = courseApi
-  app.registerFeature('course')
+  apiList.push('course')
 
   const featuresApi = new FeaturesApi(app)
 

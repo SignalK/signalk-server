@@ -46,5 +46,4 @@ interface FeaturesCollection {
 
 export interface WithFeatures {
   getFeatures: (enabledOnly?: boolean) => FeaturesCollection
-  registerFeature: (featureId: string) => void
 }

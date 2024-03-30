@@ -179,9 +179,9 @@ export interface ServerAPI extends PluginServerApp {
       id: string
       name: string
       version: string
+      enabled: boolean
     }
   }
-  registerFeature: (featureId: string) => void
 
   getCourse: () => Promise<CourseInfo>
   clearDestination: () => Promise<void>

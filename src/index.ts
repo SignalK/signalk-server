@@ -38,7 +38,7 @@ import http from 'http'
 import https from 'https'
 import _ from 'lodash'
 import path from 'path'
-import { startApis } from './api'
+import { startApis, apiList, SIGNALK_API_LIST, SIGNALK_API } from './api'
 import {
   SelfIdentity,
   ServerApp,
@@ -123,23 +123,15 @@ class Server {
 
     app.providerStatus = {}
 
-    // feature registration
-    app.apiList = []
-
-    app.registerFeature = (featureId: string): boolean => {
-      if (!app.apiList.includes(featureId)) {
-        app.apiList.push(featureId)
-        return true
-      } else {
-        debug(`featureId (${featureId}) is already registered!`)
-        return false
-      }
-    }
-
     // feature detection
     app.getFeatures = async (enabledOnly?: boolean) => {
+      const pluginApis = app.plugins.filter( (p:{feature: SIGNALK_API}) => {
+        return p.feature && SIGNALK_API_LIST.includes(p.feature) ? true : false
+      }).map ((p: {feature: SIGNALK_API}) => {
+        return p.feature
+      })
       return {
-        apis: app.apiList.slice(),
+        apis: apiList.slice().concat(pluginApis),
         plugins: await app.listFeaturePlugins(enabledOnly)
       }
     }
