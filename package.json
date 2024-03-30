@@ -127,7 +127,7 @@
   },
   "optionalDependencies": {
     "@signalk/freeboard-sk": "^2.0.0-beta.3",
-    "@mxtommy/kip": "^2.8.2",
+    "@mxtommy/kip": "^2.9.1",
     "@signalk/instrumentpanel": "0.x",
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
