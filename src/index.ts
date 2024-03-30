@@ -125,11 +125,15 @@ class Server {
 
     // feature detection
     app.getFeatures = async (enabledOnly?: boolean) => {
-      const pluginApis = app.plugins.filter( (p:{feature: SIGNALK_API}) => {
-        return p.feature && SIGNALK_API_LIST.includes(p.feature) ? true : false
-      }).map ((p: {feature: SIGNALK_API}) => {
-        return p.feature
-      })
+      const pluginApis = app.plugins
+        .filter((p: { feature: SIGNALK_API }) => {
+          return p.feature && SIGNALK_API_LIST.includes(p.feature)
+            ? true
+            : false
+        })
+        .map((p: { feature: SIGNALK_API }) => {
+          return p.feature
+        })
       return {
         apis: apiList.slice().concat(pluginApis),
         plugins: await app.listFeaturePlugins(enabledOnly)

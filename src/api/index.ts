@@ -38,7 +38,12 @@ export const Responses = {
 }
 
 export type SIGNALK_API = 'resources' | 'course' | 'autopilot' | 'anchor'
-export const SIGNALK_API_LIST: Array<SIGNALK_API> = ['resources', 'course', 'autopilot', 'anchor']
+export const SIGNALK_API_LIST: Array<SIGNALK_API> = [
+  'resources',
+  'course',
+  'autopilot',
+  'anchor'
+]
 export const apiList: Array<SIGNALK_API> = []
 
 export const startApis = (
