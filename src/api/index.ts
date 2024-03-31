@@ -37,14 +37,26 @@ export const Responses = {
   }
 }
 
-export type SIGNALK_API = 'resources' | 'course' | 'autopilot' | 'anchor'
-export const SIGNALK_API_LIST: Array<SIGNALK_API> = [
-  'resources',
-  'course',
-  'autopilot',
-  'anchor'
-]
-export const apiList: Array<SIGNALK_API> = []
+export type SIGNALK_API_ID =
+  | 'resources'
+  | 'course'
+  | 'history'
+  | 'autopilot'
+  | 'anchor'
+  | 'logbook'
+
+export const isSignalKApi = (id: SIGNALK_API_ID): boolean => {
+  return [
+    'resources',
+    'course',
+    'history',
+    'autopilot',
+    'anchor',
+    'logbook'
+  ].includes(id)
+}
+
+export const apiList: Array<SIGNALK_API_ID> = []
 
 export const startApis = (
   app: SignalKMessageHub &

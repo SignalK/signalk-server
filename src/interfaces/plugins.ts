@@ -110,8 +110,8 @@ module.exports = (theApp: any) => {
 
       startPlugins(theApp)
 
-      theApp.listFeaturePlugins = async (enabledOnly?: boolean) => {
-        return await listFeaturePlugins(enabledOnly)
+      theApp.getPluginsWithFeature = async (enabledOnly?: boolean) => {
+        return await getPluginsWithFeature(enabledOnly)
       }
 
       theApp.use(
@@ -120,17 +120,7 @@ module.exports = (theApp: any) => {
       )
 
       theApp.get(backwardsCompat('/plugins'), (req: Request, res: Response) => {
-        const providerStatus = theApp.getProviderStatus()
-
-        Promise.all(
-          _.sortBy(theApp.plugins, [
-            (plugin: PluginInfo) => {
-              return plugin.name
-            }
-          ]).map((plugin: PluginInfo) =>
-            getPluginResponseInfo(plugin, providerStatus)
-          )
-        )
+        getPluginStatus()
           .then((json) => res.json(json))
           .catch((err) => {
             console.error(err)
@@ -141,9 +131,9 @@ module.exports = (theApp: any) => {
     }
   }
 
-  function listFeaturePlugins(enabledOnly?: boolean) {
+  function getPluginStatus() {
     const providerStatus = theApp.getProviderStatus()
-    return Promise.allSettled(
+    return Promise.all(
       _.sortBy(theApp.plugins, [
         (plugin: PluginInfo) => {
           return plugin.name
@@ -151,17 +141,21 @@ module.exports = (theApp: any) => {
       ]).map((plugin: PluginInfo) =>
         getPluginResponseInfo(plugin, providerStatus)
       )
-    ).then((pa) => {
+    )
+  }
+
+  function getPluginsWithFeature(enabledOnly?: boolean) {
+    return getPluginStatus().then((pa) => {
       return pa
         .filter((p: any) => {
-          return enabledOnly === true ? p.value.data.enabled ?? false : true
+          return enabledOnly === true ? p.data.enabled ?? false : true
         })
         .map((p: any) => {
           return {
-            id: p.value.id,
-            name: p.value.name,
-            version: p.value.version,
-            enabled: p.value.data.enabled ?? false
+            id: p.id,
+            name: p.name,
+            version: p.version,
+            enabled: p.data.enabled ?? false
           }
         })
     })
