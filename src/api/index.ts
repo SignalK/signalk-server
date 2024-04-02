@@ -2,7 +2,7 @@ import { IRouter } from 'express'
 import { SignalKMessageHub, WithConfig, WithFeatures } from '../app'
 import { WithSecurityStrategy } from '../security'
 import { CourseApi } from './course'
-import { FeaturesApi } from './features'
+import { FeaturesApi } from './discovery'
 import { ResourcesApi } from './resources'
 
 export interface ApiResponse {

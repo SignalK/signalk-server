@@ -7,8 +7,7 @@ import { IRouter, Request, Response } from 'express'
 import { SignalKMessageHub, WithConfig, WithFeatures } from '../../app'
 import { WithSecurityStrategy } from '../../security'
 
-const SIGNALK_API_PATH = `/signalk/v2/api`
-const FEATURES_API_PATH = `${SIGNALK_API_PATH}/features`
+const FEATURES_API_PATH = `/signalk/v2/features`
 
 interface FeaturesApplication
   extends IRouter,
