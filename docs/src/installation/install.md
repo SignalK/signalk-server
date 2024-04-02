@@ -28,7 +28,7 @@ Signal K Server is available as a Docker image on _Docker Hub_ and _cr.signalk.i
 
 To simply run a Signal K Server with some sample data on a device with docker installed, enter the following into a terminal:
 ```shell
-docker run --rm signalk/signalk-server --publish 3000:3000
+docker run -it --rm --publish 3000:3000 signalk/signalk-server
 ```
 
 This will start an instance of Signal K Server on port 3000 which you can then access via the web based Admin UI by pointing your web browser at `http://localhost:3000`.
