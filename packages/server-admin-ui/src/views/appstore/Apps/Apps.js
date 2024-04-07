@@ -36,7 +36,9 @@ const Apps = function (props) {
     props.appStore.installing.forEach(
       (app) => (allApps[app.name].installing = true)
     )
-    return Object.values(allApps)
+    return Object.values(allApps).sort(
+      (a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()
+    )
   }
 
   const handleUpdateAll = () => {
