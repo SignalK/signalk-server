@@ -29,7 +29,7 @@ class AppsList extends Component {
             >
               <div>Type</div>
             </th>
-            <th class="text-center">Action</th>
+            <th className="text-center">Action</th>
           </tr>
         </thead>
         <tbody>
