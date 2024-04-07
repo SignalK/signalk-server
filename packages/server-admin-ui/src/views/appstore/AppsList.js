@@ -10,13 +10,6 @@ const L_WIDTH = 992
 const M_WIDTH = 768
 
 class AppsList extends Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      installing: {},
-    }
-  }
-
   render() {
     return (
       <Table>
