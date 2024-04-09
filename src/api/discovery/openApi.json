@@ -217,7 +217,7 @@
             "explode": false,
             "schema": {
               "type": "string",
-              "enum": ["enabled"]
+              "enum": ["enabled", "1", "false", "0"]
             }
           }
         ],

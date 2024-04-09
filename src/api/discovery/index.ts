@@ -18,7 +18,12 @@ interface FeaturesApplication
 
 interface FeatureInfo {
   apis: string[]
-  plugins: string[]
+  plugins: Array<{
+    id: string
+    name: string
+    version: string
+    enabled: boolean
+  }>
 }
 
 export class FeaturesApi {
@@ -42,12 +47,15 @@ export class FeaturesApi {
     this.app.get(
       `${FEATURES_API_PATH}`,
       async (req: Request, res: Response) => {
-        debug(`** GET ${FEATURES_API_PATH}`)
-        res.json(
-          await this.app.getFeatures(
-            typeof req.query.enabled !== 'undefined' ? true : false
-          )
-        )
+        debug(`** GET ${req.path}`)
+
+        const enabled = ['true', '1'].includes(req.query.enabled as string)
+          ? true
+          : ['false', '0'].includes(req.query.enabled as string)
+          ? false
+          : undefined
+
+        res.json(await this.app.getFeatures(enabled))
       }
     )
   }

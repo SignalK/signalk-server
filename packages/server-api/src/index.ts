@@ -31,6 +31,14 @@ import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
 export * from './autopilotapi'
 
+export type SIGNALK_API_ID =
+  | 'resources'
+  | 'course'
+  | 'history'
+  | 'autopilot'
+  | 'anchor'
+  | 'logbook'
+
 export {
   PropertyValue,
   PropertyValues,

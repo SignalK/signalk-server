@@ -38,7 +38,7 @@ import http from 'http'
 import https from 'https'
 import _ from 'lodash'
 import path from 'path'
-import { startApis, apiList, isSignalKApi, SIGNALK_API_ID } from './api'
+import { startApis, apiList } from './api'
 import {
   SelfIdentity,
   ServerApp,
@@ -124,17 +124,10 @@ class Server {
     app.providerStatus = {}
 
     // feature detection
-    app.getFeatures = async (enabledOnly?: boolean) => {
-      const pluginApis = app.plugins
-        .filter((p: { feature: SIGNALK_API_ID }) => {
-          return p.feature && isSignalKApi(p.feature) ? true : false
-        })
-        .map((p: { feature: SIGNALK_API_ID }) => {
-          return p.feature
-        })
+    app.getFeatures = async (enabled?: boolean) => {
       return {
-        apis: apiList.slice().concat(pluginApis),
-        plugins: await app.getPluginsWithFeature(enabledOnly)
+        apis: apiList,
+        plugins: await app.getPluginsList(enabled)
       }
     }
 

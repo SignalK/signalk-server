@@ -110,8 +110,8 @@ module.exports = (theApp: any) => {
 
       startPlugins(theApp)
 
-      theApp.getPluginsWithFeature = async (enabledOnly?: boolean) => {
-        return await getPluginsWithFeature(enabledOnly)
+      theApp.getPluginsList = async (enabled?: boolean) => {
+        return await getPluginsList(enabled)
       }
 
       theApp.use(
@@ -144,20 +144,24 @@ module.exports = (theApp: any) => {
     )
   }
 
-  function getPluginsWithFeature(enabledOnly?: boolean) {
+  function getPluginsList(enabled?: boolean) {
     return getPluginStatus().then((pa) => {
-      return pa
-        .filter((p: any) => {
-          return enabledOnly === true ? p.data.enabled ?? false : true
+      const res = pa.map((p: any) => {
+        return {
+          id: p.id,
+          name: p.name,
+          version: p.version,
+          enabled: p.data.enabled ?? false
+        }
+      })
+
+      if (typeof enabled === 'undefined') {
+        return res
+      } else {
+        return res.filter((p: any) => {
+          return p.enabled === enabled
         })
-        .map((p: any) => {
-          return {
-            id: p.id,
-            name: p.name,
-            version: p.version,
-            enabled: p.data.enabled ?? false
-          }
-        })
+      }
     })
   }
 

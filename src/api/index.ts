@@ -4,6 +4,7 @@ import { WithSecurityStrategy } from '../security'
 import { CourseApi } from './course'
 import { FeaturesApi } from './discovery'
 import { ResourcesApi } from './resources'
+import { SIGNALK_API_ID } from '@signalk/server-api'
 
 export interface ApiResponse {
   state: 'FAILED' | 'COMPLETED' | 'PENDING'
@@ -35,25 +36,6 @@ export const Responses = {
     statusCode: 404,
     message: 'Resource not found.'
   }
-}
-
-export type SIGNALK_API_ID =
-  | 'resources'
-  | 'course'
-  | 'history'
-  | 'autopilot'
-  | 'anchor'
-  | 'logbook'
-
-export const isSignalKApi = (id: SIGNALK_API_ID): boolean => {
-  return [
-    'resources',
-    'course',
-    'history',
-    'autopilot',
-    'anchor',
-    'logbook'
-  ].includes(id)
 }
 
 export const apiList: Array<SIGNALK_API_ID> = []
