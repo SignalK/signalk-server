@@ -213,7 +213,6 @@ function isTheServerModule(moduleName: string, config: Config) {
 function findModulesWithKeyword(keyword: string) {
   return new Promise((resolve, reject) => {
     let errorCount = 0
-    let resultCount = 0
     const result = {}
     const handleResultWithTimeout = (fetchResult: Promise<Response>): void => {
       fetchResult
@@ -236,14 +235,7 @@ function findModulesWithKeyword(keyword: string) {
             },
             result
           )
-          if (resultCount++ || errorCount) {
-            resolve(_.values(result))
-          } else {
-            setTimeout(
-              () => resolve(_.values(result)),
-              Number(process.env.NPMREGISTRYTIMEOUT) || 20 * 1000
-            )
-          }
+          resolve(_.values(result))
         })
         .catch((e) => {
           if (errorCount++) {
@@ -252,9 +244,6 @@ function findModulesWithKeyword(keyword: string) {
         })
     }
     ;[
-      fetch(
-        `https://api.npms.io/v2/search?size=250&q=keywords:${keyword}+not:deprecated`
-      ),
       fetch(
         'http://registry.npmjs.org/-/v1/search?size=250&text=keywords:' +
           keyword
