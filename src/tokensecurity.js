@@ -277,6 +277,10 @@ module.exports = function (app, config) {
         resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
         return
       }
+      if (!user.password) {
+        resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
+        return
+      }
 
       bcrypt.compare(password, user.password, (err, matches) => {
         if (err) {
