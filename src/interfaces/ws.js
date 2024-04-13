@@ -760,6 +760,10 @@ function startServerLog(app, spark) {
 function getAssertBufferSize(config) {
   const MAXSENDBUFFERSIZE =
     process.env.MAXSENDBUFFERSIZE || config.maxSendBufferSize || 4 * 512 * 1024
+  const MAXSENDBUFFERCHECKTIME =
+    process.env.MAXSENDBUFFERCHECKTIME ||
+    config.maxSendBufferCheckTime ||
+    30 * 1000
   debug(`MAXSENDBUFFERSIZE:${MAXSENDBUFFERSIZE}`)
 
   if (MAXSENDBUFFERSIZE === 0) {
@@ -769,10 +773,23 @@ function getAssertBufferSize(config) {
   return (spark) => {
     debug(spark.id + ' ' + spark.request.socket.bufferSize)
     if (spark.request.socket.bufferSize > MAXSENDBUFFERSIZE) {
-      spark.end({
-        errorMessage: 'Server outgoing buffer overflow, terminating connection'
-      })
-      console.error('Send buffer overflow, terminating connection ' + spark.id)
+      if (!spark.bufferSizeExceeded) {
+        console.warn(
+          `${spark.id} outgoing buffer > max:${spark.request.socket.bufferSize}`
+        )
+        spark.bufferSizeExceeded = Date.now()
+      }
+      if (Date.now() - spark.bufferSizeExceeded > MAXSENDBUFFERCHECKTIME) {
+        spark.end({
+          errorMessage:
+            'Server outgoing buffer overflow, terminating connection'
+        })
+        console.error(
+          'Send buffer overflow, terminating connection ' + spark.id
+        )
+      }
+    } else {
+      spark.bufferSizeExceeded = undefined
     }
   }
 }
