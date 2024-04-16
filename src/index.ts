@@ -27,6 +27,7 @@ import {
   DeltaInputHandler,
   PropertyValues,
   SKVersion,
+  SignalKApiId,
   SourceRef,
   Timestamp,
   Update
@@ -38,7 +39,7 @@ import http from 'http'
 import https from 'https'
 import _ from 'lodash'
 import path from 'path'
-import { startApis, apiList } from './api'
+import { startApis } from './api'
 import {
   SelfIdentity,
   ServerApp,
@@ -83,7 +84,10 @@ class Server {
     PluginManager &
     WithSecurityStrategy &
     IRouter &
-    WithProviderStatistics
+    WithProviderStatistics &
+    {
+      apis?: Array<SignalKApiId>
+    }
   constructor(opts: ServerOptions) {
     const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
     const bodyParser = require('body-parser')
@@ -126,7 +130,7 @@ class Server {
     // feature detection
     app.getFeatures = async (enabled?: boolean) => {
       return {
-        apis: apiList,
+        apis: app.apiList,
         plugins: await app.getPluginsList(enabled)
       }
     }
@@ -444,7 +448,7 @@ class Server {
 
         sendBaseDeltas(app as unknown as ConfigApp)
 
-        await startApis(app)
+        app.apis = await startApis(app)
         startInterfaces(app)
         startMdns(app)
         app.providers = require('./pipedproviders')(app).start()

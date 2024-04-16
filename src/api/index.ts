@@ -38,7 +38,6 @@ export const Responses = {
   }
 }
 
-export const apiList: Array<SignalKApiId> = []
 
 export const startApis = (
   app: SignalKMessageHub &
@@ -47,6 +46,7 @@ export const startApis = (
     WithConfig &
     WithFeatures
 ) => {
+  const apiList: Array<SignalKApiId> = []
   const resourcesApi = new ResourcesApi(app)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).resourcesApi = resourcesApi
@@ -60,4 +60,5 @@ export const startApis = (
   const featuresApi = new FeaturesApi(app)
 
   Promise.all([resourcesApi.start(), courseApi.start(), featuresApi.start()])
+  return apiList
 }
