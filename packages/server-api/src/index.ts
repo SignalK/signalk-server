@@ -121,6 +121,16 @@ export interface Metadata {
   description?: string
 }
 
+export interface FeatureInfo {
+  apis: SignalKApiId[]
+  plugins: Array<{
+    id: string
+    name: string
+    version: string
+    enabled: boolean
+  }>
+}
+
 export interface ServerAPI extends PluginServerApp {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getSelfPath: (path: string) => any
@@ -181,15 +191,7 @@ export interface ServerAPI extends PluginServerApp {
   }) => void
   getSerialPorts: () => Promise<Ports>
 
-  getFeatures: () => {
-    apis: string[]
-    plugins: {
-      id: string
-      name: string
-      version: string
-      enabled: boolean
-    }
-  }
+  getFeatures: () => FeatureInfo
 
   getCourse: () => Promise<CourseInfo>
   clearDestination: () => Promise<void>

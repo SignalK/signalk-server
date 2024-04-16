@@ -6,6 +6,7 @@ import { IRouter, Request, Response } from 'express'
 
 import { SignalKMessageHub, WithConfig, WithFeatures } from '../../app'
 import { WithSecurityStrategy } from '../../security'
+import { FeatureInfo } from '@signalk/server-api'
 
 const FEATURES_API_PATH = `/signalk/v2/features`
 
@@ -15,16 +16,6 @@ interface FeaturesApplication
     WithFeatures,
     WithSecurityStrategy,
     SignalKMessageHub {}
-
-interface FeatureInfo {
-  apis: string[]
-  plugins: Array<{
-    id: string
-    name: string
-    version: string
-    enabled: boolean
-  }>
-}
 
 export class FeaturesApi {
   private features: FeatureInfo = {
