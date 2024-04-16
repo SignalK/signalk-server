@@ -22,7 +22,8 @@ import {
   ResourceProvider,
   ServerAPI,
   PointDestination,
-  RouteDestination
+  RouteDestination,
+  SignalKApiId
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -614,6 +615,9 @@ module.exports = (theApp: any) => {
 
     appCopy.registerHistoryProvider = (provider) => {
       app.registerHistoryProvider(provider)
+      const apiList = app.apiList as SignalKApiId[]
+      apiList.push('historyplayback')
+      apiList.push('historysnapshot')
       onStopHandlers[plugin.id].push(() => {
         app.unregisterHistoryProvider(provider)
       })
