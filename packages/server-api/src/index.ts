@@ -31,7 +31,7 @@ import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
 export * from './autopilotapi'
 
-export type SIGNALK_API_ID =
+export type SignalKApiId =
   | 'resources'
   | 'course'
   | 'history'

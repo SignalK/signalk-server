@@ -4,7 +4,7 @@ import { WithSecurityStrategy } from '../security'
 import { CourseApi } from './course'
 import { FeaturesApi } from './discovery'
 import { ResourcesApi } from './resources'
-import { SIGNALK_API_ID } from '@signalk/server-api'
+import { SignalKApiId } from '@signalk/server-api'
 
 export interface ApiResponse {
   state: 'FAILED' | 'COMPLETED' | 'PENDING'
@@ -38,7 +38,7 @@ export const Responses = {
   }
 }
 
-export const apiList: Array<SIGNALK_API_ID> = []
+export const apiList: Array<SignalKApiId> = []
 
 export const startApis = (
   app: SignalKMessageHub &
