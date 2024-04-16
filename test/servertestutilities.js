@@ -2,6 +2,7 @@ const WebSocket = require('ws')
 const _ = require('lodash')
 const promisify = require('util').promisify
 const fetch = require('node-fetch')
+const jwt = require('jsonwebtoken')
 
 // Connects to the url via ws
 // and provides Promises that are either resolved within
@@ -105,6 +106,7 @@ const LIMITED_USER_NAME = 'testuser'
 const LIMITED_USER_PASSWORD = 'verylimited'
 const ADMIN_USER_NAME = 'adminuser'
 const ADMIN_USER_PASSWORD = 'admin'
+const NOPASSWORD_USER_NAME = 'nopassword'
 
 const serverTestConfigDirectory = () => require('path').join(
   __dirname,
@@ -157,7 +159,11 @@ module.exports = {
               userId: ADMIN_USER_NAME,
               type: 'admin',
               password: ADMIN_USER_PASSWORD
-            })
+            }),
+            promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
+              userId: NOPASSWORD_USER_NAME,
+              type: 'admin',
+            }),
           ])
             .then(() => {
               resolve(s)
@@ -181,6 +187,14 @@ module.exports = {
   WRITE_USER_PASSWORD,
   getAdminToken: server => {
     return login(server, ADMIN_USER_NAME, ADMIN_USER_PASSWORD)
+  },
+  NOPASSWORD_USER_NAME,
+  getToken: (server, username) => {
+    return jwt.sign({
+      id: username
+    }, server.app.securityStrategy.securityConfig.secretKey, {
+      expiresIn: '1h'
+    })
   }
 }
 

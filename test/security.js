@@ -5,7 +5,7 @@ const freeport = require('freeport-promise')
 const Server = require('../lib')
 const fetch = require('node-fetch')
 const http = require('http')
-const promisify = require('util').promisify
+const { promisify } = require('util')
 const WebSocket = require('ws')
 const _ = require('lodash')
 const {
@@ -17,7 +17,9 @@ const {
   WRITE_USER_PASSWORD,
   LIMITED_USER_NAME,
   LIMITED_USER_PASSWORD,
-  WsPromiser
+  WsPromiser,
+  getToken,
+  NOPASSWORD_USER_NAME
 } = require('./servertestutilities')
 
 const limitedSteeringDelta = {
@@ -70,7 +72,7 @@ const metaDelta = {
 }
 
 describe('Security', () => {
-  let server, url, port, readToken, writeToken, adminToken
+  let server, url, port, readToken, writeToken, adminToken, noPasswordToken
 
   before(async function () {
     this.timeout(5000)
@@ -118,6 +120,7 @@ describe('Security', () => {
     readToken = await getReadOnlyToken(server)
     writeToken = await getWriteToken(server)
     adminToken = await getAdminToken(server)
+    noPasswordToken = await getToken(server, NOPASSWORD_USER_NAME)
   })
 
   after(async function () {
@@ -162,6 +165,33 @@ describe('Security', () => {
     result.status.should.equal(401)
   })
 
+  it('login without password to user without password fails', async function () {
+    const result = await fetch(`${url}/signalk/v1/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: NOPASSWORD_USER_NAME,
+      })
+    })
+    result.status.should.equal(401)
+  })
+
+  it('login with incorrect password to user without password fails', async function () {
+    const result = await fetch(`${url}/signalk/v1/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: NOPASSWORD_USER_NAME,
+        password: 'incorrect',
+      })
+    })
+    result.status.should.equal(401)
+  })
+
   it('login works', async function () {
     const writeUserToken = await login(WRITE_USER_NAME, WRITE_USER_PASSWORD)
     writeUserToken.length.should.equal(151)
@@ -194,6 +224,33 @@ describe('Security', () => {
     const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
       headers: {
         'X-Authorization': `JWT ${readToken}`
+      }
+    })
+    result.status.should.equal(200)
+  })
+
+  it('authorized read works for user without password', async function () {
+    const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
+      headers: {
+        Cookie: `JAUTHENTICATION=${noPasswordToken}`
+      }
+    })
+    result.status.should.equal(200)
+  })
+  
+  it('authorized read with Authorization header works for user without password', async function () {
+    const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
+      headers: {
+        Authorization: `JWT ${noPasswordToken}`
+      }
+    })
+    result.status.should.equal(200)
+  })
+
+  it('authorized read with X-Authorization header works for user without password', async function () {
+    const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
+      headers: {
+        'X-Authorization': `JWT ${noPasswordToken}`
       }
     })
     result.status.should.equal(200)
