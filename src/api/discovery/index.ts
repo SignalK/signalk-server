@@ -1,28 +1,17 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:api:features')
 
 import { IRouter, Request, Response } from 'express'
 
-import { SignalKMessageHub, WithConfig, WithFeatures } from '../../app'
-import { WithSecurityStrategy } from '../../security'
-import { FeatureInfo } from '@signalk/server-api'
+import { WithFeatures } from '../../app'
 
 const FEATURES_API_PATH = `/signalk/v2/features`
 
 interface FeaturesApplication
   extends IRouter,
-    WithConfig,
-    WithFeatures,
-    WithSecurityStrategy,
-    SignalKMessageHub {}
+    WithFeatures {}
 
 export class FeaturesApi {
-  private features: FeatureInfo = {
-    apis: [],
-    plugins: []
-  }
-
   constructor(private app: FeaturesApplication) {}
 
   async start() {
