@@ -120,7 +120,7 @@ module.exports = (theApp: any) => {
       )
 
       theApp.get(backwardsCompat('/plugins'), (req: Request, res: Response) => {
-        getPluginStatus()
+        getPluginResponseInfos()
           .then((json) => res.json(json))
           .catch((err) => {
             console.error(err)
@@ -131,7 +131,7 @@ module.exports = (theApp: any) => {
     }
   }
 
-  function getPluginStatus() {
+  function getPluginResponseInfos() {
     const providerStatus = theApp.getProviderStatus()
     return Promise.all(
       _.sortBy(theApp.plugins, [
@@ -145,7 +145,7 @@ module.exports = (theApp: any) => {
   }
 
   function getPluginsList(enabled?: boolean) {
-    return getPluginStatus().then((pa) => {
+    return getPluginResponseInfos().then((pa) => {
       const res = pa.map((p: any) => {
         return {
           id: p.id,
