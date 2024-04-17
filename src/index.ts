@@ -84,8 +84,7 @@ class Server {
     PluginManager &
     WithSecurityStrategy &
     IRouter &
-    WithProviderStatistics &
-    {
+    WithProviderStatistics & {
       apis?: Array<SignalKApiId>
     }
   constructor(opts: ServerOptions) {
@@ -130,7 +129,7 @@ class Server {
     // feature detection
     app.getFeatures = async (enabled?: boolean) => {
       return {
-        apis: app.apiList,
+        apis: app.apis,
         plugins: await app.getPluginsList(enabled)
       }
     }
