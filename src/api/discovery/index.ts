@@ -7,9 +7,7 @@ import { WithFeatures } from '../../app'
 
 const FEATURES_API_PATH = `/signalk/v2/features`
 
-interface FeaturesApplication
-  extends IRouter,
-    WithFeatures {}
+interface FeaturesApplication extends IRouter, WithFeatures {}
 
 export class FeaturesApi {
   constructor(private app: FeaturesApplication) {}

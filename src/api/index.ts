@@ -38,7 +38,6 @@ export const Responses = {
   }
 }
 
-
 export const startApis = (
   app: SignalKMessageHub &
     WithSecurityStrategy &
