@@ -17,6 +17,7 @@
 */
 import {
   Brand,
+  PointDestination,
   PropertyValues,
   PropertyValuesCallback,
   ResourceProvider,
@@ -32,19 +33,20 @@ import express, { Request, Response } from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
-import { ResourcesApi } from '../api/resources'
 import { CourseApi } from '../api/course'
+import { ResourcesApi } from '../api/resources'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
 import { listAllSerialPorts } from '../serialports'
 const debug = createDebug('signalk-server:interfaces:plugins')
 
-import { modulesWithKeyword } from '../modules'
 import { OpenApiDescription, OpenApiRecord } from '../api/swagger'
 import {
   CONNECTION_WRITE_EVENT_NAME,
   ConnectionWriteEvent
 } from '../deltastats'
+import { EventsActorId } from '../events'
+import { modulesWithKeyword } from '../modules'
 
 const put = require('../put')
 const _putPath = put.putPath
@@ -213,6 +215,11 @@ module.exports = (theApp: any) => {
         .then(([schema, uiSchema]) => {
           const status = providerStatus.find((p: any) => p.id === plugin.name)
           const statusMessage = status ? status.message : ''
+          if (schema === undefined) {
+            console.error(
+              `Error: plugin ${plugin.id} is missing configuration schema`
+            )
+          }
           resolve({
             id: plugin.id,
             name: plugin.name,
@@ -220,7 +227,7 @@ module.exports = (theApp: any) => {
             keywords: plugin.keywords,
             version: plugin.version,
             description: plugin.description,
-            schema,
+            schema: schema || {},
             statusMessage,
             uiSchema,
             state: plugin.state,
@@ -594,6 +601,11 @@ module.exports = (theApp: any) => {
     }
 
     appCopy.handleMessage = handleMessageWrapper(app, plugin.id)
+    const boundEventMethods = (app as any).wrappedEmitter.bindMethodsById(
+      `plugin:${plugin.id}` as EventsActorId
+    )
+    _.assign(appCopy, boundEventMethods)
+
     appCopy.savePluginOptions = (configuration, cb) => {
       savePluginOptions(
         plugin.id,

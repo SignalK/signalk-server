@@ -1,11 +1,11 @@
 {
     "name": "@signalk/resources-provider",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "Resources provider plugin for Signal K server.",
     "main": "plugin/index.js",
     "keywords": [
         "signalk-node-server-plugin",
-        "signalk-category-chart-plotters",
+        "signalk-category-utility",
         "signalk",
         "resources",
         "routes",

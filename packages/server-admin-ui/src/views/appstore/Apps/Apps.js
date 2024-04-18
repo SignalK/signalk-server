@@ -1,183 +1,187 @@
-import React, { Component } from 'react'
+import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import React, { useState } from 'react'
 import { connect } from 'react-redux'
 import {
   Button,
   Card,
-  CardHeader,
   CardBody,
-  Form,
-  FormGroup,
-  Col,
+  CardHeader,
+  CardTitle,
   Input,
-  Label,
 } from 'reactstrap'
-import ThisSession from './ThisSession'
-import AppsList from './AppsList'
+import AppsList from '../AppsList'
+import WarningBox from './WarningBox'
 
-const viewParams = {
-  apps: {
-    listName: 'available',
-    title: 'Available Apps',
-    defaultCategory: 'New/Updated',
-  },
-  installed: {
-    listName: 'installed',
-    title: 'Installed Apps',
-    defaultCategory: 'All',
-  },
-  updates: {
-    listName: 'updates',
-    title: 'Available Updates',
-    defaultCategory: 'All',
-  },
-}
+import '../appStore.scss'
 
-class AppTable extends Component {
-  constructor(props) {
-    super(props)
+const Apps = function (props) {
+  const [view, setSelectedView] = useState('All')
+  const [category, setSelectedCategory] = useState('All')
+  const [search, setSearch] = useState(() => '')
 
-    const viewData = viewParams[this.props.match.params.view]
-
-    let categorized = this.categorize(viewData.defaultCategory)
-
-    this.state = {
-      category: viewData.defaultCategory,
-      categorized: categorized,
-      search: '',
-    }
-
-    this.handleCategoryChange = this.handleCategoryChange.bind(this)
-    this.handleSearch = this.handleSearch.bind(this)
+  const deriveAppList = () => {
+    const allApps = props.appStore.available.reduce((acc, app) => {
+      acc[app.name] = app
+      return acc
+    }, {})
+    props.appStore.installed.forEach(
+      (app) =>
+        (allApps[app.name] = {
+          ...app,
+          installed: true,
+          newVersion: app.installedVersion !== app.version ? app.version : null,
+        })
+    )
+    props.appStore.installing.forEach(
+      (app) => (allApps[app.name].installing = true)
+    )
+    return Object.values(allApps).sort(
+      (a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()
+    )
   }
 
-  categorize(category) {
-    const viewData = viewParams[this.props.match.params.view]
-    const apps = this.props.appStore[viewData.listName]
-    return category === 'All'
-      ? apps
-      : apps.filter((app) => app.categories.indexOf(category) !== -1)
-  }
-
-  componentDidUpdate() {
-    if (!this.state.categorized || !this.state.categorized.length) {
-      const categorized = this.categorize(this.state.category)
-      if (categorized && categorized.length) {
-        this.setState({ categorized })
+  const handleUpdateAll = () => {
+    if (confirm(`Are you sure you want to install all updates?`)) {
+      // Iterate over all apps to be updated
+      for (const app of rowData) {
+        if (app.newVersion && app.installed) {
+          fetch(
+            `${window.serverRoutesPrefix}/appstore/install/${app.name}/${app.version}`,
+            {
+              method: 'POST',
+              credentials: 'include',
+            }
+          )
+        }
       }
     }
   }
 
-  handleCategoryChange(event) {
-    let searchResults
-    let categorized = this.categorize(event.target.value)
-
-    if (this.state.search.length > 0) {
-      searchResults = this.searchApps(categorized, this.state.search)
-    }
-
-    this.setState({
-      category: event.target.value,
-      categorized,
-      searchResults,
-    })
+  /* 
+  Show different warning message
+  whether the store is available or if an app was installed or removed
+  */
+  let warning
+  if (props.appStore.storeAvailable === false) {
+    warning = `You probably don't have Internet connectivity and Appstore can not be reached.`
+  } else if (props.appStore.installing.length > 0) {
+    warning =
+      'Please restart the server after installing, updating or deleting a plugin'
   }
 
-  searchApps(apps, searchString) {
-    const lowerCase = searchString.toLowerCase()
-    return apps.filter((app) => {
-      return (
-        app.keywords.filter((k) => k.toLowerCase().includes(lowerCase))
-          .length ||
-        app.name.toLowerCase().includes(lowerCase) ||
-        (app.description &&
-          app.description.toLowerCase().includes(lowerCase)) ||
-        (app.author && app.author.toLowerCase().includes(lowerCase))
-      )
-    })
-  }
+  const selectedViewFilter = selectedViewToFilter(view)
+  const selectedCategoryFilter =
+    category === 'All' ? () => true : (app) => app.categories.includes(category)
+  const textSearchFilter =
+    search === ''
+      ? () => true
+      : (app) => {
+          const lower = search.toLowerCase()
+          return (
+            app.name.toLowerCase().indexOf(lower) >= 0 ||
+            (app.description &&
+              app.description.toLowerCase().indexOf(lower) >= 0)
+          )
+        }
+  const rowData = deriveAppList()
+    .filter(selectedViewFilter)
+    .filter(selectedCategoryFilter)
+    .filter(textSearchFilter)
 
-  handleSearch(event) {
-    let searchResults = null
-    const search = event.target.value
-    if (search.length !== 0) {
-      searchResults = this.searchApps(this.state.categorized, search)
-    }
+  return (
+    <div className="appstore animated fadeIn">
+      <section className="appstore__warning section">
+        {warning && <WarningBox>{warning}</WarningBox>}
+      </section>
 
-    this.setState({ search, searchResults })
-  }
+      <Card>
+        <CardHeader className="appstore__header">
+          <div className="title__container">
+            <CardTitle>Apps & Plugins</CardTitle>
+            <Button
+              color={view === 'All' ? 'primary' : 'secondary'}
+              onClick={() => setSelectedView('All')}
+            >
+              All
+            </Button>
+            <Button
+              color={view === 'Installed' ? 'primary' : 'secondary'}
+              onClick={() => setSelectedView('Installed')}
+            >
+              Installed
+            </Button>
+            <Button
+              color={view === 'Updates' ? 'primary' : 'secondary'}
+              onClick={() => setSelectedView('Updates')}
+            >
+              Updates
+              {props.appStore.updates.length > 0 && (
+                <span className="badge__update">
+                  {props.appStore.updates.length}
+                </span>
+              )}
+            </Button>
+          </div>
 
-  render() {
-    const viewData = viewParams[this.props.match.params.view]
-    return (
-      <div className="animated fadeIn">
-        <ThisSession installingApps={this.props.appStore.installing} />
-        {!this.props.appStore.storeAvailable && (
-          <Card className="border-warning">
-            <CardHeader>Appstore not available</CardHeader>
-            <CardBody>
-              You probably don't have Internet connectivity and Appstore can not
-              be reached.
-            </CardBody>
-          </Card>
-        )}
-        {this.props.appStore.storeAvailable && (
-          <Card>
-            <CardHeader>
-              <i className="fa fa-align-justify" /> {viewData.title}
-            </CardHeader>
-            <CardBody>
-              <Form
-                action=""
-                method="post"
-                encType="multipart/form-data"
-                className="form-horizontal"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                }}
-              >
-                <FormGroup row>
-                  <Col xs="12" md="3">
-                    <Input
-                      type="select"
-                      value={this.state.category}
-                      name="context"
-                      onChange={this.handleCategoryChange}
-                    >
-                      {this.props.appStore.categories.map((key) => {
-                        return (
-                          <option disabled={key == '---'} key={key} value={key}>
-                            {key}
-                          </option>
-                        )
-                      })}
-                    </Input>
-                  </Col>
-                  <Col xs="3" md="1" className={'col-form-label'}>
-                    <Label htmlFor="select">Search</Label>
-                  </Col>
-                  <Col xs="12" md="4">
-                    <Input
-                      type="text"
-                      name="search"
-                      onChange={this.handleSearch}
-                      value={this.state.search}
-                    />
-                  </Col>
-                </FormGroup>
-              </Form>
-              <AppsList
-                apps={this.state.searchResults || this.state.categorized}
-                storeAvailable={this.props.appStore.storeAvailable}
-                listName={viewData.listName}
+          <div className="action__container">
+            {view == 'Updates' && props.appStore.updates.length > 0 ? (
+              <Button color="success" onClick={handleUpdateAll}>
+                Update all
+              </Button>
+            ) : undefined}
+
+            <div className="search">
+              <FontAwesomeIcon
+                className="search__icon"
+                icon={faMagnifyingGlass}
               />
-            </CardBody>
-          </Card>
-        )}
-      </div>
-    )
+              <Input
+                id="search-text-box"
+                className="search__input"
+                placeholder="Search ..."
+                onInput={(e) => {
+                  setSearch(e.target.value)
+                }}
+                value={search}
+              />
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardBody>
+          <section className="appstore__tags section">
+            {props.appStore.categories?.map((item) => (
+              <Button
+                key={item}
+                color="primary"
+                className={category === item ? 'active' : undefined}
+                outline
+                onClick={() => setSelectedCategory(item)}
+              >
+                {item}
+              </Button>
+            ))}
+          </section>
+          <section className="appstore__grid">
+            <div style={{ height: '100%' }}>
+              <AppsList apps={rowData} />
+            </div>
+          </section>
+        </CardBody>
+      </Card>
+    </div>
+  )
+}
+
+const selectedViewToFilter = (selectedView) => {
+  if (selectedView === 'Installed') {
+    return (app) => app.installing || app.installedVersion
+  } else if (selectedView === 'Updates') {
+    return (app) => app.installedVersion && app.version !== app.installedVersion
   }
+  return () => true
 }
 
 const mapStateToProps = ({ appStore }) => ({ appStore })
-
-export default connect(mapStateToProps)(AppTable)
+export default connect(mapStateToProps)(Apps)

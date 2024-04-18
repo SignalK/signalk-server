@@ -62,7 +62,6 @@ let baseStations = app.getFeatures();
 }
 ```
 
-
 ### Accessing the Data Model
 
 #### `app.getPath(path)`

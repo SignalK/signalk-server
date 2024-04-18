@@ -34,6 +34,123 @@ const Dashboard = (props) => {
   if (errorCount > 0) {
     errors = `(${errorCount} errors)`
   }
+
+  const getLinkType = (providerId) => {
+    try {
+      return providerStatus.find((item) => item.id === providerId).statusType
+    } catch (err) {
+      return 'provider'
+    }
+  }
+
+  const inputPulseIconClass = (providerStats) => {
+    return (
+      'icon-login' +
+      (providerStats.deltaRate > 50
+        ? ' text-primary fa-pulse-fast'
+        : providerStats.deltaRate > 0
+        ? ' text-primary fa-pulse'
+        : '')
+    )
+  }
+
+  const outputPulseIconClass = (providerStats) => {
+    return (
+      'icon-logout' +
+      (providerStats.writeRate > 50
+        ? ' text-primary fa-pulse-fast'
+        : providerStats.writeRate > 0
+        ? ' text-primary fa-pulse'
+        : '')
+    )
+  }
+
+  const renderActivity = (providerId, providerStats, linkType) => {
+    return (
+      <li key={providerId} onClick={() => props.history.push(`/dashboard`)}>
+        <i
+          className={inputPulseIconClass(providerStats)}
+          style={{
+            color: providerStats.deltaCount ? '#039' : 'lightblue',
+          }}
+        />
+        <i
+          className={outputPulseIconClass(providerStats)}
+          style={{
+            transform: 'scaleX(-1)',
+            color: providerStats.writeCount ? '#039' : 'lightblue',
+          }}
+        />
+        <span className="title">
+          {linkType === 'plugin'
+            ? pluginNameLink(providerId)
+            : providerIdLink(providerId)}
+        </span>
+        {providerStats.writeRate > 0 && (
+          <span className="value">
+            {' '}
+            {providerStats.writeRate}{' '}
+            <span className="text-muted small">{'msg/s'}</span>{' '}
+          </span>
+        )}
+        {providerStats.deltaRate > 0 && providerStats.writeRate > 0 && (
+          <span className="value">
+            <span className="text-muted small">{','}</span>
+            &#160;
+          </span>
+        )}
+        {providerStats.deltaRate > 0 && (
+          <span className="value">
+            {' '}
+            {providerStats.deltaRate}{' '}
+            <span className="text-muted small">
+              ({((providerStats.deltaRate / deltaRate) * 100).toFixed(0)}
+              %)
+            </span>{' '}
+            <span className="text-muted small">{'deltas/s'}</span>{' '}
+          </span>
+        )}
+        <div className="bars">
+          <Progress
+            className="progress-xs"
+            color="warning"
+            value={(providerStats.deltaRate / deltaRate) * 100}
+          />
+        </div>
+      </li>
+    )
+  }
+
+  const renderStatus = (status, statusClass, lastError) => {
+    return (
+      <tr
+        key={status.id}
+        onClick={() => {
+          props.history.push(
+            '/serverConfiguration/' +
+              (status.statusType === 'plugin' ? 'plugins/' : 'connections/') +
+              status.id
+          )
+        }}
+      >
+        <td>
+          {status.statusType === 'plugin'
+            ? pluginNameLink(status.id)
+            : providerIdLink(status.id)}
+        </td>
+        <td>
+          <p className="text-danger">{lastError}</p>
+        </td>
+        <td>
+          <p className={statusClass}>
+            {(status.message || '').substring(0, 80)}
+            {status.message.length > 80 ? '...' : ''}
+          </p>
+        </td>
+      </tr>
+    )
+  }
+
   return (
     <div className="animated fadeIn">
       {props.websocketStatus === 'open' && (
@@ -73,106 +190,42 @@ const Dashboard = (props) => {
                   </div>
                 </Col>
                 <Col xs="12" md="6">
-                  <div className="text-muted">Connection activity</div>
+                  <div className="text-muted" style={{ fontSize: '1rem' }}>
+                    Connections activity
+                  </div>
                   <ul className="horizontal-bars type-2">
-                    {Object.keys(providerStatistics || {}).map((providerId) => {
-                      const providerStats = providerStatistics[providerId]
-                      let linkType = 'provider'
-                      try {
-                        linkType = providerStatus.find(
-                          (item) => item.id === providerId
-                        ).statusType
-                      } catch (error) {}
-                      const inputPulseIconClass =
-                        'icon-login' +
-                        (providerStats.deltaRate > 50
-                          ? ' text-primary fa-pulse-fast'
-                          : providerStats.deltaRate > 0
-                          ? ' text-primary fa-pulse'
-                          : '')
-                      const outputPulseIconClass =
-                        'icon-logout' +
-                        (providerStats.writeRate > 50
-                          ? ' text-primary fa-pulse-fast'
-                          : providerStats.writeRate > 0
-                          ? ' text-primary fa-pulse'
-                          : '')
-                      return (
-                        <li
-                          key={providerId}
-                          onClick={() =>
-                            props.history.push(
-                              `/serverConfiguration/connections/${providerId}`
-                            )
-                          }
-                        >
-                          <i
-                            className={inputPulseIconClass}
-                            style={{
-                              color: providerStats.deltaCount
-                                ? '#039'
-                                : 'lightblue',
-                            }}
-                          />
-                          <i
-                            className={outputPulseIconClass}
-                            style={{
-                              transform: 'scaleX(-1)',
-                              color: providerStats.writeCount
-                                ? '#039'
-                                : 'lightblue',
-                            }}
-                          />
-                          <span className="title">
-                            {linkType === 'plugin'
-                              ? pluginNameLink(providerId)
-                              : providerIdLink(providerId)}
-                          </span>
-                          {providerStats.writeRate > 0 && (
-                            <span className="value">
-                              {' '}
-                              {providerStats.writeRate}{' '}
-                              <span className="text-muted small">
-                                {'msg/s'}
-                              </span>{' '}
-                            </span>
-                          )}
-                          {providerStats.deltaRate > 0 &&
-                            providerStats.writeRate > 0 && (
-                              <span className="value">
-                                <span className="text-muted small">{','}</span>
-                                &#160;
-                              </span>
-                            )}
-                          {providerStats.deltaRate > 0 && (
-                            <span className="value">
-                              {' '}
-                              {providerStats.deltaRate}{' '}
-                              <span className="text-muted small">
-                                (
-                                {(
-                                  (providerStats.deltaRate / deltaRate) *
-                                  100
-                                ).toFixed(0)}
-                                %)
-                              </span>{' '}
-                              <span className="text-muted small">
-                                {'deltas/s'}
-                              </span>{' '}
-                            </span>
-                          )}
-                          <div className="bars">
-                            <Progress
-                              className="progress-xs"
-                              color="warning"
-                              value={
-                                (providerStats.deltaRate / deltaRate) * 100
-                              }
-                            />
-                          </div>
-                        </li>
-                      )
-                    })}
+                    {Object.keys(providerStatistics || {})
+                      .sort()
+                      .map((providerId) => {
+                        if (getLinkType(providerId) === 'provider') {
+                          return renderActivity(
+                            providerId,
+                            providerStatistics[providerId],
+                            'provider'
+                          )
+                        }
+                      })}
+                  </ul>
+                  <br></br>
+                  <div className="text-muted" style={{ fontSize: '1rem' }}>
+                    {Object.keys(providerStatistics || {}).some(
+                      (providerId) => getLinkType(providerId) === 'plugin'
+                    )
+                      ? 'Plugins activity'
+                      : null}
+                  </div>
+                  <ul className="horizontal-bars type-2">
+                    {Object.keys(providerStatistics || {})
+                      .sort()
+                      .map((providerId) => {
+                        if (getLinkType(providerId) === 'plugin') {
+                          return renderActivity(
+                            providerId,
+                            providerStatistics[providerId],
+                            'plugin'
+                          )
+                        }
+                      })}
                   </ul>
                 </Col>
               </Row>
@@ -196,49 +249,19 @@ const Dashboard = (props) => {
                     </thead>
                     <tbody>
                       {providerStatus.map((status) => {
-                        let statusClass
-                        if (status.type === 'status') {
-                          statusClass = 'text-success'
-                        } else if (status.type === 'warning') {
-                          statusClass = 'text-warning'
-                        } else {
-                          statusClass = 'text-danger'
+                        const statusClasses = {
+                          status: 'text-success',
+                          warning: 'text-warning',
+                          error: 'text-danger',
                         }
+                        const statusClass = statusClasses[status.type]
                         const lastError =
                           status.lastError && status.lastError != status.message
                             ? status.lastErrorTimeStamp +
                               ': ' +
                               status.lastError
                             : ''
-                        return (
-                          <tr
-                            key={status.id}
-                            onClick={() => {
-                              props.history.push(
-                                '/serverConfiguration/' +
-                                  (status.statusType === 'plugin'
-                                    ? 'plugins/'
-                                    : 'connections/') +
-                                  status.id
-                              )
-                            }}
-                          >
-                            <td>
-                              {status.statusType === 'plugin'
-                                ? pluginNameLink(status.id)
-                                : providerIdLink(status.id)}
-                            </td>
-                            <td>
-                              <p className="text-danger">{lastError}</p>
-                            </td>
-                            <td>
-                              <p className={statusClass}>
-                                {(status.message || '').substring(0, 80)}
-                                {status.message.length > 80 ? '...' : ''}
-                              </p>
-                            </td>
-                          </tr>
-                        )
+                        return renderStatus(status, statusClass, lastError)
                       })}
                     </tbody>
                   </Table>
@@ -263,7 +286,13 @@ function pluginNameLink(id) {
 }
 
 function providerIdLink(id) {
-  return <a href={'#/serverConfiguration/connections/' + id}>{id}</a>
+  if (id === 'defaults') {
+    return <a href={'#/serverConfiguration/settings'}>{id}</a>
+  } else if (id.startsWith('ws.')) {
+    return <a href={'#/security/devices'}>{id}</a>
+  } else {
+    return <a href={'#/serverConfiguration/connections/' + id}>{id}</a>
+  }
 }
 
 export default connect(

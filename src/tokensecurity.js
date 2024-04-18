@@ -44,7 +44,7 @@ module.exports = function (app, config) {
   const strategy = {}
 
   let {
-    expiration = '3m',
+    expiration = 'NEVER',
     users = [],
     immutableConfig = false,
     allowDeviceAccessRequests = true,
@@ -191,7 +191,11 @@ module.exports = function (app, config) {
           if (reply.statusCode === 200) {
             let cookieOptions = { httpOnly: true }
             if (remember) {
-              cookieOptions.maxAge = ms(configuration.expiration || '1h')
+              cookieOptions.maxAge = ms(
+                configuration.expiration === 'NEVER'
+                  ? '10y'
+                  : configuration.expiration || '1h'
+              )
             }
             res.cookie('JAUTHENTICATION', reply.token, cookieOptions)
 
@@ -280,11 +284,13 @@ module.exports = function (app, config) {
         } else if (matches === true) {
           const payload = { id: user.username }
           const theExpiration = configuration.expiration || '1h'
-          debug('jwt expiration: ' + theExpiration)
+          const jwtOptions = {}
+          if (theExpiration !== 'NEVER') {
+            jwtOptions.expiresIn = theExpiration
+          }
+          debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
           try {
-            const token = jwt.sign(payload, configuration.secretKey, {
-              expiresIn: theExpiration
-            })
+            const token = jwt.sign(payload, configuration.secretKey, jwtOptions)
             resolve({ statusCode: 200, token })
           } catch (err) {
             resolve({
@@ -303,9 +309,11 @@ module.exports = function (app, config) {
   strategy.validateConfiguration = (newConfiguration) => {
     const configuration = getConfiguration()
     const theExpiration = newConfiguration.expiration || '1h'
-    jwt.sign({ dummy: 'payload' }, configuration.secretKey, {
-      expiresIn: theExpiration
-    })
+    if (theExpiration !== 'NEVER') {
+      jwt.sign({ dummy: 'payload' }, configuration.secretKey, {
+        expiresIn: theExpiration
+      })
+    }
   }
 
   strategy.getAuthRequiredString = () => {

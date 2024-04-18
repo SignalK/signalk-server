@@ -10,10 +10,10 @@ jobs:
   server-admin-ui-dependencies:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
+          node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
       - run: |
           if [[ "$(npm view @signalk/server-admin-ui-dependencies version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui-dependencies/package.json)" ]]; then
@@ -29,10 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: server-admin-ui-dependencies
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
+          node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
       - run: |
           if [[ "$(npm view @signalk/server-admin-ui version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui/package.json)" ]]; then
@@ -47,10 +47,10 @@ jobs:
   server-api:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
+          node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
       - run: |
           if [[ "$(npm view @signalk/server-api version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-api/package.json)" ]]; then
@@ -65,10 +65,10 @@ jobs:
   streams:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
+          node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
       - run: |
           if [[ "$(npm view @signalk/streams version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/streams/package.json)" ]]; then
@@ -84,10 +84,10 @@ jobs:
     needs: server-api
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
+          node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
       - run: |
           if [[ "$(npm view @signalk/resources-provider version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/resources-provider-plugin/package.json)" ]]; then
@@ -105,10 +105,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [server-admin-ui, server-api, streams, resources-provider-plugin]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
+          node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
       - name: Set tag variable
         id: vars
@@ -152,25 +152,25 @@ jobs:
     needs: signalk-server
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Docker meta
         id: docker_meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: |
             signalk/signalk-server
             ghcr.io/signalk/signalk-server
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: signalkci
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to ghcr.io
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -179,7 +179,7 @@ jobs:
         id: vars
         run: echo ::set-output name=tag::$(echo ${GITHUB_REF#refs/*/})
       - name: Build and push
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           file: ./docker/Dockerfile_rel
           platforms: linux/amd64,linux/arm/v7,linux/arm64
@@ -192,8 +192,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: docker_image
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Set TAG for build-arg
+        id: vars
+        run: echo ::set-output name=tag::$(echo ${GITHUB_REF#refs/*/})
       - name: Deploy demo.signalk.org at fly.io
         working-directory: ./fly_io/demo_signalk_org
         run: flyctl deploy --remote-only --build-arg SK_VERSION=${{ steps.vars.outputs.tag }}

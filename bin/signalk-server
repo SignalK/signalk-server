@@ -19,7 +19,7 @@
 const { engines } = require('../package.json');
 const semver = require('semver');
 const minimumVersion = engines.node;
-const recommendedVersion = "18";
+const recommendedVersion = "18 - 20";
 
 if (!semver.satisfies(process.version, minimumVersion)) {
   console.error(`The installed version of node (${process.version}) is older than the minimum required version (${minimumVersion}). See https://github.com/SignalK/signalk-server/wiki/Installing-and-Updating-Node.js for more information how to upgrade.`);

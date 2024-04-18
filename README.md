@@ -1,3 +1,4 @@
+# Signal K Server
 ![Signal K logo](https://user-images.githubusercontent.com/5200296/226164888-d33b2349-e608-4bed-965f-ebe4339b4376.png)
 
 [![npm version](https://badge.fury.io/js/signalk-server.svg)](https://badge.fury.io/js/signalk-server)
@@ -9,12 +10,10 @@
 ## Contents
 * [Introduction](#introduction)
 * [Signal K Platform](#signal-k-platform)
-* [Community & support](#community--support)
+* [Documentation, Community & support](#documentation-community--support)
 * [How to get Signal K Server](#how-to-get-signal-k-server)
 * [Configuration and use](#configuration-and-use)
 * [Supported PGNs, Sentences and more](#supported-pgns-sentences-and-more)
-* [Environment variables](#environment-variables)
-* [Command line options](#command-line-options)
 * [Development](#development)
 * [Sponsoring Signal K](#sponsoring-signal-k)
 * [License](#license)
@@ -38,11 +37,11 @@ For Marine vendors who build marine hardware and software, for example those dev
 Signal K Server is already running inside products developed by Victron Energy, Airmar Technology and others.
 
 ### Software Developers & Boat Electronics Hobbyists
-There are many boaters who happen to be highly skilled software developers and engineers, who want to build software for themselves and share with others. If you are one of them, Signal K offers you a free, modern and open platform developed by boaters for other boaters like you. Signal K Server features an extensible [plugin framework](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md), [web applications](https://github.com/SignalK/signalk-server/blob/master/WEBAPPS.md) as well as a rich set of [REST](https://signalk.org/specification/1.7.0/doc/rest_api.html) and [Streaming APIs](https://signalk.org/specification/1.7.0/doc/streaming_api.html).
+There are many boaters who happen to be highly skilled software developers and engineers, who want to build software for themselves and share with others. If you are one of them, Signal K offers you a free, modern and open platform developed by boaters for other boaters like you. Signal K Server features an extensible [plugin framework](./docs/src/develop/plugins/server_plugin.md), [web applications](./docs/src/develop/webapps.md) as well as a rich set of [REST](https://signalk.org/specification/1.7.0/doc/rest_api.html) and [Streaming APIs](https://signalk.org/specification/1.7.0/doc/streaming_api.html).
 
 Signal K Server takes care of all the complicated parts of protocol decode, and conversions to and from NMEA2000, NMEA0183 and many more protocols. It can also act as data hub for additional sensors, see the [Signal K SensESP project](https://github.com/SignalK/SensESP) for [ESP32](https://en.wikipedia.org/wiki/ESP32).
 
-Signal K Server makes the data available in JSON format according to the [Signal K standard specification](https://signalk.org/specification/latest/). This allows developers to bypass all the hurdles typically encountered when wanting to implement something for a boat. [Getting started with a plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md#getting-started-with-plugin-development) is surprisingly easy.
+Signal K Server makes the data available in JSON format according to the [Signal K standard specification](https://signalk.org/specification/latest/). This allows developers to bypass all the hurdles typically encountered when wanting to implement something for a boat. [Getting started with a plugin](./docs/src/develop/plugins/server_plugin.md#getting-started-with-plugin-development) is surprisingly easy.
 
 ## Signal K Platform
 
@@ -52,7 +51,9 @@ Signal K is more than just the Signal K Server, it is a comprehensive platform t
 2. **Signal K Server**: Software in this GitHub repository and described in this document. Signal K server is a full stack application developed in Node.js. Its back-end multiplexes data from and to NMEA0183, NMEA 2000, Signal K and other marine protocols, as well as WiFi, LAN and Internet, and provides APIs and websockets for access and control. Its front-end provides an extensible web-based application allowing easy configuration and management of server functions and capabilities.
 3. **Signal K Plugins and Webapps**: Built using the extensibility of Signal K Server with a plugin framework, allows developers to develop applications that easily integrate with Signal K server, extend its capabilities and publish them through npm. All published plugins become available in all existing Signal K server installations, which provides an easy distribution mechanism.
 
-## Community & support
+## Documentation, Community & Support
+
+[Documentation for Signal K Server](https://demo.signalk.org/documentation).
 
 See [Github Discussions](https://github.com/SignalK/signalk/discussions/) and [Slack (chat)](https://signalk-dev.slack.com/).
 New to Signal K Slack? Then [click here for an invite](https://join.slack.com/t/signalk-dev/shared_invite/zt-1leccop43-KrU7G6yBq9g91KXjZtNg1g).
@@ -85,7 +86,7 @@ And an installer for Windows:
 
 Another level up, this document explains how to install Signal K Server, as well as its dependencies, on a RaspberryPi that is already running Raspberry Pi OS:
 
-* [Installation on a RaspberryPi](https://github.com/SignalK/signalk-server-node/blob/master/raspberry_pi_installation.md)
+* [Installation on a RaspberryPi](./docs/src/installation/raspberry_pi_installation.md)
 
 Last, here is how to install the Signal K Server application from NPM:
 
@@ -193,61 +194,19 @@ To enable debugging without going through the Admin UI, see the file `~/.signalk
 * NMEA0183 sentences: [nmea0183-signalk](https://github.com/SignalK/signalk-parser-nmea0183)
 * TODO ADD OTHER SUPPORTED PROTOCOLS
 
-## Environment variables
-
-- `PORT` override the port for http/ws service (default is 3000).
-- `SSLPORT` override the port for https/wss service. If defined activates ssl as forced, default protocol (default is 3443).
-- `PROTOCOL` override http/https where the server is accessed via https but the server sees http (for example when Heroku handles https termination)
-- `EXTERNALPORT` the port used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
-- `EXTERNALHOST` the host used in /signalk response and Bonjour advertisement. Has precedence over configuration file.
-- `FILEUPLOADSIZELIMIT` override the file upload size limit (default is '10mb').
-- `NMEA0183PORT`  override the port for the NMEA 0183 over tcp service (default is 10110).
-- `TCPSTREAMPORT` override the port for the Signal K Streaming (deltas) over TCP.
-- `TCPSTREAMADDRESS` override the address the Signal K Stream (deltas) over TCP is listening on.
-- `DISABLEPLUGINS` disable all plugins so that they can not be enabled (default is false).
-- `DEFAULTENABLEDPLUGINS` a comma separated list of plugin ids that are overridden to be enabled by default if no setttings exist. lower preference than `DISABLEPLUGINS`.
-- `PLUGINS_WITH_UPDATE_DISABLED` a comma separated list of plugin that will not be updated.
-- `SECURITYSTRATEGY` override the security strategy module name.
-- `WSCOMPRESSION` compress websocket messages (default is false).
-- `MAXSENDBUFFERSIZE` the maximum number of bytes allowed in the server's send buffer of a WebSocket connection. The connection will be terminated if this is exceeded. Guards against slow or dysfunctional clients that can not cope with the message volume (default is 512 * 1024 bytes).
-- `SIGNALK_SERVER_IS_UPDATABLE` allows the server to be updated through the GUI even if it is not installed in the standard paths (default is false). if set to true, the server must have been installed with `npm install -g signalk-server`.
-- `SIGNALK_DISABLE_SERVER_UPDATES` disables server updates in the GUI (default is false).
-- `DEBUG` a comma-separated list of tags for debugging the specified module (For example: signalk-server*,signalk-provider-tcp). Can now be defined directly in the graphical interface.
- More help on how to use the debug here: https://www.npmjs.com/package/debug#wildcards
-- `IS_IN_DOCKER` used to tell the server it is in Docker and not normally updateable (default is false).
-- `NPMREGISTRYTIMEOUT` how long to wait for the registry when retrieving the App Store listing (default is 20s).
-- `SECRETKEY` a secret string used to generate an authentication token (the internal default autogenerated is a string of 512 hex chars like 'ef8307a4c7a4bd7...309d947bca3')
-- `ALLOW_DEVICE_ACCESS_REQUESTS` used when a device needs to gain access to a secured Signal K server (default is true) (https://signalk.org/specification/1.4.0/doc/access_requests.html).
-- `ALLOW_NEW_USER_REGISTRATION` (default is true).
-- `ADMINUSER` force a account for admin user (username:password format).
-- `PRESERIALCOMMAND` command to run before opening a serial port.
-- `MFD_ADDRESS_SCRIPT` command to run to provide a comma separate list of server addresses to advertise to (Navico) MFDs.
-- `SIGNALK_NODE_SETTINGS` override the path to the settings file.
-- `SIGNALK_NODE_CONFIG_DIR` override the path to find server configuration. Includes all run-time changing content: configuration files, plugins, plugin configuration files, webapps, and so forth.
-
-## Command line options
-
-- `-c`: same as env variable `SIGNALK_NODE_SETTINGS`
-- `-s`: same as env variable `SIGNALK_NODE_CONFIG_DIR`
-- `--sample-nmea0183-data`: starts signalk-server with sample NMEA0183 data.
-- `--sample-n2k-data`: starts signalk-server with sample NMEA2000 data.
-- `--override-timestamps`: overrides timestamps in the sample NMEA2000 data with current date and time. Doesn't apply nor makes a difference to NMEA0183 sample data.
-- `--securityenabled`: one of the ways to enable security. For a fresh install this makes the Admin UI force the user to create an admin account before he/she can continue further into the UI. See [SECURITY.md#enabling-security](https://github.com/SignalK/signalk-server/blob/master/SECURITY.md#enabling-security) for further details.
-
-
 ## Development
 
 ### Further reading
 
 The documents provide more details about developing Webapps or Plugings for Signal K Server, as well as working on the server itself:
 
-* [Contributing to this repo](docs/CONTRIBUTING.md)
-* [Server Plugins](SERVERPLUGINS.md)
-* [Webapps](WEBAPPS.md)
-* [Working with the Course API](WORKING_WITH_COURSE_API.md)
-* [Working with the Resources API](WORKING_WITH_RESOURCES_API.md)
-* [Resource Provider Plugins](RESOURCE_PROVIDER_PLUGINS.md)
-* [Security](SECURITY.md)
+* [Contributing to this repo](docs/src/develop/contributing.md)
+* [Server Plugins](docs/src/develop/plugins/server_plugin.md)
+* [Webapps](docs/src/develop/webapps.md)
+* [Working with the Course API](docs/src/develop/rest-api/course_api.md)
+* [Working with the Resources API](docs/src/develop/rest-api/resources_api.md)
+* [Resource Provider Plugins](docs/src/develop/plugins/resource_provider_plugins.md)
+* [Security](docs/src/security.md)
 
 ### Install from git
 

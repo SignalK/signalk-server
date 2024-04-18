@@ -60,7 +60,7 @@ class Settings extends Component {
               <Card>
                 <CardHeader>
                   <i className="fa fa-align-justify" />
-                  <strong>Log files</strong>
+                  <strong>Data Logfiles</strong>
                 </CardHeader>
                 <CardBody>
                   <ListGroup>

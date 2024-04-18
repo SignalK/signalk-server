@@ -50,6 +50,7 @@ import {
 } from './security'
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './types'
+import { WithWrappedEmitter } from './events'
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -73,7 +74,8 @@ interface App
     WithSecurityStrategy,
     ConfigApp,
     IRouter,
-    PluginManager {
+    PluginManager,
+    WithWrappedEmitter {
   webapps: Package[]
   logging: {
     rememberDebug: (r: boolean) => void
@@ -106,6 +108,9 @@ module.exports = function (
 
   // mount before the main /admin
   mountSwaggerUi(app, '/doc/openapi')
+
+  // mount server-guide
+  app.use('/documentation', express.static(__dirname + '/../docs/built'))
 
   app.get('/admin/', (req: Request, res: Response) => {
     fs.readFile(
@@ -829,6 +834,17 @@ module.exports = function (
     `${SERVERROUTESPREFIX}/availablePaths`,
     (req: Request, res: Response) => {
       res.json(app.streambundle.getAvailablePaths())
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/eventsRoutingData`
+  )
+  app.get(
+    `${SERVERROUTESPREFIX}/eventsRoutingData`,
+    (req: Request, res: Response) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      res.json(app.wrappedEmitter.getEventRoutingData())
     }
   )
 
