@@ -2,11 +2,66 @@
 
 # Server API for plugins
 
-SignalK server provides an interface to allow plugins to access / update the full data model, operations and send / receive deltas (updates).
+SignalK server provides an interface to allow plugins to:
+- Discover Features.
+- Access / update the full data model
+- send / receive deltas (updates)
+- Interact with APIs
+- Expose HTTP endpoints
 
-These functions are available via the `app` passed to the plugin when it is invoked.
+
+These functions are available via the `app` object passed to the plugin when it is invoked.
 
 ---
+
+### Discover Features
+
+#### `app.getFeatures(enabedOnly)`
+
+Returns an object detailing the available APIs and Plugins.
+
+The `enabledOnly` parameter is optional and has the following values:
+- `undefined` (not provided): list all features
+- `true`: list only enabled features
+- `false`: list only disabled features
+
+_Example:_
+```javascript
+let baseStations = app.getFeatures();
+
+{
+  "apis": [
+    "resources","course"
+  ],
+  "plugins": [
+    {
+      "id": "anchoralarm",
+      "name": "Anchor Alarm",
+      "version": "1.13.0",
+      "enabled": true
+    },
+    {
+      "id": "autopilot",
+      "name": "Autopilot Control",
+      "version": "1.4.0",
+      "enabled": false
+    },
+    {
+      "id": "sk-to-nmea2000",
+      "name": "Signal K to NMEA 2000",
+      "version": "2.17.0",
+      "enabled": false
+    },
+    {
+      "id": "udp-nmea-sender",
+      "name": "UDP NMEA0183 Sender",
+      "version": "2.0.0",
+      "enabled": false
+    }
+  ]
+}
+```
+
 
 ### Accessing the Data Model
 

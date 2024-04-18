@@ -93,6 +93,55 @@ GET /signalk/v1/applicationData/user/my-application
 [ "1.0", "1.1"]
 ```
 
+## Discovering Server Features
+
+To assist in tailoring a WebApps UI, it can "discover" the features supported by the server by sending a request to `/signalk/v2/features`.
+
+The response wil contain an object detailing the available APIs and Plugins.
+
+You can use the `enabled` parameter to specify to only return enabled or disabled features.
+
+To list only enabled features:
+`/signalk/v2/features?enable=1`
+
+To list only disabled features:
+`/signalk/v2/features?enable=0`
+
+_Example response:_
+```JSON
+{
+  "apis": [
+    "resources","course"
+  ],
+  "plugins": [
+    {
+      "id": "anchoralarm",
+      "name": "Anchor Alarm",
+      "version": "1.13.0",
+      "enabled": true
+    },
+    {
+      "id": "autopilot",
+      "name": "Autopilot Control",
+      "version": "1.4.0",
+      "enabled": false
+    },
+    {
+      "id": "sk-to-nmea2000",
+      "name": "Signal K to NMEA 2000",
+      "version": "2.17.0",
+      "enabled": false
+    },
+    {
+      "id": "udp-nmea-sender",
+      "name": "UDP NMEA0183 Sender",
+      "version": "2.0.0",
+      "enabled": false
+    }
+  ]
+}
+```
+
 ## Embedded Components and Admin UI / Server interfaces
 
 Embedded components are implemented using [Webpack Federated Modules](https://webpack.js.org/concepts/module-federation/) and [React Code Splitting](https://reactjs.org/docs/code-splitting.html).
