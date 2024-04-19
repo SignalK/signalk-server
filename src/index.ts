@@ -132,7 +132,7 @@ class Server {
     // feature detection
     app.getFeatures = async (enabled?: boolean) => {
       return {
-        apis: app.apis,
+        apis: enabled === false ? [] : app.apis,
         plugins: await app.getPluginsList(enabled)
       }
     }
