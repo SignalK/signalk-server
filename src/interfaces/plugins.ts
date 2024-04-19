@@ -22,7 +22,6 @@ import {
   PropertyValuesCallback,
   ResourceProvider,
   ServerAPI,
-  PointDestination,
   RouteDestination,
   SignalKApiId
 } from '@signalk/server-api'

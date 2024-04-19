@@ -85,6 +85,7 @@ class Server {
     PluginManager &
     WithSecurityStrategy &
     IRouter &
+    WithWrappedEmitter &
     WithProviderStatistics & {
       apis?: Array<SignalKApiId>
     }
