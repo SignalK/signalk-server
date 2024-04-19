@@ -16,18 +16,18 @@ These functions are available via the `app` object passed to the plugin when it 
 
 ### Discover Features
 
-#### `app.getFeatures(enabedOnly)`
+#### `app.getFeatures(enabed)`
 
 Returns an object detailing the available APIs and Plugins.
 
-The `enabledOnly` parameter is optional and has the following values:
+The `enabled` parameter is optional and has the following values:
 - `undefined` (not provided): list all features
 - `true`: list only enabled features
 - `false`: list only disabled features
 
 _Example:_
 ```javascript
-let baseStations = app.getFeatures();
+let features = app.getFeatures();
 
 {
   "apis": [
