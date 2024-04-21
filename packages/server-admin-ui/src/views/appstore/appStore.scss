@@ -69,6 +69,26 @@
     align-items: center;
     flex-wrap: wrap;
 
+    @media (max-width: 1080px) {
+      flex-direction: column;
+
+      .title__container {
+        width: 100%;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+
+      .action__container {
+        width: 100%;
+        flex-direction: row-reverse;
+
+        .search {
+          min-width: none;
+          justify-self: flex-start;
+        }
+      }
+    }
+
     .title__container {
       display: flex;
       align-items: center;
@@ -77,18 +97,20 @@
         margin: 0 10px 0 0;
       }
 
-      .badge__update {
-        color: white;
-        font-size: 10px;
-        border-radius: 3px;
-        background-color: #00cd79;
-        margin-left: 5px;
-        padding: 3px;
-        vertical-align: middle;
-      }
+      .button-wrapper {
+        .badge__update {
+          color: white;
+          font-size: 10px;
+          border-radius: 3px;
+          background-color: #00cd79;
+          margin-left: 5px;
+          padding: 3px;
+          vertical-align: middle;
+        }
 
-      button {
-        margin: 0 5px;
+        button {
+          margin: 0 2px;
+        }
       }
     }
 
@@ -97,13 +119,14 @@
       align-items: center;
 
       button {
-        margin: 0;
+        margin: 0 5px;
       }
 
       .search {
-        min-width: 350px;
+        // min-width: 350px;
         height: 100%;
         position: relative;
+        margin: 0 5px;
 
         &__icon {
           position: absolute;
@@ -151,31 +174,14 @@
 
     .cell-name {
       display: flex;
-      flex-direction: column;
       .name {
         font-size: 14px;
         color: black;
       }
-
-      .version__container {
-        display: flex;
-        width: 80%;
-
-        .version--update {
-          color: #00cd79;
-          font-weight: 700;
-        }
-
-        .update__arrow {
-          height: 10px;
-          margin: 0 5px;
-        }
-
-        .link {
-          cursor: pointer;
-          color: blue;
-          margin-left: 5px;
-        }
+      .link {
+        cursor: pointer;
+        color: blue;
+        margin-left: 5px;
       }
     }
 
@@ -185,11 +191,30 @@
       white-space: normal;
     }
 
+    .cell-version {
+      min-width: 80px;
+
+      .version__container {
+        display: flex;
+        flex-direction: column;
+
+        .version--update {
+          color: #00cd79;
+          font-weight: 700;
+          font-style: italic;
+        }
+
+        .update__arrow {
+          height: 10px;
+          margin: 0 5px;
+        }
+      }
+    }
+
     .cell-action {
       .proress__wrapper {
         display: flex;
         flex-direction: column;
-        // justify-content: center;
       }
       .progress__status {
         text-align: center;
