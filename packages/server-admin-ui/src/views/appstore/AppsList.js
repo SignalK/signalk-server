@@ -48,10 +48,7 @@ class AppsList extends Component {
               <td>
                 <NameCellRenderer data={app} value={app.name} />
               </td>
-              <td
-                col-id="version"
-                className={window.innerWidth < S_WIDTH ? 'd-none' : ''}
-              >
+              <td className={window.innerWidth < S_WIDTH ? 'd-none' : ''}>
                 <VersionCellRenderer data={app} />
               </td>
               <td className={window.innerWidth < L_WIDTH ? 'd-none' : ''}>
@@ -60,14 +57,11 @@ class AppsList extends Component {
               <td className={window.innerWidth < XL_WIDTH ? 'd-none' : ''}>
                 {app.author}
               </td>
-              <td
-                col-id="type"
-                className={window.innerWidth < M_WIDTH ? 'd-none' : ''}
-              >
+              <td className={window.innerWidth < M_WIDTH ? 'd-none' : ''}>
                 <TypeCellRenderer data={app} />
               </td>
 
-              <td col-id="action">
+              <td>
                 <ActionCellRenderer data={app} />
               </td>
             </tr>

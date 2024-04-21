@@ -314,15 +314,4 @@ const mapStateToProps = (state) => {
   return result
 }
 
-const pluginMenuItems = (plugins) => {
-  return plugins
-    ? plugins.map((pluginData) => {
-        return {
-          name: pluginData.name,
-          url: `/plugins/${pluginData.id}`,
-        }
-      })
-    : []
-}
-
 export default connect(mapStateToProps)(Sidebar)

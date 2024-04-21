@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { Alert, Button, Card, CardHeader, CardBody } from 'reactstrap'
+import { Button, Card, CardHeader, CardBody } from 'reactstrap'
 import { connect } from 'react-redux'
 import { withRouter } from 'react-router-dom'
 
@@ -15,7 +15,7 @@ class ServerUpdate extends Component {
     this.fetchChangelog()
   }
 
-  fetchChangelog(version) {
+  fetchChangelog() {
     fetch(
       `https://raw.githubusercontent.com/SignalK/signalk-server-node/master/CHANGELOG.md`
     )

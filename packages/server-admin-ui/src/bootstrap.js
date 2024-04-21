@@ -73,7 +73,6 @@ const state = {
 
 let store = createStore(
   (state, action) => {
-    let newState = {}
     if (action.type === 'RECEIVE_PLUGIN_LIST') {
       return {
         ...state,
@@ -257,9 +256,10 @@ let store = createStore(
     }
     if (action.type === 'SOURCEPRIORITIES') {
       const sourcePrioritiesMap = action.data
-      const sourcePriorities = Object.keys(sourcePrioritiesMap).map(
-        (key, i) => ({ path: key, priorities: sourcePrioritiesMap[key] })
-      )
+      const sourcePriorities = Object.keys(sourcePrioritiesMap).map((key) => ({
+        path: key,
+        priorities: sourcePrioritiesMap[key],
+      }))
       sourcePriorities.state = {}
 
       return {
@@ -297,8 +297,10 @@ function nameCollator(left, right) {
 
 window.serverRoutesPrefix = '/skServer'
 
+// eslint-disable-next-line no-undef
 __webpack_init_sharing__('default')
 
+// eslint-disable-next-line react/no-deprecated
 ReactDOM.render(
   <HashRouter>
     <Switch>

@@ -14,6 +14,7 @@ import {
 } from 'reactstrap'
 import Creatable from 'react-select/creatable'
 import remove from 'lodash.remove'
+import uniq from 'lodash.uniq'
 
 export const SOURCEPRIOS_PRIO_CHANGED = 'SOURCEPRIOS_PPRIO_CHANGED'
 export const SOURCEPRIOS_PRIO_DELETED = 'SOURCEPRIOS_PRIO_DELETED'
@@ -89,6 +90,7 @@ export const reduceSourcePriorities = (state, action) => {
       break
 
     case SOURCEPRIOS_PRIO_MOVED:
+      // eslint-disable-next-line no-case-declarations
       const tmp = prios[index]
       prios[index] = prios[index + change]
       prios[index + change] = tmp
@@ -145,7 +147,7 @@ function fetchSourceRefs(path, cb) {
       if (pathResponse.values) {
         sourceRefs = sourceRefs.concat(Object.keys(pathResponse.values))
       }
-      return _.uniq(sourceRefs)
+      return uniq(sourceRefs)
     })
     .then(cb)
 }
@@ -323,7 +325,7 @@ const sourcePrioritySave = (sourcePriorities) => (dispatch) => {
         throw new Error()
       }
     })
-    .catch((err) => {
+    .catch(() => {
       dispatch({
         type: SOURCEPRIOS_SAVE_FAILED,
       })

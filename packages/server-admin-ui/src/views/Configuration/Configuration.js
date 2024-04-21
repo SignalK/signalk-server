@@ -1,7 +1,6 @@
 import React, { Component } from 'react'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
 import {
-  Alert,
   Button,
   Card,
   CardBody,
@@ -234,7 +233,7 @@ class PluginCard extends Component {
                         type="checkbox"
                         name="enabled"
                         className="switch-input"
-                        onChange={(e) => {
+                        onChange={() => {
                           this.props.saveData({
                             ...this.props.plugin.data,
                             enabled: !this.props.plugin.data.enabled,
@@ -260,7 +259,7 @@ class PluginCard extends Component {
                         type="checkbox"
                         name="enableLogging"
                         className="switch-input"
-                        onChange={(e) => {
+                        onChange={() => {
                           this.props.saveData({
                             ...this.props.plugin.data,
                             enableLogging:
@@ -287,7 +286,7 @@ class PluginCard extends Component {
                         type="checkbox"
                         name="enableDebug"
                         className="switch-input "
-                        onChange={(e) => {
+                        onChange={() => {
                           this.props.saveData({
                             ...this.props.plugin.data,
                             enableDebug: !this.props.plugin.data.enableDebug,

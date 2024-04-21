@@ -1,26 +1,14 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import classnames from 'classnames'
 import {
   Button,
   Card,
   CardHeader,
   CardBody,
   CardFooter,
-  InputGroup,
-  InputGroupAddon,
   Input,
-  Form,
   Col,
-  Label,
-  FormGroup,
-  FormText,
   Table,
-  Nav,
-  NavItem,
-  NavLink,
-  TabContent,
-  TabPane,
   Row,
 } from 'reactstrap'
 
@@ -64,11 +52,6 @@ function runDiscovery() {
   })
 }
 
-function onRowSelect(row, isSelected, e) {
-  // if column index is 2, will not trigger selection
-  if (e.target.cellIndex === 2) return false
-}
-
 class ProvidersConfiguration extends Component {
   constructor(props) {
     super(props)
@@ -109,13 +92,13 @@ class ProvidersConfiguration extends Component {
     })
   }
 
-  handleProviderPropChange(event) {
+  handleProviderPropChange() {
     this.setState({
       selectedProvider: this.state.selectedProvider,
     })
   }
 
-  handleAddProvider(event) {
+  handleAddProvider() {
     var newProvider = {
       type: 'NMEA2000',
       logging: false,
@@ -136,11 +119,10 @@ class ProvidersConfiguration extends Component {
     )
   }
 
-  handleApply(event) {
+  handleApply() {
     var isNew = this.state.selectedProvider.isNew
     var wasDiscovered = this.state.selectedProvider.wasDiscovered
 
-    var provider = this.state.selectedProvider
     delete this.state.selectedProvider.json
 
     var id = this.state.selectedProvider.originalId
@@ -186,11 +168,11 @@ class ProvidersConfiguration extends Component {
       })
   }
 
-  handleCancel(event) {
+  handleCancel() {
     this.setState({ selectedProvider: null })
   }
 
-  handleDelete(event) {
+  handleDelete() {
     fetch(
       `${window.serverRoutesPrefix}/providers/${this.state.selectedProvider.id}`,
       {

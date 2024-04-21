@@ -43,7 +43,7 @@ class Register extends Component {
     })
   }
 
-  handleCreate(event) {
+  handleCreate() {
     if (this.state.email.length == 0) {
       this.setState({ errorMessage: 'Please enter an email address' })
     } else if (

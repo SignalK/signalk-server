@@ -1,22 +1,15 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import get from 'lodash.get'
 import JSONTree from 'react-json-tree'
 import {
-  Badge,
-  Button,
   Card,
   CardHeader,
   CardBody,
-  CardFooter,
-  InputGroup,
-  InputGroupAddon,
   Input,
   Form,
   Col,
   Label,
   FormGroup,
-  FormText,
   Table,
 } from 'reactstrap'
 import moment from 'moment'
@@ -357,7 +350,6 @@ class DataBrowser extends Component {
                           const meta =
                             this.state.meta[this.state.context][data.path]
                           const units = meta && meta.units ? meta.units : ''
-                          const path = key.substring(0, key.lastIndexOf('.'))
 
                           return (
                             <tr key={key}>
