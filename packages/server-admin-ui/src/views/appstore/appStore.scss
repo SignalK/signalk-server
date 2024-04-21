@@ -173,6 +173,7 @@
 
     .cell-name {
       display: flex;
+
       .name {
         font-size: 14px;
         color: black;
@@ -192,15 +193,22 @@
 
     .cell-version {
       min-width: 80px;
+      display: flex;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
 
       .version__container {
         display: flex;
         flex-direction: column;
+        align-items: center;
 
         .version--update {
           color: #00cd79;
           font-weight: 700;
           font-style: italic;
+          // font-size: 10px;
+          // margin-left: 5px;
         }
 
         .update__arrow {
@@ -211,9 +219,22 @@
     }
 
     .cell-action {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
       .proress__wrapper {
         display: flex;
         flex-direction: column;
+      }
+      .last-update {
+        margin-top: 10px;
+        text-align: center;
+        font-size: 10px;
+        justify-content: center;
+        span {
+          font-weight: 700;
+        }
       }
 
       .progress__status {
@@ -240,6 +261,10 @@
         path {
           color: #00cd79;
         }
+      }
+
+      p {
+        margin: 0;
       }
     }
 

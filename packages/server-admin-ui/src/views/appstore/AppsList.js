@@ -31,7 +31,11 @@ class AppsList extends Component {
             >
               <div>Type</div>
             </th>
-            <th className={window.innerWidth < S_WIDTH ? 'd-none' : ''}>
+            <th
+              className={
+                'text-center ' + (window.innerWidth < S_WIDTH ? 'd-none' : '')
+              }
+            >
               Version
             </th>
             <th className="text-center">Action</th>
