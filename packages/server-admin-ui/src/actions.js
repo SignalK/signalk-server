@@ -21,7 +21,7 @@ export function logout() {
         }
         return response
       })
-      .then((response) => {
+      .then(() => {
         dispatch({
           type: 'LOGOUT_SUCCESS',
         })
@@ -180,7 +180,7 @@ export function openServerEventsConnection(dispatch, isReconnect) {
       type: 'WEBSOCKET_CLOSE',
     })
   }
-  ws.onerror = (error) => {
+  ws.onerror = () => {
     dispatch({
       type: 'WEBSOCKET_ERROR',
     })

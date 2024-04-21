@@ -1,18 +1,14 @@
-import React, { Component, useState } from 'react'
+import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import {
-  Badge,
   Button,
   Card,
   CardHeader,
   CardBody,
   CardFooter,
-  InputGroup,
-  InputGroupAddon,
   Input,
   Form,
   Col,
-  Label,
   FormGroup,
   FormText,
   Table,
@@ -77,7 +73,7 @@ class Playground extends Component {
     }, 500)
   }
 
-  handleExecute(event) {
+  handleExecute() {
     this.send(true)
   }
 
@@ -99,7 +95,6 @@ class Playground extends Component {
         deltas: [],
         putResults: [],
         n2kJson: [],
-        jsonError: null,
         error: 'invalid json',
         jsonError: error.message,
         activeTab: LINT_ERROR_TAB_ID,
@@ -416,7 +411,6 @@ class Playground extends Component {
                                     ? 2
                                     : 0
                                 )
-                                const path = data.path
                                 const key = `${data.path}${data.context}`
 
                                 return (
@@ -509,7 +503,9 @@ function isJson(input) {
   try {
     JSON.parse(input)
     inputIsJson = true
-  } catch (e) {}
+  } catch (e) {
+    /* empty */
+  }
   return inputIsJson
 }
 

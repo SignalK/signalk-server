@@ -7,16 +7,12 @@ import {
   CardHeader,
   CardBody,
   CardFooter,
-  InputGroup,
-  InputGroupAddon,
   Input,
   Form,
   Col,
   Label,
   FormGroup,
   FormText,
-  Table,
-  Progress,
 } from 'reactstrap'
 
 import VesselConfiguration from './VesselConfiguration'
@@ -236,7 +232,7 @@ class ServerSettings extends Component {
                 <FormGroup row>
                   <Col md="2">
                     <Label htmlFor="pruneContextsMinutes">
-                      Maximum age of inactive vessels' data
+                      Maximum age of inactive vessels&apos; data
                     </Label>
                   </Col>
                   <Col xs="12" md={fieldColWidthMd}>

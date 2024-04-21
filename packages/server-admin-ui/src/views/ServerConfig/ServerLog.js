@@ -14,6 +14,7 @@ import {
 } from 'reactstrap'
 import LogFiles from './Logging'
 import Creatable from 'react-select/creatable'
+import remove from 'lodash.remove'
 
 class ServerLogs extends Component {
   constructor(props) {
@@ -88,7 +89,7 @@ class ServerLogs extends Component {
     if (enabled) {
       keysToSend.push(value)
     } else {
-      _.remove(keysToSend, (v) => v === value)
+      remove(keysToSend, (v) => v === value)
     }
     this.doHandleDebug(keysToSend.toString())
   }
@@ -126,7 +127,6 @@ class ServerLogs extends Component {
   }
 
   render() {
-    const activeDebugKeys = this.props.log.debugEnabled.split(',')
     return (
       this.state.hasData && (
         <div className="animated fadeIn">
@@ -243,7 +243,7 @@ class LogList extends Component {
         }}
       >
         {this.props.value.entries &&
-          this.props.value.entries.map((logEntry, index) => {
+          this.props.value.entries.map((logEntry) => {
             return <PureLogRow key={logEntry.i} log={logEntry.d} />
           })}
         <div

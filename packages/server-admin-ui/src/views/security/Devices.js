@@ -6,14 +6,10 @@ import {
   CardHeader,
   CardBody,
   CardFooter,
-  InputGroup,
-  InputGroupAddon,
   Input,
-  Form,
   Col,
   Label,
   FormGroup,
-  FormText,
   Table,
   Row,
 } from 'reactstrap'
@@ -90,7 +86,7 @@ class Devices extends Component {
       })
   }
 
-  deleteDevice(event) {
+  deleteDevice() {
     fetch(
       `${window.serverRoutesPrefix}/security/devices/${this.state.selectedDevice.clientId}`,
       {
@@ -124,7 +120,7 @@ class Devices extends Component {
     )
   }
 
-  handleCancel(event) {
+  handleCancel() {
     this.setState({ selectedDevice: null })
   }
   render() {

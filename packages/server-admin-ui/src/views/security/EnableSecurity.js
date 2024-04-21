@@ -29,7 +29,7 @@ class EnableSecurity extends Component {
     this.handleClick = this.handleClick.bind(this)
   }
 
-  handleClick(event) {
+  handleClick() {
     const { dispatch } = this.props
     this.setState({ enabling: true })
     enableSecurity(
