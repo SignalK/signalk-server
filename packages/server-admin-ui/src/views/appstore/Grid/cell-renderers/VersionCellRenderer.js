@@ -17,6 +17,9 @@ export default function NameCellRenderer(props) {
           </span>
         )}
       </div>
+      <p className="last-update">({props.data.updated.substring(0, 10)})</p>
+
+      <div className="last-update"></div>
     </div>
   )
 }

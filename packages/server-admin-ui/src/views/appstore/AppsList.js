@@ -18,6 +18,13 @@ class AppsList extends Component {
         <thead>
           <tr>
             <th>Name</th>
+            <th
+              className={
+                'text-center ' + (window.innerWidth < S_WIDTH ? 'd-none' : '')
+              }
+            >
+              Version
+            </th>
             <th className={window.innerWidth < L_WIDTH ? 'd-none' : ''}>
               Description
             </th>
@@ -31,13 +38,7 @@ class AppsList extends Component {
             >
               <div>Type</div>
             </th>
-            <th
-              className={
-                'text-center ' + (window.innerWidth < S_WIDTH ? 'd-none' : '')
-              }
-            >
-              Version
-            </th>
+
             <th className="text-center">Action</th>
           </tr>
         </thead>
@@ -45,10 +46,13 @@ class AppsList extends Component {
           {this.props.apps.map((app) => (
             <tr key={app.name}>
               <td>
-                <NameCellRenderer
-                  data={app}
-                  value={app.name}
-                ></NameCellRenderer>
+                <NameCellRenderer data={app} value={app.name} />
+              </td>
+              <td
+                col-id="version"
+                className={window.innerWidth < S_WIDTH ? 'd-none' : ''}
+              >
+                <VersionCellRenderer data={app} />
               </td>
               <td className={window.innerWidth < L_WIDTH ? 'd-none' : ''}>
                 {app.description}
@@ -62,12 +66,7 @@ class AppsList extends Component {
               >
                 <TypeCellRenderer data={app} />
               </td>
-              <td
-                col-id="version"
-                className={window.innerWidth < S_WIDTH ? 'd-none' : ''}
-              >
-                <VersionCellRenderer data={app} />
-              </td>
+
               <td col-id="action">
                 <ActionCellRenderer data={app} />
               </td>

@@ -194,6 +194,7 @@
     .cell-version {
       min-width: 80px;
       display: flex;
+      flex-direction: column;
       height: 100%;
       align-items: center;
       justify-content: center;
@@ -207,14 +208,18 @@
           color: #00cd79;
           font-weight: 700;
           font-style: italic;
-          // font-size: 10px;
-          // margin-left: 5px;
         }
 
         .update__arrow {
           height: 10px;
           margin: 0 5px;
         }
+      }
+
+      .last-update {
+        text-align: center;
+        font-size: 12px;
+        margin: 0;
       }
     }
 
@@ -226,15 +231,6 @@
       .proress__wrapper {
         display: flex;
         flex-direction: column;
-      }
-      .last-update {
-        margin-top: 10px;
-        text-align: center;
-        font-size: 10px;
-        justify-content: center;
-        span {
-          font-weight: 700;
-        }
       }
 
       .progress__status {
@@ -261,10 +257,6 @@
         path {
           color: #00cd79;
         }
-      }
-
-      p {
-        margin: 0;
       }
     }
 
