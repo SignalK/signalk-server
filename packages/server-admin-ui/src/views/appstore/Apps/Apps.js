@@ -99,29 +99,31 @@ const Apps = function (props) {
         <CardHeader className="appstore__header">
           <div className="title__container">
             <CardTitle>Apps & Plugins</CardTitle>
-            <Button
-              color={view === 'All' ? 'primary' : 'secondary'}
-              onClick={() => setSelectedView('All')}
-            >
-              All
-            </Button>
-            <Button
-              color={view === 'Installed' ? 'primary' : 'secondary'}
-              onClick={() => setSelectedView('Installed')}
-            >
-              Installed
-            </Button>
-            <Button
-              color={view === 'Updates' ? 'primary' : 'secondary'}
-              onClick={() => setSelectedView('Updates')}
-            >
-              Updates
-              {props.appStore.updates.length > 0 && (
-                <span className="badge__update">
-                  {props.appStore.updates.length}
-                </span>
-              )}
-            </Button>
+            <div className="button-wrapper">
+              <Button
+                color={view === 'All' ? 'primary' : 'secondary'}
+                onClick={() => setSelectedView('All')}
+              >
+                All
+              </Button>
+              <Button
+                color={view === 'Installed' ? 'primary' : 'secondary'}
+                onClick={() => setSelectedView('Installed')}
+              >
+                Installed
+              </Button>
+              <Button
+                color={view === 'Updates' ? 'primary' : 'secondary'}
+                onClick={() => setSelectedView('Updates')}
+              >
+                Updates
+                {props.appStore.updates.length > 0 && (
+                  <span className="badge__update">
+                    {props.appStore.updates.length}
+                  </span>
+                )}
+              </Button>
+            </div>
           </div>
 
           <div className="action__container">

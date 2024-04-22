@@ -93,7 +93,11 @@ function ActionCellRenderer(props) {
       </Button>
     )
   }
-  return <div className="cell__renderer cell-action center">{content}</div>
+  return (
+    <div className="cell__renderer cell-action center">
+      <div>{content}</div>
+    </div>
+  )
 }
 
 const mapStateToProps = ({ appStore }) => ({ appStore })
