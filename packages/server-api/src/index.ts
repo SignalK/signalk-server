@@ -31,6 +31,16 @@ import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
 export * from './autopilotapi'
 
+export type SignalKApiId =
+  | 'resources'
+  | 'course'
+  | 'history'
+  | 'autopilot'
+  | 'anchor'
+  | 'logbook'
+  | 'historyplayback' //https://signalk.org/specification/1.7.0/doc/streaming_api.html#history-playback
+  | 'historysnapshot' //https://signalk.org/specification/1.7.0/doc/rest_api.html#history-snapshot-retrieval
+
 export {
   PropertyValue,
   PropertyValues,
@@ -113,6 +123,16 @@ export interface Metadata {
   description?: string
 }
 
+export interface FeatureInfo {
+  apis: SignalKApiId[]
+  plugins: Array<{
+    id: string
+    name: string
+    version: string
+    enabled: boolean
+  }>
+}
+
 export interface ServerAPI extends PluginServerApp {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getSelfPath: (path: string) => any
@@ -172,6 +192,9 @@ export interface ServerAPI extends PluginServerApp {
     ) => void
   }) => void
   getSerialPorts: () => Promise<Ports>
+
+  getFeatures: () => FeatureInfo
+
   getCourse: () => Promise<CourseInfo>
   clearDestination: () => Promise<void>
   setDestination: (

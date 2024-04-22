@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { SKVersion } from '@signalk/server-api'
+import { FeatureInfo, SKVersion } from '@signalk/server-api'
 import { FullSignalK } from '@signalk/signalk-schema'
 import { EventEmitter } from 'node:events'
 
@@ -32,4 +32,8 @@ export interface SelfIdentity {
   selfType: string
   selfId: string
   selfContext: string
+}
+
+export interface WithFeatures {
+  getFeatures: (enabledOnly?: boolean) => FeatureInfo
 }

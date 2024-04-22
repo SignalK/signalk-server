@@ -21,8 +21,9 @@ import {
   PropertyValues,
   PropertyValuesCallback,
   ResourceProvider,
+  ServerAPI,
   RouteDestination,
-  ServerAPI
+  SignalKApiId
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -111,23 +112,17 @@ module.exports = (theApp: any) => {
 
       startPlugins(theApp)
 
+      theApp.getPluginsList = async (enabled?: boolean) => {
+        return await getPluginsList(enabled)
+      }
+
       theApp.use(
         backwardsCompat('/plugins/configure'),
         express.static(getPluginConfigPublic(theApp))
       )
 
       theApp.get(backwardsCompat('/plugins'), (req: Request, res: Response) => {
-        const providerStatus = theApp.getProviderStatus()
-
-        Promise.all(
-          _.sortBy(theApp.plugins, [
-            (plugin: PluginInfo) => {
-              return plugin.name
-            }
-          ]).map((plugin: PluginInfo) =>
-            getPluginResponseInfo(plugin, providerStatus)
-          )
-        )
+        getPluginResponseInfos()
           .then((json) => res.json(json))
           .catch((err) => {
             console.error(err)
@@ -136,6 +131,40 @@ module.exports = (theApp: any) => {
           })
       })
     }
+  }
+
+  function getPluginResponseInfos() {
+    const providerStatus = theApp.getProviderStatus()
+    return Promise.all(
+      _.sortBy(theApp.plugins, [
+        (plugin: PluginInfo) => {
+          return plugin.name
+        }
+      ]).map((plugin: PluginInfo) =>
+        getPluginResponseInfo(plugin, providerStatus)
+      )
+    )
+  }
+
+  function getPluginsList(enabled?: boolean) {
+    return getPluginResponseInfos().then((pa) => {
+      const res = pa.map((p: any) => {
+        return {
+          id: p.id,
+          name: p.name,
+          version: p.version,
+          enabled: p.data.enabled ?? false
+        }
+      })
+
+      if (typeof enabled === 'undefined') {
+        return res
+      } else {
+        return res.filter((p: any) => {
+          return p.enabled === enabled
+        })
+      }
+    })
   }
 
   function getPluginResponseInfo(plugin: PluginInfo, providerStatus: any) {
@@ -528,6 +557,8 @@ module.exports = (theApp: any) => {
       resourcesApi.register(plugin.id, provider)
     }
 
+    _.omit(appCopy, 'apiList') // don't expose the actual apiList
+
     const courseApi: CourseApi = app.courseApi
     _.omit(appCopy, 'courseApi') // don't expose the actual course api manager
     appCopy.getCourse = () => {
@@ -595,6 +626,9 @@ module.exports = (theApp: any) => {
 
     appCopy.registerHistoryProvider = (provider) => {
       app.registerHistoryProvider(provider)
+      const apiList = app.apiList as SignalKApiId[]
+      apiList.push('historyplayback')
+      apiList.push('historysnapshot')
       onStopHandlers[plugin.id].push(() => {
         app.unregisterHistoryProvider(provider)
       })
