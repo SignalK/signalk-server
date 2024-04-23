@@ -2,12 +2,8 @@ const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
 const freeport = require('freeport-promise')
-const Server = require('../lib')
 const fetch = require('node-fetch')
-const http = require('http')
-const { promisify } = require('util')
 const WebSocket = require('ws')
-const _ = require('lodash')
 const {
   startServerP,
   getReadOnlyToken,

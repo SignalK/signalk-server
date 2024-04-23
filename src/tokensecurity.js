@@ -417,7 +417,7 @@ module.exports = function (app, config) {
     assertConfigImmutability()
     const newUser = {
       username: user.userId,
-      type: user.type,
+      type: user.type
     }
 
     function finish(newUser, err) {
@@ -434,12 +434,12 @@ module.exports = function (app, config) {
         if (err) {
           callback(err)
         } else {
-          newUser.password = hash;
-          finish(newUser, err);
+          newUser.password = hash
+          finish(newUser, err)
         }
       })
     } else {
-      finish(newUser, undefined);
+      finish(newUser, undefined)
     }
   }
 

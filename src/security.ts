@@ -163,7 +163,7 @@ export interface SecurityStrategy {
   getUsers: (theConfig: SecurityConfig) => UserData[]
   addUser: (
     theConfig: SecurityConfig,
-    user: UserWithPassword,
+    user: User,
     cb: ICallback<SecurityConfig>
   ) => void
   updateUser: (
