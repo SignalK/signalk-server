@@ -20,7 +20,7 @@
 
 const Parser0183 = require('@signalk/nmea0183-signalk')
 const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
-const { putPath } = require('../put')
+const { putPath, deletePath } = require('../put')
 const {
   isN2KString,
   FromPgn,
@@ -67,7 +67,7 @@ module.exports = function (app) {
 
         if (first.pgn) {
           type = 'n2k-json'
-        } else if (first.updates || first.put) {
+        } else if (first.updates || first.put || first.delete) {
           type = 'signalk'
         } else {
           return { error: 'unknown JSON format' }
@@ -129,6 +129,26 @@ module.exports = function (app) {
                   msg.context,
                   msg.put.path,
                   msg.put,
+                  req,
+                  msg.requestId,
+                  (reply) => {
+                    if (reply.state !== 'PENDING') {
+                      resolve(reply)
+                    }
+                  }
+                )
+              })
+            )
+          } else if (msg.delete) {
+            puts.push(
+              new Promise((resolve) => {
+                setTimeout(() => {
+                  resolve('Timed out waiting for put result')
+                }, 5000)
+                deletePath(
+                  app,
+                  msg.context,
+                  msg.delete.path,
                   req,
                   msg.requestId,
                   (reply) => {
