@@ -91,7 +91,7 @@ module.exports = {
         })
     })
 
-    ;(putMetaHandler = (context, path, value, cb) => {
+    putMetaHandler = (context, path, value, cb) => {
       let parts = path.split('.')
       let metaPath = path
       let metaValue = value
@@ -163,82 +163,83 @@ module.exports = {
       }
 
       return { state: 'PENDING' }
-    }),
-      (deleteMetaHandler = (context, path, cb) => {
-        let parts = path.split('.')
-        let metaPath = path
-        let full_meta
+    }
 
-        //fixme, make sure meta path exists...
+    deleteMetaHandler = (context, path, cb) => {
+      let parts = path.split('.')
+      let metaPath = path
+      let full_meta
 
-        if (parts[parts.length - 1] !== 'meta') {
-          let name = parts[parts.length - 1]
-          metaPath = parts.slice(0, parts.length - 2).join('.')
+      //fixme, make sure meta path exists...
 
-          let metaValue = {
-            ...app.config.baseDeltaEditor.getMeta(context, metaPath)
-          }
+      if (parts[parts.length - 1] !== 'meta') {
+        let name = parts[parts.length - 1]
+        metaPath = parts.slice(0, parts.length - 2).join('.')
 
-          if (typeof metaValue[name] === 'undefined') {
-            return { state: 'COMPLETED', statusCode: 404 }
-          }
-
-          delete metaValue[name]
-
-          full_meta = getMetadata('vessels.self.' + metaPath)
-          delete full_meta[name]
-
-          app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
-
-          if (Object.keys(metaValue).length == 0) {
-            app.config.baseDeltaEditor.removeMeta(context, metaPath)
-          }
-        } else {
-          metaPath = parts.slice(0, parts.length - 1).join('.')
-
-          full_meta = getMetadata('vessels.self.' + metaPath)
-          let metaValue = app.config.baseDeltaEditor.getMeta(context, metaPath)
-
-          if (!metaValue) {
-            return { state: 'COMPLETED', statusCode: 404 }
-          }
-
-          Object.keys(metaValue).forEach((key) => {
-            delete full_meta[key]
-          })
-
-          app.config.baseDeltaEditor.removeMeta(context, metaPath)
+        let metaValue = {
+          ...app.config.baseDeltaEditor.getMeta(context, metaPath)
         }
 
-        app.handleMessage('defaults', {
-          context: 'vessels.self',
-          updates: [
-            {
-              meta: [
-                {
-                  path: metaPath,
-                  value: full_meta
-                }
-              ]
-            }
-          ]
+        if (typeof metaValue[name] === 'undefined') {
+          return { state: 'COMPLETED', statusCode: 404 }
+        }
+
+        delete metaValue[name]
+
+        full_meta = getMetadata('vessels.self.' + metaPath)
+        delete full_meta[name]
+
+        app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
+
+        if (Object.keys(metaValue).length == 0) {
+          app.config.baseDeltaEditor.removeMeta(context, metaPath)
+        }
+      } else {
+        metaPath = parts.slice(0, parts.length - 1).join('.')
+
+        full_meta = getMetadata('vessels.self.' + metaPath)
+        let metaValue = app.config.baseDeltaEditor.getMeta(context, metaPath)
+
+        if (!metaValue) {
+          return { state: 'COMPLETED', statusCode: 404 }
+        }
+
+        Object.keys(metaValue).forEach((key) => {
+          delete full_meta[key]
         })
 
-        skConfig
-          .writeBaseDeltasFile(app, app.config.baseDeltas)
-          .then(() => {
-            cb({ state: 'COMPLETED', statusCode: 200 })
-          })
-          .catch(() => {
-            cb({
-              state: 'COMPLETED',
-              statusCode: 502,
-              message: 'Unable to save to defaults file'
-            })
-          })
+        app.config.baseDeltaEditor.removeMeta(context, metaPath)
+      }
 
-        return { state: 'PENDING' }
+      app.handleMessage('defaults', {
+        context: 'vessels.self',
+        updates: [
+          {
+            meta: [
+              {
+                path: metaPath,
+                value: full_meta
+              }
+            ]
+          }
+        ]
       })
+
+      skConfig
+        .writeBaseDeltasFile(app, app.config.baseDeltas)
+        .then(() => {
+          cb({ state: 'COMPLETED', statusCode: 200 })
+        })
+        .catch(() => {
+          cb({
+            state: 'COMPLETED',
+            statusCode: 502,
+            message: 'Unable to save to defaults file'
+          })
+        })
+
+      return { state: 'PENDING' }
+    }
   },
 
   registerActionHandler: registerActionHandler,
