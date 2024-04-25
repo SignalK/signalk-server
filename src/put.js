@@ -5,7 +5,6 @@ const { createRequest, updateRequest } = require('./requestResponse')
 const skConfig = require('./config/config')
 const { getMetadata } = require('@signalk/signalk-schema')
 
-
 const pathPrefix = '/signalk'
 const versionPrefix = '/v1'
 const apiPathPrefix = pathPrefix + versionPrefix + '/api/'
@@ -47,7 +46,7 @@ module.exports = {
 
       const context = `${parts[0]}.${parts[1]}`
       const skpath = parts.slice(2).join('.')
-      
+
       deletePath(app, context, skpath, req)
         .then((reply) => {
           res.status(reply.statusCode)
@@ -92,7 +91,7 @@ module.exports = {
         })
     })
 
-    putMetaHandler = (context, path, value, cb) => {
+    ;(putMetaHandler = (context, path, value, cb) => {
       let parts = path.split('.')
       let metaPath = path
       let metaValue = value
@@ -112,7 +111,7 @@ module.exports = {
       app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
 
       let full_meta = getMetadata('vessels.self.' + metaPath)
-      
+
       app.handleMessage('defaults', {
         context: 'vessels.self',
         updates: [
@@ -164,79 +163,82 @@ module.exports = {
       }
 
       return { state: 'PENDING' }
-    },
+    }),
+      (deleteMetaHandler = (context, path, cb) => {
+        let parts = path.split('.')
+        let metaPath = path
+        let full_meta
 
-    deleteMetaHandler = (context, path, cb) => {
-      let parts = path.split('.')
-      let metaPath = path
-      let full_meta
+        //fixme, make sure meta path exists...
 
-      //fixme, make sure meta path exists...
+        if (parts[parts.length - 1] !== 'meta') {
+          let name = parts[parts.length - 1]
+          metaPath = parts.slice(0, parts.length - 2).join('.')
 
-      if (parts[parts.length - 1] !== 'meta') {
-        let name = parts[parts.length - 1]
-        metaPath = parts.slice(0, parts.length - 2).join('.')
+          let metaValue = {
+            ...app.config.baseDeltaEditor.getMeta(context, metaPath)
+          }
 
-        let metaValue = {
-          ...app.config.baseDeltaEditor.getMeta(context, metaPath),
-        }
+          if (typeof metaValue[name] === 'undefined') {
+            return { state: 'COMPLETED', statusCode: 404 }
+          }
 
-        if ( typeof metaValue[name] === 'undefined' ) {
-          return { state: 'COMPLETED', statusCode: 404 }
-        }
+          delete metaValue[name]
 
-        delete metaValue[name]
+          full_meta = getMetadata('vessels.self.' + metaPath)
+          delete full_meta[name]
 
-        full_meta = getMetadata('vessels.self.' + metaPath)
-        delete full_meta[name]
-        
-        app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
-        
-        if ( Object.keys(metaValue).length == 0 ) {
+          app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
+
+          if (Object.keys(metaValue).length == 0) {
+            app.config.baseDeltaEditor.removeMeta(context, metaPath)
+          }
+        } else {
+          metaPath = parts.slice(0, parts.length - 1).join('.')
+
+          full_meta = getMetadata('vessels.self.' + metaPath)
+          let metaValue = app.config.baseDeltaEditor.getMeta(context, metaPath)
+
+          if (!metaValue) {
+            return { state: 'COMPLETED', statusCode: 404 }
+          }
+
+          Object.keys(metaValue).forEach((key) => {
+            delete full_meta[key]
+          })
+
           app.config.baseDeltaEditor.removeMeta(context, metaPath)
         }
-      } else {
-        metaPath = parts.slice(0, parts.length - 1).join('.')
 
-        full_meta = getMetadata('vessels.self.' + metaPath)        
-        let metaValue = app.config.baseDeltaEditor.getMeta(context, metaPath)
-
-        if ( !metaValue ) {
-          return { state: 'COMPLETED', statusCode: 404 }
-        }
-        
-        Object.keys(metaValue).forEach(key => {
-          delete full_meta[key]
+        app.handleMessage('defaults', {
+          context: 'vessels.self',
+          updates: [
+            {
+              meta: [
+                {
+                  path: metaPath,
+                  value: full_meta
+                }
+              ]
+            }
+          ]
         })
-        
-        app.config.baseDeltaEditor.removeMeta(context, metaPath)
-      }
 
-      app.handleMessage('defaults', {
-        context: 'vessels.self',
-        updates: [
-          {
-            meta: [
-              {
-                path: metaPath,
-                value: full_meta
-              }
-            ]
-          }
-        ]
+        skConfig
+          .writeBaseDeltasFile(app, app.config.baseDeltas)
+          .then(() => {
+            cb({ state: 'COMPLETED', statusCode: 200 })
+          })
+          .catch(() => {
+            cb({
+              state: 'COMPLETED',
+              statusCode: 502,
+              message: 'Unable to save to defaults file'
+            })
+          })
+
+        return { state: 'PENDING' }
       })
-
-      skConfig
-        .writeBaseDeltasFile(app, app.config.baseDeltas)
-        .then(() => {
-          cb({ state: 'COMPLETED', statusCode: 200 })
-        })
-        .catch(() => {
-          cb({ state: 'COMPLETED', statusCode: 502,  message: 'Unable to save to defaults file' })
-        })
-      
-      return { state: 'PENDING' }
-    }
   },
 
   registerActionHandler: registerActionHandler,
@@ -274,15 +276,15 @@ function deletePath(app, contextParam, path, req, requestId, updateCb) {
 
         const parts = path.split('.')
         let handler
-        
+
         if (
           (parts.length > 1 && parts[parts.length - 1] === 'meta') ||
-            (parts.length > 1 && parts[parts.length - 2] === 'meta')
+          (parts.length > 1 && parts[parts.length - 2] === 'meta')
         ) {
           handler = deleteMetaHandler
         }
 
-        if ( handler ) {
+        if (handler) {
           const actionResult = handler(context, path, (reply) => {
             debug('got result: %j', reply)
             updateRequest(request.requestId, reply.state, reply)
@@ -325,8 +327,7 @@ function deletePath(app, contextParam, path, req, requestId, updateCb) {
       .catch(reject)
   })
 }
-                    
-        
+
 function putPath(app, contextParam, path, body, req, requestId, updateCb) {
   const context = contextParam || 'vessels.self'
   debug('received put %s %s %j', context, path, body)

@@ -235,7 +235,7 @@ module.exports = function (app) {
                 processPutRequest(spark, msg)
               }
 
-              if ( msg.delete) {
+              if (msg.delete) {
                 processDeleteRequest(spark, msg)
               }
 
