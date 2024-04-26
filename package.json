@@ -9,7 +9,7 @@
     "build:docs": "USER_INFO=$(id -u):$(id -g) docker run --rm -v ${PWD}/docs:/book peaceiris/mdbook:v0.4.34 build",
     "build:workspaces": "npm run build --workspaces --if-present",
     "build-declaration": "tsc --declaration",
-    "watch": "npm run build -- -w",
+    "watch": "tsc --build -w",
     "prettier": "prettier -w src/",
     "lint": "eslint -c .eslintrc.js --ext .ts --ext .js --fix src/",
     "format": "npm run prettier && npm run lint",
