@@ -14,6 +14,7 @@ import {
 } from 'reactstrap'
 import moment from 'moment'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
+import Meta from './Meta'
 
 const timestampFormat = 'MM/DD HH:mm:ss'
 
@@ -406,18 +407,12 @@ class DataBrowser extends Component {
                         .sort()
                         .map((key) => {
                           const meta = this.state.meta[this.state.context][key]
-                          const formatted = JSON.stringify(meta, null, 2)
                           const path = key
                           return (
                             <tr key={path}>
                               <td>{path}</td>
                               <td>
-                                <pre
-                                  className="text-primary"
-                                  style={{ whiteSpace: 'pre-wrap' }}
-                                >
-                                  {formatted}
-                                </pre>
+                                <Meta meta={meta} />
                               </td>
                             </tr>
                           )
