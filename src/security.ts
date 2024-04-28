@@ -63,7 +63,7 @@ export interface ACL {
 export interface User {
   username: string
   type: string
-  password: string
+  password?: string
 }
 export interface UserData {
   userId: string
@@ -163,7 +163,7 @@ export interface SecurityStrategy {
   getUsers: (theConfig: SecurityConfig) => UserData[]
   addUser: (
     theConfig: SecurityConfig,
-    user: UserWithPassword,
+    user: User,
     cb: ICallback<SecurityConfig>
   ) => void
   updateUser: (
