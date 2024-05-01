@@ -49,7 +49,7 @@ const Number = ({ disabled, setValue, value }) => (
   />
 )
 
-const MethodSelect = ({ disabled, setValue, value }) => {
+const MethodSelect = ({ setValue, value }) => {
   if (!Array.isArray(value)) {
     setValue([])
     return null
@@ -267,7 +267,7 @@ export default function Meta({ meta, path }) {
 }
 
 const MetaFormRow = (props) => {
-  const { _key, renderValue, value, disabled, setValue, setKey, deleteKey } =
+  const { _key, renderValue, disabled, setKey, deleteKey } =
     props
   const V = renderValue
   return (
