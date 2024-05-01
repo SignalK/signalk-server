@@ -9,7 +9,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState } from 'react'
 import { Col, Form, FormGroup, FormText, Input, Label, Row } from 'reactstrap'
 
-const UnitSelection = ({ disabled, value, setValue }) => (
+const UnitSelect = ({ disabled, value, setValue }) => (
   <Input
     disabled={disabled}
     type="select"
@@ -24,9 +24,9 @@ const UnitSelection = ({ disabled, value, setValue }) => (
   </Input>
 )
 
-const ScaleSelection = () => <span>TODO scale editor</span>
+const ScaleSelect = () => <span>TODO scale editor</span>
 
-const TextValue = ({ disabled, setValue, value }) => (
+const Text = ({ disabled, setValue, value }) => (
   <Input
     disabled={disabled}
     type="text"
@@ -34,7 +34,7 @@ const TextValue = ({ disabled, setValue, value }) => (
     value={value}
   />
 )
-const NumberValue = ({ disabled, setValue, value }) => (
+const Number = ({ disabled, setValue, value }) => (
   <Input
     disabled={disabled}
     type="number"
@@ -49,7 +49,7 @@ const NumberValue = ({ disabled, setValue, value }) => (
   />
 )
 
-const MethodEditor = ({ disabled, setValue, value }) => {
+const MethodSelect = ({ disabled, setValue, value }) => {
   if (!Array.isArray(value)) {
     setValue([])
     return null
@@ -83,44 +83,44 @@ const MethodEditor = ({ disabled, setValue, value }) => {
 
 const METAFIELDRENDERERS = {
   units: (props) => (
-    <MetaFormRow {...props} renderValue={UnitSelection}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={UnitSelect}></MetaFormRow>
   ),
   description: (props) => (
-    <MetaFormRow {...props} renderValue={TextValue}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={Text}></MetaFormRow>
   ),
   displayName: (props) => (
-    <MetaFormRow {...props} renderValue={TextValue}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={Text}></MetaFormRow>
   ),
   longName: (props) => (
-    <MetaFormRow {...props} renderValue={TextValue}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={Text}></MetaFormRow>
   ),
   shortName: (props) => (
-    <MetaFormRow {...props} renderValue={TextValue}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={Text}></MetaFormRow>
   ),
   timeout: (props) => (
-    <MetaFormRow {...props} renderValue={NumberValue}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={Number}></MetaFormRow>
   ),
   displayScale: (props) => (
-    <MetaFormRow {...props} renderValue={ScaleSelection}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={ScaleSelect}></MetaFormRow>
   ),
   zones: () => <></>, // not used
   normalMethod: (props) => (
-    <MetaFormRow {...props} renderValue={MethodEditor}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={MethodSelect}></MetaFormRow>
   ),
   nominalMethod: (props) => (
-    <MetaFormRow {...props} renderValue={MethodEditor}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={MethodSelect}></MetaFormRow>
   ),
   alertMethod: (props) => (
-    <MetaFormRow {...props} renderValue={MethodEditor}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={MethodSelect}></MetaFormRow>
   ),
   warnMethod: (props) => (
-    <MetaFormRow {...props} renderValue={MethodEditor}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={MethodSelect}></MetaFormRow>
   ),
   alarmMethod: (props) => (
-    <MetaFormRow {...props} renderValue={MethodEditor}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={MethodSelect}></MetaFormRow>
   ),
   emergencyMethod: (props) => (
-    <MetaFormRow {...props} renderValue={MethodEditor}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={MethodSelect}></MetaFormRow>
   ),
 }
 const METAFIELDS = [
