@@ -34,7 +34,7 @@ const Text = ({ disabled, setValue, value }) => (
     value={value}
   />
 )
-const Number = ({ disabled, setValue, value }) => (
+const NumberValue = ({ disabled, setValue, value }) => (
   <Input
     disabled={disabled}
     type="number"
@@ -98,7 +98,7 @@ const METAFIELDRENDERERS = {
     <MetaFormRow {...props} renderValue={Text}></MetaFormRow>
   ),
   timeout: (props) => (
-    <MetaFormRow {...props} renderValue={Number}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={NumberValue}></MetaFormRow>
   ),
   displayScale: (props) => (
     <MetaFormRow {...props} renderValue={ScaleSelect}></MetaFormRow>
