@@ -68,7 +68,7 @@ class DataBrowser extends Component {
     this.handleMessage = this.handleMessage.bind(this)
     this.handleContextChange = this.handleContextChange.bind(this)
     this.handleSearch = this.handleSearch.bind(this)
-    this.handleMeta = this.handleMeta.bind(this)
+    this.toggleMeta = this.toggleMeta.bind(this)
   }
 
   handleMessage(msg) {
@@ -207,7 +207,7 @@ class DataBrowser extends Component {
     localStorage.setItem(searchStorageKey, event.target.value)
   }
 
-  handleMeta(event) {
+  toggleMeta(event) {
     this.setState({ ...this.state, includeMeta: event.target.checked })
     localStorage.setItem(metaStorageKey, event.target.checked)
   }
@@ -265,7 +265,7 @@ class DataBrowser extends Component {
                       id="Meta"
                       name="meta"
                       className="switch-input"
-                      onChange={this.handleMeta}
+                      onChange={this.toggleMeta}
                       checked={this.state.includeMeta}
                     />
                     <span
