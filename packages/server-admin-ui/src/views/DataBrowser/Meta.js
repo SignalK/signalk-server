@@ -267,8 +267,7 @@ export default function Meta({ meta, path }) {
 }
 
 const MetaFormRow = (props) => {
-  const { _key, renderValue, disabled, setKey, deleteKey } =
-    props
+  const { _key, renderValue, disabled, setKey, deleteKey } = props
   const V = renderValue
   return (
     <FormGroup row>
