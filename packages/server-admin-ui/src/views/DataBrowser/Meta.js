@@ -107,13 +107,19 @@ export default function Meta({ meta, path }) {
             )}
           </>
         ))}
-        <Zones zones={zones} isEditing={isEditing}></Zones>
+        <Zones
+          zones={zones}
+          isEditing={isEditing}
+          setZones={(zones) => setLocalMeta({ ...localMeta, zones })}
+        ></Zones>
         {isEditing && (
           <FontAwesomeIcon
             icon={faSquarePlus}
             onClick={() => {
               const copy = { ...localMeta }
-              const firstNewMetaFieldKey = METAFIELDS.find(metaFieldName => localMeta[metaFieldName] === undefined)
+              const firstNewMetaFieldKey = METAFIELDS.find(
+                (metaFieldName) => localMeta[metaFieldName] === undefined
+              )
               copy[firstNewMetaFieldKey] = ''
               setLocalMeta(copy)
             }}
@@ -165,38 +171,37 @@ const TextMetaFormRow = ({
 }
 
 const STATES = ['nominal', 'alert', 'warn', 'alarm', 'emergency']
-const Zone = ({ zone, isEditing }) => {
+const Zone = ({ zone, isEditing, showHint, setZone, deleteZone }) => {
   const { state, lower, upper, message } = zone
   return (
     <FormGroup row>
       <Col xs="2" md="2">
-        <FormText color="muted">Upper</FormText>
+        {showHint && <FormText color="muted">Lower</FormText>}
         <Input
           disabled={!isEditing}
           type="number"
-          name="search"
-          onChange={(e) => console.log(e)}
+          onChange={(e) => setZone({ ...zone, lower: Number(e.target.value) })}
           value={lower}
         />
       </Col>
       <Col xs="2" md="2">
-        <FormText color="muted">Upper</FormText>
+        {showHint && <FormText color="muted">Upper</FormText>}
         <Input
           disabled={!isEditing}
           type="number"
           name="search"
-          onChange={(e) => console.log(e)}
+          onChange={(e) => setZone({ ...zone, upper: Number(e.target.value) })}
           value={upper}
         />
       </Col>
       <Col xs="12" md="2">
-        <FormText color="muted">State</FormText>
+        {showHint && <FormText color="muted">State</FormText>}
         <Input
           disabled={!isEditing}
           type="select"
           value={state}
           name="options.type"
-          onChange={(event) => console.log(event)}
+          onChange={(e) => setZone({ ...zone, state: e.target.value })}
         >
           {STATES.map((state, i) => (
             <option key={i} value={state}>
@@ -206,25 +211,27 @@ const Zone = ({ zone, isEditing }) => {
         </Input>
       </Col>
       <Col xs="3" md="3">
-        <FormText color="muted">Message</FormText>
+        {showHint && <FormText color="muted">Message</FormText>}
         <Input
           disabled={!isEditing}
           type="text"
           name="search"
-          onChange={(e) => console.log(e)}
+          onChange={(e) => setZone({ ...zone, message: e.target.value })}
           value={message}
         />
       </Col>
       <Col xs="2" md="2">
-        <FormText color="muted">Remove</FormText>
         {isEditing && (
-          <FontAwesomeIcon icon={faTrashCan} onClick={(e) => console.log(e)} />
+          <>
+            {showHint && <FormText color="muted">Remove</FormText>}
+            <FontAwesomeIcon icon={faTrashCan} onClick={deleteZone} />
+          </>
         )}
       </Col>
     </FormGroup>
   )
 }
-const Zones = ({ zones, isEditing }) => (
+const Zones = ({ zones, isEditing, setZones }) => (
   <Row>
     <Col md="2">Zones</Col>
     <Col md="10">
@@ -238,11 +245,37 @@ const Zones = ({ zones, isEditing }) => (
         }}
       >
         {zones.map((zone, i) => (
-          <Zone key={i} zone={zone} isEditing={isEditing}></Zone>
+          <Zone
+            key={i}
+            zone={zone}
+            isEditing={isEditing}
+            showHint={i === 0}
+            setZone={(zone) => {
+              zones[i] = zone
+              setZones([...zones])
+            }}
+            deleteZone={() => {
+              zones.splice(i, 1)
+              setZones(zones)
+            }}
+          ></Zone>
         ))}
       </Form>
       {isEditing && (
-        <FontAwesomeIcon icon={faPlusSquare} onClick={(e) => console.log(e)} />
+        <FontAwesomeIcon
+          icon={faPlusSquare}
+          onClick={() =>
+            setZones([
+              ...zones,
+              {
+                upper: 1,
+                lower: 0,
+                state: STATES[0],
+                message: '',
+              },
+            ])
+          }
+        />
       )}
     </Col>
   </Row>
