@@ -626,7 +626,7 @@ module.exports = (theApp: any) => {
 
     appCopy.registerHistoryProvider = (provider) => {
       app.registerHistoryProvider(provider)
-      const apiList = app.apiList as SignalKApiId[]
+      const apiList = app.apis as SignalKApiId[]
       apiList.push('historyplayback')
       apiList.push('historysnapshot')
       onStopHandlers[plugin.id].push(() => {
