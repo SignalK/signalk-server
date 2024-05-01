@@ -26,21 +26,31 @@ const METAFIELDS = [
   'emergencyMethod',
 ]
 
-export default function Meta({ meta }) {
+const saveMeta = (path, meta) => {
+  fetch(`/signalk/v1/api/vessels/self/${path.replaceAll('.', '/')}/meta`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: meta }),
+  })
+}
+
+export default function Meta({ meta, path }) {
   const [isEditing, setIsEditing] = useState(false)
+  const [localMeta, setLocalMeta] = useState(meta)
   let metaValues = METAFIELDS.reduce((acc, key) => {
-    if (meta[key]) {
-      acc.push({ key, value: meta[key] })
+    if (localMeta[key] !== undefined) {
+      acc.push({ key, value: localMeta[key] })
     }
     return acc
   }, [])
-  Object.keys(meta).reduce((acc, key) => {
+  Object.keys(localMeta).reduce((acc, key) => {
     if (METAFIELDS.indexOf(key) < 0) {
-      acc.push({ key, value: meta[key] })
+      acc.push({ key, value: localMeta[key] })
     }
     return acc
   }, metaValues)
-  const extraValues = clone(meta)
+  const extraValues = clone(localMeta)
   for (const prop in extraValues) {
     if (METAFIELDS.indexOf(prop) < 0) {
       delete extraValues[prop]
@@ -52,17 +62,15 @@ export default function Meta({ meta }) {
   return (
     <>
       {!isEditing && (
-        <FontAwesomeIcon
-          className="icon__add_metavalue"
-          icon={faPencil}
-          onClick={() => setIsEditing(true)}
-        />
+        <FontAwesomeIcon icon={faPencil} onClick={() => setIsEditing(true)} />
       )}
       {isEditing && (
         <FontAwesomeIcon
-          className="icon__add_metavalue"
           icon={faSave}
-          onClick={() => setIsEditing(false)}
+          onClick={() => {
+            saveMeta(path, localMeta)
+            setIsEditing(false)
+          }}
         />
       )}{' '}
       <Form
@@ -81,6 +89,20 @@ export default function Meta({ meta }) {
                 _key={key}
                 value={value}
                 isEditing={isEditing}
+                setValue={(metaFieldValue) =>
+                  setLocalMeta({ ...localMeta, ...{ [key]: metaFieldValue } })
+                }
+                setKey={(metaFieldKey) => {
+                  const copy = { ...localMeta }
+                  copy[metaFieldKey] = localMeta[key]
+                  delete copy[key]
+                  setLocalMeta(copy)
+                }}
+                deleteKey={() => {
+                  const copy = { ...localMeta }
+                  delete copy[key]
+                  setLocalMeta(copy)
+                }}
               ></TextMetaFormRow>
             )}
           </>
@@ -88,9 +110,13 @@ export default function Meta({ meta }) {
         <Zones zones={zones} isEditing={isEditing}></Zones>
         {isEditing && (
           <FontAwesomeIcon
-            className="icon__add_metavalue"
             icon={faSquarePlus}
-            onClick={(e) => console.log(e)}
+            onClick={() => {
+              const copy = { ...localMeta }
+              const firstNewMetaFieldKey = METAFIELDS.find(metaFieldName => localMeta[metaFieldName] === undefined)
+              copy[firstNewMetaFieldKey] = ''
+              setLocalMeta(copy)
+            }}
           />
         )}
       </Form>
@@ -98,43 +124,45 @@ export default function Meta({ meta }) {
   )
 }
 
-const TextMetaFormRow = ({ _key, value, isEditing }) => (
-  <FormGroup row>
-    <Col xs="3" md="2" className={'col-form-label'}>
-      <Input
-        disabled={!isEditing}
-        type="select"
-        value={_key}
-        name="options.type"
-        onChange={(event) => console.log(event)}
-      >
-        {METAFIELDS.map((fieldName, i) => (
-          <option key={i} value={fieldName}>
-            {fieldName}
-          </option>
-        ))}
-      </Input>
-    </Col>
-    <Col xs="12" md="4">
-      <Input
-        disabled={!isEditing}
-        type="text"
-        name="search"
-        onChange={(e) => console.log(e)}
-        value={value}
-      />
-    </Col>
-    <Col>
-      {isEditing && (
-        <FontAwesomeIcon
-          className="icon__remove"
-          icon={faTrashCan}
-          onClick={(e) => console.log(e)}
+const TextMetaFormRow = ({
+  _key,
+  value,
+  isEditing,
+  setValue,
+  setKey,
+  deleteKey,
+}) => {
+  return (
+    <FormGroup row>
+      <Col xs="3" md="2" className={'col-form-label'}>
+        <Input
+          disabled={!isEditing}
+          type="select"
+          value={_key}
+          name="options.type"
+          onChange={(e) => setKey(e.target.value)}
+        >
+          {METAFIELDS.map((fieldName, i) => (
+            <option key={i} value={fieldName}>
+              {fieldName}
+            </option>
+          ))}
+        </Input>
+      </Col>
+      <Col xs="12" md="4">
+        <Input
+          disabled={!isEditing}
+          type="text"
+          onChange={(e) => setValue(e.target.value)}
+          value={value}
         />
-      )}
-    </Col>
-  </FormGroup>
-)
+      </Col>
+      <Col>
+        {isEditing && <FontAwesomeIcon icon={faTrashCan} onClick={deleteKey} />}
+      </Col>
+    </FormGroup>
+  )
+}
 
 const STATES = ['nominal', 'alert', 'warn', 'alarm', 'emergency']
 const Zone = ({ zone, isEditing }) => {
@@ -190,11 +218,7 @@ const Zone = ({ zone, isEditing }) => {
       <Col xs="2" md="2">
         <FormText color="muted">Remove</FormText>
         {isEditing && (
-          <FontAwesomeIcon
-            className="icon__remove"
-            icon={faTrashCan}
-            onClick={(e) => console.log(e)}
-          />
+          <FontAwesomeIcon icon={faTrashCan} onClick={(e) => console.log(e)} />
         )}
       </Col>
     </FormGroup>
@@ -218,11 +242,7 @@ const Zones = ({ zones, isEditing }) => (
         ))}
       </Form>
       {isEditing && (
-        <FontAwesomeIcon
-          className="icon__remove"
-          icon={faPlusSquare}
-          onClick={(e) => console.log(e)}
-        />
+        <FontAwesomeIcon icon={faPlusSquare} onClick={(e) => console.log(e)} />
       )}
     </Col>
   </Row>

@@ -412,7 +412,7 @@ class DataBrowser extends Component {
                             <tr key={path}>
                               <td>{path}</td>
                               <td>
-                                <Meta meta={meta} />
+                                <Meta meta={meta} path={path} />
                               </td>
                             </tr>
                           )
