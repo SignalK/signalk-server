@@ -243,11 +243,6 @@ export default function Meta({ meta, path }) {
             const renderer = METAFIELDRENDERERS[key]
             return renderer && renderer(props)
           })}
-        <Zones
-          zones={zones}
-          isEditing={isEditing}
-          setZones={(zones) => setLocalMeta({ ...localMeta, zones })}
-        ></Zones>
         {isEditing && (
           <FontAwesomeIcon
             icon={faSquarePlus}
@@ -261,6 +256,11 @@ export default function Meta({ meta, path }) {
             }}
           />
         )}
+        <Zones
+          zones={zones}
+          isEditing={isEditing}
+          setZones={(zones) => setLocalMeta({ ...localMeta, zones })}
+        ></Zones>
       </Form>
     </>
   )
@@ -370,6 +370,9 @@ const Zones = ({ zones, isEditing, setZones }) => (
           e.preventDefault()
         }}
       >
+        {(zones === undefined || zones.length === 0) &&
+          !isEditing &&
+          'No zones defined'}
         {zones.map((zone, i) => (
           <Zone
             key={i}
