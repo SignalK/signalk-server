@@ -1,10 +1,12 @@
 import {
+  faPencil,
   faPlusSquare,
+  faSave,
   faSquarePlus,
   faTrashCan,
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import React from 'react'
+import React, { useState } from 'react'
 import { Col, Form, FormGroup, FormText, Input, Row } from 'reactstrap'
 
 const METAFIELDS = [
@@ -25,6 +27,7 @@ const METAFIELDS = [
 ]
 
 export default function Meta({ meta }) {
+  const [isEditing, setIsEditing] = useState(false)
   let metaValues = METAFIELDS.reduce((acc, key) => {
     if (meta[key]) {
       acc.push({ key, value: meta[key] })
@@ -47,36 +50,59 @@ export default function Meta({ meta }) {
   const zonesMetaValue = metaValues.find(({ key }) => key === 'zones')
   const zones = zonesMetaValue ? zonesMetaValue.value : []
   return (
-    <Form
-      action=""
-      method="post"
-      encType="multipart/form-data"
-      className="form-horizontal"
-      onSubmit={(e) => {
-        e.preventDefault()
-      }}
-    >
-      {metaValues.map(({ key, value }) => (
-        <>
-          {key !== 'zones' && (
-            <TextMetaFormRow _key={key} value={value}></TextMetaFormRow>
-          )}
-        </>
-      ))}
-      <Zones zones={zones}></Zones>
-      <FontAwesomeIcon
-        className="icon__add_metavalue"
-        icon={faSquarePlus}
-        onClick={(e) => console.log(e)}
-      />
-    </Form>
+    <>
+      {!isEditing && (
+        <FontAwesomeIcon
+          className="icon__add_metavalue"
+          icon={faPencil}
+          onClick={() => setIsEditing(true)}
+        />
+      )}
+      {isEditing && (
+        <FontAwesomeIcon
+          className="icon__add_metavalue"
+          icon={faSave}
+          onClick={() => setIsEditing(false)}
+        />
+      )}{' '}
+      <Form
+        action=""
+        method="post"
+        encType="multipart/form-data"
+        className="form-horizontal"
+        onSubmit={(e) => {
+          e.preventDefault()
+        }}
+      >
+        {metaValues.map(({ key, value }) => (
+          <>
+            {key !== 'zones' && (
+              <TextMetaFormRow
+                _key={key}
+                value={value}
+                isEditing={isEditing}
+              ></TextMetaFormRow>
+            )}
+          </>
+        ))}
+        <Zones zones={zones} isEditing={isEditing}></Zones>
+        {isEditing && (
+          <FontAwesomeIcon
+            className="icon__add_metavalue"
+            icon={faSquarePlus}
+            onClick={(e) => console.log(e)}
+          />
+        )}
+      </Form>
+    </>
   )
 }
 
-const TextMetaFormRow = ({ _key, value }) => (
+const TextMetaFormRow = ({ _key, value, isEditing }) => (
   <FormGroup row>
     <Col xs="3" md="2" className={'col-form-label'}>
       <Input
+        disabled={!isEditing}
         type="select"
         value={_key}
         name="options.type"
@@ -91,6 +117,7 @@ const TextMetaFormRow = ({ _key, value }) => (
     </Col>
     <Col xs="12" md="4">
       <Input
+        disabled={!isEditing}
         type="text"
         name="search"
         onChange={(e) => console.log(e)}
@@ -98,23 +125,26 @@ const TextMetaFormRow = ({ _key, value }) => (
       />
     </Col>
     <Col>
-      <FontAwesomeIcon
-        className="icon__remove"
-        icon={faTrashCan}
-        onClick={(e) => console.log(e)}
-      />
+      {isEditing && (
+        <FontAwesomeIcon
+          className="icon__remove"
+          icon={faTrashCan}
+          onClick={(e) => console.log(e)}
+        />
+      )}
     </Col>
   </FormGroup>
 )
 
 const STATES = ['nominal', 'alert', 'warn', 'alarm', 'emergency']
-const Zone = ({ zone }) => {
+const Zone = ({ zone, isEditing }) => {
   const { state, lower, upper, message } = zone
   return (
     <FormGroup row>
       <Col xs="2" md="2">
         <FormText color="muted">Upper</FormText>
         <Input
+          disabled={!isEditing}
           type="number"
           name="search"
           onChange={(e) => console.log(e)}
@@ -124,6 +154,7 @@ const Zone = ({ zone }) => {
       <Col xs="2" md="2">
         <FormText color="muted">Upper</FormText>
         <Input
+          disabled={!isEditing}
           type="number"
           name="search"
           onChange={(e) => console.log(e)}
@@ -133,6 +164,7 @@ const Zone = ({ zone }) => {
       <Col xs="12" md="2">
         <FormText color="muted">State</FormText>
         <Input
+          disabled={!isEditing}
           type="select"
           value={state}
           name="options.type"
@@ -148,6 +180,7 @@ const Zone = ({ zone }) => {
       <Col xs="3" md="3">
         <FormText color="muted">Message</FormText>
         <Input
+          disabled={!isEditing}
           type="text"
           name="search"
           onChange={(e) => console.log(e)}
@@ -156,16 +189,18 @@ const Zone = ({ zone }) => {
       </Col>
       <Col xs="2" md="2">
         <FormText color="muted">Remove</FormText>
-        <FontAwesomeIcon
-          className="icon__remove"
-          icon={faTrashCan}
-          onClick={(e) => console.log(e)}
-        />
+        {isEditing && (
+          <FontAwesomeIcon
+            className="icon__remove"
+            icon={faTrashCan}
+            onClick={(e) => console.log(e)}
+          />
+        )}
       </Col>
     </FormGroup>
   )
 }
-const Zones = ({ zones }) => (
+const Zones = ({ zones, isEditing }) => (
   <Row>
     <Col md="2">Zones</Col>
     <Col md="10">
@@ -179,14 +214,16 @@ const Zones = ({ zones }) => (
         }}
       >
         {zones.map((zone, i) => (
-          <Zone key={i} zone={zone}></Zone>
+          <Zone key={i} zone={zone} isEditing={isEditing}></Zone>
         ))}
       </Form>
-      <FontAwesomeIcon
-        className="icon__remove"
-        icon={faPlusSquare}
-        onClick={(e) => console.log(e)}
-      />
+      {isEditing && (
+        <FontAwesomeIcon
+          className="icon__remove"
+          icon={faPlusSquare}
+          onClick={(e) => console.log(e)}
+        />
+      )}
     </Col>
   </Row>
 )
