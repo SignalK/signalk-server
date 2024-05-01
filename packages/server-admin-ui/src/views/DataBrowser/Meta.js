@@ -7,8 +7,122 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState } from 'react'
-import { Col, Form, FormGroup, FormText, Input, Row } from 'reactstrap'
+import { Col, Form, FormGroup, FormText, Input, Label, Row } from 'reactstrap'
 
+const UnitSelection = ({ disabled, value, setValue }) => (
+  <Input
+    disabled={disabled}
+    type="select"
+    value={value}
+    onChange={(e) => setValue(e.target.value)}
+  >
+    {Object.entries(UNITS).map(([unit, description]) => (
+      <option key={unit} value={unit}>
+        {unit}:{description}
+      </option>
+    ))}
+  </Input>
+)
+
+const ScaleSelection = () => <span>TODO scale editor</span>
+
+const TextValue = ({ disabled, setValue, value }) => (
+  <Input
+    disabled={disabled}
+    type="text"
+    onChange={(e) => setValue(e.target.value)}
+    value={value}
+  />
+)
+const NumberValue = ({ disabled, setValue, value }) => (
+  <Input
+    disabled={disabled}
+    type="number"
+    onChange={(e) => {
+      try {
+        setValue(Number(e.target.value))
+      } catch (e) {
+        setValue('')
+      }
+    }}
+    value={value}
+  />
+)
+
+const MethodEditor = ({ disabled, setValue, value }) => {
+  if (!Array.isArray(value)) {
+    setValue([])
+    return null
+  }
+  return (
+    <>
+      {['sound', 'visual'].map((method) => (
+        <Label key={method} className="switch switch-text switch-primary">
+          <Input
+            type="checkbox"
+            className="switch-input"
+            onChange={() => {
+              if (value.indexOf(method) < 0) {
+                value.push(method)
+                setValue(value)
+              } else {
+                value.splice(value.indexOf(method, 1))
+                setValue(value)
+              }
+            }}
+            checked={value.indexOf(method) >= 0}
+          />
+          <span className="switch-label" data-on="Yes" data-off="No" />
+          <span className="switch-handle" />
+          {method}
+        </Label>
+      ))}
+    </>
+  )
+}
+
+const METAFIELDRENDERERS = {
+  units: (props) => (
+    <MetaFormRow {...props} renderValue={UnitSelection}></MetaFormRow>
+  ),
+  description: (props) => (
+    <MetaFormRow {...props} renderValue={TextValue}></MetaFormRow>
+  ),
+  displayName: (props) => (
+    <MetaFormRow {...props} renderValue={TextValue}></MetaFormRow>
+  ),
+  longName: (props) => (
+    <MetaFormRow {...props} renderValue={TextValue}></MetaFormRow>
+  ),
+  shortName: (props) => (
+    <MetaFormRow {...props} renderValue={TextValue}></MetaFormRow>
+  ),
+  timeout: (props) => (
+    <MetaFormRow {...props} renderValue={NumberValue}></MetaFormRow>
+  ),
+  displayScale: (props) => (
+    <MetaFormRow {...props} renderValue={ScaleSelection}></MetaFormRow>
+  ),
+  zones: () => <></>, // not used
+  normalMethod: (props) => (
+    <MetaFormRow {...props} renderValue={MethodEditor}></MetaFormRow>
+  ),
+  nominalMethod: (props) => (
+    <MetaFormRow {...props} renderValue={MethodEditor}></MetaFormRow>
+  ),
+  alertMethod: (props) => (
+    <MetaFormRow {...props} renderValue={MethodEditor}></MetaFormRow>
+  ),
+  warnMethod: (props) => (
+    <MetaFormRow {...props} renderValue={MethodEditor}></MetaFormRow>
+  ),
+  alarmMethod: (props) => (
+    <MetaFormRow {...props} renderValue={MethodEditor}></MetaFormRow>
+  ),
+  emergencyMethod: (props) => (
+    <MetaFormRow {...props} renderValue={MethodEditor}></MetaFormRow>
+  ),
+}
 const METAFIELDS = [
   'units',
   'description',
@@ -25,6 +139,29 @@ const METAFIELDS = [
   'alarmMethod',
   'emergencyMethod',
 ]
+
+const UNITS = {
+  A: 'Ampere',
+  C: 'Coulomb',
+  Hz: 'Hertz',
+  'ISO-8601 (UTC)': 'Timestamp',
+  J: 'Joule',
+  K: 'Kelvin',
+  Pa: 'Pascal',
+  V: 'Volt',
+  W: 'Watt',
+  deg: 'Degree',
+  kg: 'Kilogram',
+  m: 'Meter',
+  'm/s': 'Meters per second',
+  m2: 'Square meter',
+  m3: 'Cubic meter',
+  'm3/s': 'Cubic meters per second',
+  rad: 'Radian',
+  'rad/s': 'Radians per second',
+  ratio: 'Ratio',
+  s: 'Second',
+}
 
 const saveMeta = (path, meta) => {
   fetch(`/signalk/v1/api/vessels/self/${path.replaceAll('.', '/')}/meta`, {
@@ -82,31 +219,30 @@ export default function Meta({ meta, path }) {
           e.preventDefault()
         }}
       >
-        {metaValues.map(({ key, value }) => (
-          <>
-            {key !== 'zones' && (
-              <TextMetaFormRow
-                _key={key}
-                value={value}
-                isEditing={isEditing}
-                setValue={(metaFieldValue) =>
-                  setLocalMeta({ ...localMeta, ...{ [key]: metaFieldValue } })
-                }
-                setKey={(metaFieldKey) => {
-                  const copy = { ...localMeta }
-                  copy[metaFieldKey] = localMeta[key]
-                  delete copy[key]
-                  setLocalMeta(copy)
-                }}
-                deleteKey={() => {
-                  const copy = { ...localMeta }
-                  delete copy[key]
-                  setLocalMeta(copy)
-                }}
-              ></TextMetaFormRow>
-            )}
-          </>
-        ))}
+        {metaValues
+          .filter(({ key }) => key !== 'zones')
+          .map(({ key, value }) => {
+            const props = {
+              _key: key,
+              value,
+              disabled: !isEditing,
+              setValue: (metaFieldValue) =>
+                setLocalMeta({ ...localMeta, ...{ [key]: metaFieldValue } }),
+              setKey: (metaFieldKey) => {
+                const copy = { ...localMeta }
+                copy[metaFieldKey] = localMeta[key]
+                delete copy[key]
+                setLocalMeta(copy)
+              },
+              deleteKey: () => {
+                const copy = { ...localMeta }
+                delete copy[key]
+                setLocalMeta(copy)
+              },
+            }
+            const renderer = METAFIELDRENDERERS[key]
+            return renderer && renderer(props)
+          })}
         <Zones
           zones={zones}
           isEditing={isEditing}
@@ -130,22 +266,17 @@ export default function Meta({ meta, path }) {
   )
 }
 
-const TextMetaFormRow = ({
-  _key,
-  value,
-  isEditing,
-  setValue,
-  setKey,
-  deleteKey,
-}) => {
+const MetaFormRow = (props) => {
+  const { _key, renderValue, value, disabled, setValue, setKey, deleteKey } =
+    props
+  const V = renderValue
   return (
     <FormGroup row>
       <Col xs="3" md="2" className={'col-form-label'}>
         <Input
-          disabled={!isEditing}
+          disabled={disabled}
           type="select"
           value={_key}
-          name="options.type"
           onChange={(e) => setKey(e.target.value)}
         >
           {METAFIELDS.map((fieldName, i) => (
@@ -156,15 +287,10 @@ const TextMetaFormRow = ({
         </Input>
       </Col>
       <Col xs="12" md="4">
-        <Input
-          disabled={!isEditing}
-          type="text"
-          onChange={(e) => setValue(e.target.value)}
-          value={value}
-        />
+        <V {...props}></V>
       </Col>
       <Col>
-        {isEditing && <FontAwesomeIcon icon={faTrashCan} onClick={deleteKey} />}
+        {!disabled && <FontAwesomeIcon icon={faTrashCan} onClick={deleteKey} />}
       </Col>
     </FormGroup>
   )
