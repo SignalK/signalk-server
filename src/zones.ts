@@ -11,6 +11,17 @@ interface Zone {
   state: ZoneState
   message: string
 }
+type Method = 'visual' | 'sound'
+
+type ZoneMethod = Method[]
+interface ZoneMethods {
+  normalMethod?: ZoneMethod
+  nominalMethod?: ZoneMethod
+  alertMethod?: ZoneMethod
+  warnMethod?: ZoneMethod
+  alarmMethod?: ZoneMethod
+  emergencyMethod?: ZoneMethod
+}
 
 export class Zones {
   private unsubscribesForPaths: {
@@ -25,12 +36,12 @@ export class Zones {
       debug(`${JSON.stringify(metaMessage)}`)
       const { path, value } = metaMessage
       if (value.zones) {
-        this.watchForZones(path, value.zones)
+        this.watchForZones(path, value.zones, value as ZoneMethods)
       }
     })
   }
 
-  watchForZones(path: Path, zones: Zone[]) {
+  watchForZones(path: Path, zones: Zone[], methods: ZoneMethods) {
     if (this.unsubscribesForPaths[path]) {
       this.unsubscribesForPaths[path]()
     }
@@ -63,23 +74,28 @@ export class Zones {
       .skipDuplicates()
       .onValue((zoneIndex: number) => {
         if (debug.enabled) {
-          debug(
-            `Notify: ${path}, zone ${zoneIndex}`
-          )
+          debug(`Notify: ${path}, zone ${zoneIndex}`)
         }
-        this.sendDelta(getNotificationDelta(path, zoneIndex, zones))
+        this.sendDelta(getNotificationDelta(path, zoneIndex, zones, methods))
       })
   }
 }
 
-function getNotificationDelta(path: Path, zoneIndex: number, zones: Zone[]) {
+function getNotificationDelta(
+  path: Path,
+  zoneIndex: number,
+  zones: Zone[],
+  methods: ZoneMethods
+) {
   let value = null
   if (zoneIndex >= 0) {
     const { lower, upper, state, message } = zones[zoneIndex]
+    const methodName = `${state}Method`
     value = {
       state: state as string,
       message: message || `${lower} < value < ${upper}`,
-      method: []
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      method: (methods as any)[methodName] || ['visual']
     }
   } else {
     // Default to "normal" zone
