@@ -1,6 +1,7 @@
 const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
+const assert = require('assert')
 const freeport = require('freeport-promise')
 const Server = require('../lib')
 const fetch = require('node-fetch')
@@ -56,6 +57,22 @@ describe('Put Requests', () => {
       null,
       switch2Handler
     )
+    
+    server.app.handleMessage('test', {
+      updates: [
+        {
+          values: [
+            {
+              path: 'notifications.testNotification',
+              value: {
+                state: 'alarm',
+                method: [ 'visual', 'sound' ] 
+              }
+            }
+          ]
+        }
+      ]
+    })
   })
 
   after(async function () {
@@ -170,6 +187,61 @@ describe('Put Requests', () => {
     json.state.should.equal('COMPLETED')
     json.should.have.property('message')
     json.message.should.equal('invalid value')
+  })
+
+  it('HTTP successful PUT notication state', async function () {
+    let result = await fetch(
+      `${url}/signalk/v1/api/vessels/self/notifications/testNotification/state`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          value: 'normal'
+        })
+      }
+    )
+
+    result.status.should.equal(200)
+
+    console.log(result.href)
+
+    result = await fetch(`${url}/signalk/v1/api/vessels/self/notifications/testNotification/value`)
+
+    result.status.should.equal(200)
+
+    let response = await result.json()
+    response.should.have.property('state')
+    response.state.should.equal('normal')
+  })
+
+  it('HTTP successful PUT notication method', async function () {
+    let result = await fetch(
+      `${url}/signalk/v1/api/vessels/self/notifications/testNotification/method`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          value: [ 'visual' ]
+        })
+      }
+    )
+
+    result.status.should.equal(200)
+
+    console.log(result.href)
+
+    result = await fetch(`${url}/signalk/v1/api/vessels/self/notifications/testNotification/value`)
+
+    result.status.should.equal(200)
+
+    let response = await result.json()
+    response.should.have.property('method')
+    assert(response.method.length === 1, 'one method')
+    response.method[0].should.equal('visual')
   })
 
   it('WS put to unhandled path fails', async function () {
