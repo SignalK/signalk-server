@@ -25,7 +25,7 @@ const Result = {
 }
 
 const actionHandlers = {}
-let putMetaHandler, deleteMetaHandler
+let putMetaHandler, deleteMetaHandler, putNotificationHandler
 
 module.exports = {
   start: function (app) {
@@ -240,6 +240,9 @@ module.exports = {
 
       return { state: 'PENDING' }
     }
+    putNotificationHandler = (context, path, value) => {
+      return putNotification(app, context, path, value)
+    }
   },
 
   registerActionHandler: registerActionHandler,
@@ -386,6 +389,10 @@ function putPath(app, contextParam, path, body, req, requestId, updateCb) {
               return
             }
           }
+
+          if (!handler && parts[0] === 'notifications') {
+            handler = putNotificationHandler
+          }
         }
 
         if (handler) {
@@ -483,4 +490,40 @@ function deRegisterActionHandler(context, path, source, callback) {
     delete actionHandlers[context][path][source]
     debug(`de-registered action handler for ${context} ${path} ${source}`)
   }
+}
+
+function putNotification(app, context, path, value) {
+  const parts = path.split('.')
+  const notifPath = parts.slice(0, parts.length - 1).join('.')
+  const key = parts[parts.length - 1]
+
+  const existing = _.get(app.signalk.self, notifPath)
+
+  if (_.isUndefined(existing) || !existing.value) {
+    return { state: 'COMPLETED', statusCode: 404 }
+  }
+
+  if (key !== 'method' && key !== 'state') {
+    return { state: 'COMPLETED', statusCode: 405 }
+  }
+
+  existing.value[key] = value
+  existing.timestamp = new Date().toISOString()
+
+  const delta = {
+    updates: [
+      {
+        $source: existing.$source,
+        values: [
+          {
+            path: notifPath,
+            value: existing.value
+          }
+        ]
+      }
+    ]
+  }
+  app.handleMessage('server', delta)
+
+  return { state: 'COMPLETED', statusCode: 200 }
 }
