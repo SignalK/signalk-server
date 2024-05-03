@@ -30,6 +30,7 @@ import { ResourceProviderRegistry } from './resourcesapi'
 import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
 export * from './autopilotapi'
+export * from './weatherapi'
 
 export type SignalKApiId =
   | 'resources'
@@ -38,6 +39,7 @@ export type SignalKApiId =
   | 'autopilot'
   | 'anchor'
   | 'logbook'
+  | 'weather'
   | 'historyplayback' //https://signalk.org/specification/1.7.0/doc/streaming_api.html#history-playback
   | 'historysnapshot' //https://signalk.org/specification/1.7.0/doc/rest_api.html#history-snapshot-retrieval
 

@@ -81,7 +81,7 @@ _**Note: The Resource Provider is responsible for implementing the methods and r
 
 _Note: It is the responsibility of the resource provider plugin to filter the resources returned as per the supplied query parameters._
 
-- `query:` Object contining `key | value` pairs repesenting the parameters by which to filter the returned entries. _e.g. {region: 'fishing_zone'}_
+- `query:` Object containing `key | value` pairs repesenting the parameters by which to filter the returned entries. _e.g. {region: 'fishing_zone'}_
 
 returns: `Promise<{[id: string]: any}>`
 

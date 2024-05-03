@@ -1,0 +1,725 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "2.5.0",
+    "title": "Weather API",
+    "description": "Signal K weather API endpoints.",
+    "termsOfService": "http://signalk.org/terms/",
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "externalDocs": {
+    "url": "http://signalk.org/specification/",
+    "description": "Signal K specification."
+  },
+  "tags": [
+    {
+      "name": "Weather",
+      "description": "Operations to interact with weather service data."
+    },
+    {
+      "name": "Provider",
+      "description": "Operations to view / switch providers."
+    }
+  ],
+  "components": {
+    "schemas": {
+      "Position": {
+        "type": "object",
+        "required": ["latitude", "longitude"],
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "format": "float"
+          },
+          "longitude": {
+            "type": "number",
+            "format": "float"
+          }
+        }
+      },
+      "IsoTime": {
+        "type": "string",
+        "description": "Date / Time when data values were recorded",
+        "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2}(?:\\.\\d*)?)((-(\\d{2}):(\\d{2})|Z)?)$",
+        "example": "2022-04-22T05:02:56.484Z"
+      },
+      "WeatherSourceInfoModel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "12345678",
+            "description": "Source identifier."
+          },
+          "position": {
+            "$ref": "#/components/schemas/Position"
+          }
+        }
+      },
+      "WeatherDataModel": {
+        "type": "object",
+        "required": ["date", "type"],
+        "properties": {
+          "date": {
+            "$ref": "#/components/schemas/IsoTime"
+          },
+          "description": {
+            "type": "string",
+            "example": "broken clouds"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["daily", "point", "observation"]
+          },
+          "sun": {
+            "type": "object",
+            "required": ["times"],
+            "properties": {
+              "sunrise": {
+                "$ref": "#/components/schemas/IsoTime"
+              },
+              "sunset": {
+                "$ref": "#/components/schemas/IsoTime"
+              }
+            }
+          },
+          "outside": {
+            "type": "object",
+            "properties": {
+              "uvIndex": {
+                "type": "number",
+                "example": 7.5,
+                "description": "UV Index (1 UVI = 25mW/sqm)"
+              },
+              "cloudCover": {
+                "type": "number",
+                "example": 85,
+                "description": "Amount of cloud cover (%)"
+              },
+              "horizontalVisibility": {
+                "type": "number",
+                "example": 5000,
+                "description": "Visibilty (m)"
+              },
+              "horizontalVisibilityOverRange": {
+                "type": "boolean",
+                "example": "true",
+                "description": "Visibilty distance is greater than the range of the measuring equipment."
+              },
+              "temperature": {
+                "type": "number",
+                "example": 290,
+                "description": "Air temperature (K)"
+              },
+              "feelsLikeTemperature": {
+                "type": "number",
+                "example": 277,
+                "description": "Feels-like temperature (K)"
+              },
+              "dewPointTemperature": {
+                "type": "number",
+                "example": 260,
+                "description": "Dew point temperature (K)"
+              },
+              "pressure": {
+                "type": "number",
+                "example": 10100,
+                "description": "Air pressure (Pa)"
+              },
+              "pressureTendency": {
+                "type": "string",
+                "enum": ["steady", "decreasing", "increasing"],
+                "example": "steady",
+                "description": "Air pressure tendency"
+              },
+              "absoluteHumidity": {
+                "type": "number",
+                "example": 56,
+                "description": "Absolute humidity (%)"
+              },
+              "relativeHumidity": {
+                "type": "number",
+                "example": 56,
+                "description": "Relative humidity (%)"
+              },
+              "precipitationType": {
+                "type": "string",
+                "enum": [
+                  "rain",
+                  "thunderstorm",
+                  "snow",
+                  "freezing rain",
+                  "mixed/ice"
+                ],
+                "example": "rain",
+                "description": "Type of preceipitation"
+              },
+              "precipitationVolume": {
+                "type": "number",
+                "example": 56,
+                "description": "Amount of precipitation (mm)"
+              }
+            }
+          },
+          "wind": {
+            "type": "object",
+            "properties": {
+              "averageSpeed": {
+                "type": "number",
+                "example": 9.3,
+                "description": "Average wind speed (m/s)"
+              },
+              "speedTrue": {
+                "type": "number",
+                "example": 15.3,
+                "description": "Wind speed (m/s)"
+              },
+              "directionTrue": {
+                "type": "number",
+                "example": 2.145,
+                "description": "Wind direction relative to true north (rad)"
+              },
+              "gust": {
+                "type": "number",
+                "example": 21.6,
+                "description": "Wind gust (m/s)"
+              },
+              "gustDirectionTrue": {
+                "type": "number",
+                "example": 2.6,
+                "description": "Wind gust direction relative to true north (rad)"
+              }
+            }
+          },
+          "water": {
+            "type": "object",
+            "properties": {
+              "temperature": {
+                "type": "number",
+                "example": 21.6,
+                "description": "Wind gust (m/s)"
+              },
+              "level": {
+                "type": "number",
+                "example": 11.9,
+                "description": "Water level (m)"
+              },
+              "levelTendency": {
+                "type": "number",
+                "enum": ["steady", "decreasing", "increasing"],
+                "example": "steady",
+                "description": "Water level trend"
+              },
+              "waves": {
+                "type": "object",
+                "properties": {
+                  "significantHeight": {
+                    "type": "number",
+                    "example": 2.6,
+                    "description": "Wave height (m)"
+                  },
+                  "directionTrue": {
+                    "type": "number",
+                    "example": 2.3876,
+                    "description": "Wave direction relative to true north (rad)"
+                  },
+                  "period": {
+                    "type": "number",
+                    "example": 2.3876,
+                    "description": "Wave period (m/s)"
+                  }
+                }
+              },
+              "swell": {
+                "type": "object",
+                "properties": {
+                  "height": {
+                    "type": "number",
+                    "example": 2.6,
+                    "description": "Swell height (m)"
+                  },
+                  "directionTrue": {
+                    "type": "number",
+                    "example": 2.3876,
+                    "description": "Swell direction relative to true north (rad)"
+                  },
+                  "period": {
+                    "type": "number",
+                    "example": 2.3876,
+                    "description": "Swell period (m/s)"
+                  }
+                }
+              },
+              "seaState": {
+                "type": "number",
+                "example": 2,
+                "description": "Sea state (Beaufort)"
+              },
+              "salinity": {
+                "type": "number",
+                "example": 12,
+                "description": "Water salinity (%)"
+              },
+              "ice": {
+                "type": "boolean",
+                "example": true,
+                "description": "Ice present."
+              }
+            }
+          },
+          "current": {
+            "type": "object",
+            "properties": {
+              "drift": {
+                "type": "number",
+                "example": 3.4,
+                "description": "Surface current speed (m/s)"
+              },
+              "set": {
+                "type": "number",
+                "example": 1.74,
+                "description": "Surface current direction (rad)"
+              }
+            }
+          }
+        }
+      },
+      "WeatherWarningModel": {
+        "type": "object",
+        "required": ["startTime", "endTime"],
+        "properties": {
+          "startTime": {
+            "$ref": "#/components/schemas/IsoTime"
+          },
+          "endTime": {
+            "$ref": "#/components/schemas/IsoTime"
+          },
+          "source": {
+            "type": "string",
+            "description": "Name of source."
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of warning.",
+            "example": "Heat Advisory"
+          },
+          "details": {
+            "type": "string",
+            "description": "Text describing the details of the warning.",
+            "example": "HEAT ADVISORY REMAINS IN EFFECT FROM 1 PM THIS AFTERNOON...."
+          }
+        }
+      },
+      "ObservationsAttribute": {
+        "type": "object",
+        "required": ["observations"],
+        "properties": {
+          "observations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeatherDataModel"
+            }
+          }
+        }
+      },
+      "ForecastsAttribute": {
+        "type": "object",
+        "required": ["forecasts"],
+        "properties": {
+          "forecasts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeatherDataModel"
+            }
+          }
+        }
+      },
+      "WarningsAttribute": {
+        "type": "object",
+        "required": ["warnings"],
+        "properties": {
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeatherWarningModel"
+            }
+          }
+        }
+      },
+      "WeatherResponseModel": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WeatherSourceInfoModel"
+          },
+          {
+            "$ref": "#/components/schemas/WarningsAttribute"
+          },
+          {
+            "$ref": "#/components/schemas/ObservationsAttribute"
+          },
+          {
+            "$ref": "#/components/schemas/ForecastsAttribute"
+          }
+        ]
+      }
+    },
+    "responses": {
+      "200OKResponse": {
+        "description": "Successful operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "description": "Request success response",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["COMPLETED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [200]
+                }
+              },
+              "required": ["state", "statusCode"]
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "description": "Failed operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "description": "Request error response",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["FAILED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [404]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["state", "statusCode", "message"]
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "IndexParam": {
+        "in": "path",
+        "required": true,
+        "name": "index",
+        "description": "Index of entry in a collection.",
+        "schema": {
+          "type": "number"
+        }
+      },
+      "LatitudeParam": {
+        "in": "query",
+        "required": true,
+        "name": "lat",
+        "description": "Latitude at specified position.",
+        "schema": {
+          "type": "number",
+          "min": -90,
+          "max": 90
+        }
+      },
+      "LongitudeParam": {
+        "in": "query",
+        "required": true,
+        "name": "lon",
+        "description": "Longitude at specified position.",
+        "schema": {
+          "type": "number",
+          "min": -180,
+          "max": 180
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "JAUTHENTICATION"
+      }
+    }
+  },
+  "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+  "paths": {
+    "/weather": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/LatitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/LongitudeParam"
+        }
+      ],
+      "get": {
+        "tags": ["Weather"],
+        "summary": "Return / fetch weather data at the specified location (lat / lon).",
+        "responses": {
+          "default": {
+            "description": "Fetches from weather service and returns data for the specified location (lat / lon).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeatherResponseModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/weather/observations": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/LatitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/LongitudeParam"
+        }
+      ],
+      "get": {
+        "tags": ["Weather"],
+        "summary": "Retrieve observation data.",
+        "responses": {
+          "default": {
+            "description": "Returns the observation data for the specified location (lat / lon).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WeatherDataModel"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/weather/observations/{index}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/LatitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/LongitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/IndexParam"
+        }
+      ],
+      "get": {
+        "tags": ["Weather"],
+        "summary": "Retrieve supplied observation entry.",
+        "responses": {
+          "default": {
+            "description": "Return the observation entry at the specified index in the observation list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeatherDataModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/weather/forecasts": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/LatitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/LongitudeParam"
+        }
+      ],
+      "get": {
+        "tags": ["Weather"],
+        "summary": "Retrieve forecast data.",
+        "responses": {
+          "default": {
+            "description": "Returns the forecast data for the specified location (lat / lon).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WeatherDataModel"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/weather/forecasts/{index}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/LatitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/LongitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/IndexParam"
+        }
+      ],
+      "get": {
+        "tags": ["Weather"],
+        "summary": "Retrieve supplied forecast entry.",
+        "responses": {
+          "default": {
+            "description": "Return the forecast entry at the specified index in the forecast list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeatherDataModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/weather/warnings": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/LatitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/LongitudeParam"
+        }
+      ],
+      "get": {
+        "tags": ["Weather"],
+        "summary": "Retrieve warning data.",
+        "responses": {
+          "default": {
+            "description": "Returns the warning data for the specified location (lat / lon).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WeatherWarningModel"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/weather/warnings/{index}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/LatitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/LongitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/IndexParam"
+        }
+      ],
+      "get": {
+        "tags": ["Weather"],
+        "summary": "Retrieve supplied warning entry.",
+        "responses": {
+          "default": {
+            "description": "Return the warning entry at the specified index in the warning list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeatherWarningModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/weather/providers": {
+      "get": {
+        "tags": ["Provider"],
+        "summary": "Retrieve list of registered providers.",
+        "responses": {
+          "default": {
+            "description": "Return information about the registered weather providers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "required": ["name", "isDefault"],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Provider name."
+                      },
+                      "isDefault": {
+                        "type": "boolean",
+                        "description": "true if this provider is set as the default."
+                      }
+                    },
+                    "example": {
+                      "name": "OpenWeather",
+                      "isDefault": false
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Provider"],
+        "summary": "Retrieve supplied warning entry.",
+        "body": {
+          "type": "object",
+          "required": ["id"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Provider identifier."
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "200": {
+            "$ref": "#/components/responses/200OKResponse"
+          }
+        }
+      }
+    }
+  }
+}
