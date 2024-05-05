@@ -97,8 +97,8 @@ export class WeatherApi {
   // Send warning Notification
   emitWarning(
     pluginId: string,
-    position: Position,
-    warnings: WeatherWarning[]
+    position?: Position,
+    warnings?: WeatherWarning[]
   ) {
     this.sendNotification(pluginId, position, warnings)
   }
@@ -447,24 +447,38 @@ export class WeatherApi {
   // send weather warning notification
   private sendNotification(
     sourceId: string,
-    pos: Position,
-    warnings: WeatherWarning[]
+    pos?: Position,
+    warnings?: WeatherWarning[]
   ) {
+    let value: { [key: string]: any }
+    if (
+      !pos ||
+      !warnings ||
+      (Array.isArray(warnings) && warnings.length === 0)
+    ) {
+      value = {
+        state: ALARM_STATE.normal,
+        method: [],
+        message: ``
+      }
+    } else {
+      value = {
+        state: ALARM_STATE.warn,
+        method: [ALARM_METHOD.visual],
+        message: `Weather Warning`,
+        data: {
+          position: pos,
+          warnings: warnings
+        }
+      }
+    }
     const msg: Delta = {
       updates: [
         {
           values: [
             {
               path: `notifications.weather.warning` as Path,
-              value: {
-                state: ALARM_STATE.warn,
-                method: ALARM_METHOD.visual,
-                message: `Weather Warning`,
-                data: {
-                  position: pos,
-                  warnings: warnings
-                }
-              }
+              value: value
             }
           ]
         }

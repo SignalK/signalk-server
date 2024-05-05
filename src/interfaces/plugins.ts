@@ -23,7 +23,11 @@ import {
   ResourceProvider,
   ServerAPI,
   RouteDestination,
-  SignalKApiId
+  SignalKApiId,
+  WeatherProvider,
+  WeatherApi,
+  Position,
+  WeatherWarning
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -472,6 +476,7 @@ module.exports = (theApp: any) => {
       onStopHandlers[plugin.id].push(() =>
         app.resourcesApi.unRegister(plugin.id)
       )
+      onStopHandlers[plugin.id].push(() => app.weatherApi.unRegister(plugin.id))
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
@@ -550,6 +555,19 @@ module.exports = (theApp: any) => {
       }
     })
     appCopy.putPath = putPath
+
+    const weatherApi: WeatherApi = app.weatherApi
+    _.omit(appCopy, 'weatherApi') // don't expose the actual weather api manager
+    appCopy.registerWeatherProvider = (provider: WeatherProvider) => {
+      weatherApi.register(plugin.id, provider)
+    }
+    appCopy.emitWeatherWarning = (
+      pluginId: string,
+      position?: Position,
+      warnings?: WeatherWarning[]
+    ) => {
+      return weatherApi.emitWarning(pluginId, position, warnings)
+    }
 
     const resourcesApi: ResourcesApi = app.resourcesApi
     _.omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager

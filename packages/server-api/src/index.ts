@@ -31,6 +31,8 @@ import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
 export * from './autopilotapi'
 export * from './weatherapi'
+export { WeatherProviderRegistry } from './weatherapi'
+import { WeatherProviderRegistry, WeatherWarning } from './weatherapi'
 
 export type SignalKApiId =
   | 'resources'
@@ -65,7 +67,8 @@ export interface PropertyValuesEmitter {
 
 export interface PluginServerApp
   extends PropertyValuesEmitter,
-    ResourceProviderRegistry {}
+    ResourceProviderRegistry,
+    WeatherProviderRegistry {}
 
 /**
  * This is the API that a [server plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md) must implement.
@@ -203,6 +206,11 @@ export interface ServerAPI extends PluginServerApp {
     dest: (PointDestination & { arrivalCircle?: number }) | null
   ) => Promise<void>
   activateRoute: (dest: RouteDestination | null) => Promise<void>
+  emitWeatherWarning: (
+    pluginId: string,
+    position?: Position,
+    warnings?: WeatherWarning[]
+  ) => void
 
   /**
    * A plugin can report that it has handled output messages. This will

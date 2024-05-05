@@ -5,8 +5,8 @@ export interface WeatherApi {
   unRegister: (pluginId: string) => void
   emitWarning: (
     pluginId: string,
-    position: Position,
-    warnings: WeatherWarning[]
+    position?: Position,
+    warnings?: WeatherWarning[]
   ) => void
 }
 
@@ -53,7 +53,7 @@ export interface WeatherWarning {
 
 // Aligned with Signal K environment specification
 export interface WeatherData {
-  description: string
+  description?: string
   date: string
   type: 'daily' | 'point' | 'observation' // daily forecast, point-in-time forecast, observed values
   outside?: {

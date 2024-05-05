@@ -171,6 +171,12 @@ getWarnings({latitude: 16.34765, longitude: 12.5432});
 _Returns:_
 ```JSON
 [
-    
+  {
+    "startTime": "2024-05-03T05:00:00.259Z",
+    "endTime": "2024-05-03T08:00:00.702Z",
+    "details": "Strong wind warning.",
+    "source": "OpenWeather",
+    "type": "Warning"
+  }
 ]
 ```
