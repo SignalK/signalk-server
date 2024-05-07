@@ -24,8 +24,6 @@ const UnitSelect = ({ disabled, value, setValue }) => (
   </Input>
 )
 
-const ScaleSelect = () => <span>TODO scale editor</span>
-
 const Text = ({ disabled, setValue, value }) => (
   <Input
     disabled={disabled}
@@ -81,6 +79,89 @@ const MethodSelect = ({ setValue, value }) => {
   )
 }
 
+const DISPLAYTYPES = ['linear', 'logarithmic', 'squareroot', 'power']
+
+const DisplaySelect = ({ disabled, setValue, value }) => {
+  const { lower, upper, type, power } = value
+  return (
+    <>
+      <Input
+        disabled={disabled}
+        type="select"
+        value={type}
+        onChange={(e) =>
+          setValue({
+            ...value,
+            type: e.target.value,
+          })
+        }
+      >
+        {DISPLAYTYPES.map((type) => (
+          <option key={type} value={type}>
+            {type}
+          </option>
+        ))}
+      </Input>
+
+      <Input
+        disabled={disabled}
+        type="number"
+        onChange={(e) => {
+          try {
+            setValue({
+              ...value,
+              lower: Number(e.target.value),
+            })
+          } catch (e) {
+            setValue({
+              ...value,
+              lower: null,
+            })
+          }
+        }}
+        value={lower}
+      />
+
+      <Input
+        disabled={disabled}
+        type="number"
+        onChange={(e) => {
+          try {
+            setValue({
+              ...value,
+              upper: Number(e.target.value),
+            })
+          } catch (e) {
+            setValue({
+              ...value,
+              upper: null,
+            })
+          }
+        }}
+        value={upper}
+      />
+      <Input
+        disabled={disabled || type !== 'power'}
+        type="number"
+        onChange={(e) => {
+          try {
+            setValue({
+              ...value,
+              power: Number(e.target.value),
+            })
+          } catch (e) {
+            setValue({
+              ...value,
+              upper: null,
+            })
+          }
+        }}
+        value={power}
+      />
+    </>
+  )
+}
+
 const METAFIELDRENDERERS = {
   units: (props) => (
     <MetaFormRow {...props} renderValue={UnitSelect}></MetaFormRow>
@@ -101,7 +182,7 @@ const METAFIELDRENDERERS = {
     <MetaFormRow {...props} renderValue={NumberValue}></MetaFormRow>
   ),
   displayScale: (props) => (
-    <MetaFormRow {...props} renderValue={ScaleSelect}></MetaFormRow>
+    <MetaFormRow {...props} renderValue={DisplaySelect}></MetaFormRow>
   ),
   zones: () => <></>, // not used
   normalMethod: (props) => (
