@@ -310,16 +310,18 @@ module.exports = (theApp: any) => {
   function startPlugins(app: any) {
     app.plugins = []
     app.pluginsMap = {}
-    modulesWithKeyword(app.config, 'signalk-node-server-plugin').forEach(
-      (moduleData: any) => {
+    modulesWithKeyword(app.config, 'signalk-node-server-plugin')
+      .filter(
+        (moduleData: any) => moduleData.metadata.name !== '@signalk/zones'
+      )
+      .forEach((moduleData: any) => {
         registerPlugin(
           app,
           moduleData.module,
           moduleData.metadata,
           moduleData.location
         )
-      }
-    )
+      })
   }
 
   function handleMessageWrapper(app: any, id: string) {
