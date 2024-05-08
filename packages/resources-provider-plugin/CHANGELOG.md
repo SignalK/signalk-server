@@ -4,6 +4,15 @@ ___Note: Signal K server on which this plugin is installed must implement the `R
 
 ---
 
+## v1.1.2
+
+- **Update**: Change plugin category keyword to `signalk-category-utility`.
+
+## v1.1.0
+
+- **Fix**: Only process files in resource folders (ignore folders).
+
+
 ## v1.0.0
 
 Resource Provider plugin that facilitates the storage and retrieval of resources on the Signal K server filesystem.

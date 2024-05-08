@@ -155,15 +155,14 @@ class Sidebar extends Component {
 const mapStateToProps = (state) => {
   var appUpdates = state.appStore.updates.length
   var updatesBadge = null
-  var availableBadge = null
   var serverUpdateBadge = null
   var accessRequestsBadge = null
 
   if (appUpdates > 0) {
     updatesBadge = {
-      variant: 'danger',
+      variant: 'success',
       text: `${appUpdates}`,
-      color: 'danger',
+      color: 'success',
     }
   }
 
@@ -175,8 +174,8 @@ const mapStateToProps = (state) => {
     }
   }
 
-  if (!state.appStore.storeAvailable) {
-    updatesBadge = availableBadge = {
+  if (state.appStore.storeAvailable === false) {
+    updatesBadge = {
       variant: 'danger',
       text: 'OFFLINE',
     }
@@ -220,22 +219,7 @@ const mapStateToProps = (state) => {
         name: 'Appstore',
         url: '/appstore',
         icon: 'icon-basket',
-        children: [
-          {
-            name: 'Available',
-            url: '/appstore/apps',
-            badge: availableBadge,
-          },
-          {
-            name: 'Installed',
-            url: '/appstore/installed',
-          },
-          {
-            name: 'Updates',
-            url: '/appstore/updates',
-            badge: updatesBadge,
-          },
-        ],
+        badge: updatesBadge,
       },
       {
         name: 'Server',
@@ -255,7 +239,7 @@ const mapStateToProps = (state) => {
             url: '/serverConfiguration/plugins/' + (openPlugin || '-'),
           },
           {
-            name: 'Server Log',
+            name: 'Server Logs',
             url: '/serverConfiguration/log',
           },
           {
@@ -328,17 +312,6 @@ const mapStateToProps = (state) => {
   })
 
   return result
-}
-
-const pluginMenuItems = (plugins) => {
-  return plugins
-    ? plugins.map((pluginData) => {
-        return {
-          name: pluginData.name,
-          url: `/plugins/${pluginData.id}`,
-        }
-      })
-    : []
 }
 
 export default connect(mapStateToProps)(Sidebar)

@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import {
   Card,
   CardBody,
+  CardHeader,
   Input,
   Form,
   Col,
@@ -11,6 +12,9 @@ import {
   FormGroup,
   FormText,
 } from 'reactstrap'
+import LogFiles from './Logging'
+import Creatable from 'react-select/creatable'
+import remove from 'lodash.remove'
 
 class ServerLogs extends Component {
   constructor(props) {
@@ -85,7 +89,7 @@ class ServerLogs extends Component {
     if (enabled) {
       keysToSend.push(value)
     } else {
-      _.remove(keysToSend, (v) => v === value)
+      remove(keysToSend, (v) => v === value)
     }
     this.doHandleDebug(keysToSend.toString())
   }
@@ -123,11 +127,15 @@ class ServerLogs extends Component {
   }
 
   render() {
-    const activeDebugKeys = this.props.log.debugEnabled.split(',')
     return (
       this.state.hasData && (
         <div className="animated fadeIn">
           <Card>
+            <CardHeader>
+              <i className="fa fa-align-justify" />
+              <strong>Server Log</strong>
+            </CardHeader>
+
             <CardBody>
               <Form
                 action=""
@@ -139,24 +147,37 @@ class ServerLogs extends Component {
                 }}
               >
                 <FormGroup row>
-                  <Col xs="1" md="1">
-                    <Label htmlFor="select">Debug</Label>
-                  </Col>
-
-                  <Col xs="6" md="6">
-                    <Input
-                      type="text"
-                      name="debug"
-                      onChange={this.handleDebug}
-                      value={this.props.log.debugEnabled}
+                  <Col>
+                    <Creatable
+                      isMulti
+                      options={this.state.debugKeys.map((key) => ({
+                        label: key,
+                        value: key,
+                      }))}
+                      value={
+                        this.props.log.debugEnabled
+                          ? this.props.log.debugEnabled
+                              .split(',')
+                              .map((value) => ({ label: value, value }))
+                          : null
+                      }
+                      onChange={(v) => {
+                        const value =
+                          v !== null
+                            ? v.map(({ value }) => value).join(',')
+                            : ''
+                        this.doHandleDebug(value)
+                      }}
                     />
                     <FormText color="muted" style={{ marginBottom: '15px' }}>
-                      Enter the appropriate debug keys to enable debug logging.
-                      Multiple entries should be separated by a comma. For
-                      example: <code>signalk-server*,signalk-provider-tcp</code>
-                      . You can also activate individual debug keys on the
-                      right.
+                      Select the appropriate debug keys to activate debug
+                      logging for various components on the server.
                     </FormText>
+                  </Col>
+                </FormGroup>
+                <FormGroup row>
+                  <Col xs="6" md="6">
+                    Persist debug settings over server restarts{' '}
                     <Label className="switch switch-text switch-primary">
                       <Input
                         type="checkbox"
@@ -172,75 +193,33 @@ class ServerLogs extends Component {
                         data-off="No"
                       />
                       <span className="switch-handle" />
-                    </Label>{' '}
-                    Remember debug setting
+                    </Label>
                   </Col>
-
-                  <Col xs="5" md="5">
-                    <div
-                      style={{
-                        overflow: 'scroll',
-                        maxHeight: '30vh',
-                        borderStyle: 'solid',
-                        borderWidth: '0.5px',
-                        borderColor: 'lightgray',
-                        padding: '8px',
-                      }}
-                    >
-                      {this.state.debugKeys.map((key, i) => (
-                        <div key={i}>
-                          <Label className="switch switch-text switch-primary">
-                            <Input
-                              type="checkbox"
-                              id={key}
-                              name={key}
-                              className="switch-input"
-                              onChange={(e) => {
-                                this.handleDebugCheckbox(
-                                  key,
-                                  activeDebugKeys.indexOf(key) === -1
-                                )
-                              }}
-                              checked={activeDebugKeys.indexOf(key) >= 0}
-                            />
-                            <span
-                              className="switch-label"
-                              data-on="Yes"
-                              data-off="No"
-                            />
-                            <span className="switch-handle" />
-                          </Label>{' '}
-                          {key}
-                        </div>
-                      ))}
-                    </div>
+                  <Col xs="6" md="6">
+                    Pause the log window{' '}
+                    <Label className="switch switch-text switch-primary">
+                      <Input
+                        type="checkbox"
+                        id="Pause"
+                        name="pause"
+                        className="switch-input"
+                        onChange={this.handlePause}
+                        checked={this.state.pause}
+                      />
+                      <span
+                        className="switch-label"
+                        data-on="Yes"
+                        data-off="No"
+                      />
+                      <span className="switch-handle" />
+                    </Label>
                   </Col>
                 </FormGroup>
-
-                <div>
-                  Pause the log window
-                  <Label className="switch switch-text switch-primary">
-                    <Input
-                      type="checkbox"
-                      id="Pause"
-                      name="pause"
-                      className="switch-input"
-                      onChange={this.handlePause}
-                      checked={this.state.pause}
-                    />
-                    <span
-                      className="switch-label"
-                      data-on="Yes"
-                      data-off="No"
-                    />
-                    <span className="switch-handle" />
-                  </Label>
-                </div>
-
                 <LogList value={this.props.log} />
               </Form>
             </CardBody>
           </Card>
+          <LogFiles />
         </div>
       )
     )
@@ -264,7 +243,7 @@ class LogList extends Component {
         }}
       >
         {this.props.value.entries &&
-          this.props.value.entries.map((logEntry, index) => {
+          this.props.value.entries.map((logEntry) => {
             return <PureLogRow key={logEntry.i} log={logEntry.d} />
           })}
         <div

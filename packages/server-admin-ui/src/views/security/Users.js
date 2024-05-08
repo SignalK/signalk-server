@@ -6,14 +6,10 @@ import {
   CardHeader,
   CardBody,
   CardFooter,
-  InputGroup,
-  InputGroupAddon,
   Input,
-  Form,
   Col,
   Label,
   FormGroup,
-  FormText,
   Table,
   Row,
 } from 'reactstrap'
@@ -68,7 +64,7 @@ class Users extends Component {
     })
   }
 
-  handleAddUser(event) {
+  handleAddUser() {
     var newUser = {
       type: 'readonly',
       isNew: true,
@@ -134,7 +130,7 @@ class Users extends Component {
       })
   }
 
-  deleteUser(event) {
+  deleteUser() {
     fetch(
       `${window.serverRoutesPrefix}/security/users/${this.state.selectedUser.userId}`,
       {
@@ -168,7 +164,7 @@ class Users extends Component {
     )
   }
 
-  handleCancel(event) {
+  handleCancel() {
     this.setState({ selectedUser: null })
   }
   render() {

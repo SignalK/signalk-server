@@ -1,10 +1,9 @@
 import React, { Component } from 'react'
-import { connect } from 'react-redux'
 import { Input, FormGroup, FormText, Col, Label } from 'reactstrap'
 import N2KFilters from './N2KFilters'
 
 class BasicProvider extends Component {
-  constructor(props) {
+  constructor() {
     super()
     this.state = {
       hasAnalyzer: false,
@@ -177,7 +176,7 @@ class TextAreaInput extends Component {
 }
 
 class DeviceInput extends Component {
-  constructor(props) {
+  constructor() {
     super()
     this.state = {
       devices: {},
@@ -852,7 +851,7 @@ const NMEA0183 = (props) => {
         {props.value.options.type === 'serial' && (
           <Col xs="12" md="6">
             Serial ports are bidirectional. Input from the connection is parsed
-            as NMEA0183. Configure Output Events below to connect server's
+            as NMEA0183. Configure Output Events below to connect server&apos;s
             NMEA0183 data for output.
           </Col>
         )}
@@ -988,7 +987,7 @@ const SignalK = (props) => {
       {!props.value.options.useDiscovery && (
         <FormGroup row>
           <Col md="3">
-            <Label htmlFor="options.type">'self' handling</Label>
+            <Label htmlFor="options.type">&apos;self&apos; handling</Label>
           </Col>
           <Col xs="12" md="3">
             <Input
@@ -998,10 +997,10 @@ const SignalK = (props) => {
               onChange={(event) => props.onChange(event)}
             >
               <option value="useRemoteSelf">
-                Map remote 'self' to local 'self'
+                Map remote &apos;self&apos; to local &apos;self&apos;
               </option>
               <option value="manualSelf">Manual mapping</option>
-              <option value="noSelf">No 'self' mapping</option>
+              <option value="noSelf">No &apos;self&apos; mapping</option>
             </Input>
           </Col>
         </FormGroup>

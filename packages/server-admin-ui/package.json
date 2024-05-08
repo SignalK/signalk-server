@@ -1,6 +1,6 @@
-  {
+{
   "name": "@signalk/server-admin-ui",
-  "version": "2.4.0",
+  "version": "2.7.0",
   "description": "Signal K server admin webapp",
   "author": "Scott Bender, Teppo Kurki",
   "contributors": [
@@ -16,6 +16,10 @@
     "@babel/core": "^7.11.6",
     "@babel/preset-react": "^7.10.4",
     "@fortawesome/fontawesome-free": "^5.15.1",
+    "@fortawesome/fontawesome-svg-core": "^6.5.1",
+    "@fortawesome/free-regular-svg-icons": "^6.5.1",
+    "@fortawesome/free-solid-svg-icons": "^6.5.1",
+    "@fortawesome/react-fontawesome": "^0.2.0",
     "@signalk/server-admin-ui-dependencies": "1.0.1",
     "ansi-to-html": "^0.6.14",
     "babel-loader": "^8.1.0",
@@ -23,6 +27,8 @@
     "buffer": "^6.0.3",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^5.0.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react": "^7.34.1",
     "file-loader": "^6.1.1",
     "font-awesome": "^4.7.0",
     "html-webpack-plugin": "^5.0.0-alpha.6",
@@ -30,6 +36,7 @@
     "lodash.get": "^4.4.2",
     "lodash.remove": "^4.7.0",
     "lodash.set": "^4.3.2",
+    "lodash.uniq": "^4.5.0",
     "moment": "^2.29.1",
     "node-sass": "^8.0.0",
     "prettier": "^2.3.2",
@@ -58,7 +65,8 @@
     "watch": "webpack --watch --mode development",
     "build": "webpack --mode=production",
     "format": "prettier --write src/",
-    "ci": "prettier --check src/",
+    "eslint": "eslint src/",
+    "ci": "prettier --check src/ && npm run eslint",
     "clean": "rimraf ./public",
     "bundle-analyzer": "webpack-bundle-analyzer --port 4200 public/stats.json"
   }

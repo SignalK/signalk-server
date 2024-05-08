@@ -44,7 +44,7 @@ module.exports = function (app, config) {
   const strategy = {}
 
   let {
-    expiration = '3m',
+    expiration = 'NEVER',
     users = [],
     immutableConfig = false,
     allowDeviceAccessRequests = true,
@@ -191,7 +191,11 @@ module.exports = function (app, config) {
           if (reply.statusCode === 200) {
             let cookieOptions = { httpOnly: true }
             if (remember) {
-              cookieOptions.maxAge = ms(configuration.expiration || '1h')
+              cookieOptions.maxAge = ms(
+                configuration.expiration === 'NEVER'
+                  ? '10y'
+                  : configuration.expiration || '1h'
+              )
             }
             res.cookie('JAUTHENTICATION', reply.token, cookieOptions)
 
@@ -273,6 +277,10 @@ module.exports = function (app, config) {
         resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
         return
       }
+      if (!user.password) {
+        resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
+        return
+      }
 
       bcrypt.compare(password, user.password, (err, matches) => {
         if (err) {
@@ -280,11 +288,13 @@ module.exports = function (app, config) {
         } else if (matches === true) {
           const payload = { id: user.username }
           const theExpiration = configuration.expiration || '1h'
-          debug('jwt expiration: ' + theExpiration)
+          const jwtOptions = {}
+          if (theExpiration !== 'NEVER') {
+            jwtOptions.expiresIn = theExpiration
+          }
+          debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
           try {
-            const token = jwt.sign(payload, configuration.secretKey, {
-              expiresIn: theExpiration
-            })
+            const token = jwt.sign(payload, configuration.secretKey, jwtOptions)
             resolve({ statusCode: 200, token })
           } catch (err) {
             resolve({
@@ -303,9 +313,11 @@ module.exports = function (app, config) {
   strategy.validateConfiguration = (newConfiguration) => {
     const configuration = getConfiguration()
     const theExpiration = newConfiguration.expiration || '1h'
-    jwt.sign({ dummy: 'payload' }, configuration.secretKey, {
-      expiresIn: theExpiration
-    })
+    if (theExpiration !== 'NEVER') {
+      jwt.sign({ dummy: 'payload' }, configuration.secretKey, {
+        expiresIn: theExpiration
+      })
+    }
   }
 
   strategy.getAuthRequiredString = () => {
@@ -403,23 +415,32 @@ module.exports = function (app, config) {
 
   function addUser(theConfig, user, callback) {
     assertConfigImmutability()
-    bcrypt.hash(user.password, passwordSaltRounds, (err, hash) => {
-      if (err) {
-        callback(err)
-      } else {
-        const newuser = {
-          username: user.userId,
-          type: user.type,
-          password: hash
-        }
-        if (!theConfig.users) {
-          theConfig.users = []
-        }
-        theConfig.users.push(newuser)
-        options = theConfig
-        callback(err, theConfig)
+    const newUser = {
+      username: user.userId,
+      type: user.type
+    }
+
+    function finish(newUser, err) {
+      if (!theConfig.users) {
+        theConfig.users = []
       }
-    })
+      theConfig.users.push(newUser)
+      options = theConfig
+      callback(err, theConfig)
+    }
+
+    if (user.password) {
+      bcrypt.hash(user.password, passwordSaltRounds, (err, hash) => {
+        if (err) {
+          callback(err)
+        } else {
+          newUser.password = hash
+          finish(newUser, err)
+        }
+      })
+    } else {
+      finish(newUser, undefined)
+    }
   }
 
   strategy.updateUser = (theConfig, username, updates, callback) => {

@@ -348,6 +348,12 @@ export class ResourcesApi {
       async (req: Request, res: Response, next: NextFunction) => {
         debug(`** GET ${RESOURCES_API_PATH}/:resourceType/:resourceId/*`)
 
+        if (req.path.match(`/charts/(\\w*\\W*)+/[0-9]*/[0-9]*/[0-9]*`)) {
+          debug('*** CHART TILE request -> next()')
+          next()
+          return
+        }
+
         if (!this.hasRegisteredProvider(req.params.resourceType)) {
           next()
           return

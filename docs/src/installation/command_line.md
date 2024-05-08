@@ -35,7 +35,8 @@ Signal K Server provides the following command line options and environment vari
 | `PLUGINS_WITH_UPDATE_DISABLED` | A comma separated list of plugin that will not be updated. |
 | `SECURITYSTRATEGY` | Override the security strategy module name. |
 | `WSCOMPRESSION` | Compress websocket messages _(default is false)_. |
-| `MAXSENDBUFFERSIZE` | The maximum number of bytes allowed in the server's send buffer of a WebSocket connection. The connection will be terminated if this is exceeded. Guards against slow or dysfunctional clients that can not cope with the message volume _(default is 512 * 1024 bytes)_. |
+| `MAXSENDBUFFERSIZE` | The maximum number of bytes allowed in the server's send buffer of a WebSocket connection. The connection will be terminated if this is exceeded for MAXSENDBUFFERCHECKTIME milliseconds. Guards against slow or dysfunctional clients that can not cope with the message volume _(default is 512 * 1024 bytes)_. |
+| `MAXSENDBUFFERCHECKTIME` | The maximum number of bytes allowed in the server's send buffer of a WebSocket connection. The connection will be terminated if this is exceeded. Guards against slow or dysfunctional clients that can not cope with the message volume _(default is 512 * 1024 bytes)_. |
 | `SIGNALK_SERVER_IS_UPDATABLE` | Allows the server to be updated through the GUI even if it is not installed in the standard paths _(default is false)_. If set to true, the server must have been installed with `npm install -g signalk-server`. |
 | `SIGNALK_DISABLE_SERVER_UPDATES` | Disables server updates in the GUI _(default is false)_. |
 | `DEBUG` | A comma-separated list of tags for debugging the specified module _(e.g signalk-server*,signalk-provider-tcp)_. Can now be defined directly in the graphical interface.  More help on how to use the debug here: `https://www.npmjs.com/package/debug#wildcards` |

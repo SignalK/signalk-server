@@ -1,6 +1,7 @@
-import React, { Component } from 'react'
+import React from 'react'
 import Form from 'react-jsonschema-form-bs4'
 
+// eslint-disable-next-line react/display-name
 export default ({ plugin, onSubmit }) => {
   const schema = JSON.parse(JSON.stringify(plugin.schema))
   var uiSchema = {}
@@ -16,7 +17,6 @@ export default ({ plugin, onSubmit }) => {
         type: 'object',
         title: ' ',
         description: schema.description,
-        type: 'object',
         properties: schema.properties,
       },
     },

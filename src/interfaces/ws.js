@@ -505,18 +505,42 @@ function processUpdates(app, pathSources, spark, msg) {
   })
 }
 
+/*
+  Keep a list of shared context-path strings that is shared across ws connections.
+  This way the string values are shared across ws connections and not recreated
+  for each context-path-ws combination. This reduces memory consumption for
+  multiple ws clients.
+  Nevertheless we need to purge this data eventually, otherwise the strings for 
+  AIS targets will stay forever, so implement a simple total purge. This may cause
+  some thrashing, but is better than not sharing the values.
+*/
+let canonical_meta_contextpath_values = {}
+const getContextPathMetaKey = (context, path) => {
+  const contextPaths =
+    canonical_meta_contextpath_values[context] ||
+    (canonical_meta_contextpath_values[context] = {})
+  const result =
+    contextPaths[path] || (contextPaths[path] = `${context}.${path}`)
+  return result
+}
+setInterval(() => {
+  canonical_meta_contextpath_values = {}
+}, 30 * 60 * 1000)
+
 function handleValuesMeta(kp) {
-  if (kp.path && !this.spark.sentMetaData[this.context + '.' + kp.path]) {
+  const fullContextPathKey = getContextPathMetaKey(this.context, kp.path)
+  if (kp.path && !this.spark.sentMetaData[fullContextPathKey]) {
     const split = kp.path.split('.')
     for (let i = split.length; i > 1; i--) {
       const path = split.slice(0, i).join('.')
-      if (this.spark.sentMetaData[this.context + '.' + path]) {
+      const partialContextPathKey = getContextPathMetaKey(this.context, path)
+      if (this.spark.sentMetaData[partialContextPathKey]) {
         //stop backing up the path with first prefix that has already been handled
         break
       } else {
         //always set to true, even if there is no meta for the path
-        this.spark.sentMetaData[this.context + '.' + path] = true
-        let meta = getMetadata(this.context + '.' + path)
+        this.spark.sentMetaData[partialContextPathKey] = true
+        let meta = getMetadata(partialContextPathKey)
         if (meta) {
           this.spark.write({
             context: this.context,
@@ -736,6 +760,10 @@ function startServerLog(app, spark) {
 function getAssertBufferSize(config) {
   const MAXSENDBUFFERSIZE =
     process.env.MAXSENDBUFFERSIZE || config.maxSendBufferSize || 4 * 512 * 1024
+  const MAXSENDBUFFERCHECKTIME =
+    process.env.MAXSENDBUFFERCHECKTIME ||
+    config.maxSendBufferCheckTime ||
+    30 * 1000
   debug(`MAXSENDBUFFERSIZE:${MAXSENDBUFFERSIZE}`)
 
   if (MAXSENDBUFFERSIZE === 0) {
@@ -745,10 +773,23 @@ function getAssertBufferSize(config) {
   return (spark) => {
     debug(spark.id + ' ' + spark.request.socket.bufferSize)
     if (spark.request.socket.bufferSize > MAXSENDBUFFERSIZE) {
-      spark.end({
-        errorMessage: 'Server outgoing buffer overflow, terminating connection'
-      })
-      console.error('Send buffer overflow, terminating connection ' + spark.id)
+      if (!spark.bufferSizeExceeded) {
+        console.warn(
+          `${spark.id} outgoing buffer > max:${spark.request.socket.bufferSize}`
+        )
+        spark.bufferSizeExceeded = Date.now()
+      }
+      if (Date.now() - spark.bufferSizeExceeded > MAXSENDBUFFERCHECKTIME) {
+        spark.end({
+          errorMessage:
+            'Server outgoing buffer overflow, terminating connection'
+        })
+        console.error(
+          'Send buffer overflow, terminating connection ' + spark.id
+        )
+      }
+    } else {
+      spark.bufferSizeExceeded = undefined
     }
   }
 }

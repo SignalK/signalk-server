@@ -27,6 +27,7 @@ import {
   DeltaInputHandler,
   PropertyValues,
   SKVersion,
+  SignalKApiId,
   SourceRef,
   Timestamp,
   Update
@@ -38,7 +39,13 @@ import https from 'https'
 import _ from 'lodash'
 import path from 'path'
 import { startApis } from './api'
-import { SelfIdentity, ServerApp, SignalKMessageHub, WithConfig } from './app'
+import {
+  SelfIdentity,
+  ServerApp,
+  SignalKMessageHub,
+  WithConfig,
+  WithFeatures
+} from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
@@ -73,12 +80,16 @@ class Server {
   app: ServerApp &
     SelfIdentity &
     WithConfig &
+    WithFeatures &
     SignalKMessageHub &
     PluginManager &
     WithSecurityStrategy &
     IRouter &
-    WithProviderStatistics &
-    WithWrappedEmitter
+    WithWrappedEmitter &
+    WithProviderStatistics & {
+      apis?: Array<SignalKApiId>
+    }
+
   constructor(opts: ServerOptions) {
     const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
     const bodyParser = require('body-parser')
@@ -117,6 +128,14 @@ class Server {
     }
 
     app.providerStatus = {}
+
+    // feature detection
+    app.getFeatures = async (enabled?: boolean) => {
+      return {
+        apis: enabled === false ? [] : app.apis,
+        plugins: await app.getPluginsList(enabled)
+      }
+    }
 
     // create first temporary pluginManager to get typechecks, as
     // app is any and not typechecked
@@ -418,7 +437,7 @@ class Server {
 
         sendBaseDeltas(app as unknown as ConfigApp)
 
-        await startApis(app)
+        app.apis = await startApis(app)
         startInterfaces(app)
         startMdns(app)
         app.providers = pipedProviders(app as any).start()

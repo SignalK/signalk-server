@@ -46,6 +46,101 @@ where:
 
 See also [Working Offline](./developer_notes.md#offline-use).
 
+## Application Data: Storing Webapp Data on the Server
+
+Application Data is only supported if security is turned on. It supports two namespaces, one for *global data* and one for *user specific data*. For example, a client might want to store boat specific gauge configuration globally so that other users have access to it. Otherwise, it could use the user area to store user specific preferences.
+
+The data is structured and manipulated in JSON format.
+
+Global storage: `/signalk/v1/applicationData/global/:appid/:version`
+User storage: `/signalk/v1/applicationData/user/:appid/:version`
+
+There are two ways to update or add stored data:
+
+* You can POST any json data to any path:
+
+```
+POST /signalk/v1/applicationData/user/my-application/1.0/unitPreferences
+{
+  "shortDistance": "m",
+  "longDistance": "km"
+}
+```
+
+* You can also use json patch format (http://jsonpatch.com):
+
+```
+POST /signalk/v1/applicationData/user/my-application/1.0
+[
+  { "op": "add", "path": "/unitPreferences", "value": { "shortDistace": "m" } },
+  { "op": "add", "path": "/unitPreferences/longDistance", "value": "km"}
+]
+```
+
+Use an HTTP GET request to retrieve data from the server:
+
+`GET /signalk/v1/applicationData/user/my-application/1.0/unitPreferences/shortDistance`
+
+You can just GET the list of keys:
+```
+GET /signalk/v1/applicationData/user/my-application/1.0/unitPreferences?keys=true
+[ "longDistance", "shortDistance"]
+```
+
+You get can a list of available versions:
+```
+GET /signalk/v1/applicationData/user/my-application
+[ "1.0", "1.1"]
+```
+
+## Discovering Server Features
+
+To assist in tailoring a WebApps UI, it can "discover" the features supported by the server by sending a request to `/signalk/v2/features`.
+
+The response wil contain an object detailing the available APIs and Plugins.
+
+You can use the `enabled` parameter to specify to only return enabled or disabled features.
+
+To list only enabled features:
+`/signalk/v2/features?enable=1`
+
+To list only disabled features:
+`/signalk/v2/features?enable=0`
+
+_Example response:_
+```JSON
+{
+  "apis": [
+    "resources","course"
+  ],
+  "plugins": [
+    {
+      "id": "anchoralarm",
+      "name": "Anchor Alarm",
+      "version": "1.13.0",
+      "enabled": true
+    },
+    {
+      "id": "autopilot",
+      "name": "Autopilot Control",
+      "version": "1.4.0",
+      "enabled": false
+    },
+    {
+      "id": "sk-to-nmea2000",
+      "name": "Signal K to NMEA 2000",
+      "version": "2.17.0",
+      "enabled": false
+    },
+    {
+      "id": "udp-nmea-sender",
+      "name": "UDP NMEA0183 Sender",
+      "version": "2.0.0",
+      "enabled": false
+    }
+  ]
+}
+```
 
 ## Embedded Components and Admin UI / Server interfaces
 
@@ -87,3 +182,33 @@ PluginConfigurationForm properties:
 
 
 **_Note: The documentation regarding embedded WebApps and Components provided at this time is rudimentary and should be considered under development as the concept is evolving._**
+
+## Authentication and Session Management
+
+Per [the specification](https://signalk.org/specification/1.7.0/doc/security.html#authentication-via-http) the server provides the endpoint `/signalk/v1/auth/login` for logging in. A successful request will
+- set an authentication cookie
+- return an authentication token
+
+For **cookie based, shared sessions** all a webapp needs to do is use `credentials: "include"` when making api calls with [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch#sending_a_request_with_credentials_included). Cookies are included automatically in the initial WebSocket opening HTTP request, so the same works automatically for WebSocket connections.
+
+The session cookie's value is the same as the token value: it is a JWT token that includes a validity period and is signed by the server. The server is stateless: JWT is verified for each request for a valid signature and time. Validity period is governed by server's security `expires` configuration value that can be changed in Admin UI's Security section.
+
+The login endpoint has an optional `rememberMe` request parameter. By default, without `rememberMe` set to true, the cookie is erased on browser restarts per standard browser behavior. When true the response's set cookie header includes MaxAge value based on the server's `expires` value. This makes the cookie persist over browser restarts.
+
+As the cookie is set to be [`HttpOnly`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#security) webapp JavaScript has no access to it. Including it in server requests and persisting its value is managed by the browser, governed by the `Set-Cookie` headers sent by the server.
+
+For **token based sessions** a webapp may manage the authentication token itself. It must include it explicitly in fetch call headers.
+As JavaScript has no access to headers but cookies are included automatically by browsers when opening WebSocket connections the server will use the server-set, HttpOnly cookie. Normally browsers do not allow shadowing the server-set cookie with a new value. The only option for WebSocket connections is using a query parameter to override the cookie with a token.
+
+The order that the server uses for finding the JWT token is
+1. query parameter `token`
+2. request header `authorization`
+3. authorization cookie (name managed by the server)
+
+Token-based session management is currently discouraged, because it may result in **session confusion**: all login calls set the shared session cookie for all webapps that are using cookie based, shared sessions.
+
+Each webapp acting separately, managing its authentication token independently, means that
+- each application needs to implement token management separately so that closing and reopening the webapp during a browser session does not require the user to reauthenticate
+- when navigating between the different webapps the user needs to authenticate to each one separately
+
+The server's Admin UI is a regular webapp using cookie based sessions, there is no separate authentication mechanism.

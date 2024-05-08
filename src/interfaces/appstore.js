@@ -250,6 +250,7 @@ module.exports = function (app) {
         description: plugin.package.description,
         author: getAuthor(plugin.package),
         categories: getCategories(plugin.package),
+        updated: plugin.package.date,
         keywords: getKeywords(plugin.package),
         npmUrl: getNpmUrl(plugin),
         isPlugin: plugin.package.keywords.some(
