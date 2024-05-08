@@ -331,7 +331,7 @@ export class WeatherApi {
             latitude: Number(req.query.lat),
             longitude: Number(req.query.lon)
           })
-          const df = r.filter( (i: WeatherData) => { 
+          const df = r.filter((i: WeatherData) => {
             return i.type === 'daily'
           })
           res.status(200).json(df)
@@ -355,7 +355,7 @@ export class WeatherApi {
             latitude: Number(req.query.lat),
             longitude: Number(req.query.lon)
           })
-          const pf = r.filter( (i: WeatherData) => { 
+          const pf = r.filter((i: WeatherData) => {
             return i.type === 'point'
           })
           res.status(200).json(pf)
