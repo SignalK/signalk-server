@@ -7,7 +7,6 @@ import { ResourcesApi } from './resources'
 import { AutopilotApi } from './autopilot'
 import { SignalKApiId } from '@signalk/server-api'
 
-
 export interface ApiResponse {
   state: 'FAILED' | 'COMPLETED' | 'PENDING'
   statusCode: number
@@ -57,7 +56,7 @@ export const startApis = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).courseApi = courseApi
   apiList.push('course')
-  
+
   const autopilotApi = new AutopilotApi(app)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).autopilotApi = autopilotApi
@@ -65,6 +64,11 @@ export const startApis = (
 
   const featuresApi = new FeaturesApi(app)
 
-  Promise.all([resourcesApi.start(), courseApi.start(), featuresApi.start(), autopilotApi.start()])
+  Promise.all([
+    resourcesApi.start(),
+    courseApi.start(),
+    featuresApi.start(),
+    autopilotApi.start()
+  ])
   return apiList
 }
