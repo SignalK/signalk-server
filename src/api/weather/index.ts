@@ -13,6 +13,7 @@ import {
   WeatherProviders,
   WeatherProviderMethods,
   WeatherWarning,
+  WeatherData,
   //isWeatherProvider,
   SKVersion,
   Path,
@@ -299,7 +300,7 @@ export class WeatherApi {
       }
     )
 
-    // return forecast data at the provided lat / lon
+    // return all forecasts at the provided lat / lon
     this.app.get(
       `${WEATHER_API_PATH}/forecasts`,
       async (req: Request, res: Response) => {
@@ -310,6 +311,54 @@ export class WeatherApi {
             longitude: Number(req.query.lon)
           })
           res.status(200).json(r)
+        } catch (err: any) {
+          res.status(400).json({
+            statusCode: 400,
+            state: 'FAILED',
+            message: err.message
+          })
+        }
+      }
+    )
+
+    // return daily forecast data at the provided lat / lon
+    this.app.get(
+      `${WEATHER_API_PATH}/forecasts/daily`,
+      async (req: Request, res: Response) => {
+        debug(`** route = ${req.method} ${req.path}`)
+        try {
+          const r = await this.useProvider().getForecasts({
+            latitude: Number(req.query.lat),
+            longitude: Number(req.query.lon)
+          })
+          const df = r.filter( (i: WeatherData) => { 
+            return i.type === 'daily'
+          })
+          res.status(200).json(df)
+        } catch (err: any) {
+          res.status(400).json({
+            statusCode: 400,
+            state: 'FAILED',
+            message: err.message
+          })
+        }
+      }
+    )
+
+    // return point forecast data at the provided lat / lon
+    this.app.get(
+      `${WEATHER_API_PATH}/forecasts/point`,
+      async (req: Request, res: Response) => {
+        debug(`** route = ${req.method} ${req.path}`)
+        try {
+          const r = await this.useProvider().getForecasts({
+            latitude: Number(req.query.lat),
+            longitude: Number(req.query.lon)
+          })
+          const pf = r.filter( (i: WeatherData) => { 
+            return i.type === 'point'
+          })
+          res.status(200).json(pf)
         } catch (err: any) {
           res.status(400).json({
             statusCode: 400,

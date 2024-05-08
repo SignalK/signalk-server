@@ -576,6 +576,64 @@
         }
       }
     },
+    "/weather/forecasts/daily": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/LatitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/LongitudeParam"
+        }
+      ],
+      "get": {
+        "tags": ["Weather"],
+        "summary": "Retrieve daily forecast data.",
+        "responses": {
+          "default": {
+            "description": "Returns daily forecast data for the specified location (lat / lon).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WeatherDataModel"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/weather/forecasts/point": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/LatitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/LongitudeParam"
+        }
+      ],
+      "get": {
+        "tags": ["Weather"],
+        "summary": "Retrieve point forecast data.",
+        "responses": {
+          "default": {
+            "description": "Returns point forecast data for the specified location (lat / lon).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WeatherDataModel"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/weather/forecasts/{index}": {
       "parameters": [
         {

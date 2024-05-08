@@ -59,7 +59,7 @@ export interface WeatherData {
   outside?: {
     minTemperature?: number
     maxTemperature?: number
-    feelsLikeTemperature: number
+    feelsLikeTemperature?: number
     precipitationVolume?: number
     absoluteHumidity?: number
     horizontalVisibility?: number
