@@ -359,11 +359,13 @@ const MetaFormRow = (props) => {
           value={_key}
           onChange={(e) => setKey(e.target.value)}
         >
-          {METAFIELDS.map((fieldName, i) => (
-            <option key={i} value={fieldName}>
-              {fieldName}
-            </option>
-          ))}
+          {METAFIELDS.filter((fieldName) => fieldName !== 'zones').map(
+            (fieldName, i) => (
+              <option key={i} value={fieldName}>
+                {fieldName}
+              </option>
+            )
+          )}
         </Input>
       </Col>
       <Col xs="12" md="4">
