@@ -1,34 +1,27 @@
 const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
-const _ = require('lodash')
-const assert = require('assert')
-//const freeport = require('freeport-promise')
-//const { startServerP, WsPromiser, sendDelta } = require('./servertestutilities')
 
 import { startServer } from './ts-servertestutilities'
 
 const fetch = require('node-fetch')
 
 describe('Delete Requests', () => {
-  let doStop, doSendDelta, theHost, doSelfPut, doSelfGetJson, doGet, doCreateWsPromiser
+  let doStop, doSendDelta, theHost, doSelfPut, doGet, doCreateWsPromiser
 
   before(async () => {
     const {
       createWsPromiser,
-      selfGetJson,
       selfPutV1,
       sendDelta,
       stop,
       host,
-      selfGetJsonV1,
       getV1
     } = await startServer()
     doStop = stop
     doSendDelta = sendDelta
     theHost = host
     doSelfPut = selfPutV1
-    doSelfGetJson = selfGetJsonV1
     doGet = getV1
     doCreateWsPromiser = createWsPromiser
   })
