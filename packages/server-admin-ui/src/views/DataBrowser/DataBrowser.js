@@ -14,6 +14,7 @@ import {
 } from 'reactstrap'
 import moment from 'moment'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
+import Meta from './Meta'
 
 const timestampFormat = 'MM/DD HH:mm:ss'
 
@@ -67,7 +68,7 @@ class DataBrowser extends Component {
     this.handleMessage = this.handleMessage.bind(this)
     this.handleContextChange = this.handleContextChange.bind(this)
     this.handleSearch = this.handleSearch.bind(this)
-    this.handleMeta = this.handleMeta.bind(this)
+    this.toggleMeta = this.toggleMeta.bind(this)
   }
 
   handleMessage(msg) {
@@ -206,7 +207,7 @@ class DataBrowser extends Component {
     localStorage.setItem(searchStorageKey, event.target.value)
   }
 
-  handleMeta(event) {
+  toggleMeta(event) {
     this.setState({ ...this.state, includeMeta: event.target.checked })
     localStorage.setItem(metaStorageKey, event.target.checked)
   }
@@ -264,7 +265,7 @@ class DataBrowser extends Component {
                       id="Meta"
                       name="meta"
                       className="switch-input"
-                      onChange={this.handleMeta}
+                      onChange={this.toggleMeta}
                       checked={this.state.includeMeta}
                     />
                     <span
@@ -406,18 +407,12 @@ class DataBrowser extends Component {
                         .sort()
                         .map((key) => {
                           const meta = this.state.meta[this.state.context][key]
-                          const formatted = JSON.stringify(meta, null, 2)
                           const path = key
                           return (
                             <tr key={path}>
                               <td>{path}</td>
                               <td>
-                                <pre
-                                  className="text-primary"
-                                  style={{ whiteSpace: 'pre-wrap' }}
-                                >
-                                  {formatted}
-                                </pre>
+                                <Meta meta={meta} path={path} />
                               </td>
                             </tr>
                           )
