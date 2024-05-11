@@ -23,7 +23,7 @@ const {
   updateRequest,
   queryRequest
 } = require('../requestResponse')
-const { putPath } = require('../put')
+const { putPath, deletePath } = require('../put')
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
@@ -235,6 +235,10 @@ module.exports = function (app) {
                 processPutRequest(spark, msg)
               }
 
+              if (msg.delete) {
+                processDeleteRequest(spark, msg)
+              }
+
               if (msg.requestId && msg.query) {
                 processReuestQuery(spark, msg)
               }
@@ -331,6 +335,28 @@ module.exports = function (app) {
       msg.context,
       msg.put.path,
       msg.put,
+      spark.request,
+      msg.requestId,
+      (reply) => {
+        debug('sending put update %j', reply)
+        spark.write(reply)
+      }
+    ).catch((err) => {
+      console.error(err)
+      spark.write({
+        requestId: msg.requestId,
+        state: 'COMPLETED',
+        statusCode: 502,
+        message: err.message
+      })
+    })
+  }
+
+  function processDeleteRequest(spark, msg) {
+    deletePath(
+      app,
+      msg.context,
+      msg.delete.path,
       spark.request,
       msg.requestId,
       (reply) => {
