@@ -25,14 +25,14 @@ export * from './deltas'
 export * from './coursetypes'
 export * from './resourcetypes'
 export * from './resourcesapi'
-export { ResourceProviderRegistry } from './resourcesapi'
 import { ResourceProviderRegistry } from './resourcesapi'
 import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
 export * from './autopilotapi'
+
 export * from './weatherapi'
-export { WeatherProviderRegistry } from './weatherapi'
 import { WeatherProviderRegistry, WeatherWarning } from './weatherapi'
+export * from './weatherapi.guard'
 
 export type SignalKApiId =
   | 'resources'

@@ -14,7 +14,7 @@ import {
   WeatherProviderMethods,
   WeatherWarning,
   WeatherData,
-  //isWeatherProvider,
+  isWeatherProvider,
   SKVersion,
   Path,
   Delta,
@@ -51,18 +51,18 @@ export class WeatherApi {
     if (!pluginId || !provider) {
       throw new Error(`Error registering provider ${pluginId}!`)
     }
-    /*if (!isWeatherProvider(provider)) {
+    if (!isWeatherProvider(provider)) {
       throw new Error(
         `${pluginId} is missing WeatherProvider properties/methods!`
       )
-    } else {*/
-    if (!this.weatherProviders.has(pluginId)) {
-      this.weatherProviders.set(pluginId, provider)
+    } else {
+      if (!this.weatherProviders.has(pluginId)) {
+        this.weatherProviders.set(pluginId, provider)
+      }
+      if (this.weatherProviders.size === 1) {
+        this.defaultProviderId = pluginId
+      }
     }
-    if (this.weatherProviders.size === 1) {
-      this.defaultProviderId = pluginId
-    }
-    //}
     debug(`No. of WeatherProviders registered =`, this.weatherProviders.size)
   }
 

@@ -21,6 +21,7 @@ export interface WeatherProviders {
   }
 }
 
+/** @see {isWeatherProvider} ts-auto-guard:type-guard */
 export interface WeatherProvider {
   name: string // e.g. OpenWeather, Open-Meteo, NOAA
   methods: WeatherProviderMethods
