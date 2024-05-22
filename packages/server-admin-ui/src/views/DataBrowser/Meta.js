@@ -338,7 +338,7 @@ export default function Meta({ meta, path }) {
           />
         )}
         <Zones
-          zones={zones}
+          zones={zones !== undefined && zones !== null ? zones : []}
           isEditing={isEditing}
           setZones={(zones) => setLocalMeta({ ...localMeta, zones })}
         ></Zones>
