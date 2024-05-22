@@ -108,6 +108,13 @@ module.exports = {
         metaPath = parts.slice(0, parts.length - 1).join('.')
       }
 
+      // set empty zones array explicitly to null
+      for (const prop in metaValue) {
+        if (Array.isArray(metaValue[prop]) && metaValue[prop].length === 0) {
+          metaValue[prop] = null
+        }
+      }
+
       app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
 
       let full_meta = getMetadata('vessels.self.' + metaPath)
