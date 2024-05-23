@@ -35,9 +35,31 @@ export class Zones {
     streambundle.getSelfMetaBus().onValue((metaMessage: any) => {
       debug(`${JSON.stringify(metaMessage)}`)
       const { path, value } = metaMessage
+
+      //send normal notification to clear out any previous notification
+      //when zones field is reset
+      if (value.zones === null) {
+        this.sendNormalDelta(path)
+        return
+      }
       if (value.zones) {
         this.watchForZones(path, value.zones, value as ZoneMethods)
       }
+    })
+  }
+
+  sendNormalDelta(path: Path) {
+    this.sendDelta({
+      updates: [
+        {
+          values: [
+            {
+              path: `notifications.${path}` as Path,
+              value: { state: 'normal', method: [] }
+            }
+          ]
+        }
+      ]
     })
   }
 
