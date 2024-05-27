@@ -107,6 +107,8 @@ npm link my-signalk-plugin-app
 
 When you start Signal K server the plugin will now appear in the **Plugin Config** screen where it can be configured and enabled.
 
+Updating and/or installing new plugins will remove the link and you need to re-link your plugin.
+
 
 ### Debugging
 
