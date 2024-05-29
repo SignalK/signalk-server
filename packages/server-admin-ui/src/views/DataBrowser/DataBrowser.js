@@ -396,23 +396,26 @@ class DataBrowser extends Component {
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.keys(this.state.meta[this.state.context] || {})
+                      {Object.keys(this.state.data[this.state.context] || {})
                         .filter((key) => {
                           return (
                             !this.state.search ||
                             this.state.search.length === 0 ||
-                            key.indexOf(this.state.search) !== -1
+                            key
+                              .toLowerCase()
+                              .indexOf(this.state.search.toLowerCase()) !== -1
                           )
                         })
                         .sort()
-                        .map((key) => {
-                          const meta = this.state.meta[this.state.context][key]
-                          const path = key
+                         .map((key) => {
+                          const data = this.state.data[this.state.context][key]
+                          const meta = this.state.meta[this.state.context][data.path]
+                          const path = data.path
                           return (
                             <tr key={path}>
                               <td>{path}</td>
                               <td>
-                                <Meta meta={meta} path={path} />
+                                <Meta meta={meta || {}} path={path} />
                               </td>
                             </tr>
                           )
