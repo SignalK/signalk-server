@@ -407,9 +407,10 @@ class DataBrowser extends Component {
                           )
                         })
                         .sort()
-                         .map((key) => {
+                        .map((key) => {
                           const data = this.state.data[this.state.context][key]
-                          const meta = this.state.meta[this.state.context][data.path]
+                          const meta =
+                            this.state.meta[this.state.context][data.path]
                           const path = data.path
                           return (
                             <tr key={path}>
