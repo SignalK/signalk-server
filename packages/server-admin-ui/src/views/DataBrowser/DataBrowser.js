@@ -406,12 +406,16 @@ class DataBrowser extends Component {
                               .indexOf(this.state.search.toLowerCase()) !== -1
                           )
                         })
+                        .map(
+                          (key) => this.state.data[this.state.context][key].path
+                        )
+                        .filter((path, index, array) => {
+                          //filter dups
+                          return array.indexOf(path) === index
+                        })
                         .sort()
-                        .map((key) => {
-                          const data = this.state.data[this.state.context][key]
-                          const meta =
-                            this.state.meta[this.state.context][data.path]
-                          const path = data.path
+                        .map((path) => {
+                          const meta = this.state.meta[this.state.context][path]
                           return (
                             <tr key={path}>
                               <td>{path}</td>
