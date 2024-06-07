@@ -9,7 +9,6 @@ import { SignalKMessageHub, WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
 
 import {
-  Delta,
   GeoJsonPoint,
   PathValue,
   Position,
@@ -20,7 +19,10 @@ import {
   ActiveRoute,
   RouteDestination,
   CourseInfo,
-  COURSE_POINT_TYPES
+  COURSE_POINT_TYPES,
+  ValuesDelta,
+  Update,
+  Delta
 } from '@signalk/server-api'
 
 const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
@@ -48,6 +50,13 @@ interface CourseApplication
     WithSecurityStrategy,
     SignalKMessageHub {}
 
+interface CommandSource {
+  type: string
+  label?: string
+  msg?: string
+  path?: string
+}
+
 export class CourseApi {
   private courseInfo: CourseInfo = {
     startTime: null,
@@ -59,12 +68,13 @@ export class CourseApi {
   }
 
   private store: Store
+  private cmdSource: CommandSource | null = null // source which set the destination
 
   constructor(
-    private server: CourseApplication,
+    private app: CourseApplication,
     private resourcesApi: ResourcesApi
   ) {
-    this.store = new Store(server, 'course')
+    this.store = new Store(app, 'course')
   }
 
   async start() {
@@ -84,8 +94,107 @@ export class CourseApi {
       if (storeData) {
         this.emitCourseInfo(true)
       }
+      // register delta handler
+      ;(this.app as any).registerDeltaInputHandler(this.deltaHandler)
       resolve()
     })
+  }
+
+  /** handle and process incoming course stream data */
+  private deltaHandler = (
+    delta: ValuesDelta,
+    next: (delta: ValuesDelta) => void
+  ) => {
+    if (!this.cmdSource || (this.cmdSource && this.cmdSource.type !== 'API')) {
+      delta.updates.forEach(async (update: Update) => {
+        this.processStreamSources(update)
+      })
+    }
+    next(delta)
+  }
+
+  /** Process stream <destination>.nextPoint data
+   * Note: Stream source cannot override destination set by API!
+   * Destination is set when:
+   * 1. There is no current destination
+   * 2. msg source matches current Destination source
+   * 3. Destination Position is changed.
+   */
+  private processStreamSources(update: Update) {
+    if (!update.values || (update.values && !Array.isArray(update.values))) {
+      return
+    }
+    update.values.forEach(async (pathValue: PathValue) => {
+      if (
+        pathValue.path === 'navigation.courseRhumbline.nextPoint' ||
+        pathValue.path === 'navigation.courseGreatCircle.nextPoint'
+      ) {
+        if (
+          update.source &&
+          update.source.type &&
+          ['NMEA0183', 'NMEA2000'].includes(update.source.type)
+        ) {
+          await this.parseStreamValue(
+            {
+              type: update.source.type,
+              label: update.source.label,
+              msg:
+                update.source.type === 'NMEA0183'
+                  ? `${update.source.sentence}:${update.source.talker}`
+                  : `${update.source.pgn}:${update.source.src}`,
+              path: pathValue.path
+            },
+            pathValue.value as Position
+          )
+        }
+      }
+    })
+  }
+
+  /**Process stream value */
+  private async parseStreamValue(src: CommandSource, pos: Position) {
+    if (!this.cmdSource) {
+      // New source
+      if (!pos) {
+        return
+      }
+      debug('parseStreamValue:', 'Setting Destination...')
+      const result = await this.setDestination({ position: pos }, src)
+      debug('parseStreamValue: Source set...', this.cmdSource)
+      if (result) {
+        this.emitCourseInfo()
+        return
+      }
+    }
+
+    if (
+      this.cmdSource?.type === src.type &&
+      this.cmdSource?.label === src.label &&
+      this.cmdSource?.path === src.path &&
+      this.cmdSource?.msg === src.msg
+    ) {
+      // Current source
+      if (!pos) {
+        debug('parseStreamValue:', 'No position... Clear Destination...')
+        this.clearDestination()
+        return
+      } else if (
+        this.courseInfo.nextPoint?.position?.latitude === pos.latitude &&
+        this.courseInfo.nextPoint?.position?.longitude === pos.longitude
+      ) {
+        return
+      } else {
+        debug(
+          'parseStreamValue:',
+          'Position changed... Updating Destination...'
+        )
+        const result = await this.setDestination({ position: pos }, src)
+        if (result) {
+          this.emitCourseInfo()
+          return
+        }
+      }
+    }
   }
 
   /** Get course (exposed to plugins) */
@@ -101,6 +210,7 @@ export class CourseApi {
     this.courseInfo.activeRoute = null
     this.courseInfo.nextPoint = null
     this.courseInfo.previousPoint = null
+    this.cmdSource = null
     this.emitCourseInfo()
   }
 
@@ -139,11 +249,15 @@ export class CourseApi {
   }
 
   private getVesselPosition() {
-    return _.get((this.server.signalk as any).self, 'navigation.position')
+    return _.get((this.app.signalk as any).self, 'navigation.position')
   }
 
   private validateCourseInfo(info: CourseInfo) {
-    if (info.activeRoute && info.nextPoint && info.previousPoint) {
+    if (
+      typeof info.activeRoute !== 'undefined' &&
+      typeof info.nextPoint !== 'undefined' &&
+      typeof info.previousPoint !== 'undefined'
+    ) {
       return info
     } else {
       debug(`** Error: Loaded course data is invalid!! (using default) **`)
@@ -152,7 +266,7 @@ export class CourseApi {
   }
 
   private updateAllowed(request: Request): boolean {
-    return this.server.securityStrategy.shouldAllowPut(
+    return this.app.securityStrategy.shouldAllowPut(
       request,
       'vessels.self',
       null,
@@ -164,16 +278,13 @@ export class CourseApi {
     debug(`** Initialise ${COURSE_API_PATH} path handlers **`)
 
     // return current course information
-    this.server.get(
-      `${COURSE_API_PATH}`,
-      async (req: Request, res: Response) => {
-        debug(`** GET ${COURSE_API_PATH}`)
-        res.json(this.courseInfo)
-      }
-    )
+    this.app.get(`${COURSE_API_PATH}`, async (req: Request, res: Response) => {
+      debug(`** GET ${COURSE_API_PATH}`)
+      res.json(this.courseInfo)
+    })
 
     // course metadata
-    this.server.get(
+    this.app.get(
       `${COURSE_API_PATH}/arrivalCircle/meta`,
       async (req: Request, res: Response) => {
         debug(`** GET ${COURSE_API_PATH}/arrivalCircle/meta`)
@@ -187,7 +298,7 @@ export class CourseApi {
       }
     )
 
-    this.server.put(
+    this.app.put(
       `${COURSE_API_PATH}/arrivalCircle`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/arrivalCircle`)
@@ -205,7 +316,7 @@ export class CourseApi {
       }
     )
 
-    this.server.put(
+    this.app.put(
       `${COURSE_API_PATH}/restart`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/restart`)
@@ -248,7 +359,7 @@ export class CourseApi {
       }
     )
 
-    this.server.put(
+    this.app.put(
       `${COURSE_API_PATH}/targetArrivalTime`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/targetArrivalTime`)
@@ -267,7 +378,7 @@ export class CourseApi {
     )
 
     // clear / cancel course
-    this.server.delete(
+    this.app.delete(
       `${COURSE_API_PATH}`,
       async (req: Request, res: Response) => {
         debug(`** DELETE ${COURSE_API_PATH}`)
@@ -281,7 +392,7 @@ export class CourseApi {
     )
 
     // set destination
-    this.server.put(
+    this.app.put(
       `${COURSE_API_PATH}/destination`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/destination`)
@@ -315,7 +426,7 @@ export class CourseApi {
     )
 
     // set activeRoute
-    this.server.put(
+    this.app.put(
       `${COURSE_API_PATH}/activeRoute`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/activeRoute`)
@@ -342,7 +453,7 @@ export class CourseApi {
       }
     )
 
-    this.server.put(
+    this.app.put(
       `${COURSE_API_PATH}/activeRoute/:action`,
       async (req: Request, res: Response) => {
         debug(`** PUT ${COURSE_API_PATH}/activeRoute/${req.params.action}`)
@@ -474,7 +585,10 @@ export class CourseApi {
     )
   }
 
-  private async activateRoute(route: RouteDestination): Promise<boolean> {
+  private async activateRoute(
+    route: RouteDestination,
+    src?: CommandSource
+  ): Promise<boolean> {
     const { href, reverse } = route
     let rte: any
 
@@ -539,11 +653,13 @@ export class CourseApi {
     }
 
     this.courseInfo = newCourse
+    this.cmdSource = src ? src : { type: 'API' }
     return true
   }
 
   private async setDestination(
-    dest: PointDestination & { arrivalCircle?: number }
+    dest: PointDestination & { arrivalCircle?: number },
+    src?: CommandSource
   ): Promise<boolean> {
     const newCourse: CourseInfo = { ...this.courseInfo }
 
@@ -616,6 +732,7 @@ export class CourseApi {
     }
 
     this.courseInfo = newCourse
+    this.cmdSource = src ? src : { type: 'API' }
     return true
   }
 
@@ -718,8 +835,6 @@ export class CourseApi {
   private buildDeltaMsg(paths: string[]): any {
     const values: Array<{ path: string; value: any }> = []
     const navPath = 'navigation.course'
-
-    debug(this.courseInfo)
 
     if (
       paths.length === 0 ||
@@ -865,7 +980,6 @@ export class CourseApi {
         value: this.courseInfo.previousPoint.type
       })
     }
-
     return {
       updates: [
         {
@@ -876,16 +990,12 @@ export class CourseApi {
   }
 
   private emitCourseInfo(noSave = false, ...paths: string[]) {
-    this.server.handleMessage(
+    this.app.handleMessage(
       'courseApi',
       this.buildV1DeltaMsg(paths),
-      SKVersion.v1
-    )
-    this.server.handleMessage(
-      'courseApi',
-      this.buildDeltaMsg(paths),
       SKVersion.v2
     )
+    this.app.handleMessage('courseApi', this.buildDeltaMsg(paths), SKVersion.v2)
     if (!noSave) {
       this.store.write(this.courseInfo).catch((error) => {
         console.log(error)
