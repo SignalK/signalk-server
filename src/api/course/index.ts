@@ -126,8 +126,8 @@ export class CourseApi {
     }
     update.values.forEach(async (pathValue: PathValue) => {
       if (
-        pathValue.path === 'navigation.courseRhumbline.nextPoint' ||
-        pathValue.path === 'navigation.courseGreatCircle.nextPoint'
+        pathValue.path === 'navigation.courseRhumbline.nextPoint.position' ||
+        pathValue.path === 'navigation.courseGreatCircle.nextPoint.position'
       ) {
         if (
           update.source &&
