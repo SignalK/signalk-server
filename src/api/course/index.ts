@@ -105,11 +105,7 @@ export class CourseApi {
     delta: ValuesDelta,
     next: (delta: ValuesDelta) => void
   ) => {
-    if (!this.cmdSource || (this.cmdSource && this.cmdSource.type !== 'API')) {
-      delta.updates.forEach(async (update: Update) => {
-        this.processStreamSources(update)
-      })
-    }
+    this.processStreamSources(delta)
     next(delta)
   }
 
@@ -120,38 +116,49 @@ export class CourseApi {
    * 2. msg source matches current Destination source
    * 3. Destination Position is changed.
    */
-  private processStreamSources(update: Update) {
-    if (!update.values || (update.values && !Array.isArray(update.values))) {
-      return
-    }
-    update.values.forEach(async (pathValue: PathValue) => {
-      if (
-        pathValue.path === 'navigation.courseRhumbline.nextPoint.position' ||
-        pathValue.path === 'navigation.courseGreatCircle.nextPoint.position'
-      ) {
+  private async processStreamSources(delta: ValuesDelta) {
+    if (!this.cmdSource || (this.cmdSource && this.cmdSource.type !== 'API')) {
+      delta.updates.forEach((update: Update) => {
         if (
-          update.source &&
-          update.source.type &&
-          ['NMEA0183', 'NMEA2000'].includes(update.source.type)
+          !update.values ||
+          (update.values && !Array.isArray(update.values))
         ) {
-          await this.parseStreamValue(
-            {
-              type: update.source.type,
-              label: update.source.label,
-              msg:
-                update.source.type === 'NMEA0183'
-                  ? `${update.source.sentence}:${update.source.talker}`
-                  : `${update.source.pgn}:${update.source.src}`,
-              path: pathValue.path
-            },
-            pathValue.value as Position
-          )
+          return
         }
-      }
-    })
+        update.values.forEach((pathValue: PathValue) => {
+          if (
+            pathValue.path ===
+              'navigation.courseRhumbline.nextPoint.position' ||
+            pathValue.path === 'navigation.courseGreatCircle.nextPoint.position'
+          ) {
+            if (
+              update.source &&
+              update.source.type &&
+              ['NMEA0183', 'NMEA2000'].includes(update.source.type)
+            ) {
+              this.parseStreamValue(
+                {
+                  type: update.source.type,
+                  label: update.source.label,
+                  msg:
+                    update.source.type === 'NMEA0183'
+                      ? `${update.source.sentence}:${update.source.talker}`
+                      : `${update.source.pgn}:${update.source.src}`,
+                  path: pathValue.path
+                },
+                pathValue.value as Position
+              )
+            }
+          }
+        })
+      })
+    }
   }
 
-  /**Process stream value */
+  /** Process stream value and take action
+   * @param src Object describing the source of the update
+   * @param pos Destination location value in the update
+   */
   private async parseStreamValue(src: CommandSource, pos: Position) {
     if (!this.cmdSource) {
       // New source
@@ -993,7 +1000,7 @@ export class CourseApi {
     this.app.handleMessage(
       'courseApi',
       this.buildV1DeltaMsg(paths),
-      SKVersion.v2
+      SKVersion.v1
     )
     this.app.handleMessage('courseApi', this.buildDeltaMsg(paths), SKVersion.v2)
     if (!noSave) {
