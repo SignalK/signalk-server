@@ -378,6 +378,20 @@
         "tags": ["course"],
         "summary": "Cancel / clear course.",
         "description": "Clear all course information.",
+        "parameters": [
+          {
+            "name": "force",
+            "in": "query",
+            "description": "Force HTTP only mode, ignoring all subsequent stream input. To clear this mode, call this endpoint without specifying `force`.",
+            "example": "/course/force=1",
+            "required": false,
+            "explode": false,
+            "schema": {
+              "type": "string",
+              "enum": ["1", "true"]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/components/responses/200Ok"

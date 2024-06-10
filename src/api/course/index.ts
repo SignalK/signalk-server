@@ -210,14 +210,21 @@ export class CourseApi {
     return this.courseInfo
   }
 
-  /** Clear destination / route (exposed to plugins)  */
-  async clearDestination(): Promise<void> {
+  /** Clear destination / route (exposed to plugins)
+   * @params force When true will set source.type to API. This will froce API only mode (NMEA sources are ignored).
+   * Call with force=false to clear API only mode.
+   */
+  async clearDestination(force?: boolean): Promise<void> {
     this.courseInfo.startTime = null
     this.courseInfo.targetArrivalTime = null
     this.courseInfo.activeRoute = null
     this.courseInfo.nextPoint = null
     this.courseInfo.previousPoint = null
-    this.cmdSource = null
+    if (force) {
+      this.cmdSource = { type: 'API' }
+    } else {
+      this.cmdSource = null
+    }
     this.emitCourseInfo()
   }
 
@@ -388,12 +395,19 @@ export class CourseApi {
     this.app.delete(
       `${COURSE_API_PATH}`,
       async (req: Request, res: Response) => {
-        debug(`** DELETE ${COURSE_API_PATH}`)
+        debug(`** DELETE ${COURSE_API_PATH}`, req.query)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        this.clearDestination()
+        if (
+          req.query.force &&
+          (req.query.force === '1' || req.query.force === 'true')
+        ) {
+          this.clearDestination(true)
+        } else {
+          this.clearDestination()
+        }
         res.status(200).json(Responses.ok)
       }
     )

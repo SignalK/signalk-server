@@ -5,9 +5,11 @@
 
 The _Course API_ provides common course operations under the path `/signalk/v2/api/vessels/self/navigation/course` ensuring that all related Signal K data model values are maintained and consistent. This provides a set of data that can be confidently used for _course calculations_ and _autopilot operation_.
 
+Additionally, the Course API persists course information on the server to ensure data is not lost in the event of a server restart.
+
 Client applications use `HTTP` requests (`PUT`, `GET`,`DELETE`) to perform operations and retrieve course data. 
 
-Additionally, the Course API persists course information on the server to ensure data is not lost in the event of a server restart.
+The Course API also listens for destination information in the NMEA stream and will set / clear the destination accordingly _(e.g. RMB sentence)_. 
 
 _Note: You can view the _Course API_ OpenAPI definition in the Admin UI (Documentation => OpenApi)._
 
@@ -235,11 +237,19 @@ _Example response:_
 
 ## Cancelling navigation
 
-To cancel the current course navigation and clear the course data
+To cancel the current course navigation and clear the course data.
 
 ```typescript
 HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/'
 ```
+
+To clear the current destination and stop NMEA stream input from setting the destination, specify the `force` parameter.
+
+```typescript
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course?force=1'
+```
+
+_Note: To re-enable NMEA stream input, make the DELETE request without the `force` parameter._
 
 ---
 

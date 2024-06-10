@@ -625,9 +625,11 @@ Retrieves the current course information.
 - returns: Resolved Promise on success containing the same course information returned by the [`/course`](/doc/openapi/?urls.primaryName=course#/course/get_course) API endpoint.
 
 
-#### `app.clearDestination()`
+#### `app.clearDestination(force?)`
 
 Cancels navigation to the current point or route being followed.
+
+- `force`: (optional) If true causes NMEA stream input to be ignored. To re-enable NMEA input, call this method without specifying `force`.
 
 - returns: Resolved Promise on success.
 
