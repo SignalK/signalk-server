@@ -33,6 +33,14 @@ module.exports = function (app) {
   const n2kMapper = new N2kMapper({ app }, app.propertyValues)
   const pgnParser = new FromPgn({}, app.propertyValues)
 
+  app.on('nmea2000JsonOut', (msg) => {
+    console.log('nmea2000JsonOut: ' + msg)
+  })
+
+  app.on('nmea2000out', (msg) => {
+    console.log('nmea2000out: ' + msg)
+  })
+
   const processors = {
     n2k: (msgs, sendToServer) => {
       const n2kJson = []
@@ -97,9 +105,10 @@ module.exports = function (app) {
 
   app.post(`${serverRoutesPrefix}/inputTest`, (req, res) => {
     const sendToServer = req.body.sendToServer
+    const sendToN2K = req.body.sendToN2K
 
     if (
-      sendToServer &&
+      (sendToServer || sendToN2K) &&
       !app.securityStrategy.isDummy() &&
       !app.securityStrategy.allowConfigure(req)
     ) {
@@ -111,6 +120,15 @@ module.exports = function (app) {
 
     if (error) {
       res.status(400).json({ error: error })
+      return
+    }
+
+    if (sendToN2K && type != 'n2k-json' && type != 'n2k') {
+      res
+        .status(400)
+        .json({
+          error: 'PLease enter NMEA 2000 json format or Actisense format'
+        })
       return
     }
 
@@ -171,6 +189,12 @@ module.exports = function (app) {
       } else {
         res.json({ deltas: msgs })
       }
+    } else if (sendToN2K) {
+      const event = type == 'n2k' ? 'nmea2000out' : 'nmea2000JsonOut'
+      msgs.forEach((msg) => {
+        app.emit(event, msg)
+      })
+      res.json({ deltas: [] })
     } else {
       try {
         const data = processors[type](msgs, sendToServer)
