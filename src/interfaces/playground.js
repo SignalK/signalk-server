@@ -33,14 +33,6 @@ module.exports = function (app) {
   const n2kMapper = new N2kMapper({ app }, app.propertyValues)
   const pgnParser = new FromPgn({}, app.propertyValues)
 
-  app.on('nmea2000JsonOut', (msg) => {
-    console.log('nmea2000JsonOut: ' + msg)
-  })
-
-  app.on('nmea2000out', (msg) => {
-    console.log('nmea2000out: ' + msg)
-  })
-
   const processors = {
     n2k: (msgs, sendToServer) => {
       const n2kJson = []
@@ -124,11 +116,9 @@ module.exports = function (app) {
     }
 
     if (sendToN2K && type != 'n2k-json' && type != 'n2k') {
-      res
-        .status(400)
-        .json({
-          error: 'PLease enter NMEA 2000 json format or Actisense format'
-        })
+      res.status(400).json({
+        error: 'PLease enter NMEA 2000 json format or Actisense format'
+      })
       return
     }
 
