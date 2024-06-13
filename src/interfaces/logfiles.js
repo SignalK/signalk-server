@@ -42,8 +42,9 @@ function mountApi(app) {
     })
   })
   app.get(`${SERVERROUTESPREFIX}/logfiles/:filename`, function (req, res) {
+    const sanitizedFilename = req.params.filename.replaceAll(/\.\.(\\|\/)/g, '')
     const sanitizedLogfile = path
-      .join(getFullLogDir(app), req.params.filename)
+      .join(getFullLogDir(app), sanitizedFilename)
       .replace(/\.\./g, '')
     res.sendFile(sanitizedLogfile)
   })
