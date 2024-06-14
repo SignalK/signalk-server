@@ -166,7 +166,7 @@ module.exports = function (app) {
         console.log(err)
         res.status(500).send(err.message)
       } else {
-        res.send()
+        res.json('ApplicationData saved')
       }
     })
   }

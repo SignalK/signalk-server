@@ -127,7 +127,7 @@ module.exports = (theApp: any) => {
           .catch((err) => {
             console.error(err)
             res.status(500)
-            res.send(err)
+            res.json(err)
           })
       })
     }
@@ -694,10 +694,10 @@ module.exports = (theApp: any) => {
         if (err) {
           console.error(err)
           res.status(500)
-          res.send(err)
+          res.json(err)
           return
         }
-        res.send('Saved configuration for plugin ' + plugin.id)
+        res.json('Saved configuration for plugin ' + plugin.id)
         stopPlugin(plugin)
         const options = getPluginOptions(plugin.id)
         plugin.enableLogging = options.enableLogging

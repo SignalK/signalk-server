@@ -35,7 +35,7 @@ function mountApi(app) {
       if (err) {
         console.error(err)
         res.status(500)
-        res.send('Error reading logfiles list')
+        res.json('Error reading logfiles list')
         return
       }
       res.json(files)
