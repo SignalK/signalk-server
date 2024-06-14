@@ -122,6 +122,7 @@ module.exports = function (
         if (err) {
           console.error(err)
           res.status(500)
+          res.type('text/plain')
           res.send('Could not handle admin ui root request')
         }
         res.type('html')
@@ -165,7 +166,7 @@ module.exports = function (
 
   app.put(`${SERVERROUTESPREFIX}/restart`, (req: Request, res: Response) => {
     if (app.securityStrategy.allowRestart(req)) {
-      res.send('Restarting...')
+      res.json('Restarting...')
       setTimeout(function () {
         process.exit(0)
       }, 2000)
@@ -223,10 +224,10 @@ module.exports = function (
           if (err) {
             console.log(err)
             res.status(500)
-            res.send('Unable to save configuration change')
+            res.json('Unable to save configuration change')
             return
           }
-          res.send('security config saved')
+          res.json('security config saved')
         })
       } else {
         res.status(401).send('Security config not allowed')
@@ -240,7 +241,7 @@ module.exports = function (
     return (err: any, config: any) => {
       if (err) {
         console.log(err)
-        res.status(500).send(failure)
+        res.status(500).type('text/plain').send(failure)
       } else if (config) {
         saveSecurityConfig(app, config, (theError) => {
           if (theError) {
@@ -248,10 +249,10 @@ module.exports = function (
             res.status(500).send('Unable to save configuration change')
             return
           }
-          res.send(success)
+          res.type('text/plain').send(success)
         })
       } else {
-        res.send(success)
+        res.type('text/plain').send(success)
       }
     }
   }
@@ -465,7 +466,7 @@ module.exports = function (
       .catch((err: any) => {
         console.log(err)
         res.status(500)
-        res.send(`Unable to check request: ${err.message}`)
+        res.type('text/plain').send(`Unable to check request: ${err.message}`)
       })
   })
 
@@ -637,7 +638,7 @@ module.exports = function (
       if (err) {
         res.status(500).send('Unable to save to settings file')
       } else {
-        res.send('Settings changed')
+        res.type('text/plain').send('Settings changed')
       }
     })
   })
@@ -749,7 +750,7 @@ module.exports = function (
       if (err) {
         res.status(500).send('Unable to save to defaults file')
       } else {
-        res.send('Vessel changed')
+        res.type('text/plain').send('Vessel changed')
       }
     })
   }
@@ -822,7 +823,7 @@ module.exports = function (
     } else {
       writeBaseDeltasFile(app)
         .then(() => {
-          res.send('Vessel changed')
+          res.type('text/plain').send('Vessel changed')
         })
         .catch(() => {
           res.status(500).send('Unable to save to defaults file')
@@ -1085,7 +1086,7 @@ module.exports = function (
                     fs.unlinkSync(zipFile)
                     listSafeRestoreFiles(restoreFilePath)
                       .then((files) => {
-                        res.send(files)
+                        res.type('text/plain').send(files)
                       })
                       .catch((err) => {
                         console.error(err)

@@ -126,9 +126,9 @@ module.exports = function (app, config) {
     res.status(401)
     if (req.accepts('application/json') && !req.accepts('text/html')) {
       res.set('Content-Type', 'application/json')
-      res.send('{ "error": "Permission Denied"}')
+      res.json({ error: 'Permission Denied' })
     } else {
-      res.send(permissionDeniedMessage)
+      res.type('text/plain').send(permissionDeniedMessage)
     }
   }
 
@@ -350,7 +350,7 @@ module.exports = function (app, config) {
     const token = jwt.sign(payload, configuration.secretKey, {
       expiresIn: theExpiration
     })
-    res.send(token)
+    res.type('text/plain').send(token)
   }
 
   strategy.allowReadOnly = function () {
