@@ -387,19 +387,6 @@ module.exports = function (
     }
   )
 
-  app.get(
-    `${SERVERROUTESPREFIX}/security/token/:id/:expiration`,
-    (req: Request, res: Response, next: NextFunction) => {
-      app.securityStrategy.generateToken(
-        req,
-        res,
-        next,
-        req.params.id,
-        req.params.expiration
-      )
-    }
-  )
-
   app.put(
     [
       `${SERVERROUTESPREFIX}/security/access/requests/:identifier/:status`,
