@@ -108,8 +108,8 @@ export class CourseApi {
   ) => {
     try {
       this.processV1DestinationDeltas(delta)
-    } catch {
-      //
+    } catch (err: any) {
+      debug(err.message)
     }
     next(delta)
   }
