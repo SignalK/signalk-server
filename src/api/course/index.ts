@@ -7,6 +7,7 @@ import _ from 'lodash'
 
 import { SignalKMessageHub, WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
+import { getSourceId } from '@signalk/signalk-schema'
 
 import {
   GeoJsonPoint,
@@ -52,7 +53,7 @@ interface CourseApplication
 
 interface CommandSource {
   type: string
-  label?: string
+  id?: string
   msg?: string
   path?: string
 }
@@ -105,7 +106,11 @@ export class CourseApi {
     delta: ValuesDelta,
     next: (delta: ValuesDelta) => void
   ) => {
-    this.processStreamSources(delta)
+    try {
+      this.processV1DestinationDeltas(delta)
+    } catch {
+      //
+    }
     next(delta)
   }
 
@@ -116,13 +121,13 @@ export class CourseApi {
    * 2. msg source matches current Destination source
    * 3. Destination Position is changed.
    */
-  private async processStreamSources(delta: ValuesDelta) {
-    if (!this.cmdSource || (this.cmdSource && this.cmdSource.type !== 'API')) {
+  private async processV1DestinationDeltas(delta: ValuesDelta) {
+    if (!Array.isArray(delta.updates)) {
+      return
+    }
+    if (!(this.cmdSource?.type === 'API')) {
       delta.updates.forEach((update: Update) => {
-        if (
-          !update.values ||
-          (update.values && !Array.isArray(update.values))
-        ) {
+        if (!Array.isArray(update.values)) {
           return
         }
         update.values.forEach((pathValue: PathValue) => {
@@ -139,11 +144,11 @@ export class CourseApi {
               this.parseStreamValue(
                 {
                   type: update.source.type,
-                  label: update.source.label,
+                  id: getSourceId(update.source),
                   msg:
                     update.source.type === 'NMEA0183'
-                      ? `${update.source.sentence}:${update.source.talker}`
-                      : `${update.source.pgn}:${update.source.src}`,
+                      ? `${update.source.sentence}`
+                      : `${update.source.pgn}`,
                   path: pathValue.path
                 },
                 pathValue.value as Position
@@ -176,7 +181,7 @@ export class CourseApi {
 
     if (
       this.cmdSource?.type === src.type &&
-      this.cmdSource?.label === src.label &&
+      this.cmdSource?.id === src.id &&
       this.cmdSource?.path === src.path &&
       this.cmdSource?.msg === src.msg
     ) {
@@ -296,6 +301,15 @@ export class CourseApi {
       debug(`** GET ${COURSE_API_PATH}`)
       res.json(this.courseInfo)
     })
+
+    // Source that set destination
+    this.app.get(
+      `${COURSE_API_PATH}/commandSource`,
+      async (req: Request, res: Response) => {
+        debug(`** GET ${req.path}`)
+        res.json(this.cmdSource)
+      }
+    )
 
     // course metadata
     this.app.get(

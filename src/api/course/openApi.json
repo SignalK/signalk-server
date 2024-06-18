@@ -383,18 +383,59 @@
             "name": "force",
             "in": "query",
             "description": "Force HTTP only mode, ignoring all subsequent stream input. To clear this mode, call this endpoint without specifying `force`.",
-            "example": "/course/force=1",
+            "example": "/course/force=true",
             "required": false,
             "explode": false,
             "schema": {
-              "type": "string",
-              "enum": ["1", "true"]
+              "type": "boolean"
             }
           }
         ],
         "responses": {
           "200": {
             "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/course/commandSource": {
+      "get": {
+        "tags": ["course"],
+        "summary": "Retrieve the source which set the current destination.",
+        "description": "Returns details of the source which set the destination.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["type"],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["NMEA0183", "NMEA2000", "API"],
+                      "description": "Source input type."
+                    },
+                    "id": {
+                      "type": "string",
+                      "description": "Source identifier."
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "PGN / Sentence that was the source of destination information."
+                    },
+                    "path": {
+                      "type": "string",
+                      "description": "Signal K path containing the source path with the destination position."
+                    }
+                  }
+                }
+              }
+            }
           },
           "default": {
             "$ref": "#/components/responses/ErrorResponse"

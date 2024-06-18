@@ -127,6 +127,42 @@ HTTP GET 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course'
 
 The contents of the response will reflect the operation used to set the current course. The `nextPoint` & `previousPoint` sections will always contain values but `activeRoute` will only contain values when a route is being followed.
 
+
+#### Determining the source which set the destination
+
+When a destination is set, you can retrieve the source that set the destination by submitting a HTTP `GET` request to `/signalk/v2/api/vessels/self/navigation/course/commandSource`.
+
+```typescript
+HTTP GET 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/commandSource'
+```
+
+_Example: Set by NMEA0183 source_
+```json
+{
+    "type": "NMEA0183",
+    "id": "nmeasim.GP",
+    "msg": "RMB",
+    "path": "navigation.courseRhumbline.nextPoint.position"
+}
+```
+
+_Example: Set by NMEA2000 source_
+```json
+{
+    "type": "NMEA2000",
+    "id": "raymarineAP.3",
+    "msg": "129284",
+    "path": "navigation.courseGreatCircle.nextPoint.position"
+}
+```
+
+_Example: Set via API request._
+```json
+{
+    "type": "API"
+}
+```
+
 #### 1. Operation: Navigate to a location _(lat, lon)_
 
 _Example response:_
@@ -247,6 +283,10 @@ To clear the current destination and stop NMEA stream input from setting the des
 
 ```typescript
 HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course?force=1'
+```
+OR
+```typescript
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course?force=true'
 ```
 
 _Note: To re-enable NMEA stream input, make the DELETE request without the `force` parameter._
