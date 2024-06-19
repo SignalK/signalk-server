@@ -8,6 +8,7 @@ import _ from 'lodash'
 import { SignalKMessageHub, WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
 import { getSourceId } from '@signalk/signalk-schema'
+import { Unsubscribes } from '../../types'
 
 import {
   GeoJsonPoint,
@@ -70,6 +71,7 @@ export class CourseApi {
 
   private store: Store
   private cmdSource: CommandSource | null = null // source which set the destination
+  private unsubscribes: Unsubscribes = []
 
   constructor(
     private app: CourseApplication,
@@ -95,27 +97,35 @@ export class CourseApi {
       if (storeData) {
         this.emitCourseInfo(true)
       }
-      // register delta handler
-      ;(this.app as any).registerDeltaInputHandler(this.deltaHandler)
+
+      ;(this.app as any).subscriptionmanager.subscribe(
+        {
+          context: 'vessels.self',
+          subscribe: [
+            {
+              path: 'navigation.courseRhumbline.nextPoint.position',
+              period: 500
+            },
+            {
+              path: 'navigation.courseGreatCircle.nextPoint.position',
+              period: 500
+            }
+          ]
+        },
+        this.unsubscribes,
+        (err: Error) => {
+          console.error(`Course API: Subscribe failed:${err}`)
+        },
+        (msg: ValuesDelta) => {
+          this.processV1DestinationDeltas(msg)
+        }
+      )
       resolve()
     })
   }
 
-  /** handle and process incoming course stream data */
-  private deltaHandler = (
-    delta: ValuesDelta,
-    next: (delta: ValuesDelta) => void
-  ) => {
-    try {
-      this.processV1DestinationDeltas(delta)
-    } catch (err: any) {
-      debug(err.message)
-    }
-    next(delta)
-  }
-
-  /** Process stream <destination>.nextPoint data
-   * Note: Stream source cannot override destination set by API!
+  /** Process deltas for <destination>.nextPoint data
+   * Note: Delta source cannot override destination set by API!
    * Destination is set when:
    * 1. There is no current destination
    * 2. msg source matches current Destination source
@@ -132,28 +142,22 @@ export class CourseApi {
         }
         update.values.forEach((pathValue: PathValue) => {
           if (
-            pathValue.path ===
-              'navigation.courseRhumbline.nextPoint.position' ||
-            pathValue.path === 'navigation.courseGreatCircle.nextPoint.position'
+            update.source &&
+            update.source.type &&
+            ['NMEA0183', 'NMEA2000'].includes(update.source.type)
           ) {
-            if (
-              update.source &&
-              update.source.type &&
-              ['NMEA0183', 'NMEA2000'].includes(update.source.type)
-            ) {
-              this.parseStreamValue(
-                {
-                  type: update.source.type,
-                  id: getSourceId(update.source),
-                  msg:
-                    update.source.type === 'NMEA0183'
-                      ? `${update.source.sentence}`
-                      : `${update.source.pgn}`,
-                  path: pathValue.path
-                },
-                pathValue.value as Position
-              )
-            }
+            this.parseStreamValue(
+              {
+                type: update.source.type,
+                id: getSourceId(update.source),
+                msg:
+                  update.source.type === 'NMEA0183'
+                    ? `${update.source.sentence}`
+                    : `${update.source.pgn}`,
+                path: pathValue.path
+              },
+              pathValue.value as Position
+            )
           }
         })
       })
@@ -940,17 +944,14 @@ export class CourseApi {
     const navGC = 'navigation.courseGreatCircle'
     const navRL = 'navigation.courseRhumbline'
 
-    if (
-      this.courseInfo.activeRoute &&
-      (paths.length === 0 || (paths && paths.includes('activeRoute')))
-    ) {
+    if (paths.length === 0 || (paths && paths.includes('activeRoute'))) {
       values.push({
         path: `${navGC}.activeRoute.href`,
-        value: this.courseInfo.activeRoute.href
+        value: this.courseInfo.activeRoute?.href ?? null
       })
       values.push({
         path: `${navRL}.activeRoute.href`,
-        value: this.courseInfo.activeRoute.href
+        value: this.courseInfo.activeRoute?.href ?? null
       })
 
       values.push({
@@ -962,35 +963,32 @@ export class CourseApi {
         value: this.courseInfo.startTime
       })
     }
-    if (
-      this.courseInfo.nextPoint &&
-      (paths.length === 0 || (paths && paths.includes('nextPoint')))
-    ) {
+    if (paths.length === 0 || (paths && paths.includes('nextPoint'))) {
       values.push({
         path: `${navGC}.nextPoint.value.href`,
-        value: this.courseInfo.nextPoint.href ?? null
+        value: this.courseInfo.nextPoint?.href ?? null
       })
       values.push({
         path: `${navRL}.nextPoint.value.href`,
-        value: this.courseInfo.nextPoint.href ?? null
+        value: this.courseInfo.nextPoint?.href ?? null
       })
 
       values.push({
         path: `${navGC}.nextPoint.value.type`,
-        value: this.courseInfo.nextPoint.type
+        value: this.courseInfo.nextPoint?.type ?? null
       })
       values.push({
         path: `${navRL}.nextPoint.value.type`,
-        value: this.courseInfo.nextPoint.type
+        value: this.courseInfo.nextPoint?.type ?? null
       })
 
       values.push({
         path: `${navGC}.nextPoint.position`,
-        value: this.courseInfo.nextPoint.position
+        value: this.courseInfo.nextPoint?.position ?? null
       })
       values.push({
         path: `${navRL}.nextPoint.position`,
-        value: this.courseInfo.nextPoint.position
+        value: this.courseInfo.nextPoint?.position ?? null
       })
     }
     if (paths.length === 0 || (paths && paths.includes('arrivalCircle'))) {
@@ -1003,28 +1001,26 @@ export class CourseApi {
         value: this.courseInfo.arrivalCircle
       })
     }
-    if (
-      this.courseInfo.previousPoint &&
-      (paths.length === 0 || (paths && paths.includes('previousPoint')))
-    ) {
+    if (paths.length === 0 || (paths && paths.includes('previousPoint'))) {
       values.push({
         path: `${navGC}.previousPoint.position`,
-        value: this.courseInfo.previousPoint.position
+        value: this.courseInfo.previousPoint?.position ?? null
       })
       values.push({
         path: `${navRL}.previousPoint.position`,
-        value: this.courseInfo.previousPoint.position
+        value: this.courseInfo.previousPoint?.position ?? null
       })
 
       values.push({
         path: `${navGC}.previousPoint.value.type`,
-        value: this.courseInfo.previousPoint.type
+        value: this.courseInfo.previousPoint?.type ?? null
       })
       values.push({
         path: `${navRL}.previousPoint.value.type`,
-        value: this.courseInfo.previousPoint.type
+        value: this.courseInfo.previousPoint?.type ?? null
       })
     }
+
     return {
       updates: [
         {
@@ -1035,16 +1031,16 @@ export class CourseApi {
   }
 
   private emitCourseInfo(noSave = false, ...paths: string[]) {
-    this.app.handleMessage(
-      'courseApi',
-      this.buildV1DeltaMsg(paths),
-      SKVersion.v1
-    )
     this.app.handleMessage('courseApi', this.buildDeltaMsg(paths), SKVersion.v2)
     if (!noSave) {
       this.store.write(this.courseInfo).catch((error) => {
         console.log(error)
       })
     }
+    this.app.handleMessage(
+      'courseApi',
+      this.buildV1DeltaMsg(paths),
+      SKVersion.v1
+    )
   }
 }
