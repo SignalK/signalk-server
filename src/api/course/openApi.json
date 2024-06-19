@@ -380,10 +380,10 @@
         "description": "Clear all course information.",
         "parameters": [
           {
-            "name": "force",
+            "name": "apiMode",
             "in": "query",
-            "description": "Force HTTP only mode, ignoring all subsequent stream input. To clear this mode, call this endpoint without specifying `force`.",
-            "example": "/course/force=true",
+            "description": "Destination information from delta updates is ignored and only requests via API endpoints / interfaces are accepted. To clear this mode, call this endpoint without specifying `apiMode` or DELETE request to `commandSource`.",
+            "example": "/course?apiMode=true",
             "required": false,
             "explode": false,
             "schema": {

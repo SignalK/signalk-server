@@ -219,13 +219,13 @@ export class CourseApi {
    * @params force When true will set source.type to API. This will froce API only mode (NMEA sources are ignored).
    * Call with force=false to clear API only mode.
    */
-  async clearDestination(force?: boolean): Promise<void> {
+  async clearDestination(apiMode?: boolean): Promise<void> {
     this.courseInfo.startTime = null
     this.courseInfo.targetArrivalTime = null
     this.courseInfo.activeRoute = null
     this.courseInfo.nextPoint = null
     this.courseInfo.previousPoint = null
-    if (force) {
+    if (apiMode) {
       this.cmdSource = { type: 'API' }
     } else {
       this.cmdSource = null
@@ -296,18 +296,28 @@ export class CourseApi {
   private initCourseRoutes() {
     debug(`** Initialise ${COURSE_API_PATH} path handlers **`)
 
-    // return current course information
+    // Return current course information
     this.app.get(`${COURSE_API_PATH}`, async (req: Request, res: Response) => {
-      debug(`** GET ${COURSE_API_PATH}`)
+      debug(`** ${req.method} ${req.path}`)
       res.json(this.courseInfo)
     })
 
-    // Source that set destination
+    // Source that set the destination
     this.app.get(
       `${COURSE_API_PATH}/commandSource`,
       async (req: Request, res: Response) => {
-        debug(`** GET ${req.path}`)
+        debug(`** ${req.method} ${req.path}`)
         res.json(this.cmdSource)
+      }
+    )
+
+    // Clear the commandSource.
+    this.app.delete(
+      `${COURSE_API_PATH}/commandSource`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        this.cmdSource = null
+        res.status(200).json(Responses.ok)
       }
     )
 
@@ -315,7 +325,7 @@ export class CourseApi {
     this.app.get(
       `${COURSE_API_PATH}/arrivalCircle/meta`,
       async (req: Request, res: Response) => {
-        debug(`** GET ${COURSE_API_PATH}/arrivalCircle/meta`)
+        debug(`** ${req.method} ${req.path}`)
         res.json({
           arrivalCircle: {
             description:
@@ -329,7 +339,7 @@ export class CourseApi {
     this.app.put(
       `${COURSE_API_PATH}/arrivalCircle`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/arrivalCircle`)
+        debug(`** ${req.method} ${req.path}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
@@ -347,7 +357,7 @@ export class CourseApi {
     this.app.put(
       `${COURSE_API_PATH}/restart`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/restart`)
+        debug(`** ${req.method} ${req.path}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
@@ -390,7 +400,7 @@ export class CourseApi {
     this.app.put(
       `${COURSE_API_PATH}/targetArrivalTime`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/targetArrivalTime`)
+        debug(`** ${req.method} ${req.path}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
@@ -409,14 +419,14 @@ export class CourseApi {
     this.app.delete(
       `${COURSE_API_PATH}`,
       async (req: Request, res: Response) => {
-        debug(`** DELETE ${COURSE_API_PATH}`, req.query)
+        debug(`** ${req.method} ${req.path}`, req.query)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
         if (
-          req.query.force &&
-          (req.query.force === '1' || req.query.force === 'true')
+          req.query.apiMode &&
+          (req.query.apiMode === '1' || req.query.apiMode === 'true')
         ) {
           this.clearDestination(true)
         } else {
@@ -430,7 +440,7 @@ export class CourseApi {
     this.app.put(
       `${COURSE_API_PATH}/destination`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/destination`)
+        debug(`** ${req.method} ${req.path}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
@@ -464,7 +474,7 @@ export class CourseApi {
     this.app.put(
       `${COURSE_API_PATH}/activeRoute`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/activeRoute`)
+        debug(`** ${req.method} ${req.path}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
@@ -491,7 +501,7 @@ export class CourseApi {
     this.app.put(
       `${COURSE_API_PATH}/activeRoute/:action`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/activeRoute/${req.params.action}`)
+        debug(`** ${req.method} ${req.path}, ${req.params.action}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return

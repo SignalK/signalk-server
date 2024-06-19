@@ -163,6 +163,18 @@ _Example: Set via API request._
 }
 ```
 
+#### Clearing the current source
+
+When a destination is set, only updates from the source that set it are accepted.
+To allow updates from another source you need to clear the current soource which is done by submitting a HTTP `DELETE` request to `/signalk/v2/api/vessels/self/navigation/course/commandSource`.
+
+_Note: This command does not change the destination!_
+
+```typescript
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/commandSource'
+```
+
+
 #### 1. Operation: Navigate to a location _(lat, lon)_
 
 _Example response:_
@@ -279,14 +291,10 @@ To cancel the current course navigation and clear the course data.
 HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/'
 ```
 
-To clear the current destination and stop NMEA stream input from setting the destination, specify the `force` parameter.
+To clear the current destination and stop deltas from setting the destination, specify the `apiMode` parameter.
 
 ```typescript
-HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course?force=1'
-```
-OR
-```typescript
-HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course?force=true'
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course?apiMode=true'
 ```
 
 _Note: To re-enable NMEA stream input, make the DELETE request without the `force` parameter._
