@@ -134,7 +134,7 @@ export default class PluginConfigurationList extends Component {
                   if (plugin.data.configuration === undefined) {
                     data.enabled = true
                   }
-                  this.saveData(plugin.id, data, i)
+                  this.saveData(plugin.id, data)
                 }}
               />
             )
@@ -144,7 +144,7 @@ export default class PluginConfigurationList extends Component {
     )
   }
 
-  saveData(id, data, i) {
+  saveData(id, data) {
     fetch(`${window.serverRoutesPrefix}/plugins/${id}/config`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -156,7 +156,7 @@ export default class PluginConfigurationList extends Component {
         alert('Saving plugin settings failed')
       } else {
         const plugins = [...this.state.plugins]
-        plugins[i].data = data
+        plugins.find((plugin) => plugin.id === id).data = data
         this.setState({ plugins })
       }
     })
