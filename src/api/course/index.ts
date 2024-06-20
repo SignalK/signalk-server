@@ -1042,6 +1042,5 @@ export class CourseApi {
         console.log(error)
       })
     }
-
   }
 }
