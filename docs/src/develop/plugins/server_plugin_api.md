@@ -652,6 +652,53 @@ in the specified direction and starting at the specified point.
 
 ---
 
+### Weather API Interface
+
+The [`Weather API`](../rest-api/weather_api.md) provides the following functions for use by plugins.
+
+#### `app.emitWeatherWarning = (pluginId, position?, warnings?)`
+ 
+Weather API interface method for raising, updating and clearing weather warning notifications.
+
+  - `pluginId`: The plugin identifier
+
+  - `position`: A valid `Position` object containing latitude & longitude.
+
+  - `warnings`: An array of `WeatherWarning` objects
+  
+- returns:  `void`.
+
+The notification is placed in the path `vessels.self.notifications.weather.warning`.
+
+To raise or update a warning, call the method with a valid `Position` object and array of  `WeatherData` objects.
+
+_Example:_
+```javascript
+app.emitWeatherWarning(
+  'myWeatherPluginId',
+  {latitude: 54.345, longitude: 6.39845},
+  [
+    {
+      "startTime": "2024-05-03T05:00:00.259Z",
+      "endTime": "2024-05-03T08:00:00.702Z",
+      "details": "Strong wind warning.",
+      "source": "OpenWeather",
+      "type": "Warning"
+    }
+  ]
+)
+```
+
+To clear the warning, call the method with an `undefined` position or warnings attribute.
+
+_Example: Clear weather warning_
+```javascript
+app.emitWeatherWarning('myWeatherPluginId')
+```
+
+---
+
+
 ### Notifications API _(proposed)_
 
 #### `app.notify(path, value, pluginId)`
