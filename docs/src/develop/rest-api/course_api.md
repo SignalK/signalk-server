@@ -5,9 +5,11 @@
 
 The _Course API_ provides common course operations under the path `/signalk/v2/api/vessels/self/navigation/course` ensuring that all related Signal K data model values are maintained and consistent. This provides a set of data that can be confidently used for _course calculations_ and _autopilot operation_.
 
+Additionally, the Course API persists course information on the server to ensure data is not lost in the event of a server restart.
+
 Client applications use `HTTP` requests (`PUT`, `GET`,`DELETE`) to perform operations and retrieve course data. 
 
-Additionally, the Course API persists course information on the server to ensure data is not lost in the event of a server restart.
+The Course API also listens for destination information in the NMEA stream and will set / clear the destination accordingly _(e.g. RMB sentence)_. 
 
 _Note: You can view the _Course API_ OpenAPI definition in the Admin UI (Documentation => OpenApi)._
 
@@ -125,6 +127,54 @@ HTTP GET 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course'
 
 The contents of the response will reflect the operation used to set the current course. The `nextPoint` & `previousPoint` sections will always contain values but `activeRoute` will only contain values when a route is being followed.
 
+
+#### Determining the source which set the destination
+
+When a destination is set, you can retrieve the source that set the destination by submitting a HTTP `GET` request to `/signalk/v2/api/vessels/self/navigation/course/commandSource`.
+
+```typescript
+HTTP GET 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/commandSource'
+```
+
+_Example: Set by NMEA0183 source_
+```json
+{
+    "type": "NMEA0183",
+    "id": "nmeasim.GP",
+    "msg": "RMB",
+    "path": "navigation.courseRhumbline.nextPoint.position"
+}
+```
+
+_Example: Set by NMEA2000 source_
+```json
+{
+    "type": "NMEA2000",
+    "id": "raymarineAP.3",
+    "msg": "129284",
+    "path": "navigation.courseGreatCircle.nextPoint.position"
+}
+```
+
+_Example: Set via API request._
+```json
+{
+    "type": "API"
+}
+```
+
+#### Clearing the current source
+
+When a destination is set, only updates from the source that set it are accepted.
+To allow updates from another source you need to clear the current soource which is done by submitting a HTTP `DELETE` request to `/signalk/v2/api/vessels/self/navigation/course/commandSource`.
+
+_Note: This command does not change the destination!_
+
+```typescript
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/commandSource'
+```
+
+
 #### 1. Operation: Navigate to a location _(lat, lon)_
 
 _Example response:_
@@ -235,11 +285,19 @@ _Example response:_
 
 ## Cancelling navigation
 
-To cancel the current course navigation and clear the course data
+To cancel the current course navigation and clear the course data.
 
 ```typescript
 HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/'
 ```
+
+To clear the current destination and stop deltas from setting the destination, specify the `apiMode` parameter.
+
+```typescript
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course?apiMode=true'
+```
+
+_Note: To re-enable NMEA stream input, make the DELETE request without the `force` parameter._
 
 ---
 
