@@ -47,10 +47,12 @@ class Playground extends Component {
       input,
       inputIsJson: isJson(input),
       sending: false,
+      sendingN2K: false,
       activeTab: DELTAS_TAB_ID,
     }
 
     this.handleExecute = this.handleExecute.bind(this)
+    this.handleSendN2K = this.handleSendN2K.bind(this)
     this.handleInput = this.handleInput.bind(this)
     this.send = this.send.bind(this)
     this.beautify = this.beautify.bind(this)
@@ -75,6 +77,10 @@ class Playground extends Component {
 
   handleExecute() {
     this.send(true)
+  }
+
+  handleSendN2K() {
+    this.send(false, true)
   }
 
   componentDidMount() {
@@ -102,7 +108,7 @@ class Playground extends Component {
     }
   }
 
-  send(sendToServer) {
+  send(sendToServer, sendToN2K) {
     let start = this.state.input.trim().charAt(0)
     if (start === '{' || start === '[') {
       try {
@@ -125,10 +131,13 @@ class Playground extends Component {
       }
     }
 
-    const body = { value: this.state.input, sendToServer }
+    const body = { value: this.state.input, sendToServer, sendToN2K }
     localStorage.setItem(inputStorageKey, this.state.input)
     if (sendToServer) {
       this.setState({ ...this.state, sending: true })
+    }
+    if (sendToN2K) {
+      this.setState({ ...this.state, sendingN2K: true })
     }
     fetch(`${window.serverRoutesPrefix}/inputTest`, {
       method: 'POST',
@@ -140,9 +149,9 @@ class Playground extends Component {
     })
       .then((response) => response.json())
       .then((data) => {
-        if (sendToServer) {
+        if (sendToServer || sendToN2K) {
           setTimeout(() => {
-            this.setState({ ...this.state, sending: false })
+            this.setState({ ...this.state, sending: false, sendingN2K: false })
           }, 1000)
         }
         if (data.error) {
@@ -214,8 +223,8 @@ class Playground extends Component {
           error: error.message,
           jsonError: null,
         })
-        if (sendToServer) {
-          this.setState({ ...this.state, sending: false })
+        if (sendToServer || sendToN2K) {
+          this.setState({ ...this.state, sending: false, sendingN2K: false })
         }
       })
   }
@@ -291,6 +300,20 @@ class Playground extends Component {
                       }
                     />{' '}
                     Send To Server
+                  </Button>{' '}
+                  <Button
+                    size="sm"
+                    color="primary"
+                    onClick={this.handleSendN2K}
+                  >
+                    <i
+                      className={
+                        this.state.sendingN2K
+                          ? 'fa fa-spinner fa-spin'
+                          : 'fa fa-dot-circle-o'
+                      }
+                    />{' '}
+                    Send To N2K Out
                   </Button>
                 </CardFooter>
               </Card>
