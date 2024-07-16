@@ -254,7 +254,7 @@ class Playground extends Component {
                       <Col xs="12" md="12">
                         <FormText color="muted">
                           You can enter multi-line raw NMEA 2000, NMEA 0183 or
-                          Signal K deltas (one delta or an array)
+                          Signal K deltas (one delta or an array). For sending PGNs out over the servers NMEA 2000 connection, use one of the formats <a href="/documentation/develop/plugins/deltas.html?highlight=NMEA%202000%20json#sending-nmea-2000-data-from-a-plugin">here</a>
                         </FormText>
                         <Input
                           type="textarea"
@@ -268,6 +268,8 @@ class Playground extends Component {
                   </Form>
                 </CardBody>
                 <CardFooter>
+                  <Row style={{ paddingBottom: '0.25rem' }}>
+                      <Col>
                   <Button
                     size="sm"
                     color="primary"
@@ -277,15 +279,9 @@ class Playground extends Component {
                   >
                     <i className="fa fa-dot-circle-o" /> Beautify JSON
                   </Button>
-                  <span
-                    className="float-left"
-                    style={{ paddingLeft: '10px', paddingTop: '0.25rem' }}
-                  >
-                    {' '}
-                    {this.state.error && (
-                      <p className="text-danger">{this.state.error}</p>
-                    )}
-                  </span>{' '}
+                      </Col>
+                    
+                  <Col>
                   <Button
                     size="sm"
                     color="primary"
@@ -300,10 +296,16 @@ class Playground extends Component {
                       }
                     />{' '}
                     Send To Server
-                  </Button>{' '}
+                  </Button>
+                  </Col>
+                    </Row>
+                    <Row style={{ paddingBottom: '0.25rem' }}>
+                      
+                      <Col className="text-right">
                   <Button
                     size="sm"
                     color="primary"
+                    disabled={!(this.state.n2kJson && this.state.n2kJson.length > 0)}
                     onClick={this.handleSendN2K}
                   >
                     <i
@@ -313,8 +315,19 @@ class Playground extends Component {
                           : 'fa fa-dot-circle-o'
                       }
                     />{' '}
-                    Send To N2K Out
+                    Send as PGN to server's NMEA2000 connection
                   </Button>
+                    </Col>
+                    </Row>
+                   <Row>
+                  <Col>
+                        <span className="float-right" >
+                    {this.state.error && (
+                      <p className="text-danger">{this.state.error}</p>
+                    )}
+                        </span>
+                  </Col>
+                   </Row>
                 </CardFooter>
               </Card>
             </Col>
