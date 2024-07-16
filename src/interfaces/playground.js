@@ -123,7 +123,7 @@ module.exports = function (app) {
 
     if (sendToN2K && type != 'n2k-json' && type != 'n2k') {
       res.status(400).json({
-        error: 'PLease enter NMEA 2000 json format or Actisense format'
+        error: 'Please enter NMEA 2000 json format or Actisense format'
       })
       return
     }
