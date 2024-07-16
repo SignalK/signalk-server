@@ -29,9 +29,15 @@ const {
 
 const serverRoutesPrefix = '/skServer'
 
+let n2kOutAvailable = false
+
 module.exports = function (app) {
   const n2kMapper = new N2kMapper({ app }, app.propertyValues)
   const pgnParser = new FromPgn({}, app.propertyValues)
+
+  app.on('nmea2000OutAvailable', (msg) => {
+    n2kOutAvailable = true
+  })
 
   const processors = {
     n2k: (msgs, sendToServer) => {
@@ -46,7 +52,7 @@ module.exports = function (app) {
           return n2kMapper.toDelta(n2k)
         }
       })
-      return { deltas, n2kJson: n2kJson }
+      return { deltas, n2kJson: n2kJson, n2kOutAvailable }
     },
     '0183': (msgs) => {
       const parser = new Parser0183({ app })

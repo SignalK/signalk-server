@@ -44,6 +44,7 @@ class Playground extends Component {
       data: [],
       deltas: [],
       n2kJson: [],
+      n2kOutAvailable: false,
       input,
       inputIsJson: isJson(input),
       sending: false,
@@ -101,6 +102,7 @@ class Playground extends Component {
         deltas: [],
         putResults: [],
         n2kJson: [],
+        n2kOutAvailable: false,
         error: 'invalid json',
         jsonError: error.message,
         activeTab: LINT_ERROR_TAB_ID,
@@ -123,6 +125,7 @@ class Playground extends Component {
           deltas: [],
           putResults: [],
           n2kJson: [],
+          n2kOutAvailable: false,
           error: 'invalid json',
           jsonError: error.message,
           activeTab: LINT_ERROR_TAB_ID,
@@ -161,6 +164,7 @@ class Playground extends Component {
             deltas: [],
             putResults: [],
             n2kJson: [],
+            n2kOutAvailable: false,
             jsonError: null,
             error: data.error,
           })
@@ -207,6 +211,7 @@ class Playground extends Component {
             data: values,
             deltas: data.deltas,
             n2kJson: data.n2kJson,
+            n2kOutAvailable: data.n2kOutAvailable,
             putResults: data.putResults,
             jsonError: null,
           })
@@ -220,6 +225,7 @@ class Playground extends Component {
           deltas: [],
           putResults: [],
           n2kJson: [],
+          n2kOutAvailable: data.n2kOutAvailable,
           error: error.message,
           jsonError: null,
         })
@@ -305,7 +311,7 @@ class Playground extends Component {
                   <Button
                     size="sm"
                     color="primary"
-                    disabled={!(this.state.n2kJson && this.state.n2kJson.length > 0)}
+                    disabled={!(this.state.n2kJson && this.state.n2kJson.length > 0 && this.state.n2kOutAvailable)}
                     onClick={this.handleSendN2K}
                   >
                     <i
@@ -362,6 +368,7 @@ class Playground extends Component {
                         </NavLink>
                       </NavItem>
                     )}
+
                     {this.state.n2kJson && this.state.n2kJson.length > 0 && (
                       <NavItem>
                         <NavLink
