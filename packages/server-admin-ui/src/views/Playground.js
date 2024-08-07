@@ -225,7 +225,7 @@ class Playground extends Component {
           deltas: [],
           putResults: [],
           n2kJson: [],
-          n2kOutAvailable: data.n2kOutAvailable,
+          n2kOutAvailable: false,
           error: error.message,
           jsonError: null,
         })
@@ -331,7 +331,7 @@ class Playground extends Component {
                               : 'fa fa-dot-circle-o'
                           }
                         />{' '}
-                        Send as PGN to server's NMEA2000 connection
+                        Send as PGN to server&apos;s NMEA2000 connection
                       </Button>
                     </Col>
                   </Row>
