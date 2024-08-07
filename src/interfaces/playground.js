@@ -35,7 +35,7 @@ module.exports = function (app) {
   const n2kMapper = new N2kMapper({ app }, app.propertyValues)
   const pgnParser = new FromPgn({}, app.propertyValues)
 
-  app.on('nmea2000OutAvailable', (msg) => {
+  app.on('nmea2000OutAvailable', () => {
     n2kOutAvailable = true
   })
 
