@@ -184,7 +184,7 @@ module.exports = function (app, config) {
       const remember = req.body.rememberMe
       const configuration = getConfiguration()
 
-      login(name, password)
+      strategy.login(name, password)
         .then((reply) => {
           const requestType = req.get('Content-Type')
 
