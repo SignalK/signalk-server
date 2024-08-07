@@ -69,6 +69,20 @@ module.exports = function (app, config) {
       }
       return tslogin(username, password)
     }
+
+    const tsAuthorizeWS = security.authorizeWS
+    security.tsAuthorizeWS = (req) => {
+      tsAuthorizeWS(req)
+      if ( !req.skIsAuthenticated &&
+           req.headers.venus_os_authenticated === 'true' ) {
+        req.skIsAuthenticated = true
+        req.skPrincipal = {
+          identifier: 'admin',
+          permissions: 'admin'
+        }
+      }
+    }
+    
   }  else {
     security = dummysecurity()
   }
