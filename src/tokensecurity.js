@@ -184,7 +184,8 @@ module.exports = function (app, config) {
       const remember = req.body.rememberMe
       const configuration = getConfiguration()
 
-      strategy.login(name, password)
+      strategy
+        .login(name, password)
         .then((reply) => {
           const requestType = req.get('Content-Type')
 
@@ -883,7 +884,7 @@ module.exports = function (app, config) {
     const configuration = getConfiguration()
 
     let token = req.cookies.JAUTHENTICATION
-    
+
     if (!token) {
       token = strategy.getAuthorizationFromHeaders(req)
     }

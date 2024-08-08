@@ -16,21 +16,19 @@
 */
 
 import fs from 'fs'
-import { createDebug } from './debug'
+//import { createDebug } from './debug'
 //const debug = createDebug('signalk-server:venussecurity')
 import dummysecurity from './dummysecurity'
-import {
-  saveSecurityConfig,
-} from './security'
+import { saveSecurityConfig } from './security'
 
 //const passwordFile = '/data/conf/vncpassword.txt'
 const passwordFile = './vncpassword.txt'
 
 module.exports = function (app, config) {
   let security
-  
-  if ( fs.existsSync(passwordFile) && fs.readFileSync(passwordFile).length ) {
-    if ( !config.users || config.users.length == 0 ) {
+
+  if (fs.existsSync(passwordFile) && fs.readFileSync(passwordFile).length) {
+    if (!config.users || config.users.length == 0) {
       const user = {
         username: 'admin',
         type: 'admin',
@@ -39,7 +37,7 @@ module.exports = function (app, config) {
 
       security = require('./tokensecurity')(app, config)
       config = security.getConfiguration()
-      config.users = [ user ]
+      config.users = [user]
       app.securityStrategy = security
       saveSecurityConfig(app, config, (theError) => {
         if (theError) {
@@ -50,15 +48,16 @@ module.exports = function (app, config) {
       security = require('./tokensecurity')(app, config)
     }
     const tslogin = security.login
-    
+
     security.login = (username, password) => {
-      if ( username === 'admin' ) {
-        
-        const user = security.getConfiguration().users.find((aUser) => aUser.username === username)
-        
+      if (username === 'admin') {
+        const user = security
+          .getConfiguration()
+          .users.find((aUser) => aUser.username === username)
+
         const password = fs.readFileSync(passwordFile).toString().trim()
 
-        if ( password !== user.password ) {
+        if (password !== user.password) {
           user.password = password
           saveSecurityConfig(app, config, (theError) => {
             if (theError) {
@@ -73,8 +72,10 @@ module.exports = function (app, config) {
     const tsAuthorizeWS = security.authorizeWS
     security.authorizeWS = (req) => {
       tsAuthorizeWS(req)
-      if ( !req.skIsAuthenticated &&
-           req.headers.venus_os_authenticated === 'true' ) {
+      if (
+        !req.skIsAuthenticated &&
+        req.headers.venus_os_authenticated === 'true'
+      ) {
         req.skIsAuthenticated = true
         req.skPrincipal = {
           identifier: 'admin',
@@ -85,12 +86,14 @@ module.exports = function (app, config) {
 
     const tsHttpAuthorize = security.httpAuthorize
     security.httpAuthorize = (redirect, forLoginStatus, req, res, next) => {
-      if ( req.cookies.JAUTHENTICATION ||
-           security.getAuthorizationFromHeaders(req) ) {
+      if (
+        req.cookies.JAUTHENTICATION ||
+        security.getAuthorizationFromHeaders(req)
+      ) {
         return tsHttpAuthorize(redirect, forLoginStatus, req, res, next)
       }
-      
-      if ( req.headers.venus_os_authenticated === 'true' ) {
+
+      if (req.headers.venus_os_authenticated === 'true') {
         req.skIsAuthenticated = true
         req.userLoggedIn = true
         req.skPrincipal = {
@@ -102,8 +105,7 @@ module.exports = function (app, config) {
         return tsHttpAuthorize(redirect, forLoginStatus, req, res, next)
       }
     }
-    
-  }  else {
+  } else {
     security = dummysecurity()
   }
   return security
