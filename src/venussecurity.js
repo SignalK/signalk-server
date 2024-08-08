@@ -17,7 +17,7 @@
 
 import fs from 'fs'
 import { createDebug } from './debug'
-const debug = createDebug('signalk-server:tokensecurity')
+//const debug = createDebug('signalk-server:venussecurity')
 import dummysecurity from './dummysecurity'
 import {
   saveSecurityConfig,
@@ -71,7 +71,7 @@ module.exports = function (app, config) {
     }
 
     const tsAuthorizeWS = security.authorizeWS
-    security.tsAuthorizeWS = (req) => {
+    security.authorizeWS = (req) => {
       tsAuthorizeWS(req)
       if ( !req.skIsAuthenticated &&
            req.headers.venus_os_authenticated === 'true' ) {
@@ -80,6 +80,26 @@ module.exports = function (app, config) {
           identifier: 'admin',
           permissions: 'admin'
         }
+      }
+    }
+
+    const tsHttpAuthorize = security.httpAuthorize
+    security.httpAuthorize = (redirect, forLoginStatus, req, res, next) => {
+      if ( req.cookies.JAUTHENTICATION ||
+           security.getAuthorizationFromHeaders(req) ) {
+        return tsHttpAuthorize(redirect, forLoginStatus, req, res, next)
+      }
+      
+      if ( req.headers.venus_os_authenticated === 'true' ) {
+        req.skIsAuthenticated = true
+        req.userLoggedIn = true
+        req.skPrincipal = {
+          identifier: 'admin',
+          permissions: 'admin'
+        }
+        return next()
+      } else {
+        return tsHttpAuthorize(redirect, forLoginStatus, req, res, next)
       }
     }
     

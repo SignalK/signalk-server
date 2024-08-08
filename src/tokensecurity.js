@@ -674,7 +674,7 @@ module.exports = function (app, config) {
     }
   }
 
-  function getAuthorizationFromHeaders(req) {
+  strategy.getAuthorizationFromHeaders = (req) => {
     if (req.headers) {
       let header = req.headers.authorization
       if (!header) {
@@ -705,7 +705,7 @@ module.exports = function (app, config) {
       if (req.query && req.query.token) {
         token = req.query.token
       } else {
-        token = getAuthorizationFromHeaders(req)
+        token = strategy.getAuthorizationFromHeaders(req)
       }
     }
 
@@ -869,65 +869,69 @@ module.exports = function (app, config) {
   function http_authorize(redirect, forLoginStatus) {
     // debug('http_authorize: ' + redirect)
     return function (req, res, next) {
-      let token = req.cookies.JAUTHENTICATION
+      strategy.httpAuthorize(redirect, forLoginStatus, req, res, next)
+    }
+  }
 
-      debug(`http_authorize: ${req.path} (forLogin: ${forLoginStatus})`)
+  strategy.httpAuthorize = (redirect, forLoginStatus, req, res, next) => {
+    debug(`http_authorize: ${req.path} (forLogin: ${forLoginStatus})`)
 
-      if (!getIsEnabled()) {
-        return next()
-      }
+    if (!getIsEnabled()) {
+      return next()
+    }
 
-      const configuration = getConfiguration()
+    const configuration = getConfiguration()
 
-      if (!token) {
-        token = getAuthorizationFromHeaders(req)
-      }
+    let token = req.cookies.JAUTHENTICATION
+    
+    if (!token) {
+      token = strategy.getAuthorizationFromHeaders(req)
+    }
 
-      if (token) {
-        jwt.verify(token, configuration.secretKey, function (err, decoded) {
-          debug('verify')
-          if (!err) {
-            const principal = getPrincipal(decoded)
-            if (principal) {
-              debug('authorized')
-              req.skPrincipal = principal
-              req.skIsAuthenticated = true
-              req.userLoggedIn = true
-              next()
-              return
-            } else {
-              debug('unknown user: ' + (decoded.id || decoded.device))
-            }
-          } else {
-            debug(`bad token: ${err.message} ${req.path}`)
-            res.clearCookie('JAUTHENTICATION')
-          }
-
-          if (configuration.allow_readonly) {
-            req.skIsAuthenticated = false
+    if (token) {
+      jwt.verify(token, configuration.secretKey, function (err, decoded) {
+        debug('verify')
+        if (!err) {
+          const principal = getPrincipal(decoded)
+          if (principal) {
+            debug('authorized')
+            req.skPrincipal = principal
+            req.skIsAuthenticated = true
+            req.userLoggedIn = true
             next()
+            return
           } else {
-            res.status(401).send('bad auth token')
+            debug('unknown user: ' + (decoded.id || decoded.device))
           }
-        })
-      } else {
-        debug('no token')
-
-        if (configuration.allow_readonly && !forLoginStatus) {
-          req.skPrincipal = { identifier: 'AUTO', permissions: 'readonly' }
-          req.skIsAuthenticated = true
-          return next()
         } else {
-          req.skIsAuthenticated = false
+          debug(`bad token: ${err.message} ${req.path}`)
+          res.clearCookie('JAUTHENTICATION')
+        }
 
-          if (forLoginStatus) {
-            next()
-          } else if (redirect) {
-            debug('redirecting to login')
-            res.redirect('/@signalk/server-admin-ui/#/login')
-          } else {
-            res.status(401).send('Unauthorized')
-          }
+        if (configuration.allow_readonly) {
+          req.skIsAuthenticated = false
+          next()
+        } else {
+          res.status(401).send('bad auth token')
+        }
+      })
+    } else {
+      debug('no token')
+
+      if (configuration.allow_readonly && !forLoginStatus) {
+        req.skPrincipal = { identifier: 'AUTO', permissions: 'readonly' }
+        req.skIsAuthenticated = true
+        return next()
+      } else {
+        req.skIsAuthenticated = false
+
+        if (forLoginStatus) {
+          next()
+        } else if (redirect) {
+          debug('redirecting to login')
+          res.redirect('/@signalk/server-admin-ui/#/login')
+        } else {
+          res.status(401).send('Unauthorized')
         }
       }
     }
