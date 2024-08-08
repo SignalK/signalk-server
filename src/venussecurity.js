@@ -32,7 +32,8 @@ module.exports = function (app, config) {
       const user = {
         username: 'admin',
         type: 'admin',
-        password: fs.readFileSync(passwordFile).toString().trim()
+        password: fs.readFileSync(passwordFile).toString().trim(),
+        venusAdminUser: true
       }
 
       security = require('./tokensecurity')(app, config)
@@ -55,15 +56,17 @@ module.exports = function (app, config) {
           .getConfiguration()
           .users.find((aUser) => aUser.username === username)
 
-        const password = fs.readFileSync(passwordFile).toString().trim()
-
-        if (password !== user.password) {
-          user.password = password
-          saveSecurityConfig(app, config, (theError) => {
-            if (theError) {
-              console.error(theError)
-            }
-          })
+        if ( user.venusAdminUser ) {
+          const password = fs.readFileSync(passwordFile).toString().trim()
+          
+          if (password !== user.password) {
+            user.password = password
+            saveSecurityConfig(app, config, (theError) => {
+              if (theError) {
+                console.error(theError)
+              }
+            })
+          }
         }
       }
       return tslogin(username, password)
