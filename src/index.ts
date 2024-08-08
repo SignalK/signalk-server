@@ -448,9 +448,9 @@ class Server {
 
         const primaryPort = getPrimaryPort(app)
         debug(`primary port:${primaryPort}`)
-        server.listen(primaryPort, () => {
+        server.listen(primaryPort, app.config.settings.interface, () => {
           console.log(
-            'signalk-server running at 0.0.0.0:' + primaryPort.toString() + '\n'
+            'signalk-server running at ' + JSON.stringify(server.address()) + '\n'
           )
           app.started = true
           resolve(self)
@@ -465,7 +465,8 @@ class Server {
               if (!anErr) {
                 app.redirectServer = aServer
               }
-            }
+            },
+            app.config.settings.interface
           )
         }
       })
@@ -584,7 +585,8 @@ function createServer(app: any, cb: (err: any, server?: any) => void) {
 function startRedirectToSsl(
   port: number,
   redirectPort: number,
-  cb: (e: unknown, server: any) => void
+  cb: (e: unknown, server: any) => void,
+  networkInterface?: string,
 ) {
   const redirectApp = express()
   redirectApp.use((req: Request, res: Response) => {
@@ -592,7 +594,7 @@ function startRedirectToSsl(
     res.redirect(`https://${host}:${redirectPort}${req.path}`)
   })
   const server = http.createServer(redirectApp)
-  server.listen(port, () => {
+  server.listen(port, networkInterface, () => {
     console.log(`Redirect server running on port ${port.toString()}`)
     cb(null, server)
   })
