@@ -659,8 +659,6 @@ async function startRedirectToSsl(
     port
   )
 
-  throw new Error('Configuration is immutable')
-
   return servers
 }
 
