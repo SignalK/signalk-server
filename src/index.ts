@@ -449,11 +449,16 @@ class Server {
         debug(`primary port:${primaryPort}`)
 
         await serverListen(
-          'signalk-server running at',
           app.config.settings.networkInterfaces,
           servers,
           primaryPort
         )
+
+        servers.forEach((server) => {
+          console.log(
+            `signalk-server running at ${JSON.stringify(server.address())}`
+          )
+        })
 
         const secondaryPort = getSecondaryPort(app)
         debug(`secondary port:${primaryPort}`)
@@ -606,7 +611,6 @@ function createServer(app: any, cb: (err: any, servers?: any[]) => void) {
 }
 
 function serverListen(
-  msg: string,
   networkInterfaces: string[] | undefined,
   servers: any[],
   port: number | { fd: number }
@@ -626,7 +630,6 @@ function serverListen(
       new Promise((resolve, reject) => {
         try {
           server.listen(port, interfaces[idx], () => {
-            console.log(`${msg} ${JSON.stringify(server.address())}`)
             resolve(null)
           })
         } catch (err) {
@@ -652,12 +655,15 @@ async function startRedirectToSsl(
     return http.createServer(redirectApp)
   })
 
-  await serverListen(
-    'signalk-server redirect server running at',
-    networkInterfaces,
-    servers,
-    port
-  )
+  await serverListen(networkInterfaces, servers, port)
+
+  servers.forEach((server) => {
+    console.log(
+      `signalk-server redirect server running at  ${JSON.stringify(
+        server.address()
+      )}`
+    )
+  })
 
   return servers
 }
