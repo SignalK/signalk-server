@@ -448,28 +448,20 @@ class Server {
         const primaryPort = getPrimaryPort(app)
         debug(`primary port:${primaryPort}`)
 
-        serverListen('signalk-server running at', app.config.settings.networkInterfaces, servers, primaryPort, (err:any) => {
-          if ( !err ) {
-            app.started = true
-            resolve(self)
-          } else {
-            reject(err)
-          }
-        })
+        await serverListen('signalk-server running at', app.config.settings.networkInterfaces, servers, primaryPort)
+       
         const secondaryPort = getSecondaryPort(app)
         debug(`secondary port:${primaryPort}`)
         if (app.config.settings.ssl && secondaryPort) {
-          startRedirectToSsl(
+          app.redirectServers = await startRedirectToSsl(
             secondaryPort,
             getExternalPort(app),
-            (anErr: any, aServers: any[]) => {
-              if (!anErr) {
-                app.redirectServers = aServers
-              }
-            },
             app.config.settings.networkInterfaces
           )
         }
+
+        app.started = true
+        resolve(self)
       })
     })
   }
@@ -603,7 +595,7 @@ function createServer(app: any, cb: (err: any, servers?: any[]) => void) {
   cb(null, servers)
 }
 
-function serverListen(msg:string, networkInterfaces: string[] | undefined, servers: any[], port: number | { fd: number; }, cb: (err: any) => void)
+function serverListen(msg:string, networkInterfaces: string[] | undefined, servers: any[], port: number | { fd: number; })
 {
   let interfaces : any
 
@@ -631,15 +623,12 @@ function serverListen(msg:string, networkInterfaces: string[] | undefined, serve
       }
     }))
   })
-  Promise.all(promises)
-    .then( () => { cb(null) } )
-    .catch( cb )
+  return Promise.all(promises)
 }
 
-function startRedirectToSsl(
+async function startRedirectToSsl(
   port: number,
   redirectPort: number,
-  cb: (e: unknown, servers: any[]) => void,
   networkInterfaces: string[] | undefined,
 ) {
   const redirectApp = express()
@@ -651,9 +640,12 @@ function startRedirectToSsl(
     return http.createServer(redirectApp)
   })
   
-  serverListen('Redirect server running at', networkInterfaces, servers, port, (err:any) => {
-    cb(err, servers)
-  })
+  await serverListen('signalk-server redirect server running at', networkInterfaces, servers, port)
+
+  throw new Error('Configuration is immutable')
+
+  
+  return servers
 }
 
 function startMdns(app: ServerApp & WithConfig) {
