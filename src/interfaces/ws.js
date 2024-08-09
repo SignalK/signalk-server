@@ -154,7 +154,8 @@ module.exports = function (app) {
     const assertBufferSize = getAssertBufferSize(app.config)
 
     primuses = allWsOptions.map((primusOptions) => {
-      const primus = new Primus(app.server, primusOptions)
+      return app.servers.map((server) => {
+      const primus = new Primus(server, primusOptions)
 
       if (app.securityStrategy.canAuthorizeWS()) {
         primus.authorize(
@@ -302,8 +303,9 @@ module.exports = function (app) {
         debug(spark.id + ' disconnected')
       })
 
-      return primus
-    })
+        return primus
+      })
+    }).reduce((prev, current) => [...prev, ...current])
   }
 
   api.stop = function () {

@@ -75,7 +75,7 @@ export interface Config {
     enablePluginLogging?: boolean
     loggingDirectory?: string
     sourcePriorities?: any
-    interface?: string
+    networkInterfaces?: string[]
   }
   defaults: object
 }
