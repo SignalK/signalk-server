@@ -427,7 +427,7 @@ class Server {
     // eslint-disable-next-line no-async-promise-executor
     return new Promise(async (resolve, reject) => {
       createServer(app, async (err, servers) => {
-        if (err || _.isUndefined(servers) ) {
+        if (err || _.isUndefined(servers)) {
           reject(err)
           return
         }
@@ -448,8 +448,13 @@ class Server {
         const primaryPort = getPrimaryPort(app)
         debug(`primary port:${primaryPort}`)
 
-        await serverListen('signalk-server running at', app.config.settings.networkInterfaces, servers, primaryPort)
-       
+        await serverListen(
+          'signalk-server running at',
+          app.config.settings.networkInterfaces,
+          servers,
+          primaryPort
+        )
+
         const secondaryPort = getSecondaryPort(app)
         debug(`secondary port:${primaryPort}`)
         if (app.config.settings.ssl && secondaryPort) {
@@ -522,15 +527,17 @@ class Server {
           debug('Closing server...')
 
           const that = this
-          Promise.all([closeServers(this.app.servers),
-                       closeServers(this.app.redirectServers)])
+          Promise.all([
+            closeServers(this.app.servers),
+            closeServers(this.app.redirectServers)
+          ])
             .then(() => {
               debug('Servers closed')
               that.app.started = false
               cb && cb()
               resolve(that)
             })
-            .catch(err => {
+            .catch((err) => {
               reject(err)
             })
         } catch (err) {
@@ -543,28 +550,31 @@ class Server {
 
 module.exports = Server
 
-function closeServers(servers: any[] | undefined)
-{
-  if ( !servers ) {
+function closeServers(servers: any[] | undefined) {
+  if (!servers) {
     return null
   } else {
-    return Promise.all(servers.map((server) => {
-      return new Promise((resolve, reject) => {
-        try {
-          server.close(() => {
-            resolve(server)
-          })
-        } catch ( err ) {
-          reject(err)
-        }
+    return Promise.all(
+      servers.map((server) => {
+        return new Promise((resolve, reject) => {
+          try {
+            server.close(() => {
+              resolve(server)
+            })
+          } catch (err) {
+            reject(err)
+          }
+        })
       })
-    }))
+    )
   }
 }
 
 function createServer(app: any, cb: (err: any, servers?: any[]) => void) {
-  const serverCount = app.config.settings.networkInterfaces ? app.config.settings.networkInterfaces.length : 1
-  
+  const serverCount = app.config.settings.networkInterfaces
+    ? app.config.settings.networkInterfaces.length
+    : 1
+
   if (app.config.settings.ssl) {
     getCertificateOptions(app, (err: any, options: any) => {
       if (err) {
@@ -573,10 +583,10 @@ function createServer(app: any, cb: (err: any, servers?: any[]) => void) {
         debug('Starting server to serve both http and https')
 
         const servers = []
-        for ( let i = 0; i < serverCount; i++ ) {
+        for (let i = 0; i < serverCount; i++) {
           servers.push(https.createServer(options, app))
         }
-        
+
         cb(null, servers)
       }
     })
@@ -585,7 +595,7 @@ function createServer(app: any, cb: (err: any, servers?: any[]) => void) {
   const servers = []
   try {
     debug('Starting server to serve only http')
-    for ( let i = 0; i < serverCount; i++ ) {
+    for (let i = 0; i < serverCount; i++) {
       servers.push(http.createServer(app))
     }
   } catch (e) {
@@ -595,33 +605,35 @@ function createServer(app: any, cb: (err: any, servers?: any[]) => void) {
   cb(null, servers)
 }
 
-function serverListen(msg:string, networkInterfaces: string[] | undefined, servers: any[], port: number | { fd: number; })
-{
-  let interfaces : any
+function serverListen(
+  msg: string,
+  networkInterfaces: string[] | undefined,
+  servers: any[],
+  port: number | { fd: number }
+) {
+  let interfaces: any
 
   interfaces = networkInterfaces
 
-  if ( !interfaces )
-  {
+  if (!interfaces) {
     interfaces = [undefined]
   }
 
-  const promises:any[] = []
+  const promises: any[] = []
 
-  servers.forEach((server:any, idx:number) => {
-    promises.push(new Promise((resolve, reject) => {
-      try
-      {
-        server.listen(port, interfaces[idx], () => {
-          console.log(`${msg} ${JSON.stringify(server.address())}`)
-          resolve(null)
-        })
-      }
-      catch ( err )
-      {
-        reject(err)
-      }
-    }))
+  servers.forEach((server: any, idx: number) => {
+    promises.push(
+      new Promise((resolve, reject) => {
+        try {
+          server.listen(port, interfaces[idx], () => {
+            console.log(`${msg} ${JSON.stringify(server.address())}`)
+            resolve(null)
+          })
+        } catch (err) {
+          reject(err)
+        }
+      })
+    )
   })
   return Promise.all(promises)
 }
@@ -629,7 +641,7 @@ function serverListen(msg:string, networkInterfaces: string[] | undefined, serve
 async function startRedirectToSsl(
   port: number,
   redirectPort: number,
-  networkInterfaces: string[] | undefined,
+  networkInterfaces: string[] | undefined
 ) {
   const redirectApp = express()
   redirectApp.use((req: Request, res: Response) => {
@@ -639,12 +651,16 @@ async function startRedirectToSsl(
   const servers = (networkInterfaces || [undefined]).map(() => {
     return http.createServer(redirectApp)
   })
-  
-  await serverListen('signalk-server redirect server running at', networkInterfaces, servers, port)
+
+  await serverListen(
+    'signalk-server redirect server running at',
+    networkInterfaces,
+    servers,
+    port
+  )
 
   throw new Error('Configuration is immutable')
 
-  
   return servers
 }
 

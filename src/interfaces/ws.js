@@ -153,159 +153,161 @@ module.exports = function (app) {
 
     const assertBufferSize = getAssertBufferSize(app.config)
 
-    primuses = allWsOptions.map((primusOptions) => {
-      return app.servers.map((server) => {
-      const primus = new Primus(server, primusOptions)
+    primuses = allWsOptions
+      .map((primusOptions) => {
+        return app.servers.map((server) => {
+          const primus = new Primus(server, primusOptions)
 
-      if (app.securityStrategy.canAuthorizeWS()) {
-        primus.authorize(
-          createPrimusAuthorize(app.securityStrategy.authorizeWS)
-        )
-      }
-
-      primus.on('connection', function (spark) {
-        let principalId
-        if (spark.request.skPrincipal) {
-          principalId = spark.request.skPrincipal.identifier
-        }
-
-        debugConnection(
-          `${spark.id} connected ${JSON.stringify(spark.query)} ${
-            spark.request.connection.remoteAddress
-          }:${principalId}`
-        )
-
-        spark.sendMetaDeltas = spark.query.sendMeta === 'all'
-        spark.sentMetaData = {}
-
-        let onChange = (delta) => {
-          const filtered = app.securityStrategy.filterReadDelta(
-            spark.request.skPrincipal,
-            delta
-          )
-          if (filtered) {
-            sendMetaData(app, spark, filtered)
-            spark.write(filtered)
-            assertBufferSize(spark)
-          }
-        }
-
-        const unsubscribes = []
-
-        if (primusOptions.isPlayback) {
-          spark.on('data', () => {
-            console.error('Playback does not support ws upstream messages')
-            spark.end('Playback does not support ws upstream messages')
-          })
-        } else {
-          spark.on('data', function (msg) {
-            debug('<' + JSON.stringify(msg))
-
-            try {
-              if (msg.token) {
-                spark.request.token = msg.token
-              }
-
-              if (msg.updates) {
-                processUpdates(app, pathSources, spark, msg)
-              }
-
-              if (msg.subscribe) {
-                processSubscribe(
-                  app,
-                  unsubscribes,
-                  spark,
-                  assertBufferSize,
-                  msg
-                )
-              }
-
-              if (msg.unsubscribe) {
-                processUnsubscribe(app, unsubscribes, msg, onChange, spark)
-              }
-
-              if (msg.accessRequest) {
-                processAccessRequest(spark, msg)
-              }
-
-              if (msg.login && app.securityStrategy.supportsLogin()) {
-                processLoginRequest(spark, msg)
-              }
-
-              if (msg.put) {
-                processPutRequest(spark, msg)
-              }
-
-              if (msg.delete) {
-                processDeleteRequest(spark, msg)
-              }
-
-              if (msg.requestId && msg.query) {
-                processReuestQuery(spark, msg)
-              }
-            } catch (e) {
-              console.error(e)
-            }
-          })
-        }
-
-        spark.on('end', function () {
-          debugConnection(
-            `${spark.id} end ${JSON.stringify(spark.query)} ${
-              spark.request.connection.remoteAddress
-            }:${principalId}`
-          )
-
-          unsubscribes.forEach((unsubscribe) => unsubscribe())
-
-          _.keys(pathSources).forEach((path) => {
-            _.keys(pathSources[path]).forEach((source) => {
-              if (pathSources[path][source] === spark) {
-                debug('removing source for %s', path)
-                delete pathSources[path][source]
-              }
-            })
-          })
-        })
-
-        if (isSelfSubscription(spark.query)) {
-          const realOnChange = onChange
-          onChange = function (msg) {
-            if (!msg.context || msg.context === app.selfContext) {
-              realOnChange(msg)
-            }
-          }
-        }
-
-        if (spark.query.subscribe === 'none') {
-          onChange = () => undefined
-        }
-
-        onChange = wrapWithverifyWS(app.securityStrategy, spark, onChange)
-
-        spark.onDisconnects = []
-
-        if (primusOptions.isPlayback) {
-          if (!spark.query.startTime) {
-            spark.end(
-              'startTime is a required query parameter for playback connections'
+          if (app.securityStrategy.canAuthorizeWS()) {
+            primus.authorize(
+              createPrimusAuthorize(app.securityStrategy.authorizeWS)
             )
-          } else {
-            handlePlaybackConnection(app, spark, onChange)
           }
-        } else {
-          handleRealtimeConnection(app, spark, onChange)
-        }
-      })
 
-      primus.on('disconnection', function (spark) {
-        spark.onDisconnects.forEach((f) => f())
-        debug(spark.id + ' disconnected')
-      })
+          primus.on('connection', function (spark) {
+            let principalId
+            if (spark.request.skPrincipal) {
+              principalId = spark.request.skPrincipal.identifier
+            }
 
-        return primus
+            debugConnection(
+              `${spark.id} connected ${JSON.stringify(spark.query)} ${
+                spark.request.connection.remoteAddress
+              }:${principalId}`
+            )
+
+            spark.sendMetaDeltas = spark.query.sendMeta === 'all'
+            spark.sentMetaData = {}
+
+            let onChange = (delta) => {
+              const filtered = app.securityStrategy.filterReadDelta(
+                spark.request.skPrincipal,
+                delta
+              )
+              if (filtered) {
+                sendMetaData(app, spark, filtered)
+                spark.write(filtered)
+                assertBufferSize(spark)
+              }
+            }
+
+            const unsubscribes = []
+
+            if (primusOptions.isPlayback) {
+              spark.on('data', () => {
+                console.error('Playback does not support ws upstream messages')
+                spark.end('Playback does not support ws upstream messages')
+              })
+            } else {
+              spark.on('data', function (msg) {
+                debug('<' + JSON.stringify(msg))
+
+                try {
+                  if (msg.token) {
+                    spark.request.token = msg.token
+                  }
+
+                  if (msg.updates) {
+                    processUpdates(app, pathSources, spark, msg)
+                  }
+
+                  if (msg.subscribe) {
+                    processSubscribe(
+                      app,
+                      unsubscribes,
+                      spark,
+                      assertBufferSize,
+                      msg
+                    )
+                  }
+
+                  if (msg.unsubscribe) {
+                    processUnsubscribe(app, unsubscribes, msg, onChange, spark)
+                  }
+
+                  if (msg.accessRequest) {
+                    processAccessRequest(spark, msg)
+                  }
+
+                  if (msg.login && app.securityStrategy.supportsLogin()) {
+                    processLoginRequest(spark, msg)
+                  }
+
+                  if (msg.put) {
+                    processPutRequest(spark, msg)
+                  }
+
+                  if (msg.delete) {
+                    processDeleteRequest(spark, msg)
+                  }
+
+                  if (msg.requestId && msg.query) {
+                    processReuestQuery(spark, msg)
+                  }
+                } catch (e) {
+                  console.error(e)
+                }
+              })
+            }
+
+            spark.on('end', function () {
+              debugConnection(
+                `${spark.id} end ${JSON.stringify(spark.query)} ${
+                  spark.request.connection.remoteAddress
+                }:${principalId}`
+              )
+
+              unsubscribes.forEach((unsubscribe) => unsubscribe())
+
+              _.keys(pathSources).forEach((path) => {
+                _.keys(pathSources[path]).forEach((source) => {
+                  if (pathSources[path][source] === spark) {
+                    debug('removing source for %s', path)
+                    delete pathSources[path][source]
+                  }
+                })
+              })
+            })
+
+            if (isSelfSubscription(spark.query)) {
+              const realOnChange = onChange
+              onChange = function (msg) {
+                if (!msg.context || msg.context === app.selfContext) {
+                  realOnChange(msg)
+                }
+              }
+            }
+
+            if (spark.query.subscribe === 'none') {
+              onChange = () => undefined
+            }
+
+            onChange = wrapWithverifyWS(app.securityStrategy, spark, onChange)
+
+            spark.onDisconnects = []
+
+            if (primusOptions.isPlayback) {
+              if (!spark.query.startTime) {
+                spark.end(
+                  'startTime is a required query parameter for playback connections'
+                )
+              } else {
+                handlePlaybackConnection(app, spark, onChange)
+              }
+            } else {
+              handleRealtimeConnection(app, spark, onChange)
+            }
+          })
+
+          primus.on('disconnection', function (spark) {
+            spark.onDisconnects.forEach((f) => f())
+            debug(spark.id + ' disconnected')
+          })
+
+          return primus
+        })
       })
-    }).reduce((prev, current) => [...prev, ...current])
+      .reduce((prev, current) => [...prev, ...current])
   }
 
   api.stop = function () {

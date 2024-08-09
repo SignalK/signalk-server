@@ -56,9 +56,9 @@ module.exports = function (app, config) {
           .getConfiguration()
           .users.find((aUser) => aUser.username === username)
 
-        if ( user.venusAdminUser ) {
+        if (user.venusAdminUser) {
           const password = fs.readFileSync(passwordFile).toString().trim()
-          
+
           if (password !== user.password) {
             user.password = password
             saveSecurityConfig(app, config, (theError) => {
