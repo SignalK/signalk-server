@@ -250,8 +250,6 @@ It is connected to the NMEA2000 network and has a 10W audio amplifier which can 
 The following post on Panbo is a great resource with regards to the N2K Alert PGNs:
 [Link](https://panbo.com/nmea-2000-network-alert-pgns-seem-great-so-why-are-they-hardly-used/)
 
-Thread on Signal K Slack where most of the information for this chapter was gathered: 
-[Link](https://signalk-dev.slack.com/archives/C02EMP1RF/p1693086271207619)
 
 ### Remote notifications
 
