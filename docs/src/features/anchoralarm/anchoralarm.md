@@ -299,7 +299,7 @@ Listed below are some other apps and supported operations:
 | -----------    | ------------ | -------------- | -------------- | ----------- |  ----------- | 
 |**Wilhelm SK**<br>(iOS)              | yes | yes | yes | yes | yes |
 |**Anchor alarm plugin**<br>(web app) | yes | yes | no  | no  | no  |
-|**Freeboard SK**<br>(web app)        | yes | yes | no  | yes | yes |
+|**Freeboard SK**<br>(web app)        | yes | yes | yes  | yes | yes |
 |**Aqua Map**<br>(iOS & Android)      | ?   | ?   | ?   | ?   | ?   |
 
 
@@ -315,11 +315,18 @@ It provides the ability to arm / disarm and set the radius of the anchor alarm b
 
 ### Freeboard SK
 
-Freeboard SK provides the ability to arm / disarm and set the radius of the anchor alarm via its _Anchor Watch_ function.
-Additionally it will:
-- Display the alarm on screen 
+Freeboard SK provides a "sequence" driven user interface to "step" through the setting of the anchor alarm.
+
+It provides the ability to drop / raise the anchor, set / adjust the alarm radius and shift the anchor position via the _Anchor Watch_ feature in the main menu.
+
+When set, it will:
+- Display the alarm radius on the map
+- Show the vessel track whilst anchored
+
+When alarm is triggered:
+- Display an alarm notification on screen 
 - Play a sound
-- Display a track.
+
 
 It is available under _WebApps_ in the Signal K Server Admin UI.
 
