@@ -17,6 +17,7 @@
   * [NMEA0183 Server](./features/navdataserver/navdataserver.md)
 # Support
 * [Help & Support](./support/help.md)
+  * [FAQs](./support/faq.md)
 * [Sponsor](./support/sponsor.md)
 # Develop
 * [Notes for Developers](./develop/developer_notes.md)
