@@ -296,7 +296,7 @@ Listed below are some other apps and supported operations:
 |  Client App    | Arm / disarm | Set radius     | Move location  | See track   | Plays sound |
 | -----------    | ------------ | -------------- | -------------- | ----------- |  ----------- | 
 |**Wilhelm SK**<br>(iOS)              | yes | yes | yes | yes | yes |
-|**Anchor alarm plugin**<br>(web app) | yes | yes | no  | no  | no  |
+|**Anchor alarm plugin**<br>(web app) | yes | yes | yes  | yes  | no  |
 |**Freeboard SK**<br>(web app)        | yes | yes | yes  | yes | yes |
 |**Aqua Map**<br>(iOS & Android)      | ?   | ?   | ?   | ?   | ?   |
 
@@ -306,7 +306,7 @@ Listed below are some other apps and supported operations:
 
 The anchor alarm plugin provides a web user interface available under _WebApps_ in the Signal K Server Admin UI.
 
-It provides the ability to arm / disarm and set the radius of the anchor alarm but does not display the alarm on screen or play a sound.
+It provides the ability to arm / disarm, set the radius and shift the anchor but does not display the alarm on screen or play a sound.
 
 <img src="./anchor_alarm_plugin_ui.png" width=300px>
 
