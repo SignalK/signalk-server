@@ -70,7 +70,7 @@ const Apps = function (props) {
       'Please restart the server after installing, updating or deleting a plugin'
   }
 
-  const selectedViewFilter = selectedViewToFilter(view)
+  const selectedViewFilter = selectedViewToFilter(view, props.appStore)
   const selectedCategoryFilter =
     category === 'All' ? () => true : (app) => app.categories.includes(category)
   const textSearchFilter =
@@ -176,11 +176,14 @@ const Apps = function (props) {
   )
 }
 
-const selectedViewToFilter = (selectedView) => {
+const selectedViewToFilter = (selectedView, appStore) => {
   if (selectedView === 'Installed') {
     return (app) => app.installing || app.installedVersion
   } else if (selectedView === 'Updates') {
-    return (app) => app.installedVersion && app.version !== app.installedVersion
+    return (app) =>
+      app.installedVersion &&
+      app.version !== app.installedVersion &&
+      appStore.updates.find((update) => update.name === app.name)
   }
   return () => true
 }
