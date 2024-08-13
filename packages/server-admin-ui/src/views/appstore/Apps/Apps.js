@@ -27,15 +27,14 @@ const Apps = function (props) {
     }, {})
     props.appStore.installed.forEach(
       (app) =>
-        (allApps[app.name] = {
-          ...app,
-          installed: true,
-          newVersion:
-            app.installedVersion !== app.version &&
-            updateAvailable(app, props.appStore)
-              ? app.version
-              : null,
-        })
+      (allApps[app.name] = {
+        ...app,
+        installed: true,
+        newVersion:
+          updateAvailable(app, props.appStore)
+            ? app.version
+            : null,
+      })
     )
     props.appStore.installing.forEach(
       (app) => ((allApps[app.name] || {}).installing = true)
@@ -81,13 +80,13 @@ const Apps = function (props) {
     search === ''
       ? () => true
       : (app) => {
-          const lower = search.toLowerCase()
-          return (
-            app.name.toLowerCase().indexOf(lower) >= 0 ||
-            (app.description &&
-              app.description.toLowerCase().indexOf(lower) >= 0)
-          )
-        }
+        const lower = search.toLowerCase()
+        return (
+          app.name.toLowerCase().indexOf(lower) >= 0 ||
+          (app.description &&
+            app.description.toLowerCase().indexOf(lower) >= 0)
+        )
+      }
   const rowData = deriveAppList()
     .filter(selectedViewFilter)
     .filter(selectedCategoryFilter)
@@ -185,17 +184,17 @@ const selectedViewToFilter = (selectedView, appStore) => {
     return (app) => app.installing || app.installedVersion
   } else if (selectedView === 'Updates') {
     return (app) =>
-      app.installedVersion &&
-      app.version !== app.installedVersion &&
       updateAvailable(app, appStore)
   }
   return () => true
 }
 
 const updateAvailable = (app, appStore) => {
-  //Don't allow updates for plugins in the PLUGINS_WITH_UPDATE_DISABLED
-  //environment variable
-  return appStore.updates.find((update) => update.name === app.name)
+  return app.installedVersion &&
+    app.version !== app.installedVersion &&
+    //Don't allow updates for plugins in the PLUGINS_WITH_UPDATE_DISABLED
+    //environment variable
+    appStore.updates.find((update) => update.name === app.name)
 }
 
 const mapStateToProps = ({ appStore }) => ({ appStore })
