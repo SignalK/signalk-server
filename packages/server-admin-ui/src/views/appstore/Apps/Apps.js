@@ -193,7 +193,7 @@ const selectedViewToFilter = (selectedView, appStore) => {
 }
 
 const updateAvailable = (app, appStore) => {
-  //Don't show allow updates for plugins in the PLUGINS_WITH_UPDATE_DISABLED
+  //Don't allow updates for plugins in the PLUGINS_WITH_UPDATE_DISABLED
   //environment variable
   return appStore.updates.find((update) => update.name === app.name)
 }
