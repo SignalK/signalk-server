@@ -32,7 +32,7 @@ const Apps = function (props) {
           installed: true,
           newVersion:
             app.installedVersion !== app.version &&
-            props.appStore.updates.find((update) => update.name === app.name)
+            updateAvailable(app, props.appStore)
               ? app.version
               : null,
         })
@@ -187,9 +187,15 @@ const selectedViewToFilter = (selectedView, appStore) => {
     return (app) =>
       app.installedVersion &&
       app.version !== app.installedVersion &&
-      appStore.updates.find((update) => update.name === app.name)
+      updateAvailable(app, appStore)
   }
   return () => true
+}
+
+const updateAvailable = (app, appStore) => {
+  //Don't show allow updates for plugins in the PLUGINS_WITH_UPDATE_DISABLED
+  //environment variable
+  return appStore.updates.find((update) => update.name === app.name)
 }
 
 const mapStateToProps = ({ appStore }) => ({ appStore })
