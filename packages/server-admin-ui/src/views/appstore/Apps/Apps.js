@@ -30,7 +30,11 @@ const Apps = function (props) {
         (allApps[app.name] = {
           ...app,
           installed: true,
-          newVersion: app.installedVersion !== app.version ? app.version : null,
+          newVersion:
+            app.installedVersion !== app.version &&
+            props.appStore.updates.find((update) => update.name === app.name)
+              ? app.version
+              : null,
         })
     )
     props.appStore.installing.forEach(
