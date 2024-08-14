@@ -30,7 +30,7 @@ const Apps = function (props) {
         (allApps[app.name] = {
           ...app,
           installed: true,
-          newVersion: app.installedVersion !== app.version ? app.version : null,
+          newVersion: updateAvailable(app, props.appStore) ? app.version : null,
         })
     )
     props.appStore.installing.forEach(
@@ -70,7 +70,7 @@ const Apps = function (props) {
       'Please restart the server after installing, updating or deleting a plugin'
   }
 
-  const selectedViewFilter = selectedViewToFilter(view)
+  const selectedViewFilter = selectedViewToFilter(view, props.appStore)
   const selectedCategoryFilter =
     category === 'All' ? () => true : (app) => app.categories.includes(category)
   const textSearchFilter =
@@ -176,13 +176,23 @@ const Apps = function (props) {
   )
 }
 
-const selectedViewToFilter = (selectedView) => {
+const selectedViewToFilter = (selectedView, appStore) => {
   if (selectedView === 'Installed') {
     return (app) => app.installing || app.installedVersion
   } else if (selectedView === 'Updates') {
-    return (app) => app.installedVersion && app.version !== app.installedVersion
+    return (app) => updateAvailable(app, appStore)
   }
   return () => true
+}
+
+const updateAvailable = (app, appStore) => {
+  return (
+    app.installedVersion &&
+    app.version !== app.installedVersion &&
+    //Don't allow updates for plugins in the PLUGINS_WITH_UPDATE_DISABLED
+    //environment variable
+    appStore.updates.find((update) => update.name === app.name)
+  )
 }
 
 const mapStateToProps = ({ appStore }) => ({ appStore })
