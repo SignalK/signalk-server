@@ -65,8 +65,9 @@ export function startDeltaStatistics(
       (app.providerStatistics[msg.providerId] = new ProviderStats())
     if (msg.count !== undefined) {
       stats.writeCount += msg.count
+    } else {
+      stats.writeCount++
     }
-    stats.writeCount++
   })
 
   return setInterval(() => {
