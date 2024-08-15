@@ -105,10 +105,7 @@ export function incDeltaStatistics(
 function updateProviderPeriodStats(app: any) {
   app.providers.forEach((provider: any) => {
     if (isUndefined(app.providerStatistics[provider.id])) {
-      app.providerStatistics[provider.id] = {
-        deltaCount: 0,
-        deltaRate: 0
-      }
+      app.providerStatistics[provider.id] = new ProviderStats()
     }
   })
 
