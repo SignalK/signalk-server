@@ -132,9 +132,16 @@ class Server {
 
     // feature detection
     app.getFeatures = async (enabled?: boolean) => {
-      return {
-        apis: enabled === false ? [] : app.apis,
-        plugins: await app.getPluginsList(enabled)
+      if (typeof app.getPluginsList === 'function') {
+        return {
+          apis: enabled === false ? [] : app.apis,
+          plugins: await app.getPluginsList(enabled)
+        }
+      } else {
+        throw new Error(`
+          Plugin manager initialisation not complete!
+          Cannot call this  function until all plugins have been initialised!
+        `)
       }
     }
 
