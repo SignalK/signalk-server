@@ -1023,7 +1023,7 @@ const Seatalk = (props) => (
   <span>
     <FormGroup row>
       <Col md="3">
-        <Label htmlFor="options.type">Seatalk Source</Label>
+        <Label htmlFor="options.type">GPIO Library</Label>
       </Col>
       <Col xs="12" md="3">
         <Input
@@ -1032,7 +1032,7 @@ const Seatalk = (props) => (
           name="options.type"
           onChange={(event) => props.onChange(event)}
         >
-          <option value="none">Select a source</option>
+          <option value="none">Select a library</option>
           <option value="gpiod">gpiod</option>
           <option value="pigpio">pigpio (legacy)</option>
         </Input>
