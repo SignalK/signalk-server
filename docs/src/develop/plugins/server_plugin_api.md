@@ -18,7 +18,7 @@ These functions are available via the `app` object passed to the plugin when it 
 
 #### `app.getFeatures(enabed)`
 
-Returns an object detailing the available APIs and Plugins.
+Returns a Promise containing an object detailing the available APIs and Plugins.
 
 The `enabled` parameter is optional and has the following values:
 - `undefined` (not provided): list all features
@@ -27,7 +27,7 @@ The `enabled` parameter is optional and has the following values:
 
 _Example:_
 ```javascript
-let features = app.getFeatures();
+const features = await app.getFeatures();
 
 {
   "apis": [

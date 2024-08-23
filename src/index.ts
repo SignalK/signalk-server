@@ -132,16 +132,25 @@ class Server {
 
     // feature detection
     app.getFeatures = async (enabled?: boolean) => {
-      if (typeof app.getPluginsList === 'function') {
-        return {
-          apis: enabled === false ? [] : app.apis,
-          plugins: await app.getPluginsList(enabled)
-        }
-      } else {
-        throw new Error(`
-          Plugin manager initialisation not complete!
-          Cannot call this  function until all plugins have been initialised!
-        `)
+      const checkPMStarted = (): Promise<boolean> => {
+        return new Promise((resolve) => {
+          setImmediate(() => {
+            resolve(typeof app.getPluginsList === 'function')
+          })
+        })
+      }
+      const maxTries = 10
+      let tries = 0
+      let pmStarted = false
+
+      while (!pmStarted && tries < maxTries) {
+        tries++
+        pmStarted = await checkPMStarted()
+      }
+      const plugins = pmStarted ? await app.getPluginsList(enabled) : []
+      return {
+        apis: enabled === false ? [] : app.apis,
+        plugins: plugins
       }
     }
 
