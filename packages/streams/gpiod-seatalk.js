@@ -59,6 +59,16 @@ class st1rx:
         self.stop = stop
         self.invert = invert
 
+        # calculate timing based on baud rate
+        self.fullbit_ns = int(1000000000 / self.baud)
+        self.halfbit_ns = int(self.fullbit_ns / 2)
+        self.frame_ns = int((1 + self.bits + self.stop) * self.fullbit_ns)
+        # ideally we should sample at halfbit_ns, but opto-coupler circuit may have slow rising edge
+        # sample at 1/4 bit pos with invert, and 3/4 bit without invert
+        self.sample_ns = int(self.halfbit_ns / 2)
+        if invert == False:
+            self.sample_ns += self.halfbit_ns
+
         if gpiod_v == 1:
             # get pin with gpiod v1.x.x
             if self.invert == 0:
@@ -101,9 +111,6 @@ class st1rx:
         bits = self.bits
         stop = self.stop
         pol = self.invert
-        fullbit_ns = int(1000000000 / self.baud)
-        halfbit_ns = int(fullbit_ns / 2)
-        frame_ns = int((1 + self.bits + self.stop) * fullbit_ns)
 
         if self.pending_e is None:
             # wait for new gpio events, timeout after 0.5 seconds
@@ -122,8 +129,10 @@ class st1rx:
             level = 1^pol
         e_ns = e.nsec
 
-        sample_ns = e_ns + halfbit_ns
-        remaining_ns = frame_ns + halfbit_ns
+        fullbit_ns = self.fullbit_ns
+        sample_ns = e_ns + self.sample_ns
+        remaining_ns = self.frame_ns
+
         b = 0
         sb = False
 
@@ -197,9 +206,6 @@ class st1rx:
         bits = self.bits
         stop = self.stop
         pol = self.invert
-        fullbit_ns = int(1000000000 / self.baud)
-        halfbit_ns = int(fullbit_ns / 2)
-        frame_ns = int((1 + self.bits + self.stop) * fullbit_ns)
 
         if self.pending_e is None:
             # wait for new gpio events, timeout after 0.5 seconds
@@ -218,8 +224,10 @@ class st1rx:
             level = 1^pol
         e_ns = e.timestamp_ns
 
-        sample_ns = e_ns + halfbit_ns
-        remaining_ns = frame_ns + halfbit_ns
+        fullbit_ns = self.fullbit_ns
+        sample_ns = e_ns + self.sample_ns
+        remaining_ns = self.frame_ns
+
         b = 0
         sb = False
 
