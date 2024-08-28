@@ -18,7 +18,7 @@
  * This stream receives Seatalk1 data over GPIO on a Raspberry Pi
  * Supports Python libraries gpiod 1.x and 2.x
  * Supports Raspberry Pi OS Bookworm and Bullseye on Raspberry Pi 3, 4 and 5
-*/
+ */
 
 const Execute = require('./execute')
 
