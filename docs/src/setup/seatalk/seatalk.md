@@ -34,7 +34,7 @@ Before setting up the data connection on Signal K Server, you may need to instal
 
 Both versions of this library 1.x.x (Debian package) and 2.x.x (Pip package) are supported. It is possible that your system already has one of the two versions of this library installed and some program is already using it, so before installing it we will check if we already have one.
 
-Type this is an terminal:
+Type this in a terminal:
 
 ```
 python -m pydoc gpiod | tail
@@ -86,7 +86,7 @@ _Note: The _pigpio_ deamon by default provides a socket interface on port 8888, 
 
 ### Data Connection
 
-Now you have installed the required software, you can now add a new data connection using the Signal K Server Admin UI.
+With the required software installed, you can now add a new data connection using the Signal K Server Admin UI.
 
 _Example Data Connection:_
 
