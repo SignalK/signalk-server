@@ -2,13 +2,9 @@
 
 ### Introduction
 
-Please note that this setup will [not, for the moment, run on a Raspberry Pi 5](https://github.com/SignalK/signalk-server/issues/1658) !! 
-
 The Signal K Server supports a variety of data connection types including _Seatalk (GPIO)_ which provides the ability to receive Raymarine Seatalk 1 (ST1) data, via simple DIY hardware connected to a Raspberry Pi GPIO, and convert it to Signal K deltas. This information can then be forwarded by the Signal K Server to a NMEA 0183 or NMEA 2000 network using appropriate hardware and plugins. 
 
 A guide to SeaTalk can be found [here](http://boatprojects.blogspot.com/2012/12/beginners-guide-to-raymarines-seatalk.html).
-
-_Inspired by [Read SeaTalk1 from the Raspberry Pi GPIO using pigpio](https://github.com/Thomas-GeDaD/Seatalk1-Raspi-reader)._
 
 ### Hardware
 
@@ -26,9 +22,43 @@ A simpler, non-electrically isolated, solution is detailed below, using a low si
 
 ![ST1_Tr](./seatalk_circuit_2.jpg)
 
+If you do not want to build your own circuit, you can get a **MacArthur HAT** and simply connect it to your Seatalk 1 network [following the manual](https://macarthur-hat-documentation.readthedocs.io/en/latest/seatalk.html). If you also use OpenPlotter with this HAT, all the software will be installed and ready to go.
+
+![MacArthur HAT](./seatalk-dcdc.png)
+
 ### Software
 
-Before configuring the data connection in Signal K Server, you will need to install `pigpio` and associated python libraries on the Raspberry PI. 
+Before setting up the data connection on Signal K Server, you may need to install some associated Python libraries on your system. Here you have two options: gpiod library (**Raspberry Pi 3, 4 and 5 models**) or pigpio library (**Raspberry Pi 3 and 4 models**).
+
+#### gpiod (recommended)
+
+Both versions of this library 1.x.x (Debian package) and 2.x.x (Pip package) are supported. It is possible that your system already has one of the two versions of this library installed and some program is already using it, so before installing it we will check if we already have one.
+
+Type this is an terminal:
+
+```
+python -m pydoc gpiod | tail
+```
+
+If gpiod appears as installed, simply do nothing and go directly to the *Data Connection* section.
+
+If it is not installed, type this in a terminal to install the latest version from pip:
+
+```
+sudo pip3 install gpiod
+```
+
+Since Debian 12 (Bookworm) and Ubuntu 24 (Noble), pip packages need to be installed in virtual environments, but we need this library to be installed at the system level, so on these systems we need to type this instead:
+
+```
+sudo pip3 install gpiod --break-system-packages
+```
+
+Pip will complain that the package is being installed in a non-virtual environment, but you can ignore the warning because it has not been detected to break any system packages.
+
+#### pigpio
+
+_Inspired by [Read SeaTalk1 from the Raspberry Pi GPIO using pigpio](https://github.com/Thomas-GeDaD/Seatalk1-Raspi-reader)._
 
 Open a terminal and enter the following:
 
@@ -70,7 +100,9 @@ _Example Data Connection:_
 
 - Set the _Enabled_ to **Yes**.
 
-- Enter an _ID_ _(e.g. Seatalk)_.
+- Enter an _ID_ _(e.g. Seatalk1)_.
+
+- In *GPIO Library*, select the software that is installed on your system as we have seen in the previous section.
 
 - In _GPIO Pin_, select one of the green GPIO pins from those pictured below _(this will be the pin to which you connect your hardware  e.g. GPIO04)._
 
@@ -89,16 +121,10 @@ Once the server has restarted, confirm that data is being received from the ST1 
 
 The data received via the Seatalk connection will be displayed in the Data Browser with a source value that contains the _ID_ you provided when setting up the connection.
 
-If there is no data displayed in the Data Browser from the Seatalk connection, you can check if there is data available at the selected GPIO using the `STALK_read.py` utility.
+If there is no data displayed in the Data Browser from the Seatalk connection, you can check if there is data available at the selected GPIO using these utilities:
 
-You can download a program from a terminal session with the following command:
-```
-    wget https://raw.githubusercontent.com/MatsA/seatalk1-to-NMEA0183/master/STALK_read.py
-```
-    
-Run the utility with the following command:
-```
-    sudo python STALK_read.py
-```
-    
+gpiod: https://gist.github.com/astuder/c319cf955f6d651350222d36065981b3
+
+pigpio: https://raw.githubusercontent.com/MatsA/seatalk1-to-NMEA0183/master/STALK_read.py
+
 If the display shows ST1 sentences being received at the GPIO pin then review your data connection settings.
