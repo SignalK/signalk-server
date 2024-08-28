@@ -28,27 +28,33 @@ If you do not want to build your own circuit, you can get a **MacArthur HAT** an
 
 ### Software
 
-Before setting up the data connection on Signal K Server, you may need to install some associated Python libraries on your system. Here you have two options: *gpiod* library (Raspberry Pi 3, 4 and 5 models) or *pigpio* library (Raspberry Pi 3 and 4 models).
+Before setting up the data connection on Signal K Server, you may need to install some associated Python libraries on your system. Here you have two options: gpiod library (**Raspberry Pi 3, 4 and 5 models**) or pigpio library (**Raspberry Pi 3 and 4 models**).
 
 #### gpiod (recommended)
 
-Both versions of this library 1.x.x and 2.x.x are supported. These two versions are not compatible with each other. It is possible that your system already has one of the two versions of this library installed and some program is already using it, so before installing it we will check if we already have one.
+Both versions of this library 1.x.x (Debian package) and 2.x.x (Pip package) are supported. It is possible that your system already has one of the two versions of this library installed and some program is already using it, so before installing it we will check if we already have one.
 
 Type this is an terminal:
 
 ```
-apt list gpiod
+python -m pydoc gpiod | tail
 ```
 
 If gpiod appears as installed, simply do nothing and go directly to the *Data Connection* section.
 
-If it is not installed, type this in a terminal to install the latest version:
+If it is not installed, type this in a terminal to install the latest version from pip:
+
+```
+sudo pip3 install gpiod
+```
+
+Since Debian 12 (Bookworm) and Ubuntu 24 (Noble), pip packages need to be installed in virtual environments, but we need this library to be installed at the system level, so on these systems we need to type this instead:
 
 ```
 sudo pip3 install gpiod --break-system-packages
 ```
 
-Pip will complain that the package is being installed in a non-virtual environment, but you can ignore the warning and go to the *Data Connection* section.
+Pip will complain that the package is being installed in a non-virtual environment, but you can ignore the warning because it has not been detected to break any system packages.
 
 #### pigpio
 
