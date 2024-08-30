@@ -73,7 +73,7 @@ export interface Meta {
 
 // Meta payload
 export interface MetaValue {
-  description: string
+  description?: string
   units?: string
   example?: string
 }
