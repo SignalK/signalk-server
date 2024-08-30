@@ -69,5 +69,6 @@
   },
   "ts-node": {
     "files": true
-  }
+  },
+  "exclude": ["src/**/*.test.ts"]
 }
