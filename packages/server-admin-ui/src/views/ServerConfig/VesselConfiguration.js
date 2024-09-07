@@ -288,6 +288,23 @@ class VesselConfiguration extends Component {
                 </FormGroup>
                 <FormGroup row>
                   <Col md="2">
+                    <Label htmlFor="anchorRollerHeight">Anchor Roller Height</Label>
+                  </Col>
+                  <Col xs="12" md="4">
+                    <Input
+                      type="text"
+                      name="height"
+                      onChange={this.handleChange}
+                      value={this.state.anchorRollerHeight}
+                    />
+                    <FormText color="muted">
+                      The height above the waterline of the anchor roller or bridle
+	              connection point in meters{' '}
+                    </FormText>
+                  </Col>
+                </FormGroup>
+                <FormGroup row>
+                  <Col md="2">
                     <Label htmlFor="gpsFromBow">GPS Distance From Bow</Label>
                   </Col>
                   <Col xs="12" md="4">
