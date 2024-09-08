@@ -4,6 +4,7 @@ import { WithSecurityStrategy } from '../security'
 import { CourseApi } from './course'
 import { FeaturesApi } from './discovery'
 import { ResourcesApi } from './resources'
+import { WeatherApi } from './weather'
 import { SignalKApiId } from '@signalk/server-api'
 
 export interface ApiResponse {
@@ -56,8 +57,18 @@ export const startApis = (
   ;(app as any).courseApi = courseApi
   apiList.push('course')
 
+  const weatherApi = new WeatherApi(app)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).weatherApi = weatherApi
+  apiList.push('weather')
+
   const featuresApi = new FeaturesApi(app)
 
-  Promise.all([resourcesApi.start(), courseApi.start(), featuresApi.start()])
+  Promise.all([
+    resourcesApi.start(),
+    courseApi.start(),
+    weatherApi.start(),
+    featuresApi.start()
+  ])
   return apiList
 }
