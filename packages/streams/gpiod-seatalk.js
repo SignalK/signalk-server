@@ -23,7 +23,7 @@
 const Execute = require('./execute')
 
 const cmd = `
-import gpiod, sys, datetime
+import gpiod, sys, datetime, glob
 
 ST_PIN = 20
 
@@ -38,13 +38,26 @@ if gpiod_v != 1 and gpiod_v !=2:
     print("Error: gpiod version {} is not supported".format(gpiod.__version__))
     sys.exit()
 
-# detect model of Raspberry Pi, tested with Pi 4 and Pi 5 running Bookworm
+# detect gpiochip, based on model of Raspberry Pi
 with open("/proc/device-tree/model") as f:
     model = f.read()
 if "Pi 4" in model or "Pi 3" in model:
     gpio_chip = "gpiochip0"
 elif "Pi 5" in model:
-    gpio_chip = "gpiochip4"
+    gpio_chip = "gpiochip0"
+    if gpiod_v == 1:
+        for c in gpiod.ChipIter():
+            if c.label() == "pinctrl-rp1":
+                gpio_chip = c.name()
+                break
+    else:
+        for g in glob.glob("/dev/gpiochip*"):
+            if gpiod.is_gpiochip_device(g):
+                with gpiod.Chip(g) as c:
+                    info = c.get_info()
+                    if info.label == "pinctrl-rp1":
+                        gpio_chip = info.name
+                        break
 else:
     print("Warning: Use of {} is untested".format(model))
     gpio_chip = "gpiochip0"
@@ -314,12 +327,12 @@ if __name__ == "__main__":
         if sys.argv[2] == "true":
             pol = 1
 
-    st = st1rx()
-    if st.open(pin=gpio, invert=pol) == False:
-        print("Error: Failed to open Seatalk1 pin")
-        sys.exit()
-
     try:
+        st = st1rx()
+        if st.open(pin=gpio, invert=pol) == False:
+            print("Error: Failed to open Seatalk1 pin")
+            sys.exit()
+
         st_msg = ""
         st_start = False
         while True:
