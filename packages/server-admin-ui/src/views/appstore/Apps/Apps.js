@@ -124,15 +124,15 @@ const Apps = function (props) {
                 )}
               </Button>
               {props.appStore.installing.length > 0 && (
-              <Button
-                color={view === 'Installing' ? 'primary' : 'secondary'}
-                onClick={() => setSelectedView('Installing')}
-              >
-                Installing
+                <Button
+                  color={view === 'Installing' ? 'primary' : 'secondary'}
+                  onClick={() => setSelectedView('Installing')}
+                >
+                  Installing
                   <span className="badge__update">
                     {props.appStore.installing.length}
                   </span>
-              </Button>
+                </Button>
               )}
             </div>
           </div>
