@@ -123,6 +123,17 @@ const Apps = function (props) {
                   </span>
                 )}
               </Button>
+              {props.appStore.installing.length > 0 && (
+              <Button
+                color={view === 'Installing' ? 'primary' : 'secondary'}
+                onClick={() => setSelectedView('Installing')}
+              >
+                Installing
+                  <span className="badge__update">
+                    {props.appStore.installing.length}
+                  </span>
+              </Button>
+              )}
             </div>
           </div>
 
@@ -178,9 +189,11 @@ const Apps = function (props) {
 
 const selectedViewToFilter = (selectedView, appStore) => {
   if (selectedView === 'Installed') {
-    return (app) => app.installing || app.installedVersion
+    return (app) => app.installedVersion
   } else if (selectedView === 'Updates') {
     return (app) => updateAvailable(app, appStore)
+  } else if (selectedView === 'Installing') {
+    return (app) => app.installing
   }
   return () => true
 }
