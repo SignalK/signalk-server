@@ -529,7 +529,7 @@ app.resourcesApi.setResource(
   'waypoints',
   'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
   {
-    "position": {"longitude": 138.5, "latitude": -38.6}, 
+    "name": "My Waypoint"
     "feature": {
       "type":"Feature", 
       "geometry": {
