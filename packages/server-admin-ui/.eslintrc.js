@@ -30,7 +30,6 @@ module.exports = {
     "rules": {
       "react/prop-types": "off",
       "react/no-string-refs": "off",
-      "react/no-direct-mutation-state": "off",
-      "react/no-is-mounted": "off"
+      "react/no-direct-mutation-state": "off"
     }
 }
