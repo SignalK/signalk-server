@@ -618,6 +618,21 @@ module.exports = (theApp: any) => {
     appCopy.getDataDirPath = () => dirForPluginId(plugin.id)
 
     appCopy.registerPutHandler = (context, aPath, callback, source) => {
+      appCopy.handleMessage(plugin.id, {
+        updates: [
+          {
+            meta: [
+              {
+                path: aPath,
+                value: {
+                  supportsPut: true
+                }
+              }
+            ]
+          }
+        ]
+      })
+
       onStopHandlers[plugin.id].push(
         app.registerActionHandler(context, aPath, source || plugin.id, callback)
       )
