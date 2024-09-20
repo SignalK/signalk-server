@@ -44,6 +44,22 @@ Please refer to the [Canboat PGN database](https://canboat.github.io/canboat/can
 
 **_NMEA0183_**: The processing of NMEA0183 sentences is done by [nmea0183-signalk](https://github.com/SignalK/signalk-parser-nmea0183)
 
+#### NMEA 0183 Options
+
+- _Suppress nmea0183 event_ - All incoming NMEA0183 data is made available over TCP on port 10110 by default. This happens by incoming data being emitted as _nmea0183_ events. Selecting this option will prevent data from this connection appearing on the NEMA0183 TCP service.
+
+- _Input Event_ - By default, data received on this connection will cause the nmea0183 event to be emitted. In order to distinguish input from this connection from other NMEA 0183 connections, enter an input event name which will be emitted (in addition to the nmea0183 event) when data is received on this connection.
+
+- _Validate checksum_ - Usually [NMEA 0183 sentences](https://en.wikipedia.org/wiki/NMEA_0183) contain a checksum that can be used to check that the data is not garbled so that erroneous data is discarded. However some data sources do not include the checksum or it is simply wrong. Unchecking this option will disable validating the checksum.
+
+- _Append Checksum_ - See previous point. Some data sources do not include a checksum, but for example a mobile app you are using may require them. Activating this option will add checksums to the data.
+
+- _Remove NULL characters_ - Some data sources include superfluous NULL characters in the input data stream, making the data invalid for consumption. This option will remove the NULL characters. It causes additional processing, so not on by default.
+
+- _Ignored Sentences_ - NMEA0183 sentences to throw away from the input data. Sometimes you may want to ignore certain sentences from a connection, because the data is invalid or missing or just not needed.
+
+- _Override timestamps_ - NMEA0183 data may include timestamps in tag blocks. These may be off or when playing back captured data you may want to ignore the data and override them with current time when converting to Signal K.
+
 **Connection type "File Stream"**
 
 Sample files are available which can be set up as input for the server.
