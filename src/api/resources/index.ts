@@ -32,8 +32,10 @@ interface ResourceApplication
 export class ResourcesApi {
   private resProvider: { [key: string]: Map<string, ResourceProviderMethods> } =
     {}
+  private app: ResourceApplication
 
   constructor(app: ResourceApplication) {
+    this.app = app
     this.initResourceRoutes(app)
   }
 
@@ -106,6 +108,7 @@ export class ResourcesApi {
     debug(`** listResources(${resType}, ${JSON.stringify(params)})`)
 
     const provider = this.checkForProvider(resType, providerId)
+    debug(`** provider = ${provider}`)
     if (!provider) {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
@@ -149,7 +152,19 @@ export class ResourcesApi {
       }
     }
     if (provider) {
-      return this.resProvider[resType]?.get(provider)?.setResource(resId, data)
+      try {
+        const r = await this.resProvider[resType]
+          ?.get(provider)
+          ?.setResource(resId, data)
+        this.app.handleMessage(
+          provider as string,
+          this.buildDeltaMsg(resType, resId, data),
+          SKVersion.v2
+        )
+        return r
+      } catch (e) {
+        return Promise.reject(new Error(`Error deleting ${resType} ${resId}`))
+      }
     } else {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
@@ -169,7 +184,19 @@ export class ResourcesApi {
       provider = await this.getProviderForResourceId(resType, resId)
     }
     if (provider) {
-      return this.resProvider[resType]?.get(provider)?.deleteResource(resId)
+      try {
+        const r = await this.resProvider[resType]
+          ?.get(provider)
+          ?.deleteResource(resId)
+        this.app.handleMessage(
+          provider as string,
+          this.buildDeltaMsg(resType, resId, null),
+          SKVersion.v2
+        )
+        return r
+      } catch (e) {
+        return Promise.reject(new Error(`Error deleting ${resType} ${resId}`))
+      }
     } else {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
