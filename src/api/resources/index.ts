@@ -152,19 +152,21 @@ export class ResourcesApi {
       }
     }
     if (provider) {
-      try {
-        const r = await this.resProvider[resType]
-          ?.get(provider)
-          ?.setResource(resId, data)
-        this.app.handleMessage(
-          provider as string,
-          this.buildDeltaMsg(resType, resId, data),
-          SKVersion.v2
-        )
-        return r
-      } catch (e) {
-        return Promise.reject(new Error(`Error deleting ${resType} ${resId}`))
-      }
+      this.resProvider[resType]
+        ?.get(provider)
+        ?.setResource(resId, data)
+        .then((r) => {
+          this.app.handleMessage(
+            provider as string,
+            this.buildDeltaMsg(resType, resId, data),
+            SKVersion.v2
+          )
+          return r
+        })
+        .catch((e: Error) => {
+          debug(e)
+          return Promise.reject(new Error(`Error writing ${resType} ${resId}`))
+        })
     } else {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
@@ -184,19 +186,21 @@ export class ResourcesApi {
       provider = await this.getProviderForResourceId(resType, resId)
     }
     if (provider) {
-      try {
-        const r = await this.resProvider[resType]
-          ?.get(provider)
-          ?.deleteResource(resId)
-        this.app.handleMessage(
-          provider as string,
-          this.buildDeltaMsg(resType, resId, null),
-          SKVersion.v2
-        )
-        return r
-      } catch (e) {
-        return Promise.reject(new Error(`Error deleting ${resType} ${resId}`))
-      }
+      this.resProvider[resType]
+        ?.get(provider)
+        ?.deleteResource(resId)
+        .then((r) => {
+          this.app.handleMessage(
+            provider as string,
+            this.buildDeltaMsg(resType, resId, null),
+            SKVersion.v2
+          )
+          return r
+        })
+        .catch((e: Error) => {
+          debug(e)
+          return Promise.reject(new Error(`Error deleting ${resType} ${resId}`))
+        })
     } else {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
