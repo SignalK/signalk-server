@@ -221,7 +221,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
   const apiGetResources = async (
     resType: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    params?: any
+    params: any = {}
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> => {
     if (typeof params.position === 'undefined') {
