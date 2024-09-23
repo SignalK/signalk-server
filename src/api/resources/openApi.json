@@ -475,7 +475,7 @@
           "type": {
             "type": "string",
             "description": "Source type of map data.",
-            "enum": ["tilejson", "wms", "wmts"],
+            "enum": ["tilejson", "wms", "wmts", "s-57"],
             "default": "wms",
             "example": "wms"
           }
@@ -1397,6 +1397,29 @@
                 }
               }
             }
+          }
+        }
+      },
+      "post": {
+        "tags": ["charts"],
+        "summary": "New Chart",
+        "requestBody": {
+          "description": "Chart resource entry",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Chart"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/201ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
           }
         }
       }
