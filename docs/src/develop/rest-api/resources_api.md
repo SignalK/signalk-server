@@ -153,11 +153,44 @@ _for example:_
 HTTP POST 'http://hostname:3000/signalk/v2/api/resources/waypoints'
 ```
 
-the first provider that was registered for that resource type will be the target of the requested operation (`setResource()`).
+By default the first provider that was registered for that resource type will be the target of the requested operation (`setResource()`).
 
----
+You can view the registered providers by making the following request:
+```typescript
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/providers'
+```
 
-__Specifying the resource provider to be the tartet of the request:__
+_Example response:_
+``` JSON
+{
+  "charts": [
+    "charts",
+    "resources-provider (default)"
+  ],
+  "routes": [
+    "resources-provider"
+  ],
+  "waypoints": [
+    "resources-provider"
+  ],
+  "notes": [
+    "resources-provider"
+  ],
+  "regions": [
+    "resources-provider"
+  ],
+  "fishing": [
+    "resources-provider"
+  ]
+}
+```
+
+You can change the provider used for writing a resource record in the following ways:
+1. Speciify the resource provider to use as part of the request.
+2. Set a different "default" provider for a specific resource type
+
+
+__1. Specifying the resource provider to be the target of the request:__
 
 When multiple providers are registered for a resource type the client can specify which provider should be the target of the request by using the query parameter `provider`.
 
@@ -187,13 +220,20 @@ HTTP GET 'http://hostname:3000/plugins'
 ```JSON
 [
   {
-    "id": "sk-resources-fs",  // <-- plugin id
+    "id": "mysk-resource-plugin",  // <-- plugin id
     "name": "Resources Provider",
-    "packageName": "sk-resources-fs",
+    "packageName": "mysk-resource-plugin",
     "version": "1.3.0",
     ...
   },
   ...
 ]
 ```
+__2. Setting a default provider for a resource type:__
 
+To change the default provider for a resource type make a request to `http://hostname:3000/signalk/v2/api/resources/providers/default/{resourceType}` and supplying the pliugin id of the provider to direct write requests to.
+
+_Example: Direct create new chart source entries to `my-chart-plugin`._
+```typescript
+HTTP POST 'http://hostname:3000/signalk/v2/api/resources/providers/default/chart' { "value": "my-chart-plugin"}
+```
