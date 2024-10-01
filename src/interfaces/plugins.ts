@@ -418,7 +418,7 @@ module.exports = (theApp: any) => {
     }
   }
 
-  function stopPlugin(plugin: PluginInfo) {
+  function stopPlugin(plugin: PluginInfo): Promise<any> {
     debug('Stopping plugin ' + plugin.name)
     onStopHandlers[plugin.id].forEach((f: () => void) => {
       try {
@@ -428,9 +428,12 @@ module.exports = (theApp: any) => {
       }
     })
     onStopHandlers[plugin.id] = []
-    plugin.stop()
-    theApp.setPluginStatus(plugin.id, 'Stopped')
-    debug('Stopped plugin ' + plugin.name)
+    const result = Promise.resolve(plugin.stop())
+    result.then(() => {
+      theApp.setPluginStatus(plugin.id, 'Stopped')
+      debug('Stopped plugin ' + plugin.name)
+    })
+    return result
   }
 
   function setPluginStartedMessage(plugin: PluginInfo) {
@@ -657,8 +660,11 @@ module.exports = (theApp: any) => {
         if (err) {
           console.error(err)
         } else {
-          stopPlugin(plugin)
-          doPluginStart(app, plugin, location, newConfiguration, restart)
+          stopPlugin(plugin).then(() => {
+            return Promise.resolve(
+              doPluginStart(app, plugin, location, newConfiguration, restart)
+            )
+          })
         }
       })
     }
@@ -713,13 +719,14 @@ module.exports = (theApp: any) => {
           return
         }
         res.json('Saved configuration for plugin ' + plugin.id)
-        stopPlugin(plugin)
-        const options = getPluginOptions(plugin.id)
-        plugin.enableLogging = options.enableLogging
-        plugin.enableDebug = options.enableDebug
-        if (options.enabled) {
-          doPluginStart(app, plugin, location, options.configuration, restart)
-        }
+        stopPlugin(plugin).then(() => {
+          const options = getPluginOptions(plugin.id)
+          plugin.enableLogging = options.enableLogging
+          plugin.enableDebug = options.enableDebug
+          if (options.enabled) {
+            doPluginStart(app, plugin, location, options.configuration, restart)
+          }
+        })
       })
     })
 
