@@ -21,8 +21,13 @@ import {
   PropertyValues,
   PropertyValuesCallback,
   ResourceProvider,
+  AutopilotProvider,
   ServerAPI,
   RouteDestination,
+  AutopilotUpdateAttrib,
+  AutopilotAlarm,
+  Value,
+  Notification,
   SignalKApiId
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -32,6 +37,7 @@ import express, { Request, Response } from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
+import { AutopilotApi } from '../api/autopilot'
 import { CourseApi } from '../api/course'
 import { ResourcesApi } from '../api/resources'
 import { SERVERROUTESPREFIX } from '../constants'
@@ -469,9 +475,10 @@ module.exports = (theApp: any) => {
         console.error(`${plugin.id}:no configuration data`)
         safeConfiguration = {}
       }
-      onStopHandlers[plugin.id].push(() =>
+      onStopHandlers[plugin.id].push(() => {
         app.resourcesApi.unRegister(plugin.id)
-      )
+        app.autopilotApi.unRegister(plugin.id)
+      })
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
@@ -555,6 +562,29 @@ module.exports = (theApp: any) => {
     _.omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {
       resourcesApi.register(plugin.id, provider)
+    }
+
+    const autopilotApi: AutopilotApi = app.autopilotApi
+    _.omit(appCopy, 'autopilotApi') // don't expose the actual autopilot api manager
+    appCopy.registerAutopilotProvider = (
+      provider: AutopilotProvider,
+      devices: string[]
+    ) => {
+      autopilotApi.register(plugin.id, provider, devices)
+    }
+    appCopy.autopilotUpdate = (
+      deviceId: string,
+      attrib: AutopilotUpdateAttrib,
+      value: Value
+    ) => {
+      autopilotApi.apUpdate(plugin.id, deviceId, attrib, value)
+    }
+    appCopy.autopilotAlarm = (
+      deviceId: string,
+      alarmName: AutopilotAlarm,
+      value: Notification
+    ) => {
+      autopilotApi.apAlarm(plugin.id, deviceId, alarmName, value)
     }
 
     _.omit(appCopy, 'apiList') // don't expose the actual apiList
