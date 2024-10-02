@@ -155,7 +155,7 @@ HTTP POST 'http://hostname:3000/signalk/v2/api/resources/waypoints'
 
 By default the first provider that was registered for that resource type will be the target of the requested operation (`setResource()`).
 
-You can view the registered providers by making the following request:
+You can view the registered providers for each resource type by making the following request:
 ```typescript
 HTTP GET 'http://hostname:3000/signalk/v2/api/resources/providers'
 ```
@@ -165,7 +165,7 @@ _Example response:_
 {
   "charts": [
     "charts",
-    "resources-provider (default)"
+    "resources-provider"
   ],
   "routes": [
     "resources-provider"
@@ -182,6 +182,23 @@ _Example response:_
   "fishing": [
     "resources-provider"
   ]
+}
+```
+
+You can view the default providers for each resource types by making the following request:
+
+```typescript
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/providers/default'
+```
+
+_Example response:_
+```JSON
+{
+  "routes": "resources-provider",
+  "waypoints": "resources-provider",
+  "regions": "resources-provider",
+  "notes": "resources-provider",
+  "charts": "resources-provider"
 }
 ```
 

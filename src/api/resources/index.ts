@@ -25,8 +25,6 @@ export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 
 export const skUuid = () => `${uuidv4()}`
 
-const defaultProvider = 'resources-provider'
-
 interface DefaultProviders {
   [index: string]: string
 }
@@ -45,39 +43,69 @@ export class ResourcesApi {
   private resProvider: { [key: string]: Map<string, ResourceProviderMethods> } =
     {}
   private app: ResourceApplication
-
-  private defaultProviders: DefaultProviders = {
-    routes: defaultProvider,
-    waypoints: defaultProvider,
-    regions: defaultProvider,
-    notes: defaultProvider,
-    charts: defaultProvider
-  }
-
   private store: Store
-  private settings: ResourceSettings = { defaultProviders: {} }
+  private settings!: ResourceSettings
 
   constructor(app: ResourceApplication) {
     this.app = app
     this.initResourceRoutes(app)
     this.store = new Store(app, 'resources')
+    this.loadSettings()
   }
 
   async start() {
     // eslint-disable-next-line no-async-promise-executor
     return new Promise<void>(async (resolve) => {
-      try {
-        this.settings = await this.store.read()
-        debug('Found persisted resource settings', this.settings)
-        if ('defaultProviders' in this.settings) {
-          this.defaultProviders = this.settings.defaultProviders
-        }
-      } catch (error) {
-        debug('No persisted resource settings (using default)')
-      }
-      debug('DefaultProviders: ', this.defaultProviders)
       resolve()
     })
+  }
+
+  async loadSettings() {
+    const defaultSettings: ResourceSettings = {
+      defaultProviders: {
+        routes: 'resources-provider',
+        waypoints: 'resources-provider',
+        regions: 'resources-provider',
+        notes: 'resources-provider',
+        charts: 'resources-provider'
+      }
+    }
+
+    let ls: ResourceSettings
+    try {
+      ls = await this.store.read()
+      debug('Found persisted resource settings', ls)
+      if (!ls) {
+        ls = defaultSettings
+      } else if (!ls.defaultProviders) {
+        ls.defaultProviders = defaultSettings.defaultProviders
+      }
+    } catch (error) {
+      debug('No persisted resource settings (using default)')
+      ls = defaultSettings
+    }
+    this.settings = ls
+
+    // Align settings with registered providers
+    Object.entries(this.settings.defaultProviders).forEach((rt) => {
+      if (!this.checkForProvider(rt[0] as SignalKResourceType, rt[1])) {
+        debug(rt[0], '=>', rt[1], 'not registered!')
+        const p = this.checkForProvider(rt[0] as SignalKResourceType)
+        if (p) {
+          debug('Replaced with =>', p)
+          this.settings.defaultProviders[rt[0]] = p
+        } else {
+          delete this.settings.defaultProviders[rt[0]]
+        }
+      }
+    })
+    debug('Applied Settings..... ', this.settings)
+  }
+
+  saveSettings() {
+    if (this.settings) {
+      this.store.write(this.settings)
+    }
   }
 
   register(pluginId: string, provider: ResourceProvider) {
@@ -95,9 +123,12 @@ export class ResourcesApi {
         this.resProvider[provider.type] = new Map()
       }
       this.resProvider[provider.type].set(pluginId, provider.methods)
-      if (!(provider.type in this.defaultProviders)) {
-        this.defaultProviders[provider.type] = pluginId
-        debug(`Added default provider for ${provider.type}`)
+      if (this.settings?.defaultProviders) {
+        if (!(provider.type in this.settings.defaultProviders)) {
+          this.settings.defaultProviders[provider.type] = pluginId
+          debug(`Added default provider for ${provider.type}`)
+          this.saveSettings()
+        }
       }
     } else {
       throw new Error(`Error missing ResourceProvider.methods!`)
@@ -114,15 +145,27 @@ export class ResourcesApi {
       if (this.resProvider[resourceType].has(pluginId)) {
         debug(`** Un-registering ${pluginId} as ${resourceType} provider....`)
         this.resProvider[resourceType].delete(pluginId)
+        // update default provider
         if (
-          this.defaultProviders[resourceType] &&
-          this.defaultProviders[resourceType] === pluginId
+          this.settings.defaultProviders[resourceType] &&
+          this.settings.defaultProviders[resourceType] === pluginId
         ) {
-          delete this.defaultProviders[resourceType]
-          debug(`Removed ${pluginId} as default provider for ${resourceType}.`)
+          const p = this.checkForProvider(resourceType as SignalKResourceType)
+          if (p) {
+            this.settings.defaultProviders[resourceType] = p
+            debug(
+              `Assigned ${pluginId} as default provider for ${resourceType}.`
+            )
+          } else {
+            delete this.settings.defaultProviders[resourceType]
+            debug(
+              `Removed ${pluginId} as default provider for ${resourceType}.`
+            )
+          }
         }
       }
     }
+    this.saveSettings()
     debug(this.resProvider)
   }
 
@@ -299,8 +342,11 @@ export class ResourcesApi {
     debug(
       `***** No providerId supplied...getting the default provider for ${resType}.`
     )
-    if (this.defaultProviders[resType]) {
-      const pv = this.checkForProvider(resType, this.defaultProviders[resType])
+    if (this.settings.defaultProviders[resType]) {
+      const pv = this.checkForProvider(
+        resType,
+        this.settings.defaultProviders[resType]
+      )
       debug('***** Using default provider ->', pv)
       return pv
     } else {
@@ -315,6 +361,10 @@ export class ResourcesApi {
   ): string | undefined {
     debug(`** checkForProvider(${resType}, ${providerId})`)
     let result: string | undefined = undefined
+    if (!this.resProvider[resType]) {
+      debug(`${resType} not found!`)
+      return result
+    }
     if (providerId) {
       result = this.resProvider[resType].has(providerId)
         ? providerId
@@ -834,18 +884,23 @@ export class ResourcesApi {
         debug(`** ${req.method} ${req.path}`)
         const r: { [index: string]: Array<string> } = {}
         Object.entries(this.resProvider).forEach((p) => {
-          r[p[0]] = []
-          p[1].forEach((v: ResourceProviderMethods, k: string) => {
-            r[p[0]].push(
-              p[1].size > 1 &&
-                p[0] in this.defaultProviders &&
-                this.defaultProviders[p[0]] === k
-                ? `${k} (default)`
-                : k
-            )
-          })
+          if (p[1].size !== 0) {
+            r[p[0]] = []
+            p[1].forEach((v: ResourceProviderMethods, k: string) => {
+              r[p[0]].push(k)
+            })
+          }
         })
         res.json(r)
+      }
+    )
+
+    // Providers: Return list of default providers for registered resource types
+    server.get(
+      `${RESOURCES_API_PATH}/providers/default`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        res.json(this.settings.defaultProviders)
       }
     )
 
@@ -886,9 +941,8 @@ export class ResourcesApi {
           return
         }
 
-        this.defaultProviders[req.params.resourceType] = req.body.value
-        this.settings.defaultProviders = this.defaultProviders
-        this.store.write(this.settings)
+        this.settings.defaultProviders[req.params.resourceType] = req.body.value
+        this.saveSettings()
         res.status(201).json({
           state: 'COMPLETED',
           statusCode: 201,
