@@ -644,6 +644,7 @@ module.exports = function (
       length: length && length.overall,
       beam: de.getSelfValue('design.beam'),
       height: de.getSelfValue('design.airHeight'),
+      anchorRollerHeight: de.getSelfValue('design.anchorRollerHeight'),
       gpsFromBow: de.getSelfValue('sensors.gps.fromBow'),
       gpsFromCenter: de.getSelfValue('sensors.gps.fromCenter'),
       aisShipType: type && type.id,
@@ -706,6 +707,7 @@ module.exports = function (
     setNumber('design.length.value.overall', 'design.length', newVessel.length)
     setNumber('design.beam.value', 'design.beam', newVessel.beam)
     setNumber('design.airHeight.value', 'design.airHeight', newVessel.height)
+    setNumber('design.anchorRollerHeight.value', 'design.anchorRollerHeight', newVessel.anchorRollerHeight)
     setNumber(
       'sensors.gps.fromBow.value',
       'sensors.gps.fromBow',
@@ -776,6 +778,7 @@ module.exports = function (
     )
     de.setSelfValue('design.beam', makeNumber(vessel.beam))
     de.setSelfValue('design.airHeight', makeNumber(vessel.height))
+    de.setSelfValue('design.anchorRollerHeight', makeNumber(vessel.anchorRollerHeight))
     de.setSelfValue('sensors.gps.fromBow', makeNumber(vessel.gpsFromBow))
     de.setSelfValue('sensors.gps.fromCenter', makeNumber(vessel.gpsFromCenter))
     de.setSelfValue(
