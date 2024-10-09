@@ -70,7 +70,6 @@ import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { Zones } from './zones'
 const debug = createDebug('signalk-server')
-
 const { StreamBundle } = require('./streambundle')
 
 interface ServerOptions {
@@ -427,12 +426,12 @@ class Server {
 
     // eslint-disable-next-line no-async-promise-executor
     return new Promise(async (resolve, reject) => {
-      createServer(app, async (err, server) => {
-        if (err) {
+      createServer(app, async (err, servers) => {
+        if (err || _.isUndefined(servers)) {
           reject(err)
           return
         }
-        app.server = server
+        app.servers = servers
         app.interfaces = {}
         app.clients = 0
 
@@ -448,26 +447,31 @@ class Server {
 
         const primaryPort = getPrimaryPort(app)
         debug(`primary port:${primaryPort}`)
-        server.listen(primaryPort, () => {
+
+        await serverListen(
+          app.config.settings.networkInterfaces,
+          servers,
+          primaryPort
+        )
+
+        servers.forEach((server) => {
           console.log(
-            'signalk-server running at 0.0.0.0:' + primaryPort.toString() + '\n'
+            `signalk-server running at ${JSON.stringify(server.address())}`
           )
-          app.started = true
-          resolve(self)
         })
+
         const secondaryPort = getSecondaryPort(app)
         debug(`secondary port:${primaryPort}`)
         if (app.config.settings.ssl && secondaryPort) {
-          startRedirectToSsl(
+          app.redirectServers = await startRedirectToSsl(
             secondaryPort,
             getExternalPort(app),
-            (anErr: any, aServer: any) => {
-              if (!anErr) {
-                app.redirectServer = aServer
-              }
-            }
+            app.config.settings.networkInterfaces
           )
         }
+
+        app.started = true
+        resolve(self)
       })
     })
   }
@@ -528,26 +532,19 @@ class Server {
           debug('Closing server...')
 
           const that = this
-          this.app.server.close(() => {
-            debug('Server closed')
-            if (that.app.redirectServer) {
-              try {
-                that.app.redirectServer.close(() => {
-                  debug('Redirect server closed')
-                  delete that.app.redirectServer
-                  that.app.started = false
-                  cb && cb()
-                  resolve(that)
-                })
-              } catch (err) {
-                reject(err)
-              }
-            } else {
+          Promise.all([
+            closeServers(this.app.servers),
+            closeServers(this.app.redirectServers)
+          ])
+            .then(() => {
+              debug('Servers closed')
               that.app.started = false
               cb && cb()
               resolve(that)
-            }
-          })
+            })
+            .catch((err) => {
+              reject(err)
+            })
         } catch (err) {
           reject(err)
         }
@@ -558,44 +555,117 @@ class Server {
 
 module.exports = Server
 
-function createServer(app: any, cb: (err: any, server?: any) => void) {
+function closeServers(servers: any[] | undefined) {
+  if (!servers) {
+    return null
+  } else {
+    return Promise.all(
+      servers.map((server) => {
+        return new Promise((resolve, reject) => {
+          try {
+            server.close(() => {
+              resolve(server)
+            })
+          } catch (err) {
+            reject(err)
+          }
+        })
+      })
+    )
+  }
+}
+
+function createServer(app: any, cb: (err: any, servers?: any[]) => void) {
+  const serverCount = app.config.settings.networkInterfaces
+    ? app.config.settings.networkInterfaces.length
+    : 1
+
   if (app.config.settings.ssl) {
     getCertificateOptions(app, (err: any, options: any) => {
       if (err) {
         cb(err)
       } else {
         debug('Starting server to serve both http and https')
-        cb(null, https.createServer(options, app))
+
+        const servers = []
+        for (let i = 0; i < serverCount; i++) {
+          servers.push(https.createServer(options, app))
+        }
+
+        cb(null, servers)
       }
     })
     return
   }
-  let server
+  const servers = []
   try {
     debug('Starting server to serve only http')
-    server = http.createServer(app)
+    for (let i = 0; i < serverCount; i++) {
+      servers.push(http.createServer(app))
+    }
   } catch (e) {
     cb(e)
     return
   }
-  cb(null, server)
+  cb(null, servers)
 }
 
-function startRedirectToSsl(
+function serverListen(
+  networkInterfaces: string[] | undefined,
+  servers: any[],
+  port: number | { fd: number }
+) {
+  let interfaces: any
+
+  interfaces = networkInterfaces
+
+  if (!interfaces) {
+    interfaces = [undefined]
+  }
+
+  const promises: any[] = []
+
+  servers.forEach((server: any, idx: number) => {
+    promises.push(
+      new Promise((resolve, reject) => {
+        try {
+          server.listen(port, interfaces[idx], () => {
+            resolve(null)
+          })
+        } catch (err) {
+          reject(err)
+        }
+      })
+    )
+  })
+  return Promise.all(promises)
+}
+
+async function startRedirectToSsl(
   port: number,
   redirectPort: number,
-  cb: (e: unknown, server: any) => void
+  networkInterfaces: string[] | undefined
 ) {
   const redirectApp = express()
   redirectApp.use((req: Request, res: Response) => {
     const host = req.headers.host?.split(':')[0]
     res.redirect(`https://${host}:${redirectPort}${req.path}`)
   })
-  const server = http.createServer(redirectApp)
-  server.listen(port, () => {
-    console.log(`Redirect server running on port ${port.toString()}`)
-    cb(null, server)
+  const servers = (networkInterfaces || [undefined]).map(() => {
+    return http.createServer(redirectApp)
   })
+
+  await serverListen(networkInterfaces, servers, port)
+
+  servers.forEach((server) => {
+    console.log(
+      `signalk-server redirect server running at  ${JSON.stringify(
+        server.address()
+      )}`
+    )
+  })
+
+  return servers
 }
 
 function startMdns(app: ServerApp & WithConfig) {

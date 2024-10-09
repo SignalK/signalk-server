@@ -11,8 +11,8 @@ export interface ServerApp {
   interfaces: { [key: string]: any }
   intervals: NodeJS.Timeout[]
   providers: any[]
-  server: any
-  redirectServer?: any
+  servers: any[]
+  redirectServers?: any[]
   deltaCache: DeltaCache
   getProviderStatus: () => any
   lastServerEvents: { [key: string]: any }
