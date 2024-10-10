@@ -20,10 +20,6 @@
   ],
   "tags": [
     {
-      "name": "providers",
-      "description": "Resource Providers"
-    },
-    {
       "name": "resources",
       "description": "Signal K resources"
     },
@@ -212,12 +208,6 @@
               }
             ]
           }
-        }
-      },
-      "Providers": {
-        "type": "array",
-        "items": {
-          "type": "string"
         }
       },
       "Route": {
@@ -485,7 +475,7 @@
           "type": {
             "type": "string",
             "description": "Source type of map data.",
-            "enum": ["tilejson", "wms", "wmts", "s-57"],
+            "enum": ["tilejson", "wms", "wmts"],
             "default": "wms",
             "example": "wms"
           }
@@ -1409,29 +1399,6 @@
             }
           }
         }
-      },
-      "post": {
-        "tags": ["charts"],
-        "summary": "New Chart",
-        "requestBody": {
-          "description": "Chart resource entry",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Chart"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "$ref": "#/components/responses/201ActionResponse"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
       }
     },
     "/resources/charts/{id}": {
@@ -1478,83 +1445,6 @@
         "responses": {
           "200": {
             "$ref": "#/components/responses/200ActionResponse"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/resources/providers": {
-      "get": {
-        "tags": ["providers"],
-        "summary": "List of registered resource providers",
-        "responses": {
-          "default": {
-            "description": "An object containing registered resource providers, keyed by resource types.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "allOf": [
-                      {
-                        "$ref": "#/components/schemas/Providers"
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/resources/providers/default/{resourceType}": {
-      "post": {
-        "tags": ["providers"],
-        "summary": "Set the default provider for a resource type.",
-        "requestBody": {
-          "description": "Set the default provider to handle PUT / POST requests for a resource type.",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["value"],
-                "properties": {
-                  "value": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "PUT, DELETE OK response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "state": {
-                      "type": "string",
-                      "enum": ["COMPLETED"]
-                    },
-                    "statusCode": {
-                      "type": "number",
-                      "enum": [200]
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["statusCode", "state"]
-                }
-              }
-            }
           },
           "default": {
             "$ref": "#/components/responses/ErrorResponse"
