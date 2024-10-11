@@ -458,6 +458,24 @@ export class ResourcesApi {
     return result
   }
 
+  /** Return array of providers for supplied resource type */
+  private getProvidersForResourceType(resType: string): Array<string> {
+    debug(`getProvidersForResourceType(${resType})`)
+
+    const result: string[] = []
+
+    if (!this.resProvider[resType]) {
+      return result
+    }
+
+    this.resProvider[resType].forEach((v, k) => {
+      result.push(k)
+    })
+
+    debug(`getProvidersForResourceType().result = ${result}`)
+    return result
+  }
+
   private initResourceRoutes(server: ResourceApplication) {
     const updateAllowed = (req: Request): boolean => {
       return server.securityStrategy.shouldAllowPut(
@@ -472,6 +490,77 @@ export class ResourcesApi {
     server.get(`${RESOURCES_API_PATH}`, (req: Request, res: Response) => {
       res.json(this.getResourcePaths())
     })
+
+    // Providers: Return list of providers
+    server.get(
+      `${RESOURCES_API_PATH}/:resourceType/_providers`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        res.json(this.getProvidersForResourceType(req.params.resourceType))
+      }
+    )
+
+    // Providers: Return the default provider for the supplied resource type
+    server.get(
+      `${RESOURCES_API_PATH}/:resourceType/_default`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        if (!this.settings.defaultProviders[req.params.resourceType]) {
+          res.status(404).json({
+            state: 'FAILED',
+            statusCode: 404,
+            message: `Resource type not found! (${req.params.resourceType})`
+          })
+        } else {
+          res.json(this.settings.defaultProviders[req.params.resourceType])
+        }
+      }
+    )
+
+    // Providers: Set the default write provider for a resource type
+    server.post(
+      `${RESOURCES_API_PATH}/:resourceType/_default/:providerId`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+
+        if (!updateAllowed(req)) {
+          res.status(403).json(Responses.unauthorised)
+          return
+        }
+
+        if (!this.hasRegisteredProvider(req.params.resourceType)) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: `Invalid resource type (${req.params.resourceType}) supplied!`
+          })
+          return
+        }
+
+        if (
+          !this.checkForProvider(
+            req.params.resourceType as SignalKResourceType,
+            req.params.providerId
+          )
+        ) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: `Resource provider not found for ${req.params.resourceType}!`
+          })
+          return
+        }
+
+        this.settings.defaultProviders[req.params.resourceType] =
+          req.params.providerId
+        this.saveSettings()
+        res.status(201).json({
+          state: 'COMPLETED',
+          statusCode: 201,
+          message: `${req.params.providerId}`
+        })
+      }
+    )
 
     // facilitate retrieval of a specific resource
     server.get(
@@ -874,80 +963,6 @@ export class ResourcesApi {
             message: `Error deleting resource (${req.params.resourceId})!`
           })
         }
-      }
-    )
-
-    // Providers: Return list of providers
-    server.get(
-      `${RESOURCES_API_PATH}/providers`,
-      async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path}`)
-        const r: { [index: string]: Array<string> } = {}
-        Object.entries(this.resProvider).forEach((p) => {
-          if (p[1].size !== 0) {
-            r[p[0]] = []
-            p[1].forEach((v: ResourceProviderMethods, k: string) => {
-              r[p[0]].push(k)
-            })
-          }
-        })
-        res.json(r)
-      }
-    )
-
-    // Providers: Return list of default providers for registered resource types
-    server.get(
-      `${RESOURCES_API_PATH}/providers/default`,
-      async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path}`)
-        res.json(this.settings.defaultProviders)
-      }
-    )
-
-    // Providers: set the default write provider for a resource type
-    server.post(
-      `${RESOURCES_API_PATH}/providers/default/:resourceType`,
-      async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path}`)
-        if (!this.hasRegisteredProvider(req.params.resourceType)) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: `Invalid resource type (${req.params.resourceType}) supplied!`
-          })
-          return
-        }
-
-        if (!('value' in req.body)) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: `Resource type not supplied!`
-          })
-          return
-        }
-
-        if (
-          !this.checkForProvider(
-            req.params.resourceType as SignalKResourceType,
-            req.body.value
-          )
-        ) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: `Resource provider not found for ${req.params.resourceType}!`
-          })
-          return
-        }
-
-        this.settings.defaultProviders[req.params.resourceType] = req.body.value
-        this.saveSettings()
-        res.status(201).json({
-          state: 'COMPLETED',
-          statusCode: 201,
-          message: `${req.body.value}`
-        })
       }
     )
   }
