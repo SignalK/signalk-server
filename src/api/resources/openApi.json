@@ -20,10 +20,6 @@
   ],
   "tags": [
     {
-      "name": "providers",
-      "description": "Resource Providers"
-    },
-    {
       "name": "resources",
       "description": "Signal K resources"
     },
@@ -212,12 +208,6 @@
               }
             ]
           }
-        }
-      },
-      "Providers": {
-        "type": "array",
-        "items": {
-          "type": "string"
         }
       },
       "Route": {
@@ -485,7 +475,7 @@
           "type": {
             "type": "string",
             "description": "Source type of map data.",
-            "enum": ["tilejson", "wms", "wmts", "s-57"],
+            "enum": ["tilejson", "wms", "wmts"],
             "default": "wms",
             "example": "wms"
           }
@@ -1412,7 +1402,7 @@
       },
       "post": {
         "tags": ["charts"],
-        "summary": "New Chart",
+        "summary": "Add a new Chart source",
         "requestBody": {
           "description": "Chart resource entry",
           "required": true,
@@ -1425,8 +1415,8 @@
           }
         },
         "responses": {
-          "201": {
-            "$ref": "#/components/responses/201ActionResponse"
+          "200": {
+            "$ref": "#/components/responses/200ActionResponse"
           },
           "default": {
             "$ref": "#/components/responses/ErrorResponse"
@@ -1451,7 +1441,7 @@
       ],
       "get": {
         "tags": ["charts"],
-        "summary": "Retrieve chart with supplied id",
+        "summary": "Retrieve chart metadata for the supplied id",
         "responses": {
           "200": {
             "$ref": "#/components/responses/ChartResponse"
@@ -1463,7 +1453,7 @@
       },
       "put": {
         "tags": ["charts"],
-        "summary": "Add / update a new Chart with supplied id",
+        "summary": "Add / update a new Chart source with supplied id",
         "requestBody": {
           "description": "Chart resource entry",
           "required": true,
@@ -1483,78 +1473,13 @@
             "$ref": "#/components/responses/ErrorResponse"
           }
         }
-      }
-    },
-    "/resources/providers": {
-      "get": {
-        "tags": ["providers"],
-        "summary": "List of registered resource providers",
-        "responses": {
-          "default": {
-            "description": "An object containing registered resource providers, keyed by resource types.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "allOf": [
-                      {
-                        "$ref": "#/components/schemas/Providers"
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/resources/providers/default/{resourceType}": {
-      "post": {
-        "tags": ["providers"],
-        "summary": "Set the default provider for a resource type.",
-        "requestBody": {
-          "description": "Set the default provider to handle PUT / POST requests for a resource type.",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["value"],
-                "properties": {
-                  "value": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
+      },
+      "delete": {
+        "tags": ["charts"],
+        "summary": "Remove Chart source with supplied id",
         "responses": {
           "200": {
-            "description": "PUT, DELETE OK response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "state": {
-                      "type": "string",
-                      "enum": ["COMPLETED"]
-                    },
-                    "statusCode": {
-                      "type": "number",
-                      "enum": [200]
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["statusCode", "state"]
-                }
-              }
-            }
+            "$ref": "#/components/responses/200ActionResponse"
           },
           "default": {
             "$ref": "#/components/responses/ErrorResponse"
