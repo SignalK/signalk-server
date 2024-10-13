@@ -475,7 +475,7 @@
           "type": {
             "type": "string",
             "description": "Source type of map data.",
-            "enum": ["tilejson", "wms", "wmts"],
+            "enum": ["tilejson", "wms", "wmts", "mapstyleJSON"],
             "default": "wms",
             "example": "wms"
           }
