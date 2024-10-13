@@ -780,7 +780,7 @@ export class ResourcesApi {
 
         let id: string
         if (req.params.resourceType === 'charts') {
-          id = req.body.identifier
+          id = req.body.identifier ?? skUuid()
         } else {
           id = skUuid()
         }

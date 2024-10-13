@@ -488,7 +488,6 @@
       "Chart": {
         "description": "Signal K Chart resource",
         "type": "object",
-        "required": ["identifier"],
         "properties": {
           "identifier": {
             "type": "string",
