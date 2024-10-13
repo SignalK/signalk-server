@@ -321,7 +321,11 @@ class Server {
     )
     app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
     app.subscriptionmanager = new SubscriptionManager(app)
-    app.deltaCache = new DeltaCache(app, app.streambundle)
+    app.deltaCache = new DeltaCache(
+      app,
+      app.streambundle,
+      app.config.settings.defaultTimeout
+    )
 
     app.getHello = () => ({
       name: app.config.name,

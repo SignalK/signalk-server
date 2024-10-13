@@ -21,10 +21,26 @@ import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import _, { isUndefined } from 'lodash'
 import { toDelta } from './streambundle'
 import { ContextMatcher, SignalKServer, StreamBundle } from './types'
-import { Context, NormalizedDelta, SourceRef } from '@signalk/server-api'
+import { Context, NormalizedDelta, Path, SourceRef } from '@signalk/server-api'
 
 interface StringKeyed {
   [key: string]: any
+}
+
+function sendNullsForOutdatedValues(
+  x: any,
+  oldestValidTs: number,
+  sendNullFor: (context: Context, path: Path, $source: SourceRef) => void
+) {
+  Object.values(x).forEach((v: any) => {
+    if (v.timestamp) {
+      if (v.timestamp > oldestValidTs && v.value !== null) {
+        sendNullFor(v.context, v.path as Path, v.$source as SourceRef)
+      }
+    } else {
+      sendNullsForOutdatedValues(v, oldestValidTs, sendNullFor)
+    }
+  })
 }
 
 export default class DeltaCache {
@@ -39,11 +55,43 @@ export default class DeltaCache {
     }
   } = {}
 
-  constructor(app: SignalKServer, streambundle: StreamBundle) {
+  constructor(
+    app: SignalKServer,
+    streambundle: StreamBundle,
+    defaultTimeout: number
+  ) {
     this.app = app
     streambundle.keys.onValue((key) => {
       streambundle.getBus(key).onValue(this.onValue.bind(this))
     })
+
+    const sendNullFor = (context: Context, path: Path, $source: SourceRef) => {
+      app.handleMessage('n/a', {
+        context,
+        updates: [
+          {
+            $source,
+            values: [
+              {
+                path,
+                value: null
+              }
+            ]
+          }
+        ]
+      })
+    }
+
+    if (defaultTimeout) {
+      debug(`defaultTimeout set as ${defaultTimeout}, starting background task`)
+      setInterval(() => {
+        sendNullsForOutdatedValues(
+          this.cache,
+          Date.now() - defaultTimeout * 1000,
+          sendNullFor
+        )
+      }, defaultTimeout * 1000)
+    }
 
     // String.split() is heavy enough and called frequently enough
     // to warrant caching the result. Has a noticeable effect
@@ -89,14 +137,17 @@ export default class DeltaCache {
       true
     )
 
+    const msgCopy = Object.assign({}, msg) as any
+    msgCopy.timestamp = Date.now()
+
     if (msg.path.length !== 0) {
-      leaf[sourceRef] = msg
+      leaf[sourceRef] = msgCopy
     } else if (msg.value) {
       _.keys(msg.value).forEach((key) => {
         if (!leaf[key]) {
           leaf[key] = {}
         }
-        leaf[key][sourceRef] = msg
+        leaf[key][sourceRef] = msgCopy
       })
     }
     this.lastModifieds[msg.context] = Date.now()

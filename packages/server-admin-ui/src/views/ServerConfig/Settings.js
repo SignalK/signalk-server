@@ -250,6 +250,26 @@ class ServerSettings extends Component {
                 </FormGroup>
                 <FormGroup row>
                   <Col md="2">
+                    <Label htmlFor="defaultTimeout">
+                      Default timeout for data (seconds)
+                    </Label>
+                  </Col>
+                  <Col xs="12" md={fieldColWidthMd}>
+                    <Input
+                      type="text"
+                      name="defaultTimeout"
+                      onChange={this.handleChange}
+                      value={this.state.defaultTimeout}
+                    />
+                    <FormText color="muted">
+                      Unless overridden in metadata for the path data older than
+                      this will be automatically set to null to clear outdated
+                      values. Zero value disables default timeout mechanism.
+                    </FormText>
+                  </Col>
+                </FormGroup>
+                <FormGroup row>
+                  <Col md="2">
                     <Label htmlFor="loggingDirectory">
                       Data Logging Directory
                     </Label>
