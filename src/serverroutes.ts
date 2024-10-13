@@ -473,6 +473,7 @@ module.exports = function (
       },
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
+      defaultTimeout: app.config.settings.defaultTimeout || 0,
       keepMostRecentLogsOnly:
         isUndefined(app.config.settings.keepMostRecentLogsOnly) ||
         app.config.settings.keepMostRecentLogsOnly,
@@ -610,6 +611,10 @@ module.exports = function (
       app.config.settings.pruneContextsMinutes = Number(
         settings.pruneContextsMinutes
       )
+    }
+
+    if (!isUndefined(settings.defaultTimeout)) {
+      app.config.settings.defaultTimeout = Number(settings.defaultTimeout)
     }
 
     if (!isUndefined(settings.keepMostRecentLogsOnly)) {
