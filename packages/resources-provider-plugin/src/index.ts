@@ -207,33 +207,19 @@ module.exports = (server: ResourceProviderApp): Plugin => {
       return defaultConfig
     }
 
-    let isCleaned = false
     // check / clean settings
     if (!Array.isArray(options?.custom)) {
       options.custom = []
-      isCleaned = true
     }
     if (typeof options.standard.charts === 'undefined') {
-      options.standard.charts = false
-      isCleaned = true
-    }
-    let idx = -1
-    for (let i = 0; i < options.custom.length; i++) {
-      if (options.custom[i].name === 'charts') {
-        idx = i
-      }
-    }
-    if (idx !== -1) {
       options.standard.charts = true
-      options.custom.splice(idx, 1)
-      isCleaned = true
     }
 
-    if (isCleaned) {
-      server.savePluginOptions(options, () => {
-        server.debug(`Cleaned configuration applied...`)
-      })
-    }
+    options.custom = options.custom.filter((i) => !(i.name in options.standard))
+
+    server.savePluginOptions(options, () => {
+      server.debug(`Cleaned configuration applied...`)
+    })
 
     return options
   }
