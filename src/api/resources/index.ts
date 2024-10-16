@@ -20,6 +20,7 @@ import { Responses } from '../'
 import { validate } from './validate'
 import { SignalKMessageHub, WithConfig } from '../../app'
 import { Store } from '../../serverstate/store'
+import { writeSettingsFile } from '../../config/config'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 
@@ -50,7 +51,9 @@ export class ResourcesApi {
     this.app = app
     this.initResourceRoutes(app)
     this.store = new Store(app, 'resources')
-    this.loadSettings()
+    this.loadSettings();
+    //(this.app.config.settings as any).resourcesApi = { defaultProviders: {} }
+    //writeSettingsFile(this.app as any, this.app.config.settings, () => console.log('ok'))
   }
 
   async start() {
@@ -110,6 +113,8 @@ export class ResourcesApi {
 
   register(pluginId: string, provider: ResourceProvider) {
     debug(`** Registering ${provider.type} provider => ${pluginId} `)
+
+    console.log('** register***')
 
     if (!provider) {
       throw new Error(`Error registering provider ${pluginId}!`)
