@@ -1,7 +1,8 @@
 import {
   Plugin,
   ServerAPI,
-  ResourceProviderRegistry
+  ResourceProviderRegistry,
+  SIGNALKRESOURCETYPES
 } from '@signalk/server-api'
 
 import { FileStore, getUuid } from './lib/filestorage'
@@ -211,14 +212,18 @@ module.exports = (server: ResourceProviderApp): Plugin => {
     if (!Array.isArray(options?.custom)) {
       options.custom = []
     }
-    if (typeof options.standard.charts === 'undefined') {
-      options.standard.charts = true
-    }
+    SIGNALKRESOURCETYPES.forEach((r) => {
+      if (!(r in options.standard)) {
+        options.standard[r] = true
+      }
+    })
 
-    options.custom = options.custom.filter((i) => !(i.name in options.standard))
+    options.custom = options.custom.filter(
+      (i) => !(i.name in defaultConfig.standard)
+    )
 
     server.savePluginOptions(options, () => {
-      server.debug(`Cleaned configuration applied...`)
+      server.debug(`Configuration cleaned and saved...`)
     })
 
     return options
