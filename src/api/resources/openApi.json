@@ -479,9 +479,9 @@
           "type": {
             "type": "string",
             "description": "Source type of map data.",
-            "enum": ["tilejson", "wms", "wmts", "mapstyleJSON", "s-57"],
-            "default": "wms",
-            "example": "wms"
+            "enum": ["tilejson", "WMS", "WMTS", "mapboxstyle", "S-57"],
+            "default": "WMS",
+            "example": "WMS"
           }
         }
       },
@@ -1525,7 +1525,7 @@
         }
       }
     },
-    "/resources/{resourceType}/_default": {
+    "/resources/{resourceType}/_providers/_default": {
       "parameters": [
         {
           "$ref": "#/components/parameters/ResourceTypeParam"
@@ -1548,7 +1548,7 @@
         }
       }
     },
-    "/resources/{resourceType}/_default/{pluginId}": {
+    "/resources/{resourceType}/_providers/_default/{pluginId}": {
       "parameters": [
         {
           "$ref": "#/components/parameters/ResourceTypeParam"

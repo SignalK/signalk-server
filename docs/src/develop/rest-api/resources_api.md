@@ -171,10 +171,10 @@ _Example: `HTTP GET 'http://hostname:3000/signalk/v2/api/resources/charts/_provi
 You can retrieve the default provider for a resource type by making the following request:
 
 ```typescript
-HTTP GET 'http://hostname:3000/signalk/v2/api/resources/{resourceType}/_default'
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/{resourceType}/_providers/_default'
 ```
 
-Example: `HTTP GET 'http://hostname:3000/signalk/v2/api/resources/charts/_default'
+Example: `HTTP GET 'http://hostname:3000/signalk/v2/api/resources/charts/_providers/_default'
 ```JSON
 "resources-provider"
 ```
@@ -225,9 +225,9 @@ HTTP GET 'http://hostname:3000/plugins'
 ```
 __2. Setting a default provider for a resource type:__
 
-To change the default provider for a resource type make a POST request to *http://hostname:3000/signalk/v2/api/resources/{resourceType}/_default/{pluginId}* where `pluginId` is the id of resource provider plugin.
+To change the default provider for a resource type make a POST request to *http://hostname:3000/signalk/v2/api/resources/{resourceType}/_providers/_default/{pluginId}* where `pluginId` is the id of resource provider plugin.
 
 _Example: Direct create new chart source entries to `my-chart-plugin`._
 ```typescript
-HTTP POST 'http://hostname:3000/signalk/v2/api/resources/charts/_default/my-chart-plugin'
+HTTP POST 'http://hostname:3000/signalk/v2/api/resources/charts/_providers/_default/my-chart-plugin'
 ```

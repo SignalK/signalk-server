@@ -19,7 +19,6 @@ import { WithSecurityStrategy } from '../../security'
 import { Responses } from '../'
 import { validate } from './validate'
 import { SignalKMessageHub, WithConfig } from '../../app'
-import { Store } from '../../serverstate/store'
 import { writeSettingsFile } from '../../config/config'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
@@ -44,16 +43,12 @@ export class ResourcesApi {
   private resProvider: { [key: string]: Map<string, ResourceProviderMethods> } =
     {}
   private app: ResourceApplication
-  private store: Store
   private settings!: ResourceSettings
 
   constructor(app: ResourceApplication) {
     this.app = app
     this.initResourceRoutes(app)
-    this.store = new Store(app, 'resources')
-    this.loadSettings();
-    //(this.app.config.settings as any).resourcesApi = { defaultProviders: {} }
-    //writeSettingsFile(this.app as any, this.app.config.settings, () => console.log('ok'))
+    this.parseSettings()
   }
 
   async start() {
@@ -63,7 +58,7 @@ export class ResourcesApi {
     })
   }
 
-  async loadSettings() {
+  async parseSettings() {
     const defaultSettings: ResourceSettings = {
       defaultProviders: {
         routes: 'resources-provider',
@@ -74,40 +69,26 @@ export class ResourcesApi {
       }
     }
 
-    let ls: ResourceSettings
-    try {
-      ls = await this.store.read()
-      debug('Found persisted resource settings', ls)
-      if (!ls) {
-        ls = defaultSettings
-      } else if (!ls.defaultProviders) {
-        ls.defaultProviders = defaultSettings.defaultProviders
-      }
-    } catch (error) {
-      debug('No persisted resource settings (using default)')
-      ls = defaultSettings
-    }
-    this.settings = ls
-
-    // Align settings with registered providers
-    Object.entries(this.settings.defaultProviders).forEach((rt) => {
-      if (!this.checkForProvider(rt[0] as SignalKResourceType, rt[1])) {
-        debug(rt[0], '=>', rt[1], 'not registered!')
-        const p = this.checkForProvider(rt[0] as SignalKResourceType)
-        if (p) {
-          debug('Replaced with =>', p)
-          this.settings.defaultProviders[rt[0]] = p
-        } else {
-          delete this.settings.defaultProviders[rt[0]]
+    if (!('resourcesApi' in this.app.config.settings)) {
+      debug('***** Applying Default Settings ********'),
+        ((this.app.config.settings as any)['resourcesApi'] = defaultSettings)
+    } else {
+      const s = (this.app.config.settings as any)['resourcesApi']
+      Object.entries(defaultSettings.defaultProviders).forEach((k) => {
+        if (!(k[0] in s.defaultProviders)) {
+          s.defaultProviders[k[0]] = k[1]
         }
-      }
-    })
-    debug('Applied Settings..... ', this.settings)
+      })
+    }
+    this.settings = (this.app.config.settings as any)['resourcesApi']
+    debug('** Parsed Settings ***', this.app.config.settings)
   }
 
   saveSettings() {
     if (this.settings) {
-      this.store.write(this.settings)
+      writeSettingsFile(this.app as any, this.app.config.settings, () =>
+        debug('***SETTINGS SAVED***')
+      )
     }
   }
 
@@ -507,7 +488,7 @@ export class ResourcesApi {
 
     // Providers: Return the default provider for the supplied resource type
     server.get(
-      `${RESOURCES_API_PATH}/:resourceType/_default`,
+      `${RESOURCES_API_PATH}/:resourceType/_providers/_default`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         if (!this.settings.defaultProviders[req.params.resourceType]) {
@@ -524,7 +505,7 @@ export class ResourcesApi {
 
     // Providers: Set the default write provider for a resource type
     server.post(
-      `${RESOURCES_API_PATH}/:resourceType/_default/:providerId`,
+      `${RESOURCES_API_PATH}/:resourceType/_providers/_default/:providerId`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
 
