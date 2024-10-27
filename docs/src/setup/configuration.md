@@ -120,6 +120,10 @@ If things are not working as expected after installing a plugin or webapp, selec
 
 Enabling the `Remember debug setting` ensure your selections are remebered after a server restart.
 
+## Landing page
+
+When you access the Signal K server on a web browser you will be redirected to the Admin webapp as the default `landing page`. You can replace this default with your choice by adding the property `landingPage` in your `settings.json`. For example you can redirect the user to Kip or Freeboard.
+
 ## Add your Logo
 
 You can change the logo image displayed at the top left of the Admin UI screen.
