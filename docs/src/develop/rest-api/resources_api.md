@@ -203,7 +203,7 @@ HTTP POST 'http://hostname:3000/signalk/v2/api/resources/waypoints?provider=my-p
 
 the value assigned to `provider` is the `plugin id` of the resource provider plugin.
 
-The plugin id can be obtained from the Signal K server url _http://hostname:3000/plugins_.
+The plugin id can be obtained from the Signal K server url _http://hostname:3000/skServer/plugins_.
 
 _Example:_
 
