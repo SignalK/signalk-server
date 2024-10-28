@@ -444,20 +444,11 @@ export class ResourcesApi {
     return result
   }
 
-  /** Return array of providers for supplied resource type */
+  /** Return array of provider ids for supplied resource type */
   private getProvidersForResourceType(resType: string): Array<string> {
-    debug(`getProvidersForResourceType(${resType})`)
-
-    const result: string[] = []
-
-    if (!this.resProvider[resType]) {
-      return result
-    }
-
-    this.resProvider[resType].forEach((v, k) => {
-      result.push(k)
-    })
-
+    const result: string[] = this.resProvider[resType]
+      ? Object.keys(this.resProvider[resType])
+      : []
     debug(`getProvidersForResourceType().result = ${result}`)
     return result
   }
