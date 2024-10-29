@@ -18,33 +18,84 @@ import { WithSecurityStrategy } from '../../security'
 
 import { Responses } from '../'
 import { validate } from './validate'
-import { SignalKMessageHub } from '../../app'
+import { SignalKMessageHub, WithConfig } from '../../app'
+import { writeSettingsFile } from '../../config/config'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 
 export const skUuid = () => `${uuidv4()}`
 
+interface DefaultProviders {
+  [index: string]: string
+}
+
 interface ResourceApplication
   extends IRouter,
+    WithConfig,
     WithSecurityStrategy,
     SignalKMessageHub {}
+
+interface ResourceSettings {
+  defaultProviders: DefaultProviders
+}
 
 export class ResourcesApi {
   private resProvider: { [key: string]: Map<string, ResourceProviderMethods> } =
     {}
   private app: ResourceApplication
+  private settings!: ResourceSettings
 
   constructor(app: ResourceApplication) {
     this.app = app
     this.initResourceRoutes(app)
+    this.parseSettings()
   }
 
   async start() {
-    return Promise.resolve()
+    // eslint-disable-next-line no-async-promise-executor
+    return new Promise<void>(async (resolve) => {
+      resolve()
+    })
+  }
+
+  async parseSettings() {
+    const defaultSettings: ResourceSettings = {
+      defaultProviders: {
+        routes: 'resources-provider',
+        waypoints: 'resources-provider',
+        regions: 'resources-provider',
+        notes: 'resources-provider',
+        charts: 'resources-provider'
+      }
+    }
+
+    if (!('resourcesApi' in this.app.config.settings)) {
+      debug('***** Applying Default Settings ********'),
+        ((this.app.config.settings as any)['resourcesApi'] = defaultSettings)
+    } else {
+      const s = (this.app.config.settings as any)['resourcesApi']
+      Object.entries(defaultSettings.defaultProviders).forEach((k) => {
+        if (!(k[0] in s.defaultProviders)) {
+          s.defaultProviders[k[0]] = k[1]
+        }
+      })
+    }
+    this.settings = (this.app.config.settings as any)['resourcesApi']
+    debug('** Parsed Settings ***', this.app.config.settings)
+  }
+
+  saveSettings() {
+    if (this.settings) {
+      writeSettingsFile(this.app as any, this.app.config.settings, () =>
+        debug('***SETTINGS SAVED***')
+      )
+    }
   }
 
   register(pluginId: string, provider: ResourceProvider) {
     debug(`** Registering ${provider.type} provider => ${pluginId} `)
+
+    console.log('** register***')
 
     if (!provider) {
       throw new Error(`Error registering provider ${pluginId}!`)
@@ -52,24 +103,23 @@ export class ResourcesApi {
     if (!provider.type) {
       throw new Error(`Invalid ResourceProvider.type value!`)
     }
-    if (
-      !provider.methods.listResources ||
-      !provider.methods.getResource ||
-      !provider.methods.setResource ||
-      !provider.methods.deleteResource ||
-      typeof provider.methods.listResources !== 'function' ||
-      typeof provider.methods.getResource !== 'function' ||
-      typeof provider.methods.setResource !== 'function' ||
-      typeof provider.methods.deleteResource !== 'function'
-    ) {
-      throw new Error(`Error missing ResourceProvider.methods!`)
-    } else {
+
+    if (this.isResourceProvider(provider)) {
       if (!this.resProvider[provider.type]) {
         this.resProvider[provider.type] = new Map()
       }
       this.resProvider[provider.type].set(pluginId, provider.methods)
+      if (this.settings?.defaultProviders) {
+        if (!(provider.type in this.settings.defaultProviders)) {
+          this.settings.defaultProviders[provider.type] = pluginId
+          debug(`Added default provider for ${provider.type}`)
+          this.saveSettings()
+        }
+      }
+    } else {
+      throw new Error(`Error missing ResourceProvider.methods!`)
     }
-    debug(this.resProvider[provider.type])
+    debug(`Type = ${provider.type}`, this.resProvider[provider.type])
   }
 
   unRegister(pluginId: string) {
@@ -81,9 +131,41 @@ export class ResourcesApi {
       if (this.resProvider[resourceType].has(pluginId)) {
         debug(`** Un-registering ${pluginId} as ${resourceType} provider....`)
         this.resProvider[resourceType].delete(pluginId)
+        // update default provider
+        if (
+          this.settings.defaultProviders[resourceType] &&
+          this.settings.defaultProviders[resourceType] === pluginId
+        ) {
+          const p = this.checkForProvider(resourceType as SignalKResourceType)
+          if (p) {
+            this.settings.defaultProviders[resourceType] = p
+            debug(
+              `Assigned ${pluginId} as default provider for ${resourceType}.`
+            )
+          } else {
+            delete this.settings.defaultProviders[resourceType]
+            debug(
+              `Removed ${pluginId} as default provider for ${resourceType}.`
+            )
+          }
+        }
       }
     }
+    this.saveSettings()
     debug(this.resProvider)
+  }
+
+  isResourceProvider(provider: ResourceProvider) {
+    return !provider.methods.listResources ||
+      !provider.methods.getResource ||
+      !provider.methods.setResource ||
+      !provider.methods.deleteResource ||
+      typeof provider.methods.listResources !== 'function' ||
+      typeof provider.methods.getResource !== 'function' ||
+      typeof provider.methods.setResource !== 'function' ||
+      typeof provider.methods.deleteResource !== 'function'
+      ? false
+      : true
   }
 
   async getResource(
@@ -142,15 +224,7 @@ export class ResourcesApi {
       }
     }
 
-    let provider: string | undefined = undefined
-    if (providerId) {
-      provider = this.checkForProvider(resType, providerId)
-    } else {
-      provider = await this.getProviderForResourceId(resType, resId)
-      if (!provider) {
-        provider = this.checkForProvider(resType)
-      }
-    }
+    const provider = await this.getProviderForWrite(resType, resId, providerId)
     if (provider) {
       this.resProvider[resType]
         ?.get(provider)
@@ -206,6 +280,7 @@ export class ResourcesApi {
     }
   }
 
+  /** Returns true if there is a registered provider for the resource type */
   private hasRegisteredProvider(resType: string): boolean {
     const result =
       this.resProvider[resType] && this.resProvider[resType].size !== 0
@@ -215,13 +290,67 @@ export class ResourcesApi {
     return result
   }
 
-  // validates provider Id for a resourceType
+  /** Returns the provider id to use to write a resource entry */
+  async getProviderForWrite(
+    resType: SignalKResourceType,
+    resId: string,
+    providerId?: string
+  ) {
+    debug('***** getProviderForWrite()', resType, resId, providerId)
+
+    let pv4resid: string | undefined
+    if (resId) {
+      pv4resid = await this.getProviderForResourceId(resType, resId)
+    }
+
+    if (resId && pv4resid) {
+      if (providerId && pv4resid !== providerId) {
+        debug(
+          `Detected provider for resource does not match supplied provider!`
+        )
+      }
+      debug('***** Using provider ->', pv4resid)
+      return pv4resid
+    }
+
+    if (providerId) {
+      debug(`***** Checking if provider ${providerId} is valid for ${resType}.`)
+      const pv4restype = this.checkForProvider(resType, providerId)
+      if (pv4restype) {
+        debug('***** Using provider ->', pv4restype)
+        return pv4restype
+      } else {
+        debug(`***** ProviderId supplied is INVALID for ${resType}!`)
+        return undefined
+      }
+    }
+    // use default provider for resType
+    debug(
+      `***** No providerId supplied...getting the default provider for ${resType}.`
+    )
+    if (this.settings.defaultProviders[resType]) {
+      const pv = this.checkForProvider(
+        resType,
+        this.settings.defaultProviders[resType]
+      )
+      debug('***** Using default provider ->', pv)
+      return pv
+    } else {
+      return undefined
+    }
+  }
+
+  /** Validates providerId for a given resourceType */
   private checkForProvider(
     resType: SignalKResourceType,
     providerId?: string
   ): string | undefined {
     debug(`** checkForProvider(${resType}, ${providerId})`)
     let result: string | undefined = undefined
+    if (!this.resProvider[resType]) {
+      debug(`${resType} not found!`)
+      return result
+    }
     if (providerId) {
       result = this.resProvider[resType].has(providerId)
         ? providerId
@@ -233,7 +362,7 @@ export class ResourcesApi {
     return result
   }
 
-  // retrieve matching resources from ALL providers
+  /** Retrieve matching resources from ALL providers */
   private async listFromAll(resType: string, params: { [key: string]: any }) {
     debug(`listFromAll(${resType}, ${JSON.stringify(params)})`)
 
@@ -255,7 +384,7 @@ export class ResourcesApi {
     return result
   }
 
-  // query ALL providers for supplied resource id
+  /** Query ALL providers for supplied resource id */
   private async getFromAll(resType: string, resId: string, property?: string) {
     debug(`getFromAll(${resType}, ${resId})`)
 
@@ -277,7 +406,7 @@ export class ResourcesApi {
     return result
   }
 
-  // return providerId for supplied resource id
+  /** Return providerId for supplied resource id */
   private async getProviderForResourceId(
     resType: string,
     resId: string,
@@ -315,6 +444,15 @@ export class ResourcesApi {
     return result
   }
 
+  /** Return array of provider ids for supplied resource type */
+  private getProvidersForResourceType(resType: string): Array<string> {
+    const result: string[] = this.resProvider[resType]
+      ? Object.keys(this.resProvider[resType])
+      : []
+    debug(`getProvidersForResourceType().result = ${result}`)
+    return result
+  }
+
   private initResourceRoutes(server: ResourceApplication) {
     const updateAllowed = (req: Request): boolean => {
       return server.securityStrategy.shouldAllowPut(
@@ -329,6 +467,77 @@ export class ResourcesApi {
     server.get(`${RESOURCES_API_PATH}`, (req: Request, res: Response) => {
       res.json(this.getResourcePaths())
     })
+
+    // Providers: Return list of providers
+    server.get(
+      `${RESOURCES_API_PATH}/:resourceType/_providers`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        res.json(this.getProvidersForResourceType(req.params.resourceType))
+      }
+    )
+
+    // Providers: Return the default provider for the supplied resource type
+    server.get(
+      `${RESOURCES_API_PATH}/:resourceType/_providers/_default`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        if (!this.settings.defaultProviders[req.params.resourceType]) {
+          res.status(404).json({
+            state: 'FAILED',
+            statusCode: 404,
+            message: `Resource type not found! (${req.params.resourceType})`
+          })
+        } else {
+          res.json(this.settings.defaultProviders[req.params.resourceType])
+        }
+      }
+    )
+
+    // Providers: Set the default write provider for a resource type
+    server.post(
+      `${RESOURCES_API_PATH}/:resourceType/_providers/_default/:providerId`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+
+        if (!updateAllowed(req)) {
+          res.status(403).json(Responses.unauthorised)
+          return
+        }
+
+        if (!this.hasRegisteredProvider(req.params.resourceType)) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: `Invalid resource type (${req.params.resourceType}) supplied!`
+          })
+          return
+        }
+
+        if (
+          !this.checkForProvider(
+            req.params.resourceType as SignalKResourceType,
+            req.params.providerId
+          )
+        ) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: `Resource provider not found for ${req.params.resourceType}!`
+          })
+          return
+        }
+
+        this.settings.defaultProviders[req.params.resourceType] =
+          req.params.providerId
+        this.saveSettings()
+        res.status(201).json({
+          state: 'COMPLETED',
+          statusCode: 201,
+          message: `${req.params.providerId}`
+        })
+      }
+    )
 
     // facilitate retrieval of a specific resource
     server.get(
@@ -504,17 +713,18 @@ export class ResourcesApi {
 
     // facilitate creation of new resource entry of supplied type
     server.post(
-      `${RESOURCES_API_PATH}/:resourceType/`,
+      `${RESOURCES_API_PATH}/:resourceType`,
       async (req: Request, res: Response, next: NextFunction) => {
-        debug(`** POST ${RESOURCES_API_PATH}/${req.params.resourceType}`)
+        debug(`** POST ${req.path}`)
 
         if (!this.hasRegisteredProvider(req.params.resourceType)) {
           next()
           return
         }
 
-        const provider = this.checkForProvider(
+        const provider = await this.getProviderForWrite(
           req.params.resourceType as SignalKResourceType,
+          '',
           req.query.provider ? (req.query.provider as string) : undefined
         )
         if (!provider) {
@@ -547,7 +757,7 @@ export class ResourcesApi {
 
         let id: string
         if (req.params.resourceType === 'charts') {
-          id = req.body.identifier
+          id = req.body.identifier ?? skUuid()
         } else {
           id = skUuid()
         }
@@ -572,7 +782,6 @@ export class ResourcesApi {
             id
           })
         } catch (err) {
-          console.log(err)
           res.status(400).json({
             state: 'FAILED',
             statusCode: 400,
@@ -633,19 +842,11 @@ export class ResourcesApi {
         }
 
         try {
-          let provider: string | undefined = undefined
-          if (req.query.provider) {
-            provider = this.checkForProvider(
-              req.params.resourceType as SignalKResourceType,
-              req.query.provider ? (req.query.provider as string) : undefined
-            )
-          } else {
-            provider = await this.getProviderForResourceId(
-              req.params.resourceType,
-              req.params.resourceId,
-              true
-            )
-          }
+          const provider = await this.getProviderForWrite(
+            req.params.resourceType as SignalKResourceType,
+            req.params.resourceId,
+            req.query.provider ? (req.query.provider as string) : undefined
+          )
           if (!provider) {
             debug('** No provider found... calling next()...')
             next()
