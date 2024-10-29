@@ -32,25 +32,25 @@ export interface DeltaSubscription {
   }>
 }
 
-// "Classic" Delta with values
-export interface ValuesDelta {
+export interface Delta {
   context?: Context
   updates: Update[]
 }
 
-export interface MetaDelta {
-  metas: Array<{ values: Meta[] }>
-}
+/**
+ * @deprecated earlier mistake assumed ValuesDelta and MetaDelta were separate
+ */
+export type ValuesDelta = Delta
+/**
+ * @deprecated earlier mistake assumed ValuesDelta and MetaDelta were separate
+ */
+export type MetaDelta = Delta
 
-// Delta Message
-export type Delta = ValuesDelta | MetaDelta
-
-export interface Update {
+export type Update = {
   timestamp?: Timestamp
   source?: Source
   $source?: SourceRef
-  values: PathValue[]
-}
+} & ({ values: PathValue[] } | { meta: Meta[] }) // require either values or meta or both
 
 // Update delta
 export interface PathValue {
@@ -67,15 +67,26 @@ export interface Notification {
 
 // MetaMessage
 export interface Meta {
-  path: string
+  path: Path
   value: MetaValue
 }
 
 // Meta payload
 export interface MetaValue {
-  description: string
+  description?: string
   units?: string
   example?: string
+  timeout?: number
+  displayName?: string
+  displayScale?: {
+    lower: number
+    upper: number
+  }
+  zones?: {
+    upper: number
+    lower: number
+    state: string
+  }[]
 }
 
 // Notification attribute types
