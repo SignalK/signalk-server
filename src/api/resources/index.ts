@@ -95,8 +95,6 @@ export class ResourcesApi {
   register(pluginId: string, provider: ResourceProvider) {
     debug(`** Registering ${provider.type} provider => ${pluginId} `)
 
-    console.log('** register***')
-
     if (!provider) {
       throw new Error(`Error registering provider ${pluginId}!`)
     }
