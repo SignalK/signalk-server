@@ -183,7 +183,7 @@ export class CourseApi {
     ) {
       return
     }
-    delta.updates.forEach((update: Update) => {
+    delta.updates.forEach((update) => {
       if (!Array.isArray(update.values)) {
         return
       }
