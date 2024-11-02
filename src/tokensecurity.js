@@ -36,6 +36,10 @@ const permissionDeniedMessage =
 
 const skPrefix = '/signalk/v1'
 const skAuthPrefix = `${skPrefix}/auth`
+
+//cookie to hold login info for webapps to use
+const BROWSER_LOGININFO_COOKIE_NAME = 'skLoginInfo'
+
 import { SERVERROUTESPREFIX } from './constants'
 
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
@@ -198,6 +202,13 @@ module.exports = function (app, config) {
               )
             }
             res.cookie('JAUTHENTICATION', reply.token, cookieOptions)
+            // eslint-disable-next-line no-unused-vars
+            const { httpOnly, cookieOptionsForBrowserCookie } = cookieOptions
+            res.cookie(
+              BROWSER_LOGININFO_COOKIE_NAME,
+              JSON.stringify({ status: 'loggedIn', user: reply.user })
+            ),
+              cookieOptionsForBrowserCookie
 
             if (requestType === 'application/json') {
               res.json({ token: reply.token })
@@ -237,6 +248,7 @@ module.exports = function (app, config) {
 
     app.put(['/logout', `${skAuthPrefix}/logout`], function (req, res) {
       res.clearCookie('JAUTHENTICATION')
+      res.clearCookie(BROWSER_LOGININFO_COOKIE_NAME)
       res.json('Logout OK')
     })
     ;[
@@ -295,7 +307,7 @@ module.exports = function (app, config) {
           debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
           try {
             const token = jwt.sign(payload, configuration.secretKey, jwtOptions)
-            resolve({ statusCode: 200, token })
+            resolve({ statusCode: 200, token, user: user.username })
           } catch (err) {
             resolve({
               statusCode: 500,
