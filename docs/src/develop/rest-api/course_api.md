@@ -9,7 +9,7 @@ Additionally, the Course API persists course information on the server to ensure
 
 Client applications use `HTTP` requests (`PUT`, `GET`,`DELETE`) to perform operations and retrieve course data. 
 
-The Course API also listens for destination information in the NMEA stream and will set / clear the destination accordingly _(e.g. RMB sentence)_. 
+The Course API also listens for destination information in the NMEA stream and will set / clear the destination accordingly _(e.g. RMB sentence)_. See [Configuration](#Configuration) for more details.
 
 _Note: You can view the _Course API_ OpenAPI definition in the Admin UI (Documentation => OpenApi)._
 
@@ -128,53 +128,6 @@ HTTP GET 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course'
 The contents of the response will reflect the operation used to set the current course. The `nextPoint` & `previousPoint` sections will always contain values but `activeRoute` will only contain values when a route is being followed.
 
 
-#### Determining the source which set the destination
-
-When a destination is set, you can retrieve the source that set the destination by submitting a HTTP `GET` request to `/signalk/v2/api/vessels/self/navigation/course/commandSource`.
-
-```typescript
-HTTP GET 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/commandSource'
-```
-
-_Example: Set by NMEA0183 source_
-```json
-{
-    "type": "NMEA0183",
-    "id": "nmeasim.GP",
-    "msg": "RMB",
-    "path": "navigation.courseRhumbline.nextPoint.position"
-}
-```
-
-_Example: Set by NMEA2000 source_
-```json
-{
-    "type": "NMEA2000",
-    "id": "raymarineAP.3",
-    "msg": "129284",
-    "path": "navigation.courseGreatCircle.nextPoint.position"
-}
-```
-
-_Example: Set via API request._
-```json
-{
-    "type": "API"
-}
-```
-
-#### Clearing the current source
-
-When a destination is set, only updates from the source that set it are accepted.
-To allow updates from another source you need to clear the current soource which is done by submitting a HTTP `DELETE` request to `/signalk/v2/api/vessels/self/navigation/course/commandSource`.
-
-_Note: This command does not change the destination!_
-
-```typescript
-HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/commandSource'
-```
-
-
 #### 1. Operation: Navigate to a location _(lat, lon)_
 
 _Example response:_
@@ -288,24 +241,78 @@ _Example response:_
 To cancel the current course navigation and clear the course data.
 
 ```typescript
-HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/'
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course'
 ```
 
-To clear the current destination and stop deltas from setting the destination, specify the `apiMode` parameter.
+_Note: This operation will NOT change the destination information coming from the NMEA input stream! If the NMEA source device is still emitting destination data this will reappear as the current destination._ 
+
+To ignore destination data from NMEA sources see [Configuration](#configuration) below.
+
+
+
+## Configuration
+
+The default configuration of the Course API will accept destination information from both API requests and NMEA stream data.
+
+HTTP requests are prioritised over NMEA stream data, so making an API request will overwrite destination information received from and NMEA source.
+
+But, when the destination cleared using an API request, if the NMEA stream is emitting an active destination position, this will then be used by the Course API to populate course data.
+
+#### Ignoring NMEA Destination Information
+
+The Course API can be configured to ignore destination data in the NMEA stream by enabling `apiOnly` mode.
+
+In `apiOnly` mode destination information can only be set / cleared using HTTP API requests.
+
+- **`apiOnly` Mode = Off _(default)_**
+
+  - Destination data is accepted from both _HTTP API_ and _NMEA_ sources
+  - Setting a destination using the HTTP API will override the destination data received via NMEA
+  - When clearing the destination using the HTTP API, if destination data is received via NMEA this will then be used as the active destination.
+  - To clear destination sourced via NMEA, clear the destination on the source device.
+
+- **`apiOnly` Mode = On**
+
+  - Course operations are only accepted via the HTTP API
+  - NMEA stream data is ignored
+  - Switching to `apiOnly` mode when an NMEA sourced destination is active will clear the destination.
+
+
+#### Retrieving Course API Configuration
+
+To retrieve the Course API configuration settings, submit a HTTP `GET` request to `/signalk/v2/api/vessels/self/navigation/course/_config`.
 
 ```typescript
-HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course?apiMode=true'
+HTTP GET 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/_config'
 ```
 
-_Note: To re-enable NMEA stream input, make the DELETE request without the `force` parameter._
+_Example response:_
+```JSON
+{
+  "apiOnly": false
+}
+```
 
----
+#### Enable / Disable `apiOnly` mode
+
+To enable `apiOnly` mode, submit a HTTP `POST` request to `/signalk/v2/api/vessels/self/navigation/course/_config/apiOnly`.
+
+_Enable apiOnly mode:_
+```typescript
+HTTP POST 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/_config/apiOnly'
+```
+
+To disable `apiOnly` mode, submit a HTTP `DELETE` request to `/signalk/v2/api/vessels/self/navigation/course/_config/apiOnly`.
+
+_Disable apiOnly mode:_
+```typescript
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/_config/apiOnly'
+```
+
 
 ## Course Calculations
 
 Whilst not performing course calculations, the _Course API_ defines the paths to accommodate the values calculated during course navigation.
 
 Click [here](./course_calculations.md) for details.
-
-
 

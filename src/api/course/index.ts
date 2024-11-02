@@ -35,6 +35,7 @@ import { Store } from '../../serverstate/store'
 import { buildSchemaSync } from 'api-schema-builder'
 import courseOpenApi from './openApi.json'
 import { ResourcesApi } from '../resources'
+import { writeSettingsFile } from '../../config/config'
 
 const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
 
@@ -59,6 +60,10 @@ interface CommandSource {
   path?: string
 }
 
+interface CourseSettings {
+  apiOnly: boolean
+}
+
 export class CourseApi {
   private courseInfo: CourseInfo = {
     startTime: null,
@@ -72,12 +77,14 @@ export class CourseApi {
   private store: Store
   private cmdSource: CommandSource | null = null // source which set the destination
   private unsubscribes: Unsubscribes = []
+  private settings!: CourseSettings
 
   constructor(
     private app: CourseApplication,
     private resourcesApi: ResourcesApi
   ) {
     this.store = new Store(app, 'course')
+    this.parseSettings()
   }
 
   async start() {
@@ -90,10 +97,19 @@ export class CourseApi {
         storeData = await this.store.read()
         debug('Found persisted course data')
         this.courseInfo = this.validateCourseInfo(storeData)
+        this.cmdSource =
+          this.settings.apiOnly && this.courseInfo.nextPoint
+            ? { type: 'API' }
+            : null
       } catch (error) {
         debug('No persisted course data (using default)')
       }
-      debug(this.courseInfo)
+      debug(
+        '** courseInfo **',
+        this.courseInfo,
+        '** cmdSource **',
+        this.cmdSource
+      )
       if (storeData) {
         this.emitCourseInfo(true)
       }
@@ -114,7 +130,7 @@ export class CourseApi {
         },
         this.unsubscribes,
         (err: Error) => {
-          console.error(`Course API: Subscribe failed:${err}`)
+          console.log(`Course API: Subscribe failed: ${err}`)
         },
         (msg: ValuesDelta) => {
           this.processV1DestinationDeltas(msg)
@@ -122,6 +138,34 @@ export class CourseApi {
       )
       resolve()
     })
+  }
+
+  // parse server settings
+  private parseSettings() {
+    const defaultSettings: CourseSettings = {
+      apiOnly: false
+    }
+    if (!('courseApi' in this.app.config.settings)) {
+      debug('***** Applying Default Settings ********')
+      ;(this.app.config.settings as any)['courseApi'] = defaultSettings
+    }
+    if (
+      typeof (this.app.config.settings as any)['courseApi'].apiOnly ===
+      'undefined'
+    ) {
+      debug('***** Applying missing apiOnly attribute to Settings ********')
+      ;(this.app.config.settings as any)['courseApi'].apiOnly = false
+    }
+    this.settings = (this.app.config.settings as any)['courseApi']
+    debug('** Parsed App Settings ***', this.app.config.settings)
+    debug('** Applied cmdSource ***', this.cmdSource)
+  }
+
+  // write to server settings file
+  private saveSettings() {
+    writeSettingsFile(this.app as any, this.app.config.settings, () =>
+      debug('***SETTINGS SAVED***')
+    )
   }
 
   /** Process deltas for <destination>.nextPoint data
@@ -132,36 +176,38 @@ export class CourseApi {
    * 3. Destination Position is changed.
    */
   private async processV1DestinationDeltas(delta: ValuesDelta) {
-    if (!Array.isArray(delta.updates)) {
+    if (
+      !Array.isArray(delta.updates) ||
+      this.cmdSource?.type === 'API' ||
+      (!this.cmdSource && this.settings.apiOnly)
+    ) {
       return
     }
-    if (!(this.cmdSource?.type === 'API')) {
-      delta.updates.forEach((update: Update) => {
-        if (!Array.isArray(update.values)) {
-          return
+    delta.updates.forEach((update: Update) => {
+      if (!Array.isArray(update.values)) {
+        return
+      }
+      update.values.forEach((pathValue: PathValue) => {
+        if (
+          update.source &&
+          update.source.type &&
+          ['NMEA0183', 'NMEA2000'].includes(update.source.type)
+        ) {
+          this.parseStreamValue(
+            {
+              type: update.source.type,
+              id: getSourceId(update.source),
+              msg:
+                update.source.type === 'NMEA0183'
+                  ? `${update.source.sentence}`
+                  : `${update.source.pgn}`,
+              path: pathValue.path
+            },
+            pathValue.value as Position
+          )
         }
-        update.values.forEach((pathValue: PathValue) => {
-          if (
-            update.source &&
-            update.source.type &&
-            ['NMEA0183', 'NMEA2000'].includes(update.source.type)
-          ) {
-            this.parseStreamValue(
-              {
-                type: update.source.type,
-                id: getSourceId(update.source),
-                msg:
-                  update.source.type === 'NMEA0183'
-                    ? `${update.source.sentence}`
-                    : `${update.source.pgn}`,
-                path: pathValue.path
-              },
-              pathValue.value as Position
-            )
-          }
-        })
       })
-    }
+    })
   }
 
   /** Process stream value and take action
@@ -219,21 +265,14 @@ export class CourseApi {
     return this.courseInfo
   }
 
-  /** Clear destination / route (exposed to plugins)
-   * @params force When true will set source.type to API. This will froce API only mode (NMEA sources are ignored).
-   * Call with force=false to clear API only mode.
-   */
-  async clearDestination(apiMode?: boolean): Promise<void> {
+  /** Clear destination / route (exposed to plugins) */
+  async clearDestination(): Promise<void> {
     this.courseInfo.startTime = null
     this.courseInfo.targetArrivalTime = null
     this.courseInfo.activeRoute = null
     this.courseInfo.nextPoint = null
     this.courseInfo.previousPoint = null
-    if (apiMode) {
-      this.cmdSource = { type: 'API' }
-    } else {
-      this.cmdSource = null
-    }
+    this.cmdSource = null
     this.emitCourseInfo()
   }
 
@@ -306,22 +345,53 @@ export class CourseApi {
       res.json(this.courseInfo)
     })
 
-    // Source that set the destination
+    // Return course api config
     this.app.get(
-      `${COURSE_API_PATH}/commandSource`,
+      `${COURSE_API_PATH}/_config`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
-        res.json(this.cmdSource)
+        res.json((this.app.config.settings as any)['courseApi'])
       }
     )
 
-    // Clear the commandSource.
-    this.app.delete(
-      `${COURSE_API_PATH}/commandSource`,
+    // Set apiOnly mode
+    this.app.post(
+      `${COURSE_API_PATH}/_config/apiOnly`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
-        this.cmdSource = null
-        res.status(200).json(Responses.ok)
+        if (!this.updateAllowed(req)) {
+          res.status(403).json(Responses.unauthorised)
+          return
+        }
+        try {
+          this.settings.apiOnly = true
+          if (this.cmdSource?.type !== 'API') {
+            this.clearDestination()
+          }
+          this.saveSettings()
+          res.status(200).json(Responses.ok)
+        } catch {
+          res.status(400).json(Responses.invalid)
+        }
+      }
+    )
+
+    // Clear apiOnly mode
+    this.app.delete(
+      `${COURSE_API_PATH}/_config/apiOnly`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        if (!this.updateAllowed(req)) {
+          res.status(403).json(Responses.unauthorised)
+          return
+        }
+        try {
+          this.settings.apiOnly = false
+          this.saveSettings()
+          res.status(200).json(Responses.ok)
+        } catch {
+          res.status(400).json(Responses.invalid)
+        }
       }
     )
 
@@ -423,19 +493,12 @@ export class CourseApi {
     this.app.delete(
       `${COURSE_API_PATH}`,
       async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path}`, req.query)
+        debug(`** ${req.method} ${req.path}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        if (
-          req.query.apiMode &&
-          (req.query.apiMode === '1' || req.query.apiMode === 'true')
-        ) {
-          this.clearDestination(true)
-        } else {
-          this.clearDestination()
-        }
+        this.clearDestination()
         res.status(200).json(Responses.ok)
       }
     )
@@ -485,7 +548,7 @@ export class CourseApi {
         }
         try {
           const result = await this.activateRoute(req.body)
-          console.log(this.courseInfo)
+          debug(this.courseInfo)
           if (result) {
             this.emitCourseInfo()
             res.status(200).json(Responses.ok)
@@ -606,7 +669,7 @@ export class CourseApi {
               return false
             }
           } catch (err) {
-            console.log(`** Error: unable to retrieve vessel position!`)
+            console.log(`** Course API: Unable to retrieve vessel position!`)
             res.status(400).json(Responses.invalid)
             return false
           }
@@ -702,7 +765,7 @@ export class CourseApi {
     }
 
     this.courseInfo = newCourse
-    this.cmdSource = src ? src : { type: 'API' }
+    this.cmdSource = src ?? { type: 'API' }
     return true
   }
 
@@ -781,7 +844,7 @@ export class CourseApi {
     }
 
     this.courseInfo = newCourse
-    this.cmdSource = src ? src : { type: 'API' }
+    this.cmdSource = src ?? { type: 'API' }
     return true
   }
 
@@ -1039,7 +1102,8 @@ export class CourseApi {
     this.app.handleMessage('courseApi', this.buildDeltaMsg(paths), SKVersion.v2)
     if (!noSave) {
       this.store.write(this.courseInfo).catch((error) => {
-        console.log(error)
+        console.log('Course API: Unable to persist destination details!')
+        debug(error)
       })
     }
   }

@@ -34,6 +34,10 @@
     {
       "name": "calculations",
       "description": "Calculated course data"
+    },
+    {
+      "name": "configuration",
+      "description": "Course API settings."
     }
   ],
   "components": {
@@ -378,64 +382,9 @@
         "tags": ["course"],
         "summary": "Cancel / clear course.",
         "description": "Clear all course information.",
-        "parameters": [
-          {
-            "name": "apiMode",
-            "in": "query",
-            "description": "Destination information from delta updates is ignored and only requests via API endpoints / interfaces are accepted. To clear this mode, call this endpoint without specifying `apiMode` or DELETE request to `commandSource`.",
-            "example": "/course?apiMode=true",
-            "required": false,
-            "explode": false,
-            "schema": {
-              "type": "boolean"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "$ref": "#/components/responses/200Ok"
-          },
-          "default": {
-            "$ref": "#/components/responses/ErrorResponse"
-          }
-        }
-      }
-    },
-    "/course/commandSource": {
-      "get": {
-        "tags": ["course"],
-        "summary": "Retrieve the source which set the current destination.",
-        "description": "Returns details of the source which set the destination.",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": ["type"],
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "enum": ["NMEA0183", "NMEA2000", "API"],
-                      "description": "Source input type."
-                    },
-                    "id": {
-                      "type": "string",
-                      "description": "Source identifier."
-                    },
-                    "msg": {
-                      "type": "string",
-                      "description": "PGN / Sentence that was the source of destination information."
-                    },
-                    "path": {
-                      "type": "string",
-                      "description": "Signal K path containing the source path with the destination position."
-                    }
-                  }
-                }
-              }
-            }
           },
           "default": {
             "$ref": "#/components/responses/ErrorResponse"
@@ -735,6 +684,62 @@
                 }
               }
             }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/course/_config": {
+      "get": {
+        "tags": ["configuration"],
+        "summary": "Retrieve Course API configuration.",
+        "description": "Returns the current Course API configuration settings.",
+        "responses": {
+          "200": {
+            "description": "Course data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "apiOnly": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["apiOnly"]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/course/_config/apiOnly": {
+      "post": {
+        "tags": ["configuration"],
+        "summary": "Set API Only mode.",
+        "description": "Accept REST API requests only. Ignores NMEA sources.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["configuration"],
+        "summary": "Clear API Only mode.",
+        "description": "Accept both REST API requests and NMEA source data.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
           },
           "default": {
             "$ref": "#/components/responses/ErrorResponse"

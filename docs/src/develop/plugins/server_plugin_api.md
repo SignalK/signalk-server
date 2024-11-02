@@ -625,11 +625,9 @@ Retrieves the current course information.
 - returns: Resolved Promise on success containing the same course information returned by the [`/course`](/doc/openapi/?urls.primaryName=course#/course/get_course) API endpoint.
 
 
-#### `app.clearDestination(apiMode?)`
+#### `app.clearDestination()`
 
 Cancels navigation to the current point or route being followed.
-
-- `apiMode`: (optional) If true causes deltas to be ignored. To re-enable delta input, call this method without specifying `apiMode`.
 
 - returns: Resolved Promise on success.
 

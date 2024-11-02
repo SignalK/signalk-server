@@ -564,8 +564,8 @@ module.exports = (theApp: any) => {
     appCopy.getCourse = () => {
       return courseApi.getCourse()
     }
-    appCopy.clearDestination = (apiMode?: boolean) => {
-      return courseApi.clearDestination(apiMode)
+    appCopy.clearDestination = () => {
+      return courseApi.clearDestination()
     }
     appCopy.setDestination = (
       dest: (PointDestination & { arrivalCircle?: number }) | null
