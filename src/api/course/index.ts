@@ -187,7 +187,7 @@ export class CourseApi {
       if (!Array.isArray((update as any).values)) {
         return
       }
-      (update as any).values.forEach((pathValue: PathValue) => {
+      ;(update as any).values.forEach((pathValue: PathValue) => {
         if (
           update.source &&
           update.source.type &&
