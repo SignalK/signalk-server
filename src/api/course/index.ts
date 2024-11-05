@@ -175,7 +175,7 @@ export class CourseApi {
    * 2. msg source matches current Destination source
    * 3. Destination Position is changed.
    */
-  private async processV1DestinationDeltas(delta: ValuesDelta) {
+  private async processV1DestinationDeltas(delta: Delta) {
     if (
       !Array.isArray(delta.updates) ||
       this.cmdSource?.type === 'API' ||
@@ -183,11 +183,11 @@ export class CourseApi {
     ) {
       return
     }
-    delta.updates.forEach((update) => {
-      if (!Array.isArray(update.values)) {
+    delta.updates.forEach((update: Update) => {
+      if (!Array.isArray((update as any).values)) {
         return
       }
-      update.values.forEach((pathValue: PathValue) => {
+      (update as any).values.forEach((pathValue: PathValue) => {
         if (
           update.source &&
           update.source.type &&
