@@ -29,21 +29,22 @@ module.exports = function (app) {
 }
 
 function mountApi(app) {
-  app.securityStrategy.addAdminMiddleware('/logfiles')
+  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/logfiles/`)
   app.get(`${SERVERROUTESPREFIX}/logfiles/`, function (req, res) {
     listLogFiles(app, (err, files) => {
       if (err) {
         console.error(err)
         res.status(500)
-        res.send('Error reading logfiles list')
+        res.json('Error reading logfiles list')
         return
       }
       res.json(files)
     })
   })
   app.get(`${SERVERROUTESPREFIX}/logfiles/:filename`, function (req, res) {
+    const sanitizedFilename = req.params.filename.replaceAll(/\.\.(\\|\/)/g, '')
     const sanitizedLogfile = path
-      .join(getFullLogDir(app), req.params.filename)
+      .join(getFullLogDir(app), sanitizedFilename)
       .replace(/\.\./g, '')
     res.sendFile(sanitizedLogfile)
   })

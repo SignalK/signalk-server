@@ -107,6 +107,8 @@ npm link my-signalk-plugin-app
 
 When you start Signal K server the plugin will now appear in the **Plugin Config** screen where it can be configured and enabled.
 
+Updating and/or installing new plugins will remove the link and you need to re-link your plugin.
+
 
 ### Debugging
 
@@ -211,10 +213,12 @@ A plugin must return an object containing the following functions:
 - `start(settings, restartPlugin)`: This function is called when the plugin is enabled or when the server starts (and the plugin is enabled). The `settings` parameter contains the configuration data entered via the **Plugin Config** screen. `restartPlugin` is a function that can be called by the plugin to restart itself.
 
 - `stop()`: This function is called when the plugin is disabled or after configuration changes. Use this function to "clean up" the resources consumed by the plugin i.e. unsubscribe from streams, stop timers / loops and close devices.
+If there are asynchronous operations in your plugin's stop implementation you should return a Promise that resolves
+when stopping is complete.
 
 - `schema()`: A function that returns an object defining the schema of the plugin's configuration data. It is used by the server to generate the user interface in the **Plugin Config** screen.
 
-_Note: When a plugin's configuration is changed the server will first call `stop()` to stop the plugin and then `start()` with the new configuration data._ 
+_Note: When a plugin's configuration is changed the server will first call `stop()` to stop the plugin and then `start()` with the new configuration data. Return a Promise from `stop` if needed so that `start` is not called before stopping is complete._
 
 A plugin can also contain the following optional functions:
 

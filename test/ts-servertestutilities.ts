@@ -25,6 +25,7 @@ export const startServer = async () => {
   const host = 'http://localhost:' + port
   const sendDeltaUrl = host + '/signalk/v1/api/_test/delta'
   const api = host + '/signalk/v2/api'
+  const v1Api = host + '/signalk/v1/api'
 
   await emptyConfigDirectory()
   const server = await startServerP(port, false, {
@@ -48,11 +49,18 @@ export const startServer = async () => {
         body: JSON.stringify(body),
         headers: { 'Content-Type': 'application/json' }
       }),
+    selfPutV1: (path: string, body: object) =>
+      fetch(`${v1Api}/vessels/self/${path}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' }
+      }),
     selfDelete: (path: string) =>
       fetch(`${api}/vessels/self/${path}`, {
         method: 'DELETE'
       }),
     get: (path: string) => fetch(`${api}${path}`),
+    getV1: (path: string) => fetch(`${v1Api}${path}`),
     post: (path: string, body: object) =>
       fetch(`${api}${path}`, {
         method: 'POST',
@@ -67,6 +75,9 @@ export const startServer = async () => {
       }),
     selfGetJson: (path: string) =>
       fetch(`${api}/vessels/self/${path}`).then(r => r.json()),
+    selfGetJsonV1: (path: string) =>
+      fetch(`${v1Api}/vessels/self/${path}`).then(r => r.json()),
+    host,    
     sendDelta: (path: string, value: any) =>
       sendDelta(
         {

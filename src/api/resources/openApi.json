@@ -20,6 +20,10 @@
   ],
   "tags": [
     {
+      "name": "providers",
+      "description": "Resource Providers"
+    },
+    {
       "name": "resources",
       "description": "Signal K resources"
     },
@@ -475,16 +479,14 @@
           "type": {
             "type": "string",
             "description": "Source type of map data.",
-            "enum": ["tilejson", "wms", "wmts"],
-            "default": "wms",
-            "example": "wms"
+            "enum": ["tilejson", "WMS", "WMTS", "mapboxstyle", "S-57"],
+            "example": "WMTS"
           }
         }
       },
       "Chart": {
         "description": "Signal K Chart resource",
         "type": "object",
-        "required": ["identifier"],
         "properties": {
           "identifier": {
             "type": "string",
@@ -724,6 +726,15 @@
       }
     },
     "parameters": {
+      "ResourceTypeParam": {
+        "name": "resourceType",
+        "in": "path",
+        "description": "Resource type",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
       "LimitParam": {
         "in": "query",
         "name": "limit",
@@ -1399,6 +1410,29 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": ["charts"],
+        "summary": "Add a new Chart source",
+        "requestBody": {
+          "description": "Chart resource entry",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Chart"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
       }
     },
     "/resources/charts/{id}": {
@@ -1418,7 +1452,7 @@
       ],
       "get": {
         "tags": ["charts"],
-        "summary": "Retrieve chart with supplied id",
+        "summary": "Retrieve chart metadata for the supplied id",
         "responses": {
           "200": {
             "$ref": "#/components/responses/ChartResponse"
@@ -1430,7 +1464,7 @@
       },
       "put": {
         "tags": ["charts"],
-        "summary": "Add / update a new Chart with supplied id",
+        "summary": "Add / update a new Chart source with supplied id",
         "requestBody": {
           "description": "Chart resource entry",
           "required": true,
@@ -1445,6 +1479,116 @@
         "responses": {
           "200": {
             "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["charts"],
+        "summary": "Remove Chart source with supplied id",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/resources/{resourceType}/_providers": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceTypeParam"
+        }
+      ],
+      "get": {
+        "tags": ["providers"],
+        "summary": "List of resource providers for the resource type.",
+        "responses": {
+          "default": {
+            "description": "An array of registered resource providers servicing the resource type.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resources/{resourceType}/_providers/_default": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceTypeParam"
+        }
+      ],
+      "get": {
+        "tags": ["providers"],
+        "summary": "Returns the plugin id of the current default provider for the resource type.",
+        "responses": {
+          "default": {
+            "description": "An string containing the id of the resource provider plugin servicing the resource type.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resources/{resourceType}/_providers/_default/{pluginId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceTypeParam"
+        },
+        {
+          "name": "pluginId",
+          "in": "path",
+          "description": "Provider plugin id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "tags": ["providers"],
+        "summary": "Set the default provider for the resource type.",
+        "responses": {
+          "200": {
+            "description": "OK response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": ["COMPLETED"]
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "enum": [200]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["statusCode", "state"]
+                }
+              }
+            }
           },
           "default": {
             "$ref": "#/components/responses/ErrorResponse"

@@ -68,6 +68,7 @@ import { OpenApiDescription, OpenApiRecord } from './api/swagger'
 import { WithProviderStatistics } from './deltastats'
 import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
+import { Zones } from './zones'
 const debug = createDebug('signalk-server')
 
 const { StreamBundle } = require('./streambundle')
@@ -315,6 +316,9 @@ class Server {
     }
 
     app.streambundle = new StreamBundle(app, app.selfId)
+    new Zones(app.streambundle, (delta: Delta) =>
+      app.handleMessage('self.notificationhandler', delta)
+    )
     app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
     app.subscriptionmanager = new SubscriptionManager(app)
     app.deltaCache = new DeltaCache(app, app.streambundle)

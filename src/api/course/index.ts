@@ -325,7 +325,7 @@ export class CourseApi {
         }
         try {
           const result = await this.activateRoute(req.body)
-          console.log(this.courseInfo)
+          debug(this.courseInfo)
           if (result) {
             this.emitCourseInfo()
             res.status(200).json(Responses.ok)

@@ -35,7 +35,7 @@ module.exports = function (app) {
   app.put(`${SERVERROUTESPREFIX}/runDiscovery`, (req, res) => {
     app.discoveredProviders = []
     runDiscovery(app)
-    res.send('Discovery started')
+    res.json('Discovery started')
   })
 
   function getProviders(source, wasDiscovered) {
@@ -91,6 +91,7 @@ module.exports = function (app) {
         console.error(err)
         res.status(500).send('Unable to save to settings file')
       } else {
+        res.type('text/plain')
         res.send('Connection deleted')
       }
     })
@@ -159,6 +160,7 @@ module.exports = function (app) {
           console.error(err)
           res.status(500).send('Unable to save to settings file')
         } else {
+          res.type('text/plain')
           res.send('Connection ' + (isNew ? 'added' : 'updated'))
         }
       })
