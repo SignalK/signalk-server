@@ -91,7 +91,7 @@ export function mountSwaggerUi(app: IRouter & PluginManager, path: string) {
       res.json(apiDoc)
     } else {
       res.status(404)
-      res.send('Not found')
+      res.json('Not found')
     }
   }
   app.get(

@@ -153,30 +153,57 @@ _for example:_
 HTTP POST 'http://hostname:3000/signalk/v2/api/resources/waypoints'
 ```
 
-the first provider that was registered for that resource type will be the target of the requested operation (`setResource()`).
+By default the first provider that was registered for that resource type will be the target of the requested operation (`setResource()`).
 
----
+You can view the registered providers for a resource type by making the following request:
+```typescript
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/{resourceType}/_providers'
+```
 
-__Specifying the resource provider to be the tartet of the request:__
+_Example: `HTTP GET 'http://hostname:3000/signalk/v2/api/resources/charts/_providers'
+``` JSON
+[
+  "charts",
+  "resources-provider"
+]
+```
+
+You can retrieve the default provider for a resource type by making the following request:
+
+```typescript
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/{resourceType}/_providers/_default'
+```
+
+Example: `HTTP GET 'http://hostname:3000/signalk/v2/api/resources/charts/_providers/_default'
+```JSON
+"resources-provider"
+```
+
+You can change the provider used for writing a resource record in the following ways:
+1. Per-request by using the `?provider=` query parameter.
+2. Setting a "default" provider for a specific resource type
+
+
+__1. Per-request by using the `?provider=` query parameter:__
 
 When multiple providers are registered for a resource type the client can specify which provider should be the target of the request by using the query parameter `provider`.
 
 _Example:_
 ```typescript
-HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?provider=provider-plugin-id'
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?provider=my-plugin-id'
 
-HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111?provider=provider-plugin-id'
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111?provider=my-plugin-id'
 
-HTTP PUT 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111?provider=provider-plugin-id'
+HTTP PUT 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111?provider=my-plugin-id'
 
-HTTP DELETE 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111?provider=provider-plugin-id'
+HTTP DELETE 'http://hostname:3000/signalk/v2/api/resources/waypoints/94052456-65fa-48ce-a85d-41b78a9d2111?provider=my-plugin-id'
 
-HTTP POST 'http://hostname:3000/signalk/v2/api/resources/waypoints?provider=provider-plugin-id'
+HTTP POST 'http://hostname:3000/signalk/v2/api/resources/waypoints?provider=my-plugin-id'
 ```
 
 the value assigned to `provider` is the `plugin id` of the resource provider plugin.
 
-The plugin id can be obtained from the Signal K server url `http://hostname:3000/plugins`.
+The plugin id can be obtained from the Signal K server url _http://hostname:3000/skServer/plugins_.
 
 _Example:_
 
@@ -187,13 +214,20 @@ HTTP GET 'http://hostname:3000/plugins'
 ```JSON
 [
   {
-    "id": "sk-resources-fs",  // <-- plugin id
+    "id": "mysk-resource-plugin",  // <-- plugin id
     "name": "Resources Provider",
-    "packageName": "sk-resources-fs",
+    "packageName": "mysk-resource-plugin",
     "version": "1.3.0",
     ...
   },
   ...
 ]
 ```
+__2. Setting a default provider for a resource type:__
 
+To change the default provider for a resource type make a POST request to *http://hostname:3000/signalk/v2/api/resources/{resourceType}/_providers/_default/{pluginId}* where `pluginId` is the id of resource provider plugin.
+
+_Example: Direct create new chart source entries to `my-chart-plugin`._
+```typescript
+HTTP POST 'http://hostname:3000/signalk/v2/api/resources/charts/_providers/_default/my-chart-plugin'
+```

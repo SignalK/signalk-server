@@ -111,6 +111,7 @@ class Sidebar extends Component {
           >
             <i className={item.icon} />
             {item.name}
+            {badge(item.badge)}
           </a>
           <ul className="nav-dropdown-items">{navList(item.children)}</ul>
         </li>

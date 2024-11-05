@@ -65,8 +65,9 @@ export function startDeltaStatistics(
       (app.providerStatistics[msg.providerId] = new ProviderStats())
     if (msg.count !== undefined) {
       stats.writeCount += msg.count
+    } else {
+      stats.writeCount++
     }
-    stats.writeCount++
   })
 
   return setInterval(() => {
@@ -104,10 +105,7 @@ export function incDeltaStatistics(
 function updateProviderPeriodStats(app: any) {
   app.providers.forEach((provider: any) => {
     if (isUndefined(app.providerStatistics[provider.id])) {
-      app.providerStatistics[provider.id] = {
-        deltaCount: 0,
-        deltaRate: 0
-      }
+      app.providerStatistics[provider.id] = new ProviderStats()
     }
   })
 

@@ -1,8 +1,12 @@
 # CHANGELOG: RESOURCES-PROVIDER
 
-___Note: Signal K server on which this plugin is installed must implement the `ResourceProvider API`.___
+___Note: Can only be used with Signal K server version 2.0.0 or later.___
 
 ---
+
+## v1.2.0
+
+- **Update**: Update plugin configuration to include `charts`.
 
 ## v1.1.2
 

@@ -529,7 +529,7 @@ app.resourcesApi.setResource(
   'waypoints',
   'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
   {
-    "position": {"longitude": 138.5, "latitude": -38.6}, 
+    "name": "My Waypoint",
     "feature": {
       "type":"Feature", 
       "geometry": {
@@ -649,52 +649,6 @@ in the specified direction and starting at the specified point.
 - `rte`: Object containing route information as per [`/course/activeRoute`](/doc/openapi/?urls.primaryName=course#/activeRoute/put_course_activeRoute).
 
 - returns: Resolved Promise on success.
-
----
-
-### Notifications API _(proposed)_
-
-#### `app.notify(path, value, pluginId)`
-
-Notifications API interface method for raising, updating and clearing notifications.
-
-  - `path`: Signal K path of the notification
-
-  - `value`: A valid `Notification` object or `null` if clearing a notification.
-
-  - `pluginId` The plugin identifier.
-  
-
-To raise or update a for a specified path, call the method with a valid `Notification` object as the `value`.
-
-- returns:  `string` value containing the `id` of the new / updated notification.
-
-_Example:_
-```javascript
-const alarmId = app.notify(
-  'myalarm', 
-  {
-	message: 'My cutom alarm text',
-	state: 'alert'
-  },
-  'myAlarmPlugin'
-)
-
-// alarmId = "ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
-```
-
-To clear (cancel) a notification call the method with `null` as the `value`.
-
-- returns:  `void`.
-
-_Example: Clear notification_
-```javascript
-const alarmId = app.notify(
-  'myalarm', 
-  null,
-  'myAlarmPlugin'
-)
-```
 
 ---
 

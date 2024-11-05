@@ -1022,7 +1022,24 @@ const gpios = [
 const Seatalk = (props) => (
   <span>
     <FormGroup row>
-      <Col md="2">
+      <Col md="3">
+        <Label htmlFor="options.type">GPIO Library</Label>
+      </Col>
+      <Col xs="12" md="3">
+        <Input
+          type="select"
+          value={props.value.options.type || 'none'}
+          name="options.type"
+          onChange={(event) => props.onChange(event)}
+        >
+          <option value="none">Select a library</option>
+          <option value="gpiod">gpiod</option>
+          <option value="pigpio">pigpio (legacy)</option>
+        </Input>
+      </Col>
+    </FormGroup>
+    <FormGroup row>
+      <Col md="3">
         <Label htmlFor="gpio">GPIO Pin</Label>
       </Col>
       <Col xs="12" md="3">
@@ -1040,7 +1057,7 @@ const Seatalk = (props) => (
       </Col>
     </FormGroup>
     <FormGroup row>
-      <Col md="2">
+      <Col md="3">
         <Label htmlFor="gpioInvert">Invert signal</Label>
       </Col>
       <Col xs="12" md="10">

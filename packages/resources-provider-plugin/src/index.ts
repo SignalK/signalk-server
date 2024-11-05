@@ -1,13 +1,25 @@
 import {
   Plugin,
   ServerAPI,
-  ResourceProviderRegistry
+  ResourceProviderRegistry,
+  SIGNALKRESOURCETYPES
 } from '@signalk/server-api'
 
 import { FileStore, getUuid } from './lib/filestorage'
 import { StoreRequestParams } from './types'
 
 interface ResourceProviderApp extends ServerAPI, ResourceProviderRegistry {}
+
+interface ProviderSettings {
+  standard: {
+    routes: boolean
+    waypoints: boolean
+    notes: boolean
+    regions: boolean
+    charts: boolean
+  }
+  custom: Array<{ name: string }>
+}
 
 const CONFIG_SCHEMA = {
   properties: {
@@ -32,6 +44,10 @@ const CONFIG_SCHEMA = {
         regions: {
           type: 'boolean',
           title: 'REGIONS'
+        },
+        charts: {
+          type: 'boolean',
+          title: 'CHART SOURCES'
         }
       }
     },
@@ -75,6 +91,11 @@ const CONFIG_UISCHEMA = {
       'ui:widget': 'checkbox',
       'ui:title': ' ',
       'ui:help': '/signalk/v2/api/resources/regions'
+    },
+    charts: {
+      'ui:widget': 'checkbox',
+      'ui:title': ' ',
+      'ui:help': '/signalk/v2/api/resources/charts'
     }
   }
 }
@@ -85,8 +106,8 @@ module.exports = (server: ResourceProviderApp): Plugin => {
     name: 'Resources Provider (built-in)',
     schema: () => CONFIG_SCHEMA,
     uiSchema: () => CONFIG_UISCHEMA,
-    start: (options) => {
-      doStartup(options)
+    start: (settings) => {
+      doStartup(settings as ProviderSettings)
     },
     stop: () => {
       doShutdown()
@@ -94,30 +115,12 @@ module.exports = (server: ResourceProviderApp): Plugin => {
   }
 
   const db: FileStore = new FileStore(plugin.id, server.debug)
+  let config: ProviderSettings
 
-  let config = {
-    standard: {
-      routes: true,
-      waypoints: true,
-      notes: true,
-      regions: true
-    },
-    custom: [],
-    path: './resources'
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const doStartup = (options: any) => {
+  const doStartup = (settings: ProviderSettings) => {
     try {
       server.debug(`${plugin.name} starting.......`)
-      if (options && options.standard) {
-        config = options
-      } else {
-        // save defaults if no options loaded
-        server.savePluginOptions(config, () => {
-          server.debug(`Default configuration applied...`)
-        })
-      }
+      config = cleanConfig(settings)
       server.debug(`Applied config: ${JSON.stringify(config)}`)
 
       // compile list of enabled resource types
@@ -129,8 +132,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
       })
 
       if (config.custom && Array.isArray(config.custom)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const customTypes = config.custom.map((i: any) => {
+        const customTypes = config.custom.map((i: { name: string }) => {
           return i.name
         })
         apiProviderFor = apiProviderFor.concat(customTypes)
@@ -156,12 +158,13 @@ module.exports = (server: ResourceProviderApp): Plugin => {
           // register as provider for enabled resource types
           const result = registerProviders(apiProviderFor)
 
-          const msg =
-            result.length !== 0
-              ? `${result.toString()} not registered!`
-              : `Providing: ${apiProviderFor.toString()}`
-
-          server.setPluginStatus(msg)
+          if (result.length !== 0) {
+            server.setPluginError(
+              `Error registering providers: ${result.toString()}`
+            )
+          } else {
+            server.setPluginStatus(`Providing: ${apiProviderFor.toString()}`)
+          }
         })
         .catch((e: Error) => {
           server.debug(e.message)
@@ -180,6 +183,50 @@ module.exports = (server: ResourceProviderApp): Plugin => {
     server.debug('** Un-registering Update Handler(s) **')
     const msg = 'Stopped.'
     server.setPluginStatus(msg)
+  }
+
+  /** process changes in config schema */
+  const cleanConfig = (options: ProviderSettings): ProviderSettings => {
+    server.debug(`Check / Clean loaded settings...`)
+
+    const defaultConfig: ProviderSettings = {
+      standard: {
+        routes: true,
+        waypoints: true,
+        notes: true,
+        regions: true,
+        charts: true
+      },
+      custom: []
+    }
+
+    // set / save defaults if no saved settings
+    if (!options?.standard) {
+      server.savePluginOptions(defaultConfig, () => {
+        server.debug(`Default configuration applied...`)
+      })
+      return defaultConfig
+    }
+
+    // check / clean settings
+    if (!Array.isArray(options?.custom)) {
+      options.custom = []
+    }
+    SIGNALKRESOURCETYPES.forEach((r) => {
+      if (!(r in options.standard)) {
+        options.standard[r] = true
+      }
+    })
+
+    options.custom = options.custom.filter(
+      (i) => !(i.name in defaultConfig.standard)
+    )
+
+    server.savePluginOptions(options, () => {
+      server.debug(`Configuration cleaned and saved...`)
+    })
+
+    return options
   }
 
   const getVesselPosition = () => {
@@ -221,7 +268,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
   const apiGetResources = async (
     resType: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    params?: any
+    params: any = {}
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> => {
     if (typeof params.position === 'undefined') {

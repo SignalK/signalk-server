@@ -127,7 +127,7 @@ module.exports = (theApp: any) => {
           .catch((err) => {
             console.error(err)
             res.status(500)
-            res.send(err)
+            res.json(err)
           })
       })
     }
@@ -418,7 +418,7 @@ module.exports = (theApp: any) => {
     }
   }
 
-  function stopPlugin(plugin: PluginInfo) {
+  function stopPlugin(plugin: PluginInfo): Promise<any> {
     debug('Stopping plugin ' + plugin.name)
     onStopHandlers[plugin.id].forEach((f: () => void) => {
       try {
@@ -428,9 +428,12 @@ module.exports = (theApp: any) => {
       }
     })
     onStopHandlers[plugin.id] = []
-    plugin.stop()
-    theApp.setPluginStatus(plugin.id, 'Stopped')
-    debug('Stopped plugin ' + plugin.name)
+    const result = Promise.resolve(plugin.stop())
+    result.then(() => {
+      theApp.setPluginStatus(plugin.id, 'Stopped')
+      debug('Stopped plugin ' + plugin.name)
+    })
+    return result
   }
 
   function setPluginStartedMessage(plugin: PluginInfo) {
@@ -618,6 +621,21 @@ module.exports = (theApp: any) => {
     appCopy.getDataDirPath = () => dirForPluginId(plugin.id)
 
     appCopy.registerPutHandler = (context, aPath, callback, source) => {
+      appCopy.handleMessage(plugin.id, {
+        updates: [
+          {
+            meta: [
+              {
+                path: aPath,
+                value: {
+                  supportsPut: true
+                }
+              }
+            ]
+          }
+        ]
+      })
+
       onStopHandlers[plugin.id].push(
         app.registerActionHandler(context, aPath, source || plugin.id, callback)
       )
@@ -642,8 +660,11 @@ module.exports = (theApp: any) => {
         if (err) {
           console.error(err)
         } else {
-          stopPlugin(plugin)
-          doPluginStart(app, plugin, location, newConfiguration, restart)
+          stopPlugin(plugin).then(() => {
+            return Promise.resolve(
+              doPluginStart(app, plugin, location, newConfiguration, restart)
+            )
+          })
         }
       })
     }
@@ -694,17 +715,18 @@ module.exports = (theApp: any) => {
         if (err) {
           console.error(err)
           res.status(500)
-          res.send(err)
+          res.json(err)
           return
         }
-        res.send('Saved configuration for plugin ' + plugin.id)
-        stopPlugin(plugin)
-        const options = getPluginOptions(plugin.id)
-        plugin.enableLogging = options.enableLogging
-        plugin.enableDebug = options.enableDebug
-        if (options.enabled) {
-          doPluginStart(app, plugin, location, options.configuration, restart)
-        }
+        res.json('Saved configuration for plugin ' + plugin.id)
+        stopPlugin(plugin).then(() => {
+          const options = getPluginOptions(plugin.id)
+          plugin.enableLogging = options.enableLogging
+          plugin.enableDebug = options.enableDebug
+          if (options.enabled) {
+            doPluginStart(app, plugin, location, options.configuration, restart)
+          }
+        })
       })
     })
 
