@@ -22,7 +22,6 @@ import {
   RouteDestination,
   CourseInfo,
   COURSE_POINT_TYPES,
-  ValuesDelta,
   Update,
   Delta
 } from '@signalk/server-api'
@@ -60,10 +59,6 @@ interface CommandSource {
   path?: string
 }
 
-interface CourseSettings {
-  apiOnly: boolean
-}
-
 export class CourseApi {
   private courseInfo: CourseInfo = {
     startTime: null,
@@ -77,7 +72,7 @@ export class CourseApi {
   private store: Store
   private cmdSource: CommandSource | null = null // source which set the destination
   private unsubscribes: Unsubscribes = []
-  private settings!: CourseSettings
+  private settings!: { apiOnly?: boolean }
 
   constructor(
     private app: CourseApplication,
@@ -98,7 +93,7 @@ export class CourseApi {
         debug('Found persisted course data')
         this.courseInfo = this.validateCourseInfo(storeData)
         this.cmdSource =
-          this.settings.apiOnly && this.courseInfo.nextPoint
+          this.settings?.apiOnly && this.courseInfo.nextPoint
             ? { type: 'API' }
             : null
       } catch (error) {
@@ -132,7 +127,7 @@ export class CourseApi {
         (err: Error) => {
           console.log(`Course API: Subscribe failed: ${err}`)
         },
-        (msg: ValuesDelta) => {
+        (msg: Delta) => {
           this.processV1DestinationDeltas(msg)
         }
       )
@@ -142,21 +137,21 @@ export class CourseApi {
 
   // parse server settings
   private parseSettings() {
-    const defaultSettings: CourseSettings = {
+    const defaultSettings = {
       apiOnly: false
     }
     if (!('courseApi' in this.app.config.settings)) {
       debug('***** Applying Default Settings ********')
-      ;(this.app.config.settings as any)['courseApi'] = defaultSettings
+      this.app.config.settings.courseApi = defaultSettings
     }
     if (
-      typeof (this.app.config.settings as any)['courseApi'].apiOnly ===
-      'undefined'
+      this.app.config.settings.courseApi &&
+      typeof this.app.config.settings.courseApi.apiOnly === 'undefined'
     ) {
       debug('***** Applying missing apiOnly attribute to Settings ********')
-      ;(this.app.config.settings as any)['courseApi'].apiOnly = false
+      this.app.config.settings.courseApi.apiOnly = false
     }
-    this.settings = (this.app.config.settings as any)['courseApi']
+    this.settings = this.app.config.settings.courseApi ?? { apiOnly: false }
     debug('** Parsed App Settings ***', this.app.config.settings)
     debug('** Applied cmdSource ***', this.cmdSource)
   }
@@ -179,7 +174,7 @@ export class CourseApi {
     if (
       !Array.isArray(delta.updates) ||
       this.cmdSource?.type === 'API' ||
-      (!this.cmdSource && this.settings.apiOnly)
+      (!this.cmdSource && this.settings?.apiOnly)
     ) {
       return
     }
@@ -364,7 +359,7 @@ export class CourseApi {
           return
         }
         try {
-          this.settings.apiOnly = true
+          ;(this.settings as any).apiOnly = true
           if (this.cmdSource?.type !== 'API') {
             this.clearDestination()
           }
@@ -386,7 +381,7 @@ export class CourseApi {
           return
         }
         try {
-          this.settings.apiOnly = false
+          ;(this.settings as any).apiOnly = false
           this.saveSettings()
           res.status(200).json(Responses.ok)
         } catch {
