@@ -477,7 +477,10 @@ module.exports = function (
         isUndefined(app.config.settings.keepMostRecentLogsOnly) ||
         app.config.settings.keepMostRecentLogsOnly,
       logCountToKeep: app.config.settings.logCountToKeep || 24,
-      runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true'
+      runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true',
+      courseApi: {
+        apiOnly: app.config.settings.courseApi?.apiOnly || false
+      }
     }
 
     if (!settings.runFromSystemd) {
@@ -620,6 +623,12 @@ module.exports = function (
     if (!isUndefined(settings.logCountToKeep)) {
       app.config.settings.logCountToKeep = Number(settings.logCountToKeep)
     }
+
+    forIn(settings.courseApi, (enabled, name) => {
+      const courseApi: { [index: string]: boolean | string | number } =
+        app.config.settings.courseApi || (app.config.settings.courseApi = {})
+      courseApi[name] = enabled
+    })
 
     writeSettingsFile(app, app.config.settings, (err: Error) => {
       if (err) {
