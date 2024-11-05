@@ -188,12 +188,7 @@
         }
       }
     },
-    "/defaultPilot/{id}": {
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/AutopilotIdParam"
-        }
-      ],
+    "/_config/_default": {
       "get": {
         "tags": ["autopilot"],
         "summary": "Get the default autopilot device id.",
@@ -216,7 +211,14 @@
             }
           }
         }
-      },
+      }
+    },
+    "/_config/_default/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AutopilotIdParam"
+        }
+      ],
       "post": {
         "tags": ["autopilot"],
         "summary": "Set the default autopilot device.",

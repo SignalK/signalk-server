@@ -24,7 +24,7 @@ import {
 } from '@signalk/server-api'
 
 const AUTOPILOT_API_PATH = `/signalk/v2/api/vessels/self/steering/autopilots`
-const DEFAULTIDPATH = 'default'
+const DEFAULTIDPATH = '_default'
 
 interface AutopilotApplication
   extends WithSecurityStrategy,
@@ -218,7 +218,7 @@ export class AutopilotApi {
 
     // get default autopilot device
     this.server.get(
-      `${AUTOPILOT_API_PATH}/defaultPilot`,
+      `${AUTOPILOT_API_PATH}/_config/_default`,
       (req: Request, res: Response) => {
         debug(`params:`, req.params)
         res.status(Responses.ok.statusCode).json({ id: this.defaultDeviceId })
@@ -227,7 +227,7 @@ export class AutopilotApi {
 
     // set default autopilot device
     this.server.post(
-      `${AUTOPILOT_API_PATH}/defaultPilot/:id`,
+      `${AUTOPILOT_API_PATH}/_config/_default/:id`,
       (req: Request, res: Response) => {
         debug(`params:`, req.params)
         if (!this.deviceToProvider.has(req.params.id)) {

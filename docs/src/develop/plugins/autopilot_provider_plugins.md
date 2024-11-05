@@ -239,7 +239,7 @@ _Returns:_
 ```
 
 ---
-**`setState(state, deviceI?)`**: This method sets the autopilot device with the supplied identifier to the supplied state value.
+**`setState(state, deviceId?)`**: This method sets the autopilot device with the supplied identifier to the supplied state value.
 
 - `state:` state value to set. Must be a valid state value.
 - `deviceId:` identifier of the autopilot device to query.
