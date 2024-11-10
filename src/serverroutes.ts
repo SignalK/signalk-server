@@ -157,7 +157,24 @@ module.exports = function (
   )
 
   app.get('/', (req: Request, res: Response) => {
-    res.redirect(app.config.settings.landingPage || '/admin/')
+    let landingPage = '/admin/'
+
+    // if accessed with hostname that starts with a webapp's displayName redirect there
+    //strip possible port number
+    const firstHostName = (req.headers?.host || '')
+      .split(':')[0]
+      .split('.')[0]
+      .toLowerCase()
+    const targetWebapp = app.webapps.find(
+      (webapp) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (webapp as any).signalk?.displayName.toLowerCase() === firstHostName
+    )
+    if (targetWebapp) {
+      landingPage = `/${targetWebapp.name}/`
+    }
+
+    res.redirect(app.config.settings.landingPage || landingPage)
   })
 
   app.get('/@signalk/server-admin-ui', (req: Request, res: Response) => {
