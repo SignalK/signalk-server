@@ -188,7 +188,7 @@
         }
       }
     },
-    "/_config/_default": {
+    "/_providers/_default": {
       "get": {
         "tags": ["autopilot"],
         "summary": "Get the default autopilot device id.",
@@ -213,7 +213,7 @@
         }
       }
     },
-    "/_config/_default/{id}": {
+    "/_providers/_default/{id}": {
       "parameters": [
         {
           "$ref": "#/components/parameters/AutopilotIdParam"

@@ -18,16 +18,16 @@ To ensure a consistent API calling profile and to simplify client operations, th
 - When multiple autopilots are present, and a _default_ is yet to be assigned, one will be assigned when:
   - An update is received from a provider plugin, the autopilot which is the source of the update will be assigned as the _default_.
   - An API request is received, the first autopilot device registered, is assigned as the _default_.
-  - A request is sent to the `/_config/_default` API endpoint _(see [Setting the Default Autopilot](#setting-the-default-provider))_.
+  - A request is sent to the `/_providers/_default` API endpoint _(see [Setting the Default Autopilot](#setting-the-default-provider))_.
 
 
 ### Getting the Default Autopilot Identifier
 
-To get the id of the _default_ autopilot, submit an HTTP `GET` request to `/signalk/v2/api/vessels/self/steering/autopilots/_config/_default`.
+To get the id of the _default_ autopilot, submit an HTTP `GET` request to `/signalk/v2/api/vessels/self/steering/autopilots/_providers/_default`.
 
 _Example:_
 ```typescript
-HTTP GET "/signalk/v2/api/vessels/self/steering/autopilots/_config/_default"
+HTTP GET "/signalk/v2/api/vessels/self/steering/autopilots/_providers/_default"
 ```
 
 _Response:_
@@ -39,11 +39,11 @@ _Response:_
 
 ### Setting an Autopilot as the Default
 
-To set / change the _default_ autopilot, submit an HTTP `POST` request to `/signalk/v2/api/vessels/self/steering/autopilots/_config/_default/{id}` where `{id}` is the identifier of the autopilot to use as the _default_.
+To set / change the _default_ autopilot, submit an HTTP `POST` request to `/signalk/v2/api/vessels/self/steering/autopilots/_providers/_default/{id}` where `{id}` is the identifier of the autopilot to use as the _default_.
 
 _Example:_
 ```typescript
-HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/_config/_default/raymarine-id"
+HTTP POST "/signalk/v2/api/vessels/self/steering/autopilots/_providers/_default/raymarine-id"
 ```
 
 The autopilot with the supplied id will now be the target of requests made to `./steering/autopilots/_default/*`.
