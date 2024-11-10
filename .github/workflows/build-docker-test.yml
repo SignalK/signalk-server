@@ -1,0 +1,89 @@
+name: Build Docker development test container
+
+on:
+  push:
+    branches:
+    - master
+    - "build-docker"
+    - metadata-editing
+    tags:
+      - '*'
+      - '!v*'
+  workflow_dispatch:
+
+jobs:
+  signalk-server_npm_files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node setup
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+
+      - name: Build npm files locally and upload artifacts
+        run: |
+          npm cache clean -f
+          npm install npm@latest -g
+          npm install --package-lock-only
+          npm ci && npm cache clean --force
+          npm run build --workspaces --if-present
+          cd packages/server-admin-ui
+          npm pack && mv *.tgz ../../
+          cd ../server-api
+          npm pack && mv *.tgz ../../
+          cd ../streams
+          npm pack && mv *.tgz ../../
+          cd ../resources-provider-plugin
+          npm pack && mv *.tgz ../../
+          cd ../..
+          jq '.workspaces=[]' package.json > _package.json && mv _package.json package.json
+          npm i --save *.tgz
+          npm run build
+          npm pack
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 1
+          name: packed-modules
+          path: |
+            *.tgz
+
+  build_docker_images:
+    runs-on: ubuntu-latest
+    needs: [signalk-server_npm_files]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: signalkci
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }} # Personal access tokens (classic) with a scope of "write:packages" is needed to release ghcr.io package registry.
+      - uses: actions/download-artifact@v4
+        with:
+          name: packed-modules
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile_test
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          push: true
+          tags: |
+            signalk/signalk-server:latest_test
+            ghcr.io/signalk/signalk-server:latest_test
