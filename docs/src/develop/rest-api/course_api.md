@@ -9,7 +9,7 @@ Additionally, the Course API persists course information on the server to ensure
 
 Client applications use `HTTP` requests (`PUT`, `GET`,`DELETE`) to perform operations and retrieve course data. 
 
-The Course API also listens for destination information in the NMEA stream and will set / clear the destination accordingly _(e.g. RMB sentence)_. See [Configuration](#Configuration) for more details.
+The Course API also listens for destination information in the NMEA stream and will set / clear the destination accordingly _(e.g. NMEA0183 RMB sentence,  NMEA2000 PGN 129284)_. See [Configuration](#Configuration) for more details.
 
 _Note: You can view the _Course API_ OpenAPI definition in the Admin UI (Documentation => OpenApi)._
 
@@ -252,11 +252,16 @@ To ignore destination data from NMEA sources see [Configuration](#configuration)
 
 ## Configuration
 
-The default configuration of the Course API will accept destination information from both API requests and NMEA stream data.
+The default configuration of the Course API will accept destination information from both API requests and NMEA stream data sources.
 
-HTTP requests are prioritised over NMEA stream data, so making an API request will overwrite destination information received from and NMEA source.
+For NMEA sources, Course API monitors the the following Signal K paths populated by both the `nmea0183-to-signalk` and `n2k-to-signalk` plugins:
+- _navigation.courseRhumbline.nextPoint.position_
+- _navigation.courseGreatCircle.nextPoint.position_
 
-But, when the destination cleared using an API request, if the NMEA stream is emitting an active destination position, this will then be used by the Course API to populate course data.
+HTTP requests are prioritised over NMEA data sources, so making an API request will overwrite the destination information received from and NMEA source.
+
+Note: when the destination cleared using an API request, if the NMEA stream is emitting an active destination position, this will then be used by the Course API to populate course data.
+
 
 #### Ignoring NMEA Destination Information
 
