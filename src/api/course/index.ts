@@ -261,14 +261,14 @@ export class CourseApi {
   }
 
   /** Clear destination / route (exposed to plugins) */
-  async clearDestination(): Promise<void> {
+  async clearDestination(persistState?: boolean): Promise<void> {
     this.courseInfo.startTime = null
     this.courseInfo.targetArrivalTime = null
     this.courseInfo.activeRoute = null
     this.courseInfo.nextPoint = null
     this.courseInfo.previousPoint = null
+    this.emitCourseInfo(!persistState)
     this.cmdSource = null
-    this.emitCourseInfo()
   }
 
   /** Set course (exposed to plugins)
@@ -361,7 +361,7 @@ export class CourseApi {
         try {
           ;(this.settings as any).apiOnly = true
           if (this.cmdSource?.type !== 'API') {
-            this.clearDestination()
+            this.clearDestination(true)
           }
           this.saveSettings()
           res.status(200).json(Responses.ok)
@@ -493,7 +493,7 @@ export class CourseApi {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        this.clearDestination()
+        this.clearDestination(true)
         res.status(200).json(Responses.ok)
       }
     )
@@ -1088,18 +1088,23 @@ export class CourseApi {
     }
   }
 
-  private emitCourseInfo(noSave = false, ...paths: string[]) {
+  private emitCourseInfo(noSave?: boolean, ...paths: string[]) {
     this.app.handleMessage(
       'courseApi',
       this.buildV1DeltaMsg(paths),
       SKVersion.v1
     )
     this.app.handleMessage('courseApi', this.buildDeltaMsg(paths), SKVersion.v2)
-    if (!noSave) {
+
+    const p = typeof noSave === 'undefined' ? this.persistState() : !noSave
+    if (p) {
+      debug('*** persisting state **')
       this.store.write(this.courseInfo).catch((error) => {
         console.log('Course API: Unable to persist destination details!')
         debug(error)
       })
     }
   }
+
+  private persistState = () => this.cmdSource?.type === 'API'
 }
