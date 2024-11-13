@@ -58,6 +58,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Docker meta
+        id: docker_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            signalk/signalk-server
+            ghcr.io/signalk/signalk-server
+          tags: |
+            type=ref,event=branch,suffix=-test
+            type=sha,suffix=-test
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -84,6 +94,4 @@ jobs:
           file: ./docker/Dockerfile_test
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
-          tags: |
-            signalk/signalk-server:latest_test
-            ghcr.io/signalk/signalk-server:latest_test
+          tags: ${{ steps.docker_meta.outputs.tags }}
