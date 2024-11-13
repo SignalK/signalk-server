@@ -177,7 +177,7 @@ export class CourseApi {
   private async processV1DestinationDeltas(delta: Delta) {
     if (
       !Array.isArray(delta.updates) ||
-      this.cmdSource?.type === 'API' ||
+      this.isAPICmdSource() ||
       (!this.cmdSource && this.settings?.apiOnly)
     ) {
       return
@@ -356,7 +356,7 @@ export class CourseApi {
         }
         try {
           ;(this.settings as any).apiOnly = true
-          if (this.cmdSource?.type !== 'API') {
+          if (!this.isAPICmdSource()) {
             this.clearDestination(true)
           }
           this.saveSettings()
@@ -1113,7 +1113,7 @@ export class CourseApi {
       SKVersion.v2
     )
 
-    const p = typeof noSave === 'undefined' ? this.persistState() : !noSave
+    const p = typeof noSave === 'undefined' ? this.isAPICmdSource() : !noSave
     if (p) {
       debug('*** persisting state **')
       this.store.write(this.courseInfo).catch((error) => {
@@ -1123,7 +1123,7 @@ export class CourseApi {
     }
   }
 
-  private persistState = () => this.cmdSource?.type === 'API'
+  private isAPICmdSource = () => this.cmdSource?.type === API_CMD_SRC.type
 
   private isSourceChange = (newSource: CommandSource): boolean =>
     this.cmdSource !== null &&
