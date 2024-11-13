@@ -758,7 +758,7 @@ export class CourseApi {
       }
     }
 
-    if (this.sourceChange(src)) {
+    if (this.isSourceChange(src)) {
       this.clearDestination(true)
     }
     this.courseInfo = newCourse
@@ -840,7 +840,7 @@ export class CourseApi {
       throw new Error(`Error: Unable to retrieve vessel position!`)
     }
 
-    if (this.sourceChange(src)) {
+    if (this.isSourceChange(src)) {
       this.clearDestination(true)
     }
     this.courseInfo = newCourse
@@ -1128,16 +1128,8 @@ export class CourseApi {
 
   private persistState = () => this.cmdSource?.type === 'API'
 
-  private sourceChange = (newSource: CommandSource): boolean => {
-    if (!this.cmdSource) {
-      return false
-    }
-    if (this.cmdSource.type !== newSource.type) {
-      return true
-    }
-    if (this.cmdSource.id !== newSource.id) {
-      return true
-    }
-    return false
-  }
+  private isSourceChange = (newSource: CommandSource): boolean =>
+    this.cmdSource !== null &&
+    (this.cmdSource.type !== newSource.type ||
+      this.cmdSource.id !== newSource.id)
 }
