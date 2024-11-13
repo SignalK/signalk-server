@@ -24,7 +24,8 @@ import {
   COURSE_POINT_TYPES,
   Update,
   Delta,
-  hasValues
+  hasValues,
+  SourceRef
 } from '@signalk/server-api'
 
 const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
@@ -42,7 +43,10 @@ const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
 const SIGNALK_API_PATH = `/signalk/v2/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
 
-const API_CMD_SRC = { id: 'courseApi', type: 'API' }
+const API_CMD_SRC: CommandSource = {
+  $source: 'courseApi' as SourceRef,
+  type: 'API'
+}
 
 export const COURSE_API_V2_DELTA_COUNT = 13
 export const COURSE_API_V1_DELTA_COUNT = 8
@@ -57,7 +61,7 @@ interface CourseApplication
 
 interface CommandSource {
   type: string
-  id: string
+  $source: SourceRef
   msg?: string
   path?: string
 }
@@ -189,7 +193,7 @@ export class CourseApi {
             this.parseStreamValue(
               {
                 type: update.source.type,
-                id: getSourceId(update.source),
+                $source: update.$source || getSourceId(update.source),
                 msg:
                   update.source.type === 'NMEA0183'
                     ? `${update.source.sentence}`
@@ -225,7 +229,7 @@ export class CourseApi {
 
     if (
       this.cmdSource?.type === src.type &&
-      this.cmdSource?.id === src.id &&
+      this.cmdSource?.$source === src.$source &&
       this.cmdSource?.path === src.path &&
       this.cmdSource?.msg === src.msg
     ) {
@@ -1088,13 +1092,13 @@ export class CourseApi {
 
   private emitCourseInfo(noSave?: boolean, ...paths: string[]) {
     this.app.handleMessage(
-      API_CMD_SRC.id,
+      API_CMD_SRC.$source,
       this.buildV1DeltaMsg(paths),
       SKVersion.v1
     )
 
     this.app.handleMessage(
-      this.cmdSource ? this.cmdSource.id : API_CMD_SRC.id,
+      this.cmdSource ? this.cmdSource.$source : API_CMD_SRC.$source,
       {
         updates: [
           {
@@ -1111,7 +1115,7 @@ export class CourseApi {
     )
 
     this.app.handleMessage(
-      API_CMD_SRC.id,
+      API_CMD_SRC.$source,
       this.buildDeltaMsg(paths),
       SKVersion.v2
     )
@@ -1131,5 +1135,5 @@ export class CourseApi {
   private isSourceChange = (newSource: CommandSource): boolean =>
     this.cmdSource !== null &&
     (this.cmdSource.type !== newSource.type ||
-      this.cmdSource.id !== newSource.id)
+      this.cmdSource.$source !== newSource.$source)
 }
