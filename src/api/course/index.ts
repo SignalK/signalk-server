@@ -23,7 +23,8 @@ import {
   CourseInfo,
   COURSE_POINT_TYPES,
   Update,
-  Delta
+  Delta,
+  hasValues
 } from '@signalk/server-api'
 
 const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
@@ -178,29 +179,28 @@ export class CourseApi {
       return
     }
     delta.updates.forEach((update: Update) => {
-      if (!Array.isArray((update as any).values)) {
-        return
+      if (hasValues(update)) {
+        update.values.forEach((pathValue: PathValue) => {
+          if (
+            update.source &&
+            update.source.type &&
+            ['NMEA0183', 'NMEA2000'].includes(update.source.type)
+          ) {
+            this.parseStreamValue(
+              {
+                type: update.source.type,
+                id: getSourceId(update.source),
+                msg:
+                  update.source.type === 'NMEA0183'
+                    ? `${update.source.sentence}`
+                    : `${update.source.pgn}`,
+                path: pathValue.path
+              },
+              pathValue.value as Position
+            )
+          }
+        })
       }
-      ;(update as any).values.forEach((pathValue: PathValue) => {
-        if (
-          update.source &&
-          update.source.type &&
-          ['NMEA0183', 'NMEA2000'].includes(update.source.type)
-        ) {
-          this.parseStreamValue(
-            {
-              type: update.source.type,
-              id: getSourceId(update.source),
-              msg:
-                update.source.type === 'NMEA0183'
-                  ? `${update.source.sentence}`
-                  : `${update.source.pgn}`,
-              path: pathValue.path
-            },
-            pathValue.value as Position
-          )
-        }
-      })
     })
   }
 
