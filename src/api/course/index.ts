@@ -209,17 +209,17 @@ export class CourseApi {
   }
 
   /** Process stream value and take action
-   * @param src Object describing the source of the update
+   * @param cmdSource Object describing the source of the update
    * @param pos Destination location value in the update
    */
-  private async parseStreamValue(src: CommandSource, pos: Position) {
+  private async parseStreamValue(cmdSource: CommandSource, pos: Position) {
     if (!this.cmdSource) {
       // New source
       if (!pos) {
         return
       }
       debug('parseStreamValue:', 'Setting Destination...')
-      const result = await this.setDestination({ position: pos }, src)
+      const result = await this.setDestination({ position: pos }, cmdSource)
       debug('parseStreamValue: Source set...', this.cmdSource)
       if (result) {
         this.emitCourseInfo()
@@ -227,13 +227,7 @@ export class CourseApi {
       }
     }
 
-    if (
-      this.cmdSource?.type === src.type &&
-      this.cmdSource?.$source === src.$source &&
-      this.cmdSource?.path === src.path &&
-      this.cmdSource?.msg === src.msg
-    ) {
-      // Current source
+    if (this.isCurrentCmdSource(cmdSource)) {
       if (!pos) {
         debug('parseStreamValue:', 'No position... Clear Destination...')
         this.clearDestination()
@@ -248,7 +242,7 @@ export class CourseApi {
           'parseStreamValue:',
           'Position changed... Updating Destination...'
         )
-        const result = await this.setDestination({ position: pos }, src)
+        const result = await this.setDestination({ position: pos }, cmdSource)
         if (result) {
           this.emitCourseInfo()
           return
@@ -1136,4 +1130,10 @@ export class CourseApi {
     this.cmdSource !== null &&
     (this.cmdSource.type !== newSource.type ||
       this.cmdSource.$source !== newSource.$source)
+
+  private isCurrentCmdSource = (cmdSource: CommandSource) =>
+    this.cmdSource?.type === cmdSource.type &&
+    this.cmdSource?.$source === cmdSource.$source &&
+    this.cmdSource?.path === cmdSource.path &&
+    this.cmdSource?.msg === cmdSource.msg
 }
