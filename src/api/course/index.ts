@@ -41,6 +41,8 @@ const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
 const SIGNALK_API_PATH = `/signalk/v2/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
 
+const API_CMD_SRC = { id: 'courseApi', type: 'API' }
+
 export const COURSE_API_V2_DELTA_COUNT = 13
 export const COURSE_API_V1_DELTA_COUNT = 8
 export const COURSE_API_INITIAL_DELTA_COUNT =
@@ -54,7 +56,7 @@ interface CourseApplication
 
 interface CommandSource {
   type: string
-  id?: string
+  id: string
   msg?: string
   path?: string
 }
@@ -92,10 +94,7 @@ export class CourseApi {
         storeData = await this.store.read()
         debug('Found persisted course data')
         this.courseInfo = this.validateCourseInfo(storeData)
-        this.cmdSource =
-          this.settings?.apiOnly && this.courseInfo.nextPoint
-            ? { type: 'API' }
-            : null
+        this.cmdSource = this.courseInfo.nextPoint ? API_CMD_SRC : null
       } catch (error) {
         debug('No persisted course data (using default)')
       }
@@ -105,7 +104,7 @@ export class CourseApi {
         '** cmdSource **',
         this.cmdSource
       )
-      if (storeData) {
+      if (this.courseInfo.nextPoint) {
         this.emitCourseInfo(true)
       }
 
@@ -694,7 +693,7 @@ export class CourseApi {
 
   private async activateRoute(
     route: RouteDestination,
-    src?: CommandSource
+    src: CommandSource = API_CMD_SRC
   ): Promise<boolean> {
     const { href, reverse } = route
     let rte: any
@@ -759,14 +758,17 @@ export class CourseApi {
       }
     }
 
+    if (this.sourceChange(src)) {
+      this.clearDestination(true)
+    }
     this.courseInfo = newCourse
-    this.cmdSource = src ?? { type: 'API' }
+    this.cmdSource = src
     return true
   }
 
   private async setDestination(
     dest: PointDestination & { arrivalCircle?: number },
-    src?: CommandSource
+    src: CommandSource = API_CMD_SRC
   ): Promise<boolean> {
     const newCourse: CourseInfo = { ...this.courseInfo }
 
@@ -838,8 +840,11 @@ export class CourseApi {
       throw new Error(`Error: Unable to retrieve vessel position!`)
     }
 
+    if (this.sourceChange(src)) {
+      this.clearDestination(true)
+    }
     this.courseInfo = newCourse
-    this.cmdSource = src ?? { type: 'API' }
+    this.cmdSource = src
     return true
   }
 
@@ -967,13 +972,6 @@ export class CourseApi {
       })
     }
 
-    if (paths.length === 0 || (paths && paths.includes('nextPoint'))) {
-      values.push({
-        path: `${navPath}.nextPoint`,
-        value: this.courseInfo.nextPoint
-      })
-    }
-
     if (paths.length === 0 || (paths && paths.includes('arrivalCircle'))) {
       values.push({
         path: `${navPath}.arrivalCircle`,
@@ -1090,11 +1088,33 @@ export class CourseApi {
 
   private emitCourseInfo(noSave?: boolean, ...paths: string[]) {
     this.app.handleMessage(
-      'courseApi',
+      API_CMD_SRC.id,
       this.buildV1DeltaMsg(paths),
       SKVersion.v1
     )
-    this.app.handleMessage('courseApi', this.buildDeltaMsg(paths), SKVersion.v2)
+
+    this.app.handleMessage(
+      this.cmdSource ? this.cmdSource.id : API_CMD_SRC.id,
+      {
+        updates: [
+          {
+            values: [
+              {
+                path: `navigation.course.nextPoint`,
+                value: this.courseInfo.nextPoint
+              }
+            ]
+          }
+        ]
+      },
+      SKVersion.v2
+    )
+
+    this.app.handleMessage(
+      API_CMD_SRC.id,
+      this.buildDeltaMsg(paths),
+      SKVersion.v2
+    )
 
     const p = typeof noSave === 'undefined' ? this.persistState() : !noSave
     if (p) {
@@ -1107,4 +1127,17 @@ export class CourseApi {
   }
 
   private persistState = () => this.cmdSource?.type === 'API'
+
+  private sourceChange = (newSource: CommandSource): boolean => {
+    if (!this.cmdSource) {
+      return false
+    }
+    if (this.cmdSource.type !== newSource.type) {
+      return true
+    }
+    if (this.cmdSource.id !== newSource.id) {
+      return true
+    }
+    return false
+  }
 }
