@@ -232,12 +232,12 @@ export class CourseApi {
         debug('parseStreamValue:', 'No position... Clear Destination...')
         this.clearDestination()
         return
-      } else if (
-        this.courseInfo.nextPoint?.position?.latitude === pos.latitude &&
-        this.courseInfo.nextPoint?.position?.longitude === pos.longitude
+      }
+
+      if (
+        this.courseInfo.nextPoint?.position?.latitude !== pos.latitude ||
+        this.courseInfo.nextPoint?.position?.longitude !== pos.longitude
       ) {
-        return
-      } else {
         debug(
           'parseStreamValue:',
           'Position changed... Updating Destination...'
@@ -245,7 +245,6 @@ export class CourseApi {
         const result = await this.setDestination({ position: pos }, cmdSource)
         if (result) {
           this.emitCourseInfo()
-          return
         }
       }
     }
