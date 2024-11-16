@@ -75,6 +75,9 @@ export interface Config {
     enablePluginLogging?: boolean
     loggingDirectory?: string
     sourcePriorities?: any
+    courseApi?: {
+      apiOnly?: boolean
+    }
   }
   defaults: object
 }
