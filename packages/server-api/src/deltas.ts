@@ -52,6 +52,14 @@ export type Update = {
   $source?: SourceRef
 } & ({ values: PathValue[] } | { meta: Meta[] }) // require either values or meta or both
 
+export function hasValues(u: Update): u is Update & { values: PathValue[] } {
+  return 'values' in u && Array.isArray(u.values)
+}
+
+export function hasMeta(u: Update): u is Update & { meta: Meta[] } {
+  return 'meta' in u && Array.isArray(u.meta)
+}
+
 // Update delta
 export interface PathValue {
   path: Path
