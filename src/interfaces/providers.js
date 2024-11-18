@@ -143,12 +143,14 @@ module.exports = function (app) {
       ]
     }
 
-    if (
-      provider.options.type === 'canbus-canboatjs' &&
-      !provider.options.uniqueNumber
-    ) {
-      provider.options.uniqueNumber = Math.floor(Math.random() * 2097151)
-    }
+    if (provider.options.type === 'canbus-canboatjs') {
+      if (isNaN(provider.options.uniqueNumber)) {
+          provider.options.uniqueNumber = Math.floor(Math.random() * 2097151);
+      }
+      if (isNaN(provider.options.mfgCode)) {
+          provider.options.mfgCode = 999;
+      }
+  }
 
     if (applyProviderSettings(updatedProvider, provider, res)) {
       if (isNew) {

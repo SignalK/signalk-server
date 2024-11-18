@@ -794,6 +794,7 @@ const NMEA2000 = (props) => {
       )}
       {(props.value.options.type === 'canbus' ||
         props.value.options.type === 'canbus-canboatjs') && (
+        <div>
         <TextInput
           title="Interface"
           name="options.interface"
@@ -801,6 +802,21 @@ const NMEA2000 = (props) => {
           value={props.value.options.interface}
           onChange={props.onChange}
         />
+          <TextInput
+          title="UniqueNumber"
+          name="options.uniqueNumber"
+          helpText="Example: any number from 1 to 2097151, will be equal to SerialNumber of a SignalK NMEA2000 device. Leave empty for random (default). Set a fixed value if you have problem with source identification on some B&G MFD's after SignalK restart."
+          value={props.value.options.uniqueNumber}
+          onChange={props.onChange}
+        />
+          <TextInput
+          title="ManufacturerCode"
+          name="options.mfgCode"
+          helpText="Example: 999 - Unknown (default), 0 - Internal, or any other mabufacturer code to emulate. Leave empty for default 999.  Set to 0 if you have problem with source identification on some B&G MFD's after SignalK restart."
+          value={props.value.options.mfgCode}
+          onChange={props.onChange}
+        />
+        </div>
       )}
       {(props.value.options.type === 'ngt-1-canboatjs' ||
         props.value.options.type === 'ikonvert-canboatjs' ||
