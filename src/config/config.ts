@@ -330,8 +330,19 @@ function getFullDefaults(app: ConfigApp) {
 function setBaseDeltas(app: ConfigApp) {
   const defaultsPath = getBaseDeltasPath(app)
   try {
-    app.config.baseDeltaEditor.load(defaultsPath)
+    const de = app.config.baseDeltaEditor
+
+    de.load(defaultsPath)
     debug(`Found default deltas at ${defaultsPath.toString()}`)
+
+    //fix old, incorrectly done callsignVhf
+    const communication = de.getSelfValue('communication')
+    if (communication) {
+      if (communication.callsignVhf) {
+        de.setSelfValue('communication.callsignVhf', communication.callsignVhf)
+      }
+      de.setSelfValue('communication', undefined)
+    }
   } catch (e) {
     if ((e as any)?.code === 'ENOENT') {
       debug(`No default deltas found at ${defaultsPath.toString()}`)
