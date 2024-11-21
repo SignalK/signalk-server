@@ -130,9 +130,9 @@ const Apps = function (props) {
                 >
                   Installing
                   {installingCount(props.appStore) > 0 && (
-                  <span className="badge__update">
-                    {installingCount(props.appStore)}
-                  </span>
+                    <span className="badge__update">
+                      {installingCount(props.appStore)}
+                    </span>
                   )}
                 </Button>
               )}
@@ -190,7 +190,7 @@ const Apps = function (props) {
 }
 
 const installingCount = (appStore) => {
-  return appStore.installing.filter(app => {
+  return appStore.installing.filter((app) => {
     return app.isWaiting || app.isInstalling
   }).length
 }
