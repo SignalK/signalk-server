@@ -129,9 +129,11 @@ const Apps = function (props) {
                   onClick={() => setSelectedView('Installing')}
                 >
                   Installing
+                  {installingCount(props.appStore) > 0 && (
                   <span className="badge__update">
-                    {props.appStore.installing.length}
+                    {installingCount(props.appStore)}
                   </span>
+                  )}
                 </Button>
               )}
             </div>
@@ -185,6 +187,12 @@ const Apps = function (props) {
       </Card>
     </div>
   )
+}
+
+const installingCount = (appStore) => {
+  return appStore.installing.filter(app => {
+    return app.isWaiting || app.isInstalling
+  }).length
 }
 
 const selectedViewToFilter = (selectedView, appStore) => {
