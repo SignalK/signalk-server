@@ -144,13 +144,21 @@ module.exports = function (app) {
     }
 
     if (provider.options.type === 'canbus-canboatjs') {
-      if (isNaN(provider.options.uniqueNumber)) {
-          provider.options.uniqueNumber = Math.floor(Math.random() * 2097151);
+      if (isNumber(provider.options.uniqueNumber)) {
+        provider.options.uniqueNumber = parseInt(provider.options.uniqueNumber);
       }
-      if (isNaN(provider.options.mfgCode)) {
-          provider.options.mfgCode = 999;
+      else {
+        provider.options.uniqueNumber = Math.floor(Math.random() * 2097151);
       }
-  }
+
+      if (isNumber(provider.options.mfgCode)) {
+        provider.options.mfgCode = parseInt(provider.options.mfgCode);
+      }
+      else {
+        if (provider.options.mfgCode !== '')
+          delete provider.options.mfgCode; //if value is not empty or not a number then removing property
+      }
+    }
 
     if (applyProviderSettings(updatedProvider, provider, res)) {
       if (isNew) {
@@ -168,6 +176,13 @@ module.exports = function (app) {
       })
     }
   }
+}
+
+function isNumber(s) {
+  return typeof s == 'number' ? true
+    : typeof s == 'string' ? (s.trim() === '' ? false : !isNaN(s))
+      : (typeof s).match(/object|function/) ? false
+        : !isNaN(s)
 }
 
 function applyProviderSettings(target, source, res) {
