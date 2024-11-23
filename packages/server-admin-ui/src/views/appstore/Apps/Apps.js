@@ -123,6 +123,22 @@ const Apps = function (props) {
                   </span>
                 )}
               </Button>
+              {props.appStore.installing.length > 0 && (
+                <>
+                  <Button
+                    color={view === 'Installing' ? 'primary' : 'secondary'}
+                    onClick={() => setSelectedView('Installing')}
+                  >
+                    Installs & Removes
+                    {installingCount(props.appStore) > 0 && (
+                      <span className="badge__update">
+                        {installingCount(props.appStore)}
+                      </span>
+                    )}
+                  </Button>
+                  {props.appStore.installing.length > 0 && '(Pending restart)'}
+                </>
+              )}
             </div>
           </div>
 
@@ -176,11 +192,19 @@ const Apps = function (props) {
   )
 }
 
+const installingCount = (appStore) => {
+  return appStore.installing.filter((app) => {
+    return app.isWaiting || app.isInstalling
+  }).length
+}
+
 const selectedViewToFilter = (selectedView, appStore) => {
   if (selectedView === 'Installed') {
-    return (app) => app.installing || app.installedVersion
+    return (app) => app.installedVersion || app.installing
   } else if (selectedView === 'Updates') {
     return (app) => updateAvailable(app, appStore)
+  } else if (selectedView === 'Installing') {
+    return (app) => app.installing
   }
   return () => true
 }
