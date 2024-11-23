@@ -200,7 +200,7 @@ const installingCount = (appStore) => {
 
 const selectedViewToFilter = (selectedView, appStore) => {
   if (selectedView === 'Installed') {
-    return (app) => app.installedVersion
+    return (app) => app.installedVersion || app.installing
   } else if (selectedView === 'Updates') {
     return (app) => updateAvailable(app, appStore)
   } else if (selectedView === 'Installing') {
