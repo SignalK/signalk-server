@@ -124,17 +124,20 @@ const Apps = function (props) {
                 )}
               </Button>
               {props.appStore.installing.length > 0 && (
+                <>
                 <Button
                   color={view === 'Installing' ? 'primary' : 'secondary'}
                   onClick={() => setSelectedView('Installing')}
                 >
-                  Installing
+                  Installs & Removes
                   {installingCount(props.appStore) > 0 && (
                     <span className="badge__update">
                       {installingCount(props.appStore)}
                     </span>
                   )}
                 </Button>
+                {props.appStore.installing.length > 0 && ('(Pending restart)')}
+                </>
               )}
             </div>
           </div>
