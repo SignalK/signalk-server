@@ -5,7 +5,7 @@ export default function NameCellRenderer(props) {
     <div className="cell__renderer cell-version center">
       <div className="version__container">
         <span className="version">
-          v{props.data.installedVersion || props.data.version}
+          v{props.data.newVersion ? props.data.installedVersion : props.data.version}
         </span>
 
         {/* 
