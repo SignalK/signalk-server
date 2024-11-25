@@ -48,7 +48,7 @@ export interface AutopilotApi {
   apUpdate(
     pluginId: string,
     deviceId: string,
-    apInfo: {[path:string]: Value}
+    apInfo: { [path: string]: Value }
   ): void
 }
 
@@ -92,8 +92,5 @@ export interface AutopilotProviderRegistry {
     provider: AutopilotProvider,
     devices: string[]
   ): void
-  autopilotUpdate(
-    deviceId: string,
-    apInfo: {[path:string]: Value}
-  ): void
+  autopilotUpdate(deviceId: string, apInfo: { [path: string]: Value }): void
 }
