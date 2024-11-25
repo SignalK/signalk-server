@@ -1,0 +1,25 @@
+FROM cr.signalk.io/signalk/signalk-server-base:latest_test
+
+RUN npm config rm proxy \
+  && npm config rm https-proxy \
+  && npm config set fetch-retries 5 \
+  && npm config set fetch-retry-mintimeout 60000 \
+  && npm config set fetch-retry-maxtimeout 120000 \
+  && npm cache clean -f
+
+ARG TAG
+  
+RUN npm i -g signalk-server@$TAG \
+  && ln -s /usr/lib/node_modules/signalk-server /home/node/signalk
+
+WORKDIR /home/node/signalk
+COPY docker/startup_test.sh startup.sh
+RUN chmod +x startup.sh
+
+USER node
+RUN mkdir -p /home/node/.signalk
+
+EXPOSE 3000
+ENV IS_IN_DOCKER true
+WORKDIR /home/node/.signalk
+ENTRYPOINT /home/node/signalk/startup.sh
