@@ -15,7 +15,7 @@
   },
   "servers": [
     {
-      "url": "/signalk/v2/api/vessels/self/steering/autopilots"
+      "url": "/signalk/v2/api/vessels/self/autopilots"
     }
   ],
   "tags": [
@@ -268,9 +268,9 @@
                       "example": "compass"
                     },
                     "target": {
-                      "description": "Current target value (radians)",
+                      "description": "Current target value (degrees)",
                       "type": "number",
-                      "example": 1.25643
+                      "example": 75.2
                     },
                     "options": {
                       "$ref": "#/components/schemas/autopilotOptions"
@@ -492,8 +492,8 @@
       ],
       "get": {
         "tags": ["autopilot"],
-        "summary": "Retrieve the current target value (radians).",
-        "description": "Value in radians of the current target value.",
+        "summary": "Retrieve the current target value (degrees).",
+        "description": "Value in degrees of the current target value.",
         "responses": {
           "default": {
             "description": "Autopilot value response",
@@ -505,10 +505,8 @@
                   "properties": {
                     "value": {
                       "type": "number",
-                      "description": "Value in radians",
-                      "min": -3.141592653589793,
-                      "max": 6.283185307179586,
-                      "example": -1.23789
+                      "description": "Value in degrees",
+                      "example": 129
                     }
                   }
                 }
@@ -522,10 +520,10 @@
       },
       "put": {
         "tags": ["autopilot"],
-        "summary": "Set autopilot `target` value (radians).",
-        "description": "Value supplied must be in the valid range between -PI & 2*PI.",
+        "summary": "Set autopilot `target` value (degrees).",
+        "description": "Value supplied must be in the valid range between -180 & 360.",
         "requestBody": {
-          "description": "Value in radians within the bounds of the current autopilot mode. (i.e. compass: 0 to 2*Pi, wind angle: -Pi to Pi)",
+          "description": "Value in degrees within the bounds of the current autopilot mode. (i.e. compass: 0 to 360, wind angle: -180 to 180)",
           "required": true,
           "content": {
             "application/json": {
@@ -534,10 +532,10 @@
                 "properties": {
                   "value": {
                     "type": "number",
-                    "description": "Value in radians",
-                    "min": -3.141592653589793,
-                    "max": 6.283185307179586,
-                    "example": -1.23789
+                    "description": "Value in degrees",
+                    "min": -180,
+                    "max": 360,
+                    "example": 129
                   }
                 }
               }
@@ -562,10 +560,10 @@
       ],
       "put": {
         "tags": ["autopilot"],
-        "summary": "Adjust autopilot target value by +/- radians.",
+        "summary": "Adjust autopilot target value by +/- degrees.",
         "description": "Value supplied will be added to the current target value. The result must be in the valid range between -PI & 2*PI.",
         "requestBody": {
-          "description": "A value in radians to add to the current `target` value.",
+          "description": "A value in degrees to add to the current `target` value.",
           "required": true,
           "content": {
             "application/json": {
@@ -574,10 +572,8 @@
                 "properties": {
                   "value": {
                     "type": "number",
-                    "description": "Value in radians.",
-                    "min": -0.1745,
-                    "max": 0.1745,
-                    "example": -0.23789
+                    "description": "Value in degrees (-ive = port).",
+                    "example": -2
                   }
                 }
               }
@@ -674,7 +670,7 @@
         }
       }
     },
-    "/{id}/dodge/port": {
+    "/{id}/dodge": {
       "parameters": [
         {
           "$ref": "#/components/parameters/AutopilotIdParam"
@@ -682,8 +678,8 @@
       ],
       "post": {
         "tags": ["autopilot"],
-        "summary": "Turn to port.",
-        "description": "Manual override turn to port.",
+        "summary": "Turn on dodge mode.",
+        "description": "Enter dodge mode at the current course setting.",
         "responses": {
           "200ActionResponse": {
             "$ref": "#/components/responses/200ActionResponse"
@@ -692,18 +688,42 @@
             "$ref": "#/components/responses/ErrorResponse"
           }
         }
-      }
-    },
-    "/{id}/dodge/starboard": {
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/AutopilotIdParam"
-        }
-      ],
-      "post": {
+      },
+      "delete": {
         "tags": ["autopilot"],
-        "summary": "Turn to starboard.",
-        "description": "Manual override turn to starboard.",
+        "summary": "Turn Off dodge mode.",
+        "description": "Resume steering original course.",
+        "responses": {
+          "200ActionResponse": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "put": {
+        "tags": ["autopilot"],
+        "summary": "Steer port / starboard to dodge obstacles.",
+        "description": "Override the current course to change direction the supplied number of degrees.",
+        "requestBody": {
+          "description": "+/- value in degrees to turn (-ive = port).",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "number",
+                    "description": "Value in degrees.",
+                    "example": -2
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200ActionResponse": {
             "$ref": "#/components/responses/200ActionResponse"

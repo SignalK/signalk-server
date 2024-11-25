@@ -14,16 +14,15 @@ import {
   SKVersion,
   Path,
   Value,
-  Notification,
   Delta,
   isAutopilotProvider,
-  AutopilotUpdateAttrib,
   isAutopilotUpdateAttrib,
-  AutopilotAlarm,
-  isAutopilotAlarm
+  isAutopilotAlarm,
+  PathValue,
+  SourceRef
 } from '@signalk/server-api'
 
-const AUTOPILOT_API_PATH = `/signalk/v2/api/vessels/self/steering/autopilots`
+const AUTOPILOT_API_PATH = `/signalk/v2/api/vessels/self/autopilots`
 const DEFAULTIDPATH = '_default'
 
 interface AutopilotApplication
@@ -35,12 +34,20 @@ interface AutopilotList {
   [id: string]: { provider: string; isDefault: boolean }
 }
 
+interface AutopilotApiSettings {
+  maxTurn: number // maximum course adjust / steer angle value (degrees)
+}
+
 export class AutopilotApi {
   private autopilotProviders: Map<string, AutopilotProvider> = new Map()
 
   private defaultProviderId?: string
   private defaultDeviceId?: string
   private deviceToProvider: Map<string, string> = new Map()
+
+  private settings: AutopilotApiSettings = {
+    maxTurn: 20
+  }
 
   constructor(private server: AutopilotApplication) {}
 
@@ -53,7 +60,7 @@ export class AutopilotApi {
 
   // Register plugin as provider.
   register(pluginId: string, provider: AutopilotProvider, devices: string[]) {
-    debug(`** Registering provider(s)....${pluginId} ${provider}`)
+    debug(`** Registering provider(s)....${pluginId}`)
 
     if (!provider) {
       throw new Error(`Error registering provider ${pluginId}!`)
@@ -109,7 +116,16 @@ export class AutopilotApi {
       debug(`** Resetting defaults .....`)
       this.defaultDeviceId = undefined
       this.defaultProviderId = undefined
-      this.emitDeltaMsg('defaultPilot', this.defaultDeviceId, 'autopilotApi')
+      this.initDefaults()
+      /*this.emitUpdates(
+        [
+          this.buildPathValue(
+            'defaultPilot' as Path,
+            this.defaultDeviceId ?? null
+          )
+        ],
+        'autopilotApi' as SourceRef
+      )*/
     }
 
     debug(
@@ -120,54 +136,49 @@ export class AutopilotApi {
     )
   }
 
-  // Pass changed attribute / value from autopilot.
+  /** Emit updates from autopilot device as `steering.autopilot.*` deltas.
+   *  This should be used by provider plugins to:
+   *   - Ensure API state is consistant
+   *   - trigger the sending of deltas.
+   */
   apUpdate(
     pluginId: string,
-    deviceId: string = pluginId + '.default',
-    attrib: AutopilotUpdateAttrib,
-    value: Value
+    deviceId: SourceRef = pluginId as SourceRef,
+    apInfo: { [path: string]: Value }
   ) {
-    if (deviceId && !this.deviceToProvider.has(deviceId)) {
-      this.deviceToProvider.set(deviceId, pluginId)
-    }
-    if (isAutopilotUpdateAttrib(attrib)) {
-      try {
-        if (!this.defaultDeviceId) {
-          this.initDefaults(deviceId)
-        }
-        this.emitDeltaMsg(attrib, value, deviceId)
-      } catch (err) {
-        debug(`ERROR apUpdate(): ${pluginId}->${deviceId}`, err)
+    try {
+      if (deviceId && !this.deviceToProvider.has(deviceId)) {
+        this.deviceToProvider.set(deviceId, pluginId)
       }
-    } else {
-      debug(
-        `ERROR apUpdate(): ${pluginId}->${deviceId}`,
-        `${attrib} is NOT an AutopilotUpdateAttrib!`
-      )
+      if (!this.defaultDeviceId) {
+        this.initDefaults(deviceId)
+      }
+    } catch (err) {
+      debug(`ERROR apUpdate(): ${pluginId}->${deviceId}`, err)
+      return
     }
-  }
 
-  // Pass alarm / notification from autopilot.
-  apAlarm(
-    pluginId: string,
-    deviceId: string = pluginId + '.default',
-    alarmName: AutopilotAlarm,
-    value: Notification
-  ) {
-    if (isAutopilotAlarm(alarmName)) {
-      debug(`Alarm -> ${deviceId}:`, value)
-      this.server.handleMessage(deviceId, {
-        updates: [
-          {
-            values: [
-              {
-                path: `notifications.steering.autopilot.${alarmName}` as Path,
-                value: value
-              }
-            ]
+    const values: any[] = []
+    Object.keys(apInfo).forEach((attrib: string) => {
+      if (isAutopilotUpdateAttrib(attrib) && attrib !== 'options') {
+        if (attrib === 'alarm') {
+          const alarm: PathValue = apInfo[attrib] as PathValue
+          if (isAutopilotAlarm(alarm.path)) {
+            values.push({
+              path: `notifications.steering.autopilot.${alarm.path}` as Path,
+              value: alarm.value
+            })
           }
-        ]
-      })
+        } else {
+          values.push({
+            path: `steering.autopilot.${attrib}`,
+            value: apInfo[attrib]
+          })
+        }
+      }
+    })
+    if (values.length !== 0) {
+      this.emitUpdates(values, deviceId)
     }
   }
 
@@ -178,7 +189,7 @@ export class AutopilotApi {
       request,
       'vessels.self',
       null,
-      'steering.autopilot'
+      'autopilot'
     )
   }
 
@@ -345,16 +356,15 @@ export class AutopilotApi {
         }
         this.useProvider(req)
           .setState(req.body.value, req.params.id)
-          .then((r: boolean) => {
-            debug('engaged =', r)
-            this.emitDeltaMsg('engaged', r, req.params.id)
-            if (req.params.id === this.defaultDeviceId) {
-              this.emitDeltaMsg('engaged', r, DEFAULTIDPATH)
-            }
+          .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
-          .catch(() => {
-            res.status(Responses.invalid.statusCode).json(Responses.invalid)
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
           })
       }
     )
@@ -391,8 +401,12 @@ export class AutopilotApi {
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
-          .catch(() => {
-            res.status(Responses.invalid.statusCode).json(Responses.invalid)
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
           })
       }
     )
@@ -424,21 +438,22 @@ export class AutopilotApi {
           res.status(Responses.invalid.statusCode).json(Responses.invalid)
           return
         }
-        if (req.body.value < 0 - Math.PI || req.body.value > 2 * Math.PI) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: `Error: Value supplied is outside of the valid range (-PI < value < 2*PI radians).`
-          })
-          return
-        }
+        const v =
+          req.body.value < -180
+            ? Math.max(...[-180, req.body.value])
+            : Math.min(...[360, req.body.value])
+
         this.useProvider(req)
-          .setTarget(req.body.value, req.params.id)
+          .setTarget(v, req.params.id)
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
-          .catch(() => {
-            res.status(Responses.invalid.statusCode).json(Responses.invalid)
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
           })
       }
     )
@@ -451,13 +466,23 @@ export class AutopilotApi {
           res.status(Responses.invalid.statusCode).json(Responses.invalid)
           return
         }
+
+        const v =
+          req.body.value < 0
+            ? Math.max(...[0 - this.settings.maxTurn, req.body.value])
+            : Math.min(...[this.settings.maxTurn, req.body.value])
+
         this.useProvider(req)
-          .adjustTarget(req.body.value, req.params.id)
+          .adjustTarget(v, req.params.id)
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
-          .catch(() => {
-            res.status(Responses.invalid.statusCode).json(Responses.invalid)
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
           })
       }
     )
@@ -538,12 +563,12 @@ export class AutopilotApi {
       }
     )
 
-    // dodge to port
+    // dodge mode ON
     this.server.post(
-      `${AUTOPILOT_API_PATH}/:id/dodge/port`,
+      `${AUTOPILOT_API_PATH}/:id/dodge`,
       (req: Request, res: Response) => {
         this.useProvider(req)
-          .dodge('port', req.params.id)
+          .dodge(0, req.params.id)
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
@@ -557,12 +582,41 @@ export class AutopilotApi {
       }
     )
 
-    // dodge to starboard
-    this.server.post(
-      `${AUTOPILOT_API_PATH}/:id/dodge/starboard`,
+    // dodge mode OFF
+    this.server.delete(
+      `${AUTOPILOT_API_PATH}/:id/dodge`,
       (req: Request, res: Response) => {
         this.useProvider(req)
-          .dodge('starboard', req.params.id)
+          .dodge(null, req.params.id)
+          .then(() => {
+            res.status(Responses.ok.statusCode).json(Responses.ok)
+          })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
+          })
+      }
+    )
+
+    /** dodge port (-ive) / starboard (+ive) degrees */
+    this.server.put(
+      `${AUTOPILOT_API_PATH}/:id/dodge`,
+      (req: Request, res: Response) => {
+        if (typeof req.body.value !== 'number') {
+          res.status(Responses.invalid.statusCode).json(Responses.invalid)
+          return
+        }
+
+        const v =
+          req.body.value < 0
+            ? Math.max(...[0 - this.settings.maxTurn, req.body.value])
+            : Math.min(...[this.settings.maxTurn, req.body.value])
+
+        this.useProvider(req)
+          .dodge(v, req.params.id)
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
@@ -650,41 +704,45 @@ export class AutopilotApi {
       this.defaultProviderId = this.deviceToProvider.get(
         this.defaultDeviceId
       ) as string
-      this.emitDeltaMsg('defaultPilot', this.defaultDeviceId, 'autopilotApi')
-      debug(`Default Device = ${this.defaultDeviceId}`)
-      debug(`Default Provider = ${this.defaultProviderId}`)
-      return
     }
-
     // else set to first AP device registered
-    if (this.deviceToProvider.size !== 0) {
+    else if (this.deviceToProvider.size !== 0) {
       const k = this.deviceToProvider.keys()
       this.defaultDeviceId = k.next().value as string
       this.defaultProviderId = this.deviceToProvider.get(
         this.defaultDeviceId
       ) as string
-      this.emitDeltaMsg('defaultPilot', this.defaultDeviceId, 'autopilotApi')
-      debug(`Default Device = ${this.defaultDeviceId}`)
-      debug(`Default Provider = ${this.defaultProviderId}`)
-      return
     } else {
-      throw new Error(
-        'Cannot set defaultDevice....No autopilot devices registered!'
-      )
+      this.defaultDeviceId = undefined
+      this.defaultProviderId = undefined
+    }
+    this.emitUpdates(
+      [
+        this.buildPathValue(
+          'defaultPilot' as Path,
+          this.defaultDeviceId ?? null
+        )
+      ],
+      'autopilotApi' as SourceRef
+    )
+    debug(`Default Device = ${this.defaultDeviceId}`)
+    debug(`Default Provider = ${this.defaultProviderId}`)
+  }
+
+  // build autopilot delta PathValue
+  private buildPathValue(path: Path, value: Value): PathValue {
+    return {
+      path: `steering.autopilot${path ? '.' + path : ''}` as Path,
+      value: value
     }
   }
 
   // emit delta updates on operation success
-  private emitDeltaMsg(path: string, value: any, source: string) {
+  private emitUpdates(values: PathValue[], source: SourceRef) {
     const msg: Delta = {
       updates: [
         {
-          values: [
-            {
-              path: `steering.autopilot${path ? '.' + path : ''}` as Path,
-              value: value
-            }
-          ]
+          values: values
         }
       ]
     }

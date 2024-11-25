@@ -36,6 +36,11 @@ export const Responses = {
     state: 'FAILED',
     statusCode: 404,
     message: 'Resource not found.'
+  },
+  notImplemented: {
+    state: 'FAILED',
+    statusCode: 500,
+    message: 'Not implemented.'
   }
 }
 

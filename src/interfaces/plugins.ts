@@ -24,11 +24,9 @@ import {
   AutopilotProvider,
   ServerAPI,
   RouteDestination,
-  AutopilotUpdateAttrib,
-  AutopilotAlarm,
   Value,
-  Notification,
-  SignalKApiId
+  SignalKApiId,
+  SourceRef
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -576,18 +574,10 @@ module.exports = (theApp: any) => {
       autopilotApi.register(plugin.id, provider, devices)
     }
     appCopy.autopilotUpdate = (
-      deviceId: string,
-      attrib: AutopilotUpdateAttrib,
-      value: Value
+      deviceId: SourceRef,
+      apInfo: { [k: string]: Value }
     ) => {
-      autopilotApi.apUpdate(plugin.id, deviceId, attrib, value)
-    }
-    appCopy.autopilotAlarm = (
-      deviceId: string,
-      alarmName: AutopilotAlarm,
-      value: Notification
-    ) => {
-      autopilotApi.apAlarm(plugin.id, deviceId, alarmName, value)
+      autopilotApi.apUpdate(plugin.id, deviceId, apInfo)
     }
 
     _.omit(appCopy, 'apiList') // don't expose the actual apiList

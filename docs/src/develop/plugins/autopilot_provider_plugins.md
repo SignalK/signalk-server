@@ -6,7 +6,7 @@ _This document should be read in conjunction with the [SERVER PLUGINS](./server_
 
 ## Overview
 
-The Signal K Autopilot API defines endpoints under the path `/signalk/v2/api/vessels/self/steering/autopilots` providing a way for all Signal K clients to perform common autopilot operations independent of the autopilot device in use. The API is defined in an [OpenAPI](/doc/openapi/?urls.primaryName=autopilot) document.
+The Signal K Autopilot API defines endpoints under the path `/signalk/v2/api/vessels/self/autopilots` providing a way for all Signal K clients to perform common autopilot operations independent of the autopilot device in use. The API is defined in an [OpenAPI](/doc/openapi/?urls.primaryName=autopilot) document.
 
 Requests made to the Autopilot API are received by the Signal K Server, where they are validated and an authorisation check performed, before being passed on to a **provider plugin** to action the request on the autopilot device.
 
@@ -27,27 +27,10 @@ An autopilot provider plugin is a Signal K server plugin that implements the **A
 - Tells server the autopilot devices provided for by the plugin
 - Registers the methods used to action requests passed from the server to perform autopilot operations.
 
-Note: multiple providers can be registered and each provider can manage one or more autopilot devices.
+The `AutopilotProvider` interface is defined in _`@signalk/server-api`_
 
-The `AutopilotProvider` interface is defined as follows in _`@signalk/server-api`_:
+Multiple providers can be registered and each provider can manage one or more autopilot devices.
 
-```typescript
-interface AutopilotProvider {
-  getData(deviceId: string): Promise<AutopilotInfo>
-  getState(deviceId: string): Promise<string>
-  setState(state: string, deviceId: string): Promise<boolean>
-  getMode(deviceId: string): Promise<string>
-  setMode(mode: string, deviceId: string): Promise<void>
-  getTarget(deviceId: string): Promise<number>
-  setTarget(value: number, deviceId: string): Promise<void>
-  adjustTarget(value: number, deviceId: string): Promise<void>
-  engage(deviceId: string): Promise<void>
-  disengage(deviceId: string): Promise<void>
-  tack(direction: TackGybeDirection, deviceId: string): Promise<void>
-  gybe(direction: TackGybeDirection, deviceId: string): Promise<void>
-  dodge(direction: TackGybeDirection, deviceId: string): Promise<void>
-}
-```
 
 **Note: An Autopilot Provider plugin MUST:**
 - Implement all Autopilot API interface methods.
@@ -55,6 +38,7 @@ interface AutopilotProvider {
 - Ensure the `engaged` path attribute value is maintained to reflect the operational status of the autopilot.
 - Map the `engage` and `disengage` operations to an appropriate autopilot device `state`.
 - Set the state as `off-line` if the autopilot device is not connected or unreachable.
+- Set the mode as `dodge` when the autopilot device is is in dodge mode.
 
 
 ### Registering as an Autopilot Provider
@@ -69,9 +53,9 @@ app.registerAutopilotProvider(provider: AutopilotProvider, devices: string[])
 where:
 
 - `provider`: is a valid **AutopilotProvider** object
-- `devices`: is an array of identifiers for the autopilot devices managed by the plugin.
+- `devices`: is an array of identifiers indicating the autopilot devices managed by the plugin.
 
-_Example: Plugin registering as a routes & waypoints provider._
+_Example: Plugin registering as an autopilot provider._
 ```javascript
 import { AutopilotProvider } from '@signalk/server-api'
 
@@ -83,18 +67,19 @@ module.exports = function (app) {
     }
 
     const autopilotProvider: AutopilotProvider = {
-        getData: (deviceId: string) => { return ... },
-        getState: (deviceId: string) => { return ... },
-        setState: (state: string, deviceId: string) => { return true },
-        getMode: (deviceId: string) => { return ... },
-        setMode: (mode: string, deviceId: string) => { ... },
-        getTarget: (deviceId: string) => { return ... },
-        setTarget(value: number, deviceId: string) => { ... },
-        adjustTarget(value: number, deviceId: string) => { ... },
-        engage: (deviceId: string) => { ... },
-        disengage: (deviceId: string) => { ... },
-        tack:(direction: TackGybeDirection, deviceId: string) => { ... },
-        gybe:(direction: TackGybeDirection, deviceId: string) => { ... }
+        getData: (deviceId) => { return ... },
+        getState: (deviceId) => { return ... },
+        setState: (state, deviceId) => { ... },
+        getMode: (deviceId) => { return ... },
+        setMode: (mode, deviceId) => { ... },
+        getTarget: (deviceId) => { return ... },
+        setTarget(value, deviceId) => { ... },
+        adjustTarget(value, deviceId) => { ... },
+        engage: (deviceId) => { ... },
+        disengage: (deviceId) => { ... },
+        tack:(direction, deviceId) => { ... },
+        gybe:(direction, deviceId) => { ... },
+        dodge:(value, deviceId) => { ... }
     }
 
     const pilots = ['pilot1', 'pilot2']
@@ -113,63 +98,56 @@ module.exports = function (app) {
 }
 ```
 
-### Updates from Autopilot device
+### Sending Updates and Notifications from Autopilot device
 
-Updates from an autopilot device are sent to the Autopillot API via the `autopilotUpdate` interface method.
+The Autopilot API is responsible for sending both update and notification `deltas` to Signal K clients.
 
-Typically an autopilot provider plugin will call `autopilotUpdate` when receiving data from the autopilot device.
+Data received from an autopilot device, regardless of the communications protocol (NMEA2000, etc), should be sent to the Autopilot API by calling the `autopilotUpdate` interface method.
 
-_Note: All updates originating from the autopilot device, regardless of the communications protocol (NMEA2000, etc) should be sent to the Autopilot API using `autopilotUpdate`._
+This will ensure:
+- Default pilot status is correctly maintained
+- `steering.autopilot.*` both V1 and V2 deltas are sent
 
-The function has the following signature:
-
-```typescript
-app.autopilotUpdate(deviceID: string, attrib: AutopilotUpdateAttrib, value: Value)
-```
-where:
-
-- `deviceId`: is the autopilot device identifier
-- `attrib`: is the attribute / path being updated
-- `value`: the new value.
-
-_Example:_
-```javascript
-app.autopilotUpdate('my-pilot', 'target', 1.52789)
-app.autopilotUpdate('my-pilot', 'mode', 'compass')
-```
-
-### Alarms from Autopilot device
-
-Alarms from an autopilot device are sent to the Autopillot API via the `autopilotAlarm` interface method.
-
-An autopilot provider plugin will call `autopilotAlarm` when the data received data from the autopilot device is an alarm.
-
-_Note: A set of normalised alarm names are defined and alarm messages from the autopilot device should be mapped to one of the following:_
-
-- `waypointAdvance`
-- `waypointArrival`
-- `routeComplete`
-- `xte`
-- `heading`
-- `wind`
+**_Important! The values provided via `autopilotUpdate` will be sent in the relevant delta message, so ensure they are in the correct units (e.g. angles in radians, etc)._**
 
 The function has the following signature:
 
 ```typescript
-app.autopilotAlarm(deviceID: string, alarmName: AutopilotAlarm, value: Notification)
+app.autopilotUpdate(deviceID: string, apInfo: {[key:string]: Value})
 ```
 where:
 
 - `deviceId`: is the autopilot device identifier
-- `alarmName`: string containing a normalised alarm name.
-- `value`: is a Signal K Notification object.
+- `appInfo`: object containing values keyed by <AutopilotInfo> attributes _(as defined in @signalk/server-api)_
 
-_Example:_
+_Example Update:_
 ```javascript
-app.autopilotAlarm('my-pilot', 'waypointAdvance', {
-  state: 'alert'
-  method: ['sound']
-  message: 'Waypoint Advance'
+app.autopilotUpdate('my-pilot', {
+  target: 1.52789,
+  mode: 'compass'
+})
+```
+
+Notifications / Alarms are sent using one of the normalised alarm names below as the path and a `Notification` as the value.
+
+- waypointAdvance
+- waypointArrival
+- routeComplete
+- xte
+- heading
+- wind
+
+_Example Notification:_
+```javascript
+app.autopilotUpdate('my-pilot', {
+  alarm: {
+    path: 'waypointAdvance',
+    value: {
+      state: 'alert'
+      method: ['sound']
+      message: 'Waypoint Advance'
+    }
+  }
 })
 ```
 
@@ -186,16 +164,14 @@ _Note: It is the responsibility of the autopilot provider plugin to map the valu
 
 
 _Example:_ 
-```
-GET signalk/v2/api/vessels/self/steering/autopilots/mypilot1
-```
-_AutopilotProvider method invocation:_
 ```javascript
-getData('mypilot1');
-```
+// API request
+GET /signalk/v2/api/vessels/self/autopilots/mypilot1
 
-_Returns:_
-```javascript
+// AutopilotProvider method invocation
+getData('mypilot1');
+
+// Returns:
 {
   options: {
     states: [
@@ -225,16 +201,14 @@ _Returns:_
 returns: `Promise<{string}>`
 
 _Example:_ 
-```
-GET signalk/v2/api/vessels/self/steering/autopilots/mypilot1/state
-```
-_AutopilotProvider method invocation:_
 ```javascript
-getState('mypilot1');
-```
+// API request
+GET /signalk/v2/api/vessels/self/autopilots/mypilot1/state
 
-_Returns:_
-```javascript
+// AutopilotProvider method invocation
+getState('mypilot1');
+
+// Returns:
 'auto'
 ```
 
@@ -244,22 +218,17 @@ _Returns:_
 - `state:` state value to set. Must be a valid state value.
 - `deviceId:` identifier of the autopilot device to query.
 
-returns: `Promise<{boolean}>` indicating the new value of `engaged`.
+returns: `Promise<{void}>`
 
 throws on error or if supplied state value is invalid.
 
 _Example:_ 
 ```javascript
-PUT signalk/v2/api/vessels/self/steering/autopilots/mypilot1/state {value: "standby"}
-```
-_AutopilotProvider method invocation:_
-```javascript
-setState('standby', 'mypilot1');
-```
+// API request
+PUT /signalk/v2/api/vessels/self/autopilots/mypilot1/state {value: "standby"}
 
-_Returns:_
-```javascript
-false
+// AutopilotProvider method invocation
+setState('standby', 'mypilot1');
 ```
 
 ---
@@ -270,16 +239,14 @@ false
 returns: `Promise<{string}>`
 
 _Example:_ 
-```
-GET signalk/v2/api/vessels/self/steering/autopilots/mypilot1/mode
-```
-_AutopilotProvider method invocation:_
 ```javascript
-getMode('mypilot1');
-```
+// API request
+GET /signalk/v2/api/vessels/self/autopilots/mypilot1/mode
 
-_Returns:_
-```javascript
+// AutopilotProvider method invocation
+getMode('mypilot1');
+
+// Returns:
 'compass'
 ```
 
@@ -295,17 +262,17 @@ throws on error or if supplied mode value is invalid.
 
 _Example:_ 
 ```javascript
-PUT signalk/v2/api/vessels/self/steering/autopilots/mypilot1/mode {value: "gps"}
-```
-_AutopilotProvider method invocation:_
-```javascript
+// API request
+PUT /signalk/v2/api/vessels/self/autopilots/mypilot1/mode {value: "gps"}
+
+// AutopilotProvider method invocation
 setMode('gps', 'mypilot1');
 ```
 
 ---
 **`setTarget(value, deviceId)`**: This method sets target for the autopilot device with the supplied identifier to the supplied value.
 
-- `value:` target value in radians.
+- `value:` target value in degrees.
 - `deviceId:` identifier of the autopilot device to query.
 
 returns: `Promise<{void}>`
@@ -314,17 +281,17 @@ throws on error or if supplied target value is outside the valid range.
 
 _Example:_ 
 ```javascript
-PUT signalk/v2/api/vessels/self/steering/autopilots/mypilot1/target {value: 0.361}
-```
-_AutopilotProvider method invocation:_
-```javascript
-setTarget(0.361, 'mypilot1');
+// API request
+PUT /signalk/v2/api/vessels/self/autopilots/mypilot1/target {value: 129}
+
+// AutopilotProvider method invocation
+setTarget(129, 'mypilot1');
 ```
 
 ---
 **`adjustTarget(value, deviceId)`**: This method adjusts target for the autopilot device with the supplied identifier by the supplied value.
 
-- `value:` value in radians to add to current target value.
+- `value:` value in degrees to add to current target value.
 - `deviceId:` identifier of the autopilot device to query.
 
 returns: `Promise<{void}>`
@@ -333,11 +300,11 @@ throws on error or if supplied target value is outside the valid range.
 
 _Example:_ 
 ```javascript
-PUT signalk/v2/api/vessels/self/steering/autopilots/mypilot1/target {value: 0.361}
-```
-_AutopilotProvider method invocation:_
-```javascript
-adjustTarget(0.0276, 'mypilot1');
+// API request
+PUT /signalk/v2/api/vessels/self/autopilots/mypilot1/target {value: 2}
+
+// AutopilotProvider method invocation
+adjustTarget(2, 'mypilot1');
 ```
 
 ---
@@ -351,10 +318,10 @@ throws on error.
 
 _Example:_ 
 ```javascript
-POST signalk/v2/api/vessels/self/steering/autopilots/mypilot1/engage
-```
-_AutopilotProvider method invocation:_
-```javascript
+// API request
+POST /signalk/v2/api/vessels/self/autopilots/mypilot1/engage
+
+// AutopilotProvider method invocation
 engage('mypilot1');
 ```
 
@@ -369,10 +336,10 @@ throws on error.
 
 _Example:_ 
 ```javascript
-POST signalk/v2/api/vessels/self/steering/autopilots/mypilot1/disengage
-```
-_AutopilotProvider method invocation:_
-```javascript
+// API request
+POST /signalk/v2/api/vessels/self/autopilots/mypilot1/disengage
+
+// AutopilotProvider method invocation
 disengage('mypilot1');
 ```
 
@@ -388,10 +355,10 @@ throws on error.
 
 _Example:_ 
 ```javascript
-POST signalk/v2/api/vessels/self/steering/autopilots/mypilot1/tack/port
-```
-_AutopilotProvider method invocation:_
-```javascript
+// API request
+POST /signalk/v2/api/vessels/self/autopilots/mypilot1/tack/port
+
+// AutopilotProvider method invocation
 tack('port', 'mypilot1');
 ```
 
@@ -407,32 +374,56 @@ throws on error.
 
 _Example:_ 
 ```javascript
-POST signalk/v2/api/vessels/self/steering/autopilots/mypilot1/gybe/starboard
-```
-_AutopilotProvider method invocation:_
-```javascript
+// API request
+POST /signalk/v2/api/vessels/self/autopilots/mypilot1/gybe/starboard
+
+// AutopilotProvider method invocation
 gybe('starboard', 'mypilot1');
 ```
 
 ---
-**`dodge(direction, deviceId)`**: This method instructs the autopilot device with the supplied identifier to manually override the rudder position by two (2) degrees in the supplied direction.
+**`dodge(value, deviceId)`**: This method instructs the autopilot device with the supplied identifier to enter / exit dodge mode and alter the current course by the supplied value (degrees) direction.
 
-- `direction`: 'port' or 'starboard'
+- `value`: +/- value indicating the number of degrees 'port (-ive)' or 'starboard' to alter direction. _Setting the value to `null` indicates exit of dodge mode._
 - `deviceId:` identifier of the autopilot device to query.
 
 returns: `Promise<{void}>`
 
 throws on error.
 
-_Example:_ 
+
+To address different pilot behaviour, the `dodge` function can be used in the following ways:
+
+
+
+**1. Enter dodge mode at the current course**
 ```javascript
-POST signalk/v2/api/vessels/self/steering/autopilots/mypilot1/dodge/starboard
-```
-_AutopilotProvider method invocation:_
-```javascript
-dodge('starboard', 'mypilot1');
+// API request
+POST /signalk/v2/api/vessels/self/autopilots/mypilot1/dodge
+
+// _AutopilotProvider method invocation
+dodge(0, 'mypilot1');
 ```
 
+**2. Enter dodge mode and change course**
+```javascript
+// API request
+PUT /signalk/v2/api/vessels/self/autopilots/mypilot1/dodge {"value": 5}
+
+// AutopilotProvider method invocation
+dodge(5, 'mypilot1');
+```
+
+**3. Cancel dodge mode**
+```javascript
+// API request
+DELETE /signalk/v2/api/vessels/self/autopilots/mypilot1/dodge
+
+// AutopilotProvider method invocation
+dodge(null, 'mypilot1');
+```
+
+---
 
 ### Unhandled Operations
 
