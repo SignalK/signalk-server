@@ -38,7 +38,7 @@ function listSerialPorts() {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     return SerialPort.list()
-  } catch (err) {
+  } catch (_err) {
     return Promise.resolve([])
   }
 }

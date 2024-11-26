@@ -480,7 +480,7 @@ class Server {
     if (typeof mixed === 'string') {
       try {
         settings = require(path.join(process.cwd(), mixed))
-      } catch (e) {
+      } catch (_e) {
         debug(`Settings file '${settings}' does not exist`)
       }
     }

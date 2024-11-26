@@ -570,7 +570,7 @@ export class ResourcesApi {
             )
             res.json(retVal)
           }
-        } catch (err) {
+        } catch (_err) {
           res.status(404).json({
             state: 'FAILED',
             statusCode: 404,
@@ -624,7 +624,7 @@ export class ResourcesApi {
             )
             res.json(retVal)
           }
-        } catch (err) {
+        } catch (_err) {
           res.status(404).json({
             state: 'FAILED',
             statusCode: 404,
@@ -650,7 +650,7 @@ export class ResourcesApi {
             try {
               acc[name] = JSON.parse(value as string)
               return acc
-            } catch (error) {
+            } catch (_error) {
               acc[name] = value
               return acc
             }
@@ -779,7 +779,7 @@ export class ResourcesApi {
             statusCode: 201,
             id
           })
-        } catch (err) {
+        } catch (_err) {
           res.status(400).json({
             state: 'FAILED',
             statusCode: 400,
@@ -868,7 +868,7 @@ export class ResourcesApi {
             statusCode: 200,
             message: req.params.resourceId
           })
-        } catch (err) {
+        } catch (_err) {
           res.status(404).json({
             state: 'FAILED',
             statusCode: 404,
@@ -931,7 +931,7 @@ export class ResourcesApi {
             statusCode: 200,
             message: req.params.resourceId
           })
-        } catch (err) {
+        } catch (_err) {
           res.status(400).json({
             state: 'FAILED',
             statusCode: 400,

@@ -281,7 +281,7 @@ module.exports = (theApp: any) => {
     let optionsAsString = '{}'
     try {
       optionsAsString = fs.readFileSync(pathForPluginId(id), 'utf8')
-    } catch (e) {
+    } catch (_e) {
       debug(
         'Could not find options for plugin ' +
           id +
