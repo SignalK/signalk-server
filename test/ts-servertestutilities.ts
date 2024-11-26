@@ -1,7 +1,7 @@
 import freeport from 'freeport-promise'
 import fetch from 'node-fetch'
 import path from 'path'
-import rmfr from 'rmfr'
+import { rimraf } from 'rimraf'
 import {
   sendDelta,
   serverTestConfigDirectory,
@@ -18,7 +18,7 @@ const emptyConfigDirectory = () =>
   Promise.all(
     [SERVERSTATEDIRNAME, 'resources', 'plugin-config-data', 'baseDeltas.json']
       .map(subDir => path.join(serverTestConfigDirectory(), subDir))
-      .map(dir => rmfr(dir).then(() => console.error(dir)))
+      .map(dir => rimraf(dir).then(() => console.error(dir)))
   )
 
 export const startServer = async () => {
