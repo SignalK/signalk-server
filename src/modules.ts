@@ -81,7 +81,7 @@ function findModulesInDir(dir: string, keyword: string): ModuleData[] {
         let metadata
         try {
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          metadata = require(path.join(dir, `${filename}/package.json`))
+          metadata = require(path.join(dir, filename, 'package.json'))
         } catch (err) {
           debug(err)
         }
