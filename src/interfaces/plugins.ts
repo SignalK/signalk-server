@@ -51,7 +51,7 @@ const put = require('../put')
 const _putPath = put.putPath
 const getModulePublic = require('../config/get').getModulePublic
 const queryRequest = require('../requestResponse').queryRequest
-const getMetadata = require('@signalk/signalk-schema').getMetadata
+import { getMetadata } from '@signalk/signalk-schema'
 
 // #521 Returns path to load plugin-config assets.
 const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')

@@ -53,8 +53,7 @@ import { StreamBundle } from './types'
 import { WithWrappedEmitter } from './events'
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { getAISShipTypeName } = require('@signalk/signalk-schema')
+import { getAISShipTypeName } from '@signalk/signalk-schema'
 const ncp = ncpI.ncp
 
 const defaultSecurityStrategy = './tokensecurity'

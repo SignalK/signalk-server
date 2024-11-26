@@ -11,4 +11,6 @@ declare module '@signalk/signalk-schema' {
     retrieve: () => any
     pruneContexts: (seconds: number) => void
   }
+  export function getMetadata(path: string): any
+  export function getAISShipTypeName(shipType: number): string
 }
