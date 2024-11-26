@@ -70,8 +70,8 @@ export class ResourcesApi {
     }
 
     if (!('resourcesApi' in this.app.config.settings)) {
-      debug('***** Applying Default Settings ********'),
-        ((this.app.config.settings as any)['resourcesApi'] = defaultSettings)
+      debug('***** Applying Default Settings ********')
+      ;(this.app.config.settings as any)['resourcesApi'] = defaultSettings
     } else {
       const s = (this.app.config.settings as any)['resourcesApi']
       Object.entries(defaultSettings.defaultProviders).forEach((k) => {
