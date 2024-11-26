@@ -18,6 +18,7 @@
 'use strict'
 
 import fs from 'fs'
+import os from 'node:os'
 import _ from 'lodash'
 import path from 'path'
 import semver from 'semver'
@@ -466,7 +467,7 @@ function getExternalHostname(config: Config) {
     return config.settings.hostname
   }
   try {
-    return require('os').hostname()
+    return os.hostname()
   } catch (ex) {
     return 'hostname_not_available'
   }
