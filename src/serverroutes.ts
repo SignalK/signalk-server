@@ -710,7 +710,7 @@ module.exports = function (
     }
 
     function setNumber(skPath: string, rmPath: string, value: string) {
-      if (isNumber(value) || (value && value.length) > 0) {
+      if (isNumber(value) || (value && value.length > 0)) {
         set(data.vessels.self, skPath, Number(value))
       } else {
         unset(data.vessels.self, rmPath)
