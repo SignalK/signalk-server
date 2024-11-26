@@ -149,7 +149,6 @@
     "@types/mocha": "^10.0.1",
     "@types/ncp": "^2.0.5",
     "@types/node-fetch": "^2.5.3",
-    "@types/rmfr": "^2.0.1",
     "@types/semver": "^7.1.0",
     "@types/serialport": "^8.0.2",
     "@types/split": "^1.0.0",
@@ -168,8 +167,7 @@
     "lint-staged": "^10.0.3",
     "mocha": "^10.2.0",
     "prettier": "^2.7.1",
-    "rimraf": "^3.0.2",
-    "rmfr": "^2.0.0",
+    "rimraf": "^6.0.1",
     "ts-node": "^10.9.1",
     "typedoc": "^0.26.11",
     "typescript": "5.6.x"
