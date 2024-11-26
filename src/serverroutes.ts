@@ -59,8 +59,7 @@ const ncp = ncpI.ncp
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const availableInterfaces = require('./interfaces')
+import availableInterfaces from './interfaces'
 
 interface ScriptsApp {
   addons: ModuleInfo[]
@@ -538,7 +537,7 @@ module.exports = function (
               res.status(500).send('Unable to save to settings file')
             } else {
               const config = {}
-              // eslint-disable-next-line @typescript-eslint/no-var-requires
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
               const securityStrategy = require(defaultSecurityStrategy)(
                 app,
                 config,
