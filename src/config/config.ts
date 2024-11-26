@@ -420,7 +420,7 @@ function readSettingsFile(app: ConfigApp) {
     debug('Using settings file: ' + settings)
     try {
       app.config.settings = require(settings)
-    } catch (e: any) {
+    } catch (_e: any) {
       console.error(
         `Error reading settings file ${settings}, using empty settings`
       )
@@ -469,7 +469,7 @@ function getExternalHostname(config: Config) {
   }
   try {
     return os.hostname()
-  } catch (ex) {
+  } catch (_ex) {
     return 'hostname_not_available'
   }
 }
