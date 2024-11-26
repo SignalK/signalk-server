@@ -71,7 +71,7 @@ import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { Zones } from './zones'
 const debug = createDebug('signalk-server')
 
-const { StreamBundle } = require('./streambundle')
+import { StreamBundle } from './streambundle'
 
 interface ServerOptions {
   securityConfig: any
