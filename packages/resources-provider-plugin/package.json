@@ -26,9 +26,9 @@
         "build-declaration": "tsc --declaration --allowJs false",
         "watch": "npm run build -- -w",
         "prettier": "prettier -w src/",
-        "lint": "eslint -c .eslintrc.js --ext .ts --ext .js --fix src/",
+        "lint": "eslint --ext .ts --ext .js --fix src/",
         "format": "npm run prettier && npm run lint",
-        "ci-lint": "eslint -c .eslintrc.js --ext .ts --ext .js src/ && prettier --check src/",
+        "ci-lint": "eslint --ext .ts --ext .js src/ && prettier --check src/",
         "prepublishOnly": "npm run build && npm run build-declaration",
         "test": "npm run build && npm run build-declaration && npm run ci-lint"
     },

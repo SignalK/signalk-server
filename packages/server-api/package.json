@@ -10,9 +10,9 @@
     "prepublishOnly": "npm run build",
     "typedoc": "typedoc --out docs src",
     "prettier": "prettier -w src/",
-    "lint": "eslint -c .eslintrc.js --ext .ts --ext .js --fix src/",
+    "lint": "eslint --ext .ts --ext .js --fix src/",
     "format": "npm run prettier && npm run lint",
-    "ci-lint": "eslint -c .eslintrc.js --ext .ts --ext .js src/ && prettier --check src/",
+    "ci-lint": "eslint --ext .ts --ext .js src/ && prettier --check src/",
     "test": "mocha --require ts-node/register src/**/*.test.ts && npm run ci-lint"
   },
   "repository": {
