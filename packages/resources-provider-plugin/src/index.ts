@@ -256,7 +256,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
             }
           }
         })
-      } catch (error) {
+      } catch (_error) {
         failed.push(resType)
       }
     })
