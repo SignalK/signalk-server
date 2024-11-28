@@ -305,7 +305,7 @@ ReactDOM.render(
   <HashRouter>
     <Routes>
       <Provider store={store}>
-        <Route path="/" name="Home" component={Full} />
+        <Route path="/" name="Home" element={<Full/>} />
       </Provider>
     </Routes>
   </HashRouter>,
