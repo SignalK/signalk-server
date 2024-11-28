@@ -1,8 +1,19 @@
 import React, { Component } from 'react'
 import { Button, Card, CardHeader, CardBody } from 'reactstrap'
 import { connect } from 'react-redux'
-import { withRouter } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
+export function withRouter(FunctionComponent) {
+  function ComponentWithRouterProp(props ) {
+      const location = useLocation();
+      const navigate = useNavigate();
+      const params = useParams();
+
+      return <Component {...props} router={{ location, navigate, params }} />;
+  }
+
+  return ComponentWithRouterProp;
+}
 class ServerUpdate extends Component {
   constructor(props) {
     super(props)

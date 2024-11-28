@@ -1,5 +1,6 @@
+
 import React, { Component } from 'react'
-import { Switch, Route, Redirect, withRouter } from 'react-router-dom'
+import {  Route, Navigate, Routes } from 'react-router-dom'
 import { Container } from 'reactstrap'
 import { connect } from 'react-redux'
 
@@ -28,6 +29,19 @@ import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
 
 import { fetchAllData, openServerEventsConnection } from '../../actions'
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+
+export function withRouter(FunctionComponent) {
+    function ComponentWithRouterProp(props ) {
+        const location = useLocation();
+        const navigate = useNavigate();
+        const params = useParams();
+
+        return <Component {...props} router={{ location, navigate, params }} />;
+    }
+
+    return ComponentWithRouterProp;
+}
 
 class Full extends Component {
   componentDidMount() {
@@ -48,7 +62,7 @@ class Full extends Component {
           <Sidebar {...this.props} />
           <main className="main">
             <Container fluid style={suppressPadding}>
-              <Switch>
+              <Routes>
                 <Route
                   path="/dashboard"
                   name="Dashboard"
@@ -121,8 +135,11 @@ class Full extends Component {
                 />
                 <Route path="/login" component={Login} />
                 <Route path="/register" component={Register} />
-                <Redirect from="/" to="/dashboard" />
-              </Switch>
+                 <Route
+                    path="/"
+                    element={<Navigate to="/dashboard" replace />}
+                  />              
+              </Routes>
             </Container>
           </main>
           <Aside />

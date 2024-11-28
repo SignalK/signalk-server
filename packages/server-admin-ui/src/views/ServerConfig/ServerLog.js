@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import ReactHtmlParser from 'react-html-parser'
+import ReactHtmlParser from 'html-react-parser'
 import { connect } from 'react-redux'
 import {
   Card,
