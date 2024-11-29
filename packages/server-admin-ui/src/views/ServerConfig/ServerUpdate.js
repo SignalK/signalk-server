@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import { Button, Card, CardHeader, CardBody } from 'reactstrap'
 import { connect } from 'react-redux'
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router';
 
 export function withRouter(FunctionComponent) {
   function ComponentWithRouterProp(props ) {

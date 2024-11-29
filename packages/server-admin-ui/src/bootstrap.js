@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
-import { HashRouter, Route, Routes } from 'react-router-dom'
+import { HashRouter, Route, Routes } from 'react-router'
 import { Provider } from 'react-redux'
 import { createStore, applyMiddleware } from 'redux'
 import {thunk} from 'redux-thunk'
@@ -302,12 +302,12 @@ __webpack_init_sharing__('default')
 
 // eslint-disable-next-line react/no-deprecated
 ReactDOM.render(
+  <Provider store={store}>
   <HashRouter>
     <Routes>
-      <Provider store={store}>
         <Route path="/" name="Home" element={<Full/>} />
-      </Provider>
     </Routes>
-  </HashRouter>,
+  </HashRouter>
+  </Provider>,
   document.getElementById('root')
 )

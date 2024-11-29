@@ -1,6 +1,6 @@
 
 import React, { Component } from 'react'
-import {  Route, Navigate, Routes } from 'react-router-dom'
+import {  Route, Navigate, Routes } from 'react-router'
 import { Container } from 'reactstrap'
 import { connect } from 'react-redux'
 
@@ -29,7 +29,7 @@ import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
 
 import { fetchAllData, openServerEventsConnection } from '../../actions'
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router';
 
 export function withRouter(FunctionComponent) {
     function ComponentWithRouterProp(props ) {
@@ -51,8 +51,8 @@ class Full extends Component {
   }
 
   render() {
-    const suppressPadding =
-      this.props.location.pathname.indexOf('/e/') === 0
+    const suppressPadding = //{ padding: '0px' }
+      window.location.pathname.indexOf('/e/') === 0
         ? { padding: '0px' }
         : {}
     return (

@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink } from 'react-router'
 import { Badge, Nav, NavItem, NavLink as RsNavLink } from 'reactstrap'
 import { connect } from 'react-redux'
 import classNames from 'classnames'
@@ -16,7 +16,7 @@ class Sidebar extends Component {
 
   activeRoute(routeName, props) {
     // return this.props.location.pathname.indexOf(routeName) > -1 ? 'nav-item nav-dropdown open' : 'nav-item nav-dropdown';
-    return props.location.pathname.indexOf(routeName) > -1
+    return window.location.pathname.indexOf(routeName) > -1
       ? 'nav-item nav-dropdown open'
       : 'nav-item nav-dropdown'
   }

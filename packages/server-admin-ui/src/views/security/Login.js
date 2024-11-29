@@ -13,7 +13,7 @@ import {
   InputGroupText,
   Label,
 } from 'reactstrap'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { connect } from 'react-redux'
 import { login } from '../../actions'
 import Dashboard from '../Dashboard/Dashboard'
