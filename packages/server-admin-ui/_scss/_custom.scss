@@ -1,0 +1,30 @@
+// Here you can add other styles
+
+
+form.rjsf  label {
+  margin-bottom: 0;
+}
+
+form.rjsf  div>p.field-description {
+  font-size: 0.7rem;
+  font-style: italic;
+  margin-bottom: 0px;
+}
+
+form.rjsf input {
+  width: auto;
+}
+
+form.rjsf div.row.array-item {
+  background-color: aliceblue;
+  margin-bottom: 3px;
+}
+
+@media (max-width: 767px) {
+  .container-fluid, .row {
+    padding:0 2px !important;
+  }
+  .navbar-header {
+    margin:0px;
+  }
+}

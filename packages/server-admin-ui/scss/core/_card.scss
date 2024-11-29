@@ -1,193 +1,238 @@
-.card {
-  margin-bottom: 1.5 * $spacer;
-
-  // Cards with color accent
-  @each $color, $value in $theme-colors {
-    &.bg-#{$color} {
-      border-color: darken($value, 12.5%);
-      .card-header {
-        background-color: darken($value, 3%);
-        border-color: darken($value, 12.5%);
-      }
-    }
-  }
-}
-
-.text-white .text-muted {
-  color: rgba(255,255,255,.6) !important;
-}
-
-.card-header {
-
-  .icon-bg {
-    display: inline-body;
-    padding: $card-spacer-y $card-spacer-x !important;
-    margin-top: -$card-spacer-y;
-    margin-right: $card-spacer-x;
-    margin-bottom: -$card-spacer-y;
-    margin-left: -$card-spacer-x;
-    line-height: inherit;
-    color: $card-icon-color;
-    vertical-align: bottom;
-    background: $card-icon-bg;
-    border-right: $card-border-width solid $card-border-color;
-  }
-
-  .nav.nav-tabs {
-    margin-top: -$card-spacer-y;
-    margin-bottom: -$card-spacer-y;
-    border-bottom: 0;
-
-    .nav-item {
-      border-top: 0;
-    }
-
-    .nav-link {
-      padding: $card-spacer-y $card-spacer-x / 2;
-      color: $text-muted;
-      border-top: 0;
-
-      &.active {
-        color: $body-color;
-        background: #fff;
-      }
-    }
-  }
-
-  &.card-header-inverse {
-    color: #fff;
-  }
-
-  .btn {
-    margin-top: - $input-btn-padding-y;
-  }
-  .btn-sm {
-    margin-top: - $input-btn-padding-y-sm;
-  }
-  .btn-lg {
-    margin-top: - $input-btn-padding-y-lg;
-  }
-}
 //
-.card-footer {
+// Base styles
+//
 
-  ul {
-    display: table;
-    width: 100%;
-    padding: 0;
-    margin: 0;
-    table-layout: fixed;
+.card {
+  // scss-docs-start card-css-vars
+  --#{$prefix}card-spacer-y: #{$card-spacer-y};
+  --#{$prefix}card-spacer-x: #{$card-spacer-x};
+  --#{$prefix}card-title-spacer-y: #{$card-title-spacer-y};
+  --#{$prefix}card-title-color: #{$card-title-color};
+  --#{$prefix}card-subtitle-color: #{$card-subtitle-color};
+  --#{$prefix}card-border-width: #{$card-border-width};
+  --#{$prefix}card-border-color: #{$card-border-color};
+  --#{$prefix}card-border-radius: #{$card-border-radius};
+  --#{$prefix}card-box-shadow: #{$card-box-shadow};
+  --#{$prefix}card-inner-border-radius: #{$card-inner-border-radius};
+  --#{$prefix}card-cap-padding-y: #{$card-cap-padding-y};
+  --#{$prefix}card-cap-padding-x: #{$card-cap-padding-x};
+  --#{$prefix}card-cap-bg: #{$card-cap-bg};
+  --#{$prefix}card-cap-color: #{$card-cap-color};
+  --#{$prefix}card-height: #{$card-height};
+  --#{$prefix}card-color: #{$card-color};
+  --#{$prefix}card-bg: #{$card-bg};
+  --#{$prefix}card-img-overlay-padding: #{$card-img-overlay-padding};
+  --#{$prefix}card-group-margin: #{$card-group-margin};
+  // scss-docs-end card-css-vars
 
-    li {
-      display: table-cell;
-      padding: 0 $card-spacer-x;
-      text-align: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; // See https://github.com/twbs/bootstrap/pull/22740#issuecomment-305868106
+  height: var(--#{$prefix}card-height);
+  color: var(--#{$prefix}body-color);
+  word-wrap: break-word;
+  background-color: var(--#{$prefix}card-bg);
+  background-clip: border-box;
+  border: var(--#{$prefix}card-border-width) solid var(--#{$prefix}card-border-color);
+  @include border-radius(var(--#{$prefix}card-border-radius));
+  @include box-shadow(var(--#{$prefix}card-box-shadow));
+
+  > hr {
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  > .list-group {
+    border-top: inherit;
+    border-bottom: inherit;
+
+    &:first-child {
+      border-top-width: 0;
+      @include border-top-radius(var(--#{$prefix}card-inner-border-radius));
+    }
+
+    &:last-child  {
+      border-bottom-width: 0;
+      @include border-bottom-radius(var(--#{$prefix}card-inner-border-radius));
     }
   }
-}
 
-[class*="card-outline-"] {
-  .card-body {
-    background: #fff !important;
-  }
-
-  &.card-outline-top {
-    border-top-width: 2px;
-    border-right-color: $border-color;
-    border-bottom-color: $border-color;
-    border-left-color: $border-color;
+  // Due to specificity of the above selector (`.card > .list-group`), we must
+  // use a child selector here to prevent double borders.
+  > .card-header + .list-group,
+  > .list-group + .card-footer {
+    border-top: 0;
   }
 }
 
-// Cards with color accent
-@each $color, $value in $theme-colors {
-  .card-accent-#{$color} {
-    @include card-accent-variant($value);
+.card-body {
+  // Enable `flex-grow: 1` for decks and groups so that card blocks take up
+  // as much space as possible, ensuring footers are aligned to the bottom.
+  flex: 1 1 auto;
+  padding: var(--#{$prefix}card-spacer-y) var(--#{$prefix}card-spacer-x);
+  color: var(--#{$prefix}card-color);
+}
+
+.card-title {
+  margin-bottom: var(--#{$prefix}card-title-spacer-y);
+  color: var(--#{$prefix}card-title-color);
+}
+
+.card-subtitle {
+  margin-top: calc(-.5 * var(--#{$prefix}card-title-spacer-y)); // stylelint-disable-line function-disallowed-list
+  margin-bottom: 0;
+  color: var(--#{$prefix}card-subtitle-color);
+}
+
+.card-text:last-child {
+  margin-bottom: 0;
+}
+
+.card-link {
+  &:hover {
+    text-decoration: if($link-hover-decoration == underline, none, null);
+  }
+
+  + .card-link {
+    margin-left: var(--#{$prefix}card-spacer-x);
   }
 }
 
-// Card Actions
+//
+// Optional textual caps
+//
+
 .card-header {
-  > i {
-    margin-right: $spacer / 2;
+  padding: var(--#{$prefix}card-cap-padding-y) var(--#{$prefix}card-cap-padding-x);
+  margin-bottom: 0; // Removes the default margin-bottom of <hN>
+  color: var(--#{$prefix}card-cap-color);
+  background-color: var(--#{$prefix}card-cap-bg);
+  border-bottom: var(--#{$prefix}card-border-width) solid var(--#{$prefix}card-border-color);
+
+  &:first-child {
+    @include border-radius(var(--#{$prefix}card-inner-border-radius) var(--#{$prefix}card-inner-border-radius) 0 0);
   }
-  .card-actions {
-    position: absolute;
-    top: 0;
-    right: 0;
-    //height: inherit;
+}
 
-    a, button {
-      display: block;
-      float: left;
-      width: 50px;
-      padding: $card-spacer-y 0;
-      margin: 0 !important;
-      color: $body-color;
-      text-align: center;
-      background: transparent;
-      border: 0;
-      border-left: 1px solid $border-color;
-      box-shadow: 0;
+.card-footer {
+  padding: var(--#{$prefix}card-cap-padding-y) var(--#{$prefix}card-cap-padding-x);
+  color: var(--#{$prefix}card-cap-color);
+  background-color: var(--#{$prefix}card-cap-bg);
+  border-top: var(--#{$prefix}card-border-width) solid var(--#{$prefix}card-border-color);
 
-      &:hover {
-        text-decoration: none;
-      }
+  &:last-child {
+    @include border-radius(0 0 var(--#{$prefix}card-inner-border-radius) var(--#{$prefix}card-inner-border-radius));
+  }
+}
 
-      [class^="icon-"], [class*=" icon-"] {
-        display: inline-body;
-        vertical-align: middle;
-      }
 
-      i {
-        display: inline-body;
-        transition: .4s;
-      }
+//
+// Header navs
+//
 
-      .r180 {
-        transform: rotate(180deg);
-      }
-    }
+.card-header-tabs {
+  margin-right: calc(-.5 * var(--#{$prefix}card-cap-padding-x)); // stylelint-disable-line function-disallowed-list
+  margin-bottom: calc(-1 * var(--#{$prefix}card-cap-padding-y)); // stylelint-disable-line function-disallowed-list
+  margin-left: calc(-.5 * var(--#{$prefix}card-cap-padding-x)); // stylelint-disable-line function-disallowed-list
+  border-bottom: 0;
 
-    .input-group {
-      width: 230px;
-      margin: 6px;
+  .nav-link.active {
+    background-color: var(--#{$prefix}card-bg);
+    border-bottom-color: var(--#{$prefix}card-bg);
+  }
+}
 
-      .input-group-addon {
-        background: #fff;
-      }
+.card-header-pills {
+  margin-right: calc(-.5 * var(--#{$prefix}card-cap-padding-x)); // stylelint-disable-line function-disallowed-list
+  margin-left: calc(-.5 * var(--#{$prefix}card-cap-padding-x)); // stylelint-disable-line function-disallowed-list
+}
 
-      input {
+// Card image
+.card-img-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: var(--#{$prefix}card-img-overlay-padding);
+  @include border-radius(var(--#{$prefix}card-inner-border-radius));
+}
+
+.card-img,
+.card-img-top,
+.card-img-bottom {
+  width: 100%; // Required because we use flexbox and this inherently applies align-self: stretch
+}
+
+.card-img,
+.card-img-top {
+  @include border-top-radius(var(--#{$prefix}card-inner-border-radius));
+}
+
+.card-img,
+.card-img-bottom {
+  @include border-bottom-radius(var(--#{$prefix}card-inner-border-radius));
+}
+
+
+//
+// Card groups
+//
+
+.card-group {
+  // The child selector allows nested `.card` within `.card-group`
+  // to display properly.
+  > .card {
+    margin-bottom: var(--#{$prefix}card-group-margin);
+  }
+
+  @include media-breakpoint-up(sm) {
+    display: flex;
+    flex-flow: row wrap;
+    // The child selector allows nested `.card` within `.card-group`
+    // to display properly.
+    > .card {
+      flex: 1 0 0;
+      margin-bottom: 0;
+
+      + .card {
+        margin-left: 0;
         border-left: 0;
       }
+
+      // Handle rounded corners
+      @if $enable-rounded {
+        &:not(:last-child) {
+          @include border-end-radius(0);
+
+          .card-img-top,
+          .card-header {
+            // stylelint-disable-next-line property-disallowed-list
+            border-top-right-radius: 0;
+          }
+          .card-img-bottom,
+          .card-footer {
+            // stylelint-disable-next-line property-disallowed-list
+            border-bottom-right-radius: 0;
+          }
+        }
+
+        &:not(:first-child) {
+          @include border-start-radius(0);
+
+          .card-img-top,
+          .card-header {
+            // stylelint-disable-next-line property-disallowed-list
+            border-top-left-radius: 0;
+          }
+          .card-img-bottom,
+          .card-footer {
+            // stylelint-disable-next-line property-disallowed-list
+            border-bottom-left-radius: 0;
+          }
+        }
+      }
     }
   }
-}
-
-.card-full {
-  margin-top: - $spacer;
-  margin-right: - $grid-gutter-width / 2;
-  margin-left: - $grid-gutter-width / 2;
-  border: 0;
-  border-bottom: $card-border-width solid $border-color;
-}
-
-@include media-breakpoint-up(sm) {
-  .card-columns {
-
-    &.cols-2 {
-      column-count: 2;
-    }
-  }
-}
-
-.card {
-  &.drag, .drag {
-    cursor: move;
-  }
-}
-
-.card-placeholder {
-  background: rgba(0,0,0,.025);
-  border: 1px dashed $gray-300;
 }

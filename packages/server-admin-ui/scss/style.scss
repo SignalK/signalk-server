@@ -6,17 +6,17 @@
  * @license MIT
  */
 
+
+@import 'core/functions';
+
 // Override Boostrap variables
-@import 'bootstrap-variables';
+@import 'core/variables';
 
 // Import Bootstrap source files
 @import '~bootstrap/scss/bootstrap';
 
-// Override core variables
-@import 'core-variables';
-
 // Import core styles
-@import 'core/core';
+//@import 'core/*;
 
 // Custom styles
 @import 'custom';

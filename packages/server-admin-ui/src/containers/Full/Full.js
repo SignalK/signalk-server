@@ -4,29 +4,29 @@ import {  Route, Navigate, Routes } from 'react-router-dom'
 import { Container } from 'reactstrap'
 import { connect } from 'react-redux'
 
-import {Header} from '../../components/Header/Header'
-import {Sidebar} from '../../components/Sidebar/Sidebar'
-import {Aside} from '../../components/Aside/Aside'
-import {Footer} from '../../components/Footer/Footer'
+import Header from '../../components/Header/Header'
+import Sidebar from '../../components/Sidebar/Sidebar'
+import Aside from '../../components/Aside/Aside'
+import Footer from '../../components/Footer/Footer'
 
-import {Dashboard} from '../../views/Dashboard/Dashboard'
-import {Embedded} from '../../views/Webapps/Embedded'
-import {Webapps} from '../../views/Webapps/Webapps'
-import {DataBrowser} from '../../views/DataBrowser/DataBrowser'
-import {Playground} from '../../views/Playground'
-import {Apps} from '../../views/appstore/Apps/Apps'
-import {Configuration} from '../../views/Configuration/Configuration'
-import {Login} from '../../views/security/Login'
-import {SecuritySettings} from '../../views/security/Settings'
-import {Users} from '../../views/security/Users'
-import {Devices} from '../../views/security/Devices'
-import {Register} from '../../views/security/Register'
-import {AccessRequests} from '../../views/security/AccessRequests'
-import {ProvidersConfiguration} from '../../views/ServerConfig/ProvidersConfiguration'
-import {Settings} from '../../views/ServerConfig/Settings'
-import {BackupRestore} from '../../views/ServerConfig/BackupRestore'
-import {ServerLog} from '../../views/ServerConfig/ServerLog'
-import {ServerUpdate} from '../../views/ServerConfig/ServerUpdate'
+import Dashboard from '../../views/Dashboard/Dashboard'
+import Embedded from '../../views/Webapps/Embedded'
+import Webapps from '../../views/Webapps/Webapps'
+import DataBrowser from '../../views/DataBrowser/DataBrowser'
+import Playground from '../../views/Playground'
+import Apps from '../../views/appstore/Apps/Apps'
+import Configuration from '../../views/Configuration/Configuration'
+import Login from '../../views/security/Login'
+import SecuritySettings from '../../views/security/Settings'
+import Users from '../../views/security/Users'
+import Devices from '../../views/security/Devices'
+import Register from '../../views/security/Register'
+import AccessRequests from '../../views/security/AccessRequests'
+import ProvidersConfiguration from '../../views/ServerConfig/ProvidersConfiguration'
+import Settings from '../../views/ServerConfig/Settings'
+import BackupRestore from '../../views/ServerConfig/BackupRestore'
+import ServerLog from '../../views/ServerConfig/ServerLog'
+import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
 
 import { fetchAllData, openServerEventsConnection } from '../../actions'
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -66,75 +66,75 @@ class Full extends Component {
                 <Route
                   path="/dashboard"
                   name="Dashboard"
-                  component={loginOrOriginal(Dashboard, true)}
+                  element={loginOrOriginal(Dashboard, true)}
                 />
                 <Route
                   path="/webapps"
                   name="Webapps"
-                  component={loginOrOriginal(Webapps, true)}
+                  element={loginOrOriginal(Webapps, true)}
                 />
                 <Route
                   path="/e/:moduleId"
                   name="Embedded Webapps"
-                  component={loginOrOriginal(Embedded, true)}
+                  element={loginOrOriginal(Embedded, true)}
                 />
                 <Route
                   path="/databrowser"
                   name="DataBrowser"
-                  component={loginOrOriginal(DataBrowser, true)}
+                  element={loginOrOriginal(DataBrowser, true)}
                 />
                 <Route
                   path="/serverConfiguration/datafiddler"
                   name="DataFiddler"
-                  component={loginOrOriginal(Playground, true)}
+                  element={loginOrOriginal(Playground, true)}
                 />
                 <Route
                   path="/appstore"
                   name="Appstore"
-                  component={loginOrOriginal(Apps)}
+                  element={loginOrOriginal(Apps)}
                 />
                 <Route
                   path="/serverConfiguration/plugins/:pluginid"
-                  component={loginOrOriginal(Configuration)}
+                  element={loginOrOriginal(Configuration)}
                 />
                 <Route
                   path="/serverConfiguration/settings"
-                  component={loginOrOriginal(Settings)}
+                  element={loginOrOriginal(Settings)}
                 />
                 <Route
                   path="/serverConfiguration/backuprestore"
-                  component={loginOrOriginal(BackupRestore)}
+                  element={loginOrOriginal(BackupRestore)}
                 />
                 <Route
                   path="/serverConfiguration/connections/:providerId"
-                  component={loginOrOriginal(ProvidersConfiguration)}
+                  element={loginOrOriginal(ProvidersConfiguration)}
                 />
                 <Route
                   path="/serverConfiguration/log"
-                  component={loginOrOriginal(ServerLog)}
+                  element={loginOrOriginal(ServerLog)}
                 />
                 <Route
                   path="/serverConfiguration/update"
-                  component={loginOrOriginal(ServerUpdate)}
+                  element={loginOrOriginal(ServerUpdate)}
                 />
                 <Route
                   path="/security/settings"
-                  component={loginOrOriginal(SecuritySettings)}
+                  element={loginOrOriginal(SecuritySettings)}
                 />
                 <Route
                   path="/security/users"
-                  component={loginOrOriginal(Users)}
+                  element={loginOrOriginal(Users)}
                 />
                 <Route
                   path="/security/devices"
-                  component={loginOrOriginal(Devices)}
+                  element={loginOrOriginal(Devices)}
                 />
                 <Route
                   path="/security/access/requests"
-                  component={loginOrOriginal(AccessRequests)}
+                  element={loginOrOriginal(AccessRequests)}
                 />
                 <Route path="/login" element={<Login />} />
-                <Route path="/register" component={Register} />
+                <Route path="/register" element={<Register/>} />
                  <Route
                     path="/"
                     element={<Navigate to="/dashboard" replace />}

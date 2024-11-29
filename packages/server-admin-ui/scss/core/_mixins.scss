@@ -1,116 +1,42 @@
-@mixin button-social-size($padding-y, $padding-x, $font-size, $line-height, $border-radius) {
-  padding: $padding-y $padding-x;
-  font-size: $font-size;
-  line-height: $line-height;
-  border: 0;
-  @include border-radius($border-radius);
+// Toggles
+//
+// Used in conjunction with global variables to enable certain theme features.
 
-  &::before {
-    width: ($padding-y * 2) + ($font-size * $line-height);
-    height: ($padding-y * 2) + ($font-size * $line-height);
-    padding: $padding-y 0;
-    font-size: $font-size;
-    line-height: $line-height;
-    @include border-radius($border-radius);
-  }
+// Vendor
+@import "vendor/rfs";
 
-  span {
-    margin-left: ($padding-y * 2) + ($font-size * $line-height);
-  }
+// Deprecate
+@import "mixins/deprecate";
 
-  &.icon {
-    width: ($padding-y * 2) + ($font-size * $line-height);
-    height: ($padding-y * 2) + ($font-size * $line-height);
-  }
-}
+// Helpers
+@import "mixins/breakpoints";
+@import "mixins/color-mode";
+@import "mixins/color-scheme";
+@import "mixins/image";
+@import "mixins/resize";
+@import "mixins/visually-hidden";
+@import "mixins/reset-text";
+@import "mixins/text-truncate";
 
-@mixin avatar($width, $status-width) {
-  position: relative;
-  display: inline-block;
-  width: $width;
+// Utilities
+@import "mixins/utilities";
 
-  .img-avatar {
-    width: $width;
-    height: $width;
-  }
+// Components
+@import "mixins/backdrop";
+@import "mixins/buttons";
+@import "mixins/caret";
+@import "mixins/pagination";
+@import "mixins/lists";
+@import "mixins/forms";
+@import "mixins/table-variants";
 
-  .avatar-status {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    display: block;
-    width: $status-width;
-    height: $status-width;
-    border: 1px solid #fff;
-    border-radius: 50em;
-  }
-}
+// Skins
+@import "mixins/border-radius";
+@import "mixins/box-shadow";
+@import "mixins/gradients";
+@import "mixins/transition";
 
-@mixin borders($borders) {
-  @each $border in $borders {
-    $direction: nth($border, 1);
-    @if $direction == "all" {
-      $size: map-get(map-get($borders, $direction), size);
-      $style: map-get(map-get($borders, $direction), style);
-      $color: map-get(map-get($borders, $direction), color);
-      border: $size $style $color;
-    } @else if $direction == "top" {
-      $size: map-get(map-get($borders, $direction), size);
-      $style: map-get(map-get($borders, $direction), style);
-      $color: map-get(map-get($borders, $direction), color);
-      border-top: $size $style $color;
-    } @else if $direction == "right" {
-      $size: map-get(map-get($borders, $direction), size);
-      $style: map-get(map-get($borders, $direction), style);
-      $color: map-get(map-get($borders, $direction), color);
-      border-right: $size $style $color;
-    } @else if $direction == "bottom" {
-      $size: map-get(map-get($borders, $direction), size);
-      $style: map-get(map-get($borders, $direction), style);
-      $color: map-get(map-get($borders, $direction), color);
-      border-bottom: $size $style $color;
-    } @else if $direction == "left" {
-      $size: map-get(map-get($borders, $direction), size);
-      $style: map-get(map-get($borders, $direction), style);
-      $color: map-get(map-get($borders, $direction), color);
-      border-left: $size $style $color;
-    }
-  }
-}
-
-@mixin sidebar-width($borders, $width) {
-  $sidebar-width: $width;
-
-  @each $border in $borders {
-    $direction: nth($border, 1);
-    @if $direction == "all" {
-      $size: map-get(map-get($borders, $direction), size);
-      $sidebar-width: ($sidebar-width - (2 * $size));
-    } @else if $direction == "right" {
-      $size: map-get(map-get($borders, $direction), size);
-      $sidebar-width: $sidebar-width - $size;
-    } @else if $direction == "left" {
-      $size: map-get(map-get($borders, $direction), size);
-      $sidebar-width: $sidebar-width - $size;
-    }
-    width: $sidebar-width;
-  }
-}
-
-@mixin bg-variant($parent, $color) {
-  #{$parent} {
-    @include border-radius($card-border-radius-inner $card-border-radius-inner $card-border-radius-inner $card-border-radius-inner);
-    color: #fff !important;
-    background-color: $color !important;
-  }
-  a#{$parent} {
-    @include hover-focus {
-      background-color: darken($color, 10%);
-    }
-  }
-}
-
-@mixin card-accent-variant($color) {
-  border-top-width: 2px;
-  border-top-color: $color;
-}
+// Layout
+@import "mixins/clearfix";
+@import "mixins/container";
+@import "mixins/grid";

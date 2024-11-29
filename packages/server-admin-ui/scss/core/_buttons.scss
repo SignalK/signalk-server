@@ -1,575 +1,216 @@
-button {
-  cursor: pointer;
-}
+//
+// Base styles
+//
 
 .btn {
-  .badge {
-    position: absolute;
-    top: 2px;
-    right: 6px;
-    font-size: 9px;
-  }
-}
+  // scss-docs-start btn-css-vars
+  --#{$prefix}btn-padding-x: #{$btn-padding-x};
+  --#{$prefix}btn-padding-y: #{$btn-padding-y};
+  --#{$prefix}btn-font-family: #{$btn-font-family};
+  @include rfs($btn-font-size, --#{$prefix}btn-font-size);
+  --#{$prefix}btn-font-weight: #{$btn-font-weight};
+  --#{$prefix}btn-line-height: #{$btn-line-height};
+  --#{$prefix}btn-color: #{$btn-color};
+  --#{$prefix}btn-bg: transparent;
+  --#{$prefix}btn-border-width: #{$btn-border-width};
+  --#{$prefix}btn-border-color: transparent;
+  --#{$prefix}btn-border-radius: #{$btn-border-radius};
+  --#{$prefix}btn-hover-border-color: transparent;
+  --#{$prefix}btn-box-shadow: #{$btn-box-shadow};
+  --#{$prefix}btn-disabled-opacity: #{$btn-disabled-opacity};
+  --#{$prefix}btn-focus-box-shadow: 0 0 0 #{$btn-focus-width} rgba(var(--#{$prefix}btn-focus-shadow-rgb), .5);
+  // scss-docs-end btn-css-vars
 
-.btn-transparent {
-  color: #fff;
-  background-color: transparent;
-  border-color: transparent;
-}
-
-.btn {
-  [class^="icon-"], [class*=" icon-"] {
-    display: inline-block;
-    margin-top: -2px;
-    vertical-align: middle;
-  }
-}
-
-.btn-facebook,
-.btn-twitter,
-.btn-linkedin,
-.btn-flickr,
-.btn-tumblr,
-.btn-xing,
-.btn-github,
-.btn-html5,
-.btn-openid,
-.btn-stack-overflow,
-.btn-youtube,
-.btn-css3,
-.btn-dribbble,
-.btn-google-plus,
-.btn-instagram,
-.btn-pinterest,
-.btn-vk,
-.btn-yahoo,
-.btn-behance,
-.btn-dropbox,
-.btn-reddit,
-.btn-spotify,
-.btn-vine,
-.btn-foursquare,
-.btn-vimeo {
-  position: relative;
-  overflow: hidden;
-  color: #fff !important;
+  display: inline-block;
+  padding: var(--#{$prefix}btn-padding-y) var(--#{$prefix}btn-padding-x);
+  font-family: var(--#{$prefix}btn-font-family);
+  @include font-size(var(--#{$prefix}btn-font-size));
+  font-weight: var(--#{$prefix}btn-font-weight);
+  line-height: var(--#{$prefix}btn-line-height);
+  color: var(--#{$prefix}btn-color);
   text-align: center;
-
-  &::before {
-    position: absolute;
-    top: 0;
-    left: 0;
-    display: block;
-    font-family: "FontAwesome";
-    font-style: normal;
-    font-weight: normal;
-    -moz-osx-font-smoothing: grayscale;
-    -webkit-font-smoothing: antialiased;
-  }
+  text-decoration: if($link-decoration == none, null, none);
+  white-space: $btn-white-space;
+  vertical-align: middle;
+  cursor: if($enable-button-pointers, pointer, null);
+  user-select: none;
+  border: var(--#{$prefix}btn-border-width) solid var(--#{$prefix}btn-border-color);
+  @include border-radius(var(--#{$prefix}btn-border-radius));
+  @include gradient-bg(var(--#{$prefix}btn-bg));
+  @include box-shadow(var(--#{$prefix}btn-box-shadow));
+  @include transition($btn-transition);
 
   &:hover {
-    color: #fff;
+    color: var(--#{$prefix}btn-hover-color);
+    text-decoration: if($link-hover-decoration == underline, none, null);
+    background-color: var(--#{$prefix}btn-hover-bg);
+    border-color: var(--#{$prefix}btn-hover-border-color);
   }
 
-  &.icon {
+  .btn-check + &:hover {
+    // override for the checkbox/radio buttons
+    color: var(--#{$prefix}btn-color);
+    background-color: var(--#{$prefix}btn-bg);
+    border-color: var(--#{$prefix}btn-border-color);
+  }
 
-    span {
-      display: none;
+  &:focus-visible {
+    color: var(--#{$prefix}btn-hover-color);
+    @include gradient-bg(var(--#{$prefix}btn-hover-bg));
+    border-color: var(--#{$prefix}btn-hover-border-color);
+    outline: 0;
+    // Avoid using mixin so we can pass custom focus shadow properly
+    @if $enable-shadows {
+      box-shadow: var(--#{$prefix}btn-box-shadow), var(--#{$prefix}btn-focus-box-shadow);
+    } @else {
+      box-shadow: var(--#{$prefix}btn-focus-box-shadow);
     }
   }
 
-  &.text {
-    &::before {
-      display: none;
-    }
-
-    span {
-      margin-left: 0 !important;
-    }
-  }
-  @include button-social-size($input-btn-padding-y, $input-btn-padding-x, $font-size-base, $line-height-base, $btn-border-radius);
-
-  &.btn-lg {
-    @include button-social-size($input-btn-padding-y-lg, $input-btn-padding-x-lg, $font-size-lg, $line-height-lg, $btn-border-radius-lg);
-  }
-
-  &.btn-sm {
-    @include button-social-size($input-btn-padding-y-sm, $input-btn-padding-x-sm, $font-size-sm, $line-height-sm, $btn-border-radius-sm);
-  }
-
-}
-
-.btn-facebook {
-  $color: $facebook;
-
-  background: $color;
-  &::before {
-    content: "\f09a";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
+  .btn-check:focus-visible + & {
+    border-color: var(--#{$prefix}btn-hover-border-color);
+    outline: 0;
+    // Avoid using mixin so we can pass custom focus shadow properly
+    @if $enable-shadows {
+      box-shadow: var(--#{$prefix}btn-box-shadow), var(--#{$prefix}btn-focus-box-shadow);
+    } @else {
+      box-shadow: var(--#{$prefix}btn-focus-box-shadow);
     }
   }
-}
 
-.btn-twitter {
-  $color: $twitter;
+  .btn-check:checked + &,
+  :not(.btn-check) + &:active,
+  &:first-child:active,
+  &.active,
+  &.show {
+    color: var(--#{$prefix}btn-active-color);
+    background-color: var(--#{$prefix}btn-active-bg);
+    // Remove CSS gradients if they're enabled
+    background-image: if($enable-gradients, none, null);
+    border-color: var(--#{$prefix}btn-active-border-color);
+    @include box-shadow(var(--#{$prefix}btn-active-shadow));
 
-  background: $color;
-  &::before {
-    content: "\f099";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
+    &:focus-visible {
+      // Avoid using mixin so we can pass custom focus shadow properly
+      @if $enable-shadows {
+        box-shadow: var(--#{$prefix}btn-active-shadow), var(--#{$prefix}btn-focus-box-shadow);
+      } @else {
+        box-shadow: var(--#{$prefix}btn-focus-box-shadow);
+      }
     }
   }
-}
 
-.btn-linkedin {
-  $color: $linkedin;
-
-  background: $color;
-  &::before {
-    content: "\f0e1";
-    background: darken($color, 5%);
-
+  .btn-check:checked:focus-visible + & {
+    // Avoid using mixin so we can pass custom focus shadow properly
+    @if $enable-shadows {
+      box-shadow: var(--#{$prefix}btn-active-shadow), var(--#{$prefix}btn-focus-box-shadow);
+    } @else {
+      box-shadow: var(--#{$prefix}btn-focus-box-shadow);
+    }
   }
 
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
+  &:disabled,
+  &.disabled,
+  fieldset:disabled & {
+    color: var(--#{$prefix}btn-disabled-color);
+    pointer-events: none;
+    background-color: var(--#{$prefix}btn-disabled-bg);
+    background-image: if($enable-gradients, none, null);
+    border-color: var(--#{$prefix}btn-disabled-border-color);
+    opacity: var(--#{$prefix}btn-disabled-opacity);
+    @include box-shadow(none);
   }
 }
 
-.btn-flickr {
-  $color: $flickr;
 
-  background: $color;
-  &::before {
-    content: "\f16e";
-    background: darken($color, 5%);
+//
+// Alternate buttons
+//
 
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-tumblr {
-  $color: $tumblr;
-
-  background: $color;
-  &::before {
-    content: "\f173";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
+// scss-docs-start btn-variant-loops
+@each $color, $value in $theme-colors {
+  .btn-#{$color} {
+    @if $color == "light" {
+      @include button-variant(
+        $value,
+        $value,
+        $hover-background: shade-color($value, $btn-hover-bg-shade-amount),
+        $hover-border: shade-color($value, $btn-hover-border-shade-amount),
+        $active-background: shade-color($value, $btn-active-bg-shade-amount),
+        $active-border: shade-color($value, $btn-active-border-shade-amount)
+      );
+    } @else if $color == "dark" {
+      @include button-variant(
+        $value,
+        $value,
+        $hover-background: tint-color($value, $btn-hover-bg-tint-amount),
+        $hover-border: tint-color($value, $btn-hover-border-tint-amount),
+        $active-background: tint-color($value, $btn-active-bg-tint-amount),
+        $active-border: tint-color($value, $btn-active-border-tint-amount)
+      );
+    } @else {
+      @include button-variant($value, $value);
     }
   }
 }
 
-.btn-xing {
-  $color: $xing;
-
-  background: $color;
-  &::before {
-    content: "\f168";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
+@each $color, $value in $theme-colors {
+  .btn-outline-#{$color} {
+    @include button-outline-variant($value);
   }
 }
+// scss-docs-end btn-variant-loops
 
-.btn-github {
-  $color: $github;
 
-  background: $color;
-  &::before {
-    content: "\f09b";
-    background: darken($color, 5%);
+//
+// Link buttons
+//
 
+// Make a button look and behave like a link
+.btn-link {
+  --#{$prefix}btn-font-weight: #{$font-weight-normal};
+  --#{$prefix}btn-color: #{$btn-link-color};
+  --#{$prefix}btn-bg: transparent;
+  --#{$prefix}btn-border-color: transparent;
+  --#{$prefix}btn-hover-color: #{$btn-link-hover-color};
+  --#{$prefix}btn-hover-border-color: transparent;
+  --#{$prefix}btn-active-color: #{$btn-link-hover-color};
+  --#{$prefix}btn-active-border-color: transparent;
+  --#{$prefix}btn-disabled-color: #{$btn-link-disabled-color};
+  --#{$prefix}btn-disabled-border-color: transparent;
+  --#{$prefix}btn-box-shadow: 0 0 0 #000; // Can't use `none` as keyword negates all values when used with multiple shadows
+  --#{$prefix}btn-focus-shadow-rgb: #{$btn-link-focus-shadow-rgb};
+
+  text-decoration: $link-decoration;
+  @if $enable-gradients {
+    background-image: none;
+  }
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: $link-hover-decoration;
+  }
+
+  &:focus-visible {
+    color: var(--#{$prefix}btn-color);
   }
 
   &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
+    color: var(--#{$prefix}btn-hover-color);
   }
+
+  // No need for an active state here
 }
 
-.btn-html5 {
-  $color: $html5;
 
-  background: $color;
-  &::before {
-    content: "\f13b";
-    background: darken($color, 5%);
+//
+// Button Sizes
+//
 
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
+.btn-lg {
+  @include button-size($btn-padding-y-lg, $btn-padding-x-lg, $btn-font-size-lg, $btn-border-radius-lg);
 }
 
-.btn-openid {
-  $color: $openid;
-
-  background: $color;
-  &::before {
-    content: "\f19b";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-stack-overflow {
-  $color: $stack-overflow;
-
-  background: $color;
-  &::before {
-    content: "\f16c";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-css3 {
-  $color: $css3;
-
-  background: $color;
-  &::before {
-    content: "\f13c";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-youtube {
-  $color: $youtube;
-
-  background: $color;
-  &::before {
-    content: "\f167";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-dribbble {
-  $color: $dribbble;
-
-  background: $color;
-  &::before {
-    content: "\f17d";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-google-plus {
-  $color: $google-plus;
-
-  background: $color;
-  &::before {
-    content: "\f0d5";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-instagram {
-  $color: $instagram;
-
-  background: $color;
-  &::before {
-    content: "\f16d";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-pinterest {
-  $color: $pinterest;
-
-  background: $color;
-  &::before {
-    content: "\f0d2";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-vk {
-  $color: $vk;
-
-  background: $color;
-  &::before {
-    content: "\f189";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-yahoo {
-  $color: $yahoo;
-
-  background: $color;
-  &::before {
-    content: "\f19e";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-behance {
-  $color: $behance;
-
-  background: $color;
-  &::before {
-    content: "\f1b4";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-dropbox {
-  $color: $dropbox;
-
-  background: $color;
-  &::before {
-    content: "\f16b";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-reddit {
-  $color: $reddit;
-
-  background: $color;
-  &::before {
-    content: "\f1a1";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-spotify {
-  $color: $spotify;
-
-  background: $color;
-  &::before {
-    content: "\f1bc";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-vine {
-  $color: $vine;
-
-  background: $color;
-  &::before {
-    content: "\f1ca";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-foursquare {
-  $color: $foursquare;
-
-  background: $color;
-  &::before {
-    content: "\f180";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
-}
-
-.btn-vimeo {
-  $color: $vimeo;
-
-  background: $color;
-  &::before {
-    content: "\f194";
-    background: darken($color, 5%);
-
-  }
-
-  &:hover {
-    background: darken($color, 5%);
-
-    &::before {
-      background: darken($color, 10%);
-    }
-  }
+.btn-sm {
+  @include button-size($btn-padding-y-sm, $btn-padding-x-sm, $btn-font-size-sm, $btn-border-radius-sm);
 }

@@ -1,16 +1,39 @@
-.row.row-equal {
-  padding-right: ($grid-gutter-width / 4);
-  padding-left: ($grid-gutter-width / 4);
-  margin-right: ($grid-gutter-width / -2);
-  margin-left: ($grid-gutter-width / -2);
+// Row
+//
+// Rows contain your columns.
 
-  [class*='col-'] {
-    padding-right: ($grid-gutter-width / 4);
-    padding-left: ($grid-gutter-width / 4);
+:root {
+  @each $name, $value in $grid-breakpoints {
+    --#{$prefix}breakpoint-#{$name}: #{$value};
   }
 }
 
-.main .container-fluid {
-  padding: 0 30px;
-  height: 100%;
+@if $enable-grid-classes {
+  .row {
+    @include make-row();
+
+    > * {
+      @include make-col-ready();
+    }
+  }
+}
+
+@if $enable-cssgrid {
+  .grid {
+    display: grid;
+    grid-template-rows: repeat(var(--#{$prefix}rows, 1), 1fr);
+    grid-template-columns: repeat(var(--#{$prefix}columns, #{$grid-columns}), 1fr);
+    gap: var(--#{$prefix}gap, #{$grid-gutter-width});
+
+    @include make-cssgrid();
+  }
+}
+
+
+// Columns
+//
+// Common styles for small and large grid columns
+
+@if $enable-grid-classes {
+  @include make-grid-columns();
 }

@@ -1,0 +1,486 @@
+
+> signalk-server@2.12.0 build:all
+> npm run build:workspaces && npm run build && npm run build-declaration && npm run build:docs
+
+
+> signalk-server@2.12.0 build:workspaces
+> npm run build --workspaces --if-present
+
+
+> @signalk/server-admin-ui@2.11.0 build
+> webpack --mode=production
+
+Webpack Bundle Analyzer saved stats file to /Users/andrewgerngross/dev/signalk-server-nextgen/packages/server-admin-ui/public/stats.json
+assets by status 4.14 MiB [cached] 25 assets
+assets by path . 1.74 MiB
+  assets by path *.js 1.7 MiB
+    assets by status 1.56 MiB [big]
+      asset 780.js 1.1 MiB [compared for emit] [minimized] [big] (id hint: vendors) 2 related assets
+      asset 119.js 476 KiB [emitted] [minimized] [big] 1 related asset
+    asset 144.js 130 KiB [compared for emit] [minimized] (id hint: vendors) 2 related assets
+    asset main.js 7.05 KiB [compared for emit] [minimized] (name: main) 1 related asset
+    asset 41.js 6.5 KiB [compared for emit] [minimized] 2 related assets
+    asset 188.js 296 bytes [compared for emit] [minimized] 1 related asset
+  assets by path img/ 32.3 KiB
+    asset img/favicon.ico 14.7 KiB [compared for emit] [from: public_src/img/favicon.ico] [copied]
+    asset img/signal-k-logo-image-text.svg 10.6 KiB [compared for emit] [from: public_src/img/signal-k-logo-image-text.svg] [copied]
+    asset img/logo-symbol.png 7.02 KiB [compared for emit] [from: public_src/img/logo-symbol.png] [copied]
+  asset index.html 512 bytes [compared for emit]
+orphan modules 1.74 MiB [orphan] 947 modules
+runtime modules 18.5 KiB 15 modules
+built modules 4.8 MiB (javascript) 84 bytes (share-init) 84 bytes (consume-shared) [built]
+  modules by path ../../node_modules/ 4.22 MiB 540 modules
+  modules by path ./src/ 289 KiB 5 modules
+  provide-module modules 84 bytes
+    provide shared module (default) react-dom@18.3.1 = ../../node_modules/reac...(truncated) 42 bytes [built] [code generated]
+    provide shared module (default) react@18.3.1 = ../../node_modules/react/index.js 42 bytes [built] [code generated]
+  consume-shared-module modules 84 bytes
+    consume shared module (default) react@=18.3.1 (singleton) (fallback: ../../node_...(truncated) 42 bytes [built] [code generated]
+    consume shared module (default) react-dom@=18.3.1 (strict) (fallback: ../../node...(truncated) 42 bytes [built] [code generated]
+  modules by path ../../../signalk-server/packages/server-admin-ui/scss/ 308 KiB
+    ../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss 307 KiB [built] [code generated] [21 warnings]
+    ../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/core/_dropdown-m...(truncated) 737 bytes [built] [code generated]
+
+WARNING in ./src/views/security/EnableSecurity.js 55:40-55
+export 'InputGroupAddon' (imported as 'InputGroupAddon') was not found in 'reactstrap' (possible exports: Accordion, AccordionBody, AccordionContext, AccordionHeader, AccordionItem, Alert, Badge, Breadcrumb, BreadcrumbItem, Button, ButtonDropdown, ButtonGroup, ButtonToggle, ButtonToolbar, Card, CardBody, CardColumns, CardDeck, CardFooter, CardGroup, CardHeader, CardImg, CardImgOverlay, CardLink, CardSubtitle, CardText, CardTitle, Carousel, CarouselCaption, CarouselControl, CarouselIndicators, CarouselItem, CloseButton, Col, Collapse, Container, Dropdown, DropdownContext, DropdownItem, DropdownMenu, DropdownToggle, Fade, Form, FormFeedback, FormGroup, FormText, Input, InputGroup, InputGroupText, Label, List, ListGroup, ListGroupItem, ListGroupItemHeading, ListGroupItemText, ListInlineItem, Media, Modal, ModalBody, ModalFooter, ModalHeader, Nav, NavItem, NavLink, Navbar, NavbarBrand, NavbarText, NavbarToggler, Offcanvas, OffcanvasBody, OffcanvasHeader, Pagination, PaginationItem, PaginationLink, Placeholder, PlaceholderButton, Polyfill, Popover, PopoverBody, PopoverHeader, PopperContent, PopperTargetHelper, Progress, Row, Spinner, TabContent, TabPane, Table, Toast, ToastBody, ToastHeader, Tooltip, UncontrolledAccordion, UncontrolledAlert, UncontrolledButtonDropdown, UncontrolledCarousel, UncontrolledCollapse, UncontrolledDropdown, UncontrolledPopover, UncontrolledTooltip, Util)
+ @ ./src/views/security/Login.js 7:0-46 46:46-60
+ @ ./src/containers/Full/Full.js 17:0-47 122:48-53 151:48-53
+ @ ./src/bootstrap.js 20:0-42 285:44-48
+ @ ./src/index.js
+
+WARNING in ./src/views/security/EnableSecurity.js 67:40-55
+export 'InputGroupAddon' (imported as 'InputGroupAddon') was not found in 'reactstrap' (possible exports: Accordion, AccordionBody, AccordionContext, AccordionHeader, AccordionItem, Alert, Badge, Breadcrumb, BreadcrumbItem, Button, ButtonDropdown, ButtonGroup, ButtonToggle, ButtonToolbar, Card, CardBody, CardColumns, CardDeck, CardFooter, CardGroup, CardHeader, CardImg, CardImgOverlay, CardLink, CardSubtitle, CardText, CardTitle, Carousel, CarouselCaption, CarouselControl, CarouselIndicators, CarouselItem, CloseButton, Col, Collapse, Container, Dropdown, DropdownContext, DropdownItem, DropdownMenu, DropdownToggle, Fade, Form, FormFeedback, FormGroup, FormText, Input, InputGroup, InputGroupText, Label, List, ListGroup, ListGroupItem, ListGroupItemHeading, ListGroupItemText, ListInlineItem, Media, Modal, ModalBody, ModalFooter, ModalHeader, Nav, NavItem, NavLink, Navbar, NavbarBrand, NavbarText, NavbarToggler, Offcanvas, OffcanvasBody, OffcanvasHeader, Pagination, PaginationItem, PaginationLink, Placeholder, PlaceholderButton, Polyfill, Popover, PopoverBody, PopoverHeader, PopperContent, PopperTargetHelper, Progress, Row, Spinner, TabContent, TabPane, Table, Toast, ToastBody, ToastHeader, Tooltip, UncontrolledAccordion, UncontrolledAlert, UncontrolledButtonDropdown, UncontrolledCarousel, UncontrolledCollapse, UncontrolledDropdown, UncontrolledPopover, UncontrolledTooltip, Util)
+ @ ./src/views/security/Login.js 7:0-46 46:46-60
+ @ ./src/containers/Full/Full.js 17:0-47 122:48-53 151:48-53
+ @ ./src/bootstrap.js 20:0-42 285:44-48
+ @ ./src/index.js
+
+WARNING in ./src/views/security/Login.js 58:42-57
+export 'InputGroupAddon' (imported as 'InputGroupAddon') was not found in 'reactstrap' (possible exports: Accordion, AccordionBody, AccordionContext, AccordionHeader, AccordionItem, Alert, Badge, Breadcrumb, BreadcrumbItem, Button, ButtonDropdown, ButtonGroup, ButtonToggle, ButtonToolbar, Card, CardBody, CardColumns, CardDeck, CardFooter, CardGroup, CardHeader, CardImg, CardImgOverlay, CardLink, CardSubtitle, CardText, CardTitle, Carousel, CarouselCaption, CarouselControl, CarouselIndicators, CarouselItem, CloseButton, Col, Collapse, Container, Dropdown, DropdownContext, DropdownItem, DropdownMenu, DropdownToggle, Fade, Form, FormFeedback, FormGroup, FormText, Input, InputGroup, InputGroupText, Label, List, ListGroup, ListGroupItem, ListGroupItemHeading, ListGroupItemText, ListInlineItem, Media, Modal, ModalBody, ModalFooter, ModalHeader, Nav, NavItem, NavLink, Navbar, NavbarBrand, NavbarText, NavbarToggler, Offcanvas, OffcanvasBody, OffcanvasHeader, Pagination, PaginationItem, PaginationLink, Placeholder, PlaceholderButton, Polyfill, Popover, PopoverBody, PopoverHeader, PopperContent, PopperTargetHelper, Progress, Row, Spinner, TabContent, TabPane, Table, Toast, ToastBody, ToastHeader, Tooltip, UncontrolledAccordion, UncontrolledAlert, UncontrolledButtonDropdown, UncontrolledCarousel, UncontrolledCollapse, UncontrolledDropdown, UncontrolledPopover, UncontrolledTooltip, Util)
+ @ ./src/containers/Full/Full.js 17:0-47 122:48-53 151:48-53
+ @ ./src/bootstrap.js 20:0-42 285:44-48
+ @ ./src/index.js
+
+WARNING in ./src/views/security/Login.js 70:42-57
+export 'InputGroupAddon' (imported as 'InputGroupAddon') was not found in 'reactstrap' (possible exports: Accordion, AccordionBody, AccordionContext, AccordionHeader, AccordionItem, Alert, Badge, Breadcrumb, BreadcrumbItem, Button, ButtonDropdown, ButtonGroup, ButtonToggle, ButtonToolbar, Card, CardBody, CardColumns, CardDeck, CardFooter, CardGroup, CardHeader, CardImg, CardImgOverlay, CardLink, CardSubtitle, CardText, CardTitle, Carousel, CarouselCaption, CarouselControl, CarouselIndicators, CarouselItem, CloseButton, Col, Collapse, Container, Dropdown, DropdownContext, DropdownItem, DropdownMenu, DropdownToggle, Fade, Form, FormFeedback, FormGroup, FormText, Input, InputGroup, InputGroupText, Label, List, ListGroup, ListGroupItem, ListGroupItemHeading, ListGroupItemText, ListInlineItem, Media, Modal, ModalBody, ModalFooter, ModalHeader, Nav, NavItem, NavLink, Navbar, NavbarBrand, NavbarText, NavbarToggler, Offcanvas, OffcanvasBody, OffcanvasHeader, Pagination, PaginationItem, PaginationLink, Placeholder, PlaceholderButton, Polyfill, Popover, PopoverBody, PopoverHeader, PopperContent, PopperTargetHelper, Progress, Row, Spinner, TabContent, TabPane, Table, Toast, ToastBody, ToastHeader, Tooltip, UncontrolledAccordion, UncontrolledAlert, UncontrolledButtonDropdown, UncontrolledCarousel, UncontrolledCollapse, UncontrolledDropdown, UncontrolledPopover, UncontrolledTooltip, Util)
+ @ ./src/containers/Full/Full.js 17:0-47 122:48-53 151:48-53
+ @ ./src/bootstrap.js 20:0-42 285:44-48
+ @ ./src/index.js
+
+WARNING in ./src/views/security/Register.js 86:40-55
+export 'InputGroupAddon' (imported as 'InputGroupAddon') was not found in 'reactstrap' (possible exports: Accordion, AccordionBody, AccordionContext, AccordionHeader, AccordionItem, Alert, Badge, Breadcrumb, BreadcrumbItem, Button, ButtonDropdown, ButtonGroup, ButtonToggle, ButtonToolbar, Card, CardBody, CardColumns, CardDeck, CardFooter, CardGroup, CardHeader, CardImg, CardImgOverlay, CardLink, CardSubtitle, CardText, CardTitle, Carousel, CarouselCaption, CarouselControl, CarouselIndicators, CarouselItem, CloseButton, Col, Collapse, Container, Dropdown, DropdownContext, DropdownItem, DropdownMenu, DropdownToggle, Fade, Form, FormFeedback, FormGroup, FormText, Input, InputGroup, InputGroupText, Label, List, ListGroup, ListGroupItem, ListGroupItemHeading, ListGroupItemText, ListInlineItem, Media, Modal, ModalBody, ModalFooter, ModalHeader, Nav, NavItem, NavLink, Navbar, NavbarBrand, NavbarText, NavbarToggler, Offcanvas, OffcanvasBody, OffcanvasHeader, Pagination, PaginationItem, PaginationLink, Placeholder, PlaceholderButton, Polyfill, Popover, PopoverBody, PopoverHeader, PopperContent, PopperTargetHelper, Progress, Row, Spinner, TabContent, TabPane, Table, Toast, ToastBody, ToastHeader, Tooltip, UncontrolledAccordion, UncontrolledAlert, UncontrolledButtonDropdown, UncontrolledCarousel, UncontrolledCollapse, UncontrolledDropdown, UncontrolledPopover, UncontrolledTooltip, Util)
+ @ ./src/containers/Full/Full.js 21:0-53 125:48-56
+ @ ./src/bootstrap.js 20:0-42 285:44-48
+ @ ./src/index.js
+
+WARNING in ./src/views/security/Register.js 95:40-55
+export 'InputGroupAddon' (imported as 'InputGroupAddon') was not found in 'reactstrap' (possible exports: Accordion, AccordionBody, AccordionContext, AccordionHeader, AccordionItem, Alert, Badge, Breadcrumb, BreadcrumbItem, Button, ButtonDropdown, ButtonGroup, ButtonToggle, ButtonToolbar, Card, CardBody, CardColumns, CardDeck, CardFooter, CardGroup, CardHeader, CardImg, CardImgOverlay, CardLink, CardSubtitle, CardText, CardTitle, Carousel, CarouselCaption, CarouselControl, CarouselIndicators, CarouselItem, CloseButton, Col, Collapse, Container, Dropdown, DropdownContext, DropdownItem, DropdownMenu, DropdownToggle, Fade, Form, FormFeedback, FormGroup, FormText, Input, InputGroup, InputGroupText, Label, List, ListGroup, ListGroupItem, ListGroupItemHeading, ListGroupItemText, ListInlineItem, Media, Modal, ModalBody, ModalFooter, ModalHeader, Nav, NavItem, NavLink, Navbar, NavbarBrand, NavbarText, NavbarToggler, Offcanvas, OffcanvasBody, OffcanvasHeader, Pagination, PaginationItem, PaginationLink, Placeholder, PlaceholderButton, Polyfill, Popover, PopoverBody, PopoverHeader, PopperContent, PopperTargetHelper, Progress, Row, Spinner, TabContent, TabPane, Table, Toast, ToastBody, ToastHeader, Tooltip, UncontrolledAccordion, UncontrolledAlert, UncontrolledButtonDropdown, UncontrolledCarousel, UncontrolledCollapse, UncontrolledDropdown, UncontrolledPopover, UncontrolledTooltip, Util)
+ @ ./src/containers/Full/Full.js 21:0-53 125:48-56
+ @ ./src/bootstrap.js 20:0-42 285:44-48
+ @ ./src/index.js
+
+WARNING in ./src/views/security/Register.js 106:40-55
+export 'InputGroupAddon' (imported as 'InputGroupAddon') was not found in 'reactstrap' (possible exports: Accordion, AccordionBody, AccordionContext, AccordionHeader, AccordionItem, Alert, Badge, Breadcrumb, BreadcrumbItem, Button, ButtonDropdown, ButtonGroup, ButtonToggle, ButtonToolbar, Card, CardBody, CardColumns, CardDeck, CardFooter, CardGroup, CardHeader, CardImg, CardImgOverlay, CardLink, CardSubtitle, CardText, CardTitle, Carousel, CarouselCaption, CarouselControl, CarouselIndicators, CarouselItem, CloseButton, Col, Collapse, Container, Dropdown, DropdownContext, DropdownItem, DropdownMenu, DropdownToggle, Fade, Form, FormFeedback, FormGroup, FormText, Input, InputGroup, InputGroupText, Label, List, ListGroup, ListGroupItem, ListGroupItemHeading, ListGroupItemText, ListInlineItem, Media, Modal, ModalBody, ModalFooter, ModalHeader, Nav, NavItem, NavLink, Navbar, NavbarBrand, NavbarText, NavbarToggler, Offcanvas, OffcanvasBody, OffcanvasHeader, Pagination, PaginationItem, PaginationLink, Placeholder, PlaceholderButton, Polyfill, Popover, PopoverBody, PopoverHeader, PopperContent, PopperTargetHelper, Progress, Row, Spinner, TabContent, TabPane, Table, Toast, ToastBody, ToastHeader, Tooltip, UncontrolledAccordion, UncontrolledAlert, UncontrolledButtonDropdown, UncontrolledCarousel, UncontrolledCollapse, UncontrolledDropdown, UncontrolledPopover, UncontrolledTooltip, Util)
+ @ ./src/containers/Full/Full.js 21:0-53 125:48-56
+ @ ./src/bootstrap.js 20:0-42 285:44-48
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 9, column 8 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/style.scss:9:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+9 | @import 'core/functions';
+
+
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 10:9  root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 10, column 29 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/core/_functions.scss:10:29:
+Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use math.unit instead.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+10 |     @if $prev-num == null or unit($num) == "%" or unit($prev-num) == "%" {
+
+
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 11:30  -assert-ascending()
+../../../signalk-server/packages/server-admin-ui/scss/core/_variables.scss 494:1  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 13:9             root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 10, column 50 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/core/_functions.scss:10:50:
+Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use math.unit instead.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+10 |     @if $prev-num == null or unit($num) == "%" or unit($prev-num) == "%" {
+
+
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 11:51  -assert-ascending()
+../../../signalk-server/packages/server-admin-ui/scss/core/_variables.scss 494:1  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 13:9             root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 12, column 8 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/style.scss:12:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+12 | @import 'core/variables';
+
+
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 13:9  root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 15, column 8 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/style.scss:15:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+15 | @import '~bootstrap/scss/bootstrap';
+
+
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 16:9  root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 21, column 8 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/style.scss:21:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+21 | @import 'custom';
+
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 22:9  root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 36, column 10 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/core/_functions.scss:36:10:
+red() is deprecated. Suggestion:
+
+color.channel($color, "red", $space: rgb)
+
+More info: https://sass-lang.com/d/color-functions
+
+36 |   @return red($value), green($value), blue($value);
+
+
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 37:11   to-rgb()
+../../../signalk-server/packages/server-admin-ui/scss/core/_variables.scss 846:31  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 13:9              root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 36, column 23 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/core/_functions.scss:36:23:
+green() is deprecated. Suggestion:
+
+color.channel($color, "green", $space: rgb)
+
+More info: https://sass-lang.com/d/color-functions
+
+36 |   @return red($value), green($value), blue($value);
+
+
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 37:24   to-rgb()
+../../../signalk-server/packages/server-admin-ui/scss/core/_variables.scss 846:31  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 13:9              root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 37, column 4 of file:///Users/andrewgerngross/dev/signalk-server/node_modules/bootstrap/scss/_type.scss:37:4:
+Sass's behavior for declarations that appear after nested
+rules will be changing to match the behavior specified by CSS in an upcoming
+version. To keep the existing behavior, move the declaration above the nested
+rule. To opt into the new behavior, wrap the declaration in `& {}`.
+
+More info: https://sass-lang.com/d/mixed-decls
+
+37 |     font-family: $display-font-family;
+
+
+../../../signalk-server/node_modules/bootstrap/scss/_type.scss 38:5      @import
+../../../signalk-server/node_modules/bootstrap/scss/bootstrap.scss 17:9  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 16:9    root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 38, column 4 of file:///Users/andrewgerngross/dev/signalk-server/node_modules/bootstrap/scss/_type.scss:38:4:
+Sass's behavior for declarations that appear after nested
+rules will be changing to match the behavior specified by CSS in an upcoming
+version. To keep the existing behavior, move the declaration above the nested
+rule. To opt into the new behavior, wrap the declaration in `& {}`.
+
+More info: https://sass-lang.com/d/mixed-decls
+
+38 |     font-style: $display-font-style;
+
+
+../../../signalk-server/node_modules/bootstrap/scss/_type.scss 39:5      @import
+../../../signalk-server/node_modules/bootstrap/scss/bootstrap.scss 17:9  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 16:9    root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 39, column 4 of file:///Users/andrewgerngross/dev/signalk-server/node_modules/bootstrap/scss/_type.scss:39:4:
+Sass's behavior for declarations that appear after nested
+rules will be changing to match the behavior specified by CSS in an upcoming
+version. To keep the existing behavior, move the declaration above the nested
+rule. To opt into the new behavior, wrap the declaration in `& {}`.
+
+More info: https://sass-lang.com/d/mixed-decls
+
+39 |     font-weight: $display-font-weight;
+
+
+../../../signalk-server/node_modules/bootstrap/scss/_type.scss 40:5      @import
+../../../signalk-server/node_modules/bootstrap/scss/bootstrap.scss 17:9  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 16:9    root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 184, column 9 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/core/_functions.scss:184:9:
+red() is deprecated. Suggestion:
+
+color.channel($color, "red", $space: rgb)
+
+More info: https://sass-lang.com/d/color-functions
+
+184 |     "r": red($color),
+
+
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 185:10  luminance()
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 174:8   contrast-ratio()
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 159:22  color-contrast()
+../../../signalk-server/packages/server-admin-ui/scss/core/_variables.scss 846:42  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 13:9              root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 185, column 9 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/core/_functions.scss:185:9:
+green() is deprecated. Suggestion:
+
+color.channel($color, "green", $space: rgb)
+
+More info: https://sass-lang.com/d/color-functions
+
+185 |     "g": green($color),
+
+
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 186:10  luminance()
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 174:8   contrast-ratio()
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 159:22  color-contrast()
+../../../signalk-server/packages/server-admin-ui/scss/core/_variables.scss 846:42  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 13:9              root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 186, column 9 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/core/_functions.scss:186:9:
+blue() is deprecated. Suggestion:
+
+color.channel($color, "blue", $space: rgb)
+
+More info: https://sass-lang.com/d/color-functions
+
+186 |     "b": blue($color)
+
+
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 187:10  luminance()
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 174:8   contrast-ratio()
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 159:22  color-contrast()
+../../../signalk-server/packages/server-admin-ui/scss/core/_variables.scss 846:42  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 13:9              root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 206, column 10 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/core/_functions.scss:206:10:
+Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use color.mix instead.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+206 |   @return mix(white, $color, $weight);
+
+
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 207:11  tint-color()
+../../../signalk-server/packages/server-admin-ui/scss/core/_variables.scss 79:12   @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 13:9              root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 211, column 10 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/core/_functions.scss:211:10:
+Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use color.mix instead.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+211 |   @return mix(black, $color, $weight);
+
+
+../../../signalk-server/packages/server-admin-ui/scss/core/_functions.scss 212:11  shade-color()
+../../../signalk-server/packages/server-admin-ui/scss/core/_variables.scss 84:12   @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 13:9              root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 341, column 26 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/core/_variables.scss:341:26:
+Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use color.mix instead.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+341 | $light-bg-subtle:         mix($gray-100, $white) !default;
+
+
+../../../signalk-server/packages/server-admin-ui/scss/core/_variables.scss 342:27  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 13:9              root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 502, column 2 of file:///Users/andrewgerngross/dev/signalk-server/node_modules/bootstrap/scss/_reboot.scss:502:2:
+Sass's behavior for declarations that appear after nested
+rules will be changing to match the behavior specified by CSS in an upcoming
+version. To keep the existing behavior, move the declaration above the nested
+rule. To opt into the new behavior, wrap the declaration in `& {}`.
+
+More info: https://sass-lang.com/d/mixed-decls
+
+502 |   font-weight: $legend-font-weight;
+
+
+../../../signalk-server/node_modules/bootstrap/scss/_reboot.scss 503:3   @import
+../../../signalk-server/node_modules/bootstrap/scss/bootstrap.scss 16:9  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 16:9    root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 503, column 2 of file:///Users/andrewgerngross/dev/signalk-server/node_modules/bootstrap/scss/_reboot.scss:503:2:
+Sass's behavior for declarations that appear after nested
+rules will be changing to match the behavior specified by CSS in an upcoming
+version. To keep the existing behavior, move the declaration above the nested
+rule. To opt into the new behavior, wrap the declaration in `& {}`.
+
+More info: https://sass-lang.com/d/mixed-decls
+
+503 |   line-height: inherit;
+
+
+../../../signalk-server/node_modules/bootstrap/scss/_reboot.scss 504:3   @import
+../../../signalk-server/node_modules/bootstrap/scss/bootstrap.scss 16:9  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 16:9    root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 1750, column 8 of file:///Users/andrewgerngross/dev/signalk-server/packages/server-admin-ui/scss/core/_variables.scss:1750:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+1750 | @import "variables-dark"; // TODO: can be removed safely in v6, only here to avoid breaking changes in v5.3
+
+
+../../../signalk-server/packages/server-admin-ui/scss/core/_variables.scss 1751:9  @import
+../../../signalk-server/packages/server-admin-ui/scss/style.scss 13:9              root stylesheet
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in ../../../signalk-server/packages/server-admin-ui/scss/style.scss (../../node_modules/css-loader/dist/cjs.js!../../node_modules/sass-loader/dist/cjs.js!../../../signalk-server/packages/server-admin-ui/scss/style.scss)
+Module Warning (from ../../node_modules/sass-loader/dist/cjs.js):
+289 repetitive deprecation warnings omitted.
+Run in verbose mode to see all warnings.
+ @ ../../../signalk-server/packages/server-admin-ui/scss/style.scss 2:12-192 9:17-24 13:15-29
+ @ ./src/bootstrap.js 15:0-28
+ @ ./src/index.js
+
+WARNING in asset size limit: The following asset(s) exceed the recommended size limit (244 KiB).
+This can impact web performance.
+Assets: 
+  ./fonts/fontawesome-webfont.c1e38fd9e0e74ba58f7a2b77ef29fdd3.svg (434 KiB)
+  ./fonts/fa-brands-400.2f517e09eb2ca6650ff5bec5a95157ab.svg (730 KiB)
+  ./fonts/fa-solid-900.7a8b4f130182d19a2d7c67d80c090397.svg (897 KiB)
+  119.js (476 KiB)
+  780.js (1.1 MiB)
+
+webpack 5.96.1 compiled with 29 warnings in 42165 ms
+
+> @signalk/server-api@2.5.0 build
+> tsc --declaration
+
+
+> @signalk/resources-provider@1.3.0 build
+> tsc
+
+
+> signalk-server@2.12.0 build
+> tsc --build && npm run build:docs
+
+
+> signalk-server@2.12.0 build:docs
+> USER_INFO=$(id -u):$(id -g) docker run --rm -v ${PWD}/docs:/book peaceiris/mdbook:v0.4.40 build
+
