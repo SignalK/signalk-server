@@ -35,6 +35,10 @@ Once the OS installation has been completed, you are ready to commence.
 
     Follow [instructions for Ubuntu and Debian based distributions like Raspberry Pi OS at NodeSource Distributions](https://github.com/nodesource/distributions#installation-instructions).
 
+   NOTE: IMPORTANT - installing a higher version of nodejs (eg V20) is known to cause issues with a number of plugins and CAN adaptors.
+   Note: Some applications that are installed after signalk-server  are known to "auto" install updated/most recent version of nodejs... 
+    which as above breaks things .... take care to avoid this!
+
 1. Ensure that we're using the latest version of npm.
     ```
     sudo npm install -g npm@latest
