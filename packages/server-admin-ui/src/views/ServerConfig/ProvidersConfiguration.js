@@ -58,7 +58,7 @@ class ProvidersConfiguration extends Component {
     this.state = {
       activeTab: '1',
       providers: [],
-      selectedProviderId: this.props.match.params.providerId,
+      selectedProviderId: this.props.match?.params.providerId,
     }
 
     this.fetchProviders = fetchProviders.bind(this)

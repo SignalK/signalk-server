@@ -55,13 +55,14 @@ export default class PluginConfigurationList extends Component {
   }
 
   toggleForm(clickedIndex, id) {
-    const openedPluginId = this.props.match.params.pluginid === id ? '-' : id
-    if (this.props.match.params.pluginid === id) {
+    const openedPluginId = this.props.match?.params.pluginid === id ? '-' : id
+    if (this.props.match?.params.pluginid === id) {
       localStorage.removeItem(openPluginStorageKey)
     } else {
       localStorage.setItem(openPluginStorageKey, openedPluginId)
     }
-    this.props.history.replace(`/serverConfiguration/plugins/${openedPluginId}`)
+    if (this.props?.history)
+      this.props.history.replace(`/serverConfiguration/plugins/${openedPluginId}`)
   }
 
   componentDidMount() {
@@ -121,7 +122,7 @@ export default class PluginConfigurationList extends Component {
           </Form>
 
           {(this.state.searchResults || this.state.plugins).map((plugin, i) => {
-            const isOpen = this.props.match.params.pluginid === plugin.id
+            const isOpen = this.props.match?.params.pluginid === plugin.id
             return (
               <PluginCard
                 plugin={plugin}
