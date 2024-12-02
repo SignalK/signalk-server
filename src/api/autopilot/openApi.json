@@ -74,6 +74,23 @@
             "example": ["compass", "gps"]
           }
         }
+      },
+      "angleInput": {
+        "type": "object",
+        "required": ["value"],
+        "properties": {
+          "value": {
+            "type": "number",
+            "description": "Value of (degrees / radians).",
+            "example": 2.12
+          },
+          "units": {
+            "type": "string",
+            "enum": ["deg", "rad"],
+            "description": "Units of supplied value.",
+            "example": "deg"
+          }
+        }
       }
     },
     "responses": {
@@ -268,9 +285,9 @@
                       "example": "compass"
                     },
                     "target": {
-                      "description": "Current target value (degrees)",
+                      "description": "Current target value (radians)",
                       "type": "number",
-                      "example": 75.2
+                      "example": 2.8762
                     },
                     "options": {
                       "$ref": "#/components/schemas/autopilotOptions"
@@ -492,8 +509,8 @@
       ],
       "get": {
         "tags": ["autopilot"],
-        "summary": "Retrieve the current target value (degrees).",
-        "description": "Value in degrees of the current target value.",
+        "summary": "Retrieve the current target value.",
+        "description": "The current target value in radians.",
         "responses": {
           "default": {
             "description": "Autopilot value response",
@@ -505,8 +522,8 @@
                   "properties": {
                     "value": {
                       "type": "number",
-                      "description": "Value in degrees",
-                      "example": 129
+                      "description": "Value in radians",
+                      "example": 2.456
                     }
                   }
                 }
@@ -520,24 +537,15 @@
       },
       "put": {
         "tags": ["autopilot"],
-        "summary": "Set autopilot `target` value (degrees).",
-        "description": "Value supplied must be in the valid range between -180 & 360.",
+        "summary": "Set autopilot `target` value.",
+        "description": "Value supplied must fall within the valid range (-180 & 360 degrees / PI & 2 * PI radians).",
         "requestBody": {
-          "description": "Value in degrees within the bounds of the current autopilot mode. (i.e. compass: 0 to 360, wind angle: -180 to 180)",
+          "description": "Value within the valid range.",
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "value": {
-                    "type": "number",
-                    "description": "Value in degrees",
-                    "min": -180,
-                    "max": 360,
-                    "example": 129
-                  }
-                }
+                "$ref": "#/components/schemas/angleInput"
               }
             }
           }
@@ -560,22 +568,15 @@
       ],
       "put": {
         "tags": ["autopilot"],
-        "summary": "Adjust autopilot target value by +/- degrees.",
-        "description": "Value supplied will be added to the current target value. The result must be in the valid range between -PI & 2*PI.",
+        "summary": "Adjust autopilot target value by +/- degrees / radians.",
+        "description": "Value supplied will be added to the current target. The result must fall within the valid range (-180 & 360 degrees / PI & 2 * PI radians).",
         "requestBody": {
-          "description": "A value in degrees to add to the current `target` value.",
+          "description": "Value to add to the current `target`.",
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "value": {
-                    "type": "number",
-                    "description": "Value in degrees (-ive = port).",
-                    "example": -2
-                  }
-                }
+                "$ref": "#/components/schemas/angleInput"
               }
             }
           }
@@ -705,21 +706,14 @@
       "put": {
         "tags": ["autopilot"],
         "summary": "Steer port / starboard to dodge obstacles.",
-        "description": "Override the current course to change direction the supplied number of degrees.",
+        "description": "Override the current course to change direction the supplied number of degrees / radians.",
         "requestBody": {
-          "description": "+/- value in degrees to turn (-ive = port).",
+          "description": "+/- value to change direction (-ive = port).",
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "value": {
-                    "type": "number",
-                    "description": "Value in degrees.",
-                    "example": -2
-                  }
-                }
+                "$ref": "#/components/schemas/angleInput"
               }
             }
           }

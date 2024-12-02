@@ -272,7 +272,7 @@ setMode('gps', 'mypilot1');
 ---
 **`setTarget(value, deviceId)`**: This method sets target for the autopilot device with the supplied identifier to the supplied value.
 
-- `value:` target value in degrees.
+- `value:` target value in radians.
 - `deviceId:` identifier of the autopilot device to query.
 
 returns: `Promise<{void}>`
@@ -291,7 +291,7 @@ setTarget(129, 'mypilot1');
 ---
 **`adjustTarget(value, deviceId)`**: This method adjusts target for the autopilot device with the supplied identifier by the supplied value.
 
-- `value:` value in degrees to add to current target value.
+- `value:` value in radians to add to current target value.
 - `deviceId:` identifier of the autopilot device to query.
 
 returns: `Promise<{void}>`
@@ -382,9 +382,9 @@ gybe('starboard', 'mypilot1');
 ```
 
 ---
-**`dodge(value, deviceId)`**: This method instructs the autopilot device with the supplied identifier to enter / exit dodge mode and alter the current course by the supplied value (degrees) direction.
+**`dodge(value, deviceId)`**: This method instructs the autopilot device with the supplied identifier to enter / exit dodge mode and alter the current course by the supplied value (radians) direction.
 
-- `value`: +/- value indicating the number of degrees 'port (-ive)' or 'starboard' to alter direction. _Setting the value to `null` indicates exit of dodge mode._
+- `value`: +/- value in radians 'port (-ive)' or 'starboard' to change direction. _Setting the value to `null` indicates exit of dodge mode._
 - `deviceId:` identifier of the autopilot device to query.
 
 returns: `Promise<{void}>`

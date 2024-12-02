@@ -254,23 +254,31 @@ _Response:_
 
 ### Setting the Target value
 
-Autopilot target value can be set by submitting an HTTP `PUT` request to the `/signalk/v2/api/vessels/self/autopilots/{id}/target` endpoint containing the desired value in degrees.
+Autopilot target value can be set by submitting an HTTP `PUT` request to the `/signalk/v2/api/vessels/self/autopilots/{id}/target` endpoint containing the desired value.
 
 _Note: The value supplied should be a number within the valid range for the selected `mode`._
 
 ```typescript
-HTTP PUT "signalk/v2/api/vessels/self/autopilots/{id}/target" {"value": 129}
+// Set target to 129 degrees
+HTTP PUT "signalk/v2/api/vessels/self/autopilots/{id}/target" {"value": 129, "units": "deg"}
+
+// Set target to 0.349066 radians (20 degrees)
+HTTP PUT "signalk/v2/api/vessels/self/autopilots/{id}/target" {"value": 0.349066}
 ```
 
-The target value can be adjusted a +/- value by submitting an HTTP `PUT` request to the `/signalk/v2/api/vessels/self/autopilots/{id}/target/adjust` endpoint with the value to add to the current `target` value in degrees.
+The target value can be adjusted a +/- value by submitting an HTTP `PUT` request to the `/signalk/v2/api/vessels/self/autopilots/{id}/target/adjust` endpoint with the value to add to the current `target` value.
 
 ```typescript
-HTTP PUT "signalk/v2/api/vessels/self/autopilots/{id}/target/adjust" {"value": -2}
+// Adjust target 2 degrees port
+HTTP PUT "signalk/v2/api/vessels/self/autopilots/{id}/target/adjust" {"value": -2, , "units": "deg"}
+
+// Adjust target 0.0349066 radians (2 degrees) starboard
+HTTP PUT "signalk/v2/api/vessels/self/autopilots/{id}/target/adjust" {"value": 0.0349066}
 ```
 
 ### Getting the current Target value
 
-The current autopilot target value _(in degrees)_ can be retrieved by submitting an HTTP `GET` request to the `target` endpoint.
+The current autopilot target value _(in radians)_ can be retrieved by submitting an HTTP `GET` request to the `target` endpoint.
 
 ```typescript
 HTTP GET "/signalk/v2/api/vessels/self/autopilots/{id}/target"
@@ -280,7 +288,7 @@ _Response:_
 
 ```JSON
 {
-  "value":"3.14",
+  "value": 2.2345,
 }
 ```
 
@@ -349,12 +357,12 @@ POST /signalk/v2/api/vessels/self/autopilots/{id}/dodge
 
 **To enter dodge mode and change course by 5 degrees starboard**
 ```javascript
-PUT /signalk/v2/api/vessels/self/autopilots/{id}/dodge {"value": 5}
+PUT /signalk/v2/api/vessels/self/autopilots/{id}/dodge {"value": 5, "units": "deg"}
 ```
 
 **To enter dodge mode and change course by 5 degrees port**
 ```javascript
-PUT /signalk/v2/api/vessels/self/autopilots/{id}/dodge {"value": -5}
+PUT /signalk/v2/api/vessels/self/autopilots/{id}/dodge {"value": -5, "units": "deg"}
 ```
 
 **To cancel dodge mode**

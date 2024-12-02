@@ -46,7 +46,7 @@ export class AutopilotApi {
   private deviceToProvider: Map<string, string> = new Map()
 
   private settings: AutopilotApiSettings = {
-    maxTurn: 20
+    maxTurn: 20 * (Math.PI / 180)
   }
 
   constructor(private server: AutopilotApplication) {}
@@ -438,11 +438,19 @@ export class AutopilotApi {
           res.status(Responses.invalid.statusCode).json(Responses.invalid)
           return
         }
-        const v =
-          req.body.value < -180
-            ? Math.max(...[-180, req.body.value])
-            : Math.min(...[360, req.body.value])
 
+        const u: string = req.body.units ?? 'rad'
+        let v =
+          typeof u === 'string' && u.toLocaleLowerCase() === 'deg'
+            ? req.body.value * (Math.PI / 180)
+            : req.body.value
+
+        v =
+          v < 0 - Math.PI
+            ? Math.max(...[0 - Math.PI, v])
+            : Math.min(...[2 * Math.PI, v])
+
+        debug('target = ', v)
         this.useProvider(req)
           .setTarget(v, req.params.id)
           .then(() => {
@@ -466,12 +474,13 @@ export class AutopilotApi {
           res.status(Responses.invalid.statusCode).json(Responses.invalid)
           return
         }
-
+        const u: string = req.body.units ?? 'rad'
         const v =
-          req.body.value < 0
-            ? Math.max(...[0 - this.settings.maxTurn, req.body.value])
-            : Math.min(...[this.settings.maxTurn, req.body.value])
+          typeof u === 'string' && u.toLocaleLowerCase() === 'deg'
+            ? req.body.value * (Math.PI / 180)
+            : req.body.value
 
+        debug('target = ', v)
         this.useProvider(req)
           .adjustTarget(v, req.params.id)
           .then(() => {
@@ -610,11 +619,19 @@ export class AutopilotApi {
           return
         }
 
-        const v =
-          req.body.value < 0
-            ? Math.max(...[0 - this.settings.maxTurn, req.body.value])
-            : Math.min(...[this.settings.maxTurn, req.body.value])
+        const u: string = req.body.units ?? 'rad'
+        let v =
+          typeof u === 'string' && u.toLocaleLowerCase() === 'deg'
+            ? req.body.value * (Math.PI / 180)
+            : req.body.value
 
+        debug('dodge pre-normalisation) = ', v)
+        v =
+          v < 0
+            ? Math.max(...[0 - this.settings.maxTurn, v])
+            : Math.min(...[this.settings.maxTurn, v])
+
+        debug('dodge = ', v)
         this.useProvider(req)
           .dodge(v, req.params.id)
           .then(() => {
