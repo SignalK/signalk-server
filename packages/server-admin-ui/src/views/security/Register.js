@@ -10,7 +10,7 @@ import {
   Form,
   Input,
   InputGroup,
-  InputGroupAddon,
+  //InputGroupAddon,
   InputGroupText,
 } from 'reactstrap'
 
@@ -98,9 +98,9 @@ class Register extends Component {
                     <Form>
                       <p className="text-muted">Create your account</p>
                       <InputGroup className="mb-3">
-                        <InputGroupAddon addonType="prepend">
+//                        <InputGroupAddon addonType="prepend">
                           <InputGroupText>@</InputGroupText>
-                        </InputGroupAddon>
+//                        </InputGroupAddon>
                         <Input
                           name="email"
                           type="text"
@@ -109,11 +109,11 @@ class Register extends Component {
                         />
                       </InputGroup>
                       <InputGroup className="mb-3">
-                        <InputGroupAddon addonType="prepend">
+//                        <InputGroupAddon addonType="prepend">
                           <InputGroupText>
                             <i className="icon-lock" />
                           </InputGroupText>
-                        </InputGroupAddon>
+//                        </InputGroupAddon>
                         <Input
                           name="password"
                           type="password"
@@ -122,11 +122,11 @@ class Register extends Component {
                         />
                       </InputGroup>
                       <InputGroup className="mb-0">
-                        <InputGroupAddon addonType="prepend">
+//                        <InputGroupAddon addonType="prepend">
                           <InputGroupText>
                             <i className="icon-lock" />
                           </InputGroupText>
-                        </InputGroupAddon>
+//                        </InputGroupAddon>
                         <Input
                           name="confirmPassword"
                           type="password"

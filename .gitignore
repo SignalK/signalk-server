@@ -29,3 +29,6 @@ test/server-test-config/plugin-config-data/
 
 docs/built
 .signalk
+packages/server-admin-ui/scss.bs4
+packages/server-admin-ui/scss.bs5
+packages/server-admin-ui/_scss

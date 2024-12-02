@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
-import { HashRouter, Route, Routes } from 'react-router'
+import {  HashRouter, Route, Routes } from 'react-router'
 import { Provider } from 'react-redux'
 import { createStore, applyMiddleware } from 'redux'
 import {thunk} from 'redux-thunk'
@@ -14,7 +14,7 @@ import 'simple-line-icons/css/simple-line-icons.css'
 // Import Main styles for this application
 import '../scss/style.scss'
 // Temp fix for reactstrap
-import '../scss/core/_dropdown-menu-right.scss'
+// import '../scss/core/_dropdown-menu-right.scss'
 
 // Containers
 import Full from './containers/Full/Full'
@@ -301,12 +301,17 @@ window.serverRoutesPrefix = '/skServer'
 __webpack_init_sharing__('default')
 
 // eslint-disable-next-line react/no-deprecated
-ReactDOM.render(
+import { createRoot } from 'react-dom/client';
+const container = document.getElementById('app');
+const root = createRoot(container); // createRoot(container!) if you use TypeScript
+/*"    <Routes>
+        <Route index path="/" name="Home" element={<Full/>} />
+    </Routes>
+"*/
+root.render(
   <Provider store={store}>
   <HashRouter>
-    <Routes>
-        <Route path="/" name="Home" element={<Full/>} />
-    </Routes>
+    <Full/>
   </HashRouter>
   </Provider>,
   document.getElementById('root')

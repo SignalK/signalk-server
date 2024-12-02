@@ -1,6 +1,6 @@
 
 import React, { Component } from 'react'
-import {  Route, Navigate, Routes } from 'react-router'
+import {  Route, Navigate, Routes, HashRouter } from 'react-router'
 import { Container } from 'reactstrap'
 import { connect } from 'react-redux'
 
@@ -50,7 +50,131 @@ class Full extends Component {
     openServerEventsConnection(dispatch)
   }
 
+  __render(){
+    const suppressPadding = //{ padding: '0px' }
+    window.location.pathname.indexOf('/e/') === 0
+      ? { padding: '0px' }
+      : {}
+    return <div className="app">
+        <Header />
+        <div className="app-body">
+        <Sidebar {...this.props} />
+        <main className="main">
+        <Container fluid style={suppressPadding}>
+        <Routes>
+
+                <Route path="/" element={<Dashboard {...this.props}/>} />
+          
+                <Route path="/webapps" element={<Webapps {...this.props}/>} />
+        </Routes>
+        </Container>
+        </main>
+        <Aside />
+        </div>
+        <Footer />
+      </div>
+  }
   render() {
+    const suppressPadding = //{ padding: '0px' }
+      window.location.pathname.indexOf('/e/') === 0
+        ? { padding: '0px' }
+        : {}
+    return (
+      <div className="app">
+        <Header />
+        <div className="app-body">
+          <Sidebar {...this.props} />
+          <main className="main">
+            <Container fluid style={suppressPadding}>
+              <Routes>
+                <Route
+                  path="/dashboard"
+                  name="Dashboard"
+                  element={<Dashboard {...this.props}/>}
+                />
+                <Route
+                  path="/webapps"
+                  name="Webapps"
+                  element={<Webapps {...this.props}/>}
+                />
+                <Route
+                  path="/e/:moduleId"
+                  name="Embedded Webapps"
+                  element={<Embedded {...this.props}/>}
+                />
+                <Route
+                  path="/databrowser"
+                  name="DataBrowser"
+                  element={<DataBrowser {...this.props}/>}
+                />
+                <Route
+                  path="/serverConfiguration/datafiddler"
+                  name="DataFiddler"
+                  element={<Playground {...this.props}/>}
+                />
+                <Route
+                  path="/appstore"
+                  name="Appstore"
+                  element={<Apps {...this.props}/>}
+                />
+                <Route
+                  path="/serverConfiguration/plugins/:pluginid"
+                  element={<Configuration {...this.props}/>}
+                />
+                <Route
+                  path="/serverConfiguration/settings"
+                  element={<Settings {...this.props}/>}
+                />
+                <Route
+                  path="/serverConfiguration/backuprestore"
+                  element={<BackupRestore {...this.props}/>}
+                />
+                <Route
+                  path="/serverConfiguration/connections/:providerId"
+                  
+                  element={<ProvidersConfiguration {...this.props}/>}
+                />
+                <Route
+                  path="/serverConfiguration/log"
+                  element={<ServerLog {...this.props}/>}
+                />
+                <Route
+                  path="/serverConfiguration/update"
+                  element={<ServerUpdate {...this.props}/>}
+                />
+                <Route
+                  path="/security/settings"
+                  element={<SecuritySettings {...this.props}/>}
+                />
+                <Route
+                  path="/security/users"
+                  element={<Users {...this.props}/>}
+                />
+                <Route
+                  path="/security/devices"
+                  element={<Devices {...this.props}/>}
+                />
+                <Route
+                  path="/security/access/requests"
+                  element={<AccessRequests {...this.props}/>}
+                />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register/>} />
+                 <Route
+                    path="/"
+                    element={<Navigate to="/dashboard" replace />}
+                  />              
+              </Routes>
+            </Container>
+          </main>
+          <Aside />
+        </div>
+        <Footer />
+      </div>
+    )
+  }
+
+  _render() {
     const suppressPadding = //{ padding: '0px' }
       window.location.pathname.indexOf('/e/') === 0
         ? { padding: '0px' }
@@ -152,7 +276,7 @@ class Full extends Component {
 
 export default connect()(Full)
 
-const loginOrOriginal = (BaseComponent, componentSupportsReadOnly) => {
+const _loginOrOriginal = (BaseComponent, componentSupportsReadOnly) => {
   class Restricted extends Component {
     constructor(props) {
       super(props)
@@ -176,6 +300,31 @@ const loginOrOriginal = (BaseComponent, componentSupportsReadOnly) => {
   return connect(({ loginStatus }) => ({ loginStatus }))(withRouter(Restricted))
 }
 
+
+
+const loginOrOriginal = (BaseComponent, componentSupportsReadOnly) => {
+  class Restricted extends Component {
+    constructor(props) {
+      super(props)
+      this.state = { hasError: false }
+    }
+
+    static getDerivedStateFromError() {
+      return { hasError: true }
+    }
+
+    render() {
+      if (loginRequired(this.props.loginStatus, componentSupportsReadOnly)) {
+        return <Login />
+      } else if (this.state.hasError) {
+        return <span>Something went wrong.</span>
+      } else {
+        return <BaseComponent {...this.props} />
+      }
+    }
+  }
+  return connect(({ loginStatus }) => ({ loginStatus }))(withRouter(Restricted))
+}
 function loginRequired(loginStatus, componentSupportsReadOnly) {
   // component works with read only access and
   // server loginStatus allows read only access
