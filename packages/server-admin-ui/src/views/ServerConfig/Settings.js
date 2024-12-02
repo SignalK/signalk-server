@@ -36,6 +36,7 @@ class ServerSettings extends Component {
     }
     this.fetchSettings = fetchSettings.bind(this)
     this.handleChange = this.handleChange.bind(this)
+    this.handleCourseApiChange = this.handleCourseApiChange.bind(this)
     this.handleOptionChange = this.handleOptionChange.bind(this)
     this.handleInterfaceChange = this.handleInterfaceChange.bind(this)
     this.handleSaveSettings = this.handleSaveSettings.bind(this)
@@ -51,6 +52,15 @@ class ServerSettings extends Component {
         ? event.target.checked
         : event.target.value
     this.setState({ [event.target.name]: value })
+  }
+
+  handleCourseApiChange(event) {
+    const value =
+      event.target.type === 'checkbox'
+        ? event.target.checked
+        : event.target.value
+    this.state.courseApi[event.target.name] = value
+    this.setState({ courseApi: this.state.courseApi })
   }
 
   handleOptionChange(event) {
@@ -301,6 +311,39 @@ class ServerSettings extends Component {
                     <FormText color="muted">
                       How many hourly files to keep
                     </FormText>
+                  </Col>
+                </FormGroup>
+                <FormGroup row>
+                  <Col md="2">
+                    <Label>
+                      API Only Mode
+                      <br />
+                      <i>(Course API)</i>
+                    </Label>
+                  </Col>
+                  <Col>
+                    <FormGroup check>
+                      <Label className="switch switch-text switch-primary">
+                        <Input
+                          type="checkbox"
+                          name="apiOnly"
+                          id="apiOnly"
+                          className="switch-input"
+                          onChange={this.handleCourseApiChange}
+                          checked={this.state.courseApi.apiOnly}
+                        />
+                        <span
+                          className="switch-label"
+                          data-on="On"
+                          data-off="Off"
+                        />
+                        <span className="switch-handle" />
+                      </Label>
+                      <FormText color="muted">
+                        Accept course operations only via HTTP requests.
+                        Destination data from NMEA sources is not used.
+                      </FormText>
+                    </FormGroup>
                   </Col>
                 </FormGroup>
               </Form>

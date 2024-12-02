@@ -42,7 +42,7 @@ You can also include the following section in `package.json` to control how your
 
 where:
 - `appIcon` is the path (relative to the `public` directory) to an image within the package to display in the webapp list. The image should be at least 72x72 pixels in size.
-- `displayName` is the text you want to appear as the name in the webapp list. _(By default the _name_ attribute in the `package.json` is used.)_
+- `displayName` is the text you want to appear as the name in the webapp list. _(By default the _name_ attribute in the `package.json` is used.)_. Displayname is also used in an automatic redirect from the root of the server: if you have a webapp with displayName `foo` and you access it using for example the url http://foo.bar.org:3000 the first part of the hostname matches the webapp's displayName and you will be redirected to it instead of the default landingPage, the Admin webapp. With this mechanism you can add easy to access DNS names to each webapp, including .local names.
 
 See also [Working Offline](./developer_notes.md#offline-use).
 

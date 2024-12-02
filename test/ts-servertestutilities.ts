@@ -10,6 +10,7 @@ import {
 } from './servertestutilities'
 import { SERVERSTATEDIRNAME } from '../src/serverstate/store'
 import { expect } from 'chai'
+import { Delta, hasValues, PathValue } from '@signalk/server-api'
 
 export const DATETIME_REGEX = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)Z?$/
 
@@ -100,13 +101,26 @@ export const startServer = async () => {
   }
 }
 
-export const deltaHasPathValue = (delta: any, path: string, value: any) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const deltaHasPathValue = (delta: Delta, path: string, value: any) => {
   try {
-    const pathValue = delta.updates[0].values.find((x: any) => x.path === path)
-    expect(pathValue.value).to.deep.equal(value)
+    const pathValue = delta.updates.reduce<PathValue | undefined>(
+      (acc, update) => {
+        if (!acc && hasValues(update)) {
+          acc = update.values.find((x: PathValue) => x.path === path)
+        }
+        return acc
+      },
+      undefined
+    )
+    expect(pathValue?.value).to.deep.equal(value)
   } catch (e) {
     throw new Error(
-      `No such pathValue ${path}:${JSON.stringify(value)} in ${JSON.stringify(delta, null, 2)}`
+      `No such pathValue ${path}:${JSON.stringify(value)} in ${JSON.stringify(
+        delta,
+        null,
+        2
+      )}`
     )
   }
 }

@@ -157,7 +157,24 @@ module.exports = function (
   )
 
   app.get('/', (req: Request, res: Response) => {
-    res.redirect(app.config.settings.landingPage || '/admin/')
+    let landingPage = '/admin/'
+
+    // if accessed with hostname that starts with a webapp's displayName redirect there
+    //strip possible port number
+    const firstHostName = (req.headers?.host || '')
+      .split(':')[0]
+      .split('.')[0]
+      .toLowerCase()
+    const targetWebapp = app.webapps.find(
+      (webapp) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (webapp as any).signalk?.displayName.toLowerCase() === firstHostName
+    )
+    if (targetWebapp) {
+      landingPage = `/${targetWebapp.name}/`
+    }
+
+    res.redirect(app.config.settings.landingPage || landingPage)
   })
 
   app.get('/@signalk/server-admin-ui', (req: Request, res: Response) => {
@@ -477,7 +494,10 @@ module.exports = function (
         isUndefined(app.config.settings.keepMostRecentLogsOnly) ||
         app.config.settings.keepMostRecentLogsOnly,
       logCountToKeep: app.config.settings.logCountToKeep || 24,
-      runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true'
+      runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true',
+      courseApi: {
+        apiOnly: app.config.settings.courseApi?.apiOnly || false
+      }
     }
 
     if (!settings.runFromSystemd) {
@@ -621,6 +641,12 @@ module.exports = function (
       app.config.settings.logCountToKeep = Number(settings.logCountToKeep)
     }
 
+    forIn(settings.courseApi, (enabled, name) => {
+      const courseApi: { [index: string]: boolean | string | number } =
+        app.config.settings.courseApi || (app.config.settings.courseApi = {})
+      courseApi[name] = enabled
+    })
+
     writeSettingsFile(app, app.config.settings, (err: Error) => {
       if (err) {
         res.status(500).send('Unable to save to settings file')
@@ -632,7 +658,6 @@ module.exports = function (
 
   app.get(`${SERVERROUTESPREFIX}/vessel`, (req: Request, res: Response) => {
     const de = app.config.baseDeltaEditor
-    const communication = de.getSelfValue('communication')
     const draft = de.getSelfValue('design.draft')
     const length = de.getSelfValue('design.length')
     const type = de.getSelfValue('design.aisShipType')
@@ -647,7 +672,7 @@ module.exports = function (
       gpsFromBow: de.getSelfValue('sensors.gps.fromBow'),
       gpsFromCenter: de.getSelfValue('sensors.gps.fromCenter'),
       aisShipType: type && type.id,
-      callsignVhf: communication && communication.callsignVhf
+      callsignVhf: de.getSelfValue('communication.callsignVhf')
     }
 
     res.json(json)
@@ -788,9 +813,9 @@ module.exports = function (
         : undefined
     )
     de.setSelfValue(
-      'communication',
+      'communication.callsignVhf',
       !isUndefined(vessel.callsignVhf) && vessel.callsignVhf.length
-        ? { callsignVhf: vessel.callsignVhf }
+        ? vessel.callsignVhf
         : undefined
     )
 
