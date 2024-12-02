@@ -208,6 +208,18 @@ export class CourseApi {
     })
   }
 
+  /** Test for valid Signal K position */
+  private isValidPosition(position: Position): boolean {
+    return (
+      typeof position?.latitude === 'number' &&
+      typeof position?.latitude === 'number' &&
+      position?.latitude >= -90 &&
+      position?.latitude <= 90 &&
+      position?.longitude >= -180 &&
+      position?.longitude <= 180
+    )
+  }
+
   /** Process stream value and take action
    * @param cmdSource Object describing the source of the update
    * @param pos Destination location value in the update
@@ -215,7 +227,7 @@ export class CourseApi {
   private async parseStreamValue(cmdSource: CommandSource, pos: Position) {
     if (!this.cmdSource) {
       // New source
-      if (!pos) {
+      if (!this.isValidPosition(pos)) {
         return
       }
       debug('parseStreamValue:', 'Setting Destination...')
@@ -805,7 +817,7 @@ export class CourseApi {
         throw new Error(`Invalid href! (${dest.href})`)
       }
     } else if ('position' in dest) {
-      if (isValidCoordinate(dest.position)) {
+      if (this.isValidPosition(dest.position)) {
         newCourse.nextPoint = {
           position: dest.position,
           type: Location
