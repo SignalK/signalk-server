@@ -40,7 +40,7 @@ class Devices extends Component {
   }
 
   componentDidMount() {
-    if (this.props.loginStatus.authenticationRequired) {
+    if (this.props.loginStatus?.authenticationRequired) {
       this.fetchSecurityDevices()
     }
   }
@@ -126,10 +126,10 @@ class Devices extends Component {
   render() {
     return (
       <div className="animated fadeIn">
-        {this.props.loginStatus.authenticationRequired === false && (
+        {this.props.loginStatus?.authenticationRequired === false && (
           <EnableSecurity />
         )}
-        {this.props.loginStatus.authenticationRequired && (
+        {this.props.loginStatus?.authenticationRequired && (
           <div>
             <Card>
               <CardHeader>
