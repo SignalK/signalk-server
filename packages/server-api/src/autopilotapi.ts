@@ -1,27 +1,96 @@
+import { Value } from './deltas'
+
+export type AutopilotUpdateAttrib =
+  | 'mode'
+  | 'state'
+  | 'target'
+  | 'engaged'
+  | 'options'
+  | 'alarm'
+
+const AUTOPILOTUPDATEATTRIBS: AutopilotUpdateAttrib[] = [
+  'mode',
+  'state',
+  'target',
+  'engaged',
+  'options',
+  'alarm'
+]
+
+export const isAutopilotUpdateAttrib = (s: string) =>
+  AUTOPILOTUPDATEATTRIBS.includes(s as AutopilotUpdateAttrib)
+
+export type AutopilotAlarm =
+  | 'waypointAdvance'
+  | 'waypointArrival'
+  | 'routeComplete'
+  | 'xte'
+  | 'heading'
+  | 'wind'
+
+const AUTOPILOTALARMS: AutopilotAlarm[] = [
+  'waypointAdvance',
+  'waypointArrival',
+  'routeComplete',
+  'xte',
+  'heading',
+  'wind'
+]
+
+export const isAutopilotAlarm = (s: string) =>
+  AUTOPILOTALARMS.includes(s as AutopilotAlarm)
+
+export type TackGybeDirection = 'port' | 'starboard'
+
 export interface AutopilotApi {
-  register: (pluginId: string, provider: AutopilotProvider) => void
-  unRegister: (pluginId: string) => void
+  register(pluginId: string, provider: AutopilotProvider): void
+  unRegister(pluginId: string): void
+  apUpdate(
+    pluginId: string,
+    deviceId: string,
+    apInfo: { [path: string]: Value }
+  ): void
 }
 
+/** @see {isAutopilotProvider} ts-auto-guard:type-guard */
 export interface AutopilotProvider {
-  pilotType: string
-  methods: AutopilotProviderMethods
+  getData(deviceId: string): Promise<AutopilotInfo>
+  getState(deviceId: string): Promise<string>
+  setState(state: string, deviceId: string): Promise<void>
+  getMode(deviceId: string): Promise<string>
+  setMode(mode: string, deviceId: string): Promise<void>
+  getTarget(deviceId: string): Promise<number>
+  setTarget(value: number, deviceId: string): Promise<void>
+  adjustTarget(value: number, deviceId: string): Promise<void>
+  engage(deviceId: string): Promise<void>
+  disengage(deviceId: string): Promise<void>
+  tack(direction: TackGybeDirection, deviceId: string): Promise<void>
+  gybe(direction: TackGybeDirection, deviceId: string): Promise<void>
+  dodge(value: number | null, deviceId: string): Promise<void>
 }
 
-export interface AutopilotProviderMethods {
-  pluginId?: string
-  engage: (enable: boolean) => Promise<void>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getConfig: () => Promise<{ [key: string]: any }>
-  getState: () => Promise<string>
-  setState: (state: string) => Promise<void>
-  getMode: () => Promise<string>
-  setMode: (mode: string) => Promise<void>
-  setTarget: (value: number) => Promise<void>
-  adjustTarget: (value: number) => Promise<void>
-  tack: (port: boolean) => Promise<void>
+export interface AutopilotStateDef {
+  name: string // autopilot state
+  engaged: boolean // true if state indicates actively steering
+}
+
+export interface AutopilotOptions {
+  states: AutopilotStateDef[]
+  modes: string[]
+}
+
+export interface AutopilotInfo {
+  options: AutopilotOptions
+  target: number | null
+  mode: string | null
+  state: string | null
+  engaged: boolean
 }
 
 export interface AutopilotProviderRegistry {
-  registerAutopilotProvider: (provider: AutopilotProvider) => void
+  registerAutopilotProvider(
+    provider: AutopilotProvider,
+    devices: string[]
+  ): void
+  autopilotUpdate(deviceId: string, apInfo: { [path: string]: Value }): void
 }
