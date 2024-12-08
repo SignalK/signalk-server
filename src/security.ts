@@ -223,7 +223,7 @@ export function startSecurity(
     }
 
     const config = securityConfig || getSecurityConfig(app, true)
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     app.securityStrategy = require(securityStrategyModuleName)(app, config)
 
     if (securityConfig) {

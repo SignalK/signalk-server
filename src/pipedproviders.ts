@@ -144,7 +144,7 @@ export function pipedProviders(
     const efectiveElementType = elementConfig.type.startsWith('providers/')
       ? elementConfig.type.replace('providers/', '@signalk/streams/')
       : elementConfig.type
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return new (require(efectiveElementType))({
       ...elementConfig.options,
       createDebug

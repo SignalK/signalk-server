@@ -100,7 +100,7 @@ export class CourseApi {
         debug('Found persisted course data')
         this.courseInfo = this.validateCourseInfo(storeData)
         this.cmdSource = this.courseInfo.nextPoint ? API_CMD_SRC : null
-      } catch (error) {
+      } catch (_error) {
         debug('No persisted course data (using default)')
       }
       debug(
@@ -464,7 +464,7 @@ export class CourseApi {
               message: `Vessel position unavailable!`
             })
           }
-        } catch (err) {
+        } catch (_err) {
           res.status(400).json({
             state: 'FAILED',
             statusCode: 400,
@@ -671,7 +671,7 @@ export class CourseApi {
               res.status(400).json(Responses.invalid)
               return false
             }
-          } catch (err) {
+          } catch (_err) {
             console.log(`** Course API: Unable to retrieve vessel position!`)
             res.status(400).json(Responses.invalid)
             return false
@@ -753,7 +753,7 @@ export class CourseApi {
         } else {
           throw new Error(`Error: Unable to retrieve vessel position!`)
         }
-      } catch (err) {
+      } catch (_err) {
         throw new Error(`Error: Unable to retrieve vessel position!`)
       }
     } else {
@@ -810,7 +810,7 @@ export class CourseApi {
           } else {
             throw new Error(`Invalid waypoint coordinate data! (${dest.href})`)
           }
-        } catch (err) {
+        } catch (_err) {
           throw new Error(`Error retrieving and validating ${dest.href}`)
         }
       } else {
@@ -845,7 +845,7 @@ export class CourseApi {
           `Error: navigation.position.value is undefined! (${position})`
         )
       }
-    } catch (err) {
+    } catch (_err) {
       throw new Error(`Error: Unable to retrieve vessel position!`)
     }
 
@@ -943,7 +943,7 @@ export class CourseApi {
         return (await this.resourcesApi.getResource(h.type, h.id)) as
           | Route
           | undefined
-      } catch (err) {
+      } catch (_err) {
         debug(`** Unable to fetch resource: ${h.type}, ${h.id}`)
         return undefined
       }

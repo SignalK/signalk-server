@@ -53,15 +53,13 @@ import { StreamBundle } from './types'
 import { WithWrappedEmitter } from './events'
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { getAISShipTypeName } = require('@signalk/signalk-schema')
+import { getAISShipTypeName } from '@signalk/signalk-schema'
 const ncp = ncpI.ncp
 
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const availableInterfaces = require('./interfaces')
+import availableInterfaces from './interfaces'
 
 interface ScriptsApp {
   addons: ModuleInfo[]
@@ -539,7 +537,7 @@ module.exports = function (
               res.status(500).send('Unable to save to settings file')
             } else {
               const config = {}
-              // eslint-disable-next-line @typescript-eslint/no-var-requires
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
               const securityStrategy = require(defaultSecurityStrategy)(
                 app,
                 config,
@@ -712,7 +710,7 @@ module.exports = function (
     }
 
     function setNumber(skPath: string, rmPath: string, value: string) {
-      if (isNumber(value) || (value && value.length) > 0) {
+      if (isNumber(value) || (value && value.length > 0)) {
         set(data.vessels.self, skPath, Number(value))
       } else {
         unset(data.vessels.self, rmPath)

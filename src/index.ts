@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-this-alias */
 /* eslint-disable @typescript-eslint/no-var-requires */
@@ -71,7 +72,7 @@ import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { Zones } from './zones'
 const debug = createDebug('signalk-server')
 
-const { StreamBundle } = require('./streambundle')
+import { StreamBundle } from './streambundle'
 
 interface ServerOptions {
   securityConfig: any
@@ -479,7 +480,7 @@ class Server {
     if (typeof mixed === 'string') {
       try {
         settings = require(path.join(process.cwd(), mixed))
-      } catch (e) {
+      } catch (_e) {
         debug(`Settings file '${settings}' does not exist`)
       }
     }
@@ -634,8 +635,7 @@ function startInterfaces(app: ServerApp & WithConfig & WithWrappedEmitter) {
           ;(app as any)[prop] = value
           return true
         },
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        get(target: any, prop: string | symbol, receiver: any) {
+        get(target: any, prop: string | symbol, _receiver: any) {
           return (app as any)[prop]
         }
       }

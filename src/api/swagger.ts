@@ -43,7 +43,6 @@ export function mountSwaggerUi(app: IRouter & PluginManager, path: string) {
 
   // custom middleware to re-setup swaggerUI, because plugins have
   // not been loaded when this is called early in server startup sequence
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use(path, (req: Request, res: Response, next: NextFunction) => {
     swaggerUi.setup(undefined, {
       explorer: true,

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /*
@@ -51,7 +52,7 @@ const put = require('../put')
 const _putPath = put.putPath
 const getModulePublic = require('../config/get').getModulePublic
 const queryRequest = require('../requestResponse').queryRequest
-const getMetadata = require('@signalk/signalk-schema').getMetadata
+import { getMetadata } from '@signalk/signalk-schema'
 
 // #521 Returns path to load plugin-config assets.
 const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')
@@ -280,7 +281,7 @@ module.exports = (theApp: any) => {
     let optionsAsString = '{}'
     try {
       optionsAsString = fs.readFileSync(pathForPluginId(id), 'utf8')
-    } catch (e) {
+    } catch (_e) {
       debug(
         'Could not find options for plugin ' +
           id +

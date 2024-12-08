@@ -47,10 +47,10 @@ export class Store {
       /* tslint:disable:no-bitwise */
       await access(this.filePath, constants.R_OK | constants.W_OK)
       /* tslint:enable:no-bitwise */
-    } catch (error) {
+    } catch (_error) {
       try {
         await mkdir(this.filePath, { recursive: true })
-      } catch (error) {
+      } catch (_error) {
         console.log(`Error: Unable to create ${this.filePath}`)
       }
     }
