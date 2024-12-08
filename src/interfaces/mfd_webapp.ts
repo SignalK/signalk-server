@@ -72,8 +72,7 @@ const send = (
 
 const getPublishToNavico = (protocol: string, port: number) => async () => {
   let addresses: string[] = []
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  for (const [name, infos] of Object.entries(networkInterfaces())) {
+  for (const [_name, infos] of Object.entries(networkInterfaces())) {
     for (const addressInfo of infos || []) {
       if (addressInfo.family === 'IPv4') {
         addresses.push(addressInfo.address)
