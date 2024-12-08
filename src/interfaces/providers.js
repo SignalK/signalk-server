@@ -143,11 +143,18 @@ module.exports = function (app) {
       ]
     }
 
-    if (
-      provider.options.type === 'canbus-canboatjs' &&
-      !provider.options.uniqueNumber
-    ) {
-      provider.options.uniqueNumber = Math.floor(Math.random() * 2097151)
+    if (provider.options.type === 'canbus-canboatjs') {
+      if (isNumber(provider.options.uniqueNumber)) {
+        provider.options.uniqueNumber = parseInt(provider.options.uniqueNumber)
+      } else {
+        provider.options.uniqueNumber = Math.floor(Math.random() * 2097151)
+      }
+
+      if (isNumber(provider.options.mfgCode)) {
+        provider.options.mfgCode = parseInt(provider.options.mfgCode)
+      } else {
+        if (provider.options.mfgCode !== '') delete provider.options.mfgCode //if value is not empty or not a number then removing property
+      }
     }
 
     if (applyProviderSettings(updatedProvider, provider, res)) {
@@ -166,6 +173,18 @@ module.exports = function (app) {
       })
     }
   }
+}
+
+function isNumber(s) {
+  return typeof s == 'number'
+    ? true
+    : typeof s == 'string'
+    ? s.trim() === ''
+      ? false
+      : !isNaN(s)
+    : (typeof s).match(/object|function/)
+    ? false
+    : !isNaN(s)
 }
 
 function applyProviderSettings(target, source, res) {
