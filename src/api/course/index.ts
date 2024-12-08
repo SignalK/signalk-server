@@ -240,8 +240,11 @@ export class CourseApi {
     }
 
     if (this.isCurrentCmdSource(cmdSource)) {
-      if (!pos) {
-        debug('parseStreamValue:', 'No position... Clear Destination...')
+      if (!this.isValidPosition(pos)) {
+        debug(
+          'parseStreamValue:',
+          'No or invalid position... Clear Destination...'
+        )
         this.clearDestination()
         return
       }
