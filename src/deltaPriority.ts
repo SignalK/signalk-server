@@ -63,8 +63,7 @@ export const getToPreferredDelta = (
 ): ToPreferredDelta => {
   if (!sourcePrioritiesData) {
     debug('No priorities data')
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    return (delta: any, now: Date, selfContext: string) => delta
+    return (delta: any, _now: Date, _selfContext: string) => delta
   }
   const precedences = toPrecedences(sourcePrioritiesData)
 

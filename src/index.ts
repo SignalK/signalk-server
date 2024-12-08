@@ -635,8 +635,7 @@ function startInterfaces(app: ServerApp & WithConfig & WithWrappedEmitter) {
           ;(app as any)[prop] = value
           return true
         },
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        get(target: any, prop: string | symbol, receiver: any) {
+        get(target: any, prop: string | symbol, _receiver: any) {
           return (app as any)[prop]
         }
       }
