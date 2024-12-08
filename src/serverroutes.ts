@@ -656,6 +656,7 @@ module.exports = function (
 
   app.get(`${SERVERROUTESPREFIX}/vessel`, (req: Request, res: Response) => {
     const de = app.config.baseDeltaEditor
+    const communication = de.getSelfValue('communication')
     const draft = de.getSelfValue('design.draft')
     const length = de.getSelfValue('design.length')
     const type = de.getSelfValue('design.aisShipType')
@@ -670,7 +671,7 @@ module.exports = function (
       gpsFromBow: de.getSelfValue('sensors.gps.fromBow'),
       gpsFromCenter: de.getSelfValue('sensors.gps.fromCenter'),
       aisShipType: type && type.id,
-      callsignVhf: de.getSelfValue('communication.callsignVhf')
+      callsignVhf: communication && communication.callsignVhf
     }
 
     res.json(json)
@@ -811,9 +812,9 @@ module.exports = function (
         : undefined
     )
     de.setSelfValue(
-      'communication.callsignVhf',
+      'communication',
       !isUndefined(vessel.callsignVhf) && vessel.callsignVhf.length
-        ? vessel.callsignVhf
+        ? { callsignVhf: vessel.callsignVhf }
         : undefined
     )
 
