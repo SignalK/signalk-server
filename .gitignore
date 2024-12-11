@@ -12,6 +12,7 @@ logs/*
 bower_components
 settings/ssl-key.pem
 settings/ssl-cert.pem
+/*.iml
 
 *.tgz
 work/
