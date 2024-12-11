@@ -49,6 +49,10 @@ function N2KAnalyzer(options) {
   this.linereader.on('line', function (data) {
     try {
       let parsed = JSON.parse(data)
+      if ( parsed.version ) {
+        console.log('Connected to analyzer v'+parsed.version);
+        return;
+      }
       that.push(parsed)
       options.app.emit(that.analyzerOutEvent, parsed)
     } catch (ex) {
