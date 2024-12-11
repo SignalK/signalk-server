@@ -50,7 +50,7 @@ function N2KAnalyzer(options) {
     try {
       parsed = JSON.parse(data)
       that.push(parsed)
-      options.app.emit(this.analyzerOutEvent, parsed)
+      options.app.emit(that.analyzerOutEvent, parsed)
     } catch (ex) {
       console.error(data)
       console.error(ex.stack)
