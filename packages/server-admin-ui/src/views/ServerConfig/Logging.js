@@ -25,7 +25,7 @@ function fetchLogfileList() {
 
   okResponse &&
     okResponse
-      .then((response) => response.json())
+      .then((response) => {if (response) response.json()})
       .then((logfileslist) => {
         logfileslist.sort()
         this.setState({ logfileslist, hasData: true, authorized: true })

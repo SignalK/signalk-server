@@ -7,9 +7,9 @@ export function withRouter(FunctionComponent) {
   function ComponentWithRouterProp(props ) {
       const location = useLocation();
       const navigate = useNavigate();
-      const params = useParams();
+      const match = { match:useParams()};
 
-      return <Component {...props} router={{ location, navigate, params }} />;
+      return <FunctionComponent {...props} navigate={navigate} location={location} match={match}  />;
   }
 
   return ComponentWithRouterProp;
@@ -39,7 +39,7 @@ class ServerUpdate extends Component {
   handleUpdate() {
     console.log('handleUpdate')
     if (confirm(`Are you sure you want to update the server?'`)) {
-      this.props.history.push('/appstore/updates')
+      this.props.history.navigate('/appstore/updates')
       fetch(
         `${window.serverRoutesPrefix}/appstore/install/signalk-server/${this.props.appStore.serverUpdate}`,
         {
@@ -47,13 +47,13 @@ class ServerUpdate extends Component {
           credentials: 'include',
         }
       ).then(() => {
-        this.history.pushState(null, 'appstore/updates')
+        window.history.pushState(null, 'appstore/updates')
       })
     }
   }
 
   render() {
-    if (!this.props.appStore.storeAvailable) {
+    if (!this.props.appStore?.storeAvailable) {
       return (
         <div className="animated fadeIn">
           <Card>
@@ -76,7 +76,7 @@ class ServerUpdate extends Component {
     }
     return (
       <div className="animated fadeIn">
-        {!this.props.appStore.canUpdateServer && (
+        {!this.props.appStore?.canUpdateServer && (
           <Card className="border-warning">
             <CardHeader>Server Update</CardHeader>
             <CardBody>
@@ -84,7 +84,7 @@ class ServerUpdate extends Component {
             </CardBody>
           </Card>
         )}
-        {this.props.appStore.isInDocker && (
+        {this.props.appStore?.isInDocker && (
           <Card className="border-warning">
             <CardHeader>Running as a Docker container</CardHeader>
             <CardBody>
@@ -97,8 +97,8 @@ class ServerUpdate extends Component {
             </CardBody>
           </Card>
         )}
-        {this.props.appStore.canUpdateServer &&
-          this.props.appStore.serverUpdate &&
+        {this.props.appStore?.canUpdateServer &&
+          this.props.appStore?.serverUpdate &&
           !isInstalling &&
           !isInstalled && (
             <Card>
@@ -136,8 +136,8 @@ class ServerUpdate extends Component {
             </CardBody>
           </Card>
         )}
-        {this.props.appStore.canUpdateServer &&
-          !this.props.appStore.serverUpdate && (
+        {this.props.appStore?.canUpdateServer &&
+          !this.props.appStore?.serverUpdate && (
             <Card>
               <CardHeader>Server Update</CardHeader>
               <CardBody>Your server is up to date.</CardBody>
@@ -173,6 +173,8 @@ class ServerUpdate extends Component {
   }
 }
 
+
 export default connect(({ appStore }) => ({ appStore }))(
   withRouter(ServerUpdate)
 )
+

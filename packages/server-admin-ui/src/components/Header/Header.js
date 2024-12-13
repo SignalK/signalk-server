@@ -111,7 +111,7 @@ class Header extends Component {
               <DropdownToggle nav>
                 <i className="icon-menu" />
               </DropdownToggle>
-              <DropdownMenu right>
+              <DropdownMenu end>
                 {this.props.loginStatus.status === 'loggedIn' &&
                   this.props.loginStatus.userLevel == 'admin' && (
                     <DropdownItem onClick={this.props.restart}>

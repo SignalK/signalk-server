@@ -473,5 +473,10 @@ class CopyToClipboardWithFade extends Component {
     )
   }
 }
+function mapStateToProps(state) {
 
-export default connect(({ webSocket }) => ({ webSocket }))(DataBrowser)
+  return {
+    webSocket: state?.webSocket
+  }
+}
+export default connect(mapStateToProps)(DataBrowser)

@@ -90,7 +90,7 @@ class Sidebar extends Component {
               {badge(item.badge)}
             </RsNavLink>
           ) : (
-            <NavLink to={url} className={classes.link} activeClassName="active">
+            <NavLink to={url} className={classes.link} activeclassname="active">
               <i className={classes.icon} />
               {item.name}
               {badge(item.badge)}

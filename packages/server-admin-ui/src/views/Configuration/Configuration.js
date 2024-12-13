@@ -61,8 +61,7 @@ export default class PluginConfigurationList extends Component {
     } else {
       localStorage.setItem(openPluginStorageKey, openedPluginId)
     }
-    if (this.props?.history)
-      this.props.history.replace(`/serverConfiguration/plugins/${openedPluginId}`)
+    this.props.navigate(`/serverConfiguration/plugins/${openedPluginId}`, ({replace:true}))
   }
 
   componentDidMount() {
@@ -130,7 +129,7 @@ export default class PluginConfigurationList extends Component {
                 key={i}
                 isOpen={isOpen}
                 toggleForm={this.toggleForm.bind(this, i, plugin.id)}
-                history={this.props.history}
+                navigate={this.props.navigate}
                 saveData={(data) => {
                   if (plugin.data.configuration === undefined) {
                     data.enabled = true
@@ -315,7 +314,7 @@ class PluginCard extends Component {
                   plugin={this.props.plugin}
                   onSubmit={(data) => {
                     this.props.saveData(data)
-                    this.props.history.replace(`/serverConfiguration/plugins/-`)
+                    this.props.navigate(`/serverConfiguration/plugins/-`,{replace:true})
                   }}
                 />
               )}

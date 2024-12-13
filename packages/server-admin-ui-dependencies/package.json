@@ -6,12 +6,12 @@
   "author": "teppo.kurki@iki.fi",
   "license": "Apache-2.0",
   "optionalDependencies": {
-    "validate-peer-dependencies": "^1.1.0"
+    "validate-peer-dependencies": "2.2.0"
   },
   "peerDependencies": {
-    "@fortawesome/fontawesome-free": "^5.15.1",
+    "@fortawesome/fontawesome-free": "6.7.1",
     "bootstrap": "5.3.3",
-    "font-awesome": "^4.7.0",
+    "font-awesome": "4.7.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-redux": "9.1.2",

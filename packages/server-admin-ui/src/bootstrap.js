@@ -7,6 +7,7 @@ import {thunk} from 'redux-thunk'
 
 // Styles
 // Import Font Awesome Icons Set
+
 import 'font-awesome/css/font-awesome.min.css'
 import '@fortawesome/fontawesome-free/css/all.min.css'
 // Import Simple Line Icons Set
@@ -14,7 +15,8 @@ import 'simple-line-icons/css/simple-line-icons.css'
 // Import Main styles for this application
 import '../scss/style.scss'
 // Temp fix for reactstrap
-// import '../scss/core/_dropdown-menu-right.scss'
+import '../_scss/core/_dropdown-menu-right.scss'
+
 
 // Containers
 import Full from './containers/Full/Full'
@@ -232,7 +234,7 @@ let store = createStore(
         `<span style="${style}">` +
         action.data.ts +
         '</span> ' +
-        convert.toHtml(escape(action.data.row))
+        //convert.toHtml(escape(action.data.row))
       state.log.entries.push({
         i: logEntryCount++,
         d: html,
@@ -304,15 +306,14 @@ __webpack_init_sharing__('default')
 import { createRoot } from 'react-dom/client';
 const container = document.getElementById('app');
 const root = createRoot(container); // createRoot(container!) if you use TypeScript
-/*"    <Routes>
-        <Route index path="/" name="Home" element={<Full/>} />
-    </Routes>
+/*"    
 "*/
 root.render(
-  <Provider store={store}>
   <HashRouter>
-    <Full/>
+  <Provider store={store}>
+  <Routes>
+        <Route index path="*" name="Home" element={<Full/>} />
+  </Routes>
+  </Provider>
   </HashRouter>
-  </Provider>,
-  document.getElementById('root')
 )

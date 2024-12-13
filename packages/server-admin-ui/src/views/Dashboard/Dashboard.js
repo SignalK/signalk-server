@@ -67,7 +67,7 @@ const Dashboard = (props) => {
 
   const renderActivity = (providerId, providerStats, linkType) => {
     return (
-      <li key={providerId} onClick={() => props.history.push(`/dashboard`)}>
+      <li key={providerId} onClick={() => props.navigate(`/dashboard`)}>
         <i
           className={inputPulseIconClass(providerStats)}
           style={{
@@ -126,7 +126,7 @@ const Dashboard = (props) => {
       <tr
         key={status.id}
         onClick={() => {
-          props.history.push(
+          props.history.navigate(
             '/serverConfiguration/' +
               (status.statusType === 'plugin' ? 'plugins/' : 'connections/') +
               status.id

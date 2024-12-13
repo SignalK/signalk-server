@@ -31,16 +31,46 @@ import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
 import { fetchAllData, openServerEventsConnection } from '../../actions'
 import { useLocation, useNavigate, useParams } from 'react-router';
 
-export function withRouter(FunctionComponent) {
-    function ComponentWithRouterProp(props ) {
-        const location = useLocation();
-        const navigate = useNavigate();
-        const params = useParams();
+function loginOrOriginal (BaseComponent, componentSupportsReadOnly) {
 
-        return <Component {...props} router={{ location, navigate, params }} />;
+  
+  const Restricted = (props) => {
+
+      let state = { hasError: false }
+      let location=useLocation()
+      let match={params:useParams()}
+      let navigate=useNavigate()
+    
+
+    function getDerivedStateFromError() {
+      return { hasError: true }
     }
 
-    return ComponentWithRouterProp;
+  //TODO loginStatus
+
+      if (loginRequired(props?.loginStatus, componentSupportsReadOnly)) {
+        return <Login />
+      } else if (state?.hasError) {
+        return <span>Something went wrong.</span>
+      } else {
+        return <BaseComponent {...props} loginStatus={props.loginStatus} navigate={navigate} match={match} location={location}/>
+      }
+  }
+  connect(({ loginStatus }) => ({ loginStatus }))(Restricted)
+  return <Restricted />
+}
+function loginRequired(loginStatus, componentSupportsReadOnly) {
+  // component works with read only access and
+  // server loginStatus allows read only access
+  if (componentSupportsReadOnly && loginStatus?.readOnlyAccess) {
+    return false
+  }
+
+  // require login when server requires authentication AND
+  // user is not logged
+  return (
+    loginStatus?.authenticationRequired && loginStatus?.status === 'notLoggedIn'
+  )
 }
 
 class Full extends Component {
@@ -50,131 +80,7 @@ class Full extends Component {
     openServerEventsConnection(dispatch)
   }
 
-  __render(){
-    const suppressPadding = //{ padding: '0px' }
-    window.location.pathname.indexOf('/e/') === 0
-      ? { padding: '0px' }
-      : {}
-    return <div className="app">
-        <Header />
-        <div className="app-body">
-        <Sidebar {...this.props} />
-        <main className="main">
-        <Container fluid style={suppressPadding}>
-        <Routes>
-
-                <Route path="/" element={<Dashboard {...this.props}/>} />
-          
-                <Route path="/webapps" element={<Webapps {...this.props}/>} />
-        </Routes>
-        </Container>
-        </main>
-        <Aside />
-        </div>
-        <Footer />
-      </div>
-  }
   render() {
-    const suppressPadding = //{ padding: '0px' }
-      window.location.pathname.indexOf('/e/') === 0
-        ? { padding: '0px' }
-        : {}
-    return (
-      <div className="app">
-        <Header />
-        <div className="app-body">
-          <Sidebar {...this.props} />
-          <main className="main">
-            <Container fluid style={suppressPadding}>
-              <Routes>
-                <Route
-                  path="/dashboard"
-                  name="Dashboard"
-                  element={<Dashboard {...this.props}/>}
-                />
-                <Route
-                  path="/webapps"
-                  name="Webapps"
-                  element={<Webapps {...this.props}/>}
-                />
-                <Route
-                  path="/e/:moduleId"
-                  name="Embedded Webapps"
-                  element={<Embedded {...this.props}/>}
-                />
-                <Route
-                  path="/databrowser"
-                  name="DataBrowser"
-                  element={<DataBrowser {...this.props}/>}
-                />
-                <Route
-                  path="/serverConfiguration/datafiddler"
-                  name="DataFiddler"
-                  element={<Playground {...this.props}/>}
-                />
-                <Route
-                  path="/appstore"
-                  name="Appstore"
-                  element={<Apps {...this.props}/>}
-                />
-                <Route
-                  path="/serverConfiguration/plugins/:pluginid"
-                  element={<Configuration {...this.props}/>}
-                />
-                <Route
-                  path="/serverConfiguration/settings"
-                  element={<Settings {...this.props}/>}
-                />
-                <Route
-                  path="/serverConfiguration/backuprestore"
-                  element={<BackupRestore {...this.props}/>}
-                />
-                <Route
-                  path="/serverConfiguration/connections/:providerId"
-                  
-                  element={<ProvidersConfiguration {...this.props}/>}
-                />
-                <Route
-                  path="/serverConfiguration/log"
-                  element={<ServerLog {...this.props}/>}
-                />
-                <Route
-                  path="/serverConfiguration/update"
-                  element={<ServerUpdate {...this.props}/>}
-                />
-                <Route
-                  path="/security/settings"
-                  element={<SecuritySettings {...this.props}/>}
-                />
-                <Route
-                  path="/security/users"
-                  element={<Users {...this.props}/>}
-                />
-                <Route
-                  path="/security/devices"
-                  element={<Devices {...this.props}/>}
-                />
-                <Route
-                  path="/security/access/requests"
-                  element={<AccessRequests {...this.props}/>}
-                />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register/>} />
-                 <Route
-                    path="/"
-                    element={<Navigate to="/dashboard" replace />}
-                  />              
-              </Routes>
-            </Container>
-          </main>
-          <Aside />
-        </div>
-        <Footer />
-      </div>
-    )
-  }
-
-  _render() {
     const suppressPadding = //{ padding: '0px' }
       window.location.pathname.indexOf('/e/') === 0
         ? { padding: '0px' }
@@ -215,47 +121,48 @@ class Full extends Component {
                 <Route
                   path="/appstore"
                   name="Appstore"
-                  element={loginOrOriginal(Apps)}
+                  element={loginOrOriginal(Apps, true)}
                 />
                 <Route
                   path="/serverConfiguration/plugins/:pluginid"
-                  element={loginOrOriginal(Configuration)}
+                  element={loginOrOriginal(Configuration, true)}
                 />
                 <Route
                   path="/serverConfiguration/settings"
-                  element={loginOrOriginal(Settings)}
+                  element={loginOrOriginal(Settings, true)}
                 />
                 <Route
                   path="/serverConfiguration/backuprestore"
-                  element={loginOrOriginal(BackupRestore)}
+                  element={loginOrOriginal(BackupRestore, true)}
                 />
                 <Route
                   path="/serverConfiguration/connections/:providerId"
-                  element={loginOrOriginal(ProvidersConfiguration)}
+                  
+                  element={loginOrOriginal(ProvidersConfiguration, true)}
                 />
                 <Route
                   path="/serverConfiguration/log"
-                  element={loginOrOriginal(ServerLog)}
+                  element={loginOrOriginal(ServerLog, true)}
                 />
                 <Route
                   path="/serverConfiguration/update"
-                  element={loginOrOriginal(ServerUpdate)}
+                  element={loginOrOriginal(ServerUpdate, true)}
                 />
                 <Route
                   path="/security/settings"
-                  element={loginOrOriginal(SecuritySettings)}
+                  element={loginOrOriginal(SecuritySettings, true)}
                 />
                 <Route
                   path="/security/users"
-                  element={loginOrOriginal(Users)}
+                  element={loginOrOriginal(Users, true)}
                 />
                 <Route
                   path="/security/devices"
-                  element={loginOrOriginal(Devices)}
+                  element={loginOrOriginal(Devices, true)}
                 />
                 <Route
                   path="/security/access/requests"
-                  element={loginOrOriginal(AccessRequests)}
+                  element={loginOrOriginal(AccessRequests, true)}
                 />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register/>} />
@@ -272,69 +179,7 @@ class Full extends Component {
       </div>
     )
   }
+
 }
+export default connect(({ loginStatus }) => ({ loginStatus }))(Full)
 
-export default connect()(Full)
-
-const _loginOrOriginal = (BaseComponent, componentSupportsReadOnly) => {
-  class Restricted extends Component {
-    constructor(props) {
-      super(props)
-      this.state = { hasError: false }
-    }
-
-    static getDerivedStateFromError() {
-      return { hasError: true }
-    }
-
-    render() {
-      if (loginRequired(this.props.loginStatus, componentSupportsReadOnly)) {
-        return <Login />
-      } else if (this.state.hasError) {
-        return <span>Something went wrong.</span>
-      } else {
-        return <BaseComponent {...this.props} />
-      }
-    }
-  }
-  return connect(({ loginStatus }) => ({ loginStatus }))(withRouter(Restricted))
-}
-
-
-
-const loginOrOriginal = (BaseComponent, componentSupportsReadOnly) => {
-  class Restricted extends Component {
-    constructor(props) {
-      super(props)
-      this.state = { hasError: false }
-    }
-
-    static getDerivedStateFromError() {
-      return { hasError: true }
-    }
-
-    render() {
-      if (loginRequired(this.props.loginStatus, componentSupportsReadOnly)) {
-        return <Login />
-      } else if (this.state.hasError) {
-        return <span>Something went wrong.</span>
-      } else {
-        return <BaseComponent {...this.props} />
-      }
-    }
-  }
-  return connect(({ loginStatus }) => ({ loginStatus }))(withRouter(Restricted))
-}
-function loginRequired(loginStatus, componentSupportsReadOnly) {
-  // component works with read only access and
-  // server loginStatus allows read only access
-  if (componentSupportsReadOnly && loginStatus.readOnlyAccess) {
-    return false
-  }
-
-  // require login when server requires authentication AND
-  // user is not logged
-  return (
-    loginStatus.authenticationRequired && loginStatus.status === 'notLoggedIn'
-  )
-}

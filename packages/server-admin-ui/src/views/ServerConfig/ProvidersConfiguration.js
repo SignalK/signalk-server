@@ -157,7 +157,7 @@ class ProvidersConfiguration extends Component {
               selectedIndex: -1,
             },
             () => {
-              this.props.history.push('/serverConfiguration/connections/-')
+              this.props.navigate('/serverConfiguration/connections/-')
             }
           )
         }
