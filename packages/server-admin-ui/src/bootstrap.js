@@ -234,7 +234,7 @@ let store = createStore(
         `<span style="${style}">` +
         action.data.ts +
         '</span> ' +
-        //convert.toHtml(escape(action.data.row))
+        convert.toHtml(escape(action.data.row))
       state.log.entries.push({
         i: logEntryCount++,
         d: html,

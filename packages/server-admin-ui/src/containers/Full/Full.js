@@ -46,7 +46,6 @@ function loginOrOriginal (BaseComponent, componentSupportsReadOnly) {
       return { hasError: true }
     }
 
-  //TODO loginStatus
 
       if (loginRequired(props?.loginStatus, componentSupportsReadOnly)) {
         return <Login />
@@ -181,5 +180,6 @@ class Full extends Component {
   }
 
 }
+
 export default connect(({ loginStatus }) => ({ loginStatus }))(Full)
 
