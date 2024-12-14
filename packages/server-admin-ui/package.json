@@ -44,7 +44,6 @@
     "react-dom": "18.3.1",
     "html-react-parser": "5.1.19",
     "react-json-tree": "0.19.0",
-    "react-jsonschema-form-bs4": "^1.7.1",
     "@rjsf/core": "5.23.1",
     "@rjsf/validator-ajv8": "5.23.1",
     "react-redux": "9.1.2",
