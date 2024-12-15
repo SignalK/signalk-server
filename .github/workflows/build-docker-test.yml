@@ -1,4 +1,4 @@
-name: Build Docker development test container
+name: Build Docker development test image
 
 on:
   push:
