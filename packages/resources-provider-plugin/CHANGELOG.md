@@ -4,7 +4,11 @@ ___Note: Can only be used with Signal K server version 2.0.0 or later.___
 
 ---
 
-## v1.2.0
+## v1.3.1
+
+- **Added**: Filter `ResourceSet` features based on `distance` query.
+
+## v1.3.0
 
 - **Update**: Update plugin configuration to include `charts`.
 

@@ -11,7 +11,12 @@ import {
 } from 'fs/promises'
 import path from 'path'
 import { IResourceStore, StoreRequestParams } from '../types'
-import { passFilter, processParameters } from './utils'
+import {
+  passFilter,
+  processParameters,
+  isResourceSet,
+  isGeomInPolygon
+} from './utils'
 
 export const getUuid = (skIdentifier: string) =>
   skIdentifier.split(':').slice(-1)[0]
@@ -155,6 +160,17 @@ export class FileStore implements IResourceStore {
           )
           // apply param filters
           if (passFilter(res, type, params)) {
+            if (isResourceSet(res) && params.geobounds) {
+              if (
+                res.values?.type === 'FeatureCollection' &&
+                Array.isArray(res.values?.features)
+              ) {
+                const features = res.values?.features.filter((f: any) =>
+                  isGeomInPolygon(f.geometry, params.geobounds)
+                )
+                res.values.features = features
+              }
+            }
             const uuid = files[f].name
             result[uuid] = res
             const stats = await stat(path.join(rt.path, files[f].name))
