@@ -55,8 +55,18 @@ function loginOrOriginal (BaseComponent, componentSupportsReadOnly) {
         return <BaseComponent {...props} loginStatus={props.loginStatus} navigate={navigate} match={match} location={location}/>
       }
   }
-  connect(({ loginStatus }) => ({ loginStatus }))(Restricted)
+  function mapStateToProps(state) {
+
+    return {
+      loginStatus: state.loginStatus
+    }
+  }
+  //TODO react-redux::connect returns a memo-ized object that won't render in a Route 
+  // need to find a work around
+  var c = connect(mapStateToProps)(Restricted)
+
   return <Restricted />
+  
 }
 function loginRequired(loginStatus, componentSupportsReadOnly) {
   // component works with read only access and
@@ -120,48 +130,48 @@ class Full extends Component {
                 <Route
                   path="/appstore"
                   name="Appstore"
-                  element={loginOrOriginal(Apps, true)}
+                  element={loginOrOriginal(Apps)}
                 />
                 <Route
                   path="/serverConfiguration/plugins/:pluginid"
-                  element={loginOrOriginal(Configuration, true)}
+                  element={loginOrOriginal(Configuration)}
                 />
                 <Route
                   path="/serverConfiguration/settings"
-                  element={loginOrOriginal(Settings, true)}
+                  element={loginOrOriginal(Settings)}
                 />
                 <Route
                   path="/serverConfiguration/backuprestore"
-                  element={loginOrOriginal(BackupRestore, true)}
+                  element={loginOrOriginal(BackupRestore)}
                 />
                 <Route
                   path="/serverConfiguration/connections/:providerId"
                   
-                  element={loginOrOriginal(ProvidersConfiguration, true)}
+                  element={loginOrOriginal(ProvidersConfiguration)}
                 />
                 <Route
                   path="/serverConfiguration/log"
-                  element={loginOrOriginal(ServerLog, true)}
+                  element={loginOrOriginal(ServerLog)}
                 />
                 <Route
                   path="/serverConfiguration/update"
-                  element={loginOrOriginal(ServerUpdate, true)}
+                  element={loginOrOriginal(ServerUpdate)}
                 />
                 <Route
                   path="/security/settings"
-                  element={loginOrOriginal(SecuritySettings, true)}
+                  element={loginOrOriginal(SecuritySettings)}
                 />
                 <Route
                   path="/security/users"
-                  element={loginOrOriginal(Users, true)}
+                  element={loginOrOriginal(Users)}
                 />
                 <Route
                   path="/security/devices"
-                  element={loginOrOriginal(Devices, true)}
+                  element={loginOrOriginal(Devices)}
                 />
                 <Route
                   path="/security/access/requests"
-                  element={loginOrOriginal(AccessRequests, true)}
+                  element={loginOrOriginal(AccessRequests)}
                 />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register/>} />
@@ -180,6 +190,12 @@ class Full extends Component {
   }
 
 }
+function mapStateToProps(state) {
 
-export default connect(({ loginStatus }) => ({ loginStatus }))(Full)
+  return {
+    loginStatus: state.loginStatus
+  }
+}
+export default connect(mapStateToProps)(Full)
+//export default connect(({ loginStatus }) => ({ loginStatus }))(Full)
 
