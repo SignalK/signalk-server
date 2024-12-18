@@ -79,7 +79,7 @@ export const startApis = (
     resourcesApi.start(),
     courseApi.start(),
     weatherApi.start(),
-    featuresApi.start()
+    featuresApi.start(),
     autopilotApi.start()
   ])
   return apiList

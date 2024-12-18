@@ -721,7 +721,7 @@
         }
       }
     },
-    "/weather/providers": {
+    "/weather/_providers": {
       "get": {
         "tags": ["Provider"],
         "summary": "Retrieve list of registered providers.",

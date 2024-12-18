@@ -180,7 +180,7 @@ export class WeatherApi {
 
     // return list of weather providers
     this.app.get(
-      `${WEATHER_API_PATH}/providers`,
+      `${WEATHER_API_PATH}/_providers`,
       async (req: Request, res: Response) => {
         debug(`**route = ${req.method} ${req.path}`)
         try {
@@ -205,7 +205,7 @@ export class WeatherApi {
 
     // change weather provider
     this.app.post(
-      `${WEATHER_API_PATH}/providers`,
+      `${WEATHER_API_PATH}/_providers`,
       async (req: Request, res: Response) => {
         debug(`**route = ${req.method} ${req.path} ${JSON.stringify(req.body)}`)
         try {
