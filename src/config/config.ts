@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-var-requires */
 /*
@@ -18,6 +19,7 @@
 'use strict'
 
 import fs from 'fs'
+import os from 'node:os'
 import _ from 'lodash'
 import path from 'path'
 import semver from 'semver'
@@ -75,6 +77,9 @@ export interface Config {
     enablePluginLogging?: boolean
     loggingDirectory?: string
     sourcePriorities?: any
+    courseApi?: {
+      apiOnly?: boolean
+    }
   }
   defaults: object
 }
@@ -404,7 +409,7 @@ function readSettingsFile(app: ConfigApp) {
     debug('Using settings file: ' + settings)
     try {
       app.config.settings = require(settings)
-    } catch (e: any) {
+    } catch (_e: any) {
       console.error(
         `Error reading settings file ${settings}, using empty settings`
       )
@@ -452,8 +457,8 @@ function getExternalHostname(config: Config) {
     return config.settings.hostname
   }
   try {
-    return require('os').hostname()
-  } catch (ex) {
+    return os.hostname()
+  } catch (_ex) {
     return 'hostname_not_available'
   }
 }

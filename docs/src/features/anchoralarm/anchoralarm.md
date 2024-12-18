@@ -250,8 +250,6 @@ It is connected to the NMEA2000 network and has a 10W audio amplifier which can 
 The following post on Panbo is a great resource with regards to the N2K Alert PGNs:
 [Link](https://panbo.com/nmea-2000-network-alert-pgns-seem-great-so-why-are-they-hardly-used/)
 
-Thread on Signal K Slack where most of the information for this chapter was gathered: 
-[Link](https://signalk-dev.slack.com/archives/C02EMP1RF/p1693086271207619)
 
 ### Remote notifications
 
@@ -298,8 +296,8 @@ Listed below are some other apps and supported operations:
 |  Client App    | Arm / disarm | Set radius     | Move location  | See track   | Plays sound |
 | -----------    | ------------ | -------------- | -------------- | ----------- |  ----------- | 
 |**Wilhelm SK**<br>(iOS)              | yes | yes | yes | yes | yes |
-|**Anchor alarm plugin**<br>(web app) | yes | yes | no  | no  | no  |
-|**Freeboard SK**<br>(web app)        | yes | yes | no  | yes | yes |
+|**Anchor alarm plugin**<br>(web app) | yes | yes | yes  | yes  | no  |
+|**Freeboard SK**<br>(web app)        | yes | yes | yes  | yes | yes |
 |**Aqua Map**<br>(iOS & Android)      | ?   | ?   | ?   | ?   | ?   |
 
 
@@ -308,18 +306,25 @@ Listed below are some other apps and supported operations:
 
 The anchor alarm plugin provides a web user interface available under _WebApps_ in the Signal K Server Admin UI.
 
-It provides the ability to arm / disarm and set the radius of the anchor alarm but does not display the alarm on screen or play a sound.
+It provides the ability to arm / disarm, set the radius and shift the anchor but does not display the alarm on screen or play a sound.
 
 <img src="./anchor_alarm_plugin_ui.png" width=300px>
 
 
 ### Freeboard SK
 
-Freeboard SK provides the ability to arm / disarm and set the radius of the anchor alarm via its _Anchor Watch_ function.
-Additionally it will:
-- Display the alarm on screen 
+Freeboard SK provides a "sequence" driven user interface to "step" through the setting of the anchor alarm.
+
+It provides the ability to drop / raise the anchor, set / adjust the alarm radius and shift the anchor position via the _Anchor Watch_ feature in the main menu.
+
+When set, it will:
+- Display the alarm radius on the map
+- Show the vessel track whilst anchored
+
+When alarm is triggered:
+- Display an alarm notification on screen 
 - Play a sound
-- Display a track.
+
 
 It is available under _WebApps_ in the Signal K Server Admin UI.
 

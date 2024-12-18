@@ -1,7 +1,6 @@
 import React, { Component } from 'react'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
 import {
-  Alert,
   Button,
   Card,
   CardBody,
@@ -135,7 +134,7 @@ export default class PluginConfigurationList extends Component {
                   if (plugin.data.configuration === undefined) {
                     data.enabled = true
                   }
-                  this.saveData(plugin.id, data, i)
+                  this.saveData(plugin.id, data)
                 }}
               />
             )
@@ -145,7 +144,7 @@ export default class PluginConfigurationList extends Component {
     )
   }
 
-  saveData(id, data, i) {
+  saveData(id, data) {
     fetch(`${window.serverRoutesPrefix}/plugins/${id}/config`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -157,7 +156,7 @@ export default class PluginConfigurationList extends Component {
         alert('Saving plugin settings failed')
       } else {
         const plugins = [...this.state.plugins]
-        plugins[i].data = data
+        plugins.find((plugin) => plugin.id === id).data = data
         this.setState({ plugins })
       }
     })
@@ -234,7 +233,7 @@ class PluginCard extends Component {
                         type="checkbox"
                         name="enabled"
                         className="switch-input"
-                        onChange={(e) => {
+                        onChange={() => {
                           this.props.saveData({
                             ...this.props.plugin.data,
                             enabled: !this.props.plugin.data.enabled,
@@ -260,7 +259,7 @@ class PluginCard extends Component {
                         type="checkbox"
                         name="enableLogging"
                         className="switch-input"
-                        onChange={(e) => {
+                        onChange={() => {
                           this.props.saveData({
                             ...this.props.plugin.data,
                             enableLogging:
@@ -287,7 +286,7 @@ class PluginCard extends Component {
                         type="checkbox"
                         name="enableDebug"
                         className="switch-input "
-                        onChange={(e) => {
+                        onChange={() => {
                           this.props.saveData({
                             ...this.props.plugin.data,
                             enableDebug: !this.props.plugin.data.enableDebug,

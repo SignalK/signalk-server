@@ -26,9 +26,11 @@ export * from './coursetypes'
 export * from './resourcetypes'
 export * from './resourcesapi'
 import { ResourceProviderRegistry } from './resourcesapi'
-import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
-
 export * from './autopilotapi'
+import { AutopilotProviderRegistry } from './autopilotapi'
+export { AutopilotProviderRegistry } from './autopilotapi'
+export * from './autopilotapi.guard'
+import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
 export * from './weatherapi'
 import { WeatherProviderRegistry, WeatherWarning } from './weatherapi'
@@ -68,6 +70,7 @@ export interface PropertyValuesEmitter {
 export interface PluginServerApp
   extends PropertyValuesEmitter,
     ResourceProviderRegistry,
+    AutopilotProviderRegistry,
     WeatherProviderRegistry {}
 
 /**

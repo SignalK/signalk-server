@@ -1,5 +1,4 @@
 import React, { Component } from 'react'
-import { connect } from 'react-redux'
 import {
   Table,
   Input,
@@ -7,12 +6,11 @@ import {
   Card,
   CardBody,
   CardHeader,
-  FormText,
   Label,
 } from 'reactstrap'
 
 class N2KFilters extends Component {
-  constructor(props) {
+  constructor() {
     super()
 
     this.handleAddFilter = this.handleAddFilter.bind(this)

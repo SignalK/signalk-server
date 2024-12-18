@@ -63,7 +63,7 @@ export interface ACL {
 export interface User {
   username: string
   type: string
-  password: string
+  password?: string
 }
 export interface UserData {
   userId: string
@@ -163,7 +163,7 @@ export interface SecurityStrategy {
   getUsers: (theConfig: SecurityConfig) => UserData[]
   addUser: (
     theConfig: SecurityConfig,
-    user: UserWithPassword,
+    user: User,
     cb: ICallback<SecurityConfig>
   ) => void
   updateUser: (
@@ -223,7 +223,7 @@ export function startSecurity(
     }
 
     const config = securityConfig || getSecurityConfig(app, true)
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     app.securityStrategy = require(securityStrategyModuleName)(app, config)
 
     if (securityConfig) {

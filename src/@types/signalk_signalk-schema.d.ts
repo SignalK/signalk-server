@@ -9,6 +9,8 @@ declare module '@signalk/signalk-schema' {
     constructor(selfId: string, selfType: string, defaults?: any)
     addDelta: (_: any) => void
     retrieve: () => any
-    pruneContexts: () => void
+    pruneContexts: (seconds: number) => void
   }
+  export function getMetadata(path: string): any
+  export function getAISShipTypeName(shipType: number): string
 }

@@ -28,6 +28,8 @@ function StreamBundle(app, selfId) {
   this.availableSelfPaths = {}
   this.app = app
   this.metaSent = {}
+  this.metaBus = new Bacon.Bus()
+  this.selfMetaBus = new Bacon.Bus()
 }
 
 StreamBundle.prototype.pushDelta = function (delta) {
@@ -64,19 +66,34 @@ StreamBundle.prototype.pushDelta = function (delta) {
 }
 
 StreamBundle.prototype.push = function (path, pathValueWithSourceAndContext) {
+  const { isMeta } = pathValueWithSourceAndContext
+  const isSelf = pathValueWithSourceAndContext.context === this.selfContext
+  if (isMeta) {
+    this.metaBus.push(pathValueWithSourceAndContext)
+    if (isSelf) {
+      this.selfMetaBus.push(pathValueWithSourceAndContext)
+    }
+  }
   if (!this.availableSelfPaths[path]) {
     this.availableSelfPaths[path] = true
   }
   this.getBus().push(pathValueWithSourceAndContext)
   this.getBus(path).push(pathValueWithSourceAndContext)
-  if (pathValueWithSourceAndContext.context === this.selfContext) {
+  if (isSelf) {
     this.getSelfBus().push(pathValueWithSourceAndContext)
     this.getSelfBus(path).push(pathValueWithSourceAndContext)
-    if (!pathValueWithSourceAndContext.isMeta) {
+    if (!isMeta) {
       this.getSelfStream().push(pathValueWithSourceAndContext.value)
       this.getSelfStream(path).push(pathValueWithSourceAndContext.value)
     }
   }
+}
+
+StreamBundle.prototype.getMetaBus = function () {
+  return this.metaBus
+}
+StreamBundle.prototype.getSelfMetaBus = function () {
+  return this.selfMetaBus
 }
 
 StreamBundle.prototype.getBus = function (path) {

@@ -7,9 +7,10 @@ import _ from 'lodash'
 
 import { SignalKMessageHub, WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
+import { getSourceId } from '@signalk/signalk-schema'
+import { Unsubscribes } from '../../types'
 
 import {
-  Delta,
   GeoJsonPoint,
   PathValue,
   Position,
@@ -20,7 +21,11 @@ import {
   ActiveRoute,
   RouteDestination,
   CourseInfo,
-  COURSE_POINT_TYPES
+  COURSE_POINT_TYPES,
+  Update,
+  Delta,
+  hasValues,
+  SourceRef
 } from '@signalk/server-api'
 
 const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
@@ -31,11 +36,17 @@ import { Store } from '../../serverstate/store'
 import { buildSchemaSync } from 'api-schema-builder'
 import courseOpenApi from './openApi.json'
 import { ResourcesApi } from '../resources'
+import { writeSettingsFile } from '../../config/config'
 
 const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
 
 const SIGNALK_API_PATH = `/signalk/v2/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
+
+const API_CMD_SRC: CommandSource = {
+  $source: 'courseApi' as SourceRef,
+  type: 'API'
+}
 
 export const COURSE_API_V2_DELTA_COUNT = 13
 export const COURSE_API_V1_DELTA_COUNT = 8
@@ -48,6 +59,13 @@ interface CourseApplication
     WithSecurityStrategy,
     SignalKMessageHub {}
 
+interface CommandSource {
+  type: string
+  $source: SourceRef
+  msg?: string
+  path?: string
+}
+
 export class CourseApi {
   private courseInfo: CourseInfo = {
     startTime: null,
@@ -59,12 +77,16 @@ export class CourseApi {
   }
 
   private store: Store
+  private cmdSource: CommandSource | null = null // source which set the destination
+  private unsubscribes: Unsubscribes = []
+  private settings!: { apiOnly?: boolean }
 
   constructor(
-    private server: CourseApplication,
+    private app: CourseApplication,
     private resourcesApi: ResourcesApi
   ) {
-    this.store = new Store(server, 'course')
+    this.store = new Store(app, 'course')
+    this.parseSettings()
   }
 
   async start() {
@@ -77,15 +99,170 @@ export class CourseApi {
         storeData = await this.store.read()
         debug('Found persisted course data')
         this.courseInfo = this.validateCourseInfo(storeData)
-      } catch (error) {
+        this.cmdSource = this.courseInfo.nextPoint ? API_CMD_SRC : null
+      } catch (_error) {
         debug('No persisted course data (using default)')
       }
-      debug(this.courseInfo)
-      if (storeData) {
+      debug(
+        '** courseInfo **',
+        this.courseInfo,
+        '** cmdSource **',
+        this.cmdSource
+      )
+      if (this.courseInfo.nextPoint) {
         this.emitCourseInfo(true)
       }
+
+      ;(this.app as any).subscriptionmanager.subscribe(
+        {
+          context: 'vessels.self',
+          subscribe: [
+            {
+              path: 'navigation.courseRhumbline.nextPoint.position',
+              period: 500
+            },
+            {
+              path: 'navigation.courseGreatCircle.nextPoint.position',
+              period: 500
+            }
+          ]
+        },
+        this.unsubscribes,
+        (err: Error) => {
+          console.log(`Course API: Subscribe failed: ${err}`)
+        },
+        (msg: Delta) => {
+          this.processV1DestinationDeltas(msg)
+        }
+      )
       resolve()
     })
+  }
+
+  // parse server settings
+  private parseSettings() {
+    const defaultSettings = {
+      apiOnly: false
+    }
+    if (!('courseApi' in this.app.config.settings)) {
+      debug('***** Applying Default Settings ********')
+      this.app.config.settings.courseApi = defaultSettings
+    }
+    if (
+      this.app.config.settings.courseApi &&
+      typeof this.app.config.settings.courseApi.apiOnly === 'undefined'
+    ) {
+      debug('***** Applying missing apiOnly attribute to Settings ********')
+      this.app.config.settings.courseApi.apiOnly = false
+    }
+    this.settings = this.app.config.settings.courseApi ?? { apiOnly: false }
+    debug('** Parsed App Settings ***', this.app.config.settings)
+    debug('** Applied cmdSource ***', this.cmdSource)
+  }
+
+  // write to server settings file
+  private saveSettings() {
+    writeSettingsFile(this.app as any, this.app.config.settings, () =>
+      debug('***SETTINGS SAVED***')
+    )
+  }
+
+  /** Process deltas for <destination>.nextPoint data
+   * Note: Delta source cannot override destination set by API!
+   * Destination is set when:
+   * 1. There is no current destination
+   * 2. msg source matches current Destination source
+   * 3. Destination Position is changed.
+   */
+  private async processV1DestinationDeltas(delta: Delta) {
+    if (
+      !Array.isArray(delta.updates) ||
+      this.isAPICmdSource() ||
+      (!this.cmdSource && this.settings?.apiOnly)
+    ) {
+      return
+    }
+    delta.updates.forEach((update: Update) => {
+      if (hasValues(update)) {
+        update.values.forEach((pathValue: PathValue) => {
+          if (
+            update.source &&
+            update.source.type &&
+            ['NMEA0183', 'NMEA2000'].includes(update.source.type)
+          ) {
+            this.parseStreamValue(
+              {
+                type: update.source.type,
+                $source: update.$source || getSourceId(update.source),
+                msg:
+                  update.source.type === 'NMEA0183'
+                    ? `${update.source.sentence}`
+                    : `${update.source.pgn}`,
+                path: pathValue.path
+              },
+              pathValue.value as Position
+            )
+          }
+        })
+      }
+    })
+  }
+
+  /** Test for valid Signal K position */
+  private isValidPosition(position: Position): boolean {
+    return (
+      typeof position?.latitude === 'number' &&
+      typeof position?.latitude === 'number' &&
+      position?.latitude >= -90 &&
+      position?.latitude <= 90 &&
+      position?.longitude >= -180 &&
+      position?.longitude <= 180
+    )
+  }
+
+  /** Process stream value and take action
+   * @param cmdSource Object describing the source of the update
+   * @param pos Destination location value in the update
+   */
+  private async parseStreamValue(cmdSource: CommandSource, pos: Position) {
+    if (!this.cmdSource) {
+      // New source
+      if (!this.isValidPosition(pos)) {
+        return
+      }
+      debug('parseStreamValue:', 'Setting Destination...')
+      const result = await this.setDestination({ position: pos }, cmdSource)
+      debug('parseStreamValue: Source set...', this.cmdSource)
+      if (result) {
+        this.emitCourseInfo()
+        return
+      }
+    }
+
+    if (this.isCurrentCmdSource(cmdSource)) {
+      if (!this.isValidPosition(pos)) {
+        debug(
+          'parseStreamValue:',
+          'No or invalid position... Clear Destination...'
+        )
+        this.clearDestination()
+        return
+      }
+
+      if (
+        this.courseInfo.nextPoint?.position?.latitude !== pos.latitude ||
+        this.courseInfo.nextPoint?.position?.longitude !== pos.longitude
+      ) {
+        debug(
+          'parseStreamValue:',
+          'Position changed... Updating Destination...'
+        )
+        const result = await this.setDestination({ position: pos }, cmdSource)
+        if (result) {
+          this.emitCourseInfo()
+        }
+      }
+    }
   }
 
   /** Get course (exposed to plugins) */
@@ -94,14 +271,15 @@ export class CourseApi {
     return this.courseInfo
   }
 
-  /** Clear destination / route (exposed to plugins)  */
-  async clearDestination(): Promise<void> {
+  /** Clear destination / route (exposed to plugins) */
+  async clearDestination(persistState?: boolean): Promise<void> {
     this.courseInfo.startTime = null
     this.courseInfo.targetArrivalTime = null
     this.courseInfo.activeRoute = null
     this.courseInfo.nextPoint = null
     this.courseInfo.previousPoint = null
-    this.emitCourseInfo()
+    this.emitCourseInfo(!persistState)
+    this.cmdSource = null
   }
 
   /** Set course (exposed to plugins)
@@ -139,11 +317,15 @@ export class CourseApi {
   }
 
   private getVesselPosition() {
-    return _.get((this.server.signalk as any).self, 'navigation.position')
+    return _.get((this.app.signalk as any).self, 'navigation.position')
   }
 
   private validateCourseInfo(info: CourseInfo) {
-    if (info.activeRoute && info.nextPoint && info.previousPoint) {
+    if (
+      typeof info.activeRoute !== 'undefined' &&
+      typeof info.nextPoint !== 'undefined' &&
+      typeof info.previousPoint !== 'undefined'
+    ) {
       return info
     } else {
       debug(`** Error: Loaded course data is invalid!! (using default) **`)
@@ -152,7 +334,7 @@ export class CourseApi {
   }
 
   private updateAllowed(request: Request): boolean {
-    return this.server.securityStrategy.shouldAllowPut(
+    return this.app.securityStrategy.shouldAllowPut(
       request,
       'vessels.self',
       null,
@@ -163,20 +345,67 @@ export class CourseApi {
   private initCourseRoutes() {
     debug(`** Initialise ${COURSE_API_PATH} path handlers **`)
 
-    // return current course information
-    this.server.get(
-      `${COURSE_API_PATH}`,
+    // Return current course information
+    this.app.get(`${COURSE_API_PATH}`, async (req: Request, res: Response) => {
+      debug(`** ${req.method} ${req.path}`)
+      res.json(this.courseInfo)
+    })
+
+    // Return course api config
+    this.app.get(
+      `${COURSE_API_PATH}/_config`,
       async (req: Request, res: Response) => {
-        debug(`** GET ${COURSE_API_PATH}`)
-        res.json(this.courseInfo)
+        debug(`** ${req.method} ${req.path}`)
+        res.json((this.app.config.settings as any)['courseApi'])
+      }
+    )
+
+    // Set apiOnly mode
+    this.app.post(
+      `${COURSE_API_PATH}/_config/apiOnly`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        if (!this.updateAllowed(req)) {
+          res.status(403).json(Responses.unauthorised)
+          return
+        }
+        try {
+          ;(this.settings as any).apiOnly = true
+          if (!this.isAPICmdSource()) {
+            this.clearDestination(true)
+          }
+          this.saveSettings()
+          res.status(200).json(Responses.ok)
+        } catch {
+          res.status(400).json(Responses.invalid)
+        }
+      }
+    )
+
+    // Clear apiOnly mode
+    this.app.delete(
+      `${COURSE_API_PATH}/_config/apiOnly`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        if (!this.updateAllowed(req)) {
+          res.status(403).json(Responses.unauthorised)
+          return
+        }
+        try {
+          ;(this.settings as any).apiOnly = false
+          this.saveSettings()
+          res.status(200).json(Responses.ok)
+        } catch {
+          res.status(400).json(Responses.invalid)
+        }
       }
     )
 
     // course metadata
-    this.server.get(
+    this.app.get(
       `${COURSE_API_PATH}/arrivalCircle/meta`,
       async (req: Request, res: Response) => {
-        debug(`** GET ${COURSE_API_PATH}/arrivalCircle/meta`)
+        debug(`** ${req.method} ${req.path}`)
         res.json({
           arrivalCircle: {
             description:
@@ -187,10 +416,10 @@ export class CourseApi {
       }
     )
 
-    this.server.put(
+    this.app.put(
       `${COURSE_API_PATH}/arrivalCircle`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/arrivalCircle`)
+        debug(`** ${req.method} ${req.path}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
@@ -205,10 +434,10 @@ export class CourseApi {
       }
     )
 
-    this.server.put(
+    this.app.put(
       `${COURSE_API_PATH}/restart`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/restart`)
+        debug(`** ${req.method} ${req.path}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
@@ -238,7 +467,7 @@ export class CourseApi {
               message: `Vessel position unavailable!`
             })
           }
-        } catch (err) {
+        } catch (_err) {
           res.status(400).json({
             state: 'FAILED',
             statusCode: 400,
@@ -248,10 +477,10 @@ export class CourseApi {
       }
     )
 
-    this.server.put(
+    this.app.put(
       `${COURSE_API_PATH}/targetArrivalTime`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/targetArrivalTime`)
+        debug(`** ${req.method} ${req.path}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
@@ -267,24 +496,24 @@ export class CourseApi {
     )
 
     // clear / cancel course
-    this.server.delete(
+    this.app.delete(
       `${COURSE_API_PATH}`,
       async (req: Request, res: Response) => {
-        debug(`** DELETE ${COURSE_API_PATH}`)
+        debug(`** ${req.method} ${req.path}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
-        this.clearDestination()
+        this.clearDestination(true)
         res.status(200).json(Responses.ok)
       }
     )
 
     // set destination
-    this.server.put(
+    this.app.put(
       `${COURSE_API_PATH}/destination`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/destination`)
+        debug(`** ${req.method} ${req.path}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
@@ -315,17 +544,17 @@ export class CourseApi {
     )
 
     // set activeRoute
-    this.server.put(
+    this.app.put(
       `${COURSE_API_PATH}/activeRoute`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/activeRoute`)
+        debug(`** ${req.method} ${req.path}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
         }
         try {
           const result = await this.activateRoute(req.body)
-          console.log(this.courseInfo)
+          debug(this.courseInfo)
           if (result) {
             this.emitCourseInfo()
             res.status(200).json(Responses.ok)
@@ -342,10 +571,10 @@ export class CourseApi {
       }
     )
 
-    this.server.put(
+    this.app.put(
       `${COURSE_API_PATH}/activeRoute/:action`,
       async (req: Request, res: Response) => {
-        debug(`** PUT ${COURSE_API_PATH}/activeRoute/${req.params.action}`)
+        debug(`** ${req.method} ${req.path}, ${req.params.action}`)
         if (!this.updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
@@ -445,8 +674,8 @@ export class CourseApi {
               res.status(400).json(Responses.invalid)
               return false
             }
-          } catch (err) {
-            console.log(`** Error: unable to retrieve vessel position!`)
+          } catch (_err) {
+            console.log(`** Course API: Unable to retrieve vessel position!`)
             res.status(400).json(Responses.invalid)
             return false
           }
@@ -474,7 +703,10 @@ export class CourseApi {
     )
   }
 
-  private async activateRoute(route: RouteDestination): Promise<boolean> {
+  private async activateRoute(
+    route: RouteDestination,
+    src: CommandSource = API_CMD_SRC
+  ): Promise<boolean> {
     const { href, reverse } = route
     let rte: any
 
@@ -524,7 +756,7 @@ export class CourseApi {
         } else {
           throw new Error(`Error: Unable to retrieve vessel position!`)
         }
-      } catch (err) {
+      } catch (_err) {
         throw new Error(`Error: Unable to retrieve vessel position!`)
       }
     } else {
@@ -538,12 +770,17 @@ export class CourseApi {
       }
     }
 
+    if (this.isSourceChange(src)) {
+      this.clearDestination(true)
+    }
     this.courseInfo = newCourse
+    this.cmdSource = src
     return true
   }
 
   private async setDestination(
-    dest: PointDestination & { arrivalCircle?: number }
+    dest: PointDestination & { arrivalCircle?: number },
+    src: CommandSource = API_CMD_SRC
   ): Promise<boolean> {
     const newCourse: CourseInfo = { ...this.courseInfo }
 
@@ -576,14 +813,14 @@ export class CourseApi {
           } else {
             throw new Error(`Invalid waypoint coordinate data! (${dest.href})`)
           }
-        } catch (err) {
+        } catch (_err) {
           throw new Error(`Error retrieving and validating ${dest.href}`)
         }
       } else {
         throw new Error(`Invalid href! (${dest.href})`)
       }
     } else if ('position' in dest) {
-      if (isValidCoordinate(dest.position)) {
+      if (this.isValidPosition(dest.position)) {
         newCourse.nextPoint = {
           position: dest.position,
           type: Location
@@ -611,11 +848,15 @@ export class CourseApi {
           `Error: navigation.position.value is undefined! (${position})`
         )
       }
-    } catch (err) {
+    } catch (_err) {
       throw new Error(`Error: Unable to retrieve vessel position!`)
     }
 
+    if (this.isSourceChange(src)) {
+      this.clearDestination(true)
+    }
     this.courseInfo = newCourse
+    this.cmdSource = src
     return true
   }
 
@@ -705,7 +946,7 @@ export class CourseApi {
         return (await this.resourcesApi.getResource(h.type, h.id)) as
           | Route
           | undefined
-      } catch (err) {
+      } catch (_err) {
         debug(`** Unable to fetch resource: ${h.type}, ${h.id}`)
         return undefined
       }
@@ -718,8 +959,6 @@ export class CourseApi {
   private buildDeltaMsg(paths: string[]): any {
     const values: Array<{ path: string; value: any }> = []
     const navPath = 'navigation.course'
-
-    debug(this.courseInfo)
 
     if (
       paths.length === 0 ||
@@ -742,13 +981,6 @@ export class CourseApi {
       values.push({
         path: `${navPath}.activeRoute`,
         value: this.courseInfo.activeRoute
-      })
-    }
-
-    if (paths.length === 0 || (paths && paths.includes('nextPoint'))) {
-      values.push({
-        path: `${navPath}.nextPoint`,
-        value: this.courseInfo.nextPoint
       })
     }
 
@@ -780,17 +1012,14 @@ export class CourseApi {
     const navGC = 'navigation.courseGreatCircle'
     const navRL = 'navigation.courseRhumbline'
 
-    if (
-      this.courseInfo.activeRoute &&
-      (paths.length === 0 || (paths && paths.includes('activeRoute')))
-    ) {
+    if (paths.length === 0 || (paths && paths.includes('activeRoute'))) {
       values.push({
         path: `${navGC}.activeRoute.href`,
-        value: this.courseInfo.activeRoute.href
+        value: this.courseInfo.activeRoute?.href ?? null
       })
       values.push({
         path: `${navRL}.activeRoute.href`,
-        value: this.courseInfo.activeRoute.href
+        value: this.courseInfo.activeRoute?.href ?? null
       })
 
       values.push({
@@ -802,35 +1031,32 @@ export class CourseApi {
         value: this.courseInfo.startTime
       })
     }
-    if (
-      this.courseInfo.nextPoint &&
-      (paths.length === 0 || (paths && paths.includes('nextPoint')))
-    ) {
+    if (paths.length === 0 || (paths && paths.includes('nextPoint'))) {
       values.push({
         path: `${navGC}.nextPoint.value.href`,
-        value: this.courseInfo.nextPoint.href ?? null
+        value: this.courseInfo.nextPoint?.href ?? null
       })
       values.push({
         path: `${navRL}.nextPoint.value.href`,
-        value: this.courseInfo.nextPoint.href ?? null
+        value: this.courseInfo.nextPoint?.href ?? null
       })
 
       values.push({
         path: `${navGC}.nextPoint.value.type`,
-        value: this.courseInfo.nextPoint.type
+        value: this.courseInfo.nextPoint?.type ?? null
       })
       values.push({
         path: `${navRL}.nextPoint.value.type`,
-        value: this.courseInfo.nextPoint.type
+        value: this.courseInfo.nextPoint?.type ?? null
       })
 
       values.push({
         path: `${navGC}.nextPoint.position`,
-        value: this.courseInfo.nextPoint.position
+        value: this.courseInfo.nextPoint?.position ?? null
       })
       values.push({
         path: `${navRL}.nextPoint.position`,
-        value: this.courseInfo.nextPoint.position
+        value: this.courseInfo.nextPoint?.position ?? null
       })
     }
     if (paths.length === 0 || (paths && paths.includes('arrivalCircle'))) {
@@ -843,26 +1069,23 @@ export class CourseApi {
         value: this.courseInfo.arrivalCircle
       })
     }
-    if (
-      this.courseInfo.previousPoint &&
-      (paths.length === 0 || (paths && paths.includes('previousPoint')))
-    ) {
+    if (paths.length === 0 || (paths && paths.includes('previousPoint'))) {
       values.push({
         path: `${navGC}.previousPoint.position`,
-        value: this.courseInfo.previousPoint.position
+        value: this.courseInfo.previousPoint?.position ?? null
       })
       values.push({
         path: `${navRL}.previousPoint.position`,
-        value: this.courseInfo.previousPoint.position
+        value: this.courseInfo.previousPoint?.position ?? null
       })
 
       values.push({
         path: `${navGC}.previousPoint.value.type`,
-        value: this.courseInfo.previousPoint.type
+        value: this.courseInfo.previousPoint?.type ?? null
       })
       values.push({
         path: `${navRL}.previousPoint.value.type`,
-        value: this.courseInfo.previousPoint.type
+        value: this.courseInfo.previousPoint?.type ?? null
       })
     }
 
@@ -875,21 +1098,50 @@ export class CourseApi {
     }
   }
 
-  private emitCourseInfo(noSave = false, ...paths: string[]) {
-    this.server.handleMessage(
-      'courseApi',
+  private emitCourseInfo(noSave?: boolean, ...paths: string[]) {
+    this.app.handleMessage(
+      API_CMD_SRC.$source,
       this.buildV1DeltaMsg(paths),
       SKVersion.v1
     )
-    this.server.handleMessage(
-      'courseApi',
-      this.buildDeltaMsg(paths),
+
+    const v2Delta = this.buildDeltaMsg(paths)
+    v2Delta.updates[0].$source = API_CMD_SRC.$source
+    v2Delta.updates.push({
+      $source: this.cmdSource ? this.cmdSource.$source : API_CMD_SRC.$source,
+      values: [
+        {
+          path: `navigation.course.nextPoint`,
+          value: this.courseInfo.nextPoint
+        }
+      ]
+    })
+    this.app.handleMessage(
+      'N/A', //no-op as updates already have $source
+      v2Delta,
       SKVersion.v2
     )
-    if (!noSave) {
+
+    const p = typeof noSave === 'undefined' ? this.isAPICmdSource() : !noSave
+    if (p) {
+      debug('*** persisting state **')
       this.store.write(this.courseInfo).catch((error) => {
-        console.log(error)
+        console.log('Course API: Unable to persist destination details!')
+        debug(error)
       })
     }
   }
+
+  private isAPICmdSource = () => this.cmdSource?.type === API_CMD_SRC.type
+
+  private isSourceChange = (newSource: CommandSource): boolean =>
+    this.cmdSource !== null &&
+    (this.cmdSource.type !== newSource.type ||
+      this.cmdSource.$source !== newSource.$source)
+
+  private isCurrentCmdSource = (cmdSource: CommandSource) =>
+    this.cmdSource?.type === cmdSource.type &&
+    this.cmdSource?.$source === cmdSource.$source &&
+    this.cmdSource?.path === cmdSource.path &&
+    this.cmdSource?.msg === cmdSource.msg
 }

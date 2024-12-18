@@ -55,8 +55,7 @@ Signal K is more than just the Signal K Server, it is a comprehensive platform t
 
 [Documentation for Signal K Server](https://demo.signalk.org/documentation).
 
-See [Github Discussions](https://github.com/SignalK/signalk/discussions/) and [Slack (chat)](https://signalk-dev.slack.com/).
-New to Signal K Slack? Then [click here for an invite](https://join.slack.com/t/signalk-dev/shared_invite/zt-1leccop43-KrU7G6yBq9g91KXjZtNg1g).
+See [Github Discussions](https://github.com/SignalK/signalk/discussions/) and [Discord (chat)](https://discord.gg/uuZrwz4dCS).
 
 There is a [Signal K Server FAQ Frequently Asked Questions](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions) on the Wiki, including [How do I integrate with NMEA2000 (CAN bus)](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions#how-do-i-integrate-with-nmea2000-can-bus).
 

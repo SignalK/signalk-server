@@ -57,7 +57,7 @@ export class FileStore implements IResourceStore {
 
     try {
       await this.checkPath(this.savePath)
-    } catch (error) {
+    } catch (_error) {
       throw new Error(`Unable to create ${this.savePath}!`)
     }
     return await this.createSavePaths(enabledResTypes)
@@ -74,13 +74,13 @@ export class FileStore implements IResourceStore {
         try {
           await access(this.resources[t].path, constants.W_OK | constants.R_OK)
           this.debug(`${this.resources[t].path} - OK....`)
-        } catch (error) {
+        } catch (_error) {
           this.debug(`${this.resources[t].path} NOT available...`)
           this.debug(`Creating ${this.resources[t].path} ...`)
           try {
             await mkdir(this.resources[t].path, { recursive: true })
             this.debug(`Created ${this.resources[t].path} - OK....`)
-          } catch (error) {
+          } catch (_error) {
             result.error = true
             result.message += `ERROR creating ${this.resources[t].path} folder\r\n `
           }
@@ -217,7 +217,7 @@ export class FileStore implements IResourceStore {
       )
       this.debug(`${path} - OK...`)
       return true
-    } catch (error) {
+    } catch (_error) {
       // if not then create it
       this.debug(`${path} does NOT exist...`)
       this.debug(`Creating ${path} ...`)
@@ -225,7 +225,7 @@ export class FileStore implements IResourceStore {
         await mkdir(path, { recursive: true })
         this.debug(`Created ${path} - OK...`)
         return true
-      } catch (error) {
+      } catch (_error) {
         throw new Error(`Unable to create ${path}!`)
       }
     }

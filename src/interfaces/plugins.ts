@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /*
@@ -21,13 +22,16 @@ import {
   PropertyValues,
   PropertyValuesCallback,
   ResourceProvider,
+  AutopilotProvider,
   ServerAPI,
   RouteDestination,
-  SignalKApiId,
   WeatherProvider,
   WeatherApi,
   Position,
-  WeatherWarning
+  WeatherWarning,
+  Value,
+  SignalKApiId,
+  SourceRef
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -36,6 +40,7 @@ import express, { Request, Response } from 'express'
 import fs from 'fs'
 import _ from 'lodash'
 import path from 'path'
+import { AutopilotApi } from '../api/autopilot'
 import { CourseApi } from '../api/course'
 import { ResourcesApi } from '../api/resources'
 import { SERVERROUTESPREFIX } from '../constants'
@@ -55,7 +60,7 @@ const put = require('../put')
 const _putPath = put.putPath
 const getModulePublic = require('../config/get').getModulePublic
 const queryRequest = require('../requestResponse').queryRequest
-const getMetadata = require('@signalk/signalk-schema').getMetadata
+import { getMetadata } from '@signalk/signalk-schema'
 
 // #521 Returns path to load plugin-config assets.
 const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')
@@ -131,7 +136,7 @@ module.exports = (theApp: any) => {
           .catch((err) => {
             console.error(err)
             res.status(500)
-            res.send(err)
+            res.json(err)
           })
       })
     }
@@ -284,7 +289,7 @@ module.exports = (theApp: any) => {
     let optionsAsString = '{}'
     try {
       optionsAsString = fs.readFileSync(pathForPluginId(id), 'utf8')
-    } catch (e) {
+    } catch (_e) {
       debug(
         'Could not find options for plugin ' +
           id +
@@ -422,7 +427,7 @@ module.exports = (theApp: any) => {
     }
   }
 
-  function stopPlugin(plugin: PluginInfo) {
+  function stopPlugin(plugin: PluginInfo): Promise<any> {
     debug('Stopping plugin ' + plugin.name)
     onStopHandlers[plugin.id].forEach((f: () => void) => {
       try {
@@ -432,9 +437,12 @@ module.exports = (theApp: any) => {
       }
     })
     onStopHandlers[plugin.id] = []
-    plugin.stop()
-    theApp.setPluginStatus(plugin.id, 'Stopped')
-    debug('Stopped plugin ' + plugin.name)
+    const result = Promise.resolve(plugin.stop())
+    result.then(() => {
+      theApp.setPluginStatus(plugin.id, 'Stopped')
+      debug('Stopped plugin ' + plugin.name)
+    })
+    return result
   }
 
   function setPluginStartedMessage(plugin: PluginInfo) {
@@ -473,10 +481,11 @@ module.exports = (theApp: any) => {
         console.error(`${plugin.id}:no configuration data`)
         safeConfiguration = {}
       }
-      onStopHandlers[plugin.id].push(() =>
+      onStopHandlers[plugin.id].push(() => {
         app.resourcesApi.unRegister(plugin.id)
-      )
-      onStopHandlers[plugin.id].push(() => app.weatherApi.unRegister(plugin.id))
+        app.autopilotApi.unRegister(plugin.id)
+        app.weatherApi.unRegister(plugin.id))
+      })
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
@@ -575,6 +584,21 @@ module.exports = (theApp: any) => {
       resourcesApi.register(plugin.id, provider)
     }
 
+    const autopilotApi: AutopilotApi = app.autopilotApi
+    _.omit(appCopy, 'autopilotApi') // don't expose the actual autopilot api manager
+    appCopy.registerAutopilotProvider = (
+      provider: AutopilotProvider,
+      devices: string[]
+    ) => {
+      autopilotApi.register(plugin.id, provider, devices)
+    }
+    appCopy.autopilotUpdate = (
+      deviceId: SourceRef,
+      apInfo: { [k: string]: Value }
+    ) => {
+      autopilotApi.apUpdate(plugin.id, deviceId, apInfo)
+    }
+
     _.omit(appCopy, 'apiList') // don't expose the actual apiList
 
     const courseApi: CourseApi = app.courseApi
@@ -636,6 +660,21 @@ module.exports = (theApp: any) => {
     appCopy.getDataDirPath = () => dirForPluginId(plugin.id)
 
     appCopy.registerPutHandler = (context, aPath, callback, source) => {
+      appCopy.handleMessage(plugin.id, {
+        updates: [
+          {
+            meta: [
+              {
+                path: aPath,
+                value: {
+                  supportsPut: true
+                }
+              }
+            ]
+          }
+        ]
+      })
+
       onStopHandlers[plugin.id].push(
         app.registerActionHandler(context, aPath, source || plugin.id, callback)
       )
@@ -644,7 +683,7 @@ module.exports = (theApp: any) => {
 
     appCopy.registerHistoryProvider = (provider) => {
       app.registerHistoryProvider(provider)
-      const apiList = app.apiList as SignalKApiId[]
+      const apiList = app.apis as SignalKApiId[]
       apiList.push('historyplayback')
       apiList.push('historysnapshot')
       onStopHandlers[plugin.id].push(() => {
@@ -660,8 +699,11 @@ module.exports = (theApp: any) => {
         if (err) {
           console.error(err)
         } else {
-          stopPlugin(plugin)
-          doPluginStart(app, plugin, location, newConfiguration, restart)
+          stopPlugin(plugin).then(() => {
+            return Promise.resolve(
+              doPluginStart(app, plugin, location, newConfiguration, restart)
+            )
+          })
         }
       })
     }
@@ -712,17 +754,18 @@ module.exports = (theApp: any) => {
         if (err) {
           console.error(err)
           res.status(500)
-          res.send(err)
+          res.json(err)
           return
         }
-        res.send('Saved configuration for plugin ' + plugin.id)
-        stopPlugin(plugin)
-        const options = getPluginOptions(plugin.id)
-        plugin.enableLogging = options.enableLogging
-        plugin.enableDebug = options.enableDebug
-        if (options.enabled) {
-          doPluginStart(app, plugin, location, options.configuration, restart)
-        }
+        res.json('Saved configuration for plugin ' + plugin.id)
+        stopPlugin(plugin).then(() => {
+          const options = getPluginOptions(plugin.id)
+          plugin.enableLogging = options.enableLogging
+          plugin.enableDebug = options.enableDebug
+          if (options.enabled) {
+            doPluginStart(app, plugin, location, options.configuration, restart)
+          }
+        })
       })
     })
 

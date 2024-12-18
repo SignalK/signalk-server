@@ -8,7 +8,12 @@ export default function NameCellRenderer(props) {
     <div className="cell__renderer cell-name">
       <span className="name">{props.value}</span>
       {props.data.npmUrl && (
-        <a className="link" href={props.data.npmUrl} target="_blank">
+        <a
+          className="link"
+          href={props.data.npmUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
           <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
         </a>
       )}

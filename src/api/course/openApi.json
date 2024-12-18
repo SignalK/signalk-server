@@ -34,6 +34,10 @@
     {
       "name": "calculations",
       "description": "Calculated course data"
+    },
+    {
+      "name": "configuration",
+      "description": "Course API settings."
     }
   ],
   "components": {
@@ -680,6 +684,62 @@
                 }
               }
             }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/course/_config": {
+      "get": {
+        "tags": ["configuration"],
+        "summary": "Retrieve Course API configuration.",
+        "description": "Returns the current Course API configuration settings.",
+        "responses": {
+          "200": {
+            "description": "Course data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "apiOnly": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["apiOnly"]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/course/_config/apiOnly": {
+      "post": {
+        "tags": ["configuration"],
+        "summary": "Set API Only mode.",
+        "description": "Accept REST API requests only. Ignores NMEA sources.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["configuration"],
+        "summary": "Clear API Only mode.",
+        "description": "Accept both REST API requests and NMEA source data.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
           },
           "default": {
             "$ref": "#/components/responses/ErrorResponse"

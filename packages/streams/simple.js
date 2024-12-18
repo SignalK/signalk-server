@@ -23,6 +23,7 @@ const Ydwg02 = require('@canboat/canboatjs').Ydwg02
 const W2k01 = require('@canboat/canboatjs').W2k01
 const gpsd = require('./gpsd')
 const pigpioSeatalk = require('./pigpio-seatalk')
+const gpiodSeatalk = require('./gpiod-seatalk')
 
 function Simple(options) {
   Transform.call(this, { objectMode: true })
@@ -417,5 +418,9 @@ function signalKInput(subOptions) {
 }
 
 function seatalkInput(subOptions) {
-  return [new pigpioSeatalk(subOptions)]
+  if (subOptions.type === 'gpiod') {
+    return [new gpiodSeatalk(subOptions)]
+  } else {
+    return [new pigpioSeatalk(subOptions)]
+  }
 }

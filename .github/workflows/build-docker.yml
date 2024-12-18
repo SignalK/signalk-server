@@ -5,7 +5,7 @@ on:
     branches:
     - master
     - "build-docker"
-    - documentation
+    - metadata-editing
     tags:
       - '*'
       - '!v*'

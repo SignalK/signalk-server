@@ -1,18 +1,14 @@
-import React, { Component, useState } from 'react'
+import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import {
-  Badge,
   Button,
   Card,
   CardHeader,
   CardBody,
   CardFooter,
-  InputGroup,
-  InputGroupAddon,
   Input,
   Form,
   Col,
-  Label,
   FormGroup,
   FormText,
   Table,
@@ -48,13 +44,16 @@ class Playground extends Component {
       data: [],
       deltas: [],
       n2kJson: [],
+      n2kOutAvailable: false,
       input,
       inputIsJson: isJson(input),
       sending: false,
+      sendingN2K: false,
       activeTab: DELTAS_TAB_ID,
     }
 
     this.handleExecute = this.handleExecute.bind(this)
+    this.handleSendN2K = this.handleSendN2K.bind(this)
     this.handleInput = this.handleInput.bind(this)
     this.send = this.send.bind(this)
     this.beautify = this.beautify.bind(this)
@@ -77,8 +76,12 @@ class Playground extends Component {
     }, 500)
   }
 
-  handleExecute(event) {
+  handleExecute() {
     this.send(true)
+  }
+
+  handleSendN2K() {
+    this.send(false, true)
   }
 
   componentDidMount() {
@@ -99,7 +102,7 @@ class Playground extends Component {
         deltas: [],
         putResults: [],
         n2kJson: [],
-        jsonError: null,
+        n2kOutAvailable: false,
         error: 'invalid json',
         jsonError: error.message,
         activeTab: LINT_ERROR_TAB_ID,
@@ -107,7 +110,7 @@ class Playground extends Component {
     }
   }
 
-  send(sendToServer) {
+  send(sendToServer, sendToN2K) {
     let start = this.state.input.trim().charAt(0)
     if (start === '{' || start === '[') {
       try {
@@ -122,6 +125,7 @@ class Playground extends Component {
           deltas: [],
           putResults: [],
           n2kJson: [],
+          n2kOutAvailable: false,
           error: 'invalid json',
           jsonError: error.message,
           activeTab: LINT_ERROR_TAB_ID,
@@ -130,10 +134,13 @@ class Playground extends Component {
       }
     }
 
-    const body = { value: this.state.input, sendToServer }
+    const body = { value: this.state.input, sendToServer, sendToN2K }
     localStorage.setItem(inputStorageKey, this.state.input)
     if (sendToServer) {
       this.setState({ ...this.state, sending: true })
+    }
+    if (sendToN2K) {
+      this.setState({ ...this.state, sendingN2K: true })
     }
     fetch(`${window.serverRoutesPrefix}/inputTest`, {
       method: 'POST',
@@ -145,9 +152,9 @@ class Playground extends Component {
     })
       .then((response) => response.json())
       .then((data) => {
-        if (sendToServer) {
+        if (sendToServer || sendToN2K) {
           setTimeout(() => {
-            this.setState({ ...this.state, sending: false })
+            this.setState({ ...this.state, sending: false, sendingN2K: false })
           }, 1000)
         }
         if (data.error) {
@@ -157,6 +164,7 @@ class Playground extends Component {
             deltas: [],
             putResults: [],
             n2kJson: [],
+            n2kOutAvailable: false,
             jsonError: null,
             error: data.error,
           })
@@ -203,6 +211,7 @@ class Playground extends Component {
             data: values,
             deltas: data.deltas,
             n2kJson: data.n2kJson,
+            n2kOutAvailable: data.n2kOutAvailable,
             putResults: data.putResults,
             jsonError: null,
           })
@@ -216,11 +225,12 @@ class Playground extends Component {
           deltas: [],
           putResults: [],
           n2kJson: [],
+          n2kOutAvailable: false,
           error: error.message,
           jsonError: null,
         })
-        if (sendToServer) {
-          this.setState({ ...this.state, sending: false })
+        if (sendToServer || sendToN2K) {
+          this.setState({ ...this.state, sending: false, sendingN2K: false })
         }
       })
   }
@@ -250,7 +260,12 @@ class Playground extends Component {
                       <Col xs="12" md="12">
                         <FormText color="muted">
                           You can enter multi-line raw NMEA 2000, NMEA 0183 or
-                          Signal K deltas (one delta or an array)
+                          Signal K deltas (one delta or an array). For sending
+                          PGNs out over the servers NMEA 2000 connection, use
+                          one of the formats{' '}
+                          <a href="/documentation/develop/plugins/deltas.html?highlight=NMEA%202000%20json#sending-nmea-2000-data-from-a-plugin">
+                            here
+                          </a>
                         </FormText>
                         <Input
                           type="textarea"
@@ -264,39 +279,71 @@ class Playground extends Component {
                   </Form>
                 </CardBody>
                 <CardFooter>
-                  <Button
-                    size="sm"
-                    color="primary"
-                    className="float-left"
-                    disabled={!this.state.inputIsJson}
-                    onClick={this.beautify}
-                  >
-                    <i className="fa fa-dot-circle-o" /> Beautify JSON
-                  </Button>
-                  <span
-                    className="float-left"
-                    style={{ paddingLeft: '10px', paddingTop: '0.25rem' }}
-                  >
-                    {' '}
-                    {this.state.error && (
-                      <p className="text-danger">{this.state.error}</p>
-                    )}
-                  </span>{' '}
-                  <Button
-                    size="sm"
-                    color="primary"
-                    onClick={this.handleExecute}
-                    className="float-right"
-                  >
-                    <i
-                      className={
-                        this.state.sending
-                          ? 'fa fa-spinner fa-spin'
-                          : 'fa fa-dot-circle-o'
-                      }
-                    />{' '}
-                    Send To Server
-                  </Button>
+                  <Row style={{ paddingBottom: '0.25rem' }}>
+                    <Col>
+                      <Button
+                        size="sm"
+                        color="primary"
+                        className="float-left"
+                        disabled={!this.state.inputIsJson}
+                        onClick={this.beautify}
+                      >
+                        <i className="fa fa-dot-circle-o" /> Beautify JSON
+                      </Button>
+                    </Col>
+
+                    <Col>
+                      <Button
+                        size="sm"
+                        color="primary"
+                        onClick={this.handleExecute}
+                        className="float-right"
+                      >
+                        <i
+                          className={
+                            this.state.sending
+                              ? 'fa fa-spinner fa-spin'
+                              : 'fa fa-dot-circle-o'
+                          }
+                        />{' '}
+                        Send To Server
+                      </Button>
+                    </Col>
+                  </Row>
+                  <Row style={{ paddingBottom: '0.25rem' }}>
+                    <Col className="text-right">
+                      <Button
+                        size="sm"
+                        color="primary"
+                        disabled={
+                          !(
+                            this.state.n2kJson &&
+                            this.state.n2kJson.length > 0 &&
+                            this.state.n2kOutAvailable
+                          )
+                        }
+                        onClick={this.handleSendN2K}
+                      >
+                        <i
+                          className={
+                            this.state.sendingN2K
+                              ? 'fa fa-spinner fa-spin'
+                              : 'fa fa-dot-circle-o'
+                          }
+                        />{' '}
+                        Send as PGN to server&apos;s NMEA2000 connection
+                      </Button>
+                    </Col>
+                  </Row>
+                  <Row>
+                    <Col>
+                      <span className="float-right">
+                        {this.state.error && (
+                          <p className="text-danger">{this.state.error}</p>
+                        )}
+                      </span>
+                    </Col>
+                  </Row>
                 </CardFooter>
               </Card>
             </Col>
@@ -331,6 +378,7 @@ class Playground extends Component {
                         </NavLink>
                       </NavItem>
                     )}
+
                     {this.state.n2kJson && this.state.n2kJson.length > 0 && (
                       <NavItem>
                         <NavLink
@@ -416,7 +464,6 @@ class Playground extends Component {
                                     ? 2
                                     : 0
                                 )
-                                const path = data.path
                                 const key = `${data.path}${data.context}`
 
                                 return (
@@ -509,7 +556,9 @@ function isJson(input) {
   try {
     JSON.parse(input)
     inputIsJson = true
-  } catch (e) {}
+  } catch (e) {
+    /* empty */
+  }
   return inputIsJson
 }
 

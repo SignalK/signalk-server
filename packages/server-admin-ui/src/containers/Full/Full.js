@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { Switch, Route, Redirect, withRouter, History } from 'react-router-dom'
+import { Switch, Route, Redirect, withRouter } from 'react-router-dom'
 import { Container } from 'reactstrap'
 import { connect } from 'react-redux'
 
@@ -11,7 +11,7 @@ import Footer from '../../components/Footer/Footer'
 import Dashboard from '../../views/Dashboard/Dashboard'
 import Embedded from '../../views/Webapps/Embedded'
 import Webapps from '../../views/Webapps/Webapps'
-import DataBrowser from '../../views/DataBrowser'
+import DataBrowser from '../../views/DataBrowser/DataBrowser'
 import Playground from '../../views/Playground'
 import Apps from '../../views/appstore/Apps/Apps'
 import Configuration from '../../views/Configuration/Configuration'
@@ -21,19 +21,13 @@ import Users from '../../views/security/Users'
 import Devices from '../../views/security/Devices'
 import Register from '../../views/security/Register'
 import AccessRequests from '../../views/security/AccessRequests'
-import VesselConfiguration from '../../views/ServerConfig/VesselConfiguration'
 import ProvidersConfiguration from '../../views/ServerConfig/ProvidersConfiguration'
 import Settings from '../../views/ServerConfig/Settings'
 import BackupRestore from '../../views/ServerConfig/BackupRestore'
-import Logging from '../../views/ServerConfig/Logging'
 import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
 
-import {
-  fetchLoginStatus,
-  fetchAllData,
-  openServerEventsConnection,
-} from '../../actions'
+import { fetchAllData, openServerEventsConnection } from '../../actions'
 
 class Full extends Component {
   componentDidMount() {
@@ -148,7 +142,7 @@ const loginOrOriginal = (BaseComponent, componentSupportsReadOnly) => {
       this.state = { hasError: false }
     }
 
-    static getDerivedStateFromError(error) {
+    static getDerivedStateFromError() {
       return { hasError: true }
     }
 

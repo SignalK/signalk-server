@@ -35,7 +35,7 @@ HttpProvider.prototype._transform = function (chunk, encoding, done) {
 }
 
 function handleDelta (req, res, next) {
-  res.send('ok')
+  res.type('text/plain').send('ok')
   // eslint-disable-next-line no-invalid-this
   this.push(req.body)
 }

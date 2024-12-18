@@ -5,6 +5,7 @@ import { SERVERROUTESPREFIX } from '../constants'
 import { courseApiRecord } from './course/openApi'
 import { notificationsApiRecord } from './notifications/openApi'
 import { resourcesApiRecord } from './resources/openApi'
+import { autopilotApiRecord } from './autopilot/openApi'
 import { securityApiRecord } from './security/openApi'
 import { discoveryApiRecord } from './discovery/openApi'
 import { weatherApiRecord } from './weather/openApi'
@@ -27,11 +28,12 @@ interface ApiRecords {
 const apiDocs = [
   discoveryApiRecord,
   appsApiRecord,
-  securityApiRecord,
+  autopilotApiRecord,
   courseApiRecord,
   notificationsApiRecord,
   resourcesApiRecord,
-  weatherApiRecord
+  weatherApiRecord,
+  securityApiRecord
 ].reduce<ApiRecords>((acc, apiRecord: OpenApiRecord) => {
   acc[apiRecord.name] = apiRecord
   return acc
@@ -45,7 +47,6 @@ export function mountSwaggerUi(app: IRouter & PluginManager, path: string) {
 
   // custom middleware to re-setup swaggerUI, because plugins have
   // not been loaded when this is called early in server startup sequence
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use(path, (req: Request, res: Response, next: NextFunction) => {
     swaggerUi.setup(undefined, {
       explorer: true,
@@ -93,7 +94,7 @@ export function mountSwaggerUi(app: IRouter & PluginManager, path: string) {
       res.json(apiDoc)
     } else {
       res.status(404)
-      res.send('Not found')
+      res.json('Not found')
     }
   }
   app.get(

@@ -111,6 +111,7 @@ class Sidebar extends Component {
           >
             <i className={item.icon} />
             {item.name}
+            {badge(item.badge)}
           </a>
           <ul className="nav-dropdown-items">{navList(item.children)}</ul>
         </li>
@@ -312,17 +313,6 @@ const mapStateToProps = (state) => {
   })
 
   return result
-}
-
-const pluginMenuItems = (plugins) => {
-  return plugins
-    ? plugins.map((pluginData) => {
-        return {
-          name: pluginData.name,
-          url: `/plugins/${pluginData.id}`,
-        }
-      })
-    : []
 }
 
 export default connect(mapStateToProps)(Sidebar)

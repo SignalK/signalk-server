@@ -30,11 +30,11 @@ const Apps = function (props) {
         (allApps[app.name] = {
           ...app,
           installed: true,
-          newVersion: app.installedVersion !== app.version ? app.version : null,
+          newVersion: updateAvailable(app, props.appStore) ? app.version : null,
         })
     )
     props.appStore.installing.forEach(
-      (app) => (allApps[app.name].installing = true)
+      (app) => ((allApps[app.name] || {}).installing = true)
     )
     return Object.values(allApps).sort(
       (a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()
@@ -70,7 +70,7 @@ const Apps = function (props) {
       'Please restart the server after installing, updating or deleting a plugin'
   }
 
-  const selectedViewFilter = selectedViewToFilter(view)
+  const selectedViewFilter = selectedViewToFilter(view, props.appStore)
   const selectedCategoryFilter =
     category === 'All' ? () => true : (app) => app.categories.includes(category)
   const textSearchFilter =
@@ -123,6 +123,22 @@ const Apps = function (props) {
                   </span>
                 )}
               </Button>
+              {props.appStore.installing.length > 0 && (
+                <>
+                  <Button
+                    color={view === 'Installing' ? 'primary' : 'secondary'}
+                    onClick={() => setSelectedView('Installing')}
+                  >
+                    Installs & Removes
+                    {installingCount(props.appStore) > 0 && (
+                      <span className="badge__update">
+                        {installingCount(props.appStore)}
+                      </span>
+                    )}
+                  </Button>
+                  {props.appStore.installing.length > 0 && '(Pending restart)'}
+                </>
+              )}
             </div>
           </div>
 
@@ -176,13 +192,31 @@ const Apps = function (props) {
   )
 }
 
-const selectedViewToFilter = (selectedView) => {
+const installingCount = (appStore) => {
+  return appStore.installing.filter((app) => {
+    return app.isWaiting || app.isInstalling
+  }).length
+}
+
+const selectedViewToFilter = (selectedView, appStore) => {
   if (selectedView === 'Installed') {
-    return (app) => app.installing || app.installedVersion
+    return (app) => app.installedVersion || app.installing
   } else if (selectedView === 'Updates') {
-    return (app) => app.installedVersion && app.version !== app.installedVersion
+    return (app) => updateAvailable(app, appStore)
+  } else if (selectedView === 'Installing') {
+    return (app) => app.installing
   }
   return () => true
+}
+
+const updateAvailable = (app, appStore) => {
+  return (
+    app.installedVersion &&
+    app.version !== app.installedVersion &&
+    //Don't allow updates for plugins in the PLUGINS_WITH_UPDATE_DISABLED
+    //environment variable
+    appStore.updates.find((update) => update.name === app.name)
+  )
 }
 
 const mapStateToProps = ({ appStore }) => ({ appStore })

@@ -16,8 +16,11 @@
   * [Anchor Alarm](./features/anchoralarm/anchoralarm.md)
   * [NMEA0183 Server](./features/navdataserver/navdataserver.md)
   * [Working with Weather Data](./features/weather/weather.md)
+  * [Data Logging](./features/datalogging/datalogging.md)
+
 # Support
 * [Help & Support](./support/help.md)
+  * [FAQs](./support/faq.md)
 * [Sponsor](./support/sponsor.md)
 # Develop
 * [Notes for Developers](./develop/developer_notes.md)

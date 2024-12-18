@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-this-alias */
 /* eslint-disable @typescript-eslint/no-var-requires */
@@ -68,9 +69,10 @@ import { OpenApiDescription, OpenApiRecord } from './api/swagger'
 import { WithProviderStatistics } from './deltastats'
 import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
+import { Zones } from './zones'
 const debug = createDebug('signalk-server')
 
-const { StreamBundle } = require('./streambundle')
+import { StreamBundle } from './streambundle'
 
 interface ServerOptions {
   securityConfig: any
@@ -315,6 +317,9 @@ class Server {
     }
 
     app.streambundle = new StreamBundle(app, app.selfId)
+    new Zones(app.streambundle, (delta: Delta) =>
+      app.handleMessage('self.notificationhandler', delta)
+    )
     app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
     app.subscriptionmanager = new SubscriptionManager(app)
     app.deltaCache = new DeltaCache(app, app.streambundle)
@@ -475,7 +480,7 @@ class Server {
     if (typeof mixed === 'string') {
       try {
         settings = require(path.join(process.cwd(), mixed))
-      } catch (e) {
+      } catch (_e) {
         debug(`Settings file '${settings}' does not exist`)
       }
     }
@@ -630,8 +635,7 @@ function startInterfaces(app: ServerApp & WithConfig & WithWrappedEmitter) {
           ;(app as any)[prop] = value
           return true
         },
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        get(target: any, prop: string | symbol, receiver: any) {
+        get(target: any, prop: string | symbol, _receiver: any) {
           return (app as any)[prop]
         }
       }

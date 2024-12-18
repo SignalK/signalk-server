@@ -1,7 +1,7 @@
 import freeport from 'freeport-promise'
 import fetch from 'node-fetch'
 import path from 'path'
-import rmfr from 'rmfr'
+import { rimraf } from 'rimraf'
 import {
   sendDelta,
   serverTestConfigDirectory,
@@ -10,6 +10,7 @@ import {
 } from './servertestutilities'
 import { SERVERSTATEDIRNAME } from '../src/serverstate/store'
 import { expect } from 'chai'
+import { Delta, hasValues, PathValue } from '@signalk/server-api'
 
 export const DATETIME_REGEX = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)Z?$/
 
@@ -17,7 +18,7 @@ const emptyConfigDirectory = () =>
   Promise.all(
     [SERVERSTATEDIRNAME, 'resources', 'plugin-config-data', 'baseDeltas.json']
       .map(subDir => path.join(serverTestConfigDirectory(), subDir))
-      .map(dir => rmfr(dir).then(() => console.error(dir)))
+      .map(dir => rimraf(dir).then(() => console.error(dir)))
   )
 
 export const startServer = async () => {
@@ -25,6 +26,7 @@ export const startServer = async () => {
   const host = 'http://localhost:' + port
   const sendDeltaUrl = host + '/signalk/v1/api/_test/delta'
   const api = host + '/signalk/v2/api'
+  const v1Api = host + '/signalk/v1/api'
 
   await emptyConfigDirectory()
   const server = await startServerP(port, false, {
@@ -48,11 +50,18 @@ export const startServer = async () => {
         body: JSON.stringify(body),
         headers: { 'Content-Type': 'application/json' }
       }),
+    selfPutV1: (path: string, body: object) =>
+      fetch(`${v1Api}/vessels/self/${path}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' }
+      }),
     selfDelete: (path: string) =>
       fetch(`${api}/vessels/self/${path}`, {
         method: 'DELETE'
       }),
     get: (path: string) => fetch(`${api}${path}`),
+    getV1: (path: string) => fetch(`${v1Api}${path}`),
     post: (path: string, body: object) =>
       fetch(`${api}${path}`, {
         method: 'POST',
@@ -67,6 +76,9 @@ export const startServer = async () => {
       }),
     selfGetJson: (path: string) =>
       fetch(`${api}/vessels/self/${path}`).then(r => r.json()),
+    selfGetJsonV1: (path: string) =>
+      fetch(`${v1Api}/vessels/self/${path}`).then(r => r.json()),
+    host,    
     sendDelta: (path: string, value: any) =>
       sendDelta(
         {
@@ -89,13 +101,26 @@ export const startServer = async () => {
   }
 }
 
-export const deltaHasPathValue = (delta: any, path: string, value: any) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const deltaHasPathValue = (delta: Delta, path: string, value: any) => {
   try {
-    const pathValue = delta.updates[0].values.find((x: any) => x.path === path)
-    expect(pathValue.value).to.deep.equal(value)
+    const pathValue = delta.updates.reduce<PathValue | undefined>(
+      (acc, update) => {
+        if (!acc && hasValues(update)) {
+          acc = update.values.find((x: PathValue) => x.path === path)
+        }
+        return acc
+      },
+      undefined
+    )
+    expect(pathValue?.value).to.deep.equal(value)
   } catch (e) {
     throw new Error(
-      `No such pathValue ${path}:${JSON.stringify(value)} in ${JSON.stringify(delta, null, 2)}`
+      `No such pathValue ${path}:${JSON.stringify(value)} in ${JSON.stringify(
+        delta,
+        null,
+        2
+      )}`
     )
   }
 }

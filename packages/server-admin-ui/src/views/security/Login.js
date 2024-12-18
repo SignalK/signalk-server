@@ -1,6 +1,5 @@
 import React, { Component } from 'react'
 import {
-  Form,
   Container,
   Row,
   Col,
@@ -32,7 +31,7 @@ class Login extends Component {
     this.handleClick = this.handleClick.bind(this)
   }
 
-  handleClick(event) {
+  handleClick() {
     this.setState({ loggingIn: true })
     const { dispatch } = this.props
     login(
