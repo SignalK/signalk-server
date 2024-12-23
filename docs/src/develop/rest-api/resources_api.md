@@ -33,6 +33,7 @@ A filtered list of entries can be retrieved based on criteria such as:
 - being within a bounded area
 - distance from vessel
 - total entries returned
+- map zoom level
 
 by supplying a query string containing `key | value` pairs in the request.
 
@@ -54,6 +55,13 @@ _Example 3: Retrieve waypoints within a bounded area. Note: the bounded area is 
 HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?bbox=[-135.5,38,-134,38.5]'
 ```
 
+_Example 4: Return notes for display on a map view at zoom level 5. 
+
+```typescript
+HTTP GET 'http://hostname:3000/signalk/v2/api/resources/notes?zoom=5'
+```
+
+It is up to the provider to determine which resource entries are returned for any given zoom level. As a guide we recommend alignment with the criteria in the following document: https://wiki.openstreetmap.org/wiki/Zoom_levels_.
 
 ### Deleting Resources
 ---
