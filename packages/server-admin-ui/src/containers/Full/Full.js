@@ -1,5 +1,5 @@
 
-import React, { Component } from 'react'
+import React, { Component, useEffect, useState } from 'react'
 import {  Route, Navigate, Routes, HashRouter } from 'react-router'
 import { Container } from 'reactstrap'
 import { connect } from 'react-redux'
@@ -52,7 +52,7 @@ function loginOrOriginal (BaseComponent, componentSupportsReadOnly) {
       } else if (state?.hasError) {
         return <span>Something went wrong.</span>
       } else {
-        return <BaseComponent {...props} loginStatus={props.loginStatus} navigate={navigate} match={match} location={location}/>
+        return <BaseComponent {...props} navigate={navigate} match={match} location={location}/>
       }
   }
   function mapStateToProps(state) {
@@ -82,14 +82,14 @@ function loginRequired(loginStatus, componentSupportsReadOnly) {
   )
 }
 
-class Full extends Component {
-  componentDidMount() {
-    const { dispatch } = this.props
+const Full = (props)=> {
+
+  useEffect(() => {
+    const { dispatch } = props
     fetchAllData(dispatch)
     openServerEventsConnection(dispatch)
-  }
+  },[]);
 
-  render() {
     const suppressPadding = //{ padding: '0px' }
       window.location.pathname.indexOf('/e/') === 0
         ? { padding: '0px' }
@@ -98,7 +98,7 @@ class Full extends Component {
       <div className="app">
         <Header />
         <div className="app-body">
-          <Sidebar {...this.props} />
+          <Sidebar {...props} location={useLocation()}/>
           <main className="main">
             <Container fluid style={suppressPadding}>
               <Routes>
@@ -189,11 +189,10 @@ class Full extends Component {
     )
   }
 
-}
 function mapStateToProps(state) {
 
   return {
-    loginStatus: state.loginStatus
+    loginStatus: state.loginStatus,
   }
 }
 export default connect(mapStateToProps)(Full)

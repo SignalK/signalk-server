@@ -13,9 +13,10 @@ import '@fortawesome/fontawesome-free/css/all.min.css'
 // Import Simple Line Icons Set
 import 'simple-line-icons/css/simple-line-icons.css'
 // Import Main styles for this application
+
 import '../scss/style.scss'
 // Temp fix for reactstrap
-import '../_scss/core/_dropdown-menu-right.scss'
+//import '../_scss/core/_dropdown-menu-right.scss'
 
 
 // Containers

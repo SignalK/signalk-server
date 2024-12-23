@@ -10,7 +10,6 @@ import {
   Button,
   Input,
   InputGroup,
-  //InputGroupAddon,
   InputGroupText,
 } from 'reactstrap'
 import { connect } from 'react-redux'

@@ -7,9 +7,9 @@
  */
 
  
-@import 'bootstrap';
+
+//@import "@coreui/coreui/scss/coreui";
 // Override Boostrap variables
-//@import 'variables';
 
 // Import Bootstrap source files
 //@import '~bootstrap/scss/bootstrap';
@@ -18,5 +18,8 @@
 //@import 'core/*;
 
 // Custom styles
+@import 'bootstrap';
+@import 'variables';
+//@import "@coreui/coreui/scss/coreui";
 @import 'custom';
 

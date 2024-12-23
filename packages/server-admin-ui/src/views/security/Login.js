@@ -9,7 +9,6 @@ import {
   Button,
   Input,
   InputGroup,
-  //InputGroupAddon,
   InputGroupText,
   Label,
 } from 'reactstrap'

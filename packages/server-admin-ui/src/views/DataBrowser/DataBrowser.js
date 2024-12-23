@@ -476,7 +476,8 @@ class CopyToClipboardWithFade extends Component {
 function mapStateToProps(state) {
 
   return {
-    webSocket: state?.webSocket
+    webSocket: state.webSocket,
+    loginStatus: state.loginStatus
   }
 }
 export default connect(mapStateToProps)(DataBrowser)

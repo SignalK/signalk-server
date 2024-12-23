@@ -263,8 +263,14 @@ class Devices extends Component {
   }
 }
 
-const mapStateToProps = ({ securityDevices }) => ({ securityDevices })
+//const mapStateToProps = ({ securityDevices }) => ({ securityDevices })
+function mapStateToProps(state) {
 
+  return {
+    loginStatus: state.loginStatus,
+    securityDevices: state.securityDevices
+  }
+}
 export default connect(mapStateToProps)(Devices)
 
 function convertPermissions(type) {

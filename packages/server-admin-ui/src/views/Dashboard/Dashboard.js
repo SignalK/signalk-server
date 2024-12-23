@@ -294,11 +294,19 @@ function providerIdLink(id) {
     return <a href={'#/serverConfiguration/connections/' + id}>{id}</a>
   }
 }
+function mapStateToProps(state) {
 
-export default connect(
-  ({ serverStatistics, websocketStatus, providerStatus }) => ({
+  return {
+    serverStatistics: state.serverStatistics,
+    websocketStatus: state.websocketStatus,
+    providerStatus: state.providerStatus
+
+  }
+}
+export default connect(mapStateToProps
+/*  ({ serverStatistics, websocketStatus, providerStatus }) => ({
     serverStatistics,
     websocketStatus,
     providerStatus,
-  })
+  })*/
 )(Dashboard)
