@@ -18,10 +18,6 @@ export const inBounds = (
   let ok = false
   switch (type) {
     case 'notes':
-    case 'waypoints':
-      if (val?.feature?.geometry?.coordinates) {
-        ok = isPointInPolygon(val?.feature?.geometry?.coordinates, polygon)
-      }
       if (val.position) {
         ok = isPointInPolygon(val.position, polygon)
       }
@@ -33,34 +29,50 @@ export const inBounds = (
       }
       break
     case 'routes':
-      if (val.feature.geometry.coordinates) {
-        val.feature.geometry.coordinates.forEach((pt: any) => {
+    case 'regions':
+    case 'waypoints':
+      if (val.feature) {
+        ok = ok || isGeomInPolygon(val.feature.geometry, polygon)
+      }
+      break
+    default:
+      ok = true
+  }
+  return ok
+}
+
+// test if supplied geometry contains a position inside the polygon
+export const isGeomInPolygon = (
+  geom: any,
+  polygon: GeolibInputCoordinates[]
+) => {
+  let ok = false
+  if (!Array.isArray(geom.coordinates)) {
+    return false
+  }
+  if (geom.type === 'Point') {
+    ok = ok || isPointInPolygon(geom.coordinates, polygon)
+  }
+  if (geom.type === 'MultiPoint' || geom.type === 'LineString') {
+    geom.coordinates.forEach((pt: any) => {
+      ok = ok || isPointInPolygon(pt, polygon)
+    })
+  }
+  if (geom.type === 'MultiLineString' || geom.type === 'Polygon') {
+    geom.coordinates.forEach((line: any) => {
+      line.forEach((pt: any) => {
+        ok = ok || isPointInPolygon(pt, polygon)
+      })
+    })
+  }
+  if (geom.type === 'MultiPolygon') {
+    geom.coordinates.forEach((polygon: any) => {
+      polygon.forEach((line: any) => {
+        line.forEach((pt: any) => {
           ok = ok || isPointInPolygon(pt, polygon)
         })
-      }
-      break
-    case 'regions':
-      if (
-        val.feature.geometry.coordinates &&
-        val.feature.geometry.coordinates.length > 0
-      ) {
-        if (val.feature.geometry.type == 'Polygon') {
-          val.feature.geometry.coordinates.forEach((ls: any) => {
-            ls.forEach((pt: any) => {
-              ok = ok || isPointInPolygon(pt, polygon)
-            })
-          })
-        } else if (val.feature.geometry.type == 'MultiPolygon') {
-          val.feature.geometry.coordinates.forEach((polygon: any) => {
-            polygon.forEach((ls: any) => {
-              ls.forEach((pt: any) => {
-                ok = ok || isPointInPolygon(pt, polygon)
-              })
-            })
-          })
-        }
-      }
-      break
+      })
+    })
   }
   return ok
 }
@@ -182,3 +194,6 @@ export const toPolygon = (bbox: number[]): GeolibInputCoordinates[] => {
   }
   return polygon
 }
+
+export const isResourceSet = (res: any) =>
+  res.type && res.type === 'ResourceSet'
