@@ -798,7 +798,7 @@
       "ZoomParam": {
         "in": "query",
         "name": "zoom",
-        "description": "Limit response to entries that should only appear above the supplied zoom level.",
+        "description": "Zoom level of the map used by the client to display the returned resource entries. Refer: [OSM Zoom Levels](https://wiki.openstreetmap.org/wiki/Zoom_levels)",
         "schema": {
           "type": "integer",
           "format": "int32",
@@ -839,7 +839,7 @@
         "summary": "Retrieve list of available resource types",
         "responses": {
           "default": {
-            "description": "List of avaialble resource types identified by name",
+            "description": "List of available resource types identified by name",
             "content": {
               "application/json": {
                 "schema": {
