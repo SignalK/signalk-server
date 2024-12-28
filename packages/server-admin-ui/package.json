@@ -61,7 +61,7 @@
     "webpack-cli": "^4.2.0"
   },
   "scripts": {
-    "prepublishOnly": "npm run clean && npm run build",
+    "prepublishOnly": "npm run build",
     "watch": "webpack --watch --mode development",
     "build": "webpack --mode=production",
     "format": "prettier --write src/",
