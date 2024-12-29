@@ -36,15 +36,15 @@ jobs:
         with:
           file: ./docker/Dockerfile_base_test
           platforms: linux/amd64,linux/arm/v7,linux/arm64
-          push: true
-          tags: |
-            signalk/signalk-server-base:test_
-            ghcr.io/signalk/signalk-server-base:test_
+          push: false
+          tags: signalk/signalk-server-base:int_test
 
       - name: Modify Dockerfile_rel for testing
         run: |
-          sed -i 's/:latest/:test_/g' ./docker/Dockerfile_rel
-
+          sed -i \
+            's|FROM cr.signalk.io/signalk/signalk-server-base:latest|FROM signalk/signalk-server-base:int_test|g' \
+            ./docker/Dockerfile_rel
+    
       - name: Build Signal K test dockers
         uses: docker/build-push-action@v5
         with:
