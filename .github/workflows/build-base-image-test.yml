@@ -38,12 +38,12 @@ jobs:
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
           tags: |
-            signalk/signalk-server-base-test:test
-            ghcr.io/signalk/signalk-server-base-test:test
+            signalk/signalk-server-base:test_
+            ghcr.io/signalk/signalk-server-base:test_
 
       - name: Modify Dockerfile_rel for testing
         run: |
-          sed -i 's/base:latest/base-test:test/g' ./docker/Dockerfile_rel
+          sed -i 's/:latest/:test_/g' ./docker/Dockerfile_rel
 
       - name: Build Signal K test dockers
         uses: docker/build-push-action@v5
@@ -62,5 +62,5 @@ jobs:
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
           tags: |
-            signalk/signalk-server-base-test:latest
-            ghcr.io/signalk/signalk-server-base-test:latest
+            signalk/signalk-server-base:testing
+            ghcr.io/signalk/signalk-server-base:testing
