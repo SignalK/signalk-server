@@ -160,6 +160,11 @@ jobs:
           images: |
             signalk/signalk-server
             ghcr.io/signalk/signalk-server
+          tags: |
+            type=semver,pattern={{raw}}
+            type=semver,pattern=v{{major}},enable=${{ !contains(github.ref, 'beta') }}
+            type=semver,pattern=v{{major}}.{{minor}},enable=${{ !contains(github.ref, 'beta') }}
+            type=raw,value=latest,enable=${{ !contains(github.ref, 'beta') }}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -184,7 +189,7 @@ jobs:
           file: ./docker/Dockerfile_rel
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
-          tags: $tag
+          tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             TAG=${{ steps.vars.outputs.tag }}
 
