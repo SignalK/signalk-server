@@ -133,9 +133,25 @@ class Server {
 
     // feature detection
     app.getFeatures = async (enabled?: boolean) => {
+      const checkPMStarted = (): Promise<boolean> => {
+        return new Promise((resolve) => {
+          setImmediate(() => {
+            resolve(typeof app.getPluginsList === 'function')
+          })
+        })
+      }
+      const maxTries = 10
+      let tries = 0
+      let pmStarted = false
+
+      while (!pmStarted && tries < maxTries) {
+        tries++
+        pmStarted = await checkPMStarted()
+      }
+      const plugins = pmStarted ? await app.getPluginsList(enabled) : []
       return {
         apis: enabled === false ? [] : app.apis,
-        plugins: await app.getPluginsList(enabled)
+        plugins: plugins
       }
     }
 
