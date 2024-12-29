@@ -31,9 +31,9 @@ Once the OS installation has been completed, you are ready to commence.
     sudo apt update
     ```
 
-1. Install NodeJS 18 and npm.
-
-    Follow [instructions for Ubuntu and Debian based distributions like Raspberry Pi OS at NodeSource Distributions](https://github.com/nodesource/distributions#installation-instructions).
+1. Install NodeJS ([Node version compatibility](./nodecompatibility.md)) and npm.
+   
+   Follow [instructions for Ubuntu and Debian based distributions like Raspberry Pi OS at NodeSource Distributions](https://github.com/nodesource/distributions#installation-instructions).
 
 1. Ensure that we're using the latest version of npm.
     ```
@@ -71,6 +71,13 @@ signalk-server --sample-nmea0183-data
 Using sample data from /usr/lib/node_modules/signalk-server/samples/plaka.log
 signalk-server running at 0.0.0.0:3000
 ```
+
+##### NB: You may see something like the following.  This can be ignored if your Node version is > 20
+```
+The installed version of node (v23.5.0) is different than the recommended version (18 - 20). See https://github.com/SignalK/signalk-server/wiki/Installing-and-Updating-Node.js for more information how to upgrade
+```
+
+
 
 The Signal K Node Server is now reading and publishing sample NMEA0183 data from the specified file.
 
