@@ -143,11 +143,20 @@ module.exports = function (app) {
       ]
     }
 
-    if (
-      provider.options.type === 'canbus-canboatjs' &&
-      !provider.options.uniqueNumber
-    ) {
-      provider.options.uniqueNumber = Math.floor(Math.random() * 2097151)
+    if (provider.options.type === 'canbus-canboatjs') {
+      const uniqueNumber = parseInt(provider.options.uniqueNumber, 10)
+      if (!isNaN(uniqueNumber)) {
+        provider.options.uniqueNumber = uniqueNumber
+      } else {
+        provider.options.uniqueNumber = Math.floor(Math.random() * 2097151)
+      }
+
+      const mfgCode = parseInt(provider.options.mfgCode, 10)
+      if (!isNaN(mfgCode)) {
+        provider.options.mfgCode = mfgCode
+      } else {
+        if (provider.options.mfgCode !== '') delete provider.options.mfgCode //if value is not empty or not a number then removing property
+      }
     }
 
     if (applyProviderSettings(updatedProvider, provider, res)) {
