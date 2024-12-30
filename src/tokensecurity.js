@@ -36,6 +36,10 @@ const permissionDeniedMessage =
 
 const skPrefix = '/signalk/v1'
 const skAuthPrefix = `${skPrefix}/auth`
+
+//cookie to hold login info for webapps to use
+const BROWSER_LOGININFO_COOKIE_NAME = 'skLoginInfo'
+
 import { SERVERROUTESPREFIX } from './constants'
 
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
@@ -44,7 +48,7 @@ module.exports = function (app, config) {
   const strategy = {}
 
   let {
-    expiration = '3m',
+    expiration = 'NEVER',
     users = [],
     immutableConfig = false,
     allowDeviceAccessRequests = true,
@@ -126,9 +130,9 @@ module.exports = function (app, config) {
     res.status(401)
     if (req.accepts('application/json') && !req.accepts('text/html')) {
       res.set('Content-Type', 'application/json')
-      res.send('{ "error": "Permission Denied"}')
+      res.json({ error: 'Permission Denied' })
     } else {
-      res.send(permissionDeniedMessage)
+      res.type('text/plain').send(permissionDeniedMessage)
     }
   }
 
@@ -191,9 +195,20 @@ module.exports = function (app, config) {
           if (reply.statusCode === 200) {
             let cookieOptions = { httpOnly: true }
             if (remember) {
-              cookieOptions.maxAge = ms(configuration.expiration || '1h')
+              cookieOptions.maxAge = ms(
+                configuration.expiration === 'NEVER'
+                  ? '10y'
+                  : configuration.expiration || '1h'
+              )
             }
             res.cookie('JAUTHENTICATION', reply.token, cookieOptions)
+            // eslint-disable-next-line no-unused-vars
+            const { httpOnly, cookieOptionsForBrowserCookie } = cookieOptions
+            res.cookie(
+              BROWSER_LOGININFO_COOKIE_NAME,
+              JSON.stringify({ status: 'loggedIn', user: reply.user })
+            ),
+              cookieOptionsForBrowserCookie
 
             if (requestType === 'application/json') {
               res.json({ token: reply.token })
@@ -233,6 +248,7 @@ module.exports = function (app, config) {
 
     app.put(['/logout', `${skAuthPrefix}/logout`], function (req, res) {
       res.clearCookie('JAUTHENTICATION')
+      res.clearCookie(BROWSER_LOGININFO_COOKIE_NAME)
       res.json('Logout OK')
     })
     ;[
@@ -273,6 +289,10 @@ module.exports = function (app, config) {
         resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
         return
       }
+      if (!user.password) {
+        resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
+        return
+      }
 
       bcrypt.compare(password, user.password, (err, matches) => {
         if (err) {
@@ -280,12 +300,14 @@ module.exports = function (app, config) {
         } else if (matches === true) {
           const payload = { id: user.username }
           const theExpiration = configuration.expiration || '1h'
-          debug('jwt expiration: ' + theExpiration)
+          const jwtOptions = {}
+          if (theExpiration !== 'NEVER') {
+            jwtOptions.expiresIn = theExpiration
+          }
+          debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
           try {
-            const token = jwt.sign(payload, configuration.secretKey, {
-              expiresIn: theExpiration
-            })
-            resolve({ statusCode: 200, token })
+            const token = jwt.sign(payload, configuration.secretKey, jwtOptions)
+            resolve({ statusCode: 200, token, user: user.username })
           } catch (err) {
             resolve({
               statusCode: 500,
@@ -303,9 +325,11 @@ module.exports = function (app, config) {
   strategy.validateConfiguration = (newConfiguration) => {
     const configuration = getConfiguration()
     const theExpiration = newConfiguration.expiration || '1h'
-    jwt.sign({ dummy: 'payload' }, configuration.secretKey, {
-      expiresIn: theExpiration
-    })
+    if (theExpiration !== 'NEVER') {
+      jwt.sign({ dummy: 'payload' }, configuration.secretKey, {
+        expiresIn: theExpiration
+      })
+    }
   }
 
   strategy.getAuthRequiredString = () => {
@@ -338,7 +362,7 @@ module.exports = function (app, config) {
     const token = jwt.sign(payload, configuration.secretKey, {
       expiresIn: theExpiration
     })
-    res.send(token)
+    res.type('text/plain').send(token)
   }
 
   strategy.allowReadOnly = function () {
@@ -403,23 +427,32 @@ module.exports = function (app, config) {
 
   function addUser(theConfig, user, callback) {
     assertConfigImmutability()
-    bcrypt.hash(user.password, passwordSaltRounds, (err, hash) => {
-      if (err) {
-        callback(err)
-      } else {
-        const newuser = {
-          username: user.userId,
-          type: user.type,
-          password: hash
-        }
-        if (!theConfig.users) {
-          theConfig.users = []
-        }
-        theConfig.users.push(newuser)
-        options = theConfig
-        callback(err, theConfig)
+    const newUser = {
+      username: user.userId,
+      type: user.type
+    }
+
+    function finish(newUser, err) {
+      if (!theConfig.users) {
+        theConfig.users = []
       }
-    })
+      theConfig.users.push(newUser)
+      options = theConfig
+      callback(err, theConfig)
+    }
+
+    if (user.password) {
+      bcrypt.hash(user.password, passwordSaltRounds, (err, hash) => {
+        if (err) {
+          callback(err)
+        } else {
+          newUser.password = hash
+          finish(newUser, err)
+        }
+      })
+    } else {
+      finish(newUser, undefined)
+    }
   }
 
   strategy.updateUser = (theConfig, username, updates, callback) => {

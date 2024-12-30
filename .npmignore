@@ -73,3 +73,7 @@ bin/linkpackages
 
 fly_io
 .github
+
+docs/src
+docs/book.toml
+docs/server-guide/**/*.dia

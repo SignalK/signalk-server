@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-this-alias */
 /* eslint-disable @typescript-eslint/no-var-requires */
@@ -27,19 +28,25 @@ import {
   DeltaInputHandler,
   PropertyValues,
   SKVersion,
+  SignalKApiId,
   SourceRef,
   Timestamp,
   Update
 } from '@signalk/server-api'
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
-import { Debugger } from 'debug'
 import express, { IRouter, Request, Response } from 'express'
 import http from 'http'
 import https from 'https'
 import _ from 'lodash'
 import path from 'path'
 import { startApis } from './api'
-import { SelfIdentity, ServerApp, SignalKMessageHub, WithConfig } from './app'
+import {
+  SelfIdentity,
+  ServerApp,
+  SignalKMessageHub,
+  WithConfig,
+  WithFeatures
+} from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
@@ -60,9 +67,12 @@ import SubscriptionManager from './subscriptionmanager'
 import { PluginId, PluginManager } from './interfaces/plugins'
 import { OpenApiDescription, OpenApiRecord } from './api/swagger'
 import { WithProviderStatistics } from './deltastats'
+import { pipedProviders } from './pipedproviders'
+import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
+import { Zones } from './zones'
 const debug = createDebug('signalk-server')
 
-const { StreamBundle } = require('./streambundle')
+import { StreamBundle } from './streambundle'
 
 interface ServerOptions {
   securityConfig: any
@@ -72,11 +82,16 @@ class Server {
   app: ServerApp &
     SelfIdentity &
     WithConfig &
+    WithFeatures &
     SignalKMessageHub &
     PluginManager &
     WithSecurityStrategy &
     IRouter &
-    WithProviderStatistics
+    WithWrappedEmitter &
+    WithProviderStatistics & {
+      apis?: Array<SignalKApiId>
+    }
+
   constructor(opts: ServerOptions) {
     const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
     const bodyParser = require('body-parser')
@@ -115,6 +130,14 @@ class Server {
     }
 
     app.providerStatus = {}
+
+    // feature detection
+    app.getFeatures = async (enabled?: boolean) => {
+      return {
+        apis: enabled === false ? [] : app.apis,
+        plugins: await app.getPluginsList(enabled)
+      }
+    }
 
     // create first temporary pluginManager to get typechecks, as
     // app is any and not typechecked
@@ -294,6 +317,9 @@ class Server {
     }
 
     app.streambundle = new StreamBundle(app, app.selfId)
+    new Zones(app.streambundle, (delta: Delta) =>
+      app.handleMessage('self.notificationhandler', delta)
+    )
     app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
     app.subscriptionmanager = new SubscriptionManager(app)
     app.deltaCache = new DeltaCache(app, app.streambundle)
@@ -316,23 +342,10 @@ class Server {
     const self = this
     const app = this.app
 
-    const eventDebugs: { [key: string]: Debugger } = {}
-    const expressAppEmit = app.emit.bind(app)
-    app.emit = (eventName: string, ...args: any[]) => {
-      if (eventName !== 'serverlog') {
-        let eventDebug = eventDebugs[eventName]
-        if (!eventDebug) {
-          eventDebugs[eventName] = eventDebug = createDebug(
-            `signalk-server:events:${eventName}`
-          )
-        }
-        if (eventDebug.enabled) {
-          eventDebug(args)
-        }
-      }
-      expressAppEmit(eventName, ...args)
-      return true
-    }
+    app.wrappedEmitter = wrapEmitter(app)
+    app.emit = app.wrappedEmitter.emit
+    app.on = app.wrappedEmitter.addListener as any
+    app.addListener = app.wrappedEmitter.addListener as any
 
     this.app.intervals = []
 
@@ -429,10 +442,10 @@ class Server {
 
         sendBaseDeltas(app as unknown as ConfigApp)
 
-        await startApis(app)
+        app.apis = await startApis(app)
         startInterfaces(app)
         startMdns(app)
-        app.providers = require('./pipedproviders')(app).start()
+        app.providers = pipedProviders(app as any).start()
 
         const primaryPort = getPrimaryPort(app)
         debug(`primary port:${primaryPort}`)
@@ -467,7 +480,7 @@ class Server {
     if (typeof mixed === 'string') {
       try {
         settings = require(path.join(process.cwd(), mixed))
-      } catch (e) {
+      } catch (_e) {
         debug(`Settings file '${settings}' does not exist`)
       }
     }
@@ -599,7 +612,7 @@ function startMdns(app: ServerApp & WithConfig) {
   }
 }
 
-function startInterfaces(app: ServerApp & WithConfig) {
+function startInterfaces(app: ServerApp & WithConfig & WithWrappedEmitter) {
   debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
   const availableInterfaces = require('./interfaces')
   _.forIn(availableInterfaces, (theInterface: any, name: string) => {
@@ -609,14 +622,33 @@ function startInterfaces(app: ServerApp & WithConfig) {
       (app.config.settings.interfaces || {})[name]
     ) {
       debug(`Loading interface '${name}'`)
-      app.interfaces[name] = theInterface(app)
-      if (app.interfaces[name] && _.isFunction(app.interfaces[name].start)) {
+      const boundEventMethods = app.wrappedEmitter.bindMethodsById(
+        `interface:${name}` as EventsActorId
+      )
+
+      const appCopy = {
+        ...app,
+        ...boundEventMethods
+      }
+      const handler = {
+        set(obj: any, prop: any, value: any) {
+          ;(app as any)[prop] = value
+          return true
+        },
+        get(target: any, prop: string | symbol, _receiver: any) {
+          return (app as any)[prop]
+        }
+      }
+      const _interface = (appCopy.interfaces[name] = theInterface(
+        new Proxy(appCopy, handler)
+      ))
+      if (_interface && _.isFunction(_interface.start)) {
         if (
-          _.isUndefined(app.interfaces[name].forceInactive) ||
-          !app.interfaces[name].forceInactive
+          _.isUndefined(_interface.forceInactive) ||
+          !_interface.forceInactive
         ) {
           debug(`Starting interface '${name}'`)
-          app.interfaces[name].data = app.interfaces[name].start()
+          _interface.data = _interface.start()
         } else {
           debug(`Not starting interface '${name}' by forceInactive`)
         }

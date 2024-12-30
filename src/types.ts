@@ -55,7 +55,6 @@ export interface MdnsAdvertisement {
 }
 
 // move to subscriptionmanage.ts when all SubscriptionManager use is in ts
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface Unsubscribes extends Array<() => void> {}
+export type Unsubscribes = Array<() => void>
 
 export type ContextMatcher = (_: WithContext) => boolean

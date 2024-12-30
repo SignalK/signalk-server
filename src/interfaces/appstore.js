@@ -64,7 +64,7 @@ module.exports = function (app) {
                 !webapps.find(packageNameIs(name))
               ) {
                 res.status(404)
-                res.send('No such webapp or plugin available:' + name)
+                res.json('No such webapp or plugin available:' + name)
               } else {
                 if (moduleInstalling) {
                   moduleInstallQueue.push({ name: name, version: version })
@@ -72,14 +72,14 @@ module.exports = function (app) {
                 } else {
                   installSKModule(name, version)
                 }
-                res.send(`Installing ${name}...`)
+                res.json(`Installing ${name}...`)
               }
             })
             .catch((error) => {
               console.log(error.message)
               debug(error.stack)
               res.status(500)
-              res.send('<pre>' + error.message + '</pre>')
+              res.json(error.message)
             })
         }
       )
@@ -103,7 +103,7 @@ module.exports = function (app) {
                 !webapps.find(packageNameIs(name))
               ) {
                 res.status(404)
-                res.send('No such webapp or plugin available:' + name)
+                res.json('No such webapp or plugin available:' + name)
               } else {
                 if (moduleInstalling) {
                   moduleInstallQueue.push({ name: name, isRemove: true })
@@ -111,14 +111,14 @@ module.exports = function (app) {
                 } else {
                   removeSKModule(name)
                 }
-                res.send(`Removing ${name}...`)
+                res.json(`Removing ${name}...`)
               }
             })
             .catch((error) => {
               console.log(error.message)
               debug(error.stack)
               res.status(500)
-              res.send('<pre>' + error.message + '</pre>')
+              res.json(error.message)
             })
         }
       )
@@ -129,19 +129,19 @@ module.exports = function (app) {
             getLatestServerVersion(app.config.version)
               .then((serverVersion) => {
                 const result = getAllModuleInfo(plugins, webapps, serverVersion)
-                res.send(JSON.stringify(result))
+                res.json(result)
               })
               .catch(() => {
                 //could be that npmjs is down, so we can not get
                 //server version, but we have app store data
                 const result = getAllModuleInfo(plugins, webapps, '0.0.0')
-                res.send(JSON.stringify(result))
+                res.json(result)
               })
           })
           .catch((error) => {
             console.log(error.message)
             debug(error.stack)
-            res.send(emptyAppStoreInfo(false))
+            res.json(emptyAppStoreInfo(false))
           })
       })
     },
@@ -250,6 +250,7 @@ module.exports = function (app) {
         description: plugin.package.description,
         author: getAuthor(plugin.package),
         categories: getCategories(plugin.package),
+        updated: plugin.package.date,
         keywords: getKeywords(plugin.package),
         npmUrl: getNpmUrl(plugin),
         isPlugin: plugin.package.keywords.some(

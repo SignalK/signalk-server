@@ -28,9 +28,21 @@ export * from './resourcetypes'
 export * from './resourcesapi'
 export { ResourceProviderRegistry } from './resourcesapi'
 import { ResourceProviderRegistry } from './resourcesapi'
+export * from './autopilotapi'
+import { AutopilotProviderRegistry } from './autopilotapi'
+export { AutopilotProviderRegistry } from './autopilotapi'
+export * from './autopilotapi.guard'
 import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
-export * from './autopilotapi'
+export type SignalKApiId =
+  | 'resources'
+  | 'course'
+  | 'history'
+  | 'autopilot'
+  | 'anchor'
+  | 'logbook'
+  | 'historyplayback' //https://signalk.org/specification/1.7.0/doc/streaming_api.html#history-playback
+  | 'historysnapshot' //https://signalk.org/specification/1.7.0/doc/rest_api.html#history-snapshot-retrieval
 
 export {
   PropertyValue,
@@ -54,7 +66,8 @@ export interface PropertyValuesEmitter {
 
 export interface PluginServerApp
   extends PropertyValuesEmitter,
-    ResourceProviderRegistry {}
+    ResourceProviderRegistry,
+    AutopilotProviderRegistry {}
 
 /**
  * This is the API that a [server plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md) must implement.
@@ -112,6 +125,16 @@ export interface Ports {
 export interface Metadata {
   units?: string
   description?: string
+}
+
+export interface FeatureInfo {
+  apis: SignalKApiId[]
+  plugins: Array<{
+    id: string
+    name: string
+    version: string
+    enabled: boolean
+  }>
 }
 
 export interface ServerAPI extends PluginServerApp {
@@ -174,6 +197,9 @@ export interface ServerAPI extends PluginServerApp {
     ) => void
   }) => void
   getSerialPorts: () => Promise<Ports>
+
+  getFeatures: () => FeatureInfo
+
   getCourse: () => Promise<CourseInfo>
   clearDestination: () => Promise<void>
   setDestination: (

@@ -1,7 +1,6 @@
 import React, { Component } from 'react'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
 import {
-  Alert,
   Button,
   Card,
   CardBody,
@@ -122,8 +121,7 @@ export default class PluginConfigurationList extends Component {
           </Form>
 
           {(this.state.searchResults || this.state.plugins).map((plugin, i) => {
-            const isOpen =
-              localStorage.getItem(openPluginStorageKey) === plugin.id
+            const isOpen = this.props.match.params.pluginid === plugin.id
             return (
               <PluginCard
                 plugin={plugin}
@@ -131,12 +129,12 @@ export default class PluginConfigurationList extends Component {
                 key={i}
                 isOpen={isOpen}
                 toggleForm={this.toggleForm.bind(this, i, plugin.id)}
+                history={this.props.history}
                 saveData={(data) => {
                   if (plugin.data.configuration === undefined) {
                     data.enabled = true
                   }
-                  this.props.history.replace(`/serverConfiguration/plugins/-`)
-                  this.saveData(plugin.id, data, i)
+                  this.saveData(plugin.id, data)
                 }}
               />
             )
@@ -146,7 +144,7 @@ export default class PluginConfigurationList extends Component {
     )
   }
 
-  saveData(id, data, i) {
+  saveData(id, data) {
     fetch(`${window.serverRoutesPrefix}/plugins/${id}/config`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -158,7 +156,7 @@ export default class PluginConfigurationList extends Component {
         alert('Saving plugin settings failed')
       } else {
         const plugins = [...this.state.plugins]
-        plugins[i].data = data
+        plugins.find((plugin) => plugin.id === id).data = data
         this.setState({ plugins })
       }
     })
@@ -235,7 +233,7 @@ class PluginCard extends Component {
                         type="checkbox"
                         name="enabled"
                         className="switch-input"
-                        onChange={(e) => {
+                        onChange={() => {
                           this.props.saveData({
                             ...this.props.plugin.data,
                             enabled: !this.props.plugin.data.enabled,
@@ -261,7 +259,7 @@ class PluginCard extends Component {
                         type="checkbox"
                         name="enableLogging"
                         className="switch-input"
-                        onChange={(e) => {
+                        onChange={() => {
                           this.props.saveData({
                             ...this.props.plugin.data,
                             enableLogging:
@@ -288,7 +286,7 @@ class PluginCard extends Component {
                         type="checkbox"
                         name="enableDebug"
                         className="switch-input "
-                        onChange={(e) => {
+                        onChange={() => {
                           this.props.saveData({
                             ...this.props.plugin.data,
                             enableDebug: !this.props.plugin.data.enableDebug,
@@ -314,7 +312,10 @@ class PluginCard extends Component {
               {!this.props.isConfigurator && (
                 <PluginConfigurationForm
                   plugin={this.props.plugin}
-                  onSubmit={this.props.saveData}
+                  onSubmit={(data) => {
+                    this.props.saveData(data)
+                    this.props.history.replace(`/serverConfiguration/plugins/-`)
+                  }}
                 />
               )}
               {this.props.isConfigurator && (

@@ -1,0 +1,16 @@
+[book]
+title="Signal K Server Documentation"
+description = "A Guide for users and developers."
+authors = []
+language = "en"
+multilingual = false
+src = "src"
+
+[build]
+build-dir = "built"
+create-missing = false
+
+[output.html]
+edit-url-template = "https://github.com/SignalK/signalk-server/tree/master/docs/src"
+
+

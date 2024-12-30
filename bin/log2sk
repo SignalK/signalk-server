@@ -14,10 +14,13 @@ const app = {
   handleMessage: (id, delta) => console.log(JSON.stringify(delta)),
   propertyValues: {
     onPropertyValues: () => undefined
+  },
+  wrappedEmitter: {
+    bindMethodsById: () => {}
   }
 }
 
-new require('../lib/pipedproviders')(app).createPipedProvider({
+new require('../lib/pipedproviders').pipedProviders(app).createPipedProvider({
   pipeElements: [
     {
       type: 'providers/simple',

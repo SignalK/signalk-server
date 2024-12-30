@@ -14,7 +14,7 @@ const fs = require('fs')
 const promisify = require('util').promisify
 const path = require('path')
 const assert = require('assert')
-const rimraf = require('rimraf')
+const rimraf = require('rimraf').rimraf
 
 const APP_ID = 'testApplication'
 const APP_VERSION = '1.0.0'
@@ -83,18 +83,10 @@ describe('Application Data', () => {
       Cookie: `JAUTHENTICATION=${adminToken}`
     }
 
-    await new Promise((resolve, reject) => {
-      rimraf(path.join(
-        process.env.SIGNALK_NODE_CONFIG_DIR,
-        'applicationData'), error => {
-          if ( error ) {
-            reject(error)
-          } else {
-            resolve()
-          }
-        })
-    })
-    
+    await rimraf(
+      path.join(process.env.SIGNALK_NODE_CONFIG_DIR, 'applicationData')
+    )
+
     return server
   }
 

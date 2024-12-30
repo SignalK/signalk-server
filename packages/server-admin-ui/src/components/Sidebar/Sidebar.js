@@ -111,6 +111,7 @@ class Sidebar extends Component {
           >
             <i className={item.icon} />
             {item.name}
+            {badge(item.badge)}
           </a>
           <ul className="nav-dropdown-items">{navList(item.children)}</ul>
         </li>
@@ -155,15 +156,14 @@ class Sidebar extends Component {
 const mapStateToProps = (state) => {
   var appUpdates = state.appStore.updates.length
   var updatesBadge = null
-  var availableBadge = null
   var serverUpdateBadge = null
   var accessRequestsBadge = null
 
   if (appUpdates > 0) {
     updatesBadge = {
-      variant: 'danger',
+      variant: 'success',
       text: `${appUpdates}`,
-      color: 'danger',
+      color: 'success',
     }
   }
 
@@ -175,8 +175,8 @@ const mapStateToProps = (state) => {
     }
   }
 
-  if (!state.appStore.storeAvailable) {
-    updatesBadge = availableBadge = {
+  if (state.appStore.storeAvailable === false) {
+    updatesBadge = {
       variant: 'danger',
       text: 'OFFLINE',
     }
@@ -220,22 +220,7 @@ const mapStateToProps = (state) => {
         name: 'Appstore',
         url: '/appstore',
         icon: 'icon-basket',
-        children: [
-          {
-            name: 'Available',
-            url: '/appstore/apps',
-            badge: availableBadge,
-          },
-          {
-            name: 'Installed',
-            url: '/appstore/installed',
-          },
-          {
-            name: 'Updates',
-            url: '/appstore/updates',
-            badge: updatesBadge,
-          },
-        ],
+        badge: updatesBadge,
       },
       {
         name: 'Server',
@@ -255,7 +240,7 @@ const mapStateToProps = (state) => {
             url: '/serverConfiguration/plugins/' + (openPlugin || '-'),
           },
           {
-            name: 'Server Log',
+            name: 'Server Logs',
             url: '/serverConfiguration/log',
           },
           {
@@ -283,7 +268,7 @@ const mapStateToProps = (state) => {
     var security = {
       name: 'Security',
       url: '/security',
-      icon: 'icon-settings',
+      icon: 'icon-shield',
       badge: accessRequestsBadge,
       children: [
         {
@@ -317,28 +302,17 @@ const mapStateToProps = (state) => {
 
   result.items.push({
     name: 'Documentation',
-    url: '/doc',
-    icon: 'icon-settings',
-    children: [
-      {
-        name: 'OpenApi',
-        url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
-      },
-    ],
+    url: `${window.location.protocol}//${window.location.host}/documentation`,
+    icon: 'icon-book-open',
+  })
+
+  result.items.push({
+    name: 'OpenApi',
+    url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
+    icon: 'icon-energy',
   })
 
   return result
-}
-
-const pluginMenuItems = (plugins) => {
-  return plugins
-    ? plugins.map((pluginData) => {
-        return {
-          name: pluginData.name,
-          url: `/plugins/${pluginData.id}`,
-        }
-      })
-    : []
 }
 
 export default connect(mapStateToProps)(Sidebar)

@@ -1,5 +1,12 @@
 FROM cr.signalk.io/signalk/signalk-server-base:latest
 
+RUN npm config rm proxy \
+  && npm config rm https-proxy \
+  && npm config set fetch-retries 5 \
+  && npm config set fetch-retry-mintimeout 60000 \
+  && npm config set fetch-retry-maxtimeout 120000 \
+  && npm cache clean -f
+
 ARG TAG
   
 RUN npm i -g signalk-server@$TAG \

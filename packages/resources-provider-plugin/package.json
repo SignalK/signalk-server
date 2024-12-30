@@ -1,11 +1,11 @@
 {
     "name": "@signalk/resources-provider",
-    "version": "1.1.1",
+    "version": "1.3.1",
     "description": "Resources provider plugin for Signal K server.",
     "main": "plugin/index.js",
     "keywords": [
         "signalk-node-server-plugin",
-        "signalk-category-chart-plotters",
+        "signalk-category-utility",
         "signalk",
         "resources",
         "routes",
@@ -26,13 +26,14 @@
         "build-declaration": "tsc --declaration --allowJs false",
         "watch": "npm run build -- -w",
         "prettier": "prettier -w src/",
-        "lint": "eslint -c .eslintrc.js --ext .ts --ext .js --fix src/",
+        "lint": "eslint --ext .ts --ext .js --fix src/",
         "format": "npm run prettier && npm run lint",
-        "ci-lint": "eslint -c .eslintrc.js --ext .ts --ext .js src/ && prettier --check src/",
+        "ci-lint": "eslint --ext .ts --ext .js src/ && prettier --check src/",
         "prepublishOnly": "npm run build && npm run build-declaration",
         "test": "npm run build && npm run build-declaration && npm run ci-lint"
     },
     "dependencies": {
+        "@signalk/server-api": "^2.5.0",
         "geojson-validation": "^0.2.0",
         "geolib": "^3.3.3",
         "ngeohash": "^0.6.3"
@@ -42,8 +43,7 @@
         "@types/express": "^4.17.6",
         "@types/ngeohash": "^0.6.4",
         "@types/node-fetch": "^2.5.6",
-        "@typescript-eslint/eslint-plugin": "^5.52.0",
-        "@typescript-eslint/parser": "^5.52.0",
+        "@typescript-eslint/eslint-plugin": "^8.16.0",
         "eslint": "^8.34.0",
         "eslint-config-prettier": "^8.6.0",
         "prettier": "^2.8.4",

@@ -14,10 +14,19 @@
   },
   "servers": [
     {
-      "url": "/"
+      "url": "/signalk"
     }
   ],
-  "tags": [],
+  "tags": [
+    {
+      "name": "server",
+      "description": "Signal K Server."
+    },
+    {
+      "name": "features",
+      "description": "Signal K Server features."
+    }
+  ],
   "components": {
     "schemas": {
       "DiscoveryData": {
@@ -70,6 +79,46 @@
             }
           }
         }
+      },
+      "PluginMetaData": {
+        "type": "object",
+        "required": ["id", "name", "version"],
+        "description": "Plugin metadata.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Plugin ID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Plugin name."
+          },
+          "version": {
+            "type": "string",
+            "description": "Plugin verison."
+          }
+        }
+      },
+      "FeaturesModel": {
+        "type": "object",
+        "required": ["apis", "plugins"],
+        "description": "Features response",
+        "properties": {
+          "apis": {
+            "type": "array",
+            "description": "Implemented APIs.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "plugins": {
+            "type": "array",
+            "description": "Installed Plugins.",
+            "items": {
+              "$ref": "#/components/schemas/PluginMetaData"
+            }
+          }
+        }
       }
     },
     "responses": {
@@ -82,18 +131,104 @@
             }
           }
         }
+      },
+      "200Ok": {
+        "description": "OK",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["COMPLETED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [200]
+                }
+              },
+              "required": ["state", "statusCode"]
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "description": "Failed operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "description": "Request error response",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["FAILED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [404]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["state", "statusCode", "message"]
+            }
+          }
+        }
+      },
+      "FeaturesResponse": {
+        "description": "Server features response.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "description": "Features response.",
+              "$ref": "#/components/schemas/FeaturesModel"
+            }
+          }
+        }
       }
     }
   },
 
   "paths": {
-    "/signalk": {
+    "/": {
       "get": {
-        "tags": [],
+        "tags": ["server"],
+        "summary": "Retrieve server version and service endpoints.",
         "description": "Returns data about server's endpoints and versions.",
         "responses": {
           "200": {
             "$ref": "#/components/responses/DiscoveryResponse"
+          }
+        }
+      }
+    },
+    "/v2/features": {
+      "get": {
+        "tags": ["features"],
+        "parameters": [
+          {
+            "name": "enabled",
+            "in": "query",
+            "description": "Limit results to enabled features.",
+            "required": false,
+            "explode": false,
+            "schema": {
+              "type": "string",
+              "enum": ["enabled", "1", "false", "0"]
+            }
+          }
+        ],
+        "summary": "Retrieve available server features.",
+        "description": "Returns object detailing the available server features.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/FeaturesResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
           }
         }
       }

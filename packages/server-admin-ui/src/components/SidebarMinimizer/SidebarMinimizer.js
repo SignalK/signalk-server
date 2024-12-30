@@ -14,7 +14,7 @@ class SidebarMinimizer extends Component {
       <button
         className="sidebar-minimizer"
         type="button"
-        onClick={(event) => {
+        onClick={() => {
           this.sidebarMinimize()
           this.brandMinimize()
         }}

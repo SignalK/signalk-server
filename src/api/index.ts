@@ -1,8 +1,11 @@
 import { IRouter } from 'express'
-import { SignalKMessageHub, WithConfig } from '../app'
+import { SignalKMessageHub, WithConfig, WithFeatures } from '../app'
 import { WithSecurityStrategy } from '../security'
 import { CourseApi } from './course'
+import { FeaturesApi } from './discovery'
 import { ResourcesApi } from './resources'
+import { AutopilotApi } from './autopilot'
+import { SignalKApiId } from '@signalk/server-api'
 import { NotificationsApi } from './notifications'
 
 export interface ApiResponse {
@@ -34,24 +37,51 @@ export const Responses = {
     state: 'FAILED',
     statusCode: 404,
     message: 'Resource not found.'
+  },
+  notImplemented: {
+    state: 'FAILED',
+    statusCode: 500,
+    message: 'Not implemented.'
   }
 }
 
 export const startApis = (
-  app: SignalKMessageHub & WithSecurityStrategy & IRouter & WithConfig
+  app: SignalKMessageHub &
+    WithSecurityStrategy &
+    IRouter &
+    WithConfig &
+    WithFeatures
 ) => {
+  const apiList: Array<SignalKApiId> = []
   const resourcesApi = new ResourcesApi(app)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).resourcesApi = resourcesApi
+  apiList.push('resources')
+
   const courseApi = new CourseApi(app, resourcesApi)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).courseApi = courseApi
+  apiList.push('course')
+
+  const autopilotApi = new AutopilotApi(app)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).autopilotApi = autopilotApi
+  apiList.push('autopilot')
+
+  const featuresApi = new FeaturesApi(app)
+
   const notificationsApi = new NotificationsApi(app)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).notificationsApi = notificationsApi
   Promise.all([
+    
     resourcesApi.start(),
+   
     courseApi.start(),
+    featuresApi.start(),
+    autopilotApi.start()
+  ,
     notificationsApi.start()
   ])
+  return apiList
 }

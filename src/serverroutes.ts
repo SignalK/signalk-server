@@ -50,17 +50,16 @@ import {
 } from './security'
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './types'
+import { WithWrappedEmitter } from './events'
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { getAISShipTypeName } = require('@signalk/signalk-schema')
+import { getAISShipTypeName } from '@signalk/signalk-schema'
 const ncp = ncpI.ncp
 
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const availableInterfaces = require('./interfaces')
+import availableInterfaces from './interfaces'
 
 interface ScriptsApp {
   addons: ModuleInfo[]
@@ -73,7 +72,8 @@ interface App
     WithSecurityStrategy,
     ConfigApp,
     IRouter,
-    PluginManager {
+    PluginManager,
+    WithWrappedEmitter {
   webapps: Package[]
   logging: {
     rememberDebug: (r: boolean) => void
@@ -107,6 +107,9 @@ module.exports = function (
   // mount before the main /admin
   mountSwaggerUi(app, '/doc/openapi')
 
+  // mount server-guide
+  app.use('/documentation', express.static(__dirname + '/../docs/built'))
+
   app.get('/admin/', (req: Request, res: Response) => {
     fs.readFile(
       path.join(
@@ -117,6 +120,7 @@ module.exports = function (
         if (err) {
           console.error(err)
           res.status(500)
+          res.type('text/plain')
           res.send('Could not handle admin ui root request')
         }
         res.type('html')
@@ -151,7 +155,24 @@ module.exports = function (
   )
 
   app.get('/', (req: Request, res: Response) => {
-    res.redirect(app.config.settings.landingPage || '/admin/')
+    let landingPage = '/admin/'
+
+    // if accessed with hostname that starts with a webapp's displayName redirect there
+    //strip possible port number
+    const firstHostName = (req.headers?.host || '')
+      .split(':')[0]
+      .split('.')[0]
+      .toLowerCase()
+    const targetWebapp = app.webapps.find(
+      (webapp) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (webapp as any).signalk?.displayName.toLowerCase() === firstHostName
+    )
+    if (targetWebapp) {
+      landingPage = `/${targetWebapp.name}/`
+    }
+
+    res.redirect(app.config.settings.landingPage || landingPage)
   })
 
   app.get('/@signalk/server-admin-ui', (req: Request, res: Response) => {
@@ -160,7 +181,7 @@ module.exports = function (
 
   app.put(`${SERVERROUTESPREFIX}/restart`, (req: Request, res: Response) => {
     if (app.securityStrategy.allowRestart(req)) {
-      res.send('Restarting...')
+      res.json('Restarting...')
       setTimeout(function () {
         process.exit(0)
       }, 2000)
@@ -218,10 +239,10 @@ module.exports = function (
           if (err) {
             console.log(err)
             res.status(500)
-            res.send('Unable to save configuration change')
+            res.json('Unable to save configuration change')
             return
           }
-          res.send('security config saved')
+          res.json('security config saved')
         })
       } else {
         res.status(401).send('Security config not allowed')
@@ -235,7 +256,7 @@ module.exports = function (
     return (err: any, config: any) => {
       if (err) {
         console.log(err)
-        res.status(500).send(failure)
+        res.status(500).type('text/plain').send(failure)
       } else if (config) {
         saveSecurityConfig(app, config, (theError) => {
           if (theError) {
@@ -243,10 +264,10 @@ module.exports = function (
             res.status(500).send('Unable to save configuration change')
             return
           }
-          res.send(success)
+          res.type('text/plain').send(success)
         })
       } else {
-        res.send(success)
+        res.type('text/plain').send(success)
       }
     }
   }
@@ -381,19 +402,6 @@ module.exports = function (
     }
   )
 
-  app.get(
-    `${SERVERROUTESPREFIX}/security/token/:id/:expiration`,
-    (req: Request, res: Response, next: NextFunction) => {
-      app.securityStrategy.generateToken(
-        req,
-        res,
-        next,
-        req.params.id,
-        req.params.expiration
-      )
-    }
-  )
-
   app.put(
     [
       `${SERVERROUTESPREFIX}/security/access/requests/:identifier/:status`,
@@ -460,7 +468,7 @@ module.exports = function (
       .catch((err: any) => {
         console.log(err)
         res.status(500)
-        res.send(`Unable to check request: ${err.message}`)
+        res.type('text/plain').send(`Unable to check request: ${err.message}`)
       })
   })
 
@@ -484,7 +492,10 @@ module.exports = function (
         isUndefined(app.config.settings.keepMostRecentLogsOnly) ||
         app.config.settings.keepMostRecentLogsOnly,
       logCountToKeep: app.config.settings.logCountToKeep || 24,
-      runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true'
+      runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true',
+      courseApi: {
+        apiOnly: app.config.settings.courseApi?.apiOnly || false
+      }
     }
 
     if (!settings.runFromSystemd) {
@@ -526,7 +537,7 @@ module.exports = function (
               res.status(500).send('Unable to save to settings file')
             } else {
               const config = {}
-              // eslint-disable-next-line @typescript-eslint/no-var-requires
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
               const securityStrategy = require(defaultSecurityStrategy)(
                 app,
                 config,
@@ -628,11 +639,17 @@ module.exports = function (
       app.config.settings.logCountToKeep = Number(settings.logCountToKeep)
     }
 
+    forIn(settings.courseApi, (enabled, name) => {
+      const courseApi: { [index: string]: boolean | string | number } =
+        app.config.settings.courseApi || (app.config.settings.courseApi = {})
+      courseApi[name] = enabled
+    })
+
     writeSettingsFile(app, app.config.settings, (err: Error) => {
       if (err) {
         res.status(500).send('Unable to save to settings file')
       } else {
-        res.send('Settings changed')
+        res.type('text/plain').send('Settings changed')
       }
     })
   })
@@ -694,7 +711,7 @@ module.exports = function (
     }
 
     function setNumber(skPath: string, rmPath: string, value: string) {
-      if (isNumber(value) || (value && value.length) > 0) {
+      if (isNumber(value) || (value && value.length > 0)) {
         set(data.vessels.self, skPath, Number(value))
       } else {
         unset(data.vessels.self, rmPath)
@@ -744,7 +761,7 @@ module.exports = function (
       if (err) {
         res.status(500).send('Unable to save to defaults file')
       } else {
-        res.send('Vessel changed')
+        res.type('text/plain').send('Vessel changed')
       }
     })
   }
@@ -817,7 +834,7 @@ module.exports = function (
     } else {
       writeBaseDeltasFile(app)
         .then(() => {
-          res.send('Vessel changed')
+          res.type('text/plain').send('Vessel changed')
         })
         .catch(() => {
           res.status(500).send('Unable to save to defaults file')
@@ -829,6 +846,17 @@ module.exports = function (
     `${SERVERROUTESPREFIX}/availablePaths`,
     (req: Request, res: Response) => {
       res.json(app.streambundle.getAvailablePaths())
+    }
+  )
+
+  app.securityStrategy.addAdminMiddleware(
+    `${SERVERROUTESPREFIX}/eventsRoutingData`
+  )
+  app.get(
+    `${SERVERROUTESPREFIX}/eventsRoutingData`,
+    (req: Request, res: Response) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      res.json(app.wrappedEmitter.getEventRoutingData())
     }
   )
 
@@ -1069,7 +1097,7 @@ module.exports = function (
                     fs.unlinkSync(zipFile)
                     listSafeRestoreFiles(restoreFilePath)
                       .then((files) => {
-                        res.send(files)
+                        res.type('text/plain').send(files)
                       })
                       .catch((err) => {
                         console.error(err)

@@ -6,10 +6,7 @@ import {
   CardHeader,
   CardBody,
   CardFooter,
-  InputGroup,
-  InputGroupAddon,
   Input,
-  Form,
   Col,
   Label,
   FormGroup,
@@ -57,7 +54,7 @@ class AccessRequests extends Component {
       }
     )
       .then((response) => response.text())
-      .then((response) => {
+      .then(() => {
         this.state[stateKey] = this.state[stateKey].filter(
           (id) => id != identifier
         )
@@ -90,7 +87,7 @@ class AccessRequests extends Component {
       selectedRequest: this.state.selectedRequest,
     })
   }
-  handleCancel(event) {
+  handleCancel() {
     this.setState({ selectedRequest: null })
   }
 

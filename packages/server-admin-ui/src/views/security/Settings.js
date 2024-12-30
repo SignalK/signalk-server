@@ -210,13 +210,14 @@ class Settings extends Component {
                     <FormGroup row>
                       <Col md="12">
                         <Label>
-                          Simple CORS requests are allowed from all hosts by
-                          default. You can restrict CORS requests to named hosts
-                          by configuring allowed CORS origins below. The host
-                          where this page is loaded from is automatically
-                          included in the allowed CORS origins so that the Admin
-                          UI continues to work. Changes to the Allowed CORS
-                          origins requires a server restart.
+                          With no configuration all CORS origins are accepted,
+                          but client requests with credentials:include do not
+                          work. Add a single * origin to allow all origins with
+                          credentials. You can also restrict CORS requests to
+                          specific origins. The origin that this UI was loaded
+                          from is automatically added to the allowed origins so
+                          that requests from the UI work. Changes to the Allowed
+                          CORS origins requires a server restart.
                         </Label>
                       </Col>
                     </FormGroup>{' '}
@@ -232,7 +233,8 @@ class Settings extends Component {
                           value={this.state.allowedCorsOrigins}
                         />
                         <FormText color="muted">
-                          Use comma delimited list, example:
+                          Use either * or a comma delimited list of origins,
+                          example:
                           http://host1.name.com:3000,http://host2.name.com:3000
                         </FormText>
                       </Col>

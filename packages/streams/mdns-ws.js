@@ -63,6 +63,7 @@ function MdnsWs(options) {
       port: options.port,
       useTLS: options.type === 'wss',
       reconnect: true,
+      notifications: false,
       autoConnect: false,
       deltaStreamBehaviour,
       rejectUnauthorized: !(options.selfsignedcert === true),

@@ -1,0 +1,66 @@
+name: Build Docker base test image
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+jobs:
+  build_docker_base_images:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: signalkci
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }} # Personal access tokens (classic) with a scope of "write:packages" is needed to release ghcr.io package registry. 
+
+      - name: Build baseimages and push with test tag
+        uses: docker/build-push-action@v5
+        with:
+          file: ./docker/Dockerfile_base_test
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          push: true
+          tags: |
+            signalk/signalk-server-base:test_
+            ghcr.io/signalk/signalk-server-base:test_
+
+      - name: Modify Dockerfile_rel for testing
+        run: |
+          sed -i 's/:latest/:test_/g' ./docker/Dockerfile_rel
+
+      - name: Build Signal K test dockers
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile_rel
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          build-args: |
+            TAG=latest
+
+      - name: Push baseimages to registries with latest tag
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile_base_test
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          push: true
+          tags: |
+            signalk/signalk-server-base:testing
+            ghcr.io/signalk/signalk-server-base:testing

@@ -40,7 +40,7 @@ class BackupRestore extends Component {
     this.cancelRestore = this.cancelRestore.bind(this)
   }
 
-  cancelRestore(event) {
+  cancelRestore() {
     this.setState({ restoreState: RESTORE_NONE })
   }
 
@@ -229,7 +229,7 @@ class BackupRestore extends Component {
               {this.state.restoreState === RESTORE_CONFIRM && (
                 <FormGroup check>
                   <Col xs="12" md={fieldColWidthMd}>
-                    {_.keys(this.state.restoreContents).map((name) => {
+                    {Object.keys(this.state.restoreContents).map((name) => {
                       return (
                         <div key={name}>
                           <Label className="switch switch-text switch-primary">

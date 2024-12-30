@@ -10,6 +10,7 @@ export const toLazyDynamicComponent = (moduleName, component) =>
           resolve(import('./loadingerror'))
           return
         }
+        // eslint-disable-next-line no-undef
         container.init(__webpack_share_scopes__.default)
         try {
           const module = container.get(component)

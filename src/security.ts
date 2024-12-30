@@ -27,7 +27,7 @@ import {
 } from 'fs'
 import _ from 'lodash'
 import path from 'path'
-import { certificateFor } from 'devcert'
+import { generate } from 'selfsigned'
 import { Mode } from 'stat-mode'
 import { WithConfig } from './app'
 import { createDebug } from './debug'
@@ -63,7 +63,7 @@ export interface ACL {
 export interface User {
   username: string
   type: string
-  password: string
+  password?: string
 }
 export interface UserData {
   userId: string
@@ -163,7 +163,7 @@ export interface SecurityStrategy {
   getUsers: (theConfig: SecurityConfig) => UserData[]
   addUser: (
     theConfig: SecurityConfig,
-    user: UserWithPassword,
+    user: User,
     cb: ICallback<SecurityConfig>
   ) => void
   updateUser: (
@@ -191,6 +191,8 @@ export interface SecurityStrategy {
     source: any,
     path: string
   ) => boolean
+
+  addAdminMiddleware: (path: string) => void
 }
 
 export class InvalidTokenError extends Error {
@@ -221,7 +223,7 @@ export function startSecurity(
     }
 
     const config = securityConfig || getSecurityConfig(app, true)
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     app.securityStrategy = require(securityStrategyModuleName)(app, config)
 
     if (securityConfig) {
@@ -356,18 +358,20 @@ export function createCertificateOptions(
 ) {
   const location = app.config.configPath ? app.config.configPath : './settings'
   debug(`Creating certificate files in ${location}`)
-  certificateFor(['localhost'])
-    .then(({ key, cert }) => {
-      writeFileSync(keyFile, key)
+  generate(
+    [{ name: 'commonName', value: 'localhost' }],
+    { days: 3650 },
+    function (err, pems) {
+      writeFileSync(keyFile, pems.private)
       chmodSync(keyFile, '600')
-      writeFileSync(certFile, cert)
+      writeFileSync(certFile, pems.cert)
       chmodSync(certFile, '600')
       cb(null, {
-        key: key,
-        cert: cert
+        key: pems.private,
+        cert: pems.cert
       })
-    })
-    .catch(console.error)
+    }
+  )
 }
 
 export function requestAccess(

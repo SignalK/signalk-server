@@ -40,9 +40,7 @@ class Widget02 extends Component {
       color,
       footer,
       link,
-      children,
       variant,
-      bgImage,
       ...attributes
     } = this.props
 
