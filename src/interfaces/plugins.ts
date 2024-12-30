@@ -584,12 +584,6 @@ module.exports = (theApp: any) => {
 
     _.omit(appCopy, 'apiList') // don't expose the actual apiList
 
-    const notificationsApi: NotificationsApi = app.notificationsApi
-    _.omit(appCopy, 'notificationsApi') // don't expose the actual notifications api manager
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    appCopy.notify = (path: string, value: any, source: string) => {
-      notificationsApi.notify(path, value, source)
-
     const courseApi: CourseApi = app.courseApi
     _.omit(appCopy, 'courseApi') // don't expose the actual course api manager
     appCopy.getCourse = () => {
@@ -606,6 +600,13 @@ module.exports = (theApp: any) => {
     appCopy.activateRoute = (dest: RouteDestination | null) => {
       return courseApi.activeRoute(dest)
     }
+
+    const notificationsApi: NotificationsApi = app.notificationsApi
+    _.omit(appCopy, 'notificationsApi') // don't expose the actual notifications api manager
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    appCopy.notify = (path: string, value: any, source: string) => {
+      notificationsApi.notify(path, value, source)
+
 
     try {
       const pluginConstructor: (
