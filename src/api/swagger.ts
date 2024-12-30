@@ -25,10 +25,10 @@ interface ApiRecords {
 }
 
 const apiDocs = [
+  discoveryApiRecord,
   appsApiRecord,
   autopilotApiRecord,
   courseApiRecord,
-  discoveryApiRecord,
   notificationsApiRecord,
   resourcesApiRecord,
   securityApiRecord
