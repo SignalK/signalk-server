@@ -6,7 +6,7 @@ import { FeaturesApi } from './discovery'
 import { ResourcesApi } from './resources'
 import { AutopilotApi } from './autopilot'
 import { SignalKApiId } from '@signalk/server-api'
-import { NotificationsApi } from './notifications'
+import { AlertsApi } from './alerts'
 
 export interface ApiResponse {
   state: 'FAILED' | 'COMPLETED' | 'PENDING'
@@ -70,17 +70,16 @@ export const startApis = (
 
   const featuresApi = new FeaturesApi(app)
 
-  const notificationsApi = new NotificationsApi(app)
+  const notificationsApi = new AlertsApi(app)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).notificationsApi = notificationsApi
+  apiList.push('autopilot')
+
   Promise.all([
-    
     resourcesApi.start(),
-   
     courseApi.start(),
     featuresApi.start(),
-    autopilotApi.start()
-  ,
+    autopilotApi.start(),
     notificationsApi.start()
   ])
   return apiList

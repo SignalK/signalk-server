@@ -3,7 +3,7 @@ import { IRouter, NextFunction, Request, Response } from 'express'
 import swaggerUi from 'swagger-ui-express'
 import { SERVERROUTESPREFIX } from '../constants'
 import { courseApiRecord } from './course/openApi'
-import { notificationsApiRecord } from './notifications/openApi'
+import { alertsApiRecord } from './alerts/openApi'
 import { resourcesApiRecord } from './resources/openApi'
 import { autopilotApiRecord } from './autopilot/openApi'
 import { securityApiRecord } from './security/openApi'
@@ -26,10 +26,10 @@ interface ApiRecords {
 
 const apiDocs = [
   discoveryApiRecord,
+  alertsApiRecord,
   appsApiRecord,
   autopilotApiRecord,
   courseApiRecord,
-  notificationsApiRecord,
   resourcesApiRecord,
   securityApiRecord
 ].reduce<ApiRecords>((acc, apiRecord: OpenApiRecord) => {

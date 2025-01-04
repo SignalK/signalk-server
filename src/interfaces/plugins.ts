@@ -39,7 +39,7 @@ import path from 'path'
 import { AutopilotApi } from '../api/autopilot'
 import { CourseApi } from '../api/course'
 import { ResourcesApi } from '../api/resources'
-import { NotificationsApi } from '../api/notifications'
+import { AlertsApi } from '../api/alerts'
 import { SERVERROUTESPREFIX } from '../constants'
 import { createDebug } from '../debug'
 import { listAllSerialPorts } from '../serialports'
@@ -601,12 +601,12 @@ module.exports = (theApp: any) => {
       return courseApi.activeRoute(dest)
     }
 
-    const notificationsApi: NotificationsApi = app.notificationsApi
-    _.omit(appCopy, 'notificationsApi') // don't expose the actual notifications api manager
+    const alertsApi: AlertsApi = app.notificationsApi
+    _.omit(appCopy, 'alertsApi') // don't expose the actual alerts api manager
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     appCopy.notify = (path: string, value: any, source: string) => {
-      notificationsApi.notify(path, value, source)
-
+      alertsApi.notify(path, value, source)
+    }
 
     try {
       const pluginConstructor: (
