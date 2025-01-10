@@ -7,14 +7,17 @@ const debug = createDebug('signalk-server:api:alerts')
 import { IRouter, Request, Response } from 'express'
 import { SignalKMessageHub, WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
+import _ from 'lodash'
+import { AlertManager, Alert } from './alertmanager'
 
 import {
-  AlertManager,
-  Alert,
+  Path,
   AlertMetaData,
-  isAlertPriority
-} from './alertmanager'
-import { Path } from '@signalk/server-api'
+  isAlertPriority,
+  AlertPriority,
+  SourceRef,
+  AlertValue
+} from '@signalk/server-api'
 
 const SIGNALK_API_PATH = `/signalk/v2/api`
 const ALERTS_API_PATH = `${SIGNALK_API_PATH}/alerts`
@@ -41,9 +44,76 @@ export class AlertsApi {
   }
 
   /** public interface methods */
-  notify(path: string, value: Alert | null, source: string) {
-    debug(`** Interface:put(${path}, value, ${source})`)
+
+  mob(properties: AlertMetaData): string {
+    const pos = this.getVesselPosition()
+    const al = new Alert(this.app, 'emergency', {
+      path: 'mob' as Path,
+      name: properties?.name ?? 'MOB',
+      message: properties?.message ?? 'Person Overboard!',
+      sourceRef: (properties?.sourceRef as SourceRef) ?? 'alarmApi',
+      position: pos ?? null
+    })
+    return this.alertManager.add(al)
   }
+
+  raise(priority: AlertPriority, metaData?: AlertMetaData): string {
+    debug(`** priority:(${priority}, metaData, ${metaData})`)
+    if (!isAlertPriority(priority)) {
+      throw new Error('Invalid alert priority or not provided!')
+    }
+    const al = new Alert(this.app, priority, metaData ?? undefined)
+    return this.alertManager.add(al)
+  }
+
+  fetch(alertId: string): AlertValue {
+    debug(`** fetch: ${alertId}`)
+    return this.alertManager.get(alertId)?.value as AlertValue
+  }
+
+  setPriority(alertId: string, priority: AlertPriority) {
+    debug(`** set priority:${priority}`)
+    if (!isAlertPriority(priority)) {
+      throw new Error('Invalid alert priority or value not provided!')
+    }
+    this.alertManager.get(alertId)?.updatePriority(priority)
+  }
+
+  setProperties(alertId: string, metaData: AlertMetaData) {
+    debug(`** set metaData: ${metaData}`)
+    if (Object.keys(metaData ?? {}).length === 0) {
+      throw new Error('No properties have been provided!')
+    }
+    const al = this.alertManager.get(alertId)
+    if (al) al.properties = metaData
+  }
+
+  resolve(alertId: string) {
+    debug(`** resolve: ${alertId}`)
+    this.alertManager.get(alertId)?.resolve()
+  }
+
+  ack(alertId: string) {
+    debug(`** ack: ${alertId}`)
+    this.alertManager.get(alertId)?.ack()
+  }
+
+  unack(alertId: string) {
+    debug(`** unack: ${alertId}`)
+    this.alertManager.get(alertId)?.unAck()
+  }
+
+  silence(alertId: string): boolean {
+    debug(`** silence: ${alertId}`)
+    return this.alertManager.get(alertId)?.silence() as boolean
+  }
+
+  remove(alertId: string) {
+    debug(`** delete / clean: ${alertId}`)
+    this.alertManager.delete(alertId)
+  }
+
+  /** /public interface methods */
 
   private updateAllowed(request: Request): boolean {
     return this.app.securityStrategy.shouldAllowPut(
@@ -52,6 +122,11 @@ export class AlertsApi {
       null,
       'alerts'
     )
+  }
+
+  private getVesselPosition() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return _.get((this.app.signalk as any).self, 'navigation.position').value
   }
 
   private initApiEndpoints() {
@@ -92,27 +167,15 @@ export class AlertsApi {
     this.app.post(`${ALERTS_API_PATH}`, (req: Request, res: Response) => {
       debug(`** ${req.method} ${req.path} ${JSON.stringify(req.body)}`)
 
-      if (!isAlertPriority(req.body.priority)) {
-        res.status(400).json({
-          state: 'FAILED',
-          statusCode: 400,
-          message: 'Alert priority is invalid or not provided!'
-        })
-        return
-      }
-
-      // create alert & add to manager
-      const al = new Alert(
-        this.app,
-        req.body.priority,
-        req.body.properties ?? undefined
-      )
       try {
-        this.alertManager.add(al)
+        const id = this.raise(
+          req.body.priority,
+          req.body.properties ?? undefined
+        )
         res.status(201).json({
           state: 'COMPLETED',
           statusCode: 201,
-          id: al.value.id
+          id: id
         })
       } catch (e) {
         res.status(400).json({
@@ -127,20 +190,12 @@ export class AlertsApi {
     this.app.post(`${ALERTS_API_PATH}/mob`, (req: Request, res: Response) => {
       debug(`** ${req.method} ${req.path} ${JSON.stringify(req.body)}`)
 
-      const { name, message, sourceRef } = req.body
-      // create alert & add to manager
-      const al = new Alert(this.app, 'emergency', {
-        path: 'mob' as Path,
-        name,
-        message,
-        sourceRef
-      })
       try {
-        this.alertManager.add(al)
+        const id = this.mob(req.body)
         res.status(201).json({
           state: 'COMPLETED',
           statusCode: 201,
-          id: al.value.id
+          id: id
         })
       } catch (e) {
         res.status(400).json({
@@ -178,8 +233,7 @@ export class AlertsApi {
         debug(`** ${req.method} ${req.path} ${JSON.stringify(req.body)}`)
 
         try {
-          const al = this.alertManager.get(req.params.id)
-          al?.ack()
+          this.ack(req.params.id)
           res.status(201).json({
             state: 'COMPLETED',
             statusCode: 201,
@@ -202,8 +256,7 @@ export class AlertsApi {
         debug(`** ${req.method} ${req.path} ${JSON.stringify(req.body)}`)
 
         try {
-          const al = this.alertManager.get(req.params.id)
-          al?.unAck()
+          this.unack(req.params.id)
           res.status(201).json({
             state: 'COMPLETED',
             statusCode: 201,
@@ -249,8 +302,7 @@ export class AlertsApi {
         debug(`** ${req.method} ${req.path} ${JSON.stringify(req.body)}`)
 
         try {
-          const al = this.alertManager.get(req.params.id)
-          if (al?.silence()) {
+          if (this.silence(req.params.id)) {
             res.status(201).json({
               state: 'COMPLETED',
               statusCode: 201,
@@ -279,18 +331,8 @@ export class AlertsApi {
       (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path} ${JSON.stringify(req.body)}`)
 
-        if (Object.keys(req.body).length === 0) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: 'No properties have been provided!'
-          })
-          return
-        }
-
         try {
-          const al = this.alertManager.get(req.params.id)
-          if (al) al.properties = req.body as AlertMetaData
+          this.setProperties(req.params.id, req.body)
           res.status(201).json({
             state: 'COMPLETED',
             statusCode: 201,
@@ -312,18 +354,8 @@ export class AlertsApi {
       (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path} ${JSON.stringify(req.body)}`)
 
-        if (!isAlertPriority(req.body.value)) {
-          res.status(400).json({
-            state: 'FAILED',
-            statusCode: 400,
-            message: 'Alert priority is invalid or not provided!'
-          })
-          return
-        }
-
         try {
-          const al = this.alertManager.get(req.params.id)
-          if (al) al.updatePriority(req.body.value)
+          this.setPriority(req.params.id, req.body.value)
           res.status(201).json({
             state: 'COMPLETED',
             statusCode: 201,
@@ -346,8 +378,7 @@ export class AlertsApi {
         debug(`** ${req.method} ${req.path} ${JSON.stringify(req.body)}`)
 
         try {
-          const al = this.alertManager.get(req.params.id)
-          al?.resolve()
+          this.resolve(req.params.id)
           res.status(201).json({
             state: 'COMPLETED',
             statusCode: 201,
@@ -363,7 +394,7 @@ export class AlertsApi {
       }
     )
 
-    // Clean / delete Alert
+    // Remove Alert
     this.app.delete(`${ALERTS_API_PATH}/:id`, (req: Request, res: Response) => {
       debug(`** ${req.method} ${req.path} ${JSON.stringify(req.body)}`)
 

@@ -1,44 +1,14 @@
 import { v4 as uuidv4 } from 'uuid'
-import { Path, Position, SourceRef } from '@signalk/server-api'
+import {
+  SourceRef,
+  AlertMetaData,
+  isAlertPriority,
+  AlertPriority,
+  AlertProcess,
+  AlertAlarmState,
+  AlertValue
+} from '@signalk/server-api'
 import { AlertsApplication } from '.'
-
-export type AlertPriority = 'emergency' | 'alarm' | 'warning' | 'caution'
-export type AlertProcess = 'normal' | 'abnormal'
-export type AlertAlarmState = 'active' | 'inactive'
-
-interface AlertAdditionalProperties {
-  name?: string
-  message?: string
-  position?: Position
-  path?: Path
-  sourceRef?: SourceRef
-}
-export interface AlertMetaData extends AlertAdditionalProperties {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [index: string]: any
-}
-
-export interface AlertValue {
-  id: string
-  created: Date
-  resolved: Date
-  priority: AlertPriority
-  process: AlertProcess
-  alarmState: AlertAlarmState
-  acknowledged: boolean
-  silenced: boolean
-  metaData: AlertMetaData
-}
-
-export interface AlertListParams {
-  priority: AlertPriority
-  top: number
-  unack: string
-}
-
-export const isAlertPriority = (value: AlertPriority) => {
-  return ['emergency', 'alarm', 'warning', 'caution'].includes(value)
-}
 
 const ALARM_SILENCE_TIME = 30000 // 30 secs
 
@@ -226,6 +196,12 @@ export class Alert {
   }
 }
 
+interface AlertListParams {
+  priority: AlertPriority
+  top: number
+  unack: string
+}
+
 // Alert Manager
 export class AlertManager {
   private alerts: Map<string, Alert> = new Map()
@@ -273,8 +249,9 @@ export class AlertManager {
     return r
   }
 
-  add(alert: Alert) {
+  add(alert: Alert): string {
     this.alerts.set(alert.value.id, alert)
+    return alert.value.id
   }
 
   get(id: string) {

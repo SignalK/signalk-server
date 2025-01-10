@@ -70,9 +70,9 @@ export const startApis = (
 
   const featuresApi = new FeaturesApi(app)
 
-  const notificationsApi = new AlertsApi(app)
+  const alertsApi = new AlertsApi(app)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(app as any).notificationsApi = notificationsApi
+  ;(app as any).alertsApi = alertsApi
   apiList.push('autopilot')
 
   Promise.all([
@@ -80,7 +80,7 @@ export const startApis = (
     courseApi.start(),
     featuresApi.start(),
     autopilotApi.start(),
-    notificationsApi.start()
+    alertsApi.start()
   ])
   return apiList
 }

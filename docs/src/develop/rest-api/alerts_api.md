@@ -13,6 +13,32 @@ become abnormal and measured values fall outside of acceptable thresholds.
 
 The Alerts API requests are sent to `/signalk/v2/api/alerts`.
 
+Alerts are assigned a unique identifier when created, which is used when undertaking subsequent operations e.g. silencing, acknkowledging, etc.
+
+Additionally, _Notifications_ raised by an alert will also contain the alert identifer in both their `path` and `value`.
+
+_Example:_
+```javascript
+// Alert ID:
+"74dbf514-ff33-4a3f-b212-fd28bd106a88"
+
+// Notification path
+"notifications.74dbf514-ff33-4a3f-b212-fd28bd106a88"
+
+// Notification value
+{
+  "id": "74dbf514-ff33-4a3f-b212-fd28bd106a88",
+  "method": ["visual","sound"],
+  "state": "alarm",
+  "message": "My Alert Message!",
+  "metaData": {
+    "name": "My Alert",
+    "created": "2025-01-10T02:49:13.080Z"
+  }
+}
+```
+
+
 ## Supported Operations
 
 ### Individual Alert
@@ -57,7 +83,7 @@ HTTP GET "/signalk/v2/api/alerts" {
     }
 }
 ```
-The `properties` attribute is an object containing key | value pairs, noting that the following pre-defined keys have been defined:
+The `properties` attribute is an object containing key | value pairs, which can be used to hold relevant data for an alert. It should be noted that the following keys have been defined by the Alerts API:
 ```javascript
 {
   name: //string value representing the alert name

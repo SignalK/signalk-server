@@ -33,6 +33,8 @@ import { AutopilotProviderRegistry } from './autopilotapi'
 export { AutopilotProviderRegistry } from './autopilotapi'
 export * from './autopilotapi.guard'
 import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
+import { AlertMetaData, AlertPriority, AlertValue } from './alertsapi'
+export * from './alertsapi'
 
 export type SignalKApiId =
   | 'resources'
@@ -206,6 +208,19 @@ export interface ServerAPI extends PluginServerApp {
     dest: (PointDestination & { arrivalCircle?: number }) | null
   ) => Promise<void>
   activateRoute: (dest: RouteDestination | null) => Promise<void>
+
+  alertsApi: {
+    mob: (properties?: AlertMetaData) => string
+    raiseAlert: (priority: AlertPriority, properties?: AlertMetaData) => string
+    setAlertPriority: (alertId: string, priority: AlertPriority) => void
+    setAlertProperties: (alertId: string, properties: AlertMetaData) => void
+    resolveAlert: (alertId: string) => void
+    ackAlert: (alertId: string) => void
+    unackAlert: (alertId: string) => void
+    silenceAlert: (alertId: string) => boolean
+    removeAlert: (alertId: string) => void
+    getAlert: (alertId: string) => AlertValue
+  }
 
   /**
    * A plugin can report that it has handled output messages. This will
