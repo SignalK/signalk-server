@@ -31,4 +31,3 @@ export interface AlertValue {
 export const isAlertPriority = (value: AlertPriority) => {
   return ['emergency', 'alarm', 'warning', 'caution'].includes(value)
 }
-
