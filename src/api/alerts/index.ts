@@ -18,6 +18,7 @@ import {
   SourceRef,
   AlertValue
 } from '@signalk/server-api'
+import { Responses } from '..'
 
 const SIGNALK_API_PATH = `/signalk/v2/api`
 const ALERTS_API_PATH = `${SIGNALK_API_PATH}/alerts`
@@ -125,8 +126,11 @@ export class AlertsApi {
   }
 
   private getVesselPosition() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return _.get((this.app.signalk as any).self, 'navigation.position').value
+    return (
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      _.get((this.app.signalk as any).self, 'navigation.position')?.value ??
+      null
+    )
   }
 
   private initApiEndpoints() {
@@ -166,6 +170,11 @@ export class AlertsApi {
     // New Alert
     this.app.post(`${ALERTS_API_PATH}`, (req: Request, res: Response) => {
       debug(`** ${req.method} ${req.path} ${JSON.stringify(req.body)}`)
+
+      if (!this.updateAllowed(req)) {
+        res.status(403).json(Responses.unauthorised)
+        return
+      }
 
       try {
         const id = this.raise(

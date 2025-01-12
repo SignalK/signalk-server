@@ -11,6 +11,10 @@ import {
 import { AlertsApplication } from '.'
 
 const ALARM_SILENCE_TIME = 30000 // 30 secs
+const ALERT_ESCALATION_TIME = 5 * 60000 // 5 min
+
+// Alert States
+type ALERT_STATE = 'normal' | 'abnormal_unack' | 'abnormal_ack'
 
 // Class encapsulating an alert
 export class Alert {
@@ -24,7 +28,8 @@ export class Alert {
   protected silenced: boolean = false
   protected metaData: AlertMetaData = {}
 
-  private timer!: NodeJS.Timeout
+  private silencedTimer!: NodeJS.Timeout
+  private escalationTimer!: NodeJS.Timeout
   private app: AlertsApplication
 
   constructor(
@@ -40,7 +45,7 @@ export class Alert {
 
   /** clean up */
   destroy() {
-    this.clearSilencer()
+    this.clearTimers()
   }
 
   /** return Alert value */
@@ -68,30 +73,36 @@ export class Alert {
     this.notify()
   }
 
-  /** Update the Alert priority */
+  /** Update the Alert priority and set abnormal_unack state */
   updatePriority(value: AlertPriority) {
     if (!isAlertPriority(value)) {
       throw new Error('Invalid Alert Priority supplied!')
     } else {
       if (value === this.priority) return
-      // set the new Alert state for the supplied priority
-      this.priority = value
-      this.process = 'abnormal'
       this.resolved = undefined
       this.silenced = false
-      this.acknowledged = false
-      if (['emergency', 'alarm'].includes(value)) {
-        this.alarmState = 'active'
-      } else {
-        this.alarmState = 'inactive'
-      }
+      this.priority = value
+      this.setAlertState('abnormal_unack')
       this.notify()
+      this.startEscalationTimer()
     }
   }
 
-  /**set to abnormal condition */
+  // Unacknowledged alert escalation timer
+  startEscalationTimer(interval: number = ALERT_ESCALATION_TIME) {
+    if (this.priority === 'warning') {
+      console.log(`Starting Alert Escalation Timer....`)
+      this.escalationTimer = setTimeout(() => {
+        if (!this.acknowledged && this.priority === 'warning') {
+          console.log(`Escalating Alert from WARNING to ALARM`)
+          this.updatePriority('alarm')
+        }
+      }, interval)
+    }
+  }
+
+  /** raise an alert amnd set abnormal_unack state */
   raise(priority?: AlertPriority, metaData?: AlertMetaData) {
-    this.clearSilencer()
     this.metaData = metaData ?? {
       sourceRef: 'alertsApi' as SourceRef,
       message: `Alert created at ${this.created}`
@@ -101,29 +112,22 @@ export class Alert {
 
   /** return to normal condition */
   resolve() {
-    this.clearSilencer()
-    this.alarmState = 'inactive'
-    this.process = 'normal'
+    this.setAlertState('normal')
     this.resolved = new Date()
     this.notify()
   }
 
   /** acknowledge alert */
   ack() {
-    this.clearSilencer()
-    this.alarmState = 'active'
-    this.acknowledged = true
+    this.setAlertState('abnormal_ack')
     this.notify()
   }
 
   /** un-acknowledge alert */
   unAck() {
-    this.clearSilencer()
-    this.alarmState = ['emergency', 'alarm'].includes(this.priority)
-      ? 'active'
-      : 'inactive'
-    this.acknowledged = false
+    this.setAlertState('abnormal_ack')
     this.notify()
+    this.startEscalationTimer()
   }
 
   /** temporarily silence alert */
@@ -131,7 +135,7 @@ export class Alert {
     if (this.priority === 'alarm' && this.process !== 'normal') {
       this.silenced = true
       this.notify()
-      this.timer = setTimeout(() => {
+      this.silencedTimer = setTimeout(() => {
         // unsilence after 30 secs
         console.log(
           `*** Alert ${this.metaData.name ?? 'id'} (${
@@ -152,22 +156,47 @@ export class Alert {
     }
   }
 
-  private clearSilencer() {
-    if (this.timer) {
-      clearTimeout(this.timer)
+  private clearTimers() {
+    if (this.silencedTimer) {
+      clearTimeout(this.silencedTimer)
       this.silenced = false
+    }
+    if (this.escalationTimer) {
+      clearTimeout(this.escalationTimer)
+    }
+  }
+
+  private setAlertState(state: ALERT_STATE) {
+    this.clearTimers()
+    if (state === 'normal') {
+      this.process = 'normal' as AlertProcess
+      this.alarmState = 'inactive' as AlertAlarmState
+    } else if (state === 'abnormal_unack') {
+      this.process = 'abnormal' as AlertProcess
+      this.alarmState = 'active' as AlertAlarmState
+      this.acknowledged = false
+    } else if (state === 'abnormal_ack') {
+      this.process = 'abnormal' as AlertProcess
+      this.alarmState = 'active' as AlertAlarmState
+      this.acknowledged = true
     }
   }
 
   /** Emit notification */
   private notify() {
-    const method =
-      this.alarmState === 'inactive'
-        ? []
-        : this.silenced
-        ? ['visual']
-        : ['visual', 'sound']
-    const state = this.alarmState === 'inactive' ? 'normal' : this.priority
+    let method: string[]
+    if (this.alarmState === 'inactive') {
+      method = []
+    } else if (
+      this.silenced ||
+      this.acknowledged ||
+      this.priority === 'caution'
+    ) {
+      method = ['visual']
+    } else {
+      method = ['visual', 'sound']
+    }
+    const state = this.process === 'normal' ? 'normal' : this.priority
     const meta: AlertMetaData = Object.assign({}, this.metaData)
     delete meta.message
     delete meta.sourceRef
@@ -262,6 +291,8 @@ export class AlertManager {
     if (this.alerts.get(id)?.canRemove) {
       this.alerts.get(id)?.destroy()
       this.alerts.delete(id)
+    } else {
+      throw new Error('Cannot remove alert as it is still in abnormal state!')
     }
   }
 

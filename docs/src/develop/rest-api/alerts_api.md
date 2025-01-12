@@ -11,37 +11,85 @@ _Note: This API is currently under development and the information provided here
 The Alerts API provides a mechanism for applications to issue requests for raising and actioning alarms and notifications when operating conditions
 become abnormal and measured values fall outside of acceptable thresholds.
 
-The Alerts API requests are sent to `/signalk/v2/api/alerts`.
+The Alerts API REST endpoints are located at `/signalk/v2/api/alerts`.
 
-Alerts are assigned a unique identifier when created, which is used when undertaking subsequent operations e.g. silencing, acknkowledging, etc.
+_Note: This API endeavours to align terminology and implement best practise by adopting relevant sections of MSC.302(87), A.1021(26) and IEC 68682:2023._
 
-Additionally, _Notifications_ raised by an alert will also contain the alert identifer in both their `path` and `value`.
+Alerts are assigned a unique identifier when raised. 
+This identifier is attached to all notification(s) raised by the alert 
+and is used when taking action on the alert _(i.e. silencing, acknkowledging, resolving, etc)_.
+
+_Note: Notifications raised by an alert include the alert 
+identifer in both their `path` and `value`._
 
 _Example:_
 ```javascript
 // Alert ID:
 "74dbf514-ff33-4a3f-b212-fd28bd106a88"
 
-// Notification path
-"notifications.74dbf514-ff33-4a3f-b212-fd28bd106a88"
-
-// Notification value
-{
-  "id": "74dbf514-ff33-4a3f-b212-fd28bd106a88",
-  "method": ["visual","sound"],
-  "state": "alarm",
-  "message": "My Alert Message!",
-  "metaData": {
-    "name": "My Alert",
-    "created": "2025-01-10T02:49:13.080Z"
-  }
+// Alert notification(s)
+"notifications.74dbf514-ff33-4a3f-b212-fd28bd106a88": {
+    value: {
+        "method": ["visual","sound"],
+        "state": "alarm",
+        "message": "My Alert Message!",
+        "id": "74dbf514-ff33-4a3f-b212-fd28bd106a88",
+        "metaData": {
+            "name": "My Alert",
+            "created": "2025-01-10T02:49:13.080Z"
+        }
+    },
+    ...
 }
 ```
 
+## Alert Priorities
+
+Alerts are assigned a priority which determine the actions that can be taken and 
+their presentation.
+
+| Priority | Description | Requires ACK | Audible | Silenceable |
+|--- |--- |--- |--- |--- |
+| `emergency` | Indicates there is immediate danger to human life or ship and its machinery and that immediate action must be taken. | Yes | Yes (continuous) | No |
+| `alarm` | A condition requiring immediate attention and action to avoid a hazardous situation and to maintain safe operation. | Yes | Yes (continuous) | Temporarily (30 secs) |
+| `warning` | A precautionary condition which is not immediately hazardous but may become so if immediate action is not taken. | Yes | Yes (Momentary) | N/A |
+| `caution` | A condition requiring attention. | No | No | N/A |
+
+
+## Alert Escalation
+
+An alert with a priority of `warning` will be escalated to `alarm` if not 
+acknowledged after a pre-defined time interval.
+
+## Alert Lifecycle
+
+| Initial State | -> Condition / _(Action)_ | New State | Alert Alarm State | Alert Process | Alert Action State |
+|--- |--- |--- |--- |--- |--- |
+| A: Normal | -> Abnormal | B: Unacknowledged | `active` | `abnormal` | `UNACK` |
+| B: Unacknowledged | _(Acknowledge)_ | C: Acknowledged | `active` | `abnormal` | `ACK` |
+| C: Acknowledged | _(Unacknowledge)_ | B: Unacknowledged | `active` | `abnormal` | `UNACK` |
+| C: Acknowledged | -> Normal | A: Normal | `inactive` | `normal` | `ACK` |
+| B: Unacknowledged | -> Normal | D: RTN Unacknowledged | `inactive` | `normal` | `UNACK` |
+| D: RTN Unacknowledged | -> Abnormal | B: Unacknowledged | `active` | `abnormal` | `UNACK` |
+| D: RTN Unacknowledged  | _(Acknowlege)_ | A: Normal | `inactive` | `normal` | `ACK` |
+
+### Notifications
+
+Alerts emit _**Notifications**_ throughout their lifecycle as their state changes. See [Notifications](#notifications-emitted-by-alerts) section for details.
+
+## Alert State Indications
+
+| State | Audible | Visual / (Blinking)_ |
+|--- |--- |--- |
+| A: Normal | No | No |
+| B: Unacknowledged  | Yes | Yes / _(Yes)_ |
+| C: Acknowledged | No | Yes / _(No)_ |
+| D: RTN Unacknowledged| No | Yes / _(No)_ |
 
 ## Supported Operations
 
-### Individual Alert
+
+### Individual Alert Operations
 
 - [Raise](#raising-alerts): `POST /signalk/v2/api/alerts`
 - [Retrieve](#retrieve-alert): `GET /signalk/v2/api/alerts/{id}`
@@ -53,17 +101,12 @@ _Example:_
 - [Resolve](#resolve-alert): `POST /signalk/v2/api/alerts/{id}/resolve`
 - [Remove](#remove-alert): `DELETE /signalk/v2/api/alerts/{id}`
 
-### ALL Alerts
+### Alert List Operations
 
 - [List](#listing-alerts): `GET /signalk/v2/api/alerts`
 - [Acknowledge](#acknowledge-all-alerts): `POST /signalk/v2/api/alerts/ack`
 - [Silence](#silence-all-alerts): `POST /signalk/v2/api/alerts/silence`
 - [Clean](#remove-all-resolved-alerts): `DELETE /signalk/v2/api/alerts`
-
-
-### Notifications
-
-Alerts will emit Notifications throughout their lifecycle to indicate changes in status and when they are resolved. See [Notifications](#notifications-emitted-by-alerts) section for details.
 
 ---
 
@@ -273,21 +316,23 @@ _Example: Resolve alert._
 HTTP DELETE "/signalk/v2/api/alerts/74dbf514-ff33-4a3f-b212-fd28bd106a88" 
 ```
 
----
 
 ## Notifications emitted by Alerts
 
-Alerts will emit Notifications reflecting the current state that include both the alert identifier and metadata, whenever their state changes.
+Alerts will emit Notifications, which include both the alert identifier and metadata, whenever their state changes.
 
-Notifications are created under the path `notifications.{alertId}` by default.
+By default, notifications are created with the path `notifications.{alertId}`.
 
-_Example:_
+The notification path can be specified by providing a value for the `path` attribute in the Alert metadata. The resultant notification path will be `notifications.{alert.metatdata.path}.{alertId}`
+
+_Example: Alert notification with the default path._
 ```javascript
 // alert 
 "0a8a1b07-8428-4e84-8259-1ddae5bf70de": {
     ...
     "metaData": {
-        "name": "My Alert"
+        "name": "My Alert",
+        "message": "My alert message!"
     }
 }
 
@@ -305,18 +350,39 @@ notification.0a8a1b07-8428-4e84-8259-1ddae5bf70de
 
 ```
 
-If a `path` is included in the Alert metadata then this is incluided in the Notification path.
-
-_Example:_
+_Example: Alert notification with the path metadata specified._
 ```javascript
 // alert 
 "0a8a1b07-8428-4e84-8259-1ddae5bf70de": {
+    ...
     "metaData": {
+        "name": "My Alert",
+        "message": "My alert message!",
         "path": "electrical.battery.1"
     }
-    ...
 }
 
 // notification path
 notification.electrical.battery.1.0a8a1b07-8428-4e84-8259-1ddae5bf70de
+{
+    "message": "My alert message!",
+    "state": "alarm",
+    "method": ["visual","sound"],
+    "id": "0a8a1b07-8428-4e84-8259-1ddae5bf70de",
+    "metaData": {
+        "name": "My alert"
+    }
+}
 ```
+
+
+## Condition monitoring and Alert management scenarios
+
+
+| Source | Transport | Condition Manager | Alert API Access |
+|--- |--- |--- |--- |
+| `App` | HTTP | App | REST API |
+| `sensor` | Value mapped to Signal K path (Delta) | Signal K Server Zones | Interface methods |
+| `switch / sensor` | Wired to hardware managed by Signal K Plugin. | Plugin | ServerAPI.alertsApi methods |
+| `Signal K aware sensor` | Websocket | Signal K aware sensor | ? |
+
