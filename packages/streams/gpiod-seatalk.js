@@ -6,7 +6,7 @@
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
- 
+
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,7 +25,7 @@ const Execute = require('./execute')
 const cmd = `
 import gpiod, sys, datetime, glob
 
-ST_PIN = 20
+ST_PIN = 4
 
 ST_INVERT = 0   # 0=idle high, 1=idle low
 ST_BITS = 9
@@ -318,9 +318,13 @@ class st1rx:
 
 if __name__ == "__main__":
     gpio = ST_PIN
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 1 and isinstance(sys.argv[1], str) and sys.argv[1][:4]=="GPIO":
         # Gpio, info as "GPIOnn", from GUI setup. Sensing the seatalk1 (yellow wire)
-        gpio = int("".join(filter(str.isdigit, sys.argv[1])))
+        try:
+          gpio = int(sys.argv[1][4:])
+        except:
+          pass
+
     pol = ST_INVERT
     if len(sys.argv) > 2:
         # Invert, inverted input from ST1, selected in the GUI
