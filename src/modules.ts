@@ -42,15 +42,11 @@ interface NpmModuleData {
   package: NpmPackageData
 }
 
-interface PersonInPackage {
-  name: string
-  email: string
-}
-
 export interface Package {
   name: string
-  author?: PersonInPackage
-  contributors?: PersonInPackage[]
+  publisher?: {
+    username: string
+  }
   dependencies: { [key: string]: any }
   version: string
   description: string
@@ -307,16 +303,9 @@ export function checkForNewServerVersion(
 }
 
 export function getAuthor(thePackage: Package): string {
-  debug(thePackage.name + ' author: ' + thePackage.author)
-  return (
-    (thePackage.author && (thePackage.author.name || thePackage.author.email)) +
-    '' +
-    (thePackage.contributors || [])
-      .map((contributor: any) => contributor.name || contributor.email)
-      .join(',') +
-    '' +
-    (thePackage.name.startsWith('@signalk/') ? ' (Signal K team)' : '')
-  )
+  return `${thePackage.publisher?.username}${
+    thePackage.name.startsWith('@signalk/') ? ' (Signal K team)' : ''
+  }`
 }
 
 export function getKeywords(thePackage: NpmPackageData): string[] {
