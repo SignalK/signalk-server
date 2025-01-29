@@ -211,9 +211,10 @@ function isTheServerModule(moduleName: string, config: Config) {
   return moduleName === config.name
 }
 
+const modulesByKeyword: { [key: string]: any } = {}
+
 function findModulesWithKeyword(keyword: string) {
   return new Promise((resolve, reject) => {
-    let errorCount = 0
     const result = {}
     const handleResultWithTimeout = (fetchResult: Promise<Response>): void => {
       fetchResult
@@ -236,20 +237,31 @@ function findModulesWithKeyword(keyword: string) {
             },
             result
           )
-          resolve(_.values(result))
+          const packages = _.values(result)
+          modulesByKeyword[keyword] = {
+            time: Date.now(),
+            packages
+          }
+          resolve(packages)
         })
         .catch((e) => {
-          if (errorCount++) {
-            reject(e)
-          }
+          reject(e)
         })
     }
-    ;[
+    if (
+      modulesByKeyword[keyword] &&
+      Date.now() - modulesByKeyword[keyword].time < 60 * 1000
+    ) {
+      resolve(modulesByKeyword[keyword].packages)
+      return
+    }
+
+    handleResultWithTimeout(
       fetch(
         'http://registry.npmjs.org/-/v1/search?size=250&text=keywords:' +
           keyword
       )
-    ].forEach(handleResultWithTimeout)
+    )
   })
 }
 
