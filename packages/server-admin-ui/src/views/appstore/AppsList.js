@@ -29,7 +29,7 @@ class AppsList extends Component {
               Description
             </th>
             <th className={window.innerWidth < XL_WIDTH ? 'd-none' : ''}>
-              Author
+              Publisher
             </th>
             <th
               className={

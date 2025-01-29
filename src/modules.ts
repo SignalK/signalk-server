@@ -49,8 +49,8 @@ interface PersonInPackage {
 
 export interface Package {
   name: string
-  author?: PersonInPackage
-  contributors?: PersonInPackage[]
+  publisher: PersonInPackage
+  maintainers?: PersonInPackage[]
   dependencies: { [key: string]: any }
   version: string
   description: string
@@ -302,16 +302,11 @@ export function checkForNewServerVersion(
 }
 
 export function getAuthor(thePackage: Package): string {
-  debug(thePackage.name + ' author: ' + thePackage.author)
-  return (
-    (thePackage.author && (thePackage.author.name || thePackage.author.email)) +
-    '' +
-    (thePackage.contributors || [])
-      .map((contributor: any) => contributor.name || contributor.email)
-      .join(',') +
-    '' +
-    (thePackage.name.startsWith('@signalk/') ? ' (Signal K team)' : '')
-  )
+  let author = 
+    thePackage.name.startsWith('@signalk/') ? 'Signal K Team' :
+     thePackage.publisher.email
+  debug('%s publisher: %j', thePackage.name, author)
+  return author
 }
 
 export function getKeywords(thePackage: NpmPackageData): string[] {
