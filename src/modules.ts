@@ -302,9 +302,9 @@ export function checkForNewServerVersion(
 }
 
 export function getAuthor(thePackage: Package): string {
-  const author = 
-    thePackage.name.startsWith('@signalk/') ? 'Signal K Team' :
-     thePackage.publisher.email
+  const author = thePackage.name.startsWith('@signalk/')
+    ? 'Signal K Team'
+    : thePackage.publisher.email
   debug('%s publisher: %j', thePackage.name, author)
   return author
 }
