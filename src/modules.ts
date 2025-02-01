@@ -18,7 +18,7 @@
 import { spawn } from 'child_process'
 import fs from 'fs'
 import _ from 'lodash'
-import fetch, { Response } from 'node-fetch'
+import fetch from 'node-fetch'
 import path from 'path'
 import semver, { SemVer } from 'semver'
 import { Config } from './config/config'
@@ -213,41 +213,8 @@ function isTheServerModule(moduleName: string, config: Config) {
 
 const modulesByKeyword: { [key: string]: any } = {}
 
-function findModulesWithKeyword(keyword: string) {
-  return new Promise((resolve, reject) => {
-    const result = {}
-    const handleResultWithTimeout = (fetchResult: Promise<Response>): void => {
-      fetchResult
-        .then((r) => r.json())
-        .then((parsed) => {
-          const data = parsed.results || parsed.objects || []
-          data.reduce(
-            (
-              acc: { [packageName: string]: NpmModuleData },
-              module: NpmModuleData
-            ) => {
-              const name = module.package.name
-              if (
-                !acc[name] ||
-                semver.gt(module.package.version, acc[name].package.version)
-              ) {
-                acc[name] = module
-              }
-              return acc
-            },
-            result
-          )
-          const packages = _.values(result)
-          modulesByKeyword[keyword] = {
-            time: Date.now(),
-            packages
-          }
-          resolve(packages)
-        })
-        .catch((e) => {
-          reject(e)
-        })
-    }
+function findModulesWithKeyword(keyword: string): Promise<NpmModuleData[]> {
+  return new Promise<NpmModuleData[]>((resolve, reject) => {
     if (
       modulesByKeyword[keyword] &&
       Date.now() - modulesByKeyword[keyword].time < 60 * 1000
@@ -256,12 +223,38 @@ function findModulesWithKeyword(keyword: string) {
       return
     }
 
-    handleResultWithTimeout(
-      fetch(
-        'http://registry.npmjs.org/-/v1/search?size=250&text=keywords:' +
-          keyword
-      )
+    fetch(
+      'http://registry.npmjs.org/-/v1/search?size=250&text=keywords:' + keyword
     )
+      .then((r) => r.json())
+      .then((parsed) => {
+        const data = parsed.results || parsed.objects || []
+        const result = data.reduce(
+          (
+            acc: { [packageName: string]: NpmModuleData },
+            module: NpmModuleData
+          ) => {
+            const name = module.package.name
+            if (
+              !acc[name] ||
+              semver.gt(module.package.version, acc[name].package.version)
+            ) {
+              acc[name] = module
+            }
+            return acc
+          },
+          {}
+        )
+        const packages = _.values(result)
+        modulesByKeyword[keyword] = {
+          time: Date.now(),
+          packages
+        }
+        resolve(packages)
+      })
+      .catch((e) => {
+        reject(e)
+      })
   })
 }
 
