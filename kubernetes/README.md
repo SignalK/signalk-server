@@ -4,6 +4,7 @@ A simple manifest for deploying the Signal K Server is available in the `signalk
 
 See the [Signal K Server Docker documentation](https://github.com/SignalK/signalk-server/blob/master/docker/README.md) for information on the container images.  The image/tag being deployed is declared in the manifest as `image: signalk/signalk-server:master`
 
+
 # Quick Start
 
 With the kubectl CLI installed and configured for a running cluster, the manifest can be applied with
@@ -15,14 +16,14 @@ kubectl apply -f signalk-deployment.yaml
 > [!NOTE]  
 > The cluster must have a [Storage Class](https://kubernetes.io/docs/concepts/storage/storage-classes/) enabled, which many Kubernetes implementations do by default.
 >
-> If you find the pod stuck in a pending state, it may be due to no available storage class.  See the Persistent Storage section below for more information.
+> If you find the pod stuck in a pending state, it may be due to no available storage class.  See the [Settings and Data Storage](#settings-and-data-storage) section below for more information.
 
 
 ## Reaching the Server
 
 ### Load Balancer
 
-Included in the deployment manifest file is a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) resource for attachment to an [external load balancer](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/).  If the cluster has a load balancer with an available IP address, your newly deployed Signal K instance should become externally reachable on an IP address.  The IP address(es) assigned by the load balancer are included in the output from this command (look for IP: and IPs:)
+Included in the deployment manifest file is a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) resource for attachment to an [external load balancer](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/).  If the cluster has a load balancer with an available IP address, your newly deployed Signal K instance should become externally reachable on an IP address which can be included in the output from this command (look for IP and IPs)
 
 ```kubectl describe service signalk```
 
@@ -59,7 +60,24 @@ You can then deploy the ingress resource in `signalk-ingress.yaml` which routes 
 The Signal K web UI should now be available at [http://localhost](http://localhost).
 
 
-## Settings and Data Storage
+# Resource Architecture
+
+```mermaid
+graph TD
+    A[Web Browsers] -- HTTP 80 --> C
+    B[API Clients] -- HTTP 80 --> C
+
+    C(Load Balancer) -- HTTP 3000 --> D
+
+    D(Service) -- HTTP 3000 --> E
+
+    E("Pod (Signal K Server)") -- Persistent Volume Claim --> F
+
+    F(Persistent Volume)
+```
+
+
+# Settings and Data Storage
 
 The deployment manifest includes a resource that uses the Kubernetes [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) subsystem to retain settings and data across multiple deployment replicas and between container restarts.  While many implementations come with a storage class pre-configured with default that allow a quick deployment, considerations should be made to insure that availability and resilience of the stored data meets the requirements of your deployment.
 
