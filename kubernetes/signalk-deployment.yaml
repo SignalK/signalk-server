@@ -75,5 +75,3 @@ spec:
       - name: home-node-dotsignalk
         persistentVolumeClaim:
           claimName: signalkpvc
-
-
