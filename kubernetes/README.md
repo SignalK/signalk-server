@@ -25,7 +25,9 @@ kubectl apply -f signalk-deployment.yaml
 
 Included in the deployment manifest file is a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) resource for attachment to an [external load balancer](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/).  If the cluster has a load balancer with an available IP address, your newly deployed Signal K instance should become externally reachable on an IP address which is included in the output from this command (look for IP and IPs)
 
-```kubectl describe service signalk```
+```
+kubectl describe service signalk
+```
 
 It may take some time for your load balancer to assign addresses.  If the service appears to be stuck in a pending state and you are only interested in quick access to the service, consider using the more simple Ingress method described below.  Troubleshooting a cluster's network configuration is beyond the scope of this document.
 
@@ -33,7 +35,9 @@ It may take some time for your load balancer to assign addresses.  If the servic
 
 An easy to configure load balancer is available in MicroK8s that can be enabled by executing the following command and specifying a range of local IPs to dedicate to it (default ranges will often work)
 
-```microk8s enable metallb```
+```
+microk8s enable metallb
+```
 
 ### Ingress
 
@@ -43,7 +47,9 @@ A simple solution for accessing the server on a local or single-node cluster wit
 
 This command will setup a tunnel bound to a random port on the host into the signalk service in the cluster and attempt to launch a new web browser instance at the resulting URL
 
-```minikube service signalk```
+```
+minikube service signalk
+```
 
 Depending on how minikube is deployed, you may need to leave the resulting CLI process running to keep the tunnel available.
 
@@ -51,11 +57,15 @@ Depending on how minikube is deployed, you may need to leave the resulting CLI p
 
 An nginx ingress controller can be setup that binds to the host's port 80 by executing the command
 
-```microk8s enable ingress```
+```
+microk8s enable ingress
+```
 
 You can then deploy the ingress resource in `signalk-ingress.yaml` which routes requests to the controller's root with the command
 
-```kubectl apply -f signalk-ingress.yaml```
+```
+kubectl apply -f signalk-ingress.yam
+```
 
 The Signal K web UI should now be available at [http://localhost](http://localhost).
 
@@ -85,7 +95,9 @@ The deployment manifest includes a resource that uses the Kubernetes [Persistent
 
 Deployments of MicroK8s does not include a storage class by default which will cause the signalk pod to become stuck in a pending state.  This can be quickly resolved by executing the following command and re-applying the signalk-deployment.yaml file
 
-```microk8s enable storage```
+```
+microk8s enable storage
+```
 
 
 ## Uninstall
