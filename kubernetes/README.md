@@ -23,7 +23,7 @@ kubectl apply -f signalk-deployment.yaml
 
 ### Load Balancer
 
-Included in the deployment manifest file is a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) resource for attachment to an [external load balancer](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/).  If the cluster has a load balancer with an available IP address, your newly deployed Signal K instance should become externally reachable on an IP address which can be included in the output from this command (look for IP and IPs)
+Included in the deployment manifest file is a [Service](https://kubernetes.io/docs/concepts/services-networking/service/) resource for attachment to an [external load balancer](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/).  If the cluster has a load balancer with an available IP address, your newly deployed Signal K instance should become externally reachable on an IP address which is included in the output from this command (look for IP and IPs)
 
 ```kubectl describe service signalk```
 
