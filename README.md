@@ -79,6 +79,10 @@ You can run Signal K Server in Docker:
 
 * [Docker quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/docker/README.md#quickstart)
 
+Or in a Kubernetes cluster:
+
+* [Kubernetes quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/kubernetes/README.md#quickstart)
+
 And an installer for Windows:
 
 * [https://github.com/SignalK/signalk-server-windows](https://github.com/SignalK/signalk-server-windows)
