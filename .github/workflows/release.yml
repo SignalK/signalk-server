@@ -191,6 +191,32 @@ jobs:
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
           build-args: |
+            TAG=${{ steps.vars.outputs.tag }}        
+      - name: Docker meta for test image
+        id: docker_meta_test
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            signalk/signalk-server
+            ghcr.io/signalk/signalk-server
+          flavor: |
+            suffix=-24.04
+          tags: |
+            type=semver,pattern={{raw}}
+            type=semver,pattern=v{{major}},enable=${{ !contains(github.ref, 'beta') }}
+            type=semver,pattern=v{{major}}.{{minor}},enable=${{ !contains(github.ref, 'beta') }}
+            type=raw,value=latest,enable=${{ !contains(github.ref, 'beta') }}
+      - name: Modify Dockerfile_rel for test image
+        run: |
+          sed -i 's/:latest/:testing/g' ./docker/Dockerfile_rel
+      - name: Build and push test image
+        uses: docker/build-push-action@v5
+        with:
+          file: ./docker/Dockerfile_rel
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          push: true
+          tags: ${{ steps.docker_meta_test.outputs.tags }}
+          build-args: |
             TAG=${{ steps.vars.outputs.tag }}
 
   deploy_fly:

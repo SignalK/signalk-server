@@ -85,7 +85,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: packed-modules
-
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -94,3 +93,26 @@ jobs:
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
+      - name: Docker meta for test image
+        id: docker_meta_test
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            signalk/signalk-server
+            ghcr.io/signalk/signalk-server
+          flavor: |
+            suffix=-24.04
+          tags: |
+            type=ref,event=branch
+            type=sha
+      - name: Modify Dockerfile for test image
+        run: |
+          sed -i 's/:latest/:testing/g' ./docker/Dockerfile
+      - name: Build and push test image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          push: true
+          tags: ${{ steps.docker_meta_test.outputs.tags }}
