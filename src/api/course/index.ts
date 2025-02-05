@@ -25,7 +25,8 @@ import {
   Update,
   Delta,
   hasValues,
-  SourceRef
+  SourceRef,
+  Waypoint
 } from '@signalk/server-api'
 
 const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
@@ -98,7 +99,7 @@ export class CourseApi {
       try {
         storeData = await this.store.read()
         debug('Found persisted course data')
-        this.courseInfo = this.validateCourseInfo(storeData)
+        this.courseInfo = await this.validateCourseInfo(storeData)
         this.cmdSource = this.courseInfo.nextPoint ? API_CMD_SRC : null
       } catch (_error) {
         debug('No persisted course data (using default)')
@@ -320,13 +321,38 @@ export class CourseApi {
     return _.get((this.app.signalk as any).self, 'navigation.position')
   }
 
-  private validateCourseInfo(info: CourseInfo) {
+  private async validateCourseInfo(info: CourseInfo) {
     if (
       typeof info.activeRoute !== 'undefined' &&
       typeof info.nextPoint !== 'undefined' &&
       typeof info.previousPoint !== 'undefined'
     ) {
-      return info
+      // validate waypoint href
+      if (!info.activeRoute && info.nextPoint?.href) {
+        const h = this.parseHref(info.nextPoint?.href)
+        if (!h) {
+          return this.courseInfo
+        }
+        const wpt = (await this.resourcesApi.getResource(
+          h.type,
+          h.id
+        )) as Waypoint
+        if (wpt && wpt.feature) {
+          return info
+        } else {
+          return this.courseInfo
+        }
+      } else if (info.activeRoute && info.activeRoute.href) {
+        // validate route reference
+        const rte = await this.getRoute(info.activeRoute.href)
+        if (rte && rte.feature) {
+          return info
+        } else {
+          return this.courseInfo
+        }
+      } else {
+        return info
+      }
     } else {
       debug(`** Error: Loaded course data is invalid!! (using default) **`)
       return this.courseInfo
