@@ -330,44 +330,42 @@ export class CourseApi {
       debug(`** Error: Loaded course data is invalid!! **`)
       return this.courseInfo
     }
-    // validate route reference
-    if (info.activeRoute) {
-      return (await this.isValidRoute(info.activeRoute))
-        ? info
-        : this.courseInfo
-    } else if (!info.activeRoute && info.nextPoint?.href) {
-      // validate waypoint reference
-      return (await this.isValidWaypoint(info.nextPoint?.href))
-        ? info
-        : this.courseInfo
-    } else {
-      return this.courseInfo
-    }
-  }
 
-  private async isValidRoute(activeRoute: ActiveRoute): Promise<boolean> {
-    if (!activeRoute?.href) {
-      return false
-    }
-    const rte = await this.getRoute(activeRoute.href)
     if (
-      rte?.feature &&
-      activeRoute.pointIndex >= 0 &&
-      activeRoute.pointIndex < rte.feature.geometry.coordinates.length
+      (await this.isValidRouteCourse(info)) ||
+      (await this.isValidWaypointCourse(info))
     ) {
-      return true
-    } else {
-      return false
+      return info
     }
+    return this.courseInfo
   }
 
-  private async isValidWaypoint(href: string): Promise<boolean> {
-    const h = this.parseHref(href)
-    if (!h) {
+  private async isValidRouteCourse(info: CourseInfo): Promise<boolean> {
+    if (!info?.activeRoute?.href) {
       return false
     }
-    const wpt = (await this.resourcesApi.getResource(h.type, h.id)) as Waypoint
-    return wpt?.feature ? true : false
+    const activeRoute = info.activeRoute
+    const route = await this.getRoute(activeRoute.href)
+    return (
+      route?.feature !== undefined &&
+      activeRoute.pointIndex >= 0 &&
+      activeRoute.pointIndex < route.feature.geometry.coordinates.length
+    )
+  }
+
+  private async isValidWaypointCourse(info: CourseInfo): Promise<boolean> {
+    if (!info?.nextPoint?.href) {
+      return false
+    }
+    const parsedHref = this.parseHref(info.nextPoint.href)
+    if (!parsedHref) {
+      return false
+    }
+    const wpt = (await this.resourcesApi.getResource(
+      parsedHref.type,
+      parsedHref.id
+    )) as Waypoint
+    return wpt?.feature !== undefined
   }
 
   private updateAllowed(request: Request): boolean {
