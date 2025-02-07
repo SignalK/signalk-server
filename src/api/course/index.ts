@@ -323,40 +323,51 @@ export class CourseApi {
 
   private async validateCourseInfo(info: CourseInfo) {
     if (
-      typeof info.activeRoute !== 'undefined' &&
-      typeof info.nextPoint !== 'undefined' &&
-      typeof info.previousPoint !== 'undefined'
+      typeof info.activeRoute === 'undefined' ||
+      typeof info.nextPoint === 'undefined' ||
+      typeof info.previousPoint === 'undefined'
     ) {
-      // validate waypoint href
-      if (!info.activeRoute && info.nextPoint?.href) {
-        const h = this.parseHref(info.nextPoint?.href)
-        if (!h) {
-          return this.courseInfo
-        }
-        const wpt = (await this.resourcesApi.getResource(
-          h.type,
-          h.id
-        )) as Waypoint
-        if (wpt && wpt.feature) {
-          return info
-        } else {
-          return this.courseInfo
-        }
-      } else if (info.activeRoute && info.activeRoute.href) {
-        // validate route reference
-        const rte = await this.getRoute(info.activeRoute.href)
-        if (rte && rte.feature) {
-          return info
-        } else {
-          return this.courseInfo
-        }
-      } else {
-        return info
-      }
-    } else {
-      debug(`** Error: Loaded course data is invalid!! (using default) **`)
+      debug(`** Error: Loaded course data is invalid!! **`)
       return this.courseInfo
     }
+    // validate route reference
+    if (info.activeRoute) {
+      return (await this.isValidRoute(info.activeRoute))
+        ? info
+        : this.courseInfo
+    } else if (!info.activeRoute && info.nextPoint?.href) {
+      // validate waypoint reference
+      return (await this.isValidWaypoint(info.nextPoint?.href))
+        ? info
+        : this.courseInfo
+    } else {
+      return this.courseInfo
+    }
+  }
+
+  private async isValidRoute(activeRoute: ActiveRoute): Promise<boolean> {
+    if (!activeRoute?.href) {
+      return false
+    }
+    const rte = await this.getRoute(activeRoute.href)
+    if (
+      rte?.feature &&
+      activeRoute.pointIndex >= 0 &&
+      activeRoute.pointIndex < rte.feature.geometry.coordinates.length
+    ) {
+      return true
+    } else {
+      return false
+    }
+  }
+
+  private async isValidWaypoint(href: string): Promise<boolean> {
+    const h = this.parseHref(href)
+    if (!h) {
+      return false
+    }
+    const wpt = (await this.resourcesApi.getResource(h.type, h.id)) as Waypoint
+    return wpt?.feature ? true : false
   }
 
   private updateAllowed(request: Request): boolean {
