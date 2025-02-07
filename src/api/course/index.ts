@@ -66,16 +66,17 @@ interface CommandSource {
   msg?: string
   path?: string
 }
+const NO_COURSE_INFO: CourseInfo = {
+  startTime: null,
+  targetArrivalTime: null,
+  arrivalCircle: 0,
+  activeRoute: null,
+  nextPoint: null,
+  previousPoint: null
+}
 
 export class CourseApi {
-  private courseInfo: CourseInfo = {
-    startTime: null,
-    targetArrivalTime: null,
-    arrivalCircle: 0,
-    activeRoute: null,
-    nextPoint: null,
-    previousPoint: null
-  }
+  private courseInfo = NO_COURSE_INFO
 
   private store: Store
   private cmdSource: CommandSource | null = null // source which set the destination
@@ -274,13 +275,8 @@ export class CourseApi {
 
   /** Clear destination / route (exposed to plugins) */
   async clearDestination(persistState?: boolean): Promise<void> {
-    this.courseInfo.startTime = null
-    this.courseInfo.targetArrivalTime = null
-    this.courseInfo.activeRoute = null
-    this.courseInfo.nextPoint = null
-    this.courseInfo.previousPoint = null
+    this.courseInfo = NO_COURSE_INFO
     this.emitCourseInfo(!persistState)
-    this.cmdSource = null
   }
 
   /** Set course (exposed to plugins)
@@ -337,7 +333,7 @@ export class CourseApi {
     ) {
       return info
     }
-    return this.courseInfo
+    return NO_COURSE_INFO
   }
 
   private async isValidRouteCourse(info: CourseInfo): Promise<boolean> {
