@@ -276,6 +276,7 @@ export class CourseApi {
   /** Clear destination / route (exposed to plugins) */
   async clearDestination(persistState?: boolean): Promise<void> {
     this.courseInfo = NO_COURSE_INFO
+    this.cmdSource = null
     this.emitCourseInfo(!persistState)
   }
 
