@@ -23,7 +23,9 @@ import path from 'path'
 import semver, { SemVer } from 'semver'
 import { Config } from './config/config'
 import { createDebug } from './debug'
+import { nextTick } from 'process'
 const debug = createDebug('signalk:modules')
+const npmDebug = createDebug('signalk:modules:npm')
 
 interface ModuleData {
   module: string
@@ -219,13 +221,12 @@ function findModulesWithKeyword(keyword: string): Promise<NpmModuleData[]> {
       return
     }
 
-    fetch(
-      'http://registry.npmjs.org/-/v1/search?size=250&text=keywords:' + keyword
-    )
-      .then((r) => r.json())
-      .then((parsed) => {
-        const data = parsed.results || parsed.objects || []
-        const result = data.reduce(
+    searchByKeyword(keyword)
+      .then((moduleData) => {
+        npmDebug(
+          `npm search returned ${moduleData.length} modules with keyword ${keyword}`
+        )
+        const result = moduleData.reduce(
           (
             acc: { [packageName: string]: NpmModuleData },
             module: NpmModuleData
@@ -251,6 +252,37 @@ function findModulesWithKeyword(keyword: string): Promise<NpmModuleData[]> {
       .catch((e) => {
         reject(e)
       })
+  })
+}
+
+function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
+  return new Promise((resolve, reject) => {
+    let fetchedCount = 0
+    let toFetchCount = 1
+    let moduleData: NpmModuleData[] = []
+    const npmFetch = () => {
+      npmDebug(
+        `searching ${keyword} from ${fetchedCount + 1} of ${toFetchCount}`
+      )
+      fetch(
+        `http://registry.npmjs.org/-/v1/search?size=250&from=${
+          fetchedCount > 0 ? fetchedCount : 0
+        }&text=keywords:${keyword}`
+      )
+        .then((r) => r.json())
+        .then((parsed) => {
+          moduleData = moduleData.concat(parsed.objects)
+          fetchedCount += parsed.objects.length
+          toFetchCount = parsed.total
+          if (fetchedCount < toFetchCount) {
+            nextTick(() => npmFetch())
+          } else {
+            resolve(moduleData)
+          }
+        })
+        .catch(reject)
+    }
+    npmFetch()
   })
 }
 
