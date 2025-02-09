@@ -320,12 +320,10 @@ export class CourseApi {
 
   private async validateCourseInfo(info: CourseInfo) {
     if (
-      typeof info.activeRoute === 'undefined' ||
-      typeof info.nextPoint === 'undefined' ||
-      typeof info.previousPoint === 'undefined'
+      !hasAllProperties(info, ['activeRoute', 'nextPoint', 'previousPoint'])
     ) {
       debug(`** Error: Loaded course data is invalid!! **`)
-      return this.courseInfo
+      return NO_COURSE_INFO
     }
 
     if (
@@ -1176,4 +1174,8 @@ export class CourseApi {
     this.cmdSource?.$source === cmdSource.$source &&
     this.cmdSource?.path === cmdSource.path &&
     this.cmdSource?.msg === cmdSource.msg
+}
+
+const hasAllProperties = (info: CourseInfo, propNames: string[]) => {
+  return !propNames.find((propName) => !(propName in info))
 }
