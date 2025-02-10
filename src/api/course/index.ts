@@ -25,7 +25,8 @@ import {
   Update,
   Delta,
   hasValues,
-  SourceRef
+  SourceRef,
+  Waypoint
 } from '@signalk/server-api'
 
 const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
@@ -65,16 +66,17 @@ interface CommandSource {
   msg?: string
   path?: string
 }
+const NO_COURSE_INFO: CourseInfo = {
+  startTime: null,
+  targetArrivalTime: null,
+  arrivalCircle: 0,
+  activeRoute: null,
+  nextPoint: null,
+  previousPoint: null
+}
 
 export class CourseApi {
-  private courseInfo: CourseInfo = {
-    startTime: null,
-    targetArrivalTime: null,
-    arrivalCircle: 0,
-    activeRoute: null,
-    nextPoint: null,
-    previousPoint: null
-  }
+  private courseInfo = NO_COURSE_INFO
 
   private store: Store
   private cmdSource: CommandSource | null = null // source which set the destination
@@ -98,7 +100,7 @@ export class CourseApi {
       try {
         storeData = await this.store.read()
         debug('Found persisted course data')
-        this.courseInfo = this.validateCourseInfo(storeData)
+        this.courseInfo = await this.validateCourseInfo(storeData)
         this.cmdSource = this.courseInfo.nextPoint ? API_CMD_SRC : null
       } catch (_error) {
         debug('No persisted course data (using default)')
@@ -273,13 +275,12 @@ export class CourseApi {
 
   /** Clear destination / route (exposed to plugins) */
   async clearDestination(persistState?: boolean): Promise<void> {
-    this.courseInfo.startTime = null
-    this.courseInfo.targetArrivalTime = null
-    this.courseInfo.activeRoute = null
-    this.courseInfo.nextPoint = null
-    this.courseInfo.previousPoint = null
-    this.emitCourseInfo(!persistState)
+    this.courseInfo = {
+      ...NO_COURSE_INFO,
+      arrivalCircle: this.courseInfo.arrivalCircle
+    }
     this.cmdSource = null
+    this.emitCourseInfo(!persistState)
   }
 
   /** Set course (exposed to plugins)
@@ -320,17 +321,49 @@ export class CourseApi {
     return _.get((this.app.signalk as any).self, 'navigation.position')
   }
 
-  private validateCourseInfo(info: CourseInfo) {
+  private async validateCourseInfo(info: CourseInfo) {
     if (
-      typeof info.activeRoute !== 'undefined' &&
-      typeof info.nextPoint !== 'undefined' &&
-      typeof info.previousPoint !== 'undefined'
+      !hasAllProperties(info, ['activeRoute', 'nextPoint', 'previousPoint'])
+    ) {
+      debug(`** Error: Loaded course data is invalid!! **`)
+      return NO_COURSE_INFO
+    }
+
+    if (
+      (await this.isValidRouteCourse(info)) ||
+      (await this.isValidWaypointCourse(info))
     ) {
       return info
-    } else {
-      debug(`** Error: Loaded course data is invalid!! (using default) **`)
-      return this.courseInfo
     }
+    return NO_COURSE_INFO
+  }
+
+  private async isValidRouteCourse(info: CourseInfo): Promise<boolean> {
+    if (!info?.activeRoute?.href) {
+      return false
+    }
+    const activeRoute = info.activeRoute
+    const route = await this.getRoute(activeRoute.href)
+    return (
+      route?.feature !== undefined &&
+      activeRoute.pointIndex >= 0 &&
+      activeRoute.pointIndex < route.feature.geometry.coordinates.length
+    )
+  }
+
+  private async isValidWaypointCourse(info: CourseInfo): Promise<boolean> {
+    if (!info?.nextPoint?.href) {
+      return false
+    }
+    const parsedHref = this.parseHref(info.nextPoint.href)
+    if (!parsedHref) {
+      return false
+    }
+    const wpt = (await this.resourcesApi.getResource(
+      parsedHref.type,
+      parsedHref.id
+    )) as Waypoint
+    return wpt?.feature !== undefined
   }
 
   private updateAllowed(request: Request): boolean {
@@ -1144,4 +1177,8 @@ export class CourseApi {
     this.cmdSource?.$source === cmdSource.$source &&
     this.cmdSource?.path === cmdSource.path &&
     this.cmdSource?.msg === cmdSource.msg
+}
+
+const hasAllProperties = (info: CourseInfo, propNames: string[]) => {
+  return !propNames.find((propName) => !(propName in info))
 }
