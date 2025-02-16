@@ -445,7 +445,7 @@ export class ResourcesApi {
   /** Return array of provider ids for supplied resource type */
   private getProvidersForResourceType(resType: string): Array<string> {
     const result: string[] = this.resProvider[resType]
-      ? Object.keys(this.resProvider[resType])
+      ? Array.from(this.resProvider[resType].keys())
       : []
     debug(`getProvidersForResourceType().result = ${result}`)
     return result
