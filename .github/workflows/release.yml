@@ -179,11 +179,6 @@ jobs:
             type=raw,value=${{ matrix.tag }},enable=${{ !contains(github.ref, 'beta') }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: signalkci
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to ghcr.io
         uses: docker/login-action@v3
         with:
@@ -195,7 +190,9 @@ jobs:
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Modify Dockerfile_rel for build
         run: |
-          sed -i "s/:latest/:latest-${{ matrix.os }}/g" ./docker/Dockerfile_rel
+          sed -i \
+            "s|cr.signalk.io/signalk/signalk-server-base:latest|ghcr.io/signalk/signalk-server-base:${{ matrix.arch }}-${{ matrix.os }}|g" \
+            ./docker/Dockerfile_rel
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -203,7 +200,6 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           tags: |
-            signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}
             ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}
           build-args: |
             TAG=${{ steps.vars.outputs.tag }}
@@ -258,33 +254,13 @@ jobs:
           sources: |
             ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}
             ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}
-            signalk/signalk-server:amd-${{ matrix.os }}
-            signalk/signalk-server:arm-${{ matrix.os }}
 
   housekeeping:
     needs: create-and-push-manifest
     runs-on: ubuntu-latest
     permissions:
       packages: write
-    steps:	
-      - name: Delete Docker Hub Tag
-        env:
-          IMAGE_NAME: "signalk/signalk-server"
-          TAG1: "amd-22.04"
-          TAG2: "arm-22.04"
-          TAG3: "amd-24.04"
-          TAG4: "arm-24.04"
-        run: |
-          sudo apt-get update && sudo apt-get install -y jq
-          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
-            -d '{"username": "signalkci", "password": "${{ secrets.DOCKERHUB_TOKEN }}"}' \
-            https://hub.docker.com/v2/users/login/ | jq -r .token)
-          for TAG in $TAG1 $TAG2 $TAG3 $TAG4; do
-            curl -X DELETE \
-              -H "Authorization: JWT $TOKEN" \
-              "https://hub.docker.com/v2/repositories/$IMAGE_NAME/tags/$TAG/"
-          done
-            
+    steps:
       - name: Remove Docker Image from GHCR
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
