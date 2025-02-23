@@ -96,6 +96,8 @@ jobs:
   housekeeping:
     needs: create-and-push-manifest
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
 
     steps:
       - name: Delete Docker Hub Tag
