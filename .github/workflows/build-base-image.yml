@@ -6,12 +6,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-arm:
-    runs-on: ubuntu-24.04-arm
+  build-images:
     strategy:
       matrix:
         os: [22.04, 24.04]
-
+        vm: [ubuntu-latest, ubuntu-24.04-arm]
+        include:
+          - vm: ubuntu-latest
+            arch: amd
+            platform: linux/amd64
+          - vm: ubuntu-24.04-arm
+            arch: arm
+            platform: linux/arm64,linux/arm/v7
+    runs-on: ${{ matrix.vm }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -29,99 +36,32 @@ jobs:
           username: signalkci
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ matrix.os }}-arm
-
       - name: Build baseimages
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./docker/Dockerfile_base_${{ matrix.os }}
-          platforms: linux/arm64,linux/arm/v7
+          platforms: ${{ matrix.platform }}
           push: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
           tags: |
-            ghcr.io/signalk/signalk-server-base:arm-${{ matrix.os }}
-            signalk/signalk-server-base:arm-${{ matrix.os }}
+            ghcr.io/signalk/signalk-server-base:${{ matrix.arch }}-${{ matrix.os }}
+            signalk/signalk-server-base:${{ matrix.arch }}-${{ matrix.os }}
 
       - name: Modify Dockerfile_rel for testing
         run: |
-          sed -i "s/:latest/:arm-${{ matrix.os }}/g" ./docker/Dockerfile_rel
+          sed -i "s/:latest/:${{ matrix.arch }}-${{ matrix.os }}/g" ./docker/Dockerfile_rel
 
       - name: Build Signal K test docker for arm
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./docker/Dockerfile_rel
-          platforms: linux/arm64,linux/arm/v7
+          platforms: ${{ matrix.platform }}
           build-args: |
             TAG=latest
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-
-  build-amd:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        os: [22.04, 24.04]
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-
-      - name: Login to ghcr.io
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: signalkci
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ matrix.os }}-amd
-
-      - name: Build baseimages
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/Dockerfile_base_${{ matrix.os }}
-          platforms: linux/amd64
-          push: true
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-          tags: |
-            ghcr.io/signalk/signalk-server-base:amd-${{ matrix.os }}
-            signalk/signalk-server-base:amd-${{ matrix.os }}
-
-      - name: Modify Dockerfile_rel for testing
-        run: |
-          sed -i "s/:latest/:amd-${{ matrix.os }}/g" ./docker/Dockerfile_rel
-
-      - name: Build Signal K test docker for amd
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/Dockerfile_rel
-          platforms: linux/amd64
-          build-args: |
-            TAG=latest
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
 
   create-and-push-manifest:
-    needs: [build-arm, build-amd]
+    needs: [build-images]
     runs-on: ubuntu-latest
     strategy:
       matrix:
