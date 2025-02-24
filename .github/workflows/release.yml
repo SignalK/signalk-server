@@ -191,7 +191,7 @@ jobs:
       - name: Modify Dockerfile_rel for build
         run: |
           sed -i \
-            "s|cr.signalk.io/signalk/signalk-server-base:latest|ghcr.io/signalk/signalk-server-base:${{ matrix.arch }}-${{ matrix.os }}|g" \
+            "s|cr.signalk.io/signalk/signalk-server-base:latest|ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}|g" \
             ./docker/Dockerfile_rel
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -199,8 +199,7 @@ jobs:
           file: ./docker/Dockerfile_rel
           platforms: ${{ matrix.platform }}
           push: true
-          tags: |
-            ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}
+          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}
           build-args: |
             TAG=${{ steps.vars.outputs.tag }}
 
