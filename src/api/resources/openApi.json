@@ -406,7 +406,7 @@
             "$ref": "#/components/schemas/NoteBaseModel"
           }
         ],
-        "oneOf": [
+        "anyOf": [
           {
             "$ref": "#/components/schemas/HrefAttribute"
           },
