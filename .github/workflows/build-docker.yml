@@ -88,7 +88,7 @@ jobs:
           file: ./docker/Dockerfile
           platforms: ${{ matrix.platform }}
           push: true
-          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-dev
+          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ github.run_id }}
           
   create-and-push-manifest:
     needs: docker_images
@@ -133,8 +133,8 @@ jobs:
           tags: |
             ${{ steps.docker_meta.outputs.tags }}
           sources: |
-            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-dev
-            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-dev
+            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ github.run_id }}
 
   housekeeping:
     needs: create-and-push-manifest
@@ -147,5 +147,5 @@ jobs:
         with:
           packages: signalk-server
           delete-untagged: true
-          delete-tags: amd-22.04-dev,arm-22.04-dev,amd-24.04-dev,arm-24.04-dev
+          delete-tags: amd-22.04-${{ github.run_id }},arm-22.04-${{ github.run_id }},amd-24.04-${{ github.run_id }},arm-24.04-${{ github.run_id }}
           token: ${{ secrets.GHCR_PAT }}
