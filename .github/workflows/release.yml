@@ -165,18 +165,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Docker meta
-        id: docker_meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            signalk/signalk-server
-            ghcr.io/signalk/signalk-server
-          tags: |
-            type=semver,pattern={{raw}}
-            type=semver,pattern=v{{major}},enable=${{ !contains(github.ref, 'beta') }}
-            type=semver,pattern=v{{major}}.{{minor}},enable=${{ !contains(github.ref, 'beta') }}
-            type=raw,value=${{ matrix.tag }},enable=${{ !contains(github.ref, 'beta') }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to ghcr.io
@@ -196,10 +184,11 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
+          context: .
           file: ./docker/Dockerfile_rel
           platforms: ${{ matrix.platform }}
           push: true
-          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}
+          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ github.run_id }}
           build-args: |
             TAG=${{ steps.vars.outputs.tag }}
 
@@ -251,8 +240,8 @@ jobs:
           tags: |
             ${{ steps.docker_meta.outputs.tags }}
           sources: |
-            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}
-            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}
+            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ github.run_id }}
 
   housekeeping:
     needs: create-and-push-manifest
@@ -265,7 +254,7 @@ jobs:
         with:
           packages: signalk-server
           delete-untagged: true
-          delete-tags: amd-22.04,arm-22.04,amd-24.04,arm-24.04
+          delete-tags: amd-22.04-${{ github.run_id }},arm-22.04-${{ github.run_id }},amd-24.04-${{ github.run_id }},arm-24.04-${{ github.run_id }}
           token: ${{ secrets.GHCR_PAT }}
 
   deploy_fly:
