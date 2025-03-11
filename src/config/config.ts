@@ -69,6 +69,7 @@ export interface Config {
     proxy_port?: number
     hostname?: string
     pruneContextsMinutes?: number
+    defaultTimeout?: number
     mdns?: boolean
     sslport?: number
     port?: number
