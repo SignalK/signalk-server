@@ -506,6 +506,38 @@ Used by _Resource Provider plugins_ to register each resource type it handles.
 See [`Resource Provider Plugins`](../plugins/resource_provider_plugins.md#registering-as-a-resource-provider) for details.
 
 
+#### `app.resourcesApi.getResource(resource_type, resource_id, provider_id?)`
+
+Retrieve the resource with the supplied SignalK resource_type and resource_id.
+
+_Note: Requires a registered Resource Provider for the supplied `resource_type`._
+
+  - `resource_type`: Any Signal K _(i.e. `routes`,`waypoints`, `notes`, `regions` & `charts`)_
+ or user defined resource types.
+
+  - `resource_id`: The resource identifier. _(e.g. `ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a`)_
+
+  - `provider_id` (optional): The id of the Resource Provider plugin to use to complete the request. Most commonly used for creating a new resource entry when more than one provider is registered for the specified resource type.
+
+- returns:  `Promise<any>` Resolved Promise containing the resource.
+
+_Example:_
+```javascript
+app.resourcesApi.getResource(
+  'waypoints',
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+  }
+).then ( () => {
+  // success
+  ...
+}).catch (error) { 
+  // handle error
+  console.log(error.message);
+  ...
+}
+```
+
+
 #### `app.resourcesApi.setResource(resource_type, resource_id, resource_data, provider_id?)`
 
 Create / update value of the resource with the supplied SignalK resource_type and resource_id.
