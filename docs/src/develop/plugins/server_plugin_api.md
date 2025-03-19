@@ -519,7 +519,7 @@ _Note: Requires a registered Resource Provider for the supplied `resource_type`.
 
   - `provider_id` (optional): The id of the Resource Provider plugin to use to complete the request. Most commonly used for creating a new resource entry when more than one provider is registered for the specified resource type.
 
-- returns:  `Promise<any>` Resolved Promise containing the resource.
+- returns:  `Promise<any>` Promise for the resource.
 
 _Example:_
 ```javascript
