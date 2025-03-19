@@ -13,7 +13,7 @@
         "regions",
         "notes"
     ],
-    "repository": "https://github.com/SignalK/resources-provider",
+    "repository": "git+https://github.com/SignalK/signalk-server.git",
     "author": "AdrianP",
     "contributors": [
         {
