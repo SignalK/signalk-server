@@ -10,6 +10,36 @@ You can learn how from this *free* series [How to Contribute to an Open Source P
 
 ---
 
+### Running the development server
+
+1. Clone the repository:
+    ```shell
+    git clone https://github.com/SignalK/signalk-server
+    cd signalk-server
+    ```
+
+1. Install dependencies:
+   ```shell
+   npm install
+   ```
+
+1. Build the server and related packages:
+   ```shell
+   npm run build:all
+   ```
+
+1. Start the server:
+   ```shell
+   npm start
+   ```
+
+The server should now be available at [http://localhost:3000](http://localhost:3000).
+
+As you work on your changes, you may need to re-build changes. To continuously watch for changes, open a new terminal and run `npm run watch` in either the project root, or from the relevant directory in `packages/*`.
+
+You may also need to restart the server to see some changes reflected.
+
+
 ###  Submitting a Pull Request (PR)
 Before you submit your Pull Request (PR) consider the following guidelines:
 
