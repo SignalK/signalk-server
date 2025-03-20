@@ -102,6 +102,11 @@ module.exports = function (
       '/admin/fonts/signal-k-logo-image-text.*',
       (req: Request, res: Response) => res.sendFile(logopath)
     )
+    // Use the same logo for the collapsed sidebar
+    app.use(
+      '/admin/fonts/signal-k-logo-image.*',
+      (req: Request, res: Response) => res.sendFile(logopath)
+    )
   }
 
   // mount before the main /admin
