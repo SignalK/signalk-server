@@ -46,10 +46,10 @@ $navbar-border: (
     color:                            $border-color
   )
 )  !default;
-$navbar-brand-width:                  155px !default;
+$navbar-brand-width:                  130px !default;
 $navbar-brand-bg:                     #fff !default;
 $navbar-brand-logo:                   url('../public_src/img/signal-k-logo-image-text.svg') !default;
-$navbar-brand-logo-size:              150px auto !default;
+$navbar-brand-logo-size:              110px auto !default;
 $navbar-brand-border: (
   bottom: (
     size:                             1px,
@@ -60,8 +60,8 @@ $navbar-brand-border: (
 
 $navbar-brand-minimized-width:        50px !default;
 $navbar-brand-minimized-bg:           $navbar-brand-bg !default;
-$navbar-brand-minimized-logo:         url('../public_src/img/signal-k-logo-image-text.svg') !default;
-$navbar-brand-minimized-logo-size:    24px !default;
+$navbar-brand-minimized-logo:         url('../public_src/img/signal-k-logo-image.svg') !default;
+$navbar-brand-minimized-logo-size:    30px !default;
 $navbar-brand-minimized-border:       $navbar-brand-border !default;
 
 $navbar-color:                        $gray-600 !default;
