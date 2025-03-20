@@ -177,7 +177,7 @@ After the restart, the new Plugin needs to be enabled and configured. See the Se
 
 ![image](https://user-images.githubusercontent.com/5200296/226482099-b9dd46ff-72a6-44e4-b384-1d15a4621e63.png)
 
-You can change the admin application's top left logo by placing a SVG file named `logo.svg` in the settings directory (default: $HOME/.signalk/).
+You can change the admin application's top left logo by placing a SVG file named `logo.svg` in the settings directory (default: $HOME/.signalk/). You can also provide a minimized square version of the logo in a file named `logo-minimized.svg` that will be shown when the sidebar is minimized.
 
 ### Server Log
 
