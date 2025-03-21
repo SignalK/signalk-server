@@ -265,7 +265,7 @@ function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
         `searching ${keyword} from ${fetchedCount + 1} of ${toFetchCount}`
       )
       fetch(
-        `http://registry.npmjs.org/-/v1/search?size=250&from=${
+        `https://registry.npmjs.org/-/v1/search?size=250&from=${
           fetchedCount > 0 ? fetchedCount : 0
         }&text=keywords:${keyword}`
       )
@@ -287,7 +287,7 @@ function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
 }
 
 function doFetchDistTags() {
-  return fetch('http://registry.npmjs.org/-/package/signalk-server/dist-tags')
+  return fetch('https://registry.npmjs.org/-/package/signalk-server/dist-tags')
 }
 
 function getLatestServerVersion(
