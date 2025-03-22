@@ -199,8 +199,6 @@ To enable debugging without going through the Admin UI, see the file `~/.signalk
 
 ## Development
 
-### Further reading
-
 The documents provide more details about developing Webapps or Plugings for Signal K Server, as well as working on the server itself:
 
 * [Contributing to this repo](docs/src/develop/contributing.md)
@@ -210,27 +208,6 @@ The documents provide more details about developing Webapps or Plugings for Sign
 * [Working with the Resources API](docs/src/develop/rest-api/resources_api.md)
 * [Resource Provider Plugins](docs/src/develop/plugins/resource_provider_plugins.md)
 * [Security](docs/src/security.md)
-
-### Install from git
-
-```
-git clone https://github.com/SignalK/signalk-server.git
-cd signalk-server
-npm install
-npm run build:all
-```
-
-Start the server with sample data:
-* NMEA0183 sample data: `bin/nmea-from-file`
-* NMEA2000 sample data: `bin/n2k-from-file`
-
-This will start the server with a sample configuration file and the server will start playing back data from a sample file under `samples/`. The data is available immediately via the REST interface at https://localhost:3000/signalk/v1/api/.
-
-This small demo shows how to connect the Signal K Server WebSocket interface from the command line:
-```
-npm install -g wscat2
-wscat 'ws://localhost:3000/signalk/v1/stream?subscribe=all'
-```
 
 ## Sponsoring Signal K
 
