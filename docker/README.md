@@ -3,8 +3,8 @@
 Release process first publishes the server's modules to npm. Docker images are then built using the just published npm packages. Images (including older versions) are available at [Docker Hub](https://hub.docker.com/r/signalk/signalk-server) and starting from v2 at [GitHub Container registry](https://github.com/orgs/SignalK/packages/container/package/signalk-server). Going forward **use the full image name, including the registry cr.signalk.io**. That address will be updated to redirect to the recommended registry where the latest released version can be found.
 
 Release images:
-- cr.signalk.io/signalk/signalk-server:latest
-- cr.signalk.io/signalk/signalk-server:`<release tag>`, e.g. `v1.40.0`
+- ghcr.io/signalk/signalk-server:latest
+- ghcr.io/signalk/signalk-server:`<release tag>`, e.g. `v1.40.0`
 
 Supported os/architectures:
 - linux/amd64
@@ -16,13 +16,13 @@ Supported os/architectures:
 You can start a local server on port 3000  with demo data with
 
 ```
-docker run --init -it --rm --name signalk-server --publish 3000:3000 --entrypoint /home/node/signalk/bin/signalk-server cr.signalk.io/signalk/signalk-server --sample-nmea0183-data
+docker run --init -it --rm --name signalk-server --publish 3000:3000 --entrypoint /home/node/signalk/bin/signalk-server ghcr.io/signalk/signalk-server --sample-nmea0183-data
 ```
 
 For real use you need to persist /home/node/.signalk where the server's configuration is stored, with for example
 
 ```
-docker run -d --init  --name signalk-server -p 3000:3000 -v $(pwd):/home/node/.signalk cr.signalk.io/signalk/signalk-server
+docker run -d --init  --name signalk-server -p 3000:3000 -v $(pwd):/home/node/.signalk ghcr.io/signalk/signalk-server
 ```
 This will run the server as background process and current directory as the settings directory. You will be prompted to create admin credentials the first time you you access the configuration admin web UI.
 
