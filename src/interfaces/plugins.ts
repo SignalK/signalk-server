@@ -34,6 +34,7 @@ import {
 import { getLogger } from '@signalk/streams/logging'
 import express, { Request, Response } from 'express'
 import fs from 'fs'
+import { deprecate } from 'util'
 import _ from 'lodash'
 import path from 'path'
 import { AutopilotApi } from '../api/autopilot'
@@ -498,15 +499,6 @@ module.exports = (theApp: any) => {
     location: string
   ) {
     let plugin: PluginInfo
-    let setProviderUseLogged = false
-    const logSetProviderUsage = () => {
-      if (!setProviderUseLogged) {
-        console.log(
-          `Note: ${plugin.name} is using deprecated setProviderStatus/Error https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md#appsetproviderstatusmsg`
-        )
-        setProviderUseLogged = true
-      }
-    }
     const appCopy: ServerAPI = _.assign({}, app, {
       getSelfPath,
       getPath,
@@ -522,14 +514,12 @@ module.exports = (theApp: any) => {
       registerDeltaInputHandler: (handler: any) => {
         onStopHandlers[plugin.id].push(app.registerDeltaInputHandler(handler))
       },
-      setProviderStatus: (msg: string) => {
-        logSetProviderUsage()
+      setProviderStatus: deprecate((msg: string) => {
         app.setPluginStatus(plugin.id, msg)
-      },
-      setProviderError: (msg: string) => {
-        logSetProviderUsage()
+      }, `[${packageName}] setProviderStatus() is deprecated, use setPluginStatus() instead`),
+      setProviderError: deprecate((msg: string) => {
         app.setPluginError(plugin.id, msg)
-      },
+      }, `[${packageName}] setProviderError() is deprecated, use setPluginError() instead`),
       setPluginStatus: (msg: string) => {
         app.setPluginStatus(plugin.id, msg)
       },
