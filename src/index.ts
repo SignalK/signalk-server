@@ -67,6 +67,7 @@ import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { Zones } from './zones'
 const debug = createDebug('signalk-server')
+import logging from './logging'
 
 import { StreamBundle } from './streambundle'
 
@@ -95,7 +96,7 @@ class Server {
     _.merge(app, opts)
 
     load(app)
-    app.logging = require('./logging')(app)
+    app.logging = logging(app)
     app.version = '0.0.1'
 
     setupCors(app, getSecurityConfig(app))
