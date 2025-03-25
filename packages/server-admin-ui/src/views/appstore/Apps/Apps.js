@@ -91,9 +91,11 @@ const Apps = function (props) {
 
   return (
     <div className="appstore animated fadeIn">
-      <section className="appstore__warning section">
-        {warning && <WarningBox>{warning}</WarningBox>}
-      </section>
+      {warning && (
+        <section className="appstore__warning section">
+          <WarningBox>{warning}</WarningBox>
+        </section>
+      )}
 
       <Card>
         <CardHeader className="appstore__header">
