@@ -26,3 +26,5 @@ RUN mkdir -p /var/run/dbus/ \
   && mkdir -p /var/run/avahi-daemon/ \
   && chmod -R 777 /var/run/avahi-daemon/ \
   && chown -R avahi:avahi /var/run/avahi-daemon/ 
+
+RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
