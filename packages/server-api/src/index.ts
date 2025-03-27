@@ -57,6 +57,12 @@ export interface PropertyValuesEmitter {
 }
 
 /**
+ * A plugin constructor is the interface that all plugins must export.
+ * It is called by the server when the server is starting up.
+ */
+export type PluginConstructor = (app: ServerAPI) => Plugin
+
+/**
  * This is the API that the server exposes in the app object that
  * is passed in Plugin "constructor" call.
  *
@@ -99,13 +105,14 @@ export interface Plugin {
    * Called to stop the plugin. Called when the user disables the plugin in the admin UI.
    */
   stop: () => void
-  schema: () => object | object
-  uiSchema?: () => object | object
+  schema: object | (() => object)
+  uiSchema?: object | (() => object)
   registerWithRouter?: (router: IRouter) => void
   signalKApiRoutes?: (router: IRouter) => IRouter
   enabledByDefault?: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getOpenApi?: () => any
+  getOpenApi?: () => object
+  description?: string
+  statusMessage?: () => string | void
 }
 
 export type DeltaInputHandler = (

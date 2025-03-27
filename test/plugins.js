@@ -91,9 +91,30 @@ describe('Demo plugin ', () => {
 
     await server.stop()
   })
+
+  it('loads ESM plugins', async () => {
+    process.env.SIGNALK_NODE_CONFIG_DIR = require('path').join(
+      __dirname,
+      'plugin-test-config'
+    )
+
+    const port = await freeport()
+    const server = new Server({
+      config: { settings: { port } }
+    })
+    await server.start()
+
+    const plugin = server.app.plugins.find(
+      (plugin) => plugin.id === 'esm-plugin'
+    )
+
+    assert(plugin)
+
+    await server.stop()
+  })
 })
 
-function mkDirSync (dirPath) {
+function mkDirSync(dirPath) {
   try {
     fs.mkdirSync(dirPath)
   } catch (err) {

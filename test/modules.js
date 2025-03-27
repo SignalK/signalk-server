@@ -6,8 +6,9 @@ const path = require('path')
 const {
   modulesWithKeyword,
   checkForNewServerVersion,
-  getLatestServerVersion
-} = require('./modules')
+  getLatestServerVersion,
+  importOrRequire
+} = require('../lib/modules')
 
 describe('modulesWithKeyword', () => {
   it('returns a list of modules with one "installed" update in config dir', () => {
@@ -185,5 +186,25 @@ describe('getLatestServerVersion', () => {
     ).then((newVersion) => {
       chai.expect(newVersion).to.equal('1.18.0')
     })
+  })
+})
+
+describe('importOrRequire', () => {
+  it('imports a cjs directory', async () => {
+    const dir = path.join(
+      __dirname,
+      'plugin-test-config/node_modules/testplugin'
+    )
+    const mod = await importOrRequire(dir)
+    chai.expect(mod).to.be.a('function')
+  })
+
+  it('imports an esm directory', async () => {
+    const dir = path.join(
+      __dirname,
+      'plugin-test-config/node_modules/esm-plugin'
+    )
+    const mod = await importOrRequire(dir)
+    chai.expect(mod).to.be.a('function')
   })
 })
