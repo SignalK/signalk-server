@@ -6,7 +6,7 @@
   "types": "lib/index.d.ts",
   "scripts": {
     "generate": "ts-auto-guard src/autopilotapi.ts 2>/dev/null",
-    "build": "npm run generate && tsc --declaration",
+    "build": "npm run generate && tsc -b",
     "watch": "tsc --declaration --watch",
     "prepublishOnly": "npm run build",
     "typedoc": "typedoc --out docs src",
@@ -35,8 +35,8 @@
     "prettier": "^2.8.4",
     "ts-auto-guard": "^4.1.4",
     "ts-node": "^10.9.1",
-    "typedoc": "^0.23.23",
-    "typescript": "^4.1.5"
+    "typedoc": "^0.28.1",
+    "typescript": "^5.8.2"
   },
   "peerDependencies": {
     "baconjs": "^1.0.1"
