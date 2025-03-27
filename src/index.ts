@@ -443,7 +443,7 @@ class Server {
         sendBaseDeltas(app as unknown as ConfigApp)
 
         app.apis = await startApis(app)
-        startInterfaces(app)
+        await startInterfaces(app)
         startMdns(app)
         app.providers = pipedProviders(app as any).start()
 
@@ -612,49 +612,54 @@ function startMdns(app: ServerApp & WithConfig) {
   }
 }
 
-function startInterfaces(app: ServerApp & WithConfig & WithWrappedEmitter) {
+async function startInterfaces(
+  app: ServerApp & WithConfig & WithWrappedEmitter
+) {
   debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
   const availableInterfaces = require('./interfaces')
-  _.forIn(availableInterfaces, (theInterface: any, name: string) => {
-    if (
-      _.isUndefined(app.config.settings.interfaces) ||
-      _.isUndefined((app.config.settings.interfaces || {})[name]) ||
-      (app.config.settings.interfaces || {})[name]
-    ) {
-      debug(`Loading interface '${name}'`)
-      const boundEventMethods = app.wrappedEmitter.bindMethodsById(
-        `interface:${name}` as EventsActorId
-      )
+  return await Promise.all(
+    Object.keys(availableInterfaces).map(async (name) => {
+      const theInterface = availableInterfaces[name]
+      if (
+        _.isUndefined(app.config.settings.interfaces) ||
+        _.isUndefined((app.config.settings.interfaces || {})[name]) ||
+        (app.config.settings.interfaces || {})[name]
+      ) {
+        debug(`Loading interface '${name}'`)
+        const boundEventMethods = app.wrappedEmitter.bindMethodsById(
+          `interface:${name}` as EventsActorId
+        )
 
-      const appCopy = {
-        ...app,
-        ...boundEventMethods
-      }
-      const handler = {
-        set(obj: any, prop: any, value: any) {
-          ;(app as any)[prop] = value
-          return true
-        },
-        get(target: any, prop: string | symbol, _receiver: any) {
-          return (app as any)[prop]
+        const appCopy = {
+          ...app,
+          ...boundEventMethods
         }
-      }
-      const _interface = (appCopy.interfaces[name] = theInterface(
-        new Proxy(appCopy, handler)
-      ))
-      if (_interface && _.isFunction(_interface.start)) {
-        if (
-          _.isUndefined(_interface.forceInactive) ||
-          !_interface.forceInactive
-        ) {
-          debug(`Starting interface '${name}'`)
-          _interface.data = _interface.start()
-        } else {
-          debug(`Not starting interface '${name}' by forceInactive`)
+        const handler = {
+          set(obj: any, prop: any, value: any) {
+            ;(app as any)[prop] = value
+            return true
+          },
+          get(target: any, prop: string | symbol, _receiver: any) {
+            return (app as any)[prop]
+          }
         }
+        const _interface = (appCopy.interfaces[name] = theInterface(
+          new Proxy(appCopy, handler)
+        ))
+        if (_interface && _.isFunction(_interface.start)) {
+          if (
+            _.isUndefined(_interface.forceInactive) ||
+            !_interface.forceInactive
+          ) {
+            debug(`Starting interface '${name}'`)
+            _interface.data = _interface.start()
+          } else {
+            debug(`Not starting interface '${name}' by forceInactive`)
+          }
+        }
+      } else {
+        debug(`Not loading interface '${name}' because of configuration`)
       }
-    } else {
-      debug(`Not loading interface '${name}' because of configuration`)
-    }
-  })
+    })
+  )
 }
