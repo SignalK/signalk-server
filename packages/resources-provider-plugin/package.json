@@ -2,7 +2,7 @@
     "name": "@signalk/resources-provider",
     "version": "1.3.2",
     "description": "Resources provider plugin for Signal K server.",
-    "main": "plugin/index.js",
+    "main": "lib/index.js",
     "keywords": [
         "signalk-node-server-plugin",
         "signalk-category-utility",
