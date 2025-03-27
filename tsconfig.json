@@ -1,33 +1,6 @@
 {
-  "compilerOptions": {
-    "target": "es6",
-    "module": "commonjs",
-    "outDir": "./lib",
-    "esModuleInterop": true,
-    "strict": true,
-    "allowJs": true,
-    "typeRoots": ["./src/types", "./node_modules/@types"],
-    "resolveJsonModule": true,
-    "rootDir": "./src"
-  },
-  "include": ["./src/**/*"],
-  "exclude": ["node_modules"],
-  "typedocOptions": {
-    "mode": "modules",
-    "out": "tsdocs",
-    "exclude": ["test", "node_modules"],
-    "theme": "default",
-    "ignoreCompilerErrors": true,
-    "excludePrivate": true,
-    "excludeNotExported": true,
-    "target": "ES5",
-    "moduleResolution": "node",
-    "preserveConstEnums": true,
-    "stripInternal": true,
-    "suppressExcessPropertyErrors": true,
-    "suppressImplicitAnyIndexErrors": true,
-    "module": "commonjs"
-  },
+  "extends": "./tsconfig.base.json",
+  "include": ["./src/**/*", "./src/**/*.json"],
   "references": [
     {
       "path": "./packages/server-api"
