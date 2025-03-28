@@ -46,8 +46,7 @@
         "@typescript-eslint/eslint-plugin": "^8.16.0",
         "eslint": "^8.34.0",
         "eslint-config-prettier": "^8.6.0",
-        "prettier": "^2.8.4",
-        "typescript": "^5.8.2"
+        "prettier": "^2.8.4"
     },
     "signalk-plugin-enabled-by-default": true
 }
