@@ -186,7 +186,7 @@ Create `index.js` with the following content:
 ```typescript
 import { Plugin, PluginServerApp } from '@signalk/server-api';
 
-module.exports = (app: PluginServerApp): Plugin => {
+export default (app: PluginServerApp): Plugin => {
 
   const plugin: Plugin = {
     id: 'my-signalk-plugin',

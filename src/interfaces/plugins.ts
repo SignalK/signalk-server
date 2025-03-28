@@ -27,7 +27,9 @@ import {
   RouteDestination,
   Value,
   SignalKApiId,
-  SourceRef
+  SourceRef,
+  PluginConstructor,
+  Plugin
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -51,7 +53,7 @@ import {
   ConnectionWriteEvent
 } from '../deltastats'
 import { EventsActorId } from '../events'
-import { modulesWithKeyword } from '../modules'
+import { importOrRequire, modulesWithKeyword, NpmPackageData } from '../modules'
 
 const put = require('../put')
 const _putPath = put.putPath
@@ -66,13 +68,6 @@ const DEFAULT_ENABLED_PLUGINS = process.env.DEFAULTENABLEDPLUGINS
   ? process.env.DEFAULTENABLEDPLUGINS.split(',')
   : []
 
-export type PluginFactory = (serverApi: ServerAPI) => Plugin
-
-export interface Plugin {
-  start: (config: object, restart: (newConfiguration: object) => void) => any
-  stop: () => any
-}
-
 export type PluginId = Brand<string, 'PluginId'>
 export interface PluginManager {
   getPluginOpenApiRecords: () => OpenApiRecord[]
@@ -86,24 +81,8 @@ interface PluginInfo extends Plugin {
   packageName: any
   keywords: string[]
   packageLocation: string
-  registerWithRouter: any
-  getOpenApi?: () => object
-  signalKApiRoutes: any
-  name: string
-  id: string
-  schema: () => void | object
-  uiSchema: () => void | object
   version: string
-  description: string
   state: string
-  enabledByDefault: boolean
-  statusMessage: () => string | void
-}
-
-interface ModuleMetadata {
-  version: string
-  name: string
-  keywords: string[]
 }
 
 function backwardsCompat(url: string) {
@@ -113,10 +92,10 @@ function backwardsCompat(url: string) {
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
   return {
-    start() {
+    async start() {
       ensureExists(path.join(theApp.config.configPath, 'plugin-config-data'))
 
-      startPlugins(theApp)
+      await startPlugins(theApp)
 
       theApp.getPluginsList = async (enabled?: boolean) => {
         return await getPluginsList(enabled)
@@ -313,18 +292,19 @@ module.exports = (theApp: any) => {
     }
   }
 
-  function startPlugins(app: any) {
+  async function startPlugins(app: any) {
     app.plugins = []
     app.pluginsMap = {}
-    modulesWithKeyword(app.config, 'signalk-node-server-plugin').forEach(
-      (moduleData: any) => {
-        registerPlugin(
+    const modules = modulesWithKeyword(app.config, 'signalk-node-server-plugin')
+    await Promise.all(
+      modules.map((moduleData: any) => {
+        return registerPlugin(
           app,
           moduleData.module,
           moduleData.metadata,
           moduleData.location
         )
-      }
+      })
     )
   }
 
@@ -410,15 +390,15 @@ module.exports = (theApp: any) => {
     return listAllSerialPorts()
   }
 
-  function registerPlugin(
+  async function registerPlugin(
     app: any,
     pluginName: string,
-    metadata: ModuleMetadata,
+    metadata: NpmPackageData,
     location: string
   ) {
     debug('Registering plugin ' + pluginName)
     try {
-      doRegisterPlugin(app, pluginName, metadata, location)
+      await doRegisterPlugin(app, pluginName, metadata, location)
     } catch (e) {
       console.error(e)
     }
@@ -492,10 +472,10 @@ module.exports = (theApp: any) => {
     }
   }
 
-  function doRegisterPlugin(
+  async function doRegisterPlugin(
     app: any,
     packageName: string,
-    metadata: ModuleMetadata,
+    metadata: NpmPackageData,
     location: string
   ) {
     let plugin: PluginInfo
@@ -591,11 +571,11 @@ module.exports = (theApp: any) => {
     }
 
     try {
-      const pluginConstructor: (
-        app: ServerAPI
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-      ) => PluginInfo = require(path.join(location, packageName))
-      plugin = pluginConstructor(appCopy)
+      const moduleDir = path.join(location, packageName)
+      const pluginConstructor: PluginConstructor = await importOrRequire(
+        moduleDir
+      )
+      plugin = pluginConstructor(appCopy) as PluginInfo
     } catch (e: any) {
       console.error(`${packageName} failed to start: ${e.message}`)
       console.error(e)
@@ -761,7 +741,7 @@ module.exports = (theApp: any) => {
 
 const isEnabledByPackageEnableDefault = (
   options: any,
-  metadata: ModuleMetadata
+  metadata: NpmPackageData
 ) =>
   _.isUndefined(options.enabled) &&
   (metadata as any)['signalk-plugin-enabled-by-default']
