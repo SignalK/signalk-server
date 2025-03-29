@@ -1,0 +1,624 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "2.0.0",
+    "title": "Signal K Alerts API",
+    "termsOfService": "http://signalk.org/terms/",
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "description": "API for raising and managing Alerts which emit Notifications based on their current status."
+  },
+  "externalDocs": {
+    "url": "http://signalk.org/specification/",
+    "description": "Signal K specification."
+  },
+  "servers": [
+    {
+      "url": "/signalk/v2/api/alerts"
+    }
+  ],
+  "tags": [
+    {
+      "name": "alert",
+      "description": "Management and notification of abnormal condition that requires resolution."
+    },
+    {
+      "name": "special",
+      "description": "Special alert types."
+    },
+    {
+      "name": "alert list",
+      "description": "Alert list actions."
+    }
+  ],
+  "components": {
+    "schemas": {
+      "UuidDef": {
+        "type": "string",
+        "pattern": "[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-4[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$",
+        "example": "ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a"
+      },
+      "IsoTimeDef": {
+        "type": "string",
+        "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2}(?:\\.\\d*)?)((-(\\d{2}):(\\d{2})|Z)?)$",
+        "example": "2022-04-22T05:02:56.484Z"
+      },
+      "SignalKPositionDef": {
+        "type": "object",
+        "required": ["latitude", "longitude"],
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "format": "float",
+            "example": 2.459786
+          },
+          "longitude": {
+            "type": "number",
+            "format": "float",
+            "example": 17.459786
+          }
+        }
+      },
+      "PriorityDef": {
+        "type": "string",
+        "description": "Priority / severity of the alert.",
+        "example": "alarm",
+        "enum": ["emergency", "alarm", "warning", "caution"]
+      },
+      "ProcessDef": {
+        "type": "string",
+        "description": "State of the underlying process.",
+        "example": "abnormal",
+        "enum": ["normal", "abnormal"]
+      },
+      "AlarmStateDef": {
+        "type": "string",
+        "description": "Alert alarm status.",
+        "example": "active",
+        "enum": ["active", "inactive"]
+      },
+      "PathDef": {
+        "type": "string",
+        "description": "Signal K path associated with the alert.",
+        "example": "electrical.batteries.1"
+      },
+      "NameDef": {
+        "type": "string",
+        "description": "Alert name.",
+        "example": "Battery Over Voltage"
+      },
+      "MessageDef": {
+        "type": "string",
+        "description": "Alert message to display.",
+        "example": "My message!"
+      },
+      "SourceRef": {
+        "type": "string",
+        "description": "Reference to the source of the Alert.",
+        "example": "alert-plugin"
+      },
+      "MetaDataDef": {
+        "type": "object",
+        "description": "Data values associated with this alert.",
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/NameDef"
+          },
+          "message": {
+            "$ref": "#/components/schemas/MessageDef"
+          },
+          "path": {
+            "$ref": "#/components/schemas/PathDef"
+          },
+          "position": {
+            "$ref": "#/components/schemas/SignalKPositionDef"
+          },
+          "sourceRef": {
+            "$ref": "#/components/schemas/SourceRef"
+          }
+        }
+      },
+      "AlertRequestModel": {
+        "description": "Alert request model",
+        "type": "object",
+        "required": ["priority"],
+        "properties": {
+          "priority": {
+            "$ref": "#/components/schemas/PriorityDef"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/MetaDataDef"
+          }
+        }
+      },
+      "MOBRequestModel": {
+        "description": "Person overboard request model",
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "MOB message text. If not supplied then a system generated message is created.",
+            "example": "Person overboard!"
+          },
+          "name": {
+            "type": "string",
+            "description": "MOB alert name. If not supplied then a system generated message is created.",
+            "example": "MOB Alert"
+          },
+          "sourceRef": {
+            "$ref": "#/components/schemas/SourceRef"
+          }
+        }
+      },
+      "ResponseModel": {
+        "description": "Alert information",
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/UuidDef"
+          },
+          "created": {
+            "$ref": "#/components/schemas/IsoTimeDef"
+          },
+          "resolved": {
+            "$ref": "#/components/schemas/IsoTimeDef"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/PriorityDef"
+          },
+          "process": {
+            "$ref": "#/components/schemas/ProcessDef"
+          },
+          "alarmState": {
+            "$ref": "#/components/schemas/AlarmStateDef"
+          },
+          "acknowledged": {
+            "description": "Indicates if alert has been acknowledged.",
+            "type": "boolean"
+          },
+          "silenced": {
+            "description": "Indicates if alert has been silenced.",
+            "type": "boolean"
+          },
+          "metaData": {
+            "$ref": "#/components/schemas/MetaDataDef"
+          }
+        }
+      }
+    },
+    "responses": {
+      "200Ok": {
+        "description": "OK",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["COMPLETED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [200]
+                }
+              },
+              "required": ["state", "statusCode"]
+            }
+          }
+        }
+      },
+      "201ActionResponse": {
+        "description": "Action response - success.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["COMPLETED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [201]
+                },
+                "id": {
+                  "$ref": "#/components/schemas/UuidDef"
+                }
+              },
+              "required": ["id", "statusCode", "state"]
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "description": "Failed operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "description": "Request error response",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["FAILED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [404]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["state", "statusCode", "message"]
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "AlertId": {
+        "name": "id",
+        "description": "Alert identifier.",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/UuidDef"
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "JAUTHENTICATION"
+      }
+    }
+  },
+  "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": ["alert list"],
+        "summary": "List of alerts keyed by id.",
+        "description": "Retrieve list of alerts.",
+        "parameters": [
+          {
+            "name": "priority",
+            "description": "Filter results by alarm severity.",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/PriorityDef"
+            }
+          },
+          {
+            "name": "unack",
+            "description": "Return only unacknowleged alerts.",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "format": "int32",
+              "example": 1
+            }
+          },
+          {
+            "name": "top",
+            "description": "Return the last x alerts as specified.",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "format": "int32",
+              "example": 10
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "An object containing alerts, keyed by their id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/ResponseModel"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["alert"],
+        "summary": "Raise an alert.",
+        "description": "Raise a new alert with the specified priority and properties.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertRequestModel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/201ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["alert list"],
+        "summary": "Remove all resolved alerts from the alert list.",
+        "description": "Remove all alerts that have been resolved for a minimum of the specified time.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/201ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AlertId"
+        }
+      ],
+      "get": {
+        "tags": ["alert"],
+        "summary": "Return alert.",
+        "description": "Retrieve value of the alert with the supplied id.",
+        "responses": {
+          "default": {
+            "description": "An object containing alert key | value pairs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseModel"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["alert"],
+        "summary": "Clean / remove an alert from the alert list.",
+        "description": "Remove the alert with the specified id from the alert list.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/201ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/{id}/properties": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AlertId"
+        }
+      ],
+      "put": {
+        "tags": ["alert"],
+        "summary": "Update the alert metadata.",
+        "description": "Update the alert metadata.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetaDataDef"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/201ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/{id}/priority": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AlertId"
+        }
+      ],
+      "put": {
+        "tags": ["alert"],
+        "summary": "Change alert priority.",
+        "description": "Change the priority for the alert with the specified id.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["value"],
+                "properties": {
+                  "value": {
+                    "$ref": "#/components/schemas/PriorityDef"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/201ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/{id}/resolve": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AlertId"
+        }
+      ],
+      "post": {
+        "tags": ["alert"],
+        "summary": "Resolve an alert.",
+        "description": "Resolve the alert with the specified id (normal condition).",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/201ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/{id}/ack": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AlertId"
+        }
+      ],
+      "post": {
+        "tags": ["alert"],
+        "summary": "Acknowledge an alert.",
+        "description": "Acknowledge the alert with the specified id.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/201ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/{id}/unack": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AlertId"
+        }
+      ],
+      "post": {
+        "tags": ["alert"],
+        "summary": "Unacknowledge an alert.",
+        "description": "Unacknowledge the alert with the specified id.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/201ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/{id}/silence": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AlertId"
+        }
+      ],
+      "post": {
+        "tags": ["alert"],
+        "summary": "Temporarily silence an alert.",
+        "description": "Silence the alert with the specified id for 30 seconds.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/201ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/mob": {
+      "post": {
+        "tags": ["special"],
+        "summary": "Raise person overboard alarm.",
+        "description": "Raise a person overboard alarm which includes vessel position.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MOBRequestModel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/201ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/ack": {
+      "post": {
+        "tags": ["alert list"],
+        "summary": "Acknowledge ALL alerts.",
+        "description": "Acknowledge all of the unacknowledged alerts.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/201ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/silence": {
+      "post": {
+        "tags": ["alert list"],
+        "summary": "Temporarily silence ALL alerts.",
+        "description": "Silence all alerts for 30 seconds.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/201ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    }
+  }
+}
