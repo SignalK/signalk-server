@@ -156,18 +156,6 @@ app.streambundle.getAvailablePaths();
 
 ### Exposing custom HTTP paths & OpenApi
 
-Plugins are able to provide an API via a function called `registerWithRouter(router)`, which like the plugin's `start` and `stop` functions, will be called during plugin startup with an _Express_ router as the parameter.
-
-The router will be mounted at `/plugins/<pluginId>` and you can use standard _Express_ _(`.get()` `.post()` `.use()`, etc)_ methods to add HTTP path handlers.
-
-_Note: `GET /plugins/<pluginid>` and `POST /plugins/<pluginid>/configure` are reserved by server (see below)._
-
-It should be noted that _Express_ does not have a public API for deregistering subrouters, so `stop` does not do anything to the router.
-
-If a plugin does provide an API, it is strongly recommended that it provide an **OpenApi description** to document its operation.
-
-Doing so promotes interoperability with other plugins / webapps by making it easy to find and use the functionality built into plugins. It is also a means to avoid duplication, promote reuse and the possibility of including them in the Signal K specification.
-
 See [Server Plugins](server_plugin.md#add-an-openapi-definition) for details.
 
 ---
