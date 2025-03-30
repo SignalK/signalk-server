@@ -35,6 +35,7 @@ jobs:
         with:
           node-version: '20.x'
       - run: npm install
+      - run: cd packages/server-api && npm run generate
       - name: Build
         run: npm run typedoc
       - name: Upload artifact
