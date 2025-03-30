@@ -111,4 +111,8 @@ export class PropertyValues {
     return streamTuple
   }
 }
+
+/**
+ * @inline
+ */
 type Unsubscribe = () => void

@@ -66,7 +66,7 @@ export type GeoJsonLinestring = GeoJsonPoint[]
 export type GeoJsonPolygon = GeoJsonLinestring[]
 export type GeoJsonMultiPolygon = GeoJsonPolygon[]
 
-interface Polygon {
+export interface Polygon {
   type: 'Feature'
   geometry: {
     type: 'Polygon'
@@ -76,7 +76,7 @@ interface Polygon {
   id?: string
 }
 
-interface MultiPolygon {
+export interface MultiPolygon {
   type: 'Feature'
   geometry: {
     type: 'MultiPolygon'

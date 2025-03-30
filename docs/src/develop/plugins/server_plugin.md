@@ -12,12 +12,12 @@ Plugins can also provide a webapp by placing the relavent files in a folder name
 
 **Note: With the move towards Signal K server providing APIs to perform operations, it is important that you consider how the proposed functionality provided by your plugin aligns with the Signal K architecture before starting development.**
 
-For example, if the plugin you are looking to develop is providing access to information such as `route,` `waypoint`, `POI`, or `charts` you should be creating a _[Resources Provider Plugin](./resource_provider_plugins.md)_ for the _[Resources API](../openapi/resources_api.md)_.
+For example, if the plugin you are looking to develop is providing access to information such as `route,` `waypoint`, `POI`, or `charts` you should be creating a _[Resources Provider Plugin](./resource_provider_plugins.md)_ for the _[Resources API](../rest-api/resources_api.md)_.
 
-Or if you are looking to perform course calculations or integrate with an auotpilot, you will want to review the _[Course API](../openapi/course_api.md)_ documentation prior to commencing your project.
+Or if you are looking to perform course calculations or integrate with an auotpilot, you will want to review the _[Course API](../rest-api/course_api.md)_ documentation prior to commencing your project.
 
 
-**OpenApi description for your plugin's API** 
+**OpenApi description for your plugin's API**
 
 If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification. _See [Add OpenAPI definition](#add-an-openapi-definition)_ below.
 
@@ -30,7 +30,7 @@ If your plugin provides an API you should consider providing an OpenApi descript
 To get started developing your plugin you will need the following:
 - Signal K server instance on your device _(clone of GIT repository or docker instance)_
 - NodeJs version 18 or later and NPM installed
-- SignalK server configuration folder. _(Created when Signal K server is started. default location is `$HOME/.signalk`)_. 
+- SignalK server configuration folder. _(Created when Signal K server is started. default location is `$HOME/.signalk`)_.
 
 ---
 
@@ -53,7 +53,7 @@ npm init      # create package.json file
     index.html
     ..
   /src        # typescript source code (not required if using javascript)
-    index.ts  
+    index.ts
     ...
   package.json
 ```
@@ -87,7 +87,7 @@ npm i
 
 ### Link your project to Signal K server.
 
-Once you have developed your plugin code and are ready to debug, the most convenient way is to use `npm link` to link your plugin code to your instance of Signal K server. 
+Once you have developed your plugin code and are ready to debug, the most convenient way is to use `npm link` to link your plugin code to your instance of Signal K server.
 
 To do this, from within a terminal window:
 ```bash
@@ -100,7 +100,7 @@ npm link
 # Change to the Signal K server configuration directory
 cd ~/.signalk
 
-# Link your plugin using the name in the package.json file 
+# Link your plugin using the name in the package.json file
 #(may require the use of sudo)
 npm link my-signalk-plugin-app
 ```
@@ -118,7 +118,7 @@ Alternatively, you can debug your plugin by starting the Signal K server with th
 ```bash
 $ DEBUG=my-signalk-plugin signalk-server
 
-# sample output 
+# sample output
 my-signalk-plugin Plugin stopped +0ms
 my-signalk-plugin Plugin started +2ms
 ```
@@ -134,7 +134,7 @@ signalk:interfaces:plugins Could not find options for plugin my-signalk-plugin, 
 
 #### Sample Data
 
-For development purposes, it's often nice to have some mocked data. SignalK comes with a synthesized NMEA2000 data set that can be used as sample data. 
+For development purposes, it's often nice to have some mocked data. SignalK comes with a synthesized NMEA2000 data set that can be used as sample data.
 
 You can enable this by adding `--sample-n2k-data` to the command line:
 ```bash
@@ -144,9 +144,9 @@ $ DEBUG=my-signalk-plugin signalk-server --sample-n2k-data
 
 ## Start Coding
 
-Signal K server plugins are NodeJs `javascript` or `typescript` projects that return an object that implements the `Plugin` interface. 
+Signal K server plugins are NodeJs `javascript` or `typescript` projects that return an object that implements the `Plugin` interface.
 
-They are installed into the `node_modules` folder that resides inside the SignalK server's configuration directory _(`$HOME/.signalk` by default)_. 
+They are installed into the `node_modules` folder that resides inside the SignalK server's configuration directory _(`$HOME/.signalk` by default)_.
 
 A Signal K plugin is passed a reference to the Signal K server plugin interface which it can use to interact with the server.
 
@@ -255,7 +255,7 @@ plugin.getOpenApi = () => openapi;
 
 ## Plugin configuration / Schema
 
-A plugin's `schema` function must return a [JSON Schema](http://json-schema.org/) object decribing the structure of the configuration data. This is used by the server to render the plugin's configuration screen in the Admin UI. 
+A plugin's `schema` function must return a [JSON Schema](http://json-schema.org/) object decribing the structure of the configuration data. This is used by the server to render the plugin's configuration screen in the Admin UI.
 
 The configuration data is stored by the server under the following path `$SIGNALK_NODE_CONFIG_DIR/plugin-config-data/<plugin-name>.json`. _(Default value of SIGNALK_NODE_CONFIG_DIR is $HOME/.signalk.)_
 
@@ -282,9 +282,9 @@ _Example:_
     }
   };
 ```
-JSON Schema approach works reasonably well for simple to medium complex configuration data. 
+JSON Schema approach works reasonably well for simple to medium complex configuration data.
 
-It should ne noted that some JSON schema constructs are not supported. Refer ([details](https://github.com/peterkelly/react-jsonschema-form-bs4/blob/v1.7.1-bs4/docs/index.md#json-schema-supporting-status)) for details. 
+It should ne noted that some JSON schema constructs are not supported. Refer ([details](https://github.com/peterkelly/react-jsonschema-form-bs4/blob/v1.7.1-bs4/docs/index.md#json-schema-supporting-status)) for details.
 
 The server supports also [custom plugin configuration components](https://github.com/SignalK/signalk-server/blob/master/WEBAPPS.md), bypassing the automatic configuration format generation.
 
@@ -314,7 +314,7 @@ For more information, see [react-jsonschema-form-extras](https://github.com/RxNT
 
 
 ### Making a plugin enabled by default
-If your plugin does not require any initial configuration, you can enable it to start when the Signal K server is restarted after the plugin is installed. 
+If your plugin does not require any initial configuration, you can enable it to start when the Signal K server is restarted after the plugin is installed.
 
 To do this add the following to the `package.json`:
 
@@ -337,7 +337,7 @@ const openapi = require('./openApi.json');
 plugin.getOpenApi = () => openapi;
 ```
 
-This will include your plugin's OpenApi definition in the documentation in the server's Admin UI under _Documentation -> OpenAPI_. 
+This will include your plugin's OpenApi definition in the documentation in the server's Admin UI under _Documentation -> OpenAPI_.
 
 Note: If the plugin's OpenApi description DOES NOT include a `servers` property, the API path presented in the documentation will be relative to the Signal K API path. You should include this property the plugin API is rooted elsewhere.
 _Example:_
@@ -355,7 +355,7 @@ See [testplugin](https://github.com/SignalK/signalk-server/tree/b82477e63ebdc148
 
 ## Logging
 
-To record deltas sent by the plugin in the server's data log, enable the **Log plugin output** in the plugin configuration screen. 
+To record deltas sent by the plugin in the server's data log, enable the **Log plugin output** in the plugin configuration screen.
 
 ---
 

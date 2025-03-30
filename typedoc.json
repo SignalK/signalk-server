@@ -32,5 +32,5 @@
     "required-first",
     "alphabetical-ignoring-documents"
   ],
-
+  "treatWarningsAsErrors": true
 }

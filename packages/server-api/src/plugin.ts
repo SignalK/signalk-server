@@ -11,23 +11,21 @@ export type PluginConstructor = (app: ServerAPI) => Plugin
  * Plugins are components that extend functionality of the server and can be installed via the Signal K AppStore.
  *
  * A plugin can:
- * - Interact with the {@link ServerAPI}, including the full data model, {@link ResourceApi}, and more.
+ * - Interact with the {@link ServerAPI}, including the full data model, {@link ResourcesApi}, and more.
  * - emit delta messages
  * - process requests
  * - provide a webapp interface by placing the relavent files in a folder named `/public/` which the server will mount under `http://{skserver}:3000/{pluginId}`.
  * - Provide resources via the {@link ResourcesApi}
-
-
-For example, if the plugin you are looking to develop is providing access to information such as `route,` `waypoint`, `POI`, or `charts` you should be creating a _[Resources Provider Plugin](./resource_provider_plugins.md)_ for the _[Resources API](../openapi/resources_api.md)_.
-
-Or if you are looking to perform course calculations or integrate with an auotpilot, you will want to review the _[Course API](../openapi/course_api.md)_ documentation prior to commencing your project.
-
-
-**OpenApi description for your plugin's API**
-
-If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification. _See [Add OpenAPI definition](#add-an-openapi-definition)_ below.
-
-
+ *
+ * For example, if the plugin you are looking to develop is providing access to information such as `route,` `waypoint`,`POI`, or `charts` you should be creating a _[Resources Provider Plugin](../../../docs/src/develop/plugins/resource_provider_plugins.md)_ for the _[Resources API](../../../docs/src/develop/rest-api/resources_api.md)_.
+ *
+ * Or if you are looking to perform course calculations or integrate with an auotpilot, you will want to review the _[Course API](../../../docs/src/develop/rest-api/course_api.md)_ documentation prior to commencing your project.
+ *
+ * ### OpenApi description for your plugin's API
+ *
+ * If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification. _See [Add OpenAPI definition](#add-an-openapi-definition)_ below.
+ *
+ *
  * This is the API that a [server plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md) must implement.
 
  *
