@@ -2,7 +2,7 @@ const assert = require('assert')
 
 const fetch = require('node-fetch')
 const freeport = require('freeport-promise')
-const Server = require('../lib/')
+const Server = require('../dist/')
 const fs = require('fs')
 const path = require('path')
 

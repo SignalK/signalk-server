@@ -8,7 +8,7 @@ const {
   checkForNewServerVersion,
   getLatestServerVersion,
   importOrRequire
-} = require('../lib/modules')
+} = require('../dist/modules')
 
 describe('modulesWithKeyword', () => {
   it('returns a list of modules with one "installed" update in config dir', () => {

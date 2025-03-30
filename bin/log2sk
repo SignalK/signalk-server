@@ -20,7 +20,7 @@ const app = {
   }
 }
 
-new require('../lib/pipedproviders').pipedProviders(app).createPipedProvider({
+new require('../dist/pipedproviders').pipedProviders(app).createPipedProvider({
   pipeElements: [
     {
       type: 'providers/simple',

@@ -1,7 +1,7 @@
 {
   "extends": "@tsconfig/node16/tsconfig.json",
   "compilerOptions": {
-    "outDir": "${configDir}/lib",
+    "outDir": "${configDir}/dist",
     "rootDir": "${configDir}/src",
     "allowJs": true,
     "typeRoots": ["${configDir}/src/types", "./node_modules/@types"],

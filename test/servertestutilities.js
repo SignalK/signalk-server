@@ -120,7 +120,7 @@ module.exports = {
     return fetch(deltaUrl, { method: 'POST', body: JSON.stringify(delta), headers: { 'Content-Type': 'application/json' } })
   },
   startServerP: function startServerP (port, enableSecurity, extraConfig={}, securityConfig) {
-    const Server = require('../lib')
+    const Server = require('../dist')
     const props = {
       config: JSON.parse(JSON.stringify(defaultConfig))
     }

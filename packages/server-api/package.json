@@ -2,8 +2,8 @@
   "name": "@signalk/server-api",
   "version": "2.6.1",
   "description": "signalk-server Typescript API for plugins etc with relevant implementation classes",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "generate": "ts-auto-guard src/autopilotapi.ts 2>/dev/null",
     "build": "npm run generate && tsc -b",
