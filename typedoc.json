@@ -1,0 +1,36 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "out": "docs/api",
+  "entryPoints": [
+    "packages/server-api"
+  ],
+  "name": "Signal K",
+  "entryPointStrategy": "packages",
+  "projectDocuments": [
+    "docs/src/**/*.md"
+  ],
+  "packageOptions": {
+    "sort": [
+      "kind",
+      "instance-first",
+      "required-first",
+      "alphabetical-ignoring-documents"
+    ],
+  },
+  "searchInComments": true,
+  "searchInDocuments": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/SignalK/signalk-server",
+    "Website": "https://signalk.org",
+    "Documentation": "https://signalk.org/docs/",
+    "FAQ": "https://signalk.org/docs/faq/"
+  },
+  "sort": [
+    "documents-first",
+    "kind",
+    "instance-first",
+    "required-first",
+    "alphabetical-ignoring-documents"
+  ],
+
+}

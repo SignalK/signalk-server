@@ -36,14 +36,11 @@ jobs:
           node-version: '20.x'
       - run: npm install
       - name: Build
-        run: |
-          cd packages/server-api
-          npm run generate
-          npm run typedoc
+        run: npm run typedoc
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'packages/server-api/docs'
+          path: 'docs/api'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
