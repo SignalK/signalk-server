@@ -1,7 +1,8 @@
+---
+title: Resource Providers
+---
+
 # Resource Provider plugins
-
-
-## Overview
 
 The Signal K server _Resource API_ provides a common set operations for clients to interact with routes, waypoints, charts, etc but it does NOT provide the ability to persist or retrieve resources to / from storage.
 
@@ -21,7 +22,7 @@ _Note: Signal K server comes with the [resources-provider-plugin](https://github
 
 ### Resources API:
 
-The _Resources API_ handles all client requests received via the `/signalk/v2/api/resources` path, before passing on the request to registered provider plugin(s). 
+The _Resources API_ handles all client requests received via the `/signalk/v2/api/resources` path, before passing on the request to registered provider plugin(s).
 
 The _Resources API_ performs the following operations when a request is received:
 1. Checks for registered provider(s) for the resource type _(i.e. route, waypoint, etc.)_
@@ -53,7 +54,7 @@ interface ResourceProvider {
 ```
 where:
 
-- `type`: The resource type provided for by the plugin. These can be either __Standard__ _(Signal K defined)_ or __Custom__ _(user defined)_ resource types _(e.g. `'routes'`, `'fishingZones'`)_ 
+- `type`: The resource type provided for by the plugin. These can be either __Standard__ _(Signal K defined)_ or __Custom__ _(user defined)_ resource types _(e.g. `'routes'`, `'fishingZones'`)_
 
 - `methods`: An object implementing the `ResourceProviderMethods` interface defining the functions to which resource requests are passed by the SignalK server. _Note: The plugin __MUST__ implement each method, even if that operation is NOT supported by the plugin!_
 
@@ -86,7 +87,7 @@ _Note: It is the responsibility of the resource provider plugin to filter the re
 returns: `Promise<{[id: string]: any}>`
 
 
-_Example: Return waypoints within the bounded area with lower left corner at E5.4 N25.7 & upper right corner E6.9 & N31.2:_ 
+_Example: Return waypoints within the bounded area with lower left corner at E5.4 N25.7 & upper right corner E6.9 & N31.2:_
 ```
 GET /signalk/v2/api/resources/waypoints?bbox=[5.4,25.7,6.9,31.2]
 ```
@@ -144,7 +145,7 @@ _Returns:_
 
 returns: `Promise<object>`
 
-_Example resource request:_ 
+_Example resource request:_
 ```
 GET /signalk/v2/api/resources/routes/07894aba-f151-4099-aa4f-5e5773734b99
 ```
@@ -174,7 +175,7 @@ _Returns:_
 }
 ```
 
-_Example resource property value request:_ 
+_Example resource property value request:_
 ```
 GET /signalk/v2/api/resources/routes/07894aba-f151-4099-aa4f-5e5773734b99/feature/geometry/type
 ```
@@ -205,7 +206,7 @@ _Returns:_
 
 returns: `Promise<void>`
 
-_Example PUT resource request:_ 
+_Example PUT resource request:_
 ```
 PUT /signalk/v2/api/resources/routes/07894aba-f151-4099-aa4f-5e5773734b99 {resource_data}
 ```
@@ -215,10 +216,10 @@ _ResourceProvider method invocation:_
 setResource(
   '07894aba-f151-4099-aa4f-5e5773734b99',
   {
-    name: 'test route', 
-    distance': 8000, 
+    name: 'test route',
+    distance': 8000,
     feature: {
-      type: 'Feature', 
+      type: 'Feature',
       geometry: {
         type: 'LineString',
         coordinates: [[138.5, -38.6], [138.7, -38.2], [138.9, -38.0]]
@@ -229,7 +230,7 @@ setResource(
 );
 ```
 
-_Example POST resource request:_ 
+_Example POST resource request:_
 ```
 POST /signalk/v2/api/resources/routes {resource_data}
 ```
@@ -239,10 +240,10 @@ _ResourceProvider method invocation:_
 setResource(
   '<server_generated_id>',
   {
-    name: 'test route', 
-    distance': 8000, 
+    name: 'test route',
+    distance': 8000,
     feature: {
-      type: 'Feature', 
+      type: 'Feature',
       geometry: {
         type: 'LineString',
         coordinates: [[138.5, -38.6], [138.7, -38.2], [138.9, -38.0]]
@@ -261,7 +262,7 @@ setResource(
 
 returns: `Promise<void>`
 
-_Example resource request:_ 
+_Example resource request:_
 ```
 DELETE /signalk/v2/api/resources/routes/07894aba-f151-4099-aa4f-5e5773734b99
 ```
@@ -277,7 +278,7 @@ deleteResource(
 
 ### Registering as a Resource Provider:
 
-To register a plugin as a provider for one or more resource types with the SignalK server, it must call the server's `registerResourceProvider` function for each resource type being serviced during plugin startup. 
+To register a plugin as a provider for one or more resource types with the SignalK server, it must call the server's `registerResourceProvider` function for each resource type being serviced during plugin startup.
 
 The function has the following signature:
 
@@ -303,19 +304,19 @@ module.exports = function (app) {
   const routesProvider: ResourceProvider = {
       type: 'routes',
       methods: {
-        listResources: (params) => { 
+        listResources: (params) => {
           fetchRoutes(params)
-          ... 
+          ...
         },
-        getResource: (id, property?) => { 
+        getResource: (id, property?) => {
           getRoute(id, property)
-          ... 
+          ...
         },
-        setResource: (id, value )=> { 
+        setResource: (id, value )=> {
           saveRoute(id, value)
-          ... 
+          ...
         },
-        deleteResource: (id) => { 
+        deleteResource: (id) => {
           deleteRoute(id, value)
           ...
         }
@@ -325,19 +326,19 @@ module.exports = function (app) {
   const waypointsProvider: ResourceProvider = {
       type: 'waypoints',
       methods: {
-        listResources: (params) => { 
+        listResources: (params) => {
           fetchWaypoints(params)
-          ... 
+          ...
         },
-        getResource: (id, property?) => { 
+        getResource: (id, property?) => {
           getWaypoint(id, property)
-          ... 
+          ...
         },
-        setResource: (id, value )=> { 
+        setResource: (id, value )=> {
           saveWaypoint(id, value)
-          ... 
+          ...
         },
-        deleteResource: (id) => { 
+        deleteResource: (id) => {
           deleteWaypoint(id, value)
           ...
         }
@@ -359,7 +360,7 @@ module.exports = function (app) {
 }
 ```
 
-### Methods 
+### Methods
 
 A Resource Provider plugin must implement ALL methods to service the requests passed from the server.
 
@@ -367,18 +368,18 @@ Each method should return a __Promise__ on success and `throw` on error, if a re
 
 _Example:_
 ```javascript
-// SignalK server plugin 
+// SignalK server plugin
 module.exports = function (app) {
 
   const plugin = {
     id: 'mypluginid',
     name: 'My Resource Providerplugin',
-    start: options => { 
-      ... 
+    start: options => {
+      ...
       app.registerResourceProvider({
         type: 'waypoints',
         methods: {
-          listResources: (params) => { 
+          listResources: (params) => {
             return new Promise( (resolve, reject) => {
               ...
               if (ok) {
@@ -388,7 +389,7 @@ module.exports = function (app) {
               }
             })
           },
-          getResource: (id, property?) => { 
+          getResource: (id, property?) => {
             return new Promise( (resolve, reject) => {
               ...
               if (ok) {
@@ -398,11 +399,11 @@ module.exports = function (app) {
               }
             })
           },
-          setResource: (id, value )=> { 
-            throw( new Error('Not implemented!')) 
+          setResource: (id, value )=> {
+            throw( new Error('Not implemented!'))
           },
-          deleteResource: (id) => { 
-            throw( new Error('Not implemented!')) 
+          deleteResource: (id) => {
+            throw( new Error('Not implemented!'))
           }
         }
       })

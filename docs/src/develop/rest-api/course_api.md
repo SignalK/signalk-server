@@ -1,13 +1,13 @@
-# Working with the Course API
-
-
-## Overview
+---
+title: Course API
+---
+# Course API
 
 The _Course API_ provides common course operations under the path `/signalk/v2/api/vessels/self/navigation/course` ensuring that all related Signal K data model values are maintained and consistent. This provides a set of data that can be confidently used for _course calculations_ and _autopilot operation_.
 
 Additionally, the Course API persists course information on the server to ensure data is not lost in the event of a server restart.
 
-Client applications use `HTTP` requests (`PUT`, `GET`,`DELETE`) to perform operations and retrieve course data. 
+Client applications use `HTTP` requests (`PUT`, `GET`,`DELETE`) to perform operations and retrieve course data.
 
 The Course API also listens for destination information in the NMEA stream and will set / clear the destination accordingly _(e.g. NMEA0183 RMB sentence,  NMEA2000 PGN 129284)_. See [Configuration](#Configuration) for more details.
 
@@ -53,7 +53,7 @@ Additional parameters can be set when following a route including:
 
 _Example: Following a route in reverse direction:_
 ```typescript
-HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute' 
+HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute'
 {
   "href": "/resources/routes/5242d307-fbe8-4c65-9059-1f9df1ee126f",
   "reverse": true
@@ -244,7 +244,7 @@ To cancel the current course navigation and clear the course data.
 HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course'
 ```
 
-_Note: This operation will NOT change the destination information coming from the NMEA input stream! If the NMEA source device is still emitting destination data this will reappear as the current destination._ 
+_Note: This operation will NOT change the destination information coming from the NMEA input stream! If the NMEA source device is still emitting destination data this will reappear as the current destination._
 
 To ignore destination data from NMEA sources see [Configuration](#configuration) below.
 
@@ -320,4 +320,3 @@ HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/
 Whilst not performing course calculations, the _Course API_ defines the paths to accommodate the values calculated during course navigation.
 
 Click [here](./course_calculations.md) for details.
-

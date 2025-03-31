@@ -1,10 +1,8 @@
-# Autopilot Provider plugins
-
-_This document should be read in conjunction with the [SERVER PLUGINS](./server_plugin.md) document as it contains additional information regarding the development of plugins that implement the Signal K Autopilot API._
-
+---
+title: Autopilot Providers
 ---
 
-## Overview
+# Autopilot Provider plugins
 
 The Signal K Autopilot API defines endpoints under the path `/signalk/v2/api/vessels/self/autopilots` providing a way for all Signal K clients to perform common autopilot operations independent of the autopilot device in use. The API is defined in an [OpenAPI](/doc/openapi/?urls.primaryName=autopilot) document.
 
@@ -163,7 +161,7 @@ returns: `Promise<{AutopilotInfo}>`
 _Note: It is the responsibility of the autopilot provider plugin to map the value of `engaged` to the current `state`._
 
 
-_Example:_ 
+_Example:_
 ```javascript
 // API request
 GET /signalk/v2/api/vessels/self/autopilots/mypilot1
@@ -200,7 +198,7 @@ getData('mypilot1');
 
 returns: `Promise<{string}>`
 
-_Example:_ 
+_Example:_
 ```javascript
 // API request
 GET /signalk/v2/api/vessels/self/autopilots/mypilot1/state
@@ -222,7 +220,7 @@ returns: `Promise<{void}>`
 
 throws on error or if supplied state value is invalid.
 
-_Example:_ 
+_Example:_
 ```javascript
 // API request
 PUT /signalk/v2/api/vessels/self/autopilots/mypilot1/state {value: "standby"}
@@ -238,7 +236,7 @@ setState('standby', 'mypilot1');
 
 returns: `Promise<{string}>`
 
-_Example:_ 
+_Example:_
 ```javascript
 // API request
 GET /signalk/v2/api/vessels/self/autopilots/mypilot1/mode
@@ -260,7 +258,7 @@ returns: `Promise<{void}>`
 
 throws on error or if supplied mode value is invalid.
 
-_Example:_ 
+_Example:_
 ```javascript
 // API request
 PUT /signalk/v2/api/vessels/self/autopilots/mypilot1/mode {value: "gps"}
@@ -279,7 +277,7 @@ returns: `Promise<{void}>`
 
 throws on error or if supplied target value is outside the valid range.
 
-_Example:_ 
+_Example:_
 ```javascript
 // API request
 PUT /signalk/v2/api/vessels/self/autopilots/mypilot1/target {value: 129}
@@ -298,7 +296,7 @@ returns: `Promise<{void}>`
 
 throws on error or if supplied target value is outside the valid range.
 
-_Example:_ 
+_Example:_
 ```javascript
 // API request
 PUT /signalk/v2/api/vessels/self/autopilots/mypilot1/target {value: 2}
@@ -316,7 +314,7 @@ returns: `Promise<{void}>`
 
 throws on error.
 
-_Example:_ 
+_Example:_
 ```javascript
 // API request
 POST /signalk/v2/api/vessels/self/autopilots/mypilot1/engage
@@ -334,7 +332,7 @@ returns: `Promise<{void}>`
 
 throws on error.
 
-_Example:_ 
+_Example:_
 ```javascript
 // API request
 POST /signalk/v2/api/vessels/self/autopilots/mypilot1/disengage
@@ -353,7 +351,7 @@ returns: `Promise<{void}>`
 
 throws on error.
 
-_Example:_ 
+_Example:_
 ```javascript
 // API request
 POST /signalk/v2/api/vessels/self/autopilots/mypilot1/tack/port
@@ -372,7 +370,7 @@ returns: `Promise<{void}>`
 
 throws on error.
 
-_Example:_ 
+_Example:_
 ```javascript
 // API request
 POST /signalk/v2/api/vessels/self/autopilots/mypilot1/gybe/starboard
@@ -433,7 +431,7 @@ For an operation that is not supported by the autopilot device, then the plugin 
 
 _Example:_
 ```typescript
-{ 
+{
     // unsupported operation method definition
     gybe: async (d, id) => {
         throw new Error('Unsupprted operation!)

@@ -1,15 +1,16 @@
+---
+title: Resources API
+---
+
 # Working with the Resources API
-
-
-## Overview
 
 The SignalK specification defines a number of resources (routes, waypoints, notes, regions & charts) each with its own path under the root `resources` path _(e.g. `/signalk/v2/api/resources/routes`)_.
 
 Additionally, the `/resources` path can be used to host other user defined resource types, each grouped within its own folder _(e.g. `/signalk/v2/api/resources/fishingZones`)_.
 
-The _Resources API_ validates requests to these resource paths and passes them to a [Resource Provider plugin](../plugins/resource_provider_plugins.md) for storage and retrieval. 
+The _Resources API_ validates requests to these resource paths and passes them to a [Resource Provider plugin](../plugins/resource_provider_plugins.md) for storage and retrieval.
 
-Client applications can then use `HTTP` requests to these paths to store (`POST`, `PUT`), retrieve (`GET`) and remove (`DELETE`) resource entries. 
+Client applications can then use `HTTP` requests to these paths to store (`POST`, `PUT`), retrieve (`GET`) and remove (`DELETE`) resource entries.
 
 _Note: the ability to store resource entries is controlled by the server security settings so client applications may need to authenticate for write / delete operations to complete successfully._
 
@@ -55,7 +56,7 @@ _Example 3: Retrieve waypoints within a bounded area. Note: the bounded area is 
 HTTP GET 'http://hostname:3000/signalk/v2/api/resources/waypoints?bbox=[-135.5,38,-134,38.5]'
 ```
 
-_Example 4: Return notes for display on a map view at zoom level 5. 
+_Example 4: Return notes for display on a map view at zoom level 5._
 
 ```typescript
 HTTP GET 'http://hostname:3000/signalk/v2/api/resources/notes?zoom=5'
@@ -80,7 +81,7 @@ HTTP DELETE 'http://hostname:3000/signalk/v2/api/resources/routes/94052456-65fa-
 
 __Creating a new resource entry:__
 
-Resource entries are created by submitting an HTTP `POST` request to a path for the relevant resource type. 
+Resource entries are created by submitting an HTTP `POST` request to a path for the relevant resource type.
 
 ```typescript
 HTTP POST 'http://hostname:3000/signalk/v2/api/resources/routes' {resource_data}
@@ -124,7 +125,7 @@ When this scenario occurs the server services request in the following ways:
 
 __Listing entries:__
 
-When a list of resources is requested 
+When a list of resources is requested
 
 _for example:_
 ```typescript
@@ -137,7 +138,7 @@ each registered provider will be asked to return matching entries and the server
 
 __Requests for specific resources:__
 
-When a request is received for a specific resource 
+When a request is received for a specific resource
 
 _for example:_
 ```typescript
@@ -154,7 +155,7 @@ each registered provider will polled to determine which one owns the entry with 
 
 __Creating new resource entries:__
 
-When a request is received to create a new resource 
+When a request is received to create a new resource
 
 _for example:_
 ```typescript

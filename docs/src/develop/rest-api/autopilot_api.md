@@ -1,7 +1,8 @@
-# Working with the Autopilot API
+---
+title: Autopilot API
+---
 
-
-## Overview
+# Autopilot API
 
 The Autopilot API defines the `autopilots` path under `self` _(e.g. `/signalk/v2/api/vessels/self/autopilots`)_ for representing information from one or more autopilot devices.
 
@@ -294,7 +295,7 @@ _Response:_
 
 ### Engaging / Disengaging the Autopilot
 
-#### Engaging the autopilot 
+#### Engaging the autopilot
 
 An autopilot can be engaged by [setting it to a speciifc `state`](#setting-the-state) but it can also be engaged more generically by submitting an HTTP `POST` request to the `/signalk/v2/api/vessels/self/autopilots/{id}/engage` endpoint.
 
@@ -304,7 +305,7 @@ HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/engage"
 
 _Note: The resultant `state` into which the autopilot is placed will be determined by the **provider plugin** and the autopilot device it is communicating with._
 
-#### Disengaging the autopilot 
+#### Disengaging the autopilot
 
 An autopilot can be disengaged by [setting it to a speciifc `state`](#setting-the-state) but it can also be disengaged more generically by submitting an HTTP `POST` request to the `/signalk/v2/api/vessels/self/autopilots/{id}/disengage` endpoint.
 

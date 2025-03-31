@@ -1,10 +1,14 @@
+---
+title: Contributing
+---
+
 # Contributing
 
 Signal K server is an Open Source project and contributions are welcome.
 
 Contributions are made by creating Pull Requests in the [GitHub repository](https://github.com/SignalK/signalk-server).
 
-_**Working on your first Pull Request?**_ 
+_**Working on your first Pull Request?**_
 
 You can learn how from this *free* series [How to Contribute to an Open Source Project on GitHub](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github)
 
@@ -66,7 +70,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
      ```
 
 1. Create your patch.
-1. Commit your changes using a descriptive commit message that follows the 
+1. Commit your changes using a descriptive commit message that follows the
   [conventions outlined here](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#commits). Whilst we are not 100% strict about this, it really helps when reviewing the PR and in making the commit history readable. The TL;DR of it is below.
     - The subject line should be in the format `<type>: <subject>`, where `<type>` should be one of:
         - feat (feature)

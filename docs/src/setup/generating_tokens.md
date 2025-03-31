@@ -1,6 +1,8 @@
-# Generating Tokens
+---
+title: Generating Tokens
+---
 
-## Overview
+# Generating Tokens
 
 For a device to be able to interact with a Signal K server with security enabled, it is require to pass an access token with each request.
 
@@ -35,4 +37,3 @@ _Note: The device using the token will have the same permissions as the user acc
 ### Access Requests
 
 For information regarding Access Requests, [ see the Signal K specification](https://signalk.org/specification/1.5.0/doc/access_requests.html).
-

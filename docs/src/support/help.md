@@ -1,7 +1,10 @@
-## Help & Support
+---
+title: Help & Support
+---
+
+# Help & Support
 
 Signal K has an friendly and helpful community where you can find support and assistance whether you are trouble shooting issues or just have a question.
-
 
 **Join the discussion:**
 
@@ -10,4 +13,12 @@ Signal K has an friendly and helpful community where you can find support and as
 - [**GitHub Discussions**](https://github.com/SignalK/signalk/discussions/)
 
 
-- [**FAQ: Frequently Asked Questions**](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions)
+## Frequently Asked Questions
+
+Answers to common issues and queries can be found on the [Frequently Asked Questions](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions) space on GitHub.
+
+Here are some common queries:
+
+- [How do I integrate with NMEA2000 (CAN bus)](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions#how-do-i-integrate-with-nmea2000-can-bus).
+
+- [Installing & Updating NodeJS](https://github.com/SignalK/signalk-server/wiki/Installing-and-Updating-Node.js)

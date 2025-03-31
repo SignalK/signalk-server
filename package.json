@@ -68,7 +68,8 @@
     "packages/server-admin-ui",
     "packages/streams",
     "packages/server-api",
-    "packages/resources-provider-plugin"
+    "packages/resources-provider-plugin",
+    "packages/typedoc-theme"
   ],
   "dependencies": {
     "@signalk/course-provider": "^1.0.0",

@@ -1,9 +1,13 @@
+---
+title: Updating your Installation
+---
+
 # Updating your Installation
 
 Signal K Server is frequently updated to introduce new features and fix issues that have been reported.
 Sometime these updates require that NodeJS or other supporting software on your device to be upgraded to support the new functionality.
 
-Additionally your device's operating system are constantly evolving to address security issues as well as providing new capabilities. 
+Additionally your device's operating system are constantly evolving to address security issues as well as providing new capabilities.
 
 Regularly updating your installation will reduce both the volume of data download and the time taken to complete the process. Connecting your device to a network with good broadband speed before performing an update is recommended.
 
@@ -27,7 +31,7 @@ sudo apt update
 sudo apt dist-upgrade
 ```
 
-If you have not performed an update for a while these commands may take a while to complete, just be patient and make sure everything completes correctly. 
+If you have not performed an update for a while these commands may take a while to complete, just be patient and make sure everything completes correctly.
 
 After the process has completed `restart` your device.
 
@@ -83,5 +87,3 @@ Those with an update available will be listed in _Appstore -> Updates_ in the Ad
 Clicking on the _download cloud_ button next to the WebApp / Plugin you wish to update.
 
 After all installations have been completed, click **Restart** to activate the updated WebApps and Plugins.
-
-

@@ -1,3 +1,8 @@
+---
+title: Server API
+---
+
+{@link @signalk/server-api!ServerAPI | ServerAPI}
 
 #### `app.streambundle.getBus(path)`
 

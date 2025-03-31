@@ -1,3 +1,9 @@
+---
+title: Security
+children:
+- setup/generating_tokens.md
+---
+
 # Security
 
 ## Introduction
@@ -49,7 +55,7 @@ In case the administrator user credentials are lost, removing the `security.json
 Access control lists _(acls)_ allow for fine grained access to specific data in Signal K. They specify the permissions assigned to users for resources within specifc contexts and are defined within the `security.json` file.
 
 The following example defines acls for the self context allowing:
-1. Anyone to read the paths `"steering.*"`, `"navigation.*"`, `"name"`, `"design.aisShipType"` and grants the admin user permission to write (update) those paths. 
+1. Anyone to read the paths `"steering.*"`, `"navigation.*"`, `"name"`, `"design.aisShipType"` and grants the admin user permission to write (update) those paths.
 
 2. The user _john_ to read any data coming from the `actisense.35` $source.
 
@@ -110,9 +116,8 @@ In addition the user may configure any number of TCP, UDP and Websocket connecti
 The security implication of these connections is that with no security options turned on _devices connected to the network will have both read and write access to practically all of its data and settings_.
 
 People often dismiss local network access by saying that their boat's local network is secure enough. But one very common scenario is connecting your Signal K server _(e.g. a Raspberry Pi)_ to a marina wifi.
-Many wifi networks allow communication between all connected computers, so your Signal K server will be advertising its services over MDNS to all other connected devices. 
+Many wifi networks allow communication between all connected computers, so your Signal K server will be advertising its services over MDNS to all other connected devices.
 
 So in the case that your server has a manually configured connection for _NMEA0183 over UDP_, NMEA0183 data broadcast by other devices will be received and written into your SIgnal K data.
 
 NMEA0183 connections over TCP and UDP are inherently unsafe. There are no options for authentication and / or secure communication. In comparison Signal K over TLS and HTTP / WebSockets can provide secure, authenticated read and write access to your data.
-

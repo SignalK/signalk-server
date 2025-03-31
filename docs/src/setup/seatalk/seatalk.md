@@ -1,8 +1,12 @@
+---
+title: Seatalk Connections
+---
+
 ## Seatalk Connections
 
 ### Introduction
 
-The Signal K Server supports a variety of data connection types including _Seatalk (GPIO)_ which provides the ability to receive Raymarine Seatalk 1 (ST1) data, via simple DIY hardware connected to a Raspberry Pi GPIO, and convert it to Signal K deltas. This information can then be forwarded by the Signal K Server to a NMEA 0183 or NMEA 2000 network using appropriate hardware and plugins. 
+The Signal K Server supports a variety of data connection types including _Seatalk (GPIO)_ which provides the ability to receive Raymarine Seatalk 1 (ST1) data, via simple DIY hardware connected to a Raspberry Pi GPIO, and convert it to Signal K deltas. This information can then be forwarded by the Signal K Server to a NMEA 0183 or NMEA 2000 network using appropriate hardware and plugins.
 
 A guide to SeaTalk can be found [here](http://boatprojects.blogspot.com/2012/12/beginners-guide-to-raymarines-seatalk.html).
 
@@ -10,7 +14,7 @@ A guide to SeaTalk can be found [here](http://boatprojects.blogspot.com/2012/12/
 
 Using an optocoupler as the hardware interface is recommended as it creates electrical isolation from hazardous voltages and avoids ground loops.
 
-The circuit below uses the [PC817 optocoupler board](https://www.amazon.com/ARCELI-Optocoupler-Isolation-Converter-Photoelectric/dp/B07M78S8LB/ref=sr_1_2?dchild=1&keywords=pc817+optocoupler&qid=1593516071&sr=8-2) but any equivlent product can be used. The LED in the circuit will flicker when there is ST1 traffic. 
+The circuit below uses the [PC817 optocoupler board](https://www.amazon.com/ARCELI-Optocoupler-Isolation-Converter-Photoelectric/dp/B07M78S8LB/ref=sr_1_2?dchild=1&keywords=pc817+optocoupler&qid=1593516071&sr=8-2) but any equivlent product can be used. The LED in the circuit will flicker when there is ST1 traffic.
 
 ![ST1_opto_SK](./seatalk_circuit_3.jpg)
 
@@ -64,7 +68,7 @@ Open a terminal and enter the following:
 
 1. Update the package manifest
 ```
-    sudo apt-get update 
+    sudo apt-get update
 ```
 
 2. Install the software
@@ -77,7 +81,7 @@ Open a terminal and enter the following:
     sudo systemctl enable pigpiod && sudo systemctl restart  pigpiod
 ```
 
-4. Check the _pigpio_service is running 
+4. Check the _pigpio_service is running
 ```
     sudo systemctl status pigpiod
 ```
@@ -96,7 +100,7 @@ _Example Data Connection:_
 
 - Click the **Add** button to create a new connection.
 
-- Select **Seatalk (GPIO)** in the _Data Type_ dropdown list. 
+- Select **Seatalk (GPIO)** in the _Data Type_ dropdown list.
 
 - Set the _Enabled_ to **Yes**.
 

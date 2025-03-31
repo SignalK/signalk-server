@@ -1,3 +1,7 @@
+---
+title: Anchor Alarm
+---
+
 # Feature: Anchor Alarm
 
 
@@ -39,7 +43,7 @@ For use with other Apps (Android, web apps, etc) see [Alternatives to WilhelmSK]
 <img src="vesseldata.png" width=600px>
 
 Be sure to set:
-- Boat length 
+- Boat length
 - GPS Distance from Bow
 - GPS Distance from Center.
 
@@ -58,7 +62,7 @@ Locate and install each of the following plugins:
 - **signalk-alarm-silencer**
 - **@signalk/tracks-plugin**
 
-After installation is complete, restart the server. 
+After installation is complete, restart the server.
 
 _Note: The _Restart_ button only appears at the upper right of the screen when security has been enabled. (See [Enabling Security](../../security.md#enabling-security) for details.)_
 
@@ -77,7 +81,7 @@ Following are details of how to configure each plugin:
 
 **_Anchor Alarm plugin:_**
 
-This plugin only needs to be enabled. 
+This plugin only needs to be enabled.
 
 No configuration is required as the settings values are populated by WilhelmSK.
 
@@ -86,7 +90,7 @@ No configuration is required as the settings values are populated by WilhelmSK.
 
 **_Alarm Silencer plugin:_**
 
-This plugin only needs to be enabled. 
+This plugin only needs to be enabled.
 
 No configuration options available.
 
@@ -101,7 +105,7 @@ _Note: The WilhelmSK app uses an Amazon RDS service to deliver push notification
 
 - _Local Push SSIDs_: Enter the SSID(s) of the WiFi network(s) on your boat which the devices that are to receive notifications are connected.
 
-- _Local Push Port_ specifies the port number that WilhelmSK app will receive the local push notifications. 
+- _Local Push Port_ specifies the port number that WilhelmSK app will receive the local push notifications.
 The default value is _3001_ and only needs to be changed if that port number is already in use by another app / plugin on the Signal K Server.
 
 _Note: It is not necessary to set the same value in the WilhelmSK app, it auto configures itself._
@@ -111,7 +115,7 @@ _Note: It is not necessary to set the same value in the WilhelmSK app, it auto c
 
 **_Tracks plugin_**
 
-This plugin keeps track of the position of vessels visible to the Signal K Server. This enables apps to display a track of vessel movements. 
+This plugin keeps track of the position of vessels visible to the Signal K Server. This enables apps to display a track of vessel movements.
 
 The configuration values chosen will determince the amount of resource required run the plugin (and potentially the performance of the Signal K Server) so please consider this when making entries.
 
@@ -174,7 +178,7 @@ _Tip: For using the Fusion stereo: search the server plugins with the keyword Fu
 
 ## Using the Anchor Alarm
 
-Now that the connections have been configured, go to the main screen of the WilhelmSK App where you’ll see something similar to the following screenshot. 
+Now that the connections have been configured, go to the main screen of the WilhelmSK App where you’ll see something similar to the following screenshot.
 
 If data is being received from the Signal K server, green dots are displayed in the top right of each gauge to indicate that the value displayed is current.
 
@@ -194,9 +198,9 @@ Clicking the anchor on the top left of screen (next to the menu button), cycles 
 
 - White anchor indicates disarmed. Click when dropping the anchor and the color will change to yellow.
 - Yellow anchor indicates that the rode length is being calculated. Click when you have finished letting out the anchor and the colour will change to green.
-- Green anchor means the alarm is armed and ready. 
+- Green anchor means the alarm is armed and ready.
 
-Use the “four arrows icon” on the top left of screen to move the anchor location. 
+Use the “four arrows icon” on the top left of screen to move the anchor location.
 
 You can also change the alarm radius.
 
@@ -209,7 +213,7 @@ _TIP: To return to other pages (i.e. COG and AWA gauges) swipe left by holding t
 
 ## Alarms & Notifications
 
-For most use cases, push notifications shouldn’t be the only means of receiving alarms as the phone can decide to hide notifications, etc so additional means of sounding the alarm should be employed. 
+For most use cases, push notifications shouldn’t be the only means of receiving alarms as the phone can decide to hide notifications, etc so additional means of sounding the alarm should be employed.
 
 Following are some alternatives.
 
@@ -241,9 +245,9 @@ Not compatible
 
 #### Yacht Devices compatibility
 
-The [YDAB-01](https://www.yachtd.com/products/alarm_button.html) is a very flexible and configurable device sold by Yacht Devices. 
+The [YDAB-01](https://www.yachtd.com/products/alarm_button.html) is a very flexible and configurable device sold by Yacht Devices.
 
-It is connected to the NMEA2000 network and has a 10W audio amplifier which can output sound via a 4 or 8 Ohm speaker which directly connected. It has bank of 28 sound signals can be configured to sound on receipt of the anchor alarm. 
+It is connected to the NMEA2000 network and has a 10W audio amplifier which can output sound via a 4 or 8 Ohm speaker which directly connected. It has bank of 28 sound signals can be configured to sound on receipt of the anchor alarm.
 
 #### Additional information
 
@@ -259,7 +263,7 @@ There are a number of Signal K Server plugins which enable notifications to be s
 
 This plugin listens for a change of state in Signal K notifications and sends the updates to the Pushover App which is available for both Apple and Android phones and tablets.
 
-This is a paid service from [Pushover](https://pushover.net/). 
+This is a paid service from [Pushover](https://pushover.net/).
 
 _Plugin:_ [signalk-pushover-notification-relay](https://www.npmjs.com/package/signalk-pushover-notification-relay)
 
@@ -279,7 +283,7 @@ _Plugin:_ [signalk-clicksend-notifications-relay](https://www.npmjs.com/package/
 
 ### Switching a relay
 
-Operating a switch or relay provides a range of options for sounding an alarm but will require diving a bit deeper into the various (and extensive) automation options made available by Signal K Server. 
+Operating a switch or relay provides a range of options for sounding an alarm but will require diving a bit deeper into the various (and extensive) automation options made available by Signal K Server.
 
 A good place to start is the [signalk-switch-automation](https://github.com/sbender9/signalk-switch-automation) plugin.
 
@@ -294,7 +298,7 @@ client applications, any client application that supports the _anchor-alarm_ plu
 Listed below are some other apps and supported operations:
 
 |  Client App    | Arm / disarm | Set radius     | Move location  | See track   | Plays sound |
-| -----------    | ------------ | -------------- | -------------- | ----------- |  ----------- | 
+| -----------    | ------------ | -------------- | -------------- | ----------- |  ----------- |
 |**Wilhelm SK**<br>(iOS)              | yes | yes | yes | yes | yes |
 |**Anchor alarm plugin**<br>(web app) | yes | yes | yes  | yes  | no  |
 |**Freeboard SK**<br>(web app)        | yes | yes | yes  | yes | yes |
@@ -322,7 +326,7 @@ When set, it will:
 - Show the vessel track whilst anchored
 
 When alarm is triggered:
-- Display an alarm notification on screen 
+- Display an alarm notification on screen
 - Play a sound
 
 
@@ -330,10 +334,3 @@ It is available under _WebApps_ in the Signal K Server Admin UI.
 
 <img src="./freeboardsk_anchor_watch.png" width=300px>
 <img src="./freeboardsk_anchor_alarm.png" width=300px>
-
-
-
-
-
-
-

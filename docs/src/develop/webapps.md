@@ -1,3 +1,7 @@
+---
+title: WebApps
+---
+
 # WebApps and Components
 
 ## Introduction
@@ -9,7 +13,7 @@ Signal K Server provides the following ways to add web-based user interfaces to 
 1. **Embedded WebApps**  are web applications that when launched, are **embedded in the server Admin UI**, leaving the toolbar and menu available to the user.
 ![vesselpositions](../img/vesselpositions.png "Vesselpositions Embedded Webapp")
 
-1. **Embedded Plugin Configuration Forms** are forms provided by a plugin that the server embeds within the _Plugin Config_ screen to replace the generic form rendered using the plugin _configuration schema_. This allows a richer set of controls to be provided for the user to configure the plugin compared to the more generice server generated form provides. 
+1. **Embedded Plugin Configuration Forms** are forms provided by a plugin that the server embeds within the _Plugin Config_ screen to replace the generic form rendered using the plugin _configuration schema_. This allows a richer set of controls to be provided for the user to configure the plugin compared to the more generice server generated form provides.
 ![calibration](../img/calibration.png "Calibration plugin configuration form")
 
 1. **Embedded Components** are individual UI components provided by a plugin or a webapp. They are listed in the _Addons_ section at the bottom of the _Webapps_ page of the Admin UI. More a concept than a fully implemented feature at this stage, the idea is to allow a plugin to add individual components to different parts of the server UI.
@@ -20,10 +24,10 @@ All Plugins, WebApps and Components can be installed via the _Appstore_.
 
 All WebApps (like plugins) are installed with `npm`, either from the npm registry or from your own Github repository. Only WebApps that are relevant for all users should be published to `npm` to be made available in the _Appstore_ of all Signal K Servers.
 
-_Note: Private plugins need not be published to `npm` - see the documentation for [npm install](https://docs.npmjs.com/cli/v6/commands/npm-install) for details._ 
+_Note: Private plugins need not be published to `npm` - see the documentation for [npm install](https://docs.npmjs.com/cli/v6/commands/npm-install) for details._
 
 
-The basic structure of a webapp is: 
+The basic structure of a webapp is:
 - A folder named `public` that contains the html, JavaScript and resource files such as images, fonts and style sheets. This folder is automatically mounted by the server so that the webapp is available after installation and the server restarted.
 - `package.json` containing special keywords that classifies the webapp:
   - `signalk-webapp` - standalone webapp

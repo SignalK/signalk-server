@@ -1,9 +1,11 @@
-<img src="./img/logo.png" width="75" > 
+---
+title: Introduction
+---
 
 ## Introduction
 
 Signal K Server is software designed to be deployed on a vessel to act as a central hub which:
-1. Collects data from devices and sensors on board 
+1. Collects data from devices and sensors on board
 1. Aggregates and exposes it using the _[Signal K Data Standard](https://signalk.org/specification/latest/)_
 1. Exposes the collected data via REST APIs and websocket protocols over a standard WiFi, LAN or Internet connection.
 
@@ -15,6 +17,3 @@ Data is made available to client applications / connections in JSON format makin
 Signal K Server is also extensible, providing a plugin framework which allows developers to create solutions that integrate and extend its capabilities. These solutions can be published to **npmjs** and installed via the **App Store** in the server's web-based user interface.
 
 ![Server only setup](img/server_only.svg)
-
-
-

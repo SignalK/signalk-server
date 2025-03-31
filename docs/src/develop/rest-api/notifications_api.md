@@ -1,3 +1,7 @@
+---
+title: Notifications API
+---
+
 # Notifications API
 
 #### (Under Development)
@@ -15,4 +19,3 @@ It will implement:
 - A unique `id` for each notification which can then be used to action it, regardless of the notification source.
 
 [View the PR](https://github.com/SignalK/signalk-server/pull/1560) for more details.
-

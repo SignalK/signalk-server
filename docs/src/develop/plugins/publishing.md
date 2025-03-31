@@ -1,3 +1,7 @@
+---
+title: Publishing to The AppStore
+---
+
 # Publishing to The AppStore
 
 

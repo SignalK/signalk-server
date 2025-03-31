@@ -1,5 +1,8 @@
-# Installation on Raspberry Pi
+---
+title: Raspberry Pi
+---
 
+# Installation on Raspberry Pi
 
 Installation of Signal K server can consists of the following steps:
 
@@ -11,7 +14,7 @@ _**Important:** If you are updating a Signal K server installation, especially i
 
 ### Prerequisites:
 
-Raspberry Pi OS is installed on the device. 
+Raspberry Pi OS is installed on the device.
 
 For instructions on how to install the operating system [can be found here.](https://www.raspberrypi.org/documentation/computers/getting-started.html#setting-up-your-raspberry-pi).
 
@@ -39,7 +42,7 @@ Once the OS installation has been completed, you are ready to commence.
     ```
     sudo npm install -g npm@latest
     ```
-    
+
     Use the following command to check the versions of NodeJS and npm installed.
 
     ```
@@ -51,14 +54,14 @@ Once the OS installation has been completed, you are ready to commence.
     ```
     sudo apt install libnss-mdns avahi-utils libavahi-compat-libdnssd-dev
     ```
-    
+
 ## Install Signal K Server
 
 ```
 sudo npm install -g signalk-server
 ```
-    
-You can test that installation was successful by starting the server using some 
+
+You can test that installation was successful by starting the server using some
 sample data.
 
 ```
@@ -66,7 +69,7 @@ signalk-server --sample-nmea0183-data
 ```
 
 You should see the terminal output "signalk-server running at 0.0.0.0:3000" as shown below...
-``` 
+```
 signalk-server --sample-nmea0183-data
 Using sample data from /usr/lib/node_modules/signalk-server/samples/plaka.log
 signalk-server running at 0.0.0.0:3000
@@ -107,7 +110,7 @@ You can re-run this command at any time in the future to change the settings.
 _Note: The setup script will enable security which will require you to `Login`` from the Admin UI.
 Clicking `Login` for the first time will prompt you to create a user and password._
 
-Signal K server will now be started automatically when your RPi boots up. 
+Signal K server will now be started automatically when your RPi boots up.
 
 
 If you want to temporarily stop the Signal K server, you can do so by entering the following commands:
@@ -130,6 +133,3 @@ sudo systemctl disable signalk.socket
 
 
 You are ready to now **[configure](../setup/configuration.md)** your installation and connect data from devices on your boat.
-
-
-

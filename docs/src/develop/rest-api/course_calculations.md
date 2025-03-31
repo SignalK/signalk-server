@@ -1,3 +1,7 @@
+---
+title: Course Providers
+---
+
 # Course Calculations and Providers
 
 The _Course API_ defines the path `/vessels/self/navigation/course/calcValues` to accommodate the calculated values related to course navigation.
@@ -66,5 +70,3 @@ If you are looking to develop a course provider plugin, following are the recomm
 1. Perform the calculations using a "worker thread" to minimise impact on the server "main thread"
 1. Ensure the worker is set up and shut down as part of plugin "start" and "stop" functions
 1. Raise the notifications outlined above.
-
-

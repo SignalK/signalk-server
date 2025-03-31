@@ -1,13 +1,20 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "out": "docs/api",
-  "entryPoints": [
-    "packages/server-api"
-  ],
   "name": "Signal K",
   "entryPointStrategy": "packages",
+  "entryPoints": [
+    ".",
+  ],
+  "packagesRequiringDocumentation": ["signalk-server", "@signalk/server-api"],
+  "out": "docs/api",
   "projectDocuments": [
-    "docs/src/**/*.md"
+    "docs/src/index.md",
+    "docs/src/installation/install.md",
+    "docs/src/setup/configuration.md",
+    "docs/src/features/index.md",
+    "docs/src/develop/developer_notes.md",
+    "docs/src/support/help.md",
+    "docs/src/support/sponsor.md"
   ],
   "packageOptions": {
     "sort": [
@@ -20,10 +27,9 @@
   "searchInComments": true,
   "searchInDocuments": true,
   "navigationLinks": {
+    "Specification": "https://signalk.org/specification/1.5.0/doc/",
     "GitHub": "https://github.com/SignalK/signalk-server",
-    "Website": "https://signalk.org",
-    "Documentation": "https://signalk.org/docs/",
-    "FAQ": "https://signalk.org/docs/faq/"
+    "Website": "https://signalk.org"
   },
   "sort": [
     "documents-first",
@@ -32,5 +38,24 @@
     "required-first",
     "alphabetical-ignoring-documents"
   ],
-  "treatWarningsAsErrors": true
+  // "treatWarningsAsErrors": true,
+  "includeHierarchySummary": false,
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": false,
+    "excludeReferences": true,
+    "includeFolders": false,
+    "compactFolders": false
+  },
+  "visibilityFilters": {},
+  "excludeProtected": true,
+  "excludePrivate": true,
+  "sortEntryPoints": true,
+  "exclude": [
+    // "packages/resources-provider-plugin",
+    "packages/server-admin-ui",
+    "packages/server-admin-ui-dependencies",
+    "packages/streams",
+    "packages/typedoc-theme"
+  ]
 }

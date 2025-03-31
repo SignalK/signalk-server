@@ -1,3 +1,7 @@
+---
+title: Processing Data
+---
+
 # Processing data from the server
 
 A plugin will generally want to:
@@ -9,8 +13,8 @@ In both cases the plugin will use *deltas* which the server uses to signal chang
 _See the [Signal K Delta Specification](http://signalk.org/specification/1.7.0/doc/data_model.html#delta-format) for details._
 
 Using the server API, plugins can either:
-1. Get the current value of a path in the full model or 
-1. Subscribe to a path and access a stream of _deltas_ that updates every time the value is updated. 
+1. Get the current value of a path in the full model or
+1. Subscribe to a path and access a stream of _deltas_ that updates every time the value is updated.
 
 By specifying a context _e.g. 'vessels.self'_ you can limit the number of delta messages received to those of host vesseel.
 To receive all deltas you can specify `*` as the context.
@@ -24,7 +28,7 @@ The data received is formatted as per the following example:
   {
     path: 'navigation.position',
     value: { longitude: 24.7366117, latitude: 59.72493 },
-    context: 'vessel.self',  
+    context: 'vessel.self',
     source: {
         label: 'n2k-sample-data',
         type: 'NMEA2000',
@@ -113,11 +117,11 @@ _Example:_
 app.handleMessage(
     plugin.id,
     {
-        updates: [{ 
+        updates: [{
             values: [{
                 path: 'environment.outside.temperature',
                 value: -253
-            }] 
+            }]
         }]
     },
     'v1'
@@ -160,5 +164,3 @@ _Example: Send NMEA after the provider is ready:_
        '2017-04-15T14:57:58.468Z,2,6,126720,%s,%s,4,a3,99,01,00');
   });
 ```
-
-

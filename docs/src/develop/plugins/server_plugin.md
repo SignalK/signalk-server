@@ -1,7 +1,16 @@
+---
+title: Plugins
+children:
+  - ../webapps.md
+  - server_plugin_api.md
+  - deltas.md
+  - resource_provider_plugins.md
+  - ../rest-api/course_calculations.md
+  - autopilot_provider_plugins.md
+  - publishing.md
+---
+
 # Server plugins
-
-
-## Overview
 
 Signal K Node server plugins are components that extend functionality of the server.
 They are installed via the AppStore and configured via the Admin UI.
@@ -144,7 +153,7 @@ $ DEBUG=my-signalk-plugin signalk-server --sample-n2k-data
 
 ## Start Coding
 
-Signal K server plugins are NodeJs `javascript` or `typescript` projects that return an object that implements the `Plugin` interface.
+Signal K server plugins are NodeJs `javascript` or `typescript` projects that return an object that implements the {@link @signalk/server-api!Plugin | Plugin} interface.
 
 They are installed into the `node_modules` folder that resides inside the SignalK server's configuration directory _(`$HOME/.signalk` by default)_.
 

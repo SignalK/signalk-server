@@ -1,3 +1,8 @@
+---
+title: "NMEA0183 Data Server"
+category: "Guides"
+---
+
 # Signal K Server as a NMEA0183 Data Server
 
 ## Introduction
@@ -47,7 +52,7 @@ _Note: Starting with Signal K Server version 2.2.0 these plugins are pre-install
 - In the Admin UI, select _Appstore -> Available-> All_ from the menu
 - Locate the `signalk-to-nmea0183`plugin and click the install icon
 - Locate the `signalk-n2kais-to-nmea0183` plugin and click the install icon
-- Restart the Signal K Server. 
+- Restart the Signal K Server.
 
 _Note: If the **Restart** button is not displayed in the upper right of screen, refer to [Enabling Security](../../security.md#enabling-security) for details._
 
@@ -87,7 +92,7 @@ _Note: It is recommended that **Signal K over TCP (8375)** is set to **On** if y
 
 ## Configuring Apps
 
-Device apps can now be configured to connect to the NMEA0183 data stream from the Signal K Server. 
+Device apps can now be configured to connect to the NMEA0183 data stream from the Signal K Server.
 
 Following is an example of how to connect the Navionics boating app.
 
@@ -100,4 +105,3 @@ Following is an example of how to connect the Navionics boating app.
 - Click **Save**
 
     <img src="./navionics.png" width="450px" />
-

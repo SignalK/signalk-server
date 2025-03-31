@@ -1,18 +1,25 @@
+---
+title: Installation
+children:
+  - raspberry_pi_installation.md
+  - updating.md
+  - command_line.md
+---
 # Getting Started
 
 Signal K Server is a NodeJS application which can be installed on a variety of devices and operating systems.
 
 It is available for installation via:
 1. NPM package
-1. Docker image 
+1. Docker image
 1. GitHub repository
 
 See the relevant section below for instructions based on your target system.
 
+## Prerequisites
 
-### Prerequisites:
-
-_Signal K server requires NodeJs version >= 18 be installed on the target system prior to commencing installation._
+> [!NOTE]
+> Signal K server requires [NodeJS](https://nodejs.org) version >= 18 be installed on the target system prior to commencing installation.
 
 ---
 
@@ -48,7 +55,7 @@ You are ready to now **[configure](../setup/configuration.md)** your installatio
 ---
 
 
-## Installation via NPM   
+## Installation via NPM
 
 Signal K Server can be installed directly using NPM.
 
@@ -68,7 +75,7 @@ sudo signalk-server-setup
 
 If you choose not to use `signalk-server-setup` you can start the server by entering the following in a terminal window:
 ```shell
-signalk-server 
+signalk-server
 ```
 
 ---
@@ -102,7 +109,7 @@ npm run build:all
 To start Signal K Server with a sample configuration file and some sample data, enter the following into a terminal:
 _To use NMEA0183 sample data:_
 ``` shell
-bin/nmea-from-file 
+bin/nmea-from-file
 ```
 
 _To use NMEA2000 sample data:_
