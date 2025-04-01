@@ -37,11 +37,11 @@ jobs:
       - run: npm install
       - run: npm run build:workspaces
       - name: Build
-        run: npm run typedoc
+        run: npm run build:docs
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'docs/api'
+          path: 'docs/dist'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

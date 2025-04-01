@@ -6,7 +6,7 @@
     ".",
   ],
   "packagesRequiringDocumentation": ["signalk-server", "@signalk/server-api"],
-  "out": "docs/api",
+  "out": "docs/dist",
   "projectDocuments": [
     "docs/src/index.md",
     "docs/src/installation/install.md",
