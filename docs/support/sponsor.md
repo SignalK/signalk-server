@@ -1,5 +1,5 @@
 ---
-title: Sponsor Signal K
+title: Sponsor
 ---
 
 # Sponsor Signal K

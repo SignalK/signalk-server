@@ -2,13 +2,13 @@
 title: Developing
 children:
   - plugins/server_plugin.md
-  - rest-api/open_api.md
+  - rest-api/README.md
   - ../whats_new.md
   - ../breaking_changes.md
   - contributing.md
 ---
 
-# Notes for Developers
+# Developing with Signal K
 
 Signal K Server has an extensible architecture that enables developers to add functionality to support new protocols, devices, information sources, etc.
 

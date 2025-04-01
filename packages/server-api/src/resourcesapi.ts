@@ -385,7 +385,7 @@ export interface ResourceProviderMethods {
 export interface ResourceProviderRegistry {
   /**
    * Used by _Resource Provider plugins_ to register each resource type it handles.
-   * See [`Resource Provider Plugins`](../../../docs/src/develop/plugins/resource_provider_plugins.md#registering-as-a-resource-provider) for details.
+   * See [`Resource Provider Plugins`](../../../docs/develop/plugins/resource_provider_plugins.md#registering-as-a-resource-provider) for details.
    *
    * @category Resources API
    */

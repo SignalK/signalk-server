@@ -31,7 +31,7 @@ _Image: WilhelmSK App on iPad._
 
 ## Prerequisites
 
-- SignalK server installed, for example on a Victron GX device or RaspberryPi. See [Installation](../../installation/install.md) for details.
+- SignalK server installed, for example on a Victron GX device or RaspberryPi. See [Installation](../../installation/README.md) for details.
 - [WilhelmSK iOS App](https://itunes.apple.com/us/app/wilhelmsk/id1150499484?mt=8)
 
 For use with other Apps (Android, web apps, etc) see [Alternatives to WilhelmSK](#alternatives-to-wilhelmsk).

@@ -17,9 +17,9 @@ export type PluginConstructor = (app: ServerAPI) => Plugin
  * - provide a webapp interface by placing the relavent files in a folder named `/public/` which the server will mount under `http://{skserver}:3000/{pluginId}`.
  * - Provide resources via the {@link ResourcesApi}
  *
- * For example, if the plugin you are looking to develop is providing access to information such as `route,` `waypoint`,`POI`, or `charts` you should be creating a _[Resources Provider Plugin](../../../docs/src/develop/plugins/resource_provider_plugins.md)_ for the _[Resources API](../../../docs/src/develop/rest-api/resources_api.md)_.
+ * For example, if the plugin you are looking to develop is providing access to information such as `route,` `waypoint`,`POI`, or `charts` you should be creating a _[Resources Provider Plugin](../../../docs/develop/plugins/resource_provider_plugins.md)_ for the _[Resources API](../../../docs/develop/rest-api/resources_api.md)_.
  *
- * Or if you are looking to perform course calculations or integrate with an auotpilot, you will want to review the _[Course API](../../../docs/src/develop/rest-api/course_api.md)_ documentation prior to commencing your project.
+ * Or if you are looking to perform course calculations or integrate with an auotpilot, you will want to review the _[Course API](../../../docs/develop/rest-api/course_api.md)_ documentation prior to commencing your project.
  *
  * ### OpenApi description for your plugin's API
  *

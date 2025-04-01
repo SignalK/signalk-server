@@ -7,14 +7,15 @@
   ],
   "packagesRequiringDocumentation": ["signalk-server", "@signalk/server-api"],
   "out": "docs/dist",
+  "readme": "docs/README.md",
   "projectDocuments": [
-    "docs/src/index.md",
-    "docs/src/installation/install.md",
-    "docs/src/setup/configuration.md",
-    "docs/src/features/index.md",
-    "docs/src/develop/developer_notes.md",
-    "docs/src/support/help.md",
-    "docs/src/support/sponsor.md"
+    "docs/installation/README.md",
+    "docs/setup/configuration.md",
+    "docs/security.md",
+    "docs/guides/README.md",
+    "docs/develop/README.md",
+    "docs/support/help.md",
+    "docs/support/sponsor.md"
   ],
   "packageOptions": {
     "sort": [

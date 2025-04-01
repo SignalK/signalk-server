@@ -1,8 +1,7 @@
 ---
 title: Configuration
 children:
-- ../security.md
-- seatalk/seatalk.md
+- seatalk/README.md
 ---
 
 # Configuring Signal K Server

@@ -39,7 +39,7 @@ After the process has completed `restart` your device.
 
 ## Update NodeJS and NPM
 
-To ensure the version of NodeJS on your device is supported by Signal K Server _[(see prerequisites)](install.md#prerequisites)_, check the installed version by
+To ensure the version of NodeJS on your device is supported by Signal K Server _[(see prerequisites)](README.md#prerequisites)_, check the installed version by
 entering the following in a terminal window:
 ```bash
 node -v
@@ -64,7 +64,7 @@ sudo npm install -g npm@latest
 When an update is available for Signal K Server a visual indication is displayed in the Admin UI.
 
 **Important!**
-Before updating please ensure the version of NodeJS on your device is [supported by Signal K Server](install.md#prerequisites).
+Before updating please ensure the version of NodeJS on your device is [supported by Signal K Server](README.md#prerequisites).
 
 _**If you are updating from Signal K Server version v1.40.0 or earlier please [read this first](https://github.com/SignalK/signalk-server/wiki/Updating-to-Node.js-18) before proceeding.**_
 

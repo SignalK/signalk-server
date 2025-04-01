@@ -110,7 +110,7 @@ A SignalK plugin can not only read deltas, but can also send them. This is done 
 
 1. The plugin id
 2. A formatted delta update message
-3. The Signal K version ['v1' or 'v2'] _(if omitted the default is 'v1')_. See [REST APIs](../rest-api/open_api.md) for details.
+3. The Signal K version ['v1' or 'v2'] _(if omitted the default is 'v1')_. See [REST APIs](../rest-api/README.md) for details.
 
 _Example:_
 ```javascript

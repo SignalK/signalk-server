@@ -19,7 +19,7 @@ The Signal K Server does this by passing the data received from the configured D
 ## Prerequisites
 
 A Signal K Server:
-- Installed on a suitable device (e.g. Victron GX, RaspberryPi, etc). _See [Installation](../../installation/install.md) for details._
+- Installed on a suitable device (e.g. Victron GX, RaspberryPi, etc). _See [Installation](../../installation/README.md) for details._
 - Connected to a NMEA2000, etc network and Data Connections configured.
 - Connected to a WiFi network. _(Beyond the scope of this document.)_
 

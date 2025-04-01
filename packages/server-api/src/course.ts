@@ -1,7 +1,7 @@
 import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
 
 /**
- * @see [Course REST API](../../../docs/src/develop/rest-api/course_api.md) provides the following functions for use by plugins.
+ * @see [Course REST API](../../../docs/develop/rest-api/course_api.md) provides the following functions for use by plugins.
  */
 export interface CourseApi {
   /**
