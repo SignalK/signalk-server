@@ -2,9 +2,9 @@
 title: Developing
 children:
   - plugins/server_plugin.md
+  - rest-api/open_api.md
   - ../whats_new.md
   - ../breaking_changes.md
-  - rest-api/open_api.md
   - contributing.md
 ---
 
