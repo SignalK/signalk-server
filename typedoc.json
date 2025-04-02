@@ -63,7 +63,8 @@
   "alwaysCreateEntryPointModule": true,
   "theme": "signalk",
   "plugin": [
-    "typedoc-signalk-theme"
+    "typedoc-signalk-theme",
+    "typedoc-plugin-mdn-links"
   ],
   "lightHighlightTheme": "github-light-default",
   "darkHighlightTheme": "github-dark-dimmed",
