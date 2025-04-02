@@ -4,7 +4,7 @@
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
-    "build": "tsc --build && npm run build:docs",
+    "build": "tsc --build",
     "build:all": "npm run build:workspaces && npm run build && npm run build-declaration && npm run build:docs",
     "build:docs": "typedoc",
     "build:workspaces": "npm run build --workspaces --if-present",
