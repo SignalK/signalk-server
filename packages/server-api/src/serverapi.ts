@@ -205,6 +205,7 @@ export interface ServerAPI
    * Omitting the `skVersion` parameter will cause the delta to be sent as `v1`.
    *
    * @param skVersion Optional parameter to specify the Signal K version of the delta.
+   * @category Data Model
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handleMessage(id: string, msg: any, skVersion?: SKVersion): void
@@ -247,6 +248,7 @@ export interface ServerAPI
    * ```javascript
    * let myDataFile = require('path').join( app.getDataDirPath(), 'somedatafile.ext')
    * ```
+   * @category Configuration
    */
   getDataDirPath(): string
 

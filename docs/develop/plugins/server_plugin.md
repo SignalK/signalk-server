@@ -46,14 +46,14 @@ To get started developing your plugin you will need the following:
 ### Setting up your project
 
 1. Create a folder for your plugin code and create the necessary file structure:
-```bash
+```shell
 mkdir my-pluin
 cd my-plugin
 npm init      # create package.json file
 ```
 
 2. Create the folders to hold your plugin code and webapp UI.
-```bash
+```shell
 /my-plugin
   /plugin     # plugin (javascript code / built typesrcipt code)
     index.js
@@ -89,7 +89,7 @@ npm init      # create package.json file
 ```
 
 4. _Optional:_ Install any dependencies or third party packages.
-```bash
+```shell
 npm i
 ```
 
@@ -99,7 +99,7 @@ npm i
 Once you have developed your plugin code and are ready to debug, the most convenient way is to use `npm link` to link your plugin code to your instance of Signal K server.
 
 To do this, from within a terminal window:
-```bash
+```shell
 # Ensure you are in the folder containing your built plugin code
 cd my_plugin_src
 
@@ -124,7 +124,7 @@ Updating and/or installing new plugins will remove the link and you need to re-l
 The simplest way to debug your plugin is to turn on **Enable Debug log** for your plugin in the **Plugin Config** screen.
 
 Alternatively, you can debug your plugin by starting the Signal K server with the `DEBUG` environment variable:
-```bash
+```shell
 $ DEBUG=my-signalk-plugin signalk-server
 
 # sample output
@@ -133,7 +133,7 @@ my-signalk-plugin Plugin started +2ms
 ```
 
 You can also view debug information about the plugin loading process:
-```bash
+```shell
 $ DEBUG=signalk:interfaces:plugins signalk-server
 
 # sample output
@@ -146,7 +146,7 @@ signalk:interfaces:plugins Could not find options for plugin my-signalk-plugin, 
 For development purposes, it's often nice to have some mocked data. SignalK comes with a synthesized NMEA2000 data set that can be used as sample data.
 
 You can enable this by adding `--sample-n2k-data` to the command line:
-```bash
+```shell
 $ DEBUG=my-signalk-plugin signalk-server --sample-n2k-data
 ```
 ---

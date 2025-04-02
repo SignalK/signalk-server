@@ -27,7 +27,7 @@ The `signalk-generate-token` utility is run from a terminal session on the Signa
 - `-s <path to security.json>`: The path to the Siganl K Server's security.json file _(e.g. ~/.signalk/security.json)_
 
 _Example: Generate a token against the user "TempSensorDevice" that is valid for 1 year._
-```sh
+```shell
 signalk-generate-token -u TempSensorDevice -e 1y -s ~/.signalk/security.json
 
 ```

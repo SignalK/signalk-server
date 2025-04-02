@@ -171,6 +171,7 @@
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.1",
     "typedoc": "^0.28.1",
+    "typedoc-signalk-theme": "^0.3.0",
     "typescript": "^5.8.2"
   },
   "funding": "https://opencollective.com/signalk"

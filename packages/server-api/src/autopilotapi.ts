@@ -330,12 +330,16 @@ export interface AutopilotInfo {
  * @hidden visible through ServerAPI
  */
 export interface AutopilotProviderRegistry {
+  /**
+   * @category Autopilot API
+   */
   registerAutopilotProvider(
     provider: AutopilotProvider,
     devices: string[]
   ): void
 
   /**
+   * @category Autopilot API
    * @param deviceId - the autopilot device identifier
    * @param apInfo - object containing values keyed by {@link AutopilotInfo}
    */

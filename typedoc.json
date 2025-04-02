@@ -27,19 +27,20 @@
   },
   "searchInComments": true,
   "searchInDocuments": true,
+  "router": "structure-dir",
   "navigationLinks": {
-    "Specification": "https://signalk.org/specification/1.5.0/doc/",
+    "Specification": "https://signalk.org/specification/1.7.0/doc/",
     "GitHub": "https://github.com/SignalK/signalk-server",
     "Website": "https://signalk.org"
   },
   "sort": [
     "documents-first",
-    "kind",
     "instance-first",
     "required-first",
+    "kind",
     "alphabetical-ignoring-documents"
   ],
-  // "treatWarningsAsErrors": true,
+  "treatWarningsAsErrors": true,
   "includeHierarchySummary": false,
   "navigation": {
     "includeCategories": true,
@@ -58,5 +59,19 @@
     "packages/server-admin-ui-dependencies",
     "packages/streams",
     "packages/typedoc-theme"
-  ]
+  ],
+  "theme": "signalk",
+  "plugin": [
+    "typedoc-signalk-theme"
+  ],
+  "lightHighlightTheme": "github-light-default",
+  "darkHighlightTheme": "github-dark-dimmed",
+  "highlightLanguages": [
+    "bash",
+    "shell",
+    "sh",
+    "json",
+    "javascript",
+    "typescript"
+  ],
 }

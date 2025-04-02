@@ -68,6 +68,6 @@ _Example: package.json_
 
 Once you have developed and tested your Plugin / WebApp you can publish it to make it visible in the AppStore.
 To do this, in a terminal session from within the folder containing `package.json`:
-```bash
+```shell
 npm publish
 ```

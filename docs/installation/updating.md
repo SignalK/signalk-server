@@ -41,7 +41,7 @@ After the process has completed `restart` your device.
 
 To ensure the version of NodeJS on your device is supported by Signal K Server _[(see prerequisites)](README.md#prerequisites)_, check the installed version by
 entering the following in a terminal window:
-```bash
+```shell
 node -v
 
 # example response
