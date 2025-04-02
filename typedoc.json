@@ -54,12 +54,13 @@
   "excludePrivate": true,
   "sortEntryPoints": true,
   "exclude": [
-    // "packages/resources-provider-plugin",
+    "packages/resources-provider-plugin",
     "packages/server-admin-ui",
     "packages/server-admin-ui-dependencies",
     "packages/streams",
     "packages/typedoc-theme"
   ],
+  "alwaysCreateEntryPointModule": true,
   "theme": "signalk",
   "plugin": [
     "typedoc-signalk-theme"
