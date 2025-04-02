@@ -2,7 +2,7 @@
 title: Introduction
 ---
 
-## Introduction
+# Introduction
 
 Signal K Server is software designed to be deployed on a vessel to act as a central hub which:
 1. Collects data from devices and sensors on board

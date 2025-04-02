@@ -39,10 +39,12 @@ export interface Delta {
 
 /**
  * @deprecated earlier mistake assumed ValuesDelta and MetaDelta were separate
+ * @hidden
  */
 export type ValuesDelta = Delta
 /**
  * @deprecated earlier mistake assumed ValuesDelta and MetaDelta were separate
+ * @hidden
  */
 export type MetaDelta = Delta
 

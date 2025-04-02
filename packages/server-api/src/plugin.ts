@@ -11,27 +11,44 @@ export type PluginConstructor = (app: ServerAPI) => Plugin
  * Plugins are components that extend functionality of the server and can be installed via the Signal K AppStore.
  *
  * A plugin can:
- * - Interact with the {@link ServerAPI}, including the full data model, {@link ResourcesApi}, and more.
- * - emit delta messages
+ * - Interact with the {@link ServerAPI}, including the full data model.
+ * - Provide a [webapp interface](../../../docs/develop/webapps.md).
+ * - Provide access to resources such as `route,` `waypoint`,`POI`, or `charts` via the _[Resources API](../../../docs/develop/rest-api/resources_api.md)_ by operating as a _[Resources Provider Plugin](../../../docs/develop/plugins/resource_provider_plugins.md)_.
+ * - Perform common autopilot operations by acting as an [Autopilot Provider Plugin](../../../docs/develop/plugins/autopilot_provider_plugins.md)
+ * - Perform course calculations by integrating with the [Course API](../../../docs/develop/rest-api/course_api.md).
  * - process requests
- * - provide a webapp interface by placing the relavent files in a folder named `/public/` which the server will mount under `http://{skserver}:3000/{pluginId}`.
- * - Provide resources via the {@link ResourcesApi}
  *
- * For example, if the plugin you are looking to develop is providing access to information such as `route,` `waypoint`,`POI`, or `charts` you should be creating a _[Resources Provider Plugin](../../../docs/develop/plugins/resource_provider_plugins.md)_ for the _[Resources API](../../../docs/develop/rest-api/resources_api.md)_.
+ * > [!WARNING]
+ * > Typing is incomplete. If you find a missing or inaccurate type, please [report it](https://github.com/SignalK/signalk-server/issues/1917).
  *
- * Or if you are looking to perform course calculations or integrate with an auotpilot, you will want to review the _[Course API](../../../docs/develop/rest-api/course_api.md)_ documentation prior to commencing your project.
+ * @example
  *
- * ### OpenApi description for your plugin's API
+ * Signal K server plugins are NodeJs `javascript` or `typescript` projects that return an object that implements this interface.
  *
- * If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification. _See [Add OpenAPI definition](#add-an-openapi-definition)_ below.
+ * ```typescript
+ * import { Plugin, ServerAPI } from '@signalk/server-api';
  *
+ * module.exports = (app: ServerAPI): Plugin => {
+ *   const plugin: Plugin = {
+ *     id: 'my-signalk-plugin',
+ *     name: 'My Great Plugin',
+ *     start: (settings, restartPlugin) => {
+ *       // start up code goes here.
+ *     },
+ *     stop: () => {
+ *       // shutdown code goes here.
+ *     },
+ *     schema: () => {
+ *       properties: {
+ *         // plugin configuration goes here
+ *       }
+ *     }
+ *   };
  *
- * This is the API that a [server plugin](https://github.com/SignalK/signalk-server/blob/master/SERVERPLUGINS.md) must implement.
-
- *
- *
- *
- * Typing is INCOMPLETE.
+ *   return plugin;
+ * }
+ * ```
+ * @see [Developing Server Plugins](../../../docs/develop/plugins/README.md)
  */
 export interface Plugin {
   /**
@@ -111,11 +128,11 @@ export interface Plugin {
    * @param router
    * @returns
    */
-  registerWithRouter?: (router: IRouter) => void
+  registerWithRouter?(router: IRouter): void
 
   getOpenApi?: () => object
 
   statusMessage?: () => string | void
 
-  signalKApiRoutes?: (router: IRouter) => IRouter
+  signalKApiRoutes?(router: IRouter): IRouter
 }

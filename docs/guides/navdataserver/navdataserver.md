@@ -5,8 +5,6 @@ category: "Guides"
 
 # Signal K Server as a NMEA0183 Data Server
 
-## Introduction
-
 This document details how to setup Signal K Server to read AIS and navigation data from a NMEA2000 (or any other) network and make it available on a WiFi network for use with popular phone / tablet apps like:
 - Navionics
 - iSailor

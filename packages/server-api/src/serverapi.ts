@@ -8,7 +8,7 @@ import {
 import { CourseApi } from './course'
 
 /**
- * SignalK server provides an interface to allow plugins to:
+ * SignalK server provides an interface to allow {@link Plugin | Plugins } to:
  *
  * - Discover Features.
  * - Access / update the full data model
@@ -17,8 +17,10 @@ import { CourseApi } from './course'
  * - Expose HTTP endpoints
  *
  * These functions are available via the app object passed to the plugin when it is invoked.
+ *
+ * > [!WARNING]
+ * > Typing is incomplete. If you find a missing or inaccurate type, please [report it](https://github.com/SignalK/signalk-server/issues/1917).
  */
-
 export interface ServerAPI
   extends PropertyValuesEmitter,
     ResourceProviderRegistry,

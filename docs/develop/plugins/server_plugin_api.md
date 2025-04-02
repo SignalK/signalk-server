@@ -161,7 +161,7 @@ app.streambundle.getAvailablePaths();
 
 ### Exposing custom HTTP paths & OpenApi
 
-See [Server Plugins](server_plugin.md#add-an-openapi-definition) for details.
+See [Server Plugins](README.md#add-an-openapi-definition) for details.
 
 ---
 

@@ -4,13 +4,11 @@ title: WebApps
 
 # WebApps and Components
 
-## Introduction
-
 Signal K Server provides the following ways to add web-based user interfaces to enhance functionality and usability:
 
 1. **Standalone WebApps** are web applications that when launched, the server Admin UI disappears and the webapp controls the whole page (browser window / tab).
 
-1. **Embedded WebApps**  are web applications that when launched, are **embedded in the server Admin UI**, leaving the toolbar and menu available to the user.
+2. **Embedded WebApps**  are web applications that when launched, are **embedded in the server Admin UI**, leaving the toolbar and menu available to the user.
 ![vesselpositions](../img/vesselpositions.png "Vesselpositions Embedded Webapp")
 
 1. **Embedded Plugin Configuration Forms** are forms provided by a plugin that the server embeds within the _Plugin Config_ screen to replace the generic form rendered using the plugin _configuration schema_. This allows a richer set of controls to be provided for the user to configure the plugin compared to the more generice server generated form provides.

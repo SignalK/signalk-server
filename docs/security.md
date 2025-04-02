@@ -6,9 +6,6 @@ children:
 
 # Security
 
-## Introduction
-
-
 The umbrella term _Security_ in Signal K server refers to the difference between running a server, that any one connected to the network can access and alter at will **(unsecured)** , and one with restrictions in place **(secured)**.
 
 The available security options relate to:

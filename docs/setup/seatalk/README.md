@@ -2,15 +2,13 @@
 title: Seatalk Connections
 ---
 
-## Seatalk Connections
-
-### Introduction
+# Seatalk Connections
 
 The Signal K Server supports a variety of data connection types including _Seatalk (GPIO)_ which provides the ability to receive Raymarine Seatalk 1 (ST1) data, via simple DIY hardware connected to a Raspberry Pi GPIO, and convert it to Signal K deltas. This information can then be forwarded by the Signal K Server to a NMEA 0183 or NMEA 2000 network using appropriate hardware and plugins.
 
 A guide to SeaTalk can be found [here](http://boatprojects.blogspot.com/2012/12/beginners-guide-to-raymarines-seatalk.html).
 
-### Hardware
+## Hardware
 
 Using an optocoupler as the hardware interface is recommended as it creates electrical isolation from hazardous voltages and avoids ground loops.
 
@@ -30,11 +28,11 @@ If you do not want to build your own circuit, you can get a **MacArthur HAT** an
 
 ![MacArthur HAT](./seatalk-dcdc.png)
 
-### Software
+## Software
 
 Before setting up the data connection on Signal K Server, you may need to install some associated Python libraries on your system. Here you have two options: gpiod library (**Raspberry Pi 3, 4 and 5 models**) or pigpio library (**Raspberry Pi 3 and 4 models**).
 
-#### gpiod (recommended)
+### gpiod (recommended)
 
 Both versions of this library 1.x.x (Debian package) and 2.x.x (Pip package) are supported. It is possible that your system already has one of the two versions of this library installed and some program is already using it, so before installing it we will check if we already have one.
 
@@ -60,7 +58,7 @@ sudo pip3 install gpiod --break-system-packages
 
 Pip will complain that the package is being installed in a non-virtual environment, but you can ignore the warning because it has not been detected to break any system packages.
 
-#### pigpio
+### pigpio
 
 _Inspired by [Read SeaTalk1 from the Raspberry Pi GPIO using pigpio](https://github.com/Thomas-GeDaD/Seatalk1-Raspi-reader)._
 

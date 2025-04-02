@@ -1,7 +1,7 @@
 ---
 title: Developing
 children:
-  - plugins/server_plugin.md
+  - plugins/README.md
   - rest-api/README.md
   - ../whats_new.md
   - ../breaking_changes.md

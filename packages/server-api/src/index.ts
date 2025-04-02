@@ -18,6 +18,7 @@ export interface Position {
 
 /**
  * @deprecated TODO: this appears unused
+ * @hidden
  */
 export interface ActionResult {
   state: 'COMPLETED' | 'PENDING' | 'FAILED'
