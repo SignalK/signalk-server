@@ -9,12 +9,18 @@ export class SignalKTheme extends DefaultTheme {
 	constructor(renderer: Renderer) {
 		super(renderer);
 
+		const assets = [
+			{ from: "../src/assets/", to: "assets/" },
+			{ from: "../../../public/signal-k-logo-image-text.svg", to: "assets/logo.svg" }
+		]
+
 		// copy the complete assets
 		renderer.on(RendererEvent.END, () => {
-			const from = resolve(dirname(fileURLToPath(import.meta.url)), '../src/assets/');
-			const to = resolve(this.application.options.getValue('out'), 'assets/');
-
-			cpSync(from, to, { recursive: true });
+			assets.forEach(({ from, to }) => {
+				const src = resolve(dirname(fileURLToPath(import.meta.url)), from);
+				const dest = resolve(this.application.options.getValue('out'), to);
+				cpSync(src, dest, { recursive: true });
+			});
 		});
 
 		// Only show h2 and h3 in the page TOC
@@ -31,6 +37,7 @@ export class SignalKTheme extends DefaultTheme {
 		// link the css file
 		renderer.hooks.on('head.end', (event) => {
 			return <>
+				<script src={event.relativeURL('assets/themeToggle.js')}></script>
 				<link rel="stylesheet" href={event.relativeURL('assets/theme.css')} />
 			</>
 		}, -1);

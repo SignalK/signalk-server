@@ -28,11 +28,6 @@
   "searchInComments": true,
   "searchInDocuments": true,
   "router": "structure-dir",
-  "navigationLinks": {
-    "Specification": "https://signalk.org/specification/1.7.0/doc/",
-    "GitHub": "https://github.com/SignalK/signalk-server",
-    "Website": "https://signalk.org"
-  },
   "sort": [
     "documents-first",
     "instance-first",
