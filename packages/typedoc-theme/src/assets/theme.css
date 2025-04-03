@@ -146,7 +146,6 @@
   .tsd-accordion-details a,
   .tsd-accordion a,
   .tsd-page-toolbar a.title {
-    color: var(--color-text);
     text-decoration: none;
   }
 
@@ -154,7 +153,7 @@
   .tsd-page-toolbar a.title:hover,
   .tsd-accordion a:hover,
   .tsd-anchor-icon {
-    color: var(--color-text-aside);
+    text-decoration: underline;
   }
 
   .tsd-kind-class {
@@ -320,8 +319,8 @@
   .tsd-toolbar-contents {
     display: grid;
     align-items: center;
-    grid-template-columns: auto max-content max-content max-content;
-    grid-template-areas: 'brand search menu';
+    grid-template-columns: auto max-content max-content;
+    grid-template-areas: 'brand search links';
     gap: 1rem;
   }
 
@@ -336,7 +335,7 @@
     }
 
     .tsd-toolbar-contents {
-      grid-template-areas: 'brand search links menu';
+      grid-template-columns: minmax(150px, 25%) auto max-content;
     }
 
     #tsd-search-trigger {
@@ -359,11 +358,10 @@
   }
 
   @media (min-width: 1200px) {
-    .tsd-toolbar-contents {
-      grid-template-columns: minmax(0, 20%) minmax(0, 60%) auto max-content;
-    }
+    .tsd-toolbar-contents,
     .container-main {
       grid-template-columns: minmax(0, 20%) minmax(0, 60%) minmax(0, 20%);
+      gap: var(--dim-col-gap);
     }
   }
 
@@ -387,16 +385,11 @@
   }
 
   #tsd-toolbar-links {
+    display: flex; /* always show */
     grid-area: links;
     justify-content: end;
     gap: 1rem;
     margin-right: 0;
-  }
-
-  #tsd-toolbar-menu {
-    grid-area: menu;
-    display: flex;
-    gap: 1rem;
   }
 
   #tsd-search.has-focus {
