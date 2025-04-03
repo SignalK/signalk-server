@@ -121,7 +121,7 @@
 	.tsd-typography h4:not(:first-child),
 	.tsd-typography h5:not(:first-child),
 	.tsd-typography h6:not(:first-child) {
-		margin-top: 2rem;
+		margin-top: 1.25rem;
 	}
 
 	/*
@@ -283,13 +283,7 @@
 		border-radius: 6px;
 		margin: 1em 0;
 		background-color: var(--color-background-secondary) !important;
-		/* color: var(--color-text); */
 		font-family: var(--font-family-code);
-	}
-
-	code.tsd-tag {
-		/* background-color: var(--color-accent);
-		border: unset; */
 	}
 
 	/*
@@ -309,7 +303,6 @@
 
 	.tsd-page-toolbar {
 		background-color: var(--color-background-navbar);
-		/* border-bottom-color: var(--color-accent); */
 		box-shadow:
 			0px 1px 1px rgba(0, 0, 0, 0.1),
 			0px 2px 20px rgba(0, 0, 0, 0.075);
@@ -347,7 +340,7 @@
 		gap: 1rem;
 		align-items: center;
 		color: var(--color-text-aside);
-		stroke: currentColor;
+		background-color: var(--color-background-secondary);
 	}
 
 	#tsd-toolbar-links {
@@ -356,7 +349,7 @@
 	}
 
 	#tsd-search.has-focus {
-		background-color: var(--color-background-navbar);
+		background-color: var(--color-background-secondary);
 	}
 
 	#tsd-search .results,
@@ -432,11 +425,13 @@
 	* Type definition groups
 	*/
 
-	/* .tsd-panel > h1,
-	.tsd-panel > h2,
-	.tsd-panel > h3 {
-		margin-top: 0px;
-	} */
+	.tsd-panel-group {
+		margin: 1.25rem 0;
+	}
+
+	.tsd-panel {
+		margin-bottom: 0;
+	}
 
 	.tsd-panel-group.tsd-index-group details {
 		margin: 0px;
@@ -493,11 +488,9 @@
 	}
 
 	.col-content {
-		padding: 0;
-		padding-top: var(--dim-container-main-margin-y);
+		padding: var(--dim-container-main-margin-y) 0;
 	}
 
-	.tsd-index-summary .tsd-index-heading,
 	.tsd-parameters-title,
 	.tsd-returns-title,
 	.tsd-tag-example h4,
@@ -512,6 +505,7 @@
 		font-size: 1rem;
 	}
 
+	/* Make accordion headings consistent */
 	.tsd-index-section .tsd-index-heading,
 	.tsd-member-group .tsd-accordion-summary > * {
 		font-size: 1rem;
@@ -535,15 +529,11 @@
 	}
 
 	.col-content .tsd-accordion[open] .tsd-accordion-summary {
-		margin-bottom: 2rem;
+		margin-bottom: 1.25rem;
 	}
 
 	.tsd-description {
 		padding-left: 20px;
-	}
-
-	.tsd-member + .tsd-member {
-		/* border-top: 1px solid var(--color-accent); */
 	}
 
 	#tsd-search-results > li:nth-child(even) {
