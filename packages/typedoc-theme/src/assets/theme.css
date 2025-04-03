@@ -566,7 +566,7 @@
   }
 
   /* Reset return type signature */
-  .tsd-returns-title .tsd-signature-type {
+  .tsd-returns-title > * {
     text-transform: none;
     font-size: 1rem;
   }
