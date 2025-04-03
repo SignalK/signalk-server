@@ -146,17 +146,6 @@ app.streambundle.getAvailablePaths();
 ]
 ```
 
-
-### Resources API Interface
-
-
-
-
-#### `app.resourcesApi.listResources(resource_type, params, provider_id?)`
-
-
----
-
 ---
 
 ### Exposing custom HTTP paths & OpenApi

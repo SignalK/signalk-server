@@ -98,11 +98,56 @@ export interface Plugin {
   enabledByDefault?: boolean
 
   /**
+   * A [JSON Schema](http://json-schema.org/) object describing the structure of the configuration data.
+   *
+   * This is used by the server to render the plugin's configuration screen in the Admin UI.
+   * The configuration data is stored by the server in `$SIGNALK_NODE_CONFIG_DIR/plugin-config-data/<plugin-name>.json`. _(Default value of `SIGNALK_NODE_CONFIG_DIR` is `$HOME/.signalk`.)_
+   *
+   * @example
+   * ```javascript
+   *   plugin.schema = {
+   *     type: 'object',
+   *     required: ['some_string', 'some_other_number'],
+   *     properties: {
+   *       some_string: {
+   *         type: 'string',
+   *         title: 'Some string that the plugin needs'
+   *       },
+   *       some_number: {
+   *         type: 'number',
+   *         title: 'Some number that the plugin needs',
+   *         default: 60
+   *       },
+   *       some_other_number: {
+   *         type: 'number',
+   *         title: 'Some other number that the plugin needs',
+   *         default: 5
+   *       }
+   *     }
+   *   };
+   * ```
+   *
    * @category Configuration
    */
   schema: object | (() => object)
 
   /**
+   * A [uiSchema object](https://github.com/mozilla-services/react-jsonschema-form#the-uischema-object) which is used to control how the user interface is rendered in the Admin UI.
+   *
+   * For more information, see [react-jsonschema-form-extras](https://github.com/RxNT/react-jsonschema-form-extras#collapsible-fields-collapsible)
+   *
+   * @example
+   * Make all data in an object called 'myObject' collapsible:
+   * ```javascript
+   * uiSchema['myObject'] = {
+   *   'ui:field': 'collapsible',
+   *   collapse: {
+   *     field: 'ObjectField',
+   *     wrapClassName: 'panel-group'
+   *   }
+   * }
+   * ```
+   *
    * @category Configuration
    */
   uiSchema?: object | (() => object)
