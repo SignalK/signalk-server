@@ -504,12 +504,6 @@
     margin-bottom: 0px;
   }
 
-  /* Hide full type signature at top of each module. It's not helpful */
-  .col-content > .tsd-signature,
-  .col-content > .tsd-hierarchy {
-    display: none;
-  }
-
   .tsd-signature {
     background-color: var(--color-background-secondary);
     border-radius: 6px;
