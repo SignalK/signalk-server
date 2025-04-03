@@ -71,4 +71,5 @@
     "javascript",
     "typescript"
   ],
+  "cacheBust": true
 }

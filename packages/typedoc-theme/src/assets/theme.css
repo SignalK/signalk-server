@@ -320,9 +320,9 @@
   .tsd-toolbar-contents {
     display: grid;
     align-items: center;
-    grid-template-columns: auto max-content max-content;
-    grid-template-areas: 'brand search links';
-    gap: var(--dim-col-gap);
+    grid-template-columns: auto max-content max-content max-content;
+    grid-template-areas: 'brand search menu';
+    gap: 1rem;
   }
 
   @media (min-width: 770px) {
@@ -333,6 +333,10 @@
     .container-main {
       display: grid;
       grid-template-columns: minmax(150px, 25%) minmax(0, 75%);
+    }
+
+    .tsd-toolbar-contents {
+      grid-template-areas: 'brand search links menu';
     }
 
     #tsd-search-trigger {
@@ -348,16 +352,18 @@
       border: 1px solid var(--color-accent);
       padding: 8px 16px;
     }
+
+    #tsd-toolbar-menu-trigger {
+      display: none;
+    }
   }
 
   @media (min-width: 1200px) {
-    .container-main,
     .tsd-toolbar-contents {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 2.5fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 20%) minmax(0, 60%) auto max-content;
     }
-
-    .tsd-toolbar-contents {
-      grid-template-areas: 'brand search links';
+    .container-main {
+      grid-template-columns: minmax(0, 20%) minmax(0, 60%) minmax(0, 20%);
     }
   }
 
@@ -383,7 +389,13 @@
   #tsd-toolbar-links {
     grid-area: links;
     justify-content: end;
-    display: flex; /* always visible */
+    gap: 1rem;
+    margin-right: 0;
+  }
+
+  #tsd-toolbar-menu {
+    grid-area: menu;
+    display: flex;
     gap: 1rem;
   }
 
