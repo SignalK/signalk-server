@@ -47,6 +47,7 @@
   "visibilityFilters": {},
   "excludeProtected": true,
   "excludePrivate": true,
+  "excludeInternal": true,
   "sortEntryPoints": true,
   "exclude": [
     "packages/resources-provider-plugin",
