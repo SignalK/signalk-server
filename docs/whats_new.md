@@ -6,7 +6,7 @@ These APIs have been implemented to ensure the integrity of the underlying Signa
 
 The new APIs are mounted under `/signalk/v2/api`, their definitions available as OpenApi documents accessible via _Documentation -> OpenAPI_ in the server admin user interface. They coexist with `/signalk/v1/api` paths to ensure continued operation of applications.
 
-Some REST APIs provide an `interface` for use by plugins via the _[Server Plugin API](./develop/plugins/server_plugin_api.md)_ to enable them to enact operations in a managed way.
+Some REST APIs provide an `interface` for use by plugins via the {@link @signalk/server-api!ServerAPI | Server Plugin API} to enable them to enact operations in a managed way.
 
 _**Important: The Signal K data paths maintained by the REST APIs should NOT be updated directly by any other plugin or process!**_
 
@@ -38,7 +38,7 @@ See the [Resources API](./develop/rest-api/resources_api.md) for details.
 
 Whilst the Course API and its associated operations provide a means of setting a course, NMEA data streams are the source of information when the course is set on a connected device.
 
-In the past, plugins processing NMEA data streams have directly populated the mapped `v1` Signal K paths based on the received sentence / PGN values. Moving forward these plugins should utilise the relevant _[Server Plugin API](./develop/plugins/server_plugin_api.md)_ methods to enact course operations.
+In the past, plugins processing NMEA data streams have directly populated the mapped `v1` Signal K paths based on the received sentence / PGN values. Moving forward these plugins should utilise the relevant {@link @signalk/server-api!ServerAPI | Server Plugin API} methods to enact course operations.
 
 
 ### Stream updates
@@ -68,4 +68,3 @@ _Example: v2 Delta_
 The current implementation of Signal K Server provides only a single `stream` endpoint _(`/signalk/v1/stream`)_ and all values emitted as deltas _(both `v1` & `v2`)_ will continue appear there.
 
 It should be noted, that even though both `v1` & `v2` deltas appear in the one stream, only `v1` deltas will populate the _full data model_ and be available under the `/signalk/v1/api` path!
-

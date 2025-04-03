@@ -7,6 +7,7 @@ children:
   - notifications_api.md
   - autopilot_api.md
   - anchor_api.md
+  - plugin_api.md
 ---
 
 # REST APIs
