@@ -6,6 +6,7 @@ import {
   ResourceProviderRegistry
 } from '.'
 import { CourseApi } from './course'
+import { StreamBundle } from './streambundle'
 
 /**
  * SignalK server provides an interface to allow {@link Plugin | Plugins } to:
@@ -92,6 +93,11 @@ export interface ServerAPI
     source: string
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any>
+
+  /**
+   * @category Data Model
+   */
+  streambundle: StreamBundle
 
   //TSTODO convert queryRequest to ts
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -12,23 +12,6 @@ export interface HelloMessage {
   timestamp: Date
 }
 
-export interface Bus {
-  onValue: (callback: (value: any) => any) => () => void
-  push: (v: any) => void
-  scan: (
-    a: any,
-    f: (a: any, b: any) => any | void
-  ) => {
-    toProperty: () => () => void
-  }
-}
-// inferred, to be improved
-export interface StreamBundle {
-  keys: { onValue: (arg0: (key: any) => void) => void }
-  getBus: (path: string) => Bus
-  getAvailablePaths: () => string[]
-}
-
 export type ICallback<T> = (error?: Error | null, result?: T) => void
 
 export interface SignalKServer {

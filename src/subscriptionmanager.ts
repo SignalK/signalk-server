@@ -15,18 +15,23 @@
  * limitations under the License.
  */
 
-import { Position, WithContext } from '@signalk/server-api'
+import {
+  NormalizedDelta,
+  Path,
+  Position,
+  WithContext
+} from '@signalk/server-api'
 import Bacon from 'baconjs'
 import { isPointWithinRadius } from 'geolib'
 import _, { forOwn, get, isString } from 'lodash'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
-import { toDelta } from './streambundle'
+import { StreamBundle, toDelta } from './streambundle'
 import { ContextMatcher, Unsubscribes } from './types'
 const debug = createDebug('signalk-server:subscriptionmanager')
 
 interface BusesMap {
-  [key: string]: any
+  [path: Path]: Bacon.Bus<unknown, NormalizedDelta>
 }
 
 interface RelativePositionOrigin {
@@ -35,7 +40,7 @@ interface RelativePositionOrigin {
 }
 
 class SubscriptionManager {
-  streambundle: any
+  streambundle: StreamBundle
   selfContext: string
   app: any
   constructor(app: any) {
@@ -71,9 +76,9 @@ class SubscriptionManager {
       // listen to new keys and then use the same logic to check if we
       // want to subscribe, passing in a map with just that single bus
       unsubscribes.push(
-        this.streambundle.keys.onValue((key: string) => {
+        this.streambundle.keys.onValue((path) => {
           const buses: BusesMap = {}
-          buses[key] = this.streambundle.getBus(key)
+          buses[path] = this.streambundle.getBus(path)
           handleSubscribeRows(
             this.app,
             command.subscribe,
