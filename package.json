@@ -164,7 +164,7 @@
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prefer-arrow": "^1.2.3",
     "eslint-plugin-react": "^7.31.8",
-    "freeport-promise": "^1.0.0",
+    "freeport-promise": "^2.0.0",
     "lint-staged": "^10.0.3",
     "mocha": "^10.2.0",
     "prettier": "^2.8.4",
