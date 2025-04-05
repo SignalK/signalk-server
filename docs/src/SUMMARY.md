@@ -36,7 +36,7 @@
   * [Course API](./develop/rest-api/course_api.md)
     * [Course Calculations](./develop/rest-api/course_calculations.md)
   * [Resources API](./develop/rest-api/resources_api.md)
-  * [Notifications API](./develop/rest-api/notifications_api.md)
+  * [Alerts API](./develop/rest-api/alerts_api.md)
   * [Autopilot API](./develop/rest-api/autopilot_api.md)
   * [Anchor API](./develop/rest-api/anchor_api.md)
 * [Contribute](./develop/contributing.md)

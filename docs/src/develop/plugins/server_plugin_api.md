@@ -684,6 +684,225 @@ in the specified direction and starting at the specified point.
 
 ---
 
+### Alerts API Interface
+
+The Alert API interface exposes methods to allow interaction with the Alert Manager to raise and take action on alerts.
+
+#### `app.alertsApi.getAlert(alertId)`
+
+Retrieve the current value of the supplied alert.
+
+- `alertid`: Identifier of the alert
+
+- returns:  `AlertValue` object representing the current value of the alert.
+
+_Example:_
+```javascript
+app.resourcesApi.getAlert(
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+)
+```
+_Response:_
+```json
+{
+  "id": "ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a",
+  "created": "2025-01-02T08:19:58.676Z",
+  "priority": "alarm",
+  "process": "abnormal",
+  "alarmState": "active",
+  "acknowledged": false,
+  "silenced": false,
+  "metaData": {
+      "sourceRef": "alertsApi",
+      "name": "My Alert",
+      "message": "My alert message"
+  }
+}
+```
+
+#### `app.alertsApi.raiseAlert(priority, metaData?)`
+
+Create / raise an alert.
+
+- `priority`: Signal K alert priority _`emergency`,`alarm`, `warning`, `caution`_
+
+- `metaData` (optional): Additional alert properties _e.g. name, message, etc_.
+
+
+- returns:  `string` containing the identifier of the alert.
+
+_Example:_
+```javascript
+const alertId = app.resourcesApi.raiseAlert(
+  'alarm',
+  {
+    "name": "My Alert",
+    "message": "My alert message."
+  }
+)
+```
+
+#### `app.alertsApi.setAlertPriority(alertId, priority)`
+
+Set / change the priority of an alert.
+
+
+- `alertid`: Identifier of the alert
+
+- `priority`: Signal K alert priority _`emergency`,`alarm`, `warning`, `caution`_
+
+
+- returns:  `void`
+
+_Example:_
+```javascript
+app.resourcesApi.setAlertPriority(
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
+  'warning'
+)
+```
+
+#### `app.alertsApi.setAlertProperties(alertId, metaData)`
+
+Set / change the alert properties.
+
+
+- `alertid`: Identifier of the alert
+
+- `metaData`: Alert properties _e.g. name, message, etc_.
+
+
+- returns:  `void`
+
+_Example:_
+```javascript
+app.resourcesApi.setAlertProperties(
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a',
+  {
+    "name": "My updated Alert",
+    "message": "My updated alert message."
+  }
+)
+```
+
+#### `app.alertsApi.resolveAlert(alertId)`
+
+Resolve the alert and eturn to 'normal' condition.
+
+
+- `alertid`: Identifier of the alert
+
+
+- returns:  `void`
+
+_Example:_
+```javascript
+app.resourcesApi.resolveAlert(
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+)
+```
+
+#### `app.alertsApi.ackAlert(alertId)`
+
+Acknowledge the alert.
+
+
+- `alertid`: Identifier of the alert
+
+
+- returns:  `void`
+
+_Example:_
+```javascript
+app.resourcesApi.ackAlert(
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+)
+```
+
+#### `app.alertsApi.unackAlert(alertId)`
+
+Unacknowledge the alert.
+
+
+- `alertid`: Identifier of the alert
+
+
+- returns:  `void`
+
+_Example:_
+```javascript
+app.resourcesApi.unackAlert(
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+)
+```
+
+#### `app.alertsApi.silenceAlert(alertId)`
+
+Silences the audible alarm associated with the alert for 30 seconds.
+
+
+- `alertid`: Identifier of the alert
+
+
+- returns:  `boolean` Returns `true` if alert was silenced or `false` if alert could not be silenced.
+
+_Example:_
+```javascript
+app.resourcesApi.silenceAlert(
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+)
+```
+
+#### `app.alertsApi.removeAlert(alertId)`
+
+Remove the alert from the alert list.
+
+
+- `alertid`: Identifier of the alert
+
+
+- returns:  `boolean` Returns `true` if alert was silenced or `false` if alert could not be silenced.
+
+_Example:_
+```javascript
+app.resourcesApi.removeAlert(
+  'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'
+)
+```
+
+### Special Alerts
+
+#### `app.alertsApi.mob(properties?)`
+
+Raise a man / person overboard alert which has **priority** = `emergency` and properties set to the following pre-defined values (if no properties are supplied):
+
+| Property | Value |
+|--- |--- |
+| **path** | `mob` _(i.e. `notifications.mob.{id}`)_ |
+| **position** | Set to the vessel position at the time the alert was raised |
+| **name** | MOB |
+| **message** | Person Overboard! |
+| **sourceRef** | alarmApi |
+
+- `properties` (optional): Allows the `name`, `message` and `sourceRef` properties to have their pre-defined values overridden.
+
+- returns:  `string` containing the identifier of the alert.
+
+_Example:_
+```javascript
+// raise MOB with default property values
+const mobId = app.resourcesApi.mob()
+
+// raise MOB with overriden property values
+const mobId = app.resourcesApi.mob(
+  {
+    "name": "My MOB Alert",
+    "message": "My MOB alert message."
+  }
+)
+```
+
+
 ### PropertyValues
 
 The _PropertyValues_ mechanism provides a means for passing configuration type values between different components running in the server process such as plugins and input connections.

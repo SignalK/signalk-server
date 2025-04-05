@@ -27,7 +27,10 @@ import {
   RouteDestination,
   Value,
   SignalKApiId,
-  SourceRef
+  SourceRef,
+  AlertMetaData,
+  AlertPriority,
+  AlertValue
 } from '@signalk/server-api'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
@@ -550,6 +553,7 @@ module.exports = (theApp: any) => {
     })
     appCopy.putPath = putPath
 
+    // v2 API interface methods
     const resourcesApi: ResourcesApi = app.resourcesApi
     _.omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {
@@ -588,6 +592,43 @@ module.exports = (theApp: any) => {
     }
     appCopy.activateRoute = (dest: RouteDestination | null) => {
       return courseApi.activeRoute(dest)
+    }
+
+    _.omit(appCopy, 'alertsApi') // don't expose the actual alerts api manager
+    appCopy.alertsApi = {
+      getAlert: (alertId: string): AlertValue => {
+        return app.alertsApi.fetch(alertId)
+      },
+      mob: (properties?: AlertMetaData): string => {
+        return app.alertsApi.mob(properties as AlertMetaData)
+      },
+      raiseAlert: (
+        priority: AlertPriority,
+        metaData?: AlertMetaData
+      ): string => {
+        return app.alertsApi.raise(priority, metaData)
+      },
+      setAlertPriority: (alertId: string, priority: AlertPriority) => {
+        app.alertsApi.setPriority(alertId, priority)
+      },
+      setAlertProperties: (alertId: string, metaData: AlertMetaData) => {
+        app.alertsApi.setProperties(alertId, metaData)
+      },
+      resolveAlert: (alertId: string) => {
+        app.alertsApi.resolve(alertId)
+      },
+      ackAlert: (alertId: string) => {
+        app.alertsApi.ack(alertId)
+      },
+      unackAlert: (alertId: string) => {
+        app.alertsApi.unack(alertId)
+      },
+      silenceAlert: (alertId: string): boolean => {
+        return app.alertsApi.silence(alertId)
+      },
+      removeAlert: (alertId: string) => {
+        app.alertsApi.remove(alertId)
+      }
     }
 
     try {

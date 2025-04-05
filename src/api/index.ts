@@ -6,11 +6,12 @@ import { FeaturesApi } from './discovery'
 import { ResourcesApi } from './resources'
 import { AutopilotApi } from './autopilot'
 import { SignalKApiId } from '@signalk/server-api'
+import { AlertsApi } from './alerts'
 
 export interface ApiResponse {
   state: 'FAILED' | 'COMPLETED' | 'PENDING'
   statusCode: number
-  message: string
+  message?: string
   requestId?: string
   href?: string
   token?: string
@@ -69,11 +70,17 @@ export const startApis = (
 
   const featuresApi = new FeaturesApi(app)
 
+  const alertsApi = new AlertsApi(app)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).alertsApi = alertsApi
+  apiList.push('autopilot')
+
   Promise.all([
     resourcesApi.start(),
     courseApi.start(),
     featuresApi.start(),
-    autopilotApi.start()
+    autopilotApi.start(),
+    alertsApi.start()
   ])
   return apiList
 }
