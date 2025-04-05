@@ -28,10 +28,9 @@ import {
   SignalKApiId,
   SourceRef,
   PluginConstructor,
-  Plugin
+  Plugin,
+  Path
 } from '@signalk/server-api'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
 import express, { Request, Response } from 'express'
 import fs from 'fs'
@@ -616,7 +615,7 @@ module.exports = (theApp: any) => {
           {
             meta: [
               {
-                path: aPath,
+                path: aPath as Path,
                 value: {
                   supportsPut: true
                 }

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { WithContext } from '@signalk/server-api'
+import { ServerAPI, WithContext } from '@signalk/server-api'
 import { FullSignalK } from '@signalk/signalk-schema'
 import { SecurityStrategy } from './security'
 import SubscriptionManager from './subscriptionmanager'
@@ -14,9 +14,8 @@ export interface HelloMessage {
 
 export type ICallback<T> = (error?: Error | null, result?: T) => void
 
-export interface SignalKServer {
+export interface SignalKServer extends ServerAPI {
   config: { defaults: any }
-  handleMessage: (providerId: string, message: any) => void
   getHello: () => HelloMessage
   signalk: FullSignalK
   selfId: string

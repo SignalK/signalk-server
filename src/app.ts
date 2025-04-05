@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { FeatureInfo, SKVersion } from '@signalk/server-api'
+import { Delta, FeatureInfo, SKVersion } from '@signalk/server-api'
 import { FullSignalK } from '@signalk/signalk-schema'
 import { EventEmitter } from 'node:events'
 
@@ -21,7 +21,11 @@ export interface ServerApp {
 
 export interface SignalKMessageHub extends EventEmitter {
   signalk: FullSignalK
-  handleMessage: (id: string, Delta: any, skVersion?: SKVersion) => void
+  handleMessage: (
+    id: string,
+    delta: Partial<Delta>,
+    skVersion?: SKVersion
+  ) => void
 }
 
 export interface WithConfig {

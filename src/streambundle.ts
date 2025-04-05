@@ -21,7 +21,8 @@ import {
   Path,
   ServerAPI,
   Update,
-  Value
+  Value,
+  NormalizedMetaDelta
 } from '@signalk/server-api'
 import Bacon from 'baconjs'
 
@@ -36,8 +37,8 @@ export class StreamBundle implements IStreamBundle {
   keys: Bacon.Bus<unknown, Path>
   availableSelfPaths: { [key: Path]: true }
   app: ServerAPI
-  metaBus: Bacon.Bus<unknown, NormalizedDelta<true>>
-  selfMetaBus: Bacon.Bus<unknown, NormalizedDelta<true>>
+  metaBus: Bacon.Bus<unknown, NormalizedMetaDelta>
+  selfMetaBus: Bacon.Bus<unknown, NormalizedMetaDelta>
 
   constructor(app: ServerAPI, selfId: string) {
     this.selfContext = 'vessels.' + selfId
@@ -97,10 +98,9 @@ export class StreamBundle implements IStreamBundle {
     const { isMeta } = normalizedDelta
     const isSelf = normalizedDelta.context === this.selfContext
     if (isMeta) {
-      const metaDelta = normalizedDelta as NormalizedDelta<true>
-      this.metaBus.push(metaDelta)
+      this.metaBus.push(normalizedDelta)
       if (isSelf) {
-        this.selfMetaBus.push(metaDelta)
+        this.selfMetaBus.push(normalizedDelta)
       }
     }
     if (!this.availableSelfPaths[path]) {

@@ -4,19 +4,26 @@ export interface WithContext {
   context: Context
 }
 
-export type NormalizedDelta<isMeta extends boolean = boolean> = {
+/** @inline - Not exported as part of the public API */
+type NormalizedBaseDelta = {
   context: Context
   $source: SourceRef
   source: Source
   path: Path
   timestamp: Timestamp
-  isMeta: isMeta
-  value: isMeta extends true
-    ? MetaValue
-    : isMeta extends false
-    ? Value
-    : MetaValue | Value
 }
+
+export type NormalizedMetaDelta = NormalizedBaseDelta & {
+  value: MetaValue
+  isMeta: true
+}
+
+export type NormalizedValueDelta = NormalizedBaseDelta & {
+  value: Value
+  isMeta: false
+}
+
+export type NormalizedDelta = NormalizedValueDelta | NormalizedMetaDelta
 
 export type SourceRef = Brand<string, 'sourceRef'>
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -101,6 +108,7 @@ export interface MetaValue {
     upper: number
   }
   zones?: Zone[]
+  supportsPut?: boolean
 }
 
 // Notification attribute types
