@@ -4,6 +4,7 @@ node_modules
 *.tsbuildinfo
 
 lib/
+dist/
 
 .DS_Store
 .vscode/

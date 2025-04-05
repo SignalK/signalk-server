@@ -21,7 +21,7 @@ const euid = process.geteuid()
 const thisDirName = __dirname
 const systemdLocation = '/etc/systemd/system'
 
-const DeltaEditor = require('../lib/deltaeditor')
+const DeltaEditor = require('../dist/deltaeditor')
 
 clear()
 console.log(

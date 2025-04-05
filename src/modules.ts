@@ -346,6 +346,43 @@ export function getKeywords(thePackage: NpmPackageData): string[] {
   return keywords
 }
 
+export async function importOrRequire(moduleDir: string) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require(moduleDir)
+
+    // Starting with version 20.19.0 and 22 Node will load ESM modules with require
+    // https://nodejs.org/en/blog/release/v20.19.0
+    return mod.default ?? mod
+  } catch (err) {
+    debug(`Failed to require("${moduleDir}") module, trying import()`)
+
+    // `import()` only works with file paths or npm module names. It can't
+    // directly load a path to a directory. One solution would be to refactor
+    // module loading to update `NODE_PATH` with plugin directories, and
+    // then import/require them here using just their module name (e.g.
+    // `import("@signalk/plugin-name")`), which would allow NodeJS to resolve
+    // and load the module. This would be a little more extensive refactoring
+    // that may be worth while once the whole project is entirely using ESM.
+    // For now, this `esm-resolve` package work
+
+    const { buildResolver } = await import('esm-resolve')
+    const resolver = buildResolver(moduleDir, {
+      isDir: true,
+      resolveToAbsolute: true
+    })
+    const modulePath = resolver('.')
+
+    if (modulePath) {
+      const module = await import(modulePath)
+      return module.default
+    } else {
+      // Could not resolve, throw the original error.
+      throw err
+    }
+  }
+}
+
 module.exports = {
   modulesWithKeyword,
   installModule,
@@ -356,5 +393,6 @@ module.exports = {
   checkForNewServerVersion,
   getAuthor,
   getKeywords,
-  restoreModules
+  restoreModules,
+  importOrRequire
 }
