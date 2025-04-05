@@ -27,7 +27,7 @@
   },
   "searchInComments": true,
   "searchInDocuments": true,
-  "router": "structure-dir",
+  "router": "structure",
   "sort": [
     "documents-first",
     "instance-first",
