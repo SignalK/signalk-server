@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import JSONTree from 'react-json-tree'
+import { JSONTree } from 'react-json-tree'
 import {
   Card,
   CardHeader,
@@ -441,6 +441,7 @@ class DataBrowser extends Component {
               <JSONTree
                 data={this.state.sources}
                 theme="default"
+                invertTheme={true}
                 sortObjectKeys
                 hideRoot
               />
