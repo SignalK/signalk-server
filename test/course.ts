@@ -1,10 +1,11 @@
 import { strict as assert } from 'assert'
-import chai from 'chai'
+import chai, { expect } from 'chai'
 import {
   DATETIME_REGEX,
   deltaHasPathValue,
   startServer
 } from './ts-servertestutilities'
+import { CourseInfo } from '@signalk/server-api'
 chai.should()
 
 describe('Course Api', () => {
@@ -54,23 +55,23 @@ describe('Course Api', () => {
       deltaHasPathValue(v2courseDelta, path, value)
     )
 
-    await selfGetJson('navigation/course').then((data) => {
-      data.startTime.should.match(DATETIME_REGEX)
-      delete data.startTime
-      data.should.deep.equal({
-        targetArrivalTime: null,
-        arrivalCircle: 0,
-        activeRoute: null,
-        nextPoint: {
-          type: 'Location',
-          position: { latitude: -35.5, longitude: 138.7 }
-        },
-        previousPoint: {
-          type: 'VesselPosition',
-          position: { latitude: -35.45, longitude: 138 }
-        }
-      })
+    const data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.startTime).to.match(DATETIME_REGEX)
+    expect(data).to.deep.equal({
+      startTime: data.startTime,
+      targetArrivalTime: null,
+      arrivalCircle: 0,
+      activeRoute: null,
+      nextPoint: {
+        type: 'Location',
+        position: { latitude: -35.5, longitude: 138.7 }
+      },
+      previousPoint: {
+        type: 'VesselPosition',
+        position: { latitude: -35.45, longitude: 138 }
+      }
     })
+
     await stop()
   })
 
@@ -135,12 +136,9 @@ describe('Course Api', () => {
         }
       }
     }
-    const { id } = await post('/resources/waypoints', destination).then(
-      (response) => {
-        response.status.should.equal(201)
-        return response.json()
-      }
-    )
+    const response = await post('/resources/waypoints', destination)
+    response.status.should.equal(201)
+    const { id } = (await response.json()) as { id: string }
     id.length.should.equal('ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length)
     const href = `/resources/waypoints/${id}`
 
@@ -183,26 +181,25 @@ describe('Course Api', () => {
     )
     pathValue.value.should.match(DATETIME_REGEX)
 
-    await selfGetJson('navigation/course').then((data) => {
-      data.startTime.should.match(DATETIME_REGEX)
-      delete data.startTime
-      data.should.deep.equal({
-        arrivalCircle: 99,
-        targetArrivalTime: null,
-        activeRoute: null,
-        nextPoint: {
-          href,
-          type: 'Waypoint',
-          position: {
-            longitude: destination.feature.geometry.coordinates[0],
-            latitude: destination.feature.geometry.coordinates[1]
-          }
-        },
-        previousPoint: {
-          type: 'VesselPosition',
-          position: vesselPosition
+    let data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.startTime).to.match(DATETIME_REGEX)
+    expect(data).to.deep.equal({
+      startTime: data.startTime,
+      arrivalCircle: 99,
+      targetArrivalTime: null,
+      activeRoute: null,
+      nextPoint: {
+        href,
+        type: 'Waypoint',
+        position: {
+          longitude: destination.feature.geometry.coordinates[0],
+          latitude: destination.feature.geometry.coordinates[1]
         }
-      })
+      },
+      previousPoint: {
+        type: 'VesselPosition',
+        position: vesselPosition
+      }
     })
 
     await selfDelete('navigation/course').then((response) =>
@@ -231,15 +228,14 @@ describe('Course Api', () => {
       deltaHasPathValue(destinationClearedDelta, path, value)
     )
 
-    await selfGetJson('navigation/course').then((data) => {
-      data.should.deep.equal({
-        startTime: null,
-        targetArrivalTime: null,
-        activeRoute: null,
-        arrivalCircle: 99,
-        nextPoint: null,
-        previousPoint: null
-      })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    data.should.deep.equal({
+      startTime: null,
+      targetArrivalTime: null,
+      activeRoute: null,
+      arrivalCircle: 99,
+      nextPoint: null,
+      previousPoint: null
     })
 
     stop()
@@ -265,10 +261,9 @@ describe('Course Api', () => {
       }
     }
 
-    const { id } = await post('/resources/routes', points).then((response) => {
-      response.status.should.equal(201)
-      return response.json()
-    })
+    const response = await post('/resources/routes', points)
+    response.status.should.equal(201)
+    const { id } = (await response.json()) as { id: string }
     id.length.should.equal('ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length)
     const href = `/resources/routes/${id}`
 
@@ -327,85 +322,80 @@ describe('Course Api', () => {
       )
       .should.be.an('object')
 
-    await selfGetJson('navigation/course').then((data) => {
-      delete data.startTime
-      delete data.targetArrivalTime
-      delete data.activeRoute.name
-      data.should.deep.equal({
-        arrivalCircle: 0,
-        activeRoute: {
-          href,
-          pointIndex: 0,
-          pointTotal: 3,
-          reverse: false
+    let data = (await selfGetJson('navigation/course')) as CourseInfo
+
+    data.should.deep.equal({
+      startTime: data.startTime,
+      targetArrivalTime: data.targetArrivalTime,
+      arrivalCircle: 0,
+      activeRoute: {
+        href,
+        pointIndex: 0,
+        pointTotal: 3,
+        reverse: false
+      },
+      nextPoint: {
+        position: {
+          longitude: points.feature.geometry.coordinates[0][0],
+          latitude: points.feature.geometry.coordinates[0][1]
         },
-        nextPoint: {
-          position: {
-            longitude: points.feature.geometry.coordinates[0][0],
-            latitude: points.feature.geometry.coordinates[0][1]
-          },
-          type: 'RoutePoint'
-        },
-        previousPoint: {
-          type: 'VesselPosition',
-          position: vesselPosition
-        }
-      })
+        type: 'RoutePoint'
+      },
+      previousPoint: {
+        type: 'VesselPosition',
+        position: vesselPosition
+      }
     })
 
     await selfPut('navigation/course/activeRoute/nextPoint', {
       value: 1
     }).then((response) => response.status.should.equal(200))
-    await selfGetJson('navigation/course').then((data) =>
-      data.activeRoute.pointIndex.should.equal(1)
-    )
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
 
     //setting pointIndex beyond route length sets it to last point's index
     await selfPut('navigation/course/activeRoute/nextPoint', {
       value: 100
     }).then((response) => response.status.should.equal(200))
-    await selfGetJson('navigation/course').then((data) =>
-      data.activeRoute.pointIndex.should.equal(2)
-    )
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(2)
 
     await selfPut('navigation/course/activeRoute/nextPoint', {
       value: -1
     }).then((response) => response.status.should.equal(200))
-    await selfGetJson('navigation/course').then((data) =>
-      data.activeRoute.pointIndex.should.equal(1)
-    )
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
 
     await selfPut('navigation/course/activeRoute/pointIndex', {
       value: 2
     }).then((response) => response.status.should.equal(200))
-    await selfGetJson('navigation/course').then((data) =>
-      data.activeRoute.pointIndex.should.equal(2)
-    )
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(2)
 
     await selfPut('navigation/course/activeRoute', {
       href,
       reverse: true
     }).then((response) => response.status.should.equal(200))
-    await selfGetJson('navigation/course').then((data) =>
-      data.nextPoint.position.latitude.should.equal(
-        points.feature.geometry.coordinates[
-          points.feature.geometry.coordinates.length - 1
-        ][1]
-      )
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.nextPoint?.position?.latitude).to.equal(
+      points.feature.geometry.coordinates[
+        points.feature.geometry.coordinates.length - 1
+      ][1]
     )
+
     await selfPut('navigation/course/activeRoute/nextPoint', {
       value: 1
     }).then((response) => response.status.should.equal(200))
-    await selfGetJson('navigation/course').then((data) => {
-      data.nextPoint.position.latitude.should.equal(
-        points.feature.geometry.coordinates[1][1]
-      )
-      data.previousPoint.position.latitude.should.equal(
-        points.feature.geometry.coordinates[
-          points.feature.geometry.coordinates.length - 1
-        ][1]
-      )
-    })
+
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.nextPoint?.position?.latitude).to.equal(
+      points.feature.geometry.coordinates[1][1]
+    )
+    expect(data.previousPoint?.position?.latitude).to.equal(
+      points.feature.geometry.coordinates[
+        points.feature.geometry.coordinates.length - 1
+      ][1]
+    )
 
     stop()
   })
@@ -432,16 +422,16 @@ describe('Course Api', () => {
       deltaHasPathValue(v2courseDelta, path, value)
     )
 
-    await selfGetJson('navigation/course').then((data) => {
-      data.should.deep.equal({
-        startTime: null,
-        targetArrivalTime: null,
-        arrivalCircle: 98,
-        activeRoute: null,
-        nextPoint: null,
-        previousPoint: null
-      })
+    const data = (await selfGetJson('navigation/course')) as CourseInfo
+    data.should.to.deep.equal({
+      startTime: null,
+      targetArrivalTime: null,
+      arrivalCircle: 98,
+      activeRoute: null,
+      nextPoint: null,
+      previousPoint: null
     })
+
     stop()
   })
 })
