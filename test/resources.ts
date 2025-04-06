@@ -7,7 +7,7 @@ chai.should()
 export const skUuid = () => `${uuidv4()}`
 
 describe('Resources Api', () => {
-  it('can put and get a waypoint', async function() {
+  it('can put and get a waypoint', async function () {
     const { createWsPromiser, get, put, stop } = await startServer()
 
     const wsPromiser = createWsPromiser()
@@ -32,21 +32,15 @@ describe('Resources Api', () => {
     const { path, value } = resourceDelta.updates[0].values[0]
     path.should.equal(`resources.waypoints.${resId}`)
     value.should.deep.equal(waypoint)
-    ;(waypoint as any).$source = 'resources-provider'
-    await get(`/resources/waypoints/${resId}`)
-      .then(response => {
-        response.status.should.equal(200)
-        return response.json()
-      })
-      .then(resData => {
-        delete resData.timestamp
-        resData.should.deep.equal(waypoint)
-      })
+      ; (waypoint as any).$source = 'resources-provider'
+    const response = await get(`/resources/waypoints/${resId}`)
+    const resData = await response.json() as Waypoint
+    resData.should.deep.equal(waypoint)
 
     stop()
   })
 
-  it('bbox search works for waypoints', async function() {
+  it('bbox search works for waypoints', async function () {
     const { createWsPromiser, get, post, stop } = await startServer()
 
     const resourceIds = await Promise.all(
@@ -68,16 +62,13 @@ describe('Resources Api', () => {
           .then((r: any) => r.id)
       })
     )
-    await get('/resources/waypoints?bbox=[24.8,60.16,24.899,60.3]')
-      .then(r => r.json())
-      .then(r => {
-        const returnedIds = Object.keys(r)
-        returnedIds.length.should.equal(1)
-        returnedIds[0].should.equal(resourceIds[1])
-      })
+    const r = await (await get('/resources/waypoints?bbox=[24.8,60.16,24.899,60.3]')).json() as object
+    const returnedIds = Object.keys(r)
+    returnedIds.length.should.equal(1)
+    returnedIds[0].should.equal(resourceIds[1])
   })
 
-  it('Create route with route point metadata', async function() {
+  it('Create route with route point metadata', async function () {
     const {
       post,
       stop
@@ -85,11 +76,11 @@ describe('Resources Api', () => {
 
 
     const route = {
-      feature: { 
-        type: "Feature", 
+      feature: {
+        type: "Feature",
         geometry: {
           type: "LineString",
-          coordinates: [[3.3452,65.4567],[3.3352, 65.5567],[3.3261,65.5777]]
+          coordinates: [[3.3452, 65.4567], [3.3352, 65.5567], [3.3261, 65.5777]]
         },
         properties: {
           coordinatesMeta: [
@@ -110,11 +101,9 @@ describe('Resources Api', () => {
       }
     }
 
-    const { id } = await post('/resources/routes', route)
-      .then(response => {
-        response.status.should.equal(201)
-        return response.json()
-      })
+    const response = await post('/resources/routes', route)
+    response.status.should.equal(201)
+    const { id } = await response.json() as { id: string }
     id.length.should.equal(
       'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length
     )

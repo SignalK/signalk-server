@@ -22,7 +22,6 @@ import path from 'path'
 import semver, { SemVer } from 'semver'
 import { Config } from './config/config'
 import { createDebug } from './debug'
-import { nextTick } from 'process'
 const debug = createDebug('signalk:modules')
 const npmDebug = createDebug('signalk:modules:npm')
 
@@ -32,11 +31,21 @@ interface ModuleData {
   location: string
 }
 
+interface NpmDistTags {
+  latest: string
+  [prerelease: string]: string
+}
+
 export interface NpmPackageData {
   name: string
   version: string
   date: string
   keywords: string[]
+}
+
+interface NpmSearchResponse {
+  total: number
+  objects: NpmModuleData[]
 }
 
 interface NpmModuleData {
@@ -254,62 +263,50 @@ function findModulesWithKeyword(keyword: string): Promise<NpmModuleData[]> {
   })
 }
 
-function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
-  return new Promise((resolve, reject) => {
-    let fetchedCount = 0
-    let toFetchCount = 1
-    let moduleData: NpmModuleData[] = []
-    const npmFetch = () => {
-      npmDebug(
-        `searching ${keyword} from ${fetchedCount + 1} of ${toFetchCount}`
-      )
-      fetch(
-        `https://registry.npmjs.org/-/v1/search?size=250&from=${
-          fetchedCount > 0 ? fetchedCount : 0
-        }&text=keywords:${keyword}`
-      )
-        .then((r) => r.json())
-        .then((parsed) => {
-          moduleData = moduleData.concat(parsed.objects)
-          fetchedCount += parsed.objects.length
-          toFetchCount = parsed.total
-          if (fetchedCount < toFetchCount) {
-            nextTick(() => npmFetch())
-          } else {
-            resolve(moduleData)
-          }
-        })
-        .catch(reject)
-    }
-    npmFetch()
-  })
+
+async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
+  let fetchedCount = 0
+  let toFetchCount = 1
+  let moduleData: NpmModuleData[] = []
+
+  while (fetchedCount < toFetchCount) {
+    npmDebug(
+      `searching ${keyword} from ${fetchedCount + 1} of ${toFetchCount}`
+    )
+    const res = await fetch(
+      `https://registry.npmjs.org/-/v1/search?size=10&from=${fetchedCount > 0 ? fetchedCount : 0
+      }&text=keywords:${keyword}`
+    )
+    const parsed = await res.json() as NpmSearchResponse
+
+    moduleData = moduleData.concat(parsed.objects)
+    fetchedCount += parsed.objects.length
+    toFetchCount = parsed.total
+  }
+
+  return moduleData
 }
 
 function doFetchDistTags() {
   return fetch('https://registry.npmjs.org/-/package/signalk-server/dist-tags')
 }
 
-function getLatestServerVersion(
+async function getLatestServerVersion(
   currentVersion: string,
   distTags = doFetchDistTags
 ): Promise<string> {
-  return new Promise((resolve, reject) => {
-    distTags()
-      .then((npmjsResults) => npmjsResults.json())
-      .then((npmjsParsed) => {
-        const prereleaseData = semver.prerelease(currentVersion)
-        if (prereleaseData) {
-          if (semver.satisfies(npmjsParsed.latest, `>${currentVersion}`)) {
-            resolve(npmjsParsed.latest)
-          } else {
-            resolve(npmjsParsed[prereleaseData[0]])
-          }
-        } else {
-          resolve(npmjsParsed.latest)
-        }
-      })
-      .catch(reject)
-  })
+  const versions = await (await distTags()).json() as NpmDistTags
+
+  const prereleaseData = semver.prerelease(currentVersion)
+  if (prereleaseData) {
+    if (semver.satisfies(versions.latest, `>${currentVersion}`)) {
+      return versions.latest
+    } else {
+      return versions[prereleaseData[0]]
+    }
+  } else {
+    return versions.latest
+  }
 }
 
 export function checkForNewServerVersion(
