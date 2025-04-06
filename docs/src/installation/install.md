@@ -12,7 +12,7 @@ See the relevant section below for instructions based on your target system.
 
 ### Prerequisites:
 
-_Signal K server requires NodeJs version >= 18 be installed on the target system prior to commencing installation._
+_Signal K server requires NodeJs version >= 20 be installed on the target system prior to commencing installation._
 
 ---
 
