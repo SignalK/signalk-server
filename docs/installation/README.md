@@ -19,7 +19,7 @@ See the relevant section below for instructions based on your target system.
 ## Prerequisites
 
 > [!NOTE]
-> Signal K server requires [NodeJS](https://nodejs.org) version >= 18 be installed on the target system prior to commencing installation.
+> Signal K server requires [NodeJS](https://nodejs.org) version >= 20 be installed on the target system prior to commencing installation.
 
 ---
 
