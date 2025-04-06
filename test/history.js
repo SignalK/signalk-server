@@ -4,7 +4,6 @@ chai.use(require('chai-things'))
 const _ = require('lodash')
 const freeport = require('freeport-promise')
 const Server = require('../dist')
-const fetch = require('node-fetch')
 const { WsPromiser } = require('./servertestutilities')
 
 const testDeltaDate = new Date('2018-08-09T14:07:29.695Z')

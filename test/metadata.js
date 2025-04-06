@@ -1,7 +1,6 @@
 const _ = require('lodash')
 const assert = require('assert')
 const freeport = require('freeport-promise')
-const fetch = require('node-fetch')
 const startServerP = require('./servertestutilities').startServerP
 
 const metaConfig = {

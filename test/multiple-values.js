@@ -3,7 +3,6 @@ chai.Should()
 chai.use(require('chai-things'))
 chai.use(require('@signalk/signalk-schema').chaiModule)
 const freeport = require('freeport-promise')
-const fetch = require('node-fetch')
 const { startServerP, sendDelta } = require('./servertestutilities')
 
 

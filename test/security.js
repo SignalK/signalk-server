@@ -2,7 +2,6 @@ const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
 const freeport = require('freeport-promise')
-const fetch = require('node-fetch')
 const WebSocket = require('ws')
 const {
   startServerP,

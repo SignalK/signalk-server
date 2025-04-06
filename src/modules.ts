@@ -18,7 +18,6 @@
 import { spawn } from 'child_process'
 import fs from 'fs'
 import _ from 'lodash'
-import fetch from 'node-fetch'
 import path from 'path'
 import semver, { SemVer } from 'semver'
 import { Config } from './config/config'

@@ -1,5 +1,4 @@
 import freeport from 'freeport-promise'
-import fetch from 'node-fetch'
 import path from 'path'
 import { rimraf } from 'rimraf'
 import {

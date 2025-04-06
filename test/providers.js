@@ -4,7 +4,6 @@ chai.use(require('chai-things'))
 const _ = require('lodash')
 const freeport = require('freeport-promise')
 const Server = require('../dist')
-const fetch = require('node-fetch')
 
 const nullIdText = 'Please enter a provider ID'
 
