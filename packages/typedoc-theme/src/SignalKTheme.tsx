@@ -37,7 +37,6 @@ export class SignalKTheme extends DefaultTheme {
 		// link the css file
 		renderer.hooks.on('head.end', (event) => {
 			return <>
-				<script src={event.relativeURL('assets/themeToggle.js')}></script>
 				<link rel="stylesheet" href={event.relativeURL('assets/theme.css')} />
 			</>
 		}, -1);
