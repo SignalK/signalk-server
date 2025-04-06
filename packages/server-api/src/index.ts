@@ -17,10 +17,6 @@ export interface Position {
   altitude?: number
 }
 
-/**
- * @deprecated TODO: this appears unused
- * @hidden
- */
 export interface ActionResult {
   state: 'COMPLETED' | 'PENDING' | 'FAILED'
   statusCode: number
