@@ -27,18 +27,13 @@ jobs:
           npm install --package-lock-only
           npm ci && npm cache clean --force
           npm run build --workspaces --if-present
-          cd packages/server-admin-ui
-          npm pack && mv *.tgz ../../
-          cd ../server-api
-          npm pack && mv *.tgz ../../
-          cd ../streams
-          npm pack && mv *.tgz ../../
-          cd ../resources-provider-plugin
-          npm pack && mv *.tgz ../../
-          cd ../..
+          for dir in packages/*; do
+            pushd $dir && npm pack && mv *.tgz ../../ && popd
+          done
           jq '.workspaces=[]' package.json > _package.json && mv _package.json package.json
           npm i --save *.tgz
           npm run build
+          rm typedoc-signalk-theme*.tgz # This is only needed as a dev dependency
           npm pack
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

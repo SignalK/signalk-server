@@ -65,7 +65,8 @@ dist/**/*.test.js*
 
 packages
 
-signalk-server-*.tgz
+# Build artifacts from build-docker.yml workflow
+*.tgz
 
 publishing.md
 
