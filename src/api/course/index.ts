@@ -137,7 +137,81 @@ export class CourseApi {
           this.processV1DestinationDeltas(msg)
         }
       )
+      ;(this.app as any).subscriptionmanager.subscribe(
+        {
+          context: 'vessels.self',
+          subscribe: [
+            {
+              path: 'resources.routes.*',
+              period: 500
+            },
+            {
+              path: 'resources.waypoints.*',
+              period: 500
+            }
+          ]
+        },
+        this.unsubscribes,
+        (err: Error) => {
+          console.log(`Course API: Subscribe failed: ${err}`)
+        },
+        (msg: Delta) => {
+          this.processResourceDeltas(msg)
+        }
+      )
       resolve()
+    })
+  }
+
+  /**
+   * Resource delta message processing to ensure update made to
+   * 1. waypoint referenced as the current destination OR
+   * 2. active route
+   * are reflected in course deltas.
+   */
+  private processResourceDeltas(delta: Delta) {
+    let h: string[]
+    if (this.courseInfo.activeRoute?.href) {
+      h = this.courseInfo.activeRoute?.href.split('/').slice(-3)
+    } else if (this.courseInfo.nextPoint?.href) {
+      h = this.courseInfo.nextPoint?.href.split('/').slice(-3)
+    } else {
+      return
+    }
+    const ref = h ? h.join('.') : undefined
+    const refType = h ? h[1] : undefined
+
+    delta.updates.forEach((update: Update) => {
+      if (hasValues(update)) {
+        update.values.forEach(async (pathValue: PathValue) => {
+          if (ref === pathValue.path) {
+            if (refType === 'routes') {
+              const rte = await this.getRoute(
+                (this.courseInfo.activeRoute as ActiveRoute).href
+              )
+              if (rte) {
+                ;(this.courseInfo.activeRoute as ActiveRoute).name =
+                  rte.name as string
+                ;(this.courseInfo.activeRoute as ActiveRoute).pointTotal =
+                  rte.feature.geometry.coordinates.length
+                this.emitCourseInfo()
+              }
+            } else {
+              const r: any = await this.resourcesApi.getResource(
+                refType as SignalKResourceType,
+                h[2]
+              )
+              if (r && isValidCoordinate(r.feature.geometry.coordinates)) {
+                ;(this.courseInfo.nextPoint as any).position = {
+                  latitude: r.feature.geometry.coordinates[1],
+                  longitude: r.feature.geometry.coordinates[0]
+                }
+                this.emitCourseInfo()
+              }
+            }
+          }
+        })
+      }
     })
   }
 
@@ -170,7 +244,7 @@ export class CourseApi {
   }
 
   /** Process deltas for <destination>.nextPoint data
-   * Note: Delta source cannot override destination set by API!
+   * Note: Delta source cannot override destination isAPIset by API!
    * Destination is set when:
    * 1. There is no current destination
    * 2. msg source matches current Destination source
