@@ -1,7 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "allowJs": false
+    "allowJs": false,
+    "outDir": "./dist"
   },
   "include": ["./src/**/*"],
   "references": [
