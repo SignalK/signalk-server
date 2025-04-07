@@ -61,7 +61,7 @@ A can subscribe to a stream of updates (deltas) by creating the subscription.
 
 Subcriptions are generally manged in the plugin `start()` and `stop()` methods to ensure the subscribtions are _unsubscribed_ prior to the plugin stopping to ensure all resources are freed.
 
-The following example illustrates the pattern using the `subscriptionmanager` API method.
+The following example illustrates the pattern using the {@link @signalk/server-api!ServerAPI.subscriptionmanager | `subscriptionmanager`} API method.
 
 ```javascript
 let unsubscribes = [];

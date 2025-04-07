@@ -12,10 +12,10 @@ export type NormalizedDelta<isMeta extends boolean = boolean> = {
   timestamp: Timestamp
   isMeta: isMeta
   value: isMeta extends true
-  ? MetaValue
-  : isMeta extends false
-  ? Value
-  : MetaValue | Value
+    ? MetaValue
+    : isMeta extends false
+    ? Value
+    : MetaValue | Value
 }
 
 export type SourceRef = Brand<string, 'sourceRef'>
@@ -27,18 +27,6 @@ export type Timestamp = Brand<string, 'timestamp'>
 export type Context = Brand<string, 'context'>
 
 export type Value = object | number | string | null | Notification | boolean
-
-// Delta subscription
-export interface DeltaSubscription {
-  context: Context
-  subscribe: Array<{
-    path: Path
-    period: number
-    format: 'delta' | 'full'
-    policy: 'instant' | 'ideal' | 'fixed'
-    minPeriod: number
-  }>
-}
 
 export interface Delta {
   context?: Context

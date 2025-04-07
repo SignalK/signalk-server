@@ -17,7 +17,8 @@
 import { createServer, Server, Socket } from 'net'
 import split from 'split'
 import { createDebug } from '../debug'
-import { Interface, SignalKServer, Unsubscribes } from '../types'
+import { Interface, SignalKServer } from '../types'
+import { Unsubscribes } from '@signalk/server-api'
 const debug = createDebug('signalk-server:interfaces:tcp:signalk')
 
 interface SocketWithId extends Socket {
