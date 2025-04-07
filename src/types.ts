@@ -2,7 +2,6 @@
 import { ServerAPI, WithContext } from '@signalk/server-api'
 import { FullSignalK } from '@signalk/signalk-schema'
 import { SecurityStrategy } from './security'
-import SubscriptionManager from './subscriptionmanager'
 
 export interface HelloMessage {
   name: string
@@ -20,7 +19,6 @@ export interface SignalKServer extends ServerAPI {
   signalk: FullSignalK
   selfId: string
   selfType: string
-  subscriptionmanager: SubscriptionManager
   securityStrategy: SecurityStrategy
 }
 
@@ -35,8 +33,5 @@ export interface MdnsAdvertisement {
   type: string
   port: number
 }
-
-// move to subscriptionmanage.ts when all SubscriptionManager use is in ts
-export type Unsubscribes = Array<() => void>
 
 export type ContextMatcher = (_: WithContext) => boolean
