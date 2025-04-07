@@ -7,7 +7,6 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     strategy:
@@ -21,6 +20,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm install
+    - run: npm run build:all
 
     - name: streams
       working-directory: ./packages/streams
@@ -31,7 +31,6 @@ jobs:
       working-directory: ./packages/server-api
       run: |
         npm run test
-        npm run build
 
     - name: resources-provider-plugin
       working-directory: ./packages/resources-provider-plugin
@@ -42,7 +41,6 @@ jobs:
       working-directory: ./packages/server-admin-ui
       run: |
         npm run ci
-        npm run build
 
     - run: npm test
       env:

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "Signal K",
+  "entryPointStrategy": "packages",
+  "entryPoints": [
+    ".",
+  ],
+  "packagesRequiringDocumentation": ["signalk-server", "@signalk/server-api"],
+  "out": "docs/dist",
+  "readme": "docs/README.md",
+  "projectDocuments": [
+    "docs/installation/README.md",
+    "docs/setup/configuration.md",
+    "docs/security.md",
+    "docs/guides/README.md",
+    "docs/develop/README.md",
+    "docs/support/help.md",
+    "docs/support/sponsor.md"
+  ],
+  "packageOptions": {
+    "sort": [
+      "kind",
+      "instance-first",
+      "required-first",
+      "alphabetical-ignoring-documents"
+    ],
+  },
+  "searchInComments": true,
+  "searchInDocuments": true,
+  "router": "structure",
+  "sort": [
+    "documents-first",
+    "instance-first",
+    "required-first",
+    "kind",
+    "alphabetical-ignoring-documents"
+  ],
+  "treatWarningsAsErrors": true,
+  "includeHierarchySummary": false,
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": false,
+    "excludeReferences": true,
+    "includeFolders": false,
+    "compactFolders": false
+  },
+  "visibilityFilters": {},
+  "excludeProtected": true,
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "sortEntryPoints": true,
+  "exclude": [
+    "packages/resources-provider-plugin",
+    "packages/server-admin-ui",
+    "packages/server-admin-ui-dependencies",
+    "packages/streams",
+    "packages/typedoc-theme"
+  ],
+  "alwaysCreateEntryPointModule": true,
+  "theme": "signalk",
+  "plugin": [
+    "typedoc-signalk-theme",
+    "typedoc-plugin-mdn-links"
+  ],
+  "lightHighlightTheme": "github-light-default",
+  "darkHighlightTheme": "github-dark-dimmed",
+  "highlightLanguages": [
+    "bash",
+    "shell",
+    "sh",
+    "json",
+    "javascript",
+    "typescript"
+  ],
+  "cacheBust": true
+}

@@ -1,4 +1,4 @@
-import { Brand } from '.'
+import { Brand } from './brand'
 
 export interface WithContext {
   context: Context
@@ -15,9 +15,11 @@ export interface NormalizedDelta extends WithContext {
 export type SourceRef = Brand<string, 'sourceRef'>
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Source = any
+
 export type Path = Brand<string, 'path'>
 export type Timestamp = Brand<string, 'timestamp'>
 export type Context = Brand<string, 'context'>
+
 export type Value = object | number | string | null | Notification | boolean
 
 // Delta subscription
@@ -39,10 +41,12 @@ export interface Delta {
 
 /**
  * @deprecated earlier mistake assumed ValuesDelta and MetaDelta were separate
+ * @hidden
  */
 export type ValuesDelta = Delta
 /**
  * @deprecated earlier mistake assumed ValuesDelta and MetaDelta were separate
+ * @hidden
  */
 export type MetaDelta = Delta
 
