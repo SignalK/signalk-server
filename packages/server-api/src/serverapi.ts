@@ -29,7 +29,8 @@ export interface ServerAPI
     ResourceProviderRegistry,
     AutopilotProviderRegistry,
     Features,
-    CourseApi {
+    CourseApi,
+    SelfIdentity {
   /**
    * Returns the entry for the provided path starting from `vessels.self` in the full data model.
    *
@@ -431,6 +432,12 @@ export interface Ports {
   byOpenPlotter: string[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   serialports: any
+}
+
+export interface SelfIdentity {
+  selfType: string
+  selfId: string
+  selfContext: string
 }
 
 export interface Metadata {

@@ -42,13 +42,7 @@ import https from 'https'
 import _ from 'lodash'
 import path from 'path'
 import { startApis } from './api'
-import {
-  SelfIdentity,
-  ServerApp,
-  SignalKMessageHub,
-  WithConfig,
-  WithFeatures
-} from './app'
+import { ServerApp, SignalKMessageHub, WithConfig, WithFeatures } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
@@ -79,7 +73,6 @@ import { StreamBundle } from './streambundle'
 
 class Server {
   app: ServerApp &
-    SelfIdentity &
     WithConfig &
     WithFeatures &
     SignalKMessageHub &

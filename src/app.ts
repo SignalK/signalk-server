@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Delta, FeatureInfo, SKVersion } from '@signalk/server-api'
+import { Delta, FeatureInfo, ServerAPI, SKVersion } from '@signalk/server-api'
 import { FullSignalK } from '@signalk/signalk-schema'
 import { EventEmitter } from 'node:events'
 
 import { Config } from './config/config'
 import DeltaCache from './deltacache'
 
-export interface ServerApp {
+export interface ServerApp extends ServerAPI {
   started: boolean
   interfaces: { [key: string]: any }
   intervals: NodeJS.Timeout[]
@@ -30,12 +30,6 @@ export interface SignalKMessageHub extends EventEmitter {
 
 export interface WithConfig {
   config: Config
-}
-
-export interface SelfIdentity {
-  selfType: string
-  selfId: string
-  selfContext: string
 }
 
 export interface WithFeatures {
