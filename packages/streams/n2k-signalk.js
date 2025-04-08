@@ -20,6 +20,8 @@ const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
 
 require('util').inherits(ToSignalK, Transform)
 
+const aisPGNs = [129794, 129810, 129040, 130842, 129809]
+
 function ToSignalK(options) {
   Transform.call(this, {
     objectMode: true,
@@ -108,6 +110,15 @@ ToSignalK.prototype.isFiltered = function (source) {
   )
 }
 
+ToSignalK.prototype.filterSelfAISStatic = function (values) {
+  return values.filter((kv) => {
+    return (
+      kv.path !== '' &&
+      this.app.config.baseDeltaEditor.getSelfValue(kv.path) === undefined
+    )
+  })
+}
+
 ToSignalK.prototype._transform = function (chunk, encoding, done) {
   try {
     const delta = this.n2kMapper.toDelta(chunk)
@@ -135,6 +146,16 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
       ) {
         done()
         return
+      }
+
+      //filter out static AIS data for self if configured
+      if (
+        delta.context == this.app.selfContext &&
+        aisPGNs.indexOf(chunk.pgn) !== -1
+      ) {
+        delta.updates[0].values = this.filterSelfAISStatic(
+          delta.updates[0].values
+        )
       }
 
       delta.updates.forEach((update) => {
