@@ -26,7 +26,9 @@ import {
   Delta,
   hasValues,
   SourceRef,
-  Waypoint
+  Waypoint,
+  NextPreviousPoint,
+  CoursePointType
 } from '@signalk/server-api'
 
 const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
@@ -58,7 +60,19 @@ interface CourseApplication
   extends IRouter,
     WithConfig,
     WithSecurityStrategy,
-    SignalKMessageHub {}
+    SignalKMessageHub {
+  subscriptionmanager?: {
+    subscribe: (
+      subscribe: {
+        context: string
+        subscribe: Array<{ path: string; period: number }>
+      },
+      unsubscribes: Array<any>,
+      errorCallback: (error: any) => void,
+      deltaCallback: (delta: Delta) => void
+    ) => void
+  }
+}
 
 interface CommandSource {
   type: string
@@ -81,7 +95,6 @@ export class CourseApi {
   private store: Store
   private cmdSource: CommandSource | null = null // source which set the destination
   private unsubscribes: Unsubscribes = []
-  private settings!: { apiOnly?: boolean }
 
   constructor(
     private app: CourseApplication,
@@ -115,7 +128,7 @@ export class CourseApi {
         this.emitCourseInfo(true)
       }
 
-      ;(this.app as any).subscriptionmanager.subscribe(
+      this.app.subscriptionmanager?.subscribe(
         {
           context: 'vessels.self',
           subscribe: [
@@ -137,7 +150,7 @@ export class CourseApi {
           this.processV1DestinationDeltas(msg)
         }
       )
-      ;(this.app as any).subscriptionmanager.subscribe(
+      this.app.subscriptionmanager?.subscribe(
         {
           context: 'vessels.self',
           subscribe: [
@@ -186,15 +199,16 @@ export class CourseApi {
         update.values.forEach(async (pathValue: PathValue) => {
           if (ref === pathValue.path) {
             if (refType === 'routes') {
-              const rte = await this.getRoute(
-                (this.courseInfo.activeRoute as ActiveRoute).href
-              )
-              if (rte) {
-                ;(this.courseInfo.activeRoute as ActiveRoute).name =
-                  rte.name as string
-                ;(this.courseInfo.activeRoute as ActiveRoute).pointTotal =
-                  rte.feature.geometry.coordinates.length
-                this.emitCourseInfo()
+              if (this.courseInfo.activeRoute) {
+                const rte = await this.getRoute(
+                  this.courseInfo.activeRoute.href
+                )
+                if (rte) {
+                  this.courseInfo.activeRoute.name = rte.name as string
+                  this.courseInfo.activeRoute.pointTotal =
+                    rte.feature.geometry.coordinates.length
+                  this.emitCourseInfo()
+                }
               }
             } else {
               const r: any = await this.resourcesApi.getResource(
@@ -202,7 +216,7 @@ export class CourseApi {
                 h[2]
               )
               if (r && isValidCoordinate(r.feature.geometry.coordinates)) {
-                ;(this.courseInfo.nextPoint as any).position = {
+                ;(this.courseInfo.nextPoint as NextPreviousPoint).position = {
                   latitude: r.feature.geometry.coordinates[1],
                   longitude: r.feature.geometry.coordinates[0]
                 }
@@ -231,7 +245,6 @@ export class CourseApi {
       debug('***** Applying missing apiOnly attribute to Settings ********')
       this.app.config.settings.courseApi.apiOnly = false
     }
-    this.settings = this.app.config.settings.courseApi ?? { apiOnly: false }
     debug('** Parsed App Settings ***', this.app.config.settings)
     debug('** Applied cmdSource ***', this.cmdSource)
   }
@@ -254,7 +267,7 @@ export class CourseApi {
     if (
       !Array.isArray(delta.updates) ||
       this.isAPICmdSource() ||
-      (!this.cmdSource && this.settings?.apiOnly)
+      (!this.cmdSource && this.app.config.settings.courseApi?.apiOnly)
     ) {
       return
     }
@@ -463,7 +476,7 @@ export class CourseApi {
       `${COURSE_API_PATH}/_config`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
-        res.json((this.app.config.settings as any)['courseApi'])
+        res.json(this.app.config.settings.courseApi)
       }
     )
 
@@ -477,7 +490,11 @@ export class CourseApi {
           return
         }
         try {
-          ;(this.settings as any).apiOnly = true
+          if (this.app.config.settings.courseApi) {
+            this.app.config.settings.courseApi.apiOnly = true
+          } else {
+            this.app.config.settings.courseApi = { apiOnly: true }
+          }
           if (!this.isAPICmdSource()) {
             this.clearDestination(true)
           }
@@ -499,7 +516,11 @@ export class CourseApi {
           return
         }
         try {
-          ;(this.settings as any).apiOnly = false
+          if (this.app.config.settings.courseApi) {
+            this.app.config.settings.courseApi.apiOnly = false
+          } else {
+            this.app.config.settings.courseApi = { apiOnly: false }
+          }
           this.saveSettings()
           res.status(200).json(Responses.ok)
         } catch {
@@ -644,7 +665,7 @@ export class CourseApi {
           res.status(400).json({
             state: 'FAILED',
             statusCode: 400,
-            message: (error as any).message
+            message: (error as Error).message
           })
         }
       }
@@ -672,7 +693,7 @@ export class CourseApi {
           res.status(400).json({
             state: 'FAILED',
             statusCode: 400,
-            message: (error as any).message
+            message: (error as Error).message
           })
         }
       }
@@ -906,7 +927,7 @@ export class CourseApi {
           const r = (await this.resourcesApi.getResource(
             typedHref.type,
             typedHref.id
-          )) as any
+          )) as Waypoint
           if (isValidCoordinate(r.feature.geometry.coordinates)) {
             newCourse.nextPoint = {
               position: {
@@ -914,7 +935,7 @@ export class CourseApi {
                 longitude: r.feature.geometry.coordinates[0]
               },
               href: dest.href,
-              type: r.type ?? 'Waypoint'
+              type: (r.type as CoursePointType) ?? 'Waypoint'
             }
             newCourse.activeRoute = null
           } else {
