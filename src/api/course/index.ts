@@ -8,7 +8,6 @@ import _ from 'lodash'
 import { SignalKMessageHub, WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
 import { getSourceId } from '@signalk/signalk-schema'
-import { Unsubscribes } from '../../types'
 
 import {
   GeoJsonPoint,
@@ -26,7 +25,8 @@ import {
   Delta,
   hasValues,
   SourceRef,
-  Waypoint
+  Waypoint,
+  Unsubscribes
 } from '@signalk/server-api'
 
 const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES

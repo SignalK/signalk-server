@@ -19,8 +19,8 @@ import { createDebug } from './debug'
 const debug = createDebug('signalk-server:deltacache')
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import _, { isUndefined } from 'lodash'
-import { toDelta } from './streambundle'
-import { ContextMatcher, SignalKServer, StreamBundle } from './types'
+import { toDelta, StreamBundle } from './streambundle'
+import { ContextMatcher, SignalKServer } from './types'
 import { Context, NormalizedDelta, SourceRef } from '@signalk/server-api'
 
 interface StringKeyed {
@@ -189,40 +189,38 @@ export default class DeltaCache {
       })
     })
 
-    let deltas = contexts.reduce((acc: any[], context: Context) => {
-      let deltasToProcess
+    const deltas = contexts.reduce(
+      (acc: NormalizedDelta[], context: Context) => {
+        let deltasToProcess
 
-      if (key) {
-        deltasToProcess = _.get(context, key)
-      } else {
-        deltasToProcess = findDeltas(context)
-      }
-      if (deltasToProcess) {
-        // acc.push(_.reduce(deltas, ((delta, acc) => !acc ? delta : (new Date(delta.timestamp).getTime() > new Date(acc.timestamp).getTime() ? delta : acc))))
-        acc = acc.concat(
-          _.values(
-            _.pickBy(deltasToProcess, (val, akey) => {
-              return akey !== 'meta'
-            })
+        if (key) {
+          deltasToProcess = _.get(context, key)
+        } else {
+          deltasToProcess = findDeltas(context)
+        }
+        if (deltasToProcess) {
+          acc = acc.concat(
+            _.values(
+              _.pickBy(deltasToProcess, (val, akey) => {
+                return akey !== 'meta'
+              })
+            )
           )
-        )
-      }
-      return acc
-    }, [])
+        }
+        return acc
+      },
+      []
+    )
 
-    deltas.sort((left: any, right: any) => {
+    deltas.sort((left, right) => {
       return (
         new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime()
       )
     })
 
-    deltas = deltas.map(toDelta)
-
-    deltas = deltas.filter((delta: any) => {
+    return deltas.map(toDelta).filter((delta) => {
       return this.app.securityStrategy.filterReadDelta(user, delta)
     })
-
-    return deltas
   }
 }
 
@@ -279,5 +277,3 @@ function getLeafObject(
   }
   return current
 }
-
-module.exports = DeltaCache

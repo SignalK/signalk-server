@@ -129,7 +129,7 @@ export interface Plugin {
    *
    * @category Configuration
    */
-  schema: object | (() => object)
+  schema?: object | (() => object)
 
   /**
    * A [uiSchema object](https://github.com/mozilla-services/react-jsonschema-form#the-uischema-object) which is used to control how the user interface is rendered in the Admin UI.

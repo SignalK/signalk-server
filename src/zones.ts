@@ -1,26 +1,16 @@
-import { Delta, Path } from '@signalk/server-api'
+import { ALARM_METHOD, Delta, Path, Value, Zone } from '@signalk/server-api'
 import { StreamBundle } from './streambundle'
 import { createDebug } from './debug'
 
 const debug = createDebug('signalk-server:zones')
-type ZoneState = 'nominal' | 'alert' | 'warn' | 'alarm' | 'emergency'
 
-interface Zone {
-  lower: number | undefined
-  upper: number | undefined
-  state: ZoneState
-  message: string
-}
-type Method = 'visual' | 'sound'
-
-type ZoneMethod = Method[]
 interface ZoneMethods {
-  normalMethod?: ZoneMethod
-  nominalMethod?: ZoneMethod
-  alertMethod?: ZoneMethod
-  warnMethod?: ZoneMethod
-  alarmMethod?: ZoneMethod
-  emergencyMethod?: ZoneMethod
+  normalMethod?: ALARM_METHOD
+  nominalMethod?: ALARM_METHOD
+  alertMethod?: ALARM_METHOD
+  warnMethod?: ALARM_METHOD
+  alarmMethod?: ALARM_METHOD
+  emergencyMethod?: ALARM_METHOD
 }
 
 export class Zones {
@@ -31,8 +21,7 @@ export class Zones {
     private streambundle: StreamBundle,
     private sendDelta: (delta: Delta) => void
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    streambundle.getSelfMetaBus().onValue((metaMessage: any) => {
+    streambundle.getSelfMetaBus().onValue((metaMessage) => {
       debug(`${JSON.stringify(metaMessage)}`)
       const { path, value } = metaMessage
 
@@ -68,25 +57,16 @@ export class Zones {
       this.unsubscribesForPaths[path]()
     }
     const tests = zones.map((zone) => {
-      const { upper, lower } = zone
-      if (upper !== undefined) {
-        if (lower !== undefined) {
-          return (value: number) => value < upper && value >= lower
-        } else {
-          return (value: number) => value < upper
-        }
-      } else {
-        if (lower !== undefined) {
-          return (value: number) => value > lower
-        } else {
-          return () => false
-        }
+      const { upper = Infinity, lower = -Infinity } = zone
+
+      return (value: Value) => {
+        return typeof value === 'number' && value < upper && value >= lower
       }
     })
 
     this.unsubscribesForPaths[path] = this.streambundle
       .getSelfStream(path)
-      .map((value: number | null) => {
+      .map((value) => {
         if (value === null) {
           return -1
         }
@@ -112,12 +92,11 @@ function getNotificationDelta(
   let value = null
   if (zoneIndex >= 0) {
     const { lower, upper, state, message } = zones[zoneIndex]
-    const methodName = `${state}Method`
+    const methodName: keyof ZoneMethods = `${state}Method`
     value = {
       state: state as string,
       message: message || `${lower} < value < ${upper}`,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      method: (methods as any)[methodName] || ['visual']
+      method: methods[methodName] || ['visual']
     }
   } else {
     // Default to "normal" zone

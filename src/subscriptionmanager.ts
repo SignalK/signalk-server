@@ -15,27 +15,33 @@
  * limitations under the License.
  */
 
-import { Position, WithContext } from '@signalk/server-api'
+import {
+  SubscriptionManager as ISubscriptionManager,
+  Unsubscribes,
+  NormalizedDelta,
+  Path,
+  WithContext,
+  SubscribeMessage,
+  SubscriptionOptions,
+  UnsubscribeMessage,
+  SubscribeCallback,
+  RelativePositionOrigin
+} from '@signalk/server-api'
 import Bacon from 'baconjs'
 import { isPointWithinRadius } from 'geolib'
 import _, { forOwn, get, isString } from 'lodash'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
-import { toDelta } from './streambundle'
-import { ContextMatcher, Unsubscribes } from './types'
+import { StreamBundle, toDelta } from './streambundle'
+import { ContextMatcher } from './types'
 const debug = createDebug('signalk-server:subscriptionmanager')
 
 interface BusesMap {
-  [key: string]: any
+  [path: Path]: Bacon.Bus<unknown, NormalizedDelta>
 }
 
-interface RelativePositionOrigin {
-  radius: number
-  position: Position
-}
-
-class SubscriptionManager {
-  streambundle: any
+class SubscriptionManager implements ISubscriptionManager {
+  streambundle: StreamBundle
   selfContext: string
   app: any
   constructor(app: any) {
@@ -44,13 +50,13 @@ class SubscriptionManager {
     this.app = app
   }
 
-  subscribe = (
-    command: any,
+  subscribe(
+    command: SubscribeMessage,
     unsubscribes: Unsubscribes,
-    errorCallback: (err: any) => void,
-    callback: (msg: any) => void,
+    errorCallback: (err: unknown) => void,
+    callback: SubscribeCallback,
     user?: string
-  ) => {
+  ) {
     const contextFilter = contextMatcher(
       this.selfContext,
       this.app,
@@ -71,9 +77,9 @@ class SubscriptionManager {
       // listen to new keys and then use the same logic to check if we
       // want to subscribe, passing in a map with just that single bus
       unsubscribes.push(
-        this.streambundle.keys.onValue((key: string) => {
+        this.streambundle.keys.onValue((path) => {
           const buses: BusesMap = {}
-          buses[key] = this.streambundle.getBus(key)
+          buses[path] = this.streambundle.getBus(path)
           handleSubscribeRows(
             this.app,
             command.subscribe,
@@ -89,7 +95,7 @@ class SubscriptionManager {
     }
   }
 
-  unsubscribe(msg: any, unsubscribes: Unsubscribes) {
+  unsubscribe(msg: UnsubscribeMessage, unsubscribes: Unsubscribes) {
     if (
       msg.unsubscribe &&
       msg.context === '*' &&
@@ -113,11 +119,11 @@ class SubscriptionManager {
 
 function handleSubscribeRows(
   app: any,
-  rows: any[],
+  rows: SubscriptionOptions[],
   unsubscribes: Unsubscribes,
   buses: BusesMap,
   filter: ContextMatcher,
-  callback: any,
+  callback: SubscribeCallback,
   errorCallback: any,
   user?: string
 ) {
@@ -144,11 +150,11 @@ interface App {
 
 function handleSubscribeRow(
   app: App,
-  subscribeRow: any,
+  subscribeRow: SubscriptionOptions,
   unsubscribes: Unsubscribes,
   buses: BusesMap,
   filter: ContextMatcher,
-  callback: any,
+  callback: SubscribeCallback,
   errorCallback: any,
   user?: string
 ) {
@@ -216,7 +222,7 @@ function handleSubscribeRow(
   })
 }
 
-function pathMatcher(path: string) {
+function pathMatcher(path: string = '*') {
   const pattern = path.replace('.', '\\.').replace('*', '.*')
   const matcher = new RegExp('^' + pattern + '$')
   return (aPath: string) => matcher.test(aPath)
@@ -225,7 +231,7 @@ function pathMatcher(path: string) {
 function contextMatcher(
   selfContext: string,
   app: any,
-  subscribeCommand: any,
+  subscribeCommand: SubscribeMessage,
   errorCallback: any
 ): ContextMatcher {
   debug('subscribeCommand:' + JSON.stringify(subscribeCommand))
@@ -240,7 +246,7 @@ function contextMatcher(
         ((subscribeCommand.context === 'vessels.self' ||
           subscribeCommand.context === 'self') &&
           normalizedDeltaData.context === selfContext)
-    } else if (get(subscribeCommand.context, 'radius')) {
+    } else if ('radius' in subscribeCommand.context) {
       if (
         !get(subscribeCommand.context, 'radius') ||
         !get(subscribeCommand.context, 'position.latitude') ||
@@ -252,7 +258,11 @@ function contextMatcher(
         return () => false
       }
       return (normalizedDeltaData: WithContext) =>
-        checkPosition(app, subscribeCommand.context, normalizedDeltaData)
+        checkPosition(
+          app,
+          subscribeCommand.context as RelativePositionOrigin,
+          normalizedDeltaData
+        )
     }
   }
   return () => true
