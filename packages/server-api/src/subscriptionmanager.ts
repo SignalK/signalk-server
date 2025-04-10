@@ -1,5 +1,5 @@
-import { RelativePositionOrigin } from '.'
-import { Context, Delta, Path } from './deltas'
+import { RelativePositionOrigin } from './index.js'
+import { Context, Delta, Path } from './deltas.js'
 
 export interface SubscriptionManager {
   subscribe(

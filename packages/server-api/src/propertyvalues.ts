@@ -80,8 +80,7 @@ export class PropertyValues {
   emitPropertyValue(pv: PropertyValue) {
     if (this.count >= PropertyValues.MAX_VALUES_COUNT) {
       throw new Error(
-        `Max PropertyValues count ${
-          PropertyValues.MAX_VALUES_COUNT
+        `Max PropertyValues count ${PropertyValues.MAX_VALUES_COUNT
         } exceeded trying to emit ${JSON.stringify(pv)}`
       )
     }

@@ -1,5 +1,5 @@
 import { IRouter } from 'express'
-import { ServerAPI } from './serverapi'
+import { ServerAPI } from './serverapi.js'
 
 /**
  * A plugin constructor is the interface that all plugins must export.

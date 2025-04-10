@@ -5,10 +5,10 @@ import {
   PropertyValuesEmitter,
   ResourceProviderRegistry,
   Delta
-} from '.'
-import { CourseApi } from './course'
-import { StreamBundle } from './streambundle'
-import { SubscriptionManager } from './subscriptionmanager'
+} from './index.js'
+import { CourseApi } from './course.js'
+import { StreamBundle } from './streambundle.js'
+import { SubscriptionManager } from './subscriptionmanager.js'
 
 /**
  * SignalK server provides an interface to allow {@link Plugin | Plugins } to:
@@ -26,11 +26,11 @@ import { SubscriptionManager } from './subscriptionmanager'
  */
 export interface ServerAPI
   extends PropertyValuesEmitter,
-    ResourceProviderRegistry,
-    AutopilotProviderRegistry,
-    Features,
-    CourseApi,
-    SelfIdentity {
+  ResourceProviderRegistry,
+  AutopilotProviderRegistry,
+  Features,
+  CourseApi,
+  SelfIdentity {
   /**
    * Returns the entry for the provided path starting from `vessels.self` in the full data model.
    *
@@ -262,7 +262,8 @@ export interface ServerAPI
    *
    * @example
    * ```javascript
-   * let myDataFile = require('path').join( app.getDataDirPath(), 'somedatafile.ext')
+   * import path from 'path';
+   * let myDataFile = path.join( app.getDataDirPath(), 'somedatafile.ext')
    * ```
    * @category Configuration
    */

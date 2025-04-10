@@ -1,4 +1,4 @@
-import { NormalizedDelta, Path, Value } from './deltas'
+import { NormalizedDelta, Path, Value } from './deltas.js'
 
 export interface StreamBundle {
   /**

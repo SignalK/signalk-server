@@ -1,4 +1,4 @@
-import { Value } from './deltas'
+import { Value } from './deltas.js'
 
 export type AutopilotUpdateAttrib =
   | 'mode'
