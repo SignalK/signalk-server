@@ -1,31 +1,31 @@
-const { defineConfig, globalIgnores } = require('eslint/config')
-const js = require('@eslint/js')
-const globals = require('globals')
-const tseslint = require('typescript-eslint')
-const prettier = require('eslint-config-prettier/flat')
-const react = require('eslint-plugin-react')
-const chai = require('eslint-plugin-chai-friendly')
+import { globalIgnores } from 'eslint/config'
+import js from '@eslint/js'
+import globals from 'globals'
+import * as tseslint from 'typescript-eslint'
+import prettier from 'eslint-config-prettier/flat'
+import react from 'eslint-plugin-react'
+import chai from 'eslint-plugin-chai-friendly'
 
-module.exports = defineConfig([
+export default tseslint.config(
   globalIgnores(['**/public', '**/dist']),
 
-  // TypeScript options
+  // All files
   {
-    files: ['**/*.ts'],
-    extends: [common('@typescript-eslint/'), tseslint.configs.recommended],
     languageOptions: {
-      parser: tseslint.parser,
       globals: globals.node
     }
   },
 
-  // JavasScript-only options
+  // JavasScript-only
   {
     files: ['**/*.js'],
-    extends: [common(), js.configs.recommended],
-    languageOptions: {
-      globals: globals.node
-    }
+    extends: [js.configs.recommended, common()]
+  },
+
+  // TypeScript-only
+  {
+    files: ['**/*.ts'],
+    extends: [tseslint.configs.recommended, common('@typescript-eslint/')]
   },
 
   // Test-only options
@@ -40,12 +40,11 @@ module.exports = defineConfig([
       'chai/no-unused-expressions': 'error'
     },
     languageOptions: {
-      parser: tseslint.parser,
       globals: globals.mocha
     }
   },
 
-  // Server-admin UI specific options
+  // Server-admin UI
   {
     settings: {
       react: {
@@ -53,16 +52,14 @@ module.exports = defineConfig([
       }
     },
     files: ['packages/server-admin-ui/src/**/*.js'],
-    extends: [common(), react.configs.flat.recommended],
+    extends: [react.configs.flat.recommended, common()],
     languageOptions: {
       parserOptions: {
         ecmaFeatures: {
           jsx: true
         }
       },
-      globals: {
-        ...globals.browser
-      }
+      globals: globals.browser
     },
     rules: {
       'react/prop-types': 'off',
@@ -73,7 +70,7 @@ module.exports = defineConfig([
 
   // Disable rules that prettier handles
   prettier
-])
+)
 
 // Common rules for all files
 function common(prefix = '') {
