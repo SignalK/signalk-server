@@ -21,7 +21,9 @@
  *
  */
 
-const Execute = require('./execute')
+import { Execute } from './execute'
+import createDebug from 'debug'
+import { inherits } from 'util'
 
 const cmd = `
 import pigpio, time, signal, sys
@@ -37,19 +39,19 @@ else:
 
 if __name__ == "__main__":
         st1read =pigpio.pi()
-        
+
         try:
                 st1read.bb_serial_read_close(gpio) #close if already run
         except:
                 pass
-        
+
         st1read.bb_serial_read_open(gpio, 4800,9)
 
         if  sys.argv[2] == "true":			        # Invert, inverted input from ST1, selected in the GUI
                 st1read.bb_serial_invert(gpio, 1)
 
         data=""
-        
+
         try:
                 while True:
                         out=(st1read.bb_serial_read(gpio))
@@ -82,13 +84,13 @@ if __name__ == "__main__":
                 print ("exit")
 `
 
-function PigpioSeatalk(options) {
-  const createDebug = options.createDebug || require('debug')
-  Execute.call(this, { debug: createDebug('signalk:streams:pigpio-seatalk') })
+export default function PigpioSeatalk(options) {
+  const debug = (options.createDebug || createDebug)(
+    'signalk:streams:pigpio-seatalk'
+  )
+  Execute.call(this, { debug })
   this.options = options
   this.options.command = `python -u -c '${cmd}' ${options.gpio} ${options.gpioInvert} `
 }
 
-require('util').inherits(PigpioSeatalk, Execute)
-
-module.exports = PigpioSeatalk
+inherits(PigpioSeatalk, Execute)

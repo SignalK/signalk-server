@@ -29,10 +29,11 @@
 
 */
 
-const Transform = require('stream').Transform
-const getLogger = require('./logging').getLogger
+import { Transform } from 'stream'
+import { getLogger } from './logging.js'
+import { inherits } from 'util'
 
-function Log(options) {
+export default function Log(options) {
   Transform.call(this, {
     objectMode: true,
   })
@@ -40,12 +41,10 @@ function Log(options) {
   this.logger = getLogger(options.app, options.discriminator, options.logdir)
 }
 
-require('util').inherits(Log, Transform)
+inherits(Log, Transform)
 
 Log.prototype._transform = function (msg, encoding, done) {
   this.push(msg)
   this.logger(msg)
   done()
 }
-
-module.exports = Log

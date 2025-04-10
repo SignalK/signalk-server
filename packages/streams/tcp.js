@@ -28,23 +28,26 @@
 
  */
 
-const net = require('net')
-const Transform = require('stream').Transform
-const isArray = require('lodash').isArray
+import net from 'net'
+import { Transform } from 'stream'
+import { isArray } from 'lodash'
+import createDebug from 'debug'
+import { inherits } from 'util'
+import inject from 'reconnect-core'
 
-function TcpStream(options) {
+export default function TcpStream(options) {
   Transform.call(this, options)
   this.options = options
   this.noDataReceivedTimeout =
     Number.parseInt((this.options.noDataReceivedTimeout + '').trim()) * 1000
-  this.debug = (options.createDebug || require('debug'))('signalk:streams:tcp')
+  this.debug = (options.createDebug || createDebug)('signalk:streams:tcp')
   this.debug(`noDataReceivedTimeout:${this.noDataReceivedTimeout}`)
-  this.debugData = (options.createDebug || require('debug'))(
+  this.debugData = (options.createDebug || createDebug)(
     'signalk:streams:tcp-data'
   )
 }
 
-require('util').inherits(TcpStream, Transform)
+inherits(TcpStream, Transform)
 
 TcpStream.prototype.pipe = function (pipeTo) {
   const that = this
@@ -77,7 +80,7 @@ TcpStream.prototype.pipe = function (pipeTo) {
     )
   }
 
-  require('reconnect-core')(function () {
+  inject(function () {
     return net.connect.apply(null, arguments)
   })({ maxDelay: 5 * 1000 }, (tcpStream) => {
     if (!isNaN(this.noDataReceivedTimeout)) {
@@ -126,5 +129,3 @@ TcpStream.prototype.pipe = function (pipeTo) {
 TcpStream.prototype._transform = function (data, encoding, callback) {
   callback(null, data)
 }
-
-module.exports = TcpStream

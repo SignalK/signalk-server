@@ -14,20 +14,16 @@
  * limitations under the License.
  */
 
-const { FileTimestampStream } = require('file-timestamp-stream')
-const path = require('path')
-let debug = require('debug')('signalk:streams:logging')
-const fs = require('fs')
-const { isUndefined } = require('lodash')
+import { FileTimestampStream } from 'file-timestamp-stream'
+import path from 'path'
+import createDebug from 'debug'
+import fs from 'fs'
+import { isUndefined } from 'lodash'
+
+let debug = createDebug('signalk:streams:logging')
 
 const filenamePattern = /skserver-raw_\d\d\d\d-\d\d-\d\dT\d\d\.log/
 const loggers = {}
-
-module.exports = {
-  getLogger,
-  getFullLogDir,
-  listLogFiles,
-}
 
 class FileTimestampStreamWithDelete extends FileTimestampStream {
   constructor(app, fullLogDir, filesToKeep, options) {
@@ -36,7 +32,7 @@ class FileTimestampStreamWithDelete extends FileTimestampStream {
     this.filesToKeep = filesToKeep
     this.fullLogDir = fullLogDir
     this.prevFilename = undefined
-    debug = (options.createDebug || require('debug'))('signalk:streams:logging')
+    debug = (options.createDebug || createDebug)('signalk:streams:logging')
   }
 
   // This method of base class is called when new file name is contemplated
@@ -77,7 +73,7 @@ class FileTimestampStreamWithDelete extends FileTimestampStream {
   }
 }
 
-function getLogger(app, discriminator = '', logdir) {
+export function getLogger(app, discriminator = '', logdir) {
   const fullLogdir = getFullLogDir(app, logdir)
 
   if (!loggers[fullLogdir]) {
@@ -126,7 +122,7 @@ function getLogger(app, discriminator = '', logdir) {
   }
 }
 
-function getFullLogDir(app, logdir) {
+export function getFullLogDir(app, logdir) {
   if (!logdir) {
     logdir = app.config.settings.loggingDirectory || app.config.configPath
   }
@@ -135,7 +131,7 @@ function getFullLogDir(app, logdir) {
     : path.join(app.config.configPath, logdir)
 }
 
-function listLogFiles(app, cb) {
+export function listLogFiles(app, cb) {
   fs.readdir(getFullLogDir(app), (err, files) => {
     if (!err) {
       cb(

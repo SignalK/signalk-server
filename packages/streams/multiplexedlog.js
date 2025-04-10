@@ -1,3 +1,1 @@
-const autodetect = require('./autodetect')
-
-module.exports = autodetect
+export { default } from './autodetect.js'

@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-var Transform = require('stream').Transform
+import { Transform } from 'stream'
+import { inherits } from 'util'
 /*
   aws-sdk is not included in dependencies because of the
   persistent deprecation warnings caused by its transitive
@@ -23,9 +24,9 @@ var Transform = require('stream').Transform
   deprecation warnings.
   Known to work with ^2.413.0
 */
-const AWS = require('aws-sdk')
+import AWS from 'aws-sdk'
 
-function S3Provider({ bucket, prefix }) {
+export default function S3Provider({ bucket, prefix }) {
   Transform.call(this, {
     objectMode: false,
   })
@@ -34,7 +35,7 @@ function S3Provider({ bucket, prefix }) {
   // AWS.config.credentials = new AWS.SharedIniFileCredentials()
 }
 
-require('util').inherits(S3Provider, Transform)
+inherits(S3Provider, Transform)
 
 S3Provider.prototype.pipe = function (pipeTo) {
   const doEnd = this.end.bind(this)
@@ -83,5 +84,3 @@ S3Provider.prototype.pipe = function (pipeTo) {
     })
   return pipeTo
 }
-
-module.exports = S3Provider

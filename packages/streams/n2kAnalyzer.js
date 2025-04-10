@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-const Transform = require('stream').Transform
+import { Transform } from 'stream'
+import { spawn } from 'child_process'
+import { createInterface } from 'readline'
+import { inherits } from 'util'
 
-function N2KAnalyzer(options) {
+export default function N2KAnalyzer(options) {
   Transform.call(this, {
     objectMode: true,
   })
@@ -24,15 +27,9 @@ function N2KAnalyzer(options) {
   this.analyzerOutEvent = options.analyzerOutEvent || 'N2KAnalyzerOut'
 
   if (process.platform === 'win32') {
-    this.analyzerProcess = require('child_process').spawn('cmd', [
-      '/c',
-      'analyzer -json -si',
-    ])
+    this.analyzerProcess = spawn('cmd', ['/c', 'analyzer -json -si'])
   } else {
-    this.analyzerProcess = require('child_process').spawn('sh', [
-      '-c',
-      'analyzer -json -si',
-    ])
+    this.analyzerProcess = spawn('sh', ['-c', 'analyzer -json -si'])
   }
   this.analyzerProcess.stderr.on('data', function (data) {
     console.error(data.toString())
@@ -41,7 +38,7 @@ function N2KAnalyzer(options) {
     console.error('Analyzer process exited with code ' + code)
   })
 
-  this.linereader = require('readline').createInterface(
+  this.linereader = createInterface(
     this.analyzerProcess.stdout,
     this.analyzerProcess.stdin
   )
@@ -62,7 +59,7 @@ function N2KAnalyzer(options) {
   })
 }
 
-require('util').inherits(N2KAnalyzer, Transform)
+inherits(N2KAnalyzer, Transform)
 
 N2KAnalyzer.prototype._transform = function (chunk, encoding, done) {
   this.analyzerProcess.stdin.write(chunk.toString() + '\n')
@@ -78,5 +75,3 @@ N2KAnalyzer.prototype.end = function () {
   this.analyzerProcess.kill()
   this.pipeTo.end()
 }
-
-module.exports = N2KAnalyzer

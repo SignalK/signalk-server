@@ -19,14 +19,15 @@
  shovels data from tcpserver0183data to the provider pipe.
  */
 
-const Transform = require('stream').Transform
+import { Transform } from 'stream'
+import { inherits } from 'util'
 
-function TcpServer(options) {
+export default function TcpServer(options) {
   Transform.call(this)
   this.options = options
 }
 
-require('util').inherits(TcpServer, Transform)
+inherits(TcpServer, Transform)
 
 TcpServer.prototype.pipe = function (pipeTo) {
   this.options.app.on('tcpserver0183data', (d) => this.write(d))
@@ -36,5 +37,3 @@ TcpServer.prototype.pipe = function (pipeTo) {
 TcpServer.prototype._transform = function (data, encoding, callback) {
   callback(null, data)
 }
-
-module.exports = TcpServer

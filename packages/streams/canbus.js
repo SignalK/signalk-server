@@ -14,4 +14,5 @@
  * limitations under the License.
  */
 
-module.exports = require('@canboat/canboatjs').canbus
+import { canbus } from '@canboat/canboatjs'
+export default canbus

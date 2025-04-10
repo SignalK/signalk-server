@@ -1,7 +1,8 @@
-const Transform = require('stream').Transform
-const fs = require('fs')
+import { Transform } from 'stream'
+import fs from 'fs'
+import { inherits } from 'util'
 
-function FolderStreamProvider(folder) {
+export default function FolderStreamProvider(folder) {
   Transform.call(this, {
     objectMode: false,
   })
@@ -9,7 +10,7 @@ function FolderStreamProvider(folder) {
   this.fileIndex = 0
 }
 
-require('util').inherits(FolderStreamProvider, Transform)
+inherits(FolderStreamProvider, Transform)
 
 FolderStreamProvider.prototype.pipe = function (pipeTo) {
   const files = fs.readdirSync(this.folder)
@@ -32,5 +33,3 @@ FolderStreamProvider.prototype.pipe = function (pipeTo) {
 
   return pipeTo
 }
-
-module.exports = FolderStreamProvider

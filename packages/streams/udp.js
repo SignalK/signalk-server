@@ -33,26 +33,29 @@
 
  */
 
-const Transform = require('stream').Transform
+import { Transform } from 'stream'
+import createDebug from 'debug'
+import { inherits } from 'util'
+import { createSocket } from 'dgram'
 
-function Udp(options) {
+export default function Udp(options) {
   Transform.call(this, {
     objectMode: false,
   })
   this.options = options
-  this.debug = (options.createDebug || require('debug'))('signalk:streams:udp')
-  this.debugData = (options.createDebug || require('debug'))(
+  this.debug = (options.createDebug || createDebug)('signalk:streams:udp')
+  this.debugData = (options.createDebug || createDebug)(
     'signalk:streams:udp-data'
   )
 }
 
-require('util').inherits(Udp, Transform)
+inherits(Udp, Transform)
 
 Udp.prototype.pipe = function (pipeTo) {
   this.pipeTo = pipeTo
   Udp.super_.prototype.pipe.call(this, pipeTo)
 
-  const socket = require('dgram').createSocket('udp4')
+  const socket = createSocket('udp4')
   const self = this
 
   if (this.options.outEvent && this.options.port !== undefined) {
@@ -79,5 +82,3 @@ Udp.prototype.end = function () {
   this.socket.close()
   this.pipeTo.end()
 }
-
-module.exports = Udp

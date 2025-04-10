@@ -2,6 +2,7 @@
   "name": "signalk-server",
   "version": "2.13.5",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "build": "tsc --build",

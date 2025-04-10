@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-const Transform = require('stream').Transform
-const Writable = require('stream').Writable
-const TimestampThrottle = require('./timestamp-throttle')
-
-const N2KJsonToSignalK = require('./n2k-signalk')
-const ActisenseSerialToJSON = require('./n2kAnalyzer')
-const canboatjs = require('./canboatjs')
-const Nmea01832SignalK = require('./nmea0183-signalk')
-const _ = require('lodash')
+import { Transform, Writable } from 'stream'
+import TimestampThrottle from './timestamp-throttle.js'
+import N2KJsonToSignalK from './n2k-signalk.js'
+import ActisenseSerialToJSON from './n2kAnalyzer.js'
+import canboatjs from './canboatjs.js'
+import Nmea01832SignalK from './nmea0183-signalk.js'
+import _ from 'lodash'
+import { inherits } from 'util'
 
 /*
 
@@ -45,7 +44,7 @@ A => actisense-serial format N2K data
 1471172400153;A;2016-07-16T12:00:00.000Z,2,130306,105,255,8,00,d1,03,c9,23,fa,ff,ff
 */
 
-function DeMultiplexer(options) {
+export default function DeMultiplexer(options) {
   Writable.call(this)
 
   this.toTimestamped = new ToTimestamped(this, options)
@@ -57,7 +56,7 @@ function DeMultiplexer(options) {
 
   this.toTimestamped.on('drain', this.emit.bind(this, 'drain'))
 }
-require('util').inherits(DeMultiplexer, Writable)
+inherits(DeMultiplexer, Writable)
 
 DeMultiplexer.prototype.pipe = function (target) {
   return this.splitter.pipe(target)
@@ -85,7 +84,7 @@ function Splitter(deMultiplexer, options) {
   this.fromNMEA0183 = new Nmea01832SignalK(options)
   this.fromNMEA0183.on('data', this.demuxEmitData)
 }
-require('util').inherits(Splitter, Transform)
+inherits(Splitter, Transform)
 
 Splitter.prototype._transform = function (msg, encoding, _done) {
   let done = _done
@@ -138,7 +137,7 @@ function ToTimestamped(deMultiplexer, options) {
   this.deMultiplexer = deMultiplexer
   this.options = options
 }
-require('util').inherits(ToTimestamped, Transform)
+inherits(ToTimestamped, Transform)
 
 // runs only once, self-assigns the actual transform functions
 // on first call
@@ -194,5 +193,3 @@ ToTimestamped.prototype.handleMultiplexed = function (msg, encoding, done) {
   })
   done()
 }
-
-module.exports = DeMultiplexer

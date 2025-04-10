@@ -1,30 +1,33 @@
-const Transform = require('stream').Transform
-const _ = require('lodash')
-const N2kAnalyzer = require('./n2kAnalyzer')
-const FromJson = require('./from_json')
-const MultiplexedLog = require('./multiplexedlog')
-const nmea0183_signalk = require('./nmea0183-signalk')
-const N2kToSignalK = require('./n2k-signalk')
-const Log = require('./log')
-const Liner = require('./liner')
-const SplittingLiner = require('./splitting-liner')
-const execute = require('./execute')
-const Udp = require('./udp')
-const Tcp = require('./tcp')
-const TcpServer = require('./tcpserver')
-const FileStream = require('./filestream')
-const Replacer = require('./replacer')
-const Throttle = require('./throttle')
-const TimestampThrottle = require('./timestamp-throttle')
-const CanboatJs = require('./canboatjs')
-const iKonvert = require('@canboat/canboatjs').iKonvert
-const Ydwg02 = require('@canboat/canboatjs').Ydwg02
-const W2k01 = require('@canboat/canboatjs').W2k01
-const gpsd = require('./gpsd')
-const pigpioSeatalk = require('./pigpio-seatalk')
-const gpiodSeatalk = require('./gpiod-seatalk')
+import { Transform } from 'stream'
+import _ from 'lodash'
+import N2kAnalyzer from './n2kAnalyzer.js'
+import FromJson from './from_json.js'
+import MultiplexedLog from './multiplexedlog.js'
+import nmea0183_signalk from './nmea0183-signalk.js'
+import N2kToSignalK from './n2k-signalk.js'
+import Log from './log.js'
+import Liner from './liner.js'
+import SplittingLiner from './splitting-liner.js'
+import execute from './execute.js'
+import Udp from './udp.js'
+import Tcp from './tcp.js'
+import TcpServer from './tcpserver.js'
+import FileStream from './filestream.js'
+import Replacer from './replacer.js'
+import Throttle from './throttle.js'
+import TimestampThrottle from './timestamp-throttle.js'
+import CanboatJs from './canboatjs.js'
+import { iKonvert, Ydwg02, W2k01 } from '@canboat/canboatjs'
+import gpsd from './gpsd.js'
+import pigpioSeatalk from './pigpio-seatalk.js'
+import gpiodSeatalk from './gpiod-seatalk.js'
+import { inherits } from 'util'
+import actisenseSerial from './actisense-serial.js'
+import canbus from './canbus.js'
+import serialport from './serialport.js'
+import mdns_ws from './mdns-ws.js'
 
-function Simple(options) {
+export default function Simple(options) {
   Transform.call(this, { objectMode: true })
 
   const { emitPropertyValue, onPropertyValues, createDebug } = options
@@ -116,7 +119,7 @@ function Simple(options) {
   this.pipeline = pipeline
 }
 
-require('util').inherits(Simple, Transform)
+inherits(Simple, Transform)
 
 Simple.prototype._transform = function (msg, encoding, done) {
   this.push(msg)
@@ -126,8 +129,6 @@ Simple.prototype._transform = function (msg, encoding, done) {
 Simple.prototype.end = function () {
   this.pipeline[0].end()
 }
-
-module.exports = Simple
 
 const getLogger = (app, logging, discriminator) =>
   logging
@@ -244,7 +245,6 @@ const pipeStartByType = {
 
 function nmea2000input(subOptions, logging) {
   if (subOptions.type === 'ngt-1-canboatjs') {
-    const actisenseSerial = require('./actisense-serial')
     if (!actisenseSerial) {
       throw new Error('unable to load actisense serial')
     }
@@ -256,13 +256,12 @@ function nmea2000input(subOptions, logging) {
     ]
   } else if (subOptions.type === 'canbus-canboatjs') {
     return [
-      new require('./canbus')({
+      new canbus({
         ...subOptions,
         canDevice: subOptions.interface,
       }),
     ]
   } else if (subOptions.type === 'ikonvert-canboatjs') {
-    const serialport = require('./serialport')
     return [
       new serialport({
         ...subOptions,
@@ -314,7 +313,6 @@ function nmea2000input(subOptions, logging) {
   } else if (subOptions.type === 'navlink2-udp-canboatjs') {
     return [new Udp(subOptions), new Liner(subOptions)]
   } else if (subOptions.type === 'ydwg02-usb-canboatjs') {
-    const serialport = require('./serialport')
     return [
       new serialport({
         ...subOptions,
@@ -357,7 +355,6 @@ function nmea0183input(subOptions) {
   } else if (subOptions.type === 'udp') {
     pipePart = [new Udp(subOptions), new SplittingLiner(subOptions)]
   } else if (subOptions.type === 'serial') {
-    const serialport = require('./serialport')
     pipePart = [new serialport(subOptions)]
   } else if (subOptions.type === 'gpsd') {
     pipePart = [new gpsd(subOptions)]
@@ -387,7 +384,7 @@ function nmea0183input(subOptions) {
     }
     return pipePart
   } else {
-    throw new Error(`Unknown networking tyoe: ${subOptions.networking}`)
+    throw new Error(`Unknown networking type: ${subOptions.type}`)
   }
 }
 
@@ -403,14 +400,12 @@ function fileInput(subOptions) {
 
 function signalKInput(subOptions) {
   if (subOptions.type === 'ws' || subOptions.type === 'wss') {
-    const mdns_ws = require('./mdns-ws')
     return [new mdns_ws(subOptions)]
   } else if (subOptions.type === 'tcp') {
     return [new Tcp(subOptions), new Liner(subOptions)]
   } else if (subOptions.type === 'udp') {
     return [new Udp(subOptions)]
   } else if (subOptions.type === 'serial') {
-    const serialport = require('./serialport')
     return [new serialport(subOptions)]
   }
   throw new Error(`unknown SignalK type: ${subOptions.type}`)

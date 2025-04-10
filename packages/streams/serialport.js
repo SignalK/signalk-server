@@ -57,15 +57,16 @@
 
  */
 
-const Transform = require('stream').Transform
-const child_process = require('child_process')
-const shellescape = require('any-shell-escape')
-const { SerialPort } = require('serialport')
-const { ReadlineParser } = require('@serialport/parser-readline')
-const isArray = require('lodash').isArray
-const isBuffer = require('lodash').isBuffer
+import { Transform } from 'stream'
+import { execSync } from 'child_process'
+import shellescape from 'any-shell-escape'
+import { SerialPort } from 'serialport'
+import { ReadlineParser } from '@serialport/parser-readline'
+import { isArray, isBuffer } from 'lodash'
+import createDebug from 'debug'
+import { inherits } from 'util'
 
-function SerialStream(options) {
+export default function SerialStream(options) {
   if (!(this instanceof SerialStream)) {
     return new SerialStream(options)
   }
@@ -80,11 +81,12 @@ function SerialStream(options) {
   this.start()
   this.isFirstError = true
 
-  const createDebug = options.createDebug || require('debug')
-  this.debug = createDebug('signalk:streams:serialport')
+  this.debug = (options.createDebug || createDebug)(
+    'signalk:streams:serialport'
+  )
 }
 
-require('util').inherits(SerialStream, Transform)
+inherits(SerialStream, Transform)
 
 SerialStream.prototype.start = function () {
   const that = this
@@ -100,7 +102,7 @@ SerialStream.prototype.start = function () {
   }
 
   if (process.env.PRESERIALCOMMAND) {
-    child_process.execSync(
+    execSync(
       `${process.env.PRESERIALCOMMAND} ${shellescape(this.options.device)}`
     )
   }
@@ -196,5 +198,3 @@ SerialStream.prototype.scheduleReconnect = function () {
   this.options.app.setProviderStatus(this.options.providerId, msg)
   setTimeout(this.start.bind(this), this.reconnectDelay)
 }
-
-module.exports = SerialStream
