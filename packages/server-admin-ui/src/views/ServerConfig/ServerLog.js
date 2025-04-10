@@ -12,8 +12,8 @@ import {
   FormGroup,
   FormText,
 } from 'reactstrap'
-import LogFiles from './Logging'
-import Creatable from 'react-select/creatable'
+import LogFiles from './Logging.js'
+import Creatable from 'react-select/creatable/dist/react-select.esm.js'
 import remove from 'lodash.remove'
 
 class ServerLogs extends Component {

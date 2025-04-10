@@ -10,8 +10,8 @@ import {
   CardTitle,
   Input,
 } from 'reactstrap'
-import AppsList from '../AppsList'
-import WarningBox from './WarningBox'
+import AppsList from '../AppsList.js'
+import WarningBox from './WarningBox.js'
 
 import '../appStore.scss'
 
@@ -58,7 +58,7 @@ const Apps = function (props) {
     }
   }
 
-  /* 
+  /*
   Show different warning message
   whether the store is available or if an app was installed or removed
   */

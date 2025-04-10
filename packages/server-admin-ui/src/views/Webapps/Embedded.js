@@ -1,7 +1,7 @@
 import React, { Component, Suspense } from 'react'
 import { connect } from 'react-redux'
-import { toLazyDynamicComponent, APP_PANEL } from './dynamicutilities'
-import Login from '../../views/security/Login'
+import { toLazyDynamicComponent, APP_PANEL } from './dynamicutilities.js'
+import Login from '../../views/security/Login.js'
 import ReconnectingWebSocket from 'reconnecting-websocket'
 
 const wsProto = window.location.protocol == 'https:' ? 'wss' : 'ws'

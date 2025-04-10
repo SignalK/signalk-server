@@ -14,7 +14,7 @@ import {
   Table,
   Row,
 } from 'reactstrap'
-import EnableSecurity from './EnableSecurity'
+import EnableSecurity from './EnableSecurity.js'
 
 class AccessRequests extends Component {
   constructor(props) {

@@ -12,7 +12,7 @@ import {
   Input,
   Table,
 } from 'reactstrap'
-import Creatable from 'react-select/creatable'
+import Creatable from 'react-select/creatable/dist/react-select.esm.js'
 import remove from 'lodash.remove'
 import uniq from 'lodash.uniq'
 

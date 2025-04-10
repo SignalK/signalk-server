@@ -8,7 +8,7 @@ import {
 import { FileStore, getUuid } from './lib/filestorage.js'
 import { StoreRequestParams } from './types/index.js'
 
-interface ResourceProviderApp extends ServerAPI, ResourceProviderRegistry {}
+interface ResourceProviderApp extends ServerAPI, ResourceProviderRegistry { }
 
 interface ProviderSettings {
   standard: {

@@ -17,11 +17,11 @@ import '../scss/style.scss'
 import '../scss/core/_dropdown-menu-right.scss'
 
 // Containers
-import Full from './containers/Full/Full'
+import Full from './containers/Full/Full.js'
 
-import { openServerEventsConnection } from './actions'
+import { openServerEventsConnection } from './actions.js'
 
-import { reduceSourcePriorities } from './views/ServerConfig/SourcePriorities'
+import { reduceSourcePriorities } from './views/ServerConfig/SourcePriorities.js'
 
 import escape from 'escape-html'
 import Convert from 'ansi-to-html'

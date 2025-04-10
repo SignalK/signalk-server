@@ -13,7 +13,7 @@ import {
   Table,
   Row,
 } from 'reactstrap'
-import EnableSecurity from './EnableSecurity'
+import EnableSecurity from './EnableSecurity.js'
 
 export function fetchSecurityUsers() {
   fetch(`${window.serverRoutesPrefix}/security/users`, {

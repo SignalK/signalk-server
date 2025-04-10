@@ -14,8 +14,8 @@ import {
   InputGroupText,
 } from 'reactstrap'
 import { connect } from 'react-redux'
-import { enableSecurity, fetchLoginStatus } from '../../actions'
-import Login from './Login'
+import { enableSecurity, fetchLoginStatus } from '../../actions.js'
+import Login from './Login.js'
 
 class EnableSecurity extends Component {
   constructor(props) {

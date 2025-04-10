@@ -3,10 +3,10 @@ import { NavLink } from 'react-router-dom'
 import { Badge, Nav, NavItem, NavLink as RsNavLink } from 'reactstrap'
 import { connect } from 'react-redux'
 import classNames from 'classnames'
-import SidebarFooter from './../SidebarFooter/SidebarFooter'
-import SidebarForm from './../SidebarForm/SidebarForm'
-import SidebarHeader from './../SidebarHeader/SidebarHeader'
-import SidebarMinimizer from './../SidebarMinimizer/SidebarMinimizer'
+import SidebarFooter from './../SidebarFooter/SidebarFooter.js'
+import SidebarForm from './../SidebarForm/SidebarForm.js'
+import SidebarHeader from './../SidebarHeader/SidebarHeader.js'
+import SidebarMinimizer from './../SidebarMinimizer/SidebarMinimizer.js'
 
 class Sidebar extends Component {
   handleClick(e) {

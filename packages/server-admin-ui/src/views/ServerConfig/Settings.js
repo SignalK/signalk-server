@@ -15,8 +15,8 @@ import {
   FormText,
 } from 'reactstrap'
 
-import VesselConfiguration from './VesselConfiguration'
-import LogFiles from './Logging'
+import VesselConfiguration from './VesselConfiguration.js'
+import LogFiles from './Logging.js'
 
 function fetchSettings() {
   fetch(`${window.serverRoutesPrefix}/settings`, {

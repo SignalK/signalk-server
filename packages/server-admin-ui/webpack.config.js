@@ -1,19 +1,18 @@
-const webpack = require('webpack')
-const HtmlWebpackPlugin = require('html-webpack-plugin')
-const CopyWebpackPlugin = require('copy-webpack-plugin')
-const BundleAnalyzerPlugin =
-  require('webpack-bundle-analyzer').BundleAnalyzerPlugin
-const { ModuleFederationPlugin } = require('webpack').container
-require('@signalk/server-admin-ui-dependencies')
-const devDeps = require('./package.json').devDependencies
+import webpack from 'webpack'
+import HtmlWebpackPlugin from 'html-webpack-plugin'
+import CopyWebpackPlugin from 'copy-webpack-plugin'
+import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer'
+import '@signalk/server-admin-ui-dependencies'
+import path from 'path'
+import pkg from './package.json' with { type: 'json' }
 
-const path = require('path')
+const devDeps = pkg.devDependencies
 
-module.exports = {
+export default {
   entry: './src/index',
   mode: 'development',
   output: {
-    path: path.resolve(__dirname, 'public'),
+    path: path.resolve(import.meta.dirname, 'public'),
   },
   module: {
     rules: [
@@ -76,7 +75,7 @@ module.exports = {
       generateStatsFile: true,
       statsOptions: { source: false },
     }),
-    new ModuleFederationPlugin({
+    new webpack.container.ModuleFederationPlugin({
       name: 'adminUI)',
       filename: 'remoteEntry.js',
       remotes: {},
