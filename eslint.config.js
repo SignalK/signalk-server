@@ -4,6 +4,7 @@ const globals = require('globals')
 const tseslint = require('typescript-eslint')
 const prettier = require('eslint-config-prettier/flat')
 const react = require('eslint-plugin-react')
+const chai = require('eslint-plugin-chai-friendly')
 
 module.exports = defineConfig([
   globalIgnores(['**/public', '**/dist']),
@@ -20,7 +21,7 @@ module.exports = defineConfig([
 
   // JavasScript-only options
   {
-    files: ['{src,packages/*/src}/**/*.js'],
+    files: ['**/*.js'],
     extends: [common(), js.configs.recommended],
     languageOptions: {
       globals: globals.node
@@ -33,6 +34,11 @@ module.exports = defineConfig([
       '{src,packages/*/src}/**/*.test.{ts,js}',
       '{test,packages/*/test}/**/*.{js,ts}'
     ],
+    plugins: { chai },
+    rules: {
+      'no-unused-expressions': 'off', // disable original rule
+      'chai/no-unused-expressions': 'error'
+    },
     languageOptions: {
       parser: tseslint.parser,
       globals: globals.mocha

@@ -39,7 +39,7 @@ FromJson.prototype._transform = function (chunk, encoding, done) {
   let parsed = null
   try {
     parsed = JSON.parse(chunk.toString())
-  } catch (ex) {
+  } catch (_) {
     console.error('Could not parse JSON:' + chunk.toString())
   }
   if (parsed) {
