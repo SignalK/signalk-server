@@ -10,7 +10,7 @@ import {
   Input,
   Label,
   Form,
-  FormGroup,
+  FormGroup
 } from 'reactstrap'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
 import { Fragment } from 'react'
@@ -24,7 +24,7 @@ export default class PluginConfigurationList extends Component {
     this.state = {
       plugins: [],
       search: localStorage.getItem(searchStorageKey) || '',
-      searchResults: null,
+      searchResults: null
     }
     this.lastOpenedPlugin = '--'
     this.handleSearch = this.handleSearch.bind(this)
@@ -66,7 +66,7 @@ export default class PluginConfigurationList extends Component {
 
   componentDidMount() {
     fetch(`${window.serverRoutesPrefix}/plugins`, {
-      credentials: 'same-origin',
+      credentials: 'same-origin'
     })
       .then((response) => {
         if (response.status == 200) {
@@ -149,7 +149,7 @@ export default class PluginConfigurationList extends Component {
       method: 'POST',
       body: JSON.stringify(data),
       headers: new Headers({ 'Content-Type': 'application/json' }),
-      credentials: 'same-origin',
+      credentials: 'same-origin'
     }).then((response) => {
       if (response.status != 200) {
         console.error(response)
@@ -236,7 +236,7 @@ class PluginCard extends Component {
                         onChange={() => {
                           this.props.saveData({
                             ...this.props.plugin.data,
-                            enabled: !this.props.plugin.data.enabled,
+                            enabled: !this.props.plugin.data.enabled
                           })
                         }}
                         checked={this.props.plugin.data.enabled}
@@ -262,8 +262,7 @@ class PluginCard extends Component {
                         onChange={() => {
                           this.props.saveData({
                             ...this.props.plugin.data,
-                            enableLogging:
-                              !this.props.plugin.data.enableLogging,
+                            enableLogging: !this.props.plugin.data.enableLogging
                           })
                         }}
                         checked={this.props.plugin.data.enableLogging}
@@ -289,7 +288,7 @@ class PluginCard extends Component {
                         onChange={() => {
                           this.props.saveData({
                             ...this.props.plugin.data,
-                            enableDebug: !this.props.plugin.data.enableDebug,
+                            enableDebug: !this.props.plugin.data.enableDebug
                           })
                         }}
                         checked={this.props.plugin.data.enableDebug}

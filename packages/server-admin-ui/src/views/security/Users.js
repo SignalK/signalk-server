@@ -11,13 +11,13 @@ import {
   Label,
   FormGroup,
   Table,
-  Row,
+  Row
 } from 'reactstrap'
 import EnableSecurity from './EnableSecurity'
 
 export function fetchSecurityUsers() {
   fetch(`${window.serverRoutesPrefix}/security/users`, {
-    credentials: 'include',
+    credentials: 'include'
   })
     .then((response) => response.json())
     .then((data) => {
@@ -60,19 +60,19 @@ class Users extends Component {
         : event.target.value
     this.state.selectedUser[event.target.name] = value
     this.setState({
-      selectedUser: this.state.selectedUser,
+      selectedUser: this.state.selectedUser
     })
   }
 
   handleAddUser() {
     var newUser = {
       type: 'readonly',
-      isNew: true,
+      isNew: true
     }
     this.setState(
       {
         selectedUser: newUser,
-        selectedIndex: this.state.users.length - 1,
+        selectedIndex: this.state.users.length - 1
       },
       () => {
         this.refs['selectedUser'].scrollIntoView()
@@ -105,7 +105,7 @@ class Users extends Component {
 
     var payload = {
       password: this.state.selectedUser.password,
-      type: this.state.selectedUser.type || 'readonly',
+      type: this.state.selectedUser.type || 'readonly'
     }
 
     fetch(
@@ -113,17 +113,17 @@ class Users extends Component {
       {
         method: isNew ? 'POST' : 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload),
-        credentials: 'include',
+        credentials: 'include'
       }
     )
       .then((response) => response.text())
       .then((response) => {
         this.setState({
           selectedUser: null,
-          selectedIndex: -1,
+          selectedIndex: -1
         })
         alert(response)
         this.fetchSecurityUsers()
@@ -136,16 +136,16 @@ class Users extends Component {
       {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        credentials: 'include',
+        credentials: 'include'
       }
     )
       .then((response) => response.text())
       .then((response) => {
         this.setState({
           selectedUser: null,
-          selectedIndex: -1,
+          selectedIndex: -1
         })
         alert(response)
         this.fetchSecurityUsers()
@@ -156,7 +156,7 @@ class Users extends Component {
     this.setState(
       {
         selectedUser: JSON.parse(JSON.stringify(user)),
-        selectedIndex: index,
+        selectedIndex: index
       },
       () => {
         this.refs['selectedUser'].scrollIntoView()

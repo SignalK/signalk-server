@@ -3,7 +3,7 @@ import {
   faPlusSquare,
   faSave,
   faSquarePlus,
-  faTrashCan,
+  faTrashCan
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState } from 'react'
@@ -92,7 +92,7 @@ const DisplaySelect = ({ disabled, setValue, value }) => {
         onChange={(e) =>
           setValue({
             ...value,
-            type: e.target.value,
+            type: e.target.value
           })
         }
       >
@@ -110,12 +110,12 @@ const DisplaySelect = ({ disabled, setValue, value }) => {
           try {
             setValue({
               ...value,
-              lower: Number(e.target.value),
+              lower: Number(e.target.value)
             })
           } catch (_) {
             setValue({
               ...value,
-              lower: null,
+              lower: null
             })
           }
         }}
@@ -129,12 +129,12 @@ const DisplaySelect = ({ disabled, setValue, value }) => {
           try {
             setValue({
               ...value,
-              upper: Number(e.target.value),
+              upper: Number(e.target.value)
             })
           } catch (_) {
             setValue({
               ...value,
-              upper: null,
+              upper: null
             })
           }
         }}
@@ -147,12 +147,12 @@ const DisplaySelect = ({ disabled, setValue, value }) => {
           try {
             setValue({
               ...value,
-              power: Number(e.target.value),
+              power: Number(e.target.value)
             })
           } catch (_) {
             setValue({
               ...value,
-              upper: null,
+              upper: null
             })
           }
         }}
@@ -202,7 +202,7 @@ const METAFIELDRENDERERS = {
   ),
   emergencyMethod: (props) => (
     <MetaFormRow {...props} renderValue={MethodSelect}></MetaFormRow>
-  ),
+  )
 }
 const METAFIELDS = [
   'units',
@@ -218,7 +218,7 @@ const METAFIELDS = [
   'alertMethod',
   'warnMethod',
   'alarmMethod',
-  'emergencyMethod',
+  'emergencyMethod'
 ]
 
 const UNITS = {
@@ -241,7 +241,7 @@ const UNITS = {
   rad: 'Radian',
   'rad/s': 'Radians per second',
   ratio: 'Ratio',
-  s: 'Second',
+  s: 'Second'
 }
 
 const saveMeta = (path, meta) => {
@@ -249,7 +249,7 @@ const saveMeta = (path, meta) => {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value: meta }),
+    body: JSON.stringify({ value: meta })
   })
 }
 
@@ -319,7 +319,7 @@ export default function Meta({ meta, path }) {
                 const copy = { ...localMeta }
                 delete copy[key]
                 setLocalMeta(copy)
-              },
+              }
             }
             const renderer = METAFIELDRENDERERS[key]
             return renderer && renderer(props)
@@ -482,8 +482,8 @@ const Zones = ({ zones, isEditing, setZones }) => (
                 upper: 1,
                 lower: 0,
                 state: STATES[0],
-                message: '',
-              },
+                message: ''
+              }
             ])
           }
         />

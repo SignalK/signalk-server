@@ -10,14 +10,8 @@ describe('Delete Requests', () => {
   let doStop, doSendDelta, theHost, doSelfPut, doGet, doCreateWsPromiser
 
   before(async () => {
-    const {
-      createWsPromiser,
-      selfPutV1,
-      sendDelta,
-      stop,
-      host,
-      getV1
-    } = await startServer()
+    const { createWsPromiser, selfPutV1, sendDelta, stop, host, getV1 } =
+      await startServer()
     doStop = stop
     doSendDelta = sendDelta
     theHost = host
@@ -32,7 +26,7 @@ describe('Delete Requests', () => {
 
   it('HTTP delete to unhandled path fails', async function () {
     await doSendDelta('navigation.logTrip', 43374)
-   
+
     const result = await fetch(
       `${theHost}/signalk/v1/api/vessels/self/navigation/logTrip`,
       {
@@ -66,14 +60,14 @@ describe('Delete Requests', () => {
           'Content-Type': 'application/json'
         }
       }
-      )
+    )
 
     result.status.should.equal(202)
 
     result = await doGet('/vessels/self/navigation/logTrip/meta/displayName')
     result.status.should.equal(404)
   })
-  
+
   it('WS delete to unhandled path fails', async function () {
     const ws = doCreateWsPromiser()
 
@@ -93,12 +87,11 @@ describe('Delete Requests', () => {
     response.statusCode.should.equal(405)
   })
 
- 
   it('WS successful DELETE', async function () {
     let result = await doSelfPut('navigation/logTrip/meta/displayName', {
       value: 'My Log Trip'
     })
-    
+
     result.status.should.equal(202)
 
     result = await doGet('/vessels/self/navigation/logTrip/meta/displayName')
@@ -107,7 +100,7 @@ describe('Delete Requests', () => {
     name.should.equal('My Log Trip')
 
     const ws = doCreateWsPromiser()
-    
+
     let msg = await ws.nextMsg()
 
     ws.send({

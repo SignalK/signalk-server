@@ -108,7 +108,8 @@ const ADMIN_USER_NAME = 'adminuser'
 const ADMIN_USER_PASSWORD = 'admin'
 const NOPASSWORD_USER_NAME = 'nopassword'
 
-const serverTestConfigDirectory = () => require('path').join(__dirname, 'server-test-config')
+const serverTestConfigDirectory = () =>
+  require('path').join(__dirname, 'server-test-config')
 
 module.exports = {
   WsPromiser: WsPromiser,
@@ -120,7 +121,12 @@ module.exports = {
       headers: { 'Content-Type': 'application/json' }
     })
   },
-  startServerP: function startServerP(port, enableSecurity, extraConfig = {}, securityConfig) {
+  startServerP: function startServerP(
+    port,
+    enableSecurity,
+    extraConfig = {},
+    securityConfig
+  ) {
     const Server = require('../dist')
     const props = {
       config: JSON.parse(JSON.stringify(defaultConfig))

@@ -1,29 +1,29 @@
-version: "2.2"
+version: '2.2'
 services:
   signalk-server:
     image: cr.signalk.io/signalk/signalk-server:latest
     container_name: signalk-server
     restart: unless-stopped
-#   ----------------------
-    network_mode: host 
-#    network_mode: bridge    # (1/3) If bridge-mode is used, then comment line abobe (host) and select/add needed ports settings
-#    ports:    # (2/3)
-#      - "3000:3000"    # (3/3)
-#   ----------------------
-#    environment:    # (1/5) SK ENV parameters
-#      - PORT=3000    # (2/5)
-#      - SSLPORT=3443    # (3/5)
-#      - NMEA0183PORT=10110    # (4/5)
-#      - TCPSTREAMPORT=8375    # (5/5)
-#   ----------------------
+    #   ----------------------
+    network_mode: host
+    #    network_mode: bridge    # (1/3) If bridge-mode is used, then comment line abobe (host) and select/add needed ports settings
+    #    ports:    # (2/3)
+    #      - "3000:3000"    # (3/3)
+    #   ----------------------
+    #    environment:    # (1/5) SK ENV parameters
+    #      - PORT=3000    # (2/5)
+    #      - SSLPORT=3443    # (3/5)
+    #      - NMEA0183PORT=10110    # (4/5)
+    #      - TCPSTREAMPORT=8375    # (5/5)
+    #   ----------------------
     volumes:
       - /dev:/dev
-#      - $PWD/signalk_conf:/home/node/.signalk    # uncomment and make signalk_conf -folder where .signalk is bind mounted
-#   ----------------------
-#      - type: bind    # (1/3) uncomment these 3 lines to control startup.sh outside container
-#        source: $PWD/startup.sh    # (2/3)
-#        target: /home/node/signalk/startup.sh    # (3/3)
-#   ----------------------
+    #      - $PWD/signalk_conf:/home/node/.signalk    # uncomment and make signalk_conf -folder where .signalk is bind mounted
+    #   ----------------------
+    #      - type: bind    # (1/3) uncomment these 3 lines to control startup.sh outside container
+    #        source: $PWD/startup.sh    # (2/3)
+    #        target: /home/node/signalk/startup.sh    # (3/3)
+    #   ----------------------
     entrypoint: sh /home/node/signalk/startup.sh
     privileged: true
     logging:

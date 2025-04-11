@@ -3,8 +3,8 @@ name: Build Docker development container
 on:
   push:
     branches:
-    - master
-    - "build-docker"
+      - master
+      - 'build-docker'
     tags:
       - '*'
       - '!v*'

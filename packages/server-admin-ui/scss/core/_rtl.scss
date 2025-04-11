@@ -2,7 +2,7 @@
 // RTL Support
 //
 // scss-lint:disable NestingDepth, SelectorDepth
-*[dir="rtl"] {
+*[dir='rtl'] {
   direction: rtl;
   unicode-bidi: embed;
 
@@ -45,17 +45,19 @@
   //
   .sidebar-hidden {
     .sidebar {
-      margin-right: - $sidebar-width;
+      margin-right: -$sidebar-width;
     }
   }
 
   .sidebar-fixed {
-    .main, .app-footer {
+    .main,
+    .app-footer {
       margin-right: $sidebar-width;
     }
 
     &.sidebar-hidden {
-      .main, .app-footer {
+      .main,
+      .app-footer {
         margin-right: 0;
       }
     }
@@ -68,18 +70,20 @@
 
     &.sidebar-hidden {
       .sidebar {
-        margin-right: - $sidebar-minimized-width;
+        margin-right: -$sidebar-minimized-width;
         margin-left: 0;
       }
     }
 
     &.sidebar-fixed {
-      .main, .app-footer {
+      .main,
+      .app-footer {
         margin-right: $sidebar-minimized-width;
       }
 
       &.sidebar-hidden {
-        .main, .app-footer {
+        .main,
+        .app-footer {
           margin-left: 0;
         }
       }
@@ -92,7 +96,7 @@
   .aside-menu-hidden {
     .aside-menu {
       margin-right: 0;
-      margin-left: - $aside-menu-width;
+      margin-left: -$aside-menu-width;
     }
   }
 
@@ -102,13 +106,15 @@
       left: 0;
     }
 
-    .main, .app-footer {
+    .main,
+    .app-footer {
       //margin-right: 0;
       margin-left: $aside-menu-width;
     }
 
     &.aside-menu-hidden {
-      .main, .app-footer {
+      .main,
+      .app-footer {
         margin-left: 0;
       }
     }
@@ -122,7 +128,10 @@
       height: 100%;
 
       .tab-content {
-        height: calc(100vh - #{$aside-menu-nav-padding-y * 2 + $font-size-base} - #{$navbar-height});
+        height: calc(
+          100vh - #{$aside-menu-nav-padding-y * 2 + $font-size-base} -
+            #{$navbar-height}
+        );
       }
     }
   }
@@ -177,7 +186,6 @@
       }
     }
     .nav > .nav-dropdown {
-
       &:hover {
         > .nav-dropdown-items {
           right: $sidebar-minimized-width;
@@ -189,9 +197,7 @@
 
   // Horizontal bars
   .horizontal-bars {
-
     li {
-
       .bars {
         padding-right: 100px;
         padding-left: 0;
@@ -203,9 +209,7 @@
     }
 
     &.type-2 {
-
       li {
-
         i {
           margin-right: 5px;
           margin-left: $spacer;
@@ -225,7 +229,6 @@
 
   // Icon list
   .icons-list {
-
     li {
       position: relative;
       height: 40px;
@@ -261,7 +264,7 @@
   // Callouts
   .callout {
     border: 0 solid $border-color;
-    border-right-width: .25rem;
+    border-right-width: 0.25rem;
 
     @each $color, $value in $theme-colors {
       &.callout-#{$color} {

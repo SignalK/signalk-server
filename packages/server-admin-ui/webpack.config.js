@@ -13,7 +13,7 @@ module.exports = {
   entry: './src/index',
   mode: 'development',
   output: {
-    path: path.resolve(__dirname, 'public'),
+    path: path.resolve(__dirname, 'public')
   },
   module: {
     rules: [
@@ -22,15 +22,15 @@ module.exports = {
         loader: 'babel-loader',
         exclude: /node_modules/,
         options: {
-          presets: ['@babel/preset-react'],
-        },
+          presets: ['@babel/preset-react']
+        }
       },
       {
         test: /\.(woff(2)?|ttf|eot|svg)(\?v=\d+\.\d+\.\d+)?$/,
         loader: 'file-loader',
         options: {
-          name: './fonts/[name].[hash].[ext]',
-        },
+          name: './fonts/[name].[hash].[ext]'
+        }
       },
       {
         test: /\.(scss)$/,
@@ -40,41 +40,41 @@ module.exports = {
           // Translates CSS into CommonJS
           'css-loader',
           // Compiles Sass to CSS
-          'sass-loader',
-        ],
+          'sass-loader'
+        ]
       },
       {
         test: /\.css$/i,
-        use: ['style-loader', 'css-loader'],
-      },
-    ],
+        use: ['style-loader', 'css-loader']
+      }
+    ]
   },
   resolve: {
     fallback: {
       //needed by react-markdown ... vfile | replace-ext
-      path: false,
-    },
+      path: false
+    }
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: './public_src/index.html',
+      template: './public_src/index.html'
     }),
     new CopyWebpackPlugin(
       {
-        patterns: [{ from: './public_src/img', to: 'img' }],
+        patterns: [{ from: './public_src/img', to: 'img' }]
       },
       {
-        copyUnmodified: false,
+        copyUnmodified: false
       }
     ),
     new webpack.IgnorePlugin({
       resourceRegExp: /^\.\/locale$/,
-      contextRegExp: /moment$/,
+      contextRegExp: /moment$/
     }),
     new BundleAnalyzerPlugin({
       analyzerMode: 'disabled',
       generateStatsFile: true,
-      statsOptions: { source: false },
+      statsOptions: { source: false }
     }),
     new ModuleFederationPlugin({
       name: 'adminUI)',
@@ -82,9 +82,9 @@ module.exports = {
       remotes: {},
       shared: {
         react: { requiredVersion: devDeps.react, singleton: true },
-        'react-dom': { requiredVersion: devDeps['react-dom'] },
-      },
-    }),
+        'react-dom': { requiredVersion: devDeps['react-dom'] }
+      }
+    })
   ],
-  devtool: 'source-map',
+  devtool: 'source-map'
 }

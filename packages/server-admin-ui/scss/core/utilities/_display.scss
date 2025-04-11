@@ -6,7 +6,9 @@
   @include media-breakpoint-down($breakpoint) {
     $infix: breakpoint-infix($breakpoint, $grid-breakpoints);
 
-    .d#{$infix}-down-none         { display: none !important; }
+    .d#{$infix}-down-none {
+      display: none !important;
+    }
     // .d#{$infix}-inline       { display: inline !important; }
     // .d#{$infix}-inline-block { display: inline-block !important; }
     // .d#{$infix}-block        { display: block !important; }

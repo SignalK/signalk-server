@@ -20,7 +20,6 @@ For instructions on how to install the operating system [can be found here.](htt
 
 _Note: It is also possible to perform a "headless install" using `Raspberry Pi OS Lite` since the GUI for Signal K is browser based._
 
-
 Once the OS installation has been completed, you are ready to commence.
 
 ---
@@ -30,30 +29,33 @@ Once the OS installation has been completed, you are ready to commence.
 1. Log in to the RPi Desktop and open a terminal.
 
 1. Update the list of install packages.
-    ```
-    sudo apt update
-    ```
+
+   ```
+   sudo apt update
+   ```
 
 1. Install NodeJS 20 and npm.
 
-    Follow [instructions for Ubuntu and Debian based distributions like Raspberry Pi OS at NodeSource Distributions](https://github.com/nodesource/distributions#installation-instructions).
+   Follow [instructions for Ubuntu and Debian based distributions like Raspberry Pi OS at NodeSource Distributions](https://github.com/nodesource/distributions#installation-instructions).
 
 1. Ensure that we're using the latest version of npm.
-    ```
-    sudo npm install -g npm@latest
-    ```
 
-    Use the following command to check the versions of NodeJS and npm installed.
+   ```
+   sudo npm install -g npm@latest
+   ```
 
-    ```
-    node -v && npm -v
-    ```
-    Ensure the reported versions are equal to or greater than `v18.15.0, 9.5.0` respectively.
+   Use the following command to check the versions of NodeJS and npm installed.
+
+   ```
+   node -v && npm -v
+   ```
+
+   Ensure the reported versions are equal to or greater than `v18.15.0, 9.5.0` respectively.
 
 1. Install a Bonjour (mDNS) service for Linux called Avahi, which allows Apps and other network devices to Discover the Signal K server.
-    ```
-    sudo apt install libnss-mdns avahi-utils libavahi-compat-libdnssd-dev
-    ```
+   ```
+   sudo apt install libnss-mdns avahi-utils libavahi-compat-libdnssd-dev
+   ```
 
 ## Install Signal K Server
 
@@ -69,6 +71,7 @@ signalk-server --sample-nmea0183-data
 ```
 
 You should see the terminal output "signalk-server running at 0.0.0.0:3000" as shown below...
+
 ```
 signalk-server --sample-nmea0183-data
 Using sample data from /usr/lib/node_modules/signalk-server/samples/plaka.log
@@ -99,7 +102,7 @@ Using a Web browser enter the following URL: `http://127.0.0.1:3000/signalk` whi
 ## Run the Setup Script
 
 Now that you have Signal K server installed, you will want to generate a settings file for your vessel
-and configure your RPi to start the server automatically. To do this run the setup script by entering the  following command and follow the prompts.
+and configure your RPi to start the server automatically. To do this run the setup script by entering the following command and follow the prompts.
 
 ```
 sudo signalk-server-setup
@@ -112,24 +115,25 @@ Clicking `Login` for the first time will prompt you to create a user and passwor
 
 Signal K server will now be started automatically when your RPi boots up.
 
-
 If you want to temporarily stop the Signal K server, you can do so by entering the following commands:
+
 ```
 sudo systemctl stop signalk.service
 sudo systemctl stop signalk.socket
 ```
 
 To start Signal K server again enter the following commands:
+
 ```
 sudo systemctl start signalk.service
 sudo systemctl start signalk.socket
 ```
 
 To stop Signal K server from starting automatically enter the following commands:
+
 ```
 sudo systemctl disable signalk.service
 sudo systemctl disable signalk.socket
 ```
-
 
 You are ready to now **[configure](../setup/configuration.md)** your installation and connect data from devices on your boat.

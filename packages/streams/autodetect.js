@@ -50,7 +50,7 @@ function DeMultiplexer(options) {
 
   this.toTimestamped = new ToTimestamped(this, options)
   this.timestampThrottle = new TimestampThrottle({
-    getMilliseconds: (msg) => msg.timestamp,
+    getMilliseconds: (msg) => msg.timestamp
   })
   this.splitter = new Splitter(this, options)
   this.options = options
@@ -190,7 +190,7 @@ ToTimestamped.prototype.handleMultiplexed = function (msg, encoding, done) {
   this.push({
     timestamp: parts[0],
     discriminator: parts[1],
-    data: parts.slice(2).join(';'),
+    data: parts.slice(2).join(';')
   })
   done()
 }

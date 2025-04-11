@@ -28,18 +28,15 @@ Provides operations for creating, maintaining and accessing resources such as ro
 
 See the [Resources API](./develop/rest-api/resources_api.md) for details.
 
-
 ---
 
 ## Notes for Developers:
-
 
 ### NMEA0183 / NMEA2000 message processing
 
 Whilst the Course API and its associated operations provide a means of setting a course, NMEA data streams are the source of information when the course is set on a connected device.
 
 In the past, plugins processing NMEA data streams have directly populated the mapped `v1` Signal K paths based on the received sentence / PGN values. Moving forward these plugins should utilise the relevant {@link @signalk/server-api!ServerAPI | Server Plugin API} methods to enact course operations.
-
 
 ### Stream updates
 
@@ -48,6 +45,7 @@ The new REST APIs emit `v2` deltas with values that are objects.
 For example, when a course is activated, deltas will be emitted for `navigation.course.previousPoint`, `navigation.course.nextPoint` and `navigation.course.activeRoute` where the value is an object.
 
 _Example: v2 Delta_
+
 ```JSON
 {
     "path": "navigation.course.previousPoint",
@@ -61,7 +59,6 @@ _Example: v2 Delta_
     }
 }
 ```
-
 
 #### Connection with v1 Full Data Model
 

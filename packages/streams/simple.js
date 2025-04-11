@@ -33,7 +33,7 @@ function Simple(options) {
     ...options.subOptions,
     emitPropertyValue,
     onPropertyValues,
-    createDebug,
+    createDebug
   }
 
   options.subOptions.providerId = options.providerId
@@ -103,7 +103,7 @@ function Simple(options) {
             delta.updates.forEach((update) => (update.timestamp = now))
           }
           callback(null, delta)
-        },
+        }
       })
     )
   }
@@ -134,8 +134,8 @@ const getLogger = (app, logging, discriminator) =>
     ? [
         new Log({
           app: app,
-          discriminator,
-        }),
+          discriminator
+        })
       ]
     : []
 
@@ -146,7 +146,7 @@ const discriminatorByDataType = {
   NMEA2000: 'A',
   NMEA0183: 'N',
   SignalK: 'I',
-  Seatalk: 'N',
+  Seatalk: 'N'
 }
 
 const dataTypeMapping = {
@@ -155,14 +155,14 @@ const dataTypeMapping = {
       ? [new FromJson(options.subOptions)]
       : [],
   Seatalk: (options) => [
-    new nmea0183_signalk({ ...options.subOptions, validateChecksum: false }),
+    new nmea0183_signalk({ ...options.subOptions, validateChecksum: false })
   ],
   NMEA0183: (options) => {
     const result = [new nmea0183_signalk(options.subOptions)]
     if (options.type === 'FileStream') {
       result.unshift(
         new Throttle({
-          rate: options.subOptions.throttleRate || 1000,
+          rate: options.subOptions.throttleRate || 1000
         })
       )
     }
@@ -189,7 +189,7 @@ const dataTypeMapping = {
         new TimestampThrottle({
           getMilliseconds: (msg) => {
             return msg.timer * 1000
-          },
+          }
         })
       )
     } // else
@@ -209,7 +209,7 @@ const dataTypeMapping = {
       new Ydwg02(
         options.subOptions,
         options.subOptions.type === 'ydwg02-usb-canboatjs' ? 'usb' : 'network'
-      ),
+      )
     ]
     if (options.type === 'FileStream') {
       result.push(new TimestampThrottle())
@@ -230,7 +230,7 @@ const dataTypeMapping = {
     }
     return result.concat([new N2kToSignalK(options.subOptions)])
   },
-  Multiplexed: (options) => [new MultiplexedLog(options.subOptions)],
+  Multiplexed: (options) => [new MultiplexedLog(options.subOptions)]
 }
 
 const pipeStartByType = {
@@ -239,7 +239,7 @@ const pipeStartByType = {
   Execute: executeInput,
   FileStream: fileInput,
   SignalK: signalKInput,
-  Seatalk: seatalkInput,
+  Seatalk: seatalkInput
 }
 
 function nmea2000input(subOptions, logging) {
@@ -251,15 +251,15 @@ function nmea2000input(subOptions, logging) {
     return [
       new actisenseSerial({
         ...subOptions,
-        plainText: logging,
-      }),
+        plainText: logging
+      })
     ]
   } else if (subOptions.type === 'canbus-canboatjs') {
     return [
       new require('./canbus')({
         ...subOptions,
-        canDevice: subOptions.interface,
-      }),
+        canDevice: subOptions.interface
+      })
     ]
   } else if (subOptions.type === 'ikonvert-canboatjs') {
     const serialport = require('./serialport')
@@ -267,49 +267,49 @@ function nmea2000input(subOptions, logging) {
       new serialport({
         ...subOptions,
         baudrate: 230400,
-        toStdout: 'ikonvertOut',
-      }),
+        toStdout: 'ikonvertOut'
+      })
     ]
   } else if (subOptions.type === 'ydwg02-canboatjs') {
     return [
       new Tcp({
         ...subOptions,
-        outEvent: 'ydwg02-out',
+        outEvent: 'ydwg02-out'
       }),
-      new Liner(subOptions),
+      new Liner(subOptions)
     ]
   } else if (subOptions.type === 'ydwg02-udp-canboatjs') {
     return [
       new Udp({
         ...subOptions,
-        outEvent: 'ydwg02-out',
+        outEvent: 'ydwg02-out'
       }),
-      new Liner(subOptions),
+      new Liner(subOptions)
     ]
   } else if (subOptions.type === 'navlink2-tcp-canboatjs') {
     return [
       new Tcp({
         ...subOptions,
-        outEvent: 'navlink2-out',
+        outEvent: 'navlink2-out'
       }),
-      new Liner(subOptions),
+      new Liner(subOptions)
     ]
   } else if (subOptions.type === 'w2k-1-n2k-ascii-canboatjs') {
     return [
       new Tcp({
         ...subOptions,
-        outEvent: 'w2k-1-out',
+        outEvent: 'w2k-1-out'
       }),
       new Liner(subOptions),
-      new W2k01(subOptions, 'ascii', 'w2k-1-out'),
+      new W2k01(subOptions, 'ascii', 'w2k-1-out')
     ]
   } else if (subOptions.type === 'w2k-1-n2k-actisense-canboatjs') {
     return [
       new Tcp({
         ...subOptions,
-        outEvent: 'w2k-1-out',
+        outEvent: 'w2k-1-out'
       }),
-      new W2k01(subOptions, 'actisense', 'w2k-1-out'),
+      new W2k01(subOptions, 'actisense', 'w2k-1-out')
     ]
   } else if (subOptions.type === 'navlink2-udp-canboatjs') {
     return [new Udp(subOptions), new Liner(subOptions)]
@@ -319,8 +319,8 @@ function nmea2000input(subOptions, logging) {
       new serialport({
         ...subOptions,
         baudrate: 38400,
-        toStdout: 'ydwg02-out',
-      }),
+        toStdout: 'ydwg02-out'
+      })
     ]
   } else {
     let command
@@ -341,9 +341,9 @@ function nmea2000input(subOptions, logging) {
         command: command,
         toChildProcess: toChildProcess,
         app: subOptions.app,
-        providerId: subOptions.providerId,
+        providerId: subOptions.providerId
       }),
-      new Liner(subOptions),
+      new Liner(subOptions)
     ]
   }
 }
@@ -368,7 +368,7 @@ function nmea0183input(subOptions) {
       pipePart.push(
         new Replacer({
           regexp: '\u0000',
-          template: '',
+          template: ''
         })
       )
     }
@@ -379,7 +379,7 @@ function nmea0183input(subOptions) {
           pipePart.push(
             new Replacer({
               regexp: `^...${sentence}.*`,
-              template: '',
+              template: ''
             })
           )
         }

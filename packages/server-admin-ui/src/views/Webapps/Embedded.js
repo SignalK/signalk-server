@@ -13,7 +13,7 @@ class Embedded extends Component {
       component: toLazyDynamicComponent(
         this.props.match.params.moduleId,
         APP_PANEL
-      ),
+      )
     }
     this.websockets = []
 
@@ -39,10 +39,10 @@ class Embedded extends Component {
           {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify(data),
-            credentials: 'include',
+            credentials: 'include'
           }
         ).then((r) => {
           if (r.status != 200) {
@@ -68,11 +68,11 @@ class Embedded extends Component {
         return fetch(
           `/signalk/v1/api/${cParts[0]}/${cParts.slice(1).join('.')}/${path}`,
           {
-            credentials: 'include',
+            credentials: 'include'
           }
         )
       },
-      Login,
+      Login
     }
   }
 
@@ -94,7 +94,7 @@ class Embedded extends Component {
         <Suspense fallback="Loading...">
           {React.createElement(this.state.component, {
             ...this.props,
-            adminUI: this.adminUI,
+            adminUI: this.adminUI
           })}
         </Suspense>
       </div>

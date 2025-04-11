@@ -26,7 +26,7 @@ const loggers = {}
 module.exports = {
   getLogger,
   getFullLogDir,
-  listLogFiles,
+  listLogFiles
 }
 
 class FileTimestampStreamWithDelete extends FileTimestampStream {

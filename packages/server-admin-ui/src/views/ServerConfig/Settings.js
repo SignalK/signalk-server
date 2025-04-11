@@ -12,7 +12,7 @@ import {
   Col,
   Label,
   FormGroup,
-  FormText,
+  FormText
 } from 'reactstrap'
 
 import VesselConfiguration from './VesselConfiguration'
@@ -20,7 +20,7 @@ import LogFiles from './Logging'
 
 function fetchSettings() {
   fetch(`${window.serverRoutesPrefix}/settings`, {
-    credentials: 'include',
+    credentials: 'include'
   })
     .then((response) => response.json())
     .then((data) => {
@@ -32,7 +32,7 @@ class ServerSettings extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      hasData: false,
+      hasData: false
     }
     this.fetchSettings = fetchSettings.bind(this)
     this.handleChange = this.handleChange.bind(this)
@@ -85,10 +85,10 @@ class ServerSettings extends Component {
     fetch(`${window.serverRoutesPrefix}/settings`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(this.state),
-      credentials: 'include',
+      credentials: 'include'
     })
       .then((response) => response.text())
       .then((response) => {
@@ -371,7 +371,7 @@ const SettableInterfaces = {
   applicationData: 'Application Data Storage',
   logfiles: 'Data log files access',
   'nmea-tcp': 'NMEA 0183 over TCP (10110)',
-  tcp: 'Signal K over TCP (8375)',
+  tcp: 'Signal K over TCP (8375)'
 }
 
 const ReduxedSettings = connect()(ServerSettings)

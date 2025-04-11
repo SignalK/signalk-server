@@ -15,7 +15,8 @@
     vertical-align: top;
     border: 0;
 
-    &:hover, &.active {
+    &:hover,
+    &.active {
       color: $body-color;
       background: transparent;
     }
