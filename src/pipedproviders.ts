@@ -28,7 +28,6 @@ class DevNull extends Writable {
     })
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _write(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     chunk: any,

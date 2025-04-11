@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2020 Scott Bender <scott@scottbender.net>
  *
@@ -35,7 +34,7 @@ export const listAllSerialPorts = (): Promise<Ports> => {
 
 function listSerialPorts() {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('serialport').SerialPort.list()
   } catch (_err) {
     return Promise.resolve([])

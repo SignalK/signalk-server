@@ -1,6 +1,5 @@
 const appRoot = require('app-root-path')
 const SignalKServer = require('signalk-server')
-const path = require('path')
 
 const config = {
   appPath: appRoot.path,
@@ -8,5 +7,5 @@ const config = {
 }
 
 console.log(config)
-const server = new SignalKServer({ config });
+const server = new SignalKServer({ config })
 server.start()

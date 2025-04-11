@@ -38,7 +38,7 @@ const Dashboard = (props) => {
   const getLinkType = (providerId) => {
     try {
       return providerStatus.find((item) => item.id === providerId).statusType
-    } catch (err) {
+    } catch (_) {
       return 'provider'
     }
   }

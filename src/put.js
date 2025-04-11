@@ -9,21 +9,6 @@ const pathPrefix = '/signalk'
 const versionPrefix = '/v1'
 const apiPathPrefix = pathPrefix + versionPrefix + '/api/'
 
-// eslint-disable-next-line no-unused-vars
-const State = {
-  pending: 'PENDING',
-  completed: 'COMPLETED',
-  notSupported: 'NOT SUPPORTED',
-  denied: 'PERMISSION DENIED',
-  noSource: 'NO SOURCE'
-}
-
-// eslint-disable-next-line no-unused-vars
-const Result = {
-  success: 'SUCCESS',
-  failure: 'FAILURE'
-}
-
 const actionHandlers = {}
 let putMetaHandler, deleteMetaHandler, putNotificationHandler
 
@@ -403,7 +388,6 @@ function putPath(app, contextParam, path, body, req, requestId, updateCb) {
         }
 
         if (handler) {
-          // eslint-disable-next-line no-inner-declarations
           function fixReply(reply) {
             if (reply.state === 'FAILURE') {
               reply.state = 'COMPLETED'

@@ -17,7 +17,7 @@
 const Transform = require('stream').Transform
 const bodyParser = require('body-parser')
 
-function HttpProvider (options) {
+function HttpProvider(options) {
   Transform.call(this, {
     objectMode: true
   })
@@ -34,9 +34,9 @@ HttpProvider.prototype._transform = function (chunk, encoding, done) {
   done()
 }
 
-function handleDelta (req, res, next) {
+function handleDelta(req, res) {
   res.type('text/plain').send('ok')
-  // eslint-disable-next-line no-invalid-this
+
   this.push(req.body)
 }
 

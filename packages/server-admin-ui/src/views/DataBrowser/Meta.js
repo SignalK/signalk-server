@@ -39,7 +39,7 @@ const NumberValue = ({ disabled, setValue, value }) => (
     onChange={(e) => {
       try {
         setValue(Number(e.target.value))
-      } catch (e) {
+      } catch (_) {
         setValue('')
       }
     }}
@@ -112,7 +112,7 @@ const DisplaySelect = ({ disabled, setValue, value }) => {
               ...value,
               lower: Number(e.target.value),
             })
-          } catch (e) {
+          } catch (_) {
             setValue({
               ...value,
               lower: null,
@@ -131,7 +131,7 @@ const DisplaySelect = ({ disabled, setValue, value }) => {
               ...value,
               upper: Number(e.target.value),
             })
-          } catch (e) {
+          } catch (_) {
             setValue({
               ...value,
               upper: null,
@@ -149,7 +149,7 @@ const DisplaySelect = ({ disabled, setValue, value }) => {
               ...value,
               power: Number(e.target.value),
             })
-          } catch (e) {
+          } catch (_) {
             setValue({
               ...value,
               upper: null,

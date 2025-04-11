@@ -1,23 +1,22 @@
+import { SourceRef } from '@signalk/server-api'
+import { getToPreferredDelta, SourcePrioritiesData } from '../dist/deltaPriority.js'
 import chai from 'chai'
 chai.should()
 
-
-const { getToPreferredDelta } = require('../dist/deltaPriority')
-
 describe('toPreferredDelta logic', () => {
   it('works', () => {
-    const sourcePreferences = {
+    const sourcePreferences: SourcePrioritiesData = {
       'environment.wind.speedApparent': [
         {
-          sourceRef: 'a',
+          sourceRef: 'a' as SourceRef,
           timeout: 0
         },
         {
-          sourceRef: 'b',
+          sourceRef: 'b' as SourceRef,
           timeout: 150
         },
         {
-          sourceRef: 'c',
+          sourceRef: 'c' as SourceRef,
           timeout: 150
         }
       ]
@@ -26,6 +25,7 @@ describe('toPreferredDelta logic', () => {
 
 
     let totalDelay = 0
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any[] = []
     const expectedResult: string[] = []
     let n = 0

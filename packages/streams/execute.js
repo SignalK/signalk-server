@@ -49,7 +49,6 @@ function Execute(options) {
 require('util').inherits(Execute, Transform)
 
 Execute.prototype._transform = function (chunk, encoding, done) {
-  const data = chunk.toString()
   this.analyzerProcess.stdin.write(chunk.toString())
   done()
 }

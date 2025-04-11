@@ -556,7 +556,7 @@ function isJson(input) {
   try {
     JSON.parse(input)
     inputIsJson = true
-  } catch (e) {
+  } catch (_) {
     /* empty */
   }
   return inputIsJson

@@ -152,7 +152,8 @@ export function fetchAllData(dispatch) {
   fetchAddons(dispatch)
   fetchApps(dispatch)
   fetchLoginStatus(dispatch)
-  fetchServerSpecification(dispatch), fetchAccessRequests(dispatch)
+  fetchServerSpecification(dispatch)
+  fetchAccessRequests(dispatch)
 }
 
 export function openServerEventsConnection(dispatch, isReconnect) {

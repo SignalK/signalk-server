@@ -178,7 +178,7 @@ module.exports = function (app) {
         pathForApplicationData(req, appid, version, isUser),
         'utf8'
       )
-    } catch (e) {
+    } catch (_) {
       debug('Could not find applicationData for %s %s', appid, version)
     }
     try {

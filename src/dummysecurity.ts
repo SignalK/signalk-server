@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /*
  * Copyright 2017 Scott Bender <scott@scottbender.net>
  *

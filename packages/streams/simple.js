@@ -1,5 +1,4 @@
 const Transform = require('stream').Transform
-const Writable = require('stream').Writable
 const _ = require('lodash')
 const N2kAnalyzer = require('./n2kAnalyzer')
 const FromJson = require('./from_json')
@@ -388,7 +387,7 @@ function nmea0183input(subOptions) {
     }
     return pipePart
   } else {
-    throw new Error(`Unknown networking tyoe: ${options.networking}`)
+    throw new Error(`Unknown networking tyoe: ${subOptions.networking}`)
   }
 }
 

@@ -77,7 +77,7 @@ TcpStream.prototype.pipe = function (pipeTo) {
     )
   }
 
-  const re = require('reconnect-core')(function () {
+  require('reconnect-core')(function () {
     return net.connect.apply(null, arguments)
   })({ maxDelay: 5 * 1000 }, (tcpStream) => {
     if (!isNaN(this.noDataReceivedTimeout)) {
@@ -110,7 +110,7 @@ TcpStream.prototype.pipe = function (pipeTo) {
       this.options.app.setProviderError(this.options.providerId, msg)
       that.debug(msg)
     })
-    .on('disconnect', (err) => {
+    .on('disconnect', () => {
       delete this.tcpStream
       that.debug(`Disconnected ${this.options.host} ${this.options.port}`)
     })

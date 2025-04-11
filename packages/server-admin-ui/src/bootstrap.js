@@ -300,7 +300,6 @@ window.serverRoutesPrefix = '/skServer'
 // eslint-disable-next-line no-undef
 __webpack_init_sharing__('default')
 
-// eslint-disable-next-line react/no-deprecated
 ReactDOM.render(
   <HashRouter>
     <Switch>

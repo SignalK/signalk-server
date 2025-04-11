@@ -62,7 +62,7 @@ Udp.prototype.pipe = function (pipeTo) {
     })
   }
 
-  socket.on('message', function (message, remote) {
+  socket.on('message', function (message) {
     self.debug(message.toString())
     self.push(message)
   })

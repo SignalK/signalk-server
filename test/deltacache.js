@@ -192,7 +192,6 @@ describe('Deltacache', () => {
   })
 
   it('deltas ordered properly', function () {
-    // eslint-disable-next-line no-unused-vars
     var deltas = theServer.app.deltaCache
       .getCachedDeltas(() => true, null)
       .filter((delta) => delta.updates[0].$source != 'courseApi')

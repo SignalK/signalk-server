@@ -48,8 +48,4 @@ Log.prototype._transform = function (msg, encoding, done) {
   done()
 }
 
-function pad(num) {
-  return (num > 9 ? '' : '0') + num
-}
-
 module.exports = Log

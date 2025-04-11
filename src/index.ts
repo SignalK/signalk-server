@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-this-alias */
-/* eslint-disable @typescript-eslint/no-var-requires */
 /*
  * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
  *
@@ -426,7 +425,6 @@ class Server {
 
     app.intervals.push(startDeltaStatistics(app))
 
-    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async (resolve, reject) => {
       createServer(app, async (err, server) => {
         if (err) {

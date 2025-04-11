@@ -18,8 +18,6 @@ const Transform = require('stream').Transform
 
 const SignalK = require('@signalk/client')
 
-const WebSocket = require('ws')
-
 function MdnsWs(options) {
   Transform.call(this, {
     objectMode: true,
@@ -165,6 +163,6 @@ MdnsWs.prototype.connect = function (client) {
   })
 }
 
-MdnsWs.prototype._transform = function (chunk, encoding, done) {}
+MdnsWs.prototype._transform = function () {}
 
 module.exports = MdnsWs
