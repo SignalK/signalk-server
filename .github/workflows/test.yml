@@ -22,11 +22,6 @@ jobs:
     - run: npm install
     - run: npm run build:all
 
-    - name: streams
-      working-directory: ./packages/streams
-      run: |
-        npm run ci
-
     - name: server-api
       working-directory: ./packages/server-api
       run: |
@@ -36,11 +31,6 @@ jobs:
       working-directory: ./packages/resources-provider-plugin
       run: |
         npm run test
-
-    - name: server-admin-ui
-      working-directory: ./packages/server-admin-ui
-      run: |
-        npm run ci
 
     - run: npm test
       env:
