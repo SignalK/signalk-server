@@ -4,9 +4,9 @@
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
-    "build": "tsc --build && npm run build:docs",
+    "build": "tsc --build",
     "build:all": "npm run build:workspaces && npm run build && npm run build-declaration && npm run build:docs",
-    "build:docs": "USER_INFO=$(id -u):$(id -g) docker run --rm -v ${PWD}/docs:/book peaceiris/mdbook:v0.4.40 build",
+    "build:docs": "typedoc",
     "build:workspaces": "npm run build --workspaces --if-present",
     "build-declaration": "tsc --declaration",
     "watch": "tsc --build -w",
@@ -19,7 +19,6 @@
     "start": "node bin/signalk-server",
     "test-only": "mocha --require ts-node/register --extensions ts,tsx,js --timeout 20000 --exit 'test/**/*.[jt]s' 'dist/**/*.test.js'",
     "test": "npm run build && npm run test-only && npm run ci-lint",
-    "typedoc": "typedoc",
     "heroku-postbuild": "npm run build:all",
     "master-changed-files": "git diff --name-status $(git tag | tail -1)..master"
   },
@@ -68,7 +67,8 @@
     "packages/server-admin-ui",
     "packages/streams",
     "packages/server-api",
-    "packages/resources-provider-plugin"
+    "packages/resources-provider-plugin",
+    "packages/typedoc-theme"
   ],
   "dependencies": {
     "@signalk/course-provider": "^1.0.0",
@@ -171,6 +171,8 @@
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.1",
     "typedoc": "^0.28.1",
+    "typedoc-plugin-mdn-links": "^5.0.1",
+    "typedoc-signalk-theme": "^0.3.0",
     "typescript": "^5.8.2"
   },
   "funding": "https://opencollective.com/signalk"

@@ -1,4 +1,5 @@
-import { Brand, Position } from '.'
+import { Position } from '.'
+import { Brand } from './brand'
 
 export interface HrefDestination {
   href: string
@@ -32,6 +33,7 @@ export interface NextPreviousPoint {
 }
 
 export type CoursePointType = Brand<string, 'coursepointtype'>
+
 export const COURSE_POINT_TYPES = {
   VesselPosition: 'VesselPosition' as CoursePointType,
   RoutePoint: 'RoutePoint' as CoursePointType,

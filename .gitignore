@@ -29,4 +29,4 @@ test/server-test-config/ssl-cert.pem
 test/server-test-config/ssl-key.pem
 test/server-test-config/plugin-config-data/
 
-docs/built
+docs/dist
