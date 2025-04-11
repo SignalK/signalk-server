@@ -3,7 +3,8 @@ import {
   AutopilotProviderRegistry,
   Features,
   PropertyValuesEmitter,
-  ResourceProviderRegistry
+  ResourceProviderRegistry,
+  WeatherProviderRegistry,
 } from '.'
 import { CourseApi } from './course'
 
@@ -25,6 +26,7 @@ export interface ServerAPI
   extends PropertyValuesEmitter,
     ResourceProviderRegistry,
     AutopilotProviderRegistry,
+    WeatherProviderRegistry,
     Features,
     CourseApi {
   /**

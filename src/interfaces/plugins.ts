@@ -465,7 +465,7 @@ module.exports = (theApp: any) => {
       onStopHandlers[plugin.id].push(() => {
         app.resourcesApi.unRegister(plugin.id)
         app.autopilotApi.unRegister(plugin.id)
-        app.weatherApi.unRegister(plugin.id))
+        app.weatherApi.unRegister(plugin.id)
       })
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)

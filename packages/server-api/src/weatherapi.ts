@@ -10,8 +10,26 @@ export interface WeatherApi {
   ) => void
 }
 
+/**
+ * @hidden visible through ServerAPI
+ */
 export interface WeatherProviderRegistry {
+    /**
+   * @category Weather API
+   */
   registerWeatherProvider: (provider: WeatherProvider) => void
+
+  /**
+   * @category Weather API
+   * @param pluginId - the weather provider plugin identifier
+   * @param position - Position object {@link Position}
+   * @param warnings - Array of WeatherWarning objects {@link WeatherWarning}
+   */
+  emitWeatherWarning (
+    pluginId: string,
+    position?: Position,
+    warnings?: WeatherWarning[]
+  ): void
 }
 
 export interface WeatherProviders {
