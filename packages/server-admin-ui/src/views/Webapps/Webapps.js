@@ -4,7 +4,7 @@ import { Card, CardBody, CardHeader, Col } from 'reactstrap'
 import {
   ADDON_PANEL,
   toLazyDynamicComponent,
-  toSafeModuleId,
+  toSafeModuleId
 } from './dynamicutilities'
 
 import Webapp from './Webapp'
@@ -13,7 +13,7 @@ class Webapps extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      addonComponents: [],
+      addonComponents: []
     }
   }
 
@@ -21,7 +21,7 @@ class Webapps extends Component {
     this.setState({
       addonComponents: this.props.addons.map((md) =>
         toLazyDynamicComponent(md.name, ADDON_PANEL)
-      ),
+      )
     })
   }
 

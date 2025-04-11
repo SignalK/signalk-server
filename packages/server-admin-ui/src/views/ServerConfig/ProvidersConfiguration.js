@@ -9,7 +9,7 @@ import {
   Input,
   Col,
   Table,
-  Row,
+  Row
 } from 'reactstrap'
 
 import BasicProvider from './BasicProvider'
@@ -18,7 +18,7 @@ import set from 'lodash.set'
 
 function fetchProviders() {
   fetch(`${window.serverRoutesPrefix}/providers`, {
-    credentials: 'include',
+    credentials: 'include'
   })
     .then((response) => response.json())
     .then((data) => {
@@ -40,7 +40,7 @@ function fetchProviders() {
         selectedProvider: selectedProvider
           ? JSON.parse(JSON.stringify(selectedProvider))
           : undefined,
-        selectedIndex: selectedIndex,
+        selectedIndex: selectedIndex
       })
     })
 }
@@ -48,7 +48,7 @@ function fetchProviders() {
 function runDiscovery() {
   fetch(`${window.serverRoutesPrefix}/runDiscovery`, {
     method: 'PUT',
-    credentials: 'include',
+    credentials: 'include'
   })
 }
 
@@ -58,7 +58,7 @@ class ProvidersConfiguration extends Component {
     this.state = {
       activeTab: '1',
       providers: [],
-      selectedProviderId: this.props.match.params.providerId,
+      selectedProviderId: this.props.match.params.providerId
     }
 
     this.fetchProviders = fetchProviders.bind(this)
@@ -88,13 +88,13 @@ class ProvidersConfiguration extends Component {
     }
     set(this.state.selectedProvider, event.target.name, value)
     this.setState({
-      selectedProvider: this.state.selectedProvider,
+      selectedProvider: this.state.selectedProvider
     })
   }
 
   handleProviderPropChange() {
     this.setState({
-      selectedProvider: this.state.selectedProvider,
+      selectedProvider: this.state.selectedProvider
     })
   }
 
@@ -106,12 +106,12 @@ class ProvidersConfiguration extends Component {
       id: '',
       enabled: true,
       options: {},
-      editable: true,
+      editable: true
     }
     this.setState(
       {
         selectedProvider: JSON.parse(JSON.stringify(newProvider)),
-        selectedIndex: this.state.providers.length - 1,
+        selectedIndex: this.state.providers.length - 1
       },
       () => {
         this.refs['selectedProvider'].scrollIntoView()
@@ -130,10 +130,10 @@ class ProvidersConfiguration extends Component {
     fetch(`${window.serverRoutesPrefix}/providers/${id && !isNew ? id : ''}`, {
       method: isNew ? 'POST' : 'PUT',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(this.state.selectedProvider),
-      credentials: 'include',
+      credentials: 'include'
     })
       .then((response) => {
         if (response.ok) {
@@ -154,7 +154,7 @@ class ProvidersConfiguration extends Component {
               providers: this.state.providers,
               //discoveredProviders: this.state.discoveredProviders,
               selectedProvider: null,
-              selectedIndex: -1,
+              selectedIndex: -1
             },
             () => {
               this.props.history.push('/serverConfiguration/connections/-')
@@ -178,9 +178,9 @@ class ProvidersConfiguration extends Component {
       {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        credentials: 'include',
+        credentials: 'include'
       }
     )
       .then((response) => response.text())
@@ -189,7 +189,7 @@ class ProvidersConfiguration extends Component {
         this.setState({
           providers: this.state.providers,
           selectedProvider: null,
-          selectedIndex: -1,
+          selectedIndex: -1
         })
         alert(response)
       })
@@ -200,9 +200,9 @@ class ProvidersConfiguration extends Component {
       {
         selectedProvider: {
           ...JSON.parse(JSON.stringify(provider)),
-          originalId: provider.id,
+          originalId: provider.id
         },
-        selectedIndex: index,
+        selectedIndex: index
       },
       () => {
         this.refs['selectedProvider'].scrollIntoView()
@@ -213,7 +213,7 @@ class ProvidersConfiguration extends Component {
   toggle(tab) {
     if (this.state.activeTab !== tab) {
       this.setState({
-        activeTab: tab,
+        activeTab: tab
       })
     }
   }

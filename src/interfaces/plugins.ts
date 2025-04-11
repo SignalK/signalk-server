@@ -570,9 +570,8 @@ module.exports = (theApp: any) => {
 
     try {
       const moduleDir = path.join(location, packageName)
-      const pluginConstructor: PluginConstructor = await importOrRequire(
-        moduleDir
-      )
+      const pluginConstructor: PluginConstructor =
+        await importOrRequire(moduleDir)
       plugin = pluginConstructor(appCopy) as PluginInfo
     } catch (e: any) {
       console.error(`${packageName} failed to start: ${e.message}`)

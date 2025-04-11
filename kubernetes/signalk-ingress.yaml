@@ -4,12 +4,12 @@ metadata:
   name: signalk
 spec:
   rules:
-  - http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: signalk
-            port:
-              number: 3000
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: signalk
+                port:
+                  number: 3000

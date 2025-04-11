@@ -1,27 +1,27 @@
 {
-	"name": "typedoc-signalk-theme",
-	"description": "A TypeDoc theme for SignalK",
-	"version": "0.3.0",
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
-	"type": "module",
-	"repository": "https://github.com/SignalK/signalk-server",
-	"author": "Brandon Keepers <brandon@opensoul.org>",
-	"license": "MIT",
-	"peerDependencies": {
-		"typedoc": "^0.28.0"
-	},
-	"devDependencies": {
-		"@types/node": "^18.19.69",
-		"typedoc": "~0.28.0"
-	},
-	"scripts": {
-		"build": "tsc"
-	},
-	"engines": {
-		"node": ">=18.0.0"
-	},
-	"keywords": [
-		"typedoc-theme"
-	]
+  "name": "typedoc-signalk-theme",
+  "description": "A TypeDoc theme for SignalK",
+  "version": "0.3.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "repository": "https://github.com/SignalK/signalk-server",
+  "author": "Brandon Keepers <brandon@opensoul.org>",
+  "license": "MIT",
+  "peerDependencies": {
+    "typedoc": "^0.28.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.69",
+    "typedoc": "~0.28.0"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "typedoc-theme"
+  ]
 }

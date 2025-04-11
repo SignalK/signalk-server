@@ -20,7 +20,7 @@ const _ = require('lodash')
 
 function CanboatJs(options) {
   Transform.call(this, {
-    objectMode: true,
+    objectMode: true
   })
 
   this.fromPgn = new FromPgn(options)

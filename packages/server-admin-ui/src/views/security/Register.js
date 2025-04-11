@@ -11,7 +11,7 @@ import {
   Input,
   InputGroup,
   InputGroupAddon,
-  InputGroupText,
+  InputGroupText
 } from 'reactstrap'
 
 class Register extends Component {
@@ -22,7 +22,7 @@ class Register extends Component {
       email: '',
       password: '',
       confirmPassword: '',
-      registrationSent: false,
+      registrationSent: false
     }
     this.handleInputChange = this.handleInputChange.bind(this)
     this.handleCreate = this.handleCreate.bind(this)
@@ -57,20 +57,20 @@ class Register extends Component {
     } else {
       var payload = {
         userId: this.state.email,
-        password: this.state.password,
+        password: this.state.password
       }
       fetch(`/signalk/v1/access/requests`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload),
-        credentials: 'include',
+        credentials: 'include'
       }).then((response) => {
         if (response.status != 202) {
           response.json().then((json) => {
             this.setState({
-              errorMessage: json.message ? json.message : json.result,
+              errorMessage: json.message ? json.message : json.result
             })
           })
         } else {

@@ -23,7 +23,7 @@ describe('Resources Api', () => {
       }
     }
     const resId = skUuid()
-    await put(`/resources/waypoints/${resId}`, waypoint).then(response => {
+    await put(`/resources/waypoints/${resId}`, waypoint).then((response) => {
       // response.json().then(x => console.log(x))
       response.status.should.equal(200)
     })
@@ -33,13 +33,16 @@ describe('Resources Api', () => {
     path.should.equal(`resources.waypoints.${resId}`)
     value.should.deep.equal(waypoint)
     await get(`/resources/waypoints/${resId}`)
-      .then(response => {
+      .then((response) => {
         response.status.should.equal(200)
         return response.json()
       })
-      .then(resData => {
+      .then((resData) => {
         delete resData.timestamp
-        resData.should.deep.equal({ ...waypoint, $source: 'resources-provider' })
+        resData.should.deep.equal({
+          ...waypoint,
+          $source: 'resources-provider'
+        })
       })
 
     stop()
@@ -63,13 +66,13 @@ describe('Resources Api', () => {
             }
           }
         })
-          .then(r => r.json())
-          .then(r => r.id)
+          .then((r) => r.json())
+          .then((r) => r.id)
       })
     )
     await get('/resources/waypoints?bbox=[24.8,60.16,24.899,60.3]')
-      .then(r => r.json())
-      .then(r => {
+      .then((r) => r.json())
+      .then((r) => {
         const returnedIds = Object.keys(r)
         returnedIds.length.should.equal(1)
         returnedIds[0].should.equal(resourceIds[1])
@@ -77,46 +80,43 @@ describe('Resources Api', () => {
   })
 
   it('Create route with route point metadata', async function () {
-    const {
-      post,
-      stop
-    } = await startServer()
-
+    const { post, stop } = await startServer()
 
     const route = {
       feature: {
-        type: "Feature",
+        type: 'Feature',
         geometry: {
-          type: "LineString",
-          coordinates: [[3.3452, 65.4567], [3.3352, 65.5567], [3.3261, 65.5777]]
+          type: 'LineString',
+          coordinates: [
+            [3.3452, 65.4567],
+            [3.3352, 65.5567],
+            [3.3261, 65.5777]
+          ]
         },
         properties: {
           coordinatesMeta: [
             {
-              name: "Start point",
-              description: "Start of route."
+              name: 'Start point',
+              description: 'Start of route.'
             },
             {
-              name: "Mid-point marker",
-              description: "Turn here."
+              name: 'Mid-point marker',
+              description: 'Turn here.'
             },
             {
-              name: "Destination",
-              description: "End of route."
+              name: 'Destination',
+              description: 'End of route.'
             }
           ]
         }
       }
     }
 
-    const { id } = await post('/resources/routes', route)
-      .then(response => {
-        response.status.should.equal(201)
-        return response.json()
-      })
-    id.length.should.equal(
-      'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length
-    )
+    const { id } = await post('/resources/routes', route).then((response) => {
+      response.status.should.equal(201)
+      return response.json()
+    })
+    id.length.should.equal('ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length)
 
     stop()
   })

@@ -8,7 +8,7 @@ const fetch = require('node-fetch')
 
 const nullIdText = 'Please enter a provider ID'
 
-describe('Providers', _ => {
+describe('Providers', (_) => {
   let server, url, port
 
   before(async function () {
@@ -169,7 +169,7 @@ describe('Providers', _ => {
   })
 })
 
-function checkExistingProvider (existing) {
+function checkExistingProvider(existing) {
   existing.id.should.equal('existing')
   existing.enabled.should.equal(false)
   existing.pipeElements.length.should.equal(1)

@@ -37,7 +37,7 @@ const FromPgn = require('@canboat/canboatjs').FromPgn
 
 function Nmea0183ToSignalK(options) {
   Transform.call(this, {
-    objectMode: true,
+    objectMode: true
   })
   this.debug = (options.createDebug || require('debug'))(
     'signalk:streams:nmea0183-signalk'

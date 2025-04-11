@@ -12,7 +12,6 @@ Signal K has an friendly and helpful community where you can find support and as
 
 - [**GitHub Discussions**](https://github.com/SignalK/signalk/discussions/)
 
-
 ## Frequently Asked Questions
 
 Answers to common issues and queries can be found on the [Frequently Asked Questions](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions) space on GitHub.

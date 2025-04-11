@@ -12,7 +12,7 @@ import {
   Label,
   FormGroup,
   FormText,
-  Progress,
+  Progress
 } from 'reactstrap'
 
 import { restart } from '../../actions'
@@ -28,7 +28,7 @@ class BackupRestore extends Component {
     this.state = {
       restoreFile: null,
       restoreState: RESTORE_NONE,
-      includePlugins: false,
+      includePlugins: false
     }
     this.fileChanged = this.fileChanged.bind(this)
     this.handleRestoreFileChange = this.handleRestoreFileChange.bind(this)
@@ -59,9 +59,9 @@ class BackupRestore extends Component {
       credentials: 'include',
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(this.state.restoreContents),
+      body: JSON.stringify(this.state.restoreContents)
     })
       .then((response) => {
         if (!response.ok) {
@@ -101,9 +101,9 @@ class BackupRestore extends Component {
       credentials: 'include',
       method: 'POST',
       headers: {
-        Accept: 'application/json',
+        Accept: 'application/json'
       },
-      body: data,
+      body: data
     })
       .then((response) => {
         if (response.ok) {

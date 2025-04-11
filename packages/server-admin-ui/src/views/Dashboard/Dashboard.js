@@ -7,7 +7,7 @@ import {
   Progress,
   Row,
   Col,
-  Table,
+  Table
 } from 'reactstrap'
 import '../../fa-pulse.css'
 
@@ -17,13 +17,13 @@ const Dashboard = (props) => {
     numberOfAvailablePaths,
     wsClients,
     providerStatistics,
-    uptime,
+    uptime
   } = props.serverStatistics || {
     deltaRate: 0,
     numberOfAvailablePaths: 0,
     wsClients: 0,
     providerStatistics: {},
-    uptime: '',
+    uptime: ''
   }
   const providerStatus = props.providerStatus || []
   const errorCount = providerStatus.filter((s) => s.type === 'error').length
@@ -49,8 +49,8 @@ const Dashboard = (props) => {
       (providerStats.deltaRate > 50
         ? ' text-primary fa-pulse-fast'
         : providerStats.deltaRate > 0
-        ? ' text-primary fa-pulse'
-        : '')
+          ? ' text-primary fa-pulse'
+          : '')
     )
   }
 
@@ -60,8 +60,8 @@ const Dashboard = (props) => {
       (providerStats.writeRate > 50
         ? ' text-primary fa-pulse-fast'
         : providerStats.writeRate > 0
-        ? ' text-primary fa-pulse'
-        : '')
+          ? ' text-primary fa-pulse'
+          : '')
     )
   }
 
@@ -71,14 +71,14 @@ const Dashboard = (props) => {
         <i
           className={inputPulseIconClass(providerStats)}
           style={{
-            color: providerStats.deltaCount ? '#039' : 'lightblue',
+            color: providerStats.deltaCount ? '#039' : 'lightblue'
           }}
         />
         <i
           className={outputPulseIconClass(providerStats)}
           style={{
             transform: 'scaleX(-1)',
-            color: providerStats.writeCount ? '#039' : 'lightblue',
+            color: providerStats.writeCount ? '#039' : 'lightblue'
           }}
         />
         <span className="title">
@@ -252,7 +252,7 @@ const Dashboard = (props) => {
                         const statusClasses = {
                           status: 'text-success',
                           warning: 'text-warning',
-                          error: 'text-danger',
+                          error: 'text-danger'
                         }
                         const statusClass = statusClasses[status.type]
                         const lastError =
@@ -299,6 +299,6 @@ export default connect(
   ({ serverStatistics, websocketStatus, providerStatus }) => ({
     serverStatistics,
     websocketStatus,
-    providerStatus,
+    providerStatus
   })
 )(Dashboard)

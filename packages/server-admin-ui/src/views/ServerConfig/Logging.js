@@ -9,12 +9,12 @@ import {
   Col,
   Row,
   ListGroup,
-  ListGroupItem,
+  ListGroupItem
 } from 'reactstrap'
 
 function fetchLogfileList() {
   const okResponse = fetch(`${window.serverRoutesPrefix}/logfiles/`, {
-    credentials: 'include',
+    credentials: 'include'
   }).then((response) => {
     if (!response.ok) {
       this.setState({ authorized: false })
@@ -37,7 +37,7 @@ class Settings extends Component {
     super(props)
     this.state = {
       hasData: false,
-      authorized: true,
+      authorized: true
     }
 
     this.fetchLogfileList = fetchLogfileList.bind(this)

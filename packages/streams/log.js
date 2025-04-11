@@ -34,7 +34,7 @@ const getLogger = require('./logging').getLogger
 
 function Log(options) {
   Transform.call(this, {
-    objectMode: true,
+    objectMode: true
   })
 
   this.logger = getLogger(options.app, options.discriminator, options.logdir)

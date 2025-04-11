@@ -1,17 +1,16 @@
 import { strict as assert } from 'assert'
 import chai from 'chai'
-import { DATETIME_REGEX, deltaHasPathValue, startServer } from './ts-servertestutilities'
+import {
+  DATETIME_REGEX,
+  deltaHasPathValue,
+  startServer
+} from './ts-servertestutilities'
 chai.should()
 
 describe('Course Api', () => {
   it('can set course destination as position', async function () {
-    const {
-      createWsPromiser,
-      selfGetJson,
-      selfPut,
-      sendDelta,
-      stop
-    } = await startServer()
+    const { createWsPromiser, selfGetJson, selfPut, sendDelta, stop } =
+      await startServer()
     const wsPromiser = createWsPromiser()
     const self = JSON.parse(await wsPromiser.nthMessage(1)).self
 
@@ -20,7 +19,7 @@ describe('Course Api', () => {
 
     await selfPut('navigation/course/destination', {
       position: { latitude: -35.5, longitude: 138.7 }
-    }).then(response => response.status.should.equal(200))
+    }).then((response) => response.status.should.equal(200))
 
     const v2courseDelta = JSON.parse(await wsPromiser.nthMessage(4))
     v2courseDelta.context.should.equal(self)
@@ -46,7 +45,8 @@ describe('Course Api', () => {
           position: {
             latitude: -35.45,
             longitude: 138
-          }, type: 'VesselPosition'
+          },
+          type: 'VesselPosition'
         }
       }
     ]
@@ -54,7 +54,7 @@ describe('Course Api', () => {
       deltaHasPathValue(v2courseDelta, path, value)
     )
 
-    await selfGetJson('navigation/course').then(data => {
+    await selfGetJson('navigation/course').then((data) => {
       data.startTime.should.match(DATETIME_REGEX)
       delete data.startTime
       data.should.deep.equal({
@@ -87,29 +87,27 @@ describe('Course Api', () => {
 
     await selfPut('navigation/course/destination', {
       position: validDestinationPosition
-    }).then(response => response.status.should.equal(200))
+    }).then((response) => response.status.should.equal(200))
 
     const v2courseDelta = JSON.parse(await wsPromiser.nthMessage(4))
-    deltaHasPathValue(
-      v2courseDelta,
-      'navigation.course.nextPoint',
-      { position: validDestinationPosition, type: 'Location' }
-    )
+    deltaHasPathValue(v2courseDelta, 'navigation.course.nextPoint', {
+      position: validDestinationPosition,
+      type: 'Location'
+    })
 
     await selfPut('navigation/course/destination', {
-      href:
-        '/resources/waypoints/07894aba-f151-4099-aa4f-5e5773734b95'
-    }).then(response => response.status.should.equal(400))
+      href: '/resources/waypoints/07894aba-f151-4099-aa4f-5e5773734b95'
+    }).then((response) => response.status.should.equal(400))
     await assert.rejects(wsPromiser.nthMessage(5))
 
     await selfPut('navigation/course/destination', {
       hrefff: 'dummy data'
-    }).then(response => response.status.should.equal(400))
+    }).then((response) => response.status.should.equal(400))
     await assert.rejects(wsPromiser.nthMessage(5))
 
     await selfPut('navigation/course/destination', {
       position: { latitude: -35.5 }
-    }).then(response => response.status.should.equal(400))
+    }).then((response) => response.status.should.equal(400))
     await assert.rejects(wsPromiser.nthMessage(5))
 
     await stop()
@@ -137,14 +135,13 @@ describe('Course Api', () => {
         }
       }
     }
-    const { id } = await post('/resources/waypoints', destination)
-      .then(response => {
+    const { id } = await post('/resources/waypoints', destination).then(
+      (response) => {
         response.status.should.equal(201)
         return response.json()
-      })
-    id.length.should.equal(
-      'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length
+      }
     )
+    id.length.should.equal('ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length)
     const href = `/resources/waypoints/${id}`
 
     const wsPromiser = createWsPromiser()
@@ -153,7 +150,7 @@ describe('Course Api', () => {
     await selfPut('navigation/course/destination', {
       href,
       arrivalCircle: 99
-    }).then(response => response.status.should.equal(200))
+    }).then((response) => response.status.should.equal(200))
 
     const v2courseDelta = JSON.parse(await wsPromiser.nthMessage(3))
     v2courseDelta.context.should.equal(self)
@@ -165,8 +162,7 @@ describe('Course Api', () => {
         value: {
           href: `/resources/waypoints/${id}`,
           position: { latitude: 60.1699, longitude: 24.9384 },
-          type: 'Waypoint',
-
+          type: 'Waypoint'
         }
       },
       {
@@ -181,12 +177,13 @@ describe('Course Api', () => {
       deltaHasPathValue(v2courseDelta, path, value)
     )
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pathValue = v2courseDelta.updates[0].values.find((x: any) => x.path === 'navigation.course.startTime')
+    const pathValue = v2courseDelta.updates[0].values.find(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (x: any) => x.path === 'navigation.course.startTime'
+    )
     pathValue.value.should.match(DATETIME_REGEX)
 
-
-    await selfGetJson('navigation/course').then(data => {
+    await selfGetJson('navigation/course').then((data) => {
       data.startTime.should.match(DATETIME_REGEX)
       delete data.startTime
       data.should.deep.equal({
@@ -208,7 +205,7 @@ describe('Course Api', () => {
       })
     })
 
-    await selfDelete('navigation/course').then(response =>
+    await selfDelete('navigation/course').then((response) =>
       response.status.should.equal(200)
     )
     const destinationClearedDelta = JSON.parse(await wsPromiser.nthMessage(5))
@@ -234,7 +231,7 @@ describe('Course Api', () => {
       deltaHasPathValue(destinationClearedDelta, path, value)
     )
 
-    await selfGetJson('navigation/course').then(data => {
+    await selfGetJson('navigation/course').then((data) => {
       data.should.deep.equal({
         startTime: null,
         targetArrivalTime: null,
@@ -249,35 +246,30 @@ describe('Course Api', () => {
   })
 
   it('can activate route and manipulate it', async function () {
-    const {
-      createWsPromiser,
-      post,
-      selfGetJson,
-      selfPut,
-      sendDelta,
-      stop
-    } = await startServer()
+    const { createWsPromiser, post, selfGetJson, selfPut, sendDelta, stop } =
+      await startServer()
     const vesselPosition = { latitude: -35.45, longitude: 138.0 }
     sendDelta('navigation.position', vesselPosition)
 
     const points = {
       feature: {
-        type: "Feature",
+        type: 'Feature',
         geometry: {
-          type: "LineString",
-          coordinates: [[3.3452, 65.4567], [3.3352, 65.5567], [3.3261, 65.5777]]
+          type: 'LineString',
+          coordinates: [
+            [3.3452, 65.4567],
+            [3.3352, 65.5567],
+            [3.3261, 65.5777]
+          ]
         }
       }
     }
 
-    const { id } = await post('/resources/routes', points)
-      .then(response => {
-        response.status.should.equal(201)
-        return response.json()
-      })
-    id.length.should.equal(
-      'ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length
-    )
+    const { id } = await post('/resources/routes', points).then((response) => {
+      response.status.should.equal(201)
+      return response.json()
+    })
+    id.length.should.equal('ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length)
     const href = `/resources/routes/${id}`
 
     const wsPromiser = createWsPromiser()
@@ -285,7 +277,7 @@ describe('Course Api', () => {
 
     await selfPut('navigation/course/activeRoute', {
       href
-    }).then(response => response.status.should.equal(200))
+    }).then((response) => response.status.should.equal(200))
 
     const v2courseDelta = JSON.parse(await wsPromiser.nthMessage(3))
     v2courseDelta.context.should.equal(self)
@@ -323,17 +315,19 @@ describe('Course Api', () => {
           },
           type: 'VesselPosition'
         }
-      },
+      }
     ]
     expectedPathValues.forEach(({ path, value }) =>
       deltaHasPathValue(v2courseDelta, path, value)
     )
-    v2courseDelta.updates[0].values.find(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (x: any) => x.path === 'navigation.course.startTime'
-    ).should.be.an('object')
+    v2courseDelta.updates[0].values
+      .find(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (x: any) => x.path === 'navigation.course.startTime'
+      )
+      .should.be.an('object')
 
-    await selfGetJson('navigation/course').then(data => {
+    await selfGetJson('navigation/course').then((data) => {
       delete data.startTime
       delete data.targetArrivalTime
       delete data.activeRoute.name
@@ -361,49 +355,55 @@ describe('Course Api', () => {
 
     await selfPut('navigation/course/activeRoute/nextPoint', {
       value: 1
-    }).then(response => response.status.should.equal(200))
-    await selfGetJson('navigation/course').then(data =>
+    }).then((response) => response.status.should.equal(200))
+    await selfGetJson('navigation/course').then((data) =>
       data.activeRoute.pointIndex.should.equal(1)
     )
 
     //setting pointIndex beyond route length sets it to last point's index
     await selfPut('navigation/course/activeRoute/nextPoint', {
       value: 100
-    }).then(response => response.status.should.equal(200))
-    await selfGetJson('navigation/course').then(data =>
+    }).then((response) => response.status.should.equal(200))
+    await selfGetJson('navigation/course').then((data) =>
       data.activeRoute.pointIndex.should.equal(2)
     )
 
     await selfPut('navigation/course/activeRoute/nextPoint', {
       value: -1
-    }).then(response => response.status.should.equal(200))
-    await selfGetJson('navigation/course').then(data =>
+    }).then((response) => response.status.should.equal(200))
+    await selfGetJson('navigation/course').then((data) =>
       data.activeRoute.pointIndex.should.equal(1)
     )
 
     await selfPut('navigation/course/activeRoute/pointIndex', {
       value: 2
-    }).then(response => response.status.should.equal(200))
-    await selfGetJson('navigation/course').then(data =>
+    }).then((response) => response.status.should.equal(200))
+    await selfGetJson('navigation/course').then((data) =>
       data.activeRoute.pointIndex.should.equal(2)
     )
 
     await selfPut('navigation/course/activeRoute', {
       href,
       reverse: true
-    }).then(response => response.status.should.equal(200))
-    await selfGetJson('navigation/course').then(data =>
+    }).then((response) => response.status.should.equal(200))
+    await selfGetJson('navigation/course').then((data) =>
       data.nextPoint.position.latitude.should.equal(
-        points.feature.geometry.coordinates[points.feature.geometry.coordinates.length - 1][1]
+        points.feature.geometry.coordinates[
+          points.feature.geometry.coordinates.length - 1
+        ][1]
       )
     )
     await selfPut('navigation/course/activeRoute/nextPoint', {
       value: 1
-    }).then(response => response.status.should.equal(200))
-    await selfGetJson('navigation/course').then(data => {
-      data.nextPoint.position.latitude.should.equal(points.feature.geometry.coordinates[1][1])
+    }).then((response) => response.status.should.equal(200))
+    await selfGetJson('navigation/course').then((data) => {
+      data.nextPoint.position.latitude.should.equal(
+        points.feature.geometry.coordinates[1][1]
+      )
       data.previousPoint.position.latitude.should.equal(
-        points.feature.geometry.coordinates[points.feature.geometry.coordinates.length - 1][1]
+        points.feature.geometry.coordinates[
+          points.feature.geometry.coordinates.length - 1
+        ][1]
       )
     })
 
@@ -418,7 +418,7 @@ describe('Course Api', () => {
 
     await selfPut('navigation/course/arrivalCircle', {
       value: 98
-    }).then(response => response.status.should.equal(200))
+    }).then((response) => response.status.should.equal(200))
 
     const v2courseDelta = JSON.parse(await wsPromiser.nthMessage(3))
 
@@ -432,7 +432,7 @@ describe('Course Api', () => {
       deltaHasPathValue(v2courseDelta, path, value)
     )
 
-    await selfGetJson('navigation/course').then(data => {
+    await selfGetJson('navigation/course').then((data) => {
       data.should.deep.equal({
         startTime: null,
         targetArrivalTime: null,

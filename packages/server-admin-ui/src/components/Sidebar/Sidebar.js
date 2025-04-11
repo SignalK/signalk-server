@@ -73,7 +73,7 @@ class Sidebar extends Component {
           'nav-link',
           item.variant ? `nav-link-${item.variant}` : ''
         ),
-        icon: classNames(item.icon),
+        icon: classNames(item.icon)
       }
       return navLink(item, key, classes)
     }
@@ -123,10 +123,10 @@ class Sidebar extends Component {
       item.title
         ? title(item, idx)
         : item.divider
-        ? divider(item, idx)
-        : item.children
-        ? navDropdown(item, idx)
-        : navItem(item, idx)
+          ? divider(item, idx)
+          : item.children
+            ? navDropdown(item, idx)
+            : navItem(item, idx)
 
     // nav list
     const navList = (items) => {
@@ -163,7 +163,7 @@ const mapStateToProps = (state) => {
     updatesBadge = {
       variant: 'success',
       text: `${appUpdates}`,
-      color: 'success',
+      color: 'success'
     }
   }
 
@@ -171,14 +171,14 @@ const mapStateToProps = (state) => {
     accessRequestsBadge = {
       variant: 'danger',
       text: `${state.accessRequests.length}`,
-      color: 'danger',
+      color: 'danger'
     }
   }
 
   if (state.appStore.storeAvailable === false) {
     updatesBadge = {
       variant: 'danger',
-      text: 'OFFLINE',
+      text: 'OFFLINE'
     }
   }
 
@@ -186,7 +186,7 @@ const mapStateToProps = (state) => {
     serverUpdateBadge = {
       variant: 'danger',
       text: state.appStore.serverUpdate,
-      color: 'danger',
+      color: 'danger'
     }
   }
 
@@ -195,19 +195,19 @@ const mapStateToProps = (state) => {
       {
         name: 'Dashboard',
         url: '/dashboard',
-        icon: 'icon-speedometer',
+        icon: 'icon-speedometer'
       },
       {
         name: 'Webapps',
         url: '/webapps',
-        icon: 'icon-grid',
+        icon: 'icon-grid'
       },
       {
         name: 'Data Browser',
         url: '/databrowser',
-        icon: 'icon-folder',
-      },
-    ],
+        icon: 'icon-folder'
+      }
+    ]
   }
 
   if (
@@ -220,7 +220,7 @@ const mapStateToProps = (state) => {
         name: 'Appstore',
         url: '/appstore',
         icon: 'icon-basket',
-        badge: updatesBadge,
+        badge: updatesBadge
       },
       {
         name: 'Server',
@@ -229,35 +229,35 @@ const mapStateToProps = (state) => {
         children: [
           {
             name: 'Settings',
-            url: '/serverConfiguration/settings',
+            url: '/serverConfiguration/settings'
           },
           {
             name: 'Data Connections',
-            url: '/serverConfiguration/connections/-',
+            url: '/serverConfiguration/connections/-'
           },
           {
             name: 'Plugin Config',
-            url: '/serverConfiguration/plugins/' + (openPlugin || '-'),
+            url: '/serverConfiguration/plugins/' + (openPlugin || '-')
           },
           {
             name: 'Server Logs',
-            url: '/serverConfiguration/log',
+            url: '/serverConfiguration/log'
           },
           {
             name: 'Update',
             url: '/serverConfiguration/update',
-            badge: serverUpdateBadge,
+            badge: serverUpdateBadge
           },
           {
             name: 'Data Fiddler',
-            url: '/serverConfiguration/datafiddler',
+            url: '/serverConfiguration/datafiddler'
           },
           {
             name: 'Backup/Restore',
-            url: '/serverConfiguration/backuprestore',
-          },
-        ],
-      },
+            url: '/serverConfiguration/backuprestore'
+          }
+        ]
+      }
     ])
   }
 
@@ -273,18 +273,18 @@ const mapStateToProps = (state) => {
       children: [
         {
           name: 'Settings',
-          url: '/security/settings',
+          url: '/security/settings'
         },
         {
           name: 'Users',
-          url: '/security/users',
-        },
-      ],
+          url: '/security/users'
+        }
+      ]
     }
     if (state.loginStatus.allowDeviceAccessRequests) {
       security.children.push({
         name: 'Devices',
-        url: '/security/devices',
+        url: '/security/devices'
       })
     }
     if (
@@ -294,7 +294,7 @@ const mapStateToProps = (state) => {
       security.children.push({
         name: 'Access Requests',
         url: '/security/access/requests',
-        badge: accessRequestsBadge,
+        badge: accessRequestsBadge
       })
     }
     result.items.push(security)
@@ -303,13 +303,13 @@ const mapStateToProps = (state) => {
   result.items.push({
     name: 'Documentation',
     url: `${window.location.protocol}//${window.location.host}/documentation`,
-    icon: 'icon-book-open',
+    icon: 'icon-book-open'
   })
 
   result.items.push({
     name: 'OpenApi',
     url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
-    icon: 'icon-energy',
+    icon: 'icon-energy'
   })
 
   return result

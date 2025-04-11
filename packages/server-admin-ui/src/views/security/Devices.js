@@ -11,13 +11,13 @@ import {
   Label,
   FormGroup,
   Table,
-  Row,
+  Row
 } from 'reactstrap'
 import EnableSecurity from './EnableSecurity'
 
 export function fetchSecurityDevices() {
   fetch(`${window.serverRoutesPrefix}/security/devices`, {
-    credentials: 'include',
+    credentials: 'include'
   })
     .then((response) => response.json())
     .then((data) => {
@@ -29,7 +29,7 @@ class Devices extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      devices: [],
+      devices: []
     }
 
     this.fetchSecurityDevices = fetchSecurityDevices.bind(this)
@@ -52,7 +52,7 @@ class Devices extends Component {
         : event.target.value
     this.state.selectedDevice[event.target.name] = value
     this.setState({
-      selectedDevice: this.state.selectedDevice,
+      selectedDevice: this.state.selectedDevice
     })
   }
 
@@ -61,7 +61,7 @@ class Devices extends Component {
 
     var payload = {
       permissions: this.state.selectedDevice.permissions || 'readonly',
-      description: this.state.selectedDevice.description,
+      description: this.state.selectedDevice.description
     }
 
     fetch(
@@ -69,17 +69,17 @@ class Devices extends Component {
       {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload),
-        credentials: 'include',
+        credentials: 'include'
       }
     )
       .then((response) => response.text())
       .then((response) => {
         this.setState({
           selectedDevice: null,
-          selectedIndex: -1,
+          selectedIndex: -1
         })
         alert(response)
         this.fetchSecurityDevices()
@@ -92,16 +92,16 @@ class Devices extends Component {
       {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        credentials: 'include',
+        credentials: 'include'
       }
     )
       .then((response) => response.text())
       .then((response) => {
         this.setState({
           selectedDevice: null,
-          selectedIndex: -1,
+          selectedIndex: -1
         })
         alert(response)
         this.fetchSecurityDevices()
@@ -112,7 +112,7 @@ class Devices extends Component {
     this.setState(
       {
         selectedDevice: JSON.parse(JSON.stringify(device)),
-        selectedIndex: index,
+        selectedIndex: index
       },
       () => {
         this.refs['selectedDevice'].scrollIntoView()

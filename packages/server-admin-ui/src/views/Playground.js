@@ -17,7 +17,7 @@ import {
   TabPane,
   Nav,
   NavItem,
-  NavLink,
+  NavLink
 } from 'reactstrap'
 import classnames from 'classnames'
 //import { Tabs, Tab, TabList, TabPanel } from 'react-tabs'
@@ -49,7 +49,7 @@ class Playground extends Component {
       inputIsJson: isJson(input),
       sending: false,
       sendingN2K: false,
-      activeTab: DELTAS_TAB_ID,
+      activeTab: DELTAS_TAB_ID
     }
 
     this.handleExecute = this.handleExecute.bind(this)
@@ -63,7 +63,7 @@ class Playground extends Component {
     this.setState({
       ...this.state,
       input: event.target.value,
-      inputIsJson: isJson(event.target.value),
+      inputIsJson: isJson(event.target.value)
     })
     localStorage.setItem(inputStorageKey, event.target.value)
     if (this.inputWaitTimeout) {
@@ -105,7 +105,7 @@ class Playground extends Component {
         n2kOutAvailable: false,
         error: 'invalid json',
         jsonError: error.message,
-        activeTab: LINT_ERROR_TAB_ID,
+        activeTab: LINT_ERROR_TAB_ID
       })
     }
   }
@@ -128,7 +128,7 @@ class Playground extends Component {
           n2kOutAvailable: false,
           error: 'invalid json',
           jsonError: error.message,
-          activeTab: LINT_ERROR_TAB_ID,
+          activeTab: LINT_ERROR_TAB_ID
         })
         return
       }
@@ -146,9 +146,9 @@ class Playground extends Component {
       method: 'POST',
       credentials: 'include',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     })
       .then((response) => response.json())
       .then((data) => {
@@ -166,7 +166,7 @@ class Playground extends Component {
             n2kJson: [],
             n2kOutAvailable: false,
             jsonError: null,
-            error: data.error,
+            error: data.error
           })
         } else {
           this.state.error = null
@@ -188,7 +188,7 @@ class Playground extends Component {
                           context: delta.context,
                           timestamp: moment(update.timestamp).format(
                             timestampFormat
-                          ),
+                          )
                         })
                       })
                     } else {
@@ -198,7 +198,7 @@ class Playground extends Component {
                         context: delta.context,
                         timestamp: moment(update.timestamp).format(
                           timestampFormat
-                        ),
+                        )
                       })
                     }
                   })
@@ -213,7 +213,7 @@ class Playground extends Component {
             n2kJson: data.n2kJson,
             n2kOutAvailable: data.n2kOutAvailable,
             putResults: data.putResults,
-            jsonError: null,
+            jsonError: null
           })
         }
       })
@@ -227,7 +227,7 @@ class Playground extends Component {
           n2kJson: [],
           n2kOutAvailable: false,
           error: error.message,
-          jsonError: null,
+          jsonError: null
         })
         if (sendToServer || sendToN2K) {
           this.setState({ ...this.state, sending: false, sendingN2K: false })
@@ -355,7 +355,7 @@ class Playground extends Component {
                     <NavItem>
                       <NavLink
                         className={classnames({
-                          active: this.state.activeTab === DELTAS_TAB_ID,
+                          active: this.state.activeTab === DELTAS_TAB_ID
                         })}
                         onClick={() => {
                           toggle(DELTAS_TAB_ID)
@@ -368,7 +368,7 @@ class Playground extends Component {
                       <NavItem>
                         <NavLink
                           className={classnames({
-                            active: this.state.activeTab === PATHS_TAB_ID,
+                            active: this.state.activeTab === PATHS_TAB_ID
                           })}
                           onClick={() => {
                             toggle(PATHS_TAB_ID)
@@ -383,7 +383,7 @@ class Playground extends Component {
                       <NavItem>
                         <NavLink
                           className={classnames({
-                            active: this.state.activeTab === N2KJSON_TAB_ID,
+                            active: this.state.activeTab === N2KJSON_TAB_ID
                           })}
                           onClick={() => {
                             toggle(N2KJSON_TAB_ID)
@@ -398,8 +398,7 @@ class Playground extends Component {
                         <NavItem>
                           <NavLink
                             className={classnames({
-                              active:
-                                this.state.activeTab === PUTRESULTS_TAB_ID,
+                              active: this.state.activeTab === PUTRESULTS_TAB_ID
                             })}
                             onClick={() => {
                               toggle(PUTRESULTS_TAB_ID)
@@ -413,7 +412,7 @@ class Playground extends Component {
                       <NavItem>
                         <NavLink
                           className={classnames({
-                            active: this.state.activeTab === LINT_ERROR_TAB_ID,
+                            active: this.state.activeTab === LINT_ERROR_TAB_ID
                           })}
                           onClick={() => {
                             toggle(LINT_ERROR_TAB_ID)
@@ -432,7 +431,7 @@ class Playground extends Component {
                             overflowY: 'scroll',
                             maxHeight: '60vh',
                             border: '1px solid',
-                            padding: '5px',
+                            padding: '5px'
                           }}
                         >
                           <pre>
@@ -499,7 +498,7 @@ class Playground extends Component {
                               overflowY: 'scroll',
                               maxHeight: '60vh',
                               border: '1px solid',
-                              padding: '5px',
+                              padding: '5px'
                             }}
                           >
                             <pre>
@@ -516,7 +515,7 @@ class Playground extends Component {
                             overflowY: 'scroll',
                             maxHeight: '60vh',
                             border: '1px solid',
-                            padding: '5px',
+                            padding: '5px'
                           }}
                         >
                           <pre>{this.state.jsonError}</pre>
@@ -542,7 +541,7 @@ function n2kJsonPanel(n2kData) {
           overflowY: 'scroll',
           maxHeight: '60vh',
           border: '1px solid',
-          padding: '5px',
+          padding: '5px'
         }}
       >
         <pre>{JSON.stringify(n2kData, null, 2)}</pre>

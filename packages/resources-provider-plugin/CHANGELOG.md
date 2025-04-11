@@ -1,6 +1,6 @@
 # CHANGELOG: RESOURCES-PROVIDER
 
-___Note: Can only be used with Signal K server version 2.0.0 or later.___
+**_Note: Can only be used with Signal K server version 2.0.0 or later._**
 
 ---
 
@@ -16,12 +16,12 @@ ___Note: Can only be used with Signal K server version 2.0.0 or later.___
 
 - **Fix**: Only process files in resource folders (ignore folders).
 
-
 ## v1.0.0
 
 Resource Provider plugin that facilitates the storage and retrieval of resources on the Signal K server filesystem.
 
-By default it is enabled to handle the following Signal K resource types: 
+By default it is enabled to handle the following Signal K resource types:
+
 - `routes`
 - `waypoints`
 - `notes`
@@ -34,6 +34,7 @@ The plugin can also be configured to handle additional `custom` resource types.
 All resource types are stored on the local filesystem of the Signal K server with each type within its own folder.
 
 The parent folder under which resources are stored can be configured from within the plugin config screen. The default path is `~/.signalk/resources`.
+
 ```
 .signalk
     /resources
@@ -50,4 +51,3 @@ The parent folder under which resources are stored can be configured from within
 ```
 
 ![image](https://user-images.githubusercontent.com/38519157/150449889-5049a624-821c-4f33-ba8b-596b6b643d07.png)
-

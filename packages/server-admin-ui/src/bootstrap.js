@@ -34,7 +34,7 @@ let logEntryCount = 0
 for (let i = 0; i < 100; i++) {
   entries[i] = {
     i: logEntryCount++,
-    d: '',
+    d: ''
   }
 }
 
@@ -46,7 +46,7 @@ const state = {
     updates: [],
     installed: [],
     available: [],
-    installing: [],
+    installing: []
   },
   loginStatus: {},
   serverSpecification: {},
@@ -58,7 +58,7 @@ const state = {
   log: {
     entries,
     debugEnabled: '',
-    rememberDebug: false,
+    rememberDebug: false
   },
   restoreStatus: {},
   vesselInfo: {},
@@ -66,9 +66,9 @@ const state = {
     sourcePriorities: [],
     saveState: {
       dirty: false,
-      timeoutsOk: true,
-    },
-  },
+      timeoutsOk: true
+    }
+  }
 }
 
 let store = createStore(
@@ -76,19 +76,19 @@ let store = createStore(
     if (action.type === 'RECEIVE_PLUGIN_LIST') {
       return {
         ...state,
-        plugins: action.data,
+        plugins: action.data
       }
     }
     if (action.type === 'RECEIVE_WEBAPPS_LIST') {
       return {
         ...state,
-        webapps: action.data,
+        webapps: action.data
       }
     }
     if (action.type === 'RECEIVE_ADDONS_LIST') {
       return {
         ...state,
-        addons: action.data,
+        addons: action.data
       }
     }
     if (
@@ -104,13 +104,13 @@ let store = createStore(
 
       return {
         ...state,
-        appStore: apps,
+        appStore: apps
       }
     }
     if (action.type === 'SERVERSTATISTICS') {
       return {
         ...state,
-        serverStatistics: action.data,
+        serverStatistics: action.data
       }
     }
     if (action.type === 'PROVIDERSTATUS') {
@@ -119,25 +119,25 @@ let store = createStore(
       })
       return {
         ...state,
-        providerStatus: action.data,
+        providerStatus: action.data
       }
     }
     if (action.type === 'RECEIVE_LOGIN_STATUS') {
       return {
         ...state,
-        loginStatus: action.data,
+        loginStatus: action.data
       }
     }
     if (action.type === 'RECEIVE_SERVER_SPEC') {
       return {
         ...state,
-        serverSpecification: action.data,
+        serverSpecification: action.data
       }
     }
     if (action.type === 'WEBSOCKET_CONNECTED') {
       return {
         ...state,
-        websocketStatus: 'connected',
+        websocketStatus: 'connected'
       }
     }
     if (action.type === 'WEBSOCKET_OPEN') {
@@ -151,7 +151,7 @@ let store = createStore(
       return {
         ...state,
         websocketStatus: 'open',
-        webSocket: action.data,
+        webSocket: action.data
       }
     }
     if (action.type === 'VESSEL_INFO') {
@@ -160,13 +160,13 @@ let store = createStore(
       }
       return {
         ...state,
-        vesselInfo: action.data,
+        vesselInfo: action.data
       }
     }
     if (action.type === 'WEBSOCKET_ERROR') {
       return {
         ...state,
-        websocketStatus: 'error',
+        websocketStatus: 'error'
       }
     }
     if (action.type === 'WEBSOCKET_CLOSE') {
@@ -179,7 +179,7 @@ let store = createStore(
       return {
         ...state,
         websocketStatus: 'closed',
-        webSocket: null,
+        webSocket: null
       }
     }
     if (action.type === 'LOGIN_SUCCESS') {
@@ -194,13 +194,13 @@ let store = createStore(
     if (action.type === 'SERVER_RESTART') {
       return {
         ...state,
-        restarting: true,
+        restarting: true
       }
     }
     if (action.data === 'SERVER_UP') {
       return {
         ...state,
-        restarting: false,
+        restarting: false
       }
     }
     if (action.type === 'LOGOUT_REQUESTED') {
@@ -211,19 +211,19 @@ let store = createStore(
     if (action.type === 'ACCESS_REQUEST') {
       return {
         ...state,
-        accessRequests: action.data,
+        accessRequests: action.data
       }
     }
     if (action.type === 'DISCOVERY_CHANGED') {
       return {
         ...state,
-        discoveredProviders: action.data,
+        discoveredProviders: action.data
       }
     }
     if (action.type === 'DEBUG_SETTINGS') {
       return {
         ...state,
-        log: { ...state.log, ...action.data },
+        log: { ...state.log, ...action.data }
       }
     }
     if (action.type === 'LOG') {
@@ -235,7 +235,7 @@ let store = createStore(
         convert.toHtml(escape(action.data.row))
       state.log.entries.push({
         i: logEntryCount++,
-        d: html,
+        d: html
       })
       if (state.log.entries.length > 100) {
         state.log.entries.shift()
@@ -244,21 +244,21 @@ let store = createStore(
         ...state,
         log: {
           ...state.log,
-          entries: state.log.entries,
-        },
+          entries: state.log.entries
+        }
       }
     }
     if (action.type === 'RESTORESTATUS') {
       return {
         ...state,
-        restoreStatus: action.data,
+        restoreStatus: action.data
       }
     }
     if (action.type === 'SOURCEPRIORITIES') {
       const sourcePrioritiesMap = action.data
       const sourcePriorities = Object.keys(sourcePrioritiesMap).map((key) => ({
         path: key,
-        priorities: sourcePrioritiesMap[key],
+        priorities: sourcePrioritiesMap[key]
       }))
       sourcePriorities.state = {}
 
@@ -268,9 +268,9 @@ let store = createStore(
           sourcePriorities,
           saveState: {
             dirty: false,
-            timeoutsOk: true,
-          },
-        },
+            timeoutsOk: true
+          }
+        }
       }
     }
     return {
@@ -278,7 +278,7 @@ let store = createStore(
       sourcePrioritiesData: reduceSourcePriorities(
         state.sourcePrioritiesData,
         action
-      ),
+      )
     }
   },
   state,

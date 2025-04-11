@@ -35,7 +35,7 @@ const GpsdClient = require('node-gpsd-client')
 
 function Gpsd(options) {
   Transform.call(this, {
-    objectMode: true,
+    objectMode: true
   })
 
   const port = options.port || 2947
@@ -59,11 +59,11 @@ function Gpsd(options) {
           options.providerId,
           `${hostname}:${port}: ` + msg
         )
-      },
+      }
     },
     parse: false,
     reconnectThreshold: noDataReceivedTimeout,
-    reconnectInterval: noDataReceivedTimeout / 2,
+    reconnectInterval: noDataReceivedTimeout / 2
   })
 
   setProviderStatus(`Connecting to ${hostname}:${port}`)
@@ -73,7 +73,7 @@ function Gpsd(options) {
     this.listener.watch({
       class: 'WATCH',
       nmea: true,
-      json: false,
+      json: false
     })
   })
 
