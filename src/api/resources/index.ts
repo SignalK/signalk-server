@@ -52,7 +52,6 @@ export class ResourcesApi {
   }
 
   async start() {
-    // eslint-disable-next-line no-async-promise-executor
     return new Promise<void>(async (resolve) => {
       resolve()
     })
@@ -945,7 +944,6 @@ export class ResourcesApi {
   private getResourcePaths(): { [key: string]: any } {
     const resPaths: { [key: string]: any } = {}
     for (const i in this.resProvider) {
-      // eslint-disable-next-line no-prototype-builtins
       if (this.resProvider.hasOwnProperty(i)) {
         resPaths[i] = {
           description: `Path containing ${

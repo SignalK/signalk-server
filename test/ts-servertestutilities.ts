@@ -10,7 +10,7 @@ import {
 } from './servertestutilities'
 import { SERVERSTATEDIRNAME } from '../src/serverstate/store'
 import { expect } from 'chai'
-import { Delta, hasValues, PathValue } from '@signalk/server-api'
+import { Delta, hasValues, PathValue, Value } from '@signalk/server-api'
 
 export const DATETIME_REGEX = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)Z?$/
 
@@ -41,8 +41,8 @@ export const startServer = async () => {
     createWsPromiser: () =>
       new WsPromiser(
         'ws://localhost:' +
-          port +
-          '/signalk/v1/stream?subscribe=self&metaDeltas=none&sendCachedValues=false'
+        port +
+        '/signalk/v1/stream?subscribe=self&metaDeltas=none&sendCachedValues=false'
       ),
     selfPut: (path: string, body: object) =>
       fetch(`${api}/vessels/self/${path}`, {
@@ -78,8 +78,8 @@ export const startServer = async () => {
       fetch(`${api}/vessels/self/${path}`).then(r => r.json()),
     selfGetJsonV1: (path: string) =>
       fetch(`${v1Api}/vessels/self/${path}`).then(r => r.json()),
-    host,    
-    sendDelta: (path: string, value: any) =>
+    host,
+    sendDelta: (path: string, value: Value) =>
       sendDelta(
         {
           updates: [
@@ -114,7 +114,7 @@ export const deltaHasPathValue = (delta: Delta, path: string, value: any) => {
       undefined
     )
     expect(pathValue?.value).to.deep.equal(value)
-  } catch (e) {
+  } catch (_) {
     throw new Error(
       `No such pathValue ${path}:${JSON.stringify(value)} in ${JSON.stringify(
         delta,
