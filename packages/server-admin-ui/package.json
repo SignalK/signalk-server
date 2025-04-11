@@ -27,7 +27,6 @@
     "buffer": "^6.0.3",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^5.0.0",
-    "eslint-plugin-react": "^7.34.1",
     "file-loader": "^6.1.1",
     "font-awesome": "^4.7.0",
     "html-webpack-plugin": "^5.0.0-alpha.6",
@@ -63,8 +62,8 @@
     "watch": "webpack --watch --mode development",
     "build": "webpack --mode=production",
     "format": "prettier --write src/",
-    "eslint": "eslint src/",
-    "ci": "prettier --check src/ && npm run eslint",
+    "lint": "eslint --fix",
+    "ci": "prettier --check src/ && eslint",
     "clean": "rimraf ./public",
     "bundle-analyzer": "webpack-bundle-analyzer --port 4200 public/stats.json"
   }

@@ -11,9 +11,9 @@
     "build-declaration": "tsc --declaration",
     "watch": "tsc --build -w",
     "prettier": "prettier -w src/",
-    "lint": "eslint -c .eslintrc.js --ext .ts --ext .js --fix src/",
+    "lint": "eslint --fix",
     "format": "npm run prettier && npm run lint",
-    "ci-lint": "eslint -c .eslintrc.js --ext .ts --ext .js src/ && prettier --check src/",
+    "ci-lint": "eslint && prettier --check src/",
     "prepublishOnly": "npm run lint && npm run build:all && npm run build-declaration",
     "update-latest-release": "git checkout master && git branch -D latest-release || git checkout -b latest-release && git push -f origin/latest-release",
     "start": "node bin/signalk-server",
@@ -127,19 +127,21 @@
     "ws": "^7.0.0"
   },
   "optionalDependencies": {
-    "@signalk/freeboard-sk": "^2.0.0-beta.3",
     "@mxtommy/kip": "^2.9.1",
+    "@signalk/freeboard-sk": "^2.0.0-beta.3",
     "@signalk/instrumentpanel": "0.x",
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
-    "@signalk/vesselpositions": "^1.0.0",
     "@signalk/udp-nmea-plugin": "^2.0.0",
-    "signalk-to-nmea2000": "^2.16.0",
-    "signalk-n2kais-to-nmea0183": "^1.3.1",
+    "@signalk/vesselpositions": "^1.0.0",
     "mdns": "^2.5.1",
-    "serialport": "^11.0.0"
+    "serialport": "^11.0.0",
+    "signalk-n2kais-to-nmea0183": "^1.3.1",
+    "signalk-to-nmea2000": "^2.16.0"
   },
   "devDependencies": {
+    "@eslint-react/eslint-plugin": "^1.45.1",
+    "@eslint/js": "^9.24.0",
     "@tsconfig/node16": "^16.1.3",
     "@types/busboy": "^1.5.0",
     "@types/chai": "^4.2.15",
@@ -156,15 +158,15 @@
     "@types/swagger-ui-express": "^4.1.3",
     "@types/unzipper": "^0.10.5",
     "@types/uuid": "^8.3.1",
-    "@typescript-eslint/eslint-plugin": "^8.16.0",
     "chai": "^4.3.0",
     "chai-json-equal": "0.0.1",
     "chai-things": "^0.2.0",
     "eslint": "^9.24.0",
-    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-prettier": "^10.1.2",
     "eslint-plugin-prefer-arrow": "^1.2.3",
-    "eslint-plugin-react": "^7.31.8",
+    "eslint-plugin-react": "^7.37.5",
     "freeport-promise": "^1.0.0",
+    "globals": "^16.0.0",
     "lint-staged": "^10.0.3",
     "mocha": "^10.2.0",
     "prettier": "^2.8.4",
@@ -173,7 +175,8 @@
     "typedoc": "^0.28.1",
     "typedoc-plugin-mdn-links": "^5.0.1",
     "typedoc-signalk-theme": "^0.3.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.29.1"
   },
   "funding": "https://opencollective.com/signalk"
 }
