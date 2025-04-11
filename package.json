@@ -87,7 +87,6 @@
     "chalk": "^3.0.0",
     "clear": "^0.1.0",
     "command-exists": "^1.2.8",
-    "compare-versions": "^3.0.1",
     "compression": "^1.7.3",
     "cookie": "^0.4.0",
     "cookie-parser": "^1.4.3",
