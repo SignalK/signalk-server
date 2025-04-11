@@ -16,8 +16,8 @@
 
 import { createServer, Server, Socket } from 'net'
 import split from 'split'
-import { createDebug } from '../debug'
-import { Interface, SignalKServer } from '../types'
+import { createDebug } from '../debug.js'
+import { Interface, SignalKServer } from '../types.js'
 import { Unsubscribes } from '@signalk/server-api'
 const debug = createDebug('signalk-server:interfaces:tcp:signalk')
 
@@ -26,7 +26,7 @@ interface SocketWithId extends Socket {
   name?: string
 }
 
-module.exports = (app: SignalKServer) => {
+export default (app: SignalKServer) => {
   'use strict'
   let idSequence = 0
   let server: Server | null

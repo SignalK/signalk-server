@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-const Transform = require('stream').Transform
-const bodyParser = require('body-parser')
+import { Transform } from 'stream'
+import bodyParser from 'body-parser'
+import { inherits } from 'util'
 
-function HttpProvider(options) {
+export default function HttpProvider(options) {
   Transform.call(this, {
     objectMode: true
   })
@@ -27,7 +28,7 @@ function HttpProvider(options) {
   options.app.post('/signalk/v1/api/_test/delta', handleDelta.bind(this))
 }
 
-require('util').inherits(HttpProvider, Transform)
+inherits(HttpProvider, Transform)
 
 HttpProvider.prototype._transform = function (chunk, encoding, done) {
   console.error('HttpProvider._transform is not supposed to be called')
@@ -39,5 +40,3 @@ function handleDelta(req, res) {
 
   this.push(req.body)
 }
-
-module.exports = HttpProvider

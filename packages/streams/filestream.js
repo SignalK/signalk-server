@@ -68,7 +68,7 @@ FileStream.prototype.startStream = function () {
       this.options.filename
     )
     if (!existsSync(filename)) {
-      filename = path.join(__dirname, '..', this.options.filename)
+      filename = path.join(import.meta.dirname, '..', this.options.filename)
     }
   }
 

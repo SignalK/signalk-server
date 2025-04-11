@@ -1,19 +1,22 @@
-const chai = require('chai')
-chai.Should()
-chai.use(require('chai-things'))
-chai.use(require('chai-json-equal'))
-const fetch = require('node-fetch')
-const { freeport } = require('./ts-servertestutilities')
-const {
+import chai from 'chai'
+import chaiThings from 'chai-things'
+import chaiJsonEqual from 'chai-json-equal'
+import fetch from 'node-fetch'
+import {
   startServerP,
   getReadOnlyToken,
   getWriteToken,
   getAdminToken
-} = require('./servertestutilities')
-const fs = require('fs')
-const path = require('path')
-const assert = require('assert')
-const rimraf = require('rimraf').rimraf
+} from './servertestutilities.js'
+import { freeport } from './ts-servertestutilities.js'
+import fs from 'fs'
+import path from 'path'
+import assert from 'assert'
+import { rimraf } from 'rimraf'
+
+chai.Should()
+chai.use(chaiThings)
+chai.use(chaiJsonEqual)
 
 const APP_ID = 'testApplication'
 const APP_VERSION = '1.0.0'

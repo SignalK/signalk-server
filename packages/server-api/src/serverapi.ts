@@ -94,8 +94,7 @@ export interface ServerAPI
     value: number | string | object | boolean,
     updateCb: (err?: Error) => void,
     source: string
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<any>
+  ): void | Promise<void>
 
   /**
    * @category Data Model

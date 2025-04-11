@@ -28,7 +28,7 @@ export type PluginConstructor = (app: ServerAPI) => Plugin
  * ```typescript
  * import { Plugin, ServerAPI } from '@signalk/server-api';
  *
- * module.exports = (app: ServerAPI): Plugin => {
+ * export default (app: ServerAPI): Plugin => {
  *   const plugin: Plugin = {
  *     id: 'my-signalk-plugin',
  *     name: 'My Great Plugin',

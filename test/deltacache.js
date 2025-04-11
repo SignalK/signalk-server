@@ -1,9 +1,12 @@
-const chai = require('chai')
+import chai from 'chai'
+import chaiThings from 'chai-things'
+import { chaiModule } from '@signalk/signalk-schema'
+import { get } from 'lodash-es'
+import { startServer } from './ts-servertestutilities.js'
+
 chai.Should()
-chai.use(require('chai-things'))
-chai.use(require('@signalk/signalk-schema').chaiModule)
-const _ = require('lodash')
-import { startServer } from './ts-servertestutilities'
+chai.use(chaiThings)
+chai.use(chaiModule)
 
 const testDelta = {
   context: 'vessels.self',
@@ -176,7 +179,7 @@ describe('Deltacache', () => {
   it('returns valid full tree', function () {
     const fullTree = theServer.app.deltaCache.buildFull(null, [])
 
-    const self = _.get(fullTree, fullTree.self)
+    const self = get(fullTree, fullTree.self)
     self.should.have.nested.property('navigation.trip.log.value', 43374)
     self.should.have.nested.property('imaginary.path.value', 17404540)
     self.should.have.nested.property(
@@ -212,7 +215,7 @@ describe('Deltacache', () => {
 
   it('returns /sources correctly', function () {
     const fullTree = theServer.app.deltaCache.buildFull(null, ['sources'])
-    const self = _.get(fullTree, fullTree.self)
+    const self = get(fullTree, fullTree.self)
     delete self.imaginary
     delete self.navigation.course //FIXME until in schema
     fullTree.should.be.validSignalK

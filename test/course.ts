@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert'
 import chai from 'chai'
-import { DATETIME_REGEX, deltaHasPathValue, startServer } from './ts-servertestutilities'
+import { DATETIME_REGEX, deltaHasPathValue, startServer } from './ts-servertestutilities.js'
 chai.should()
 
 describe('Course Api', () => {

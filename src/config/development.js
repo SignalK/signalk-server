@@ -14,16 +14,18 @@
  * limitations under the License.
 */
 
-const { isUndefined } = require('lodash')
+import { isUndefined } from 'lodash-es'
+import errorhandler from 'errorhandler'
+import morgan from 'morgan'
 
-module.exports = function (app) {
+export default function (app) {
   'use strict'
 
   if (app.get('env') === 'development') {
     app.config.environment = 'development'
 
     app.use(
-      require('errorhandler')({
+      errorhandler({
         dumpExceptions: true,
         showStack: true
       })
@@ -36,6 +38,6 @@ module.exports = function (app) {
     if (!accessLogging) {
       morganOptions.skip = () => true
     }
-    app.use(require('morgan')('dev', morganOptions))
+    app.use(morgan('dev', morganOptions))
   }
 }

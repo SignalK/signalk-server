@@ -18,7 +18,7 @@ import { FileTimestampStream } from 'file-timestamp-stream'
 import path from 'path'
 import createDebug from 'debug'
 import fs from 'fs'
-import { isUndefined } from 'lodash'
+import { isUndefined } from 'lodash-es'
 
 let debug = createDebug('signalk:streams:logging')
 

@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-const _ = require('lodash')
-import { createDebug } from '../debug'
+import { get, set } from 'lodash-es'
+import { createDebug } from '../debug.js'
+import fs from 'fs'
+import path from 'path'
+import jsonpatch from 'json-patch'
+import { valid, coerce } from 'semver'
+
 const debug = createDebug('signalk-server:interfaces:applicationData')
-const fs = require('fs')
-const path = require('path')
-const jsonpatch = require('json-patch')
-const semver = require('semver')
 
 const prefix = '/signalk/v1/applicationData'
 
@@ -34,7 +35,7 @@ const userApplicationDataUrls = [
   `${prefix}/user/:appid/:version`
 ]
 
-module.exports = function (app) {
+export default function (app) {
   if (app.securityStrategy.isDummy()) {
     debug('ApplicationData disabled because security is off')
 
@@ -117,7 +118,7 @@ module.exports = function (app) {
 
     let data = applicationData
     if (req.params[0] && req.params[0].length !== 0) {
-      data = _.get(applicationData, req.params[0].replace(/\//g, '.'))
+      data = get(applicationData, req.params[0].replace(/\//g, '.'))
 
       if (!data) {
         res.status(404).send()
@@ -131,7 +132,7 @@ module.exports = function (app) {
         return
       }
 
-      data = _.keys(data)
+      data = Object.keys(data)
     }
 
     res.json(data)
@@ -154,8 +155,8 @@ module.exports = function (app) {
     let applicationData = readApplicationData(req, appid, version, isUser)
 
     if (req.params[0] && req.params[0].length !== 0) {
-      _.set(applicationData, req.params[0].replace(/\//g, '.'), req.body)
-    } else if (_.isArray(req.body)) {
+      set(applicationData, req.params[0].replace(/\//g, '.'), req.body)
+    } else if (Array.isArray(req.body)) {
       jsonpatch.apply(applicationData, req.body)
     } else {
       applicationData = req.body
@@ -195,7 +196,7 @@ module.exports = function (app) {
   }
 
   function validateVersion(version) {
-    return semver.valid(semver.coerce(version))
+    return valid(coerce(version))
   }
 
   function dirForApplicationData(req, appid, isUser) {

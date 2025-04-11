@@ -15,11 +15,11 @@
  */
 
 import { PropertyValues, PropertyValuesCallback } from '@signalk/server-api'
-import _ from 'lodash'
+import { get } from 'lodash-es'
 import { Duplex, Writable } from 'stream'
-import { SignalKMessageHub, WithConfig } from './app'
-import { createDebug } from './debug'
-import { EventsActorId, WithWrappedEmitter } from './events'
+import { SignalKMessageHub, WithConfig } from './app.js'
+import { createDebug } from './debug.js'
+import { EventsActorId, WithWrappedEmitter } from './events.js'
 
 class DevNull extends Writable {
   constructor() {
@@ -28,12 +28,7 @@ class DevNull extends Writable {
     })
   }
 
-  _write(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    chunk: any,
-    encoding: BufferEncoding,
-    done: (error?: Error | null) => void
-  ): void {
+  _write(_: Uint8Array, encoding: BufferEncoding, done: () => void) {
     done()
   }
 }
@@ -67,7 +62,7 @@ export function pipedProviders(
       setProviderError: (providerId: string, msg: string) => void
     }
 ) {
-  function createPipedProvider(providerConfig: PipedProviderConfig) {
+  async function createPipedProvider(providerConfig: PipedProviderConfig) {
     const { propertyValues, ...sanitizedApp } = app
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const emitPropertyValue = (name: string, value: any) =>
@@ -91,28 +86,28 @@ export function pipedProviders(
       toJSON: () => 'appFacade'
     }
 
+    const pipeElements: Duplex[] = []
+
+    for (const config of providerConfig.pipeElements) {
+      if (config.enabled ?? true) {
+        pipeElements.push(
+          await createPipeElement({
+            ...config,
+            options: {
+              providerId: providerConfig.id,
+              app: appFacade,
+              ...config.options,
+              emitPropertyValue,
+              onPropertyValues
+            }
+          })
+        )
+      }
+    }
+
     const result = {
       id: providerConfig.id,
-      pipeElements: providerConfig.pipeElements.reduce<Duplex[]>(
-        (res, config) => {
-          if (typeof config.enabled === 'undefined' || config.enabled) {
-            res.push(
-              createPipeElement({
-                ...config,
-                options: {
-                  providerId: providerConfig.id,
-                  app: appFacade,
-                  ...config.options,
-                  emitPropertyValue,
-                  onPropertyValues
-                }
-              })
-            )
-          }
-          return res
-        },
-        []
-      )
+      pipeElements
     }
 
     for (let i = result.pipeElements.length - 2; i >= 0; i--) {
@@ -127,24 +122,27 @@ export function pipedProviders(
     return result
   }
 
-  function createPipeElement(elementConfig: PipeElementConfig): Duplex {
+  async function createPipeElement(
+    elementConfig: PipeElementConfig
+  ): Promise<Duplex> {
     if (elementConfig.optionMappings) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       elementConfig.optionMappings.forEach(function (mapping: any) {
-        if (_.get(app, mapping.fromAppProperty)) {
+        if (get(app, mapping.fromAppProperty)) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(elementConfig.options as any)[mapping.toOption] = _.get(
+          ;(elementConfig.options as any)[mapping.toOption] = get(
             app,
             mapping.fromAppProperty
           )
         }
       })
     }
-    const efectiveElementType = elementConfig.type.startsWith('providers/')
-      ? elementConfig.type.replace('providers/', '@signalk/streams/')
+    const effectiveElementType = elementConfig.type.startsWith('providers/')
+      ? elementConfig.type.replace('providers/', '@signalk/streams/') + '.js'
       : elementConfig.type
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return new (require(efectiveElementType))({
+
+    const module = await import(effectiveElementType)
+    return new module.default({
       ...elementConfig.options,
       createDebug
     })

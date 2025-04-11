@@ -30,7 +30,7 @@
 
 import net from 'net'
 import { Transform } from 'stream'
-import { isArray } from 'lodash'
+import { isArray } from 'lodash-es'
 import createDebug from 'debug'
 import { inherits } from 'util'
 import inject from 'reconnect-core'

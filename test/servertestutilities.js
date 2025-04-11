@@ -1,8 +1,10 @@
-const WebSocket = require('ws')
-const _ = require('lodash')
-const promisify = require('util').promisify
-const fetch = require('node-fetch')
-const jwt = require('jsonwebtoken')
+import WebSocket from 'ws'
+import { merge } from 'lodash-es'
+import { promisify } from 'util'
+import fetch from 'node-fetch'
+import jwt from 'jsonwebtoken'
+import path from 'path'
+import Server from '../dist/index.js'
 
 // Connects to the url via ws
 // and provides Promises that are either resolved within
@@ -34,7 +36,7 @@ const defaultConfig = {
   }
 }
 
-function WsPromiser(url, timeout = 250) {
+export function WsPromiser(url, timeout = 250) {
   this.ws = new WebSocket(url)
   this.ws.on('message', this.onMessage.bind(this))
   this.callees = []
@@ -100,107 +102,108 @@ const defaultSecurityConfig = {
   users: []
 }
 
-const WRITE_USER_NAME = 'writeuser'
-const WRITE_USER_PASSWORD = 'writepass'
-const LIMITED_USER_NAME = 'testuser'
-const LIMITED_USER_PASSWORD = 'verylimited'
-const ADMIN_USER_NAME = 'adminuser'
-const ADMIN_USER_PASSWORD = 'admin'
-const NOPASSWORD_USER_NAME = 'nopassword'
+export const WRITE_USER_NAME = 'writeuser'
+export const WRITE_USER_PASSWORD = 'writepass'
+export const LIMITED_USER_NAME = 'testuser'
+export const LIMITED_USER_PASSWORD = 'verylimited'
+export const ADMIN_USER_NAME = 'adminuser'
+export const ADMIN_USER_PASSWORD = 'admin'
+export const NOPASSWORD_USER_NAME = 'nopassword'
 
-const serverTestConfigDirectory = () => require('path').join(__dirname, 'server-test-config')
+export const serverTestConfigDirectory = () =>
+  path.join(import.meta.dirname, 'server-test-config')
 
-module.exports = {
-  WsPromiser: WsPromiser,
-  serverTestConfigDirectory,
-  sendDelta: (delta, deltaUrl) => {
-    return fetch(deltaUrl, {
-      method: 'POST',
-      body: JSON.stringify(delta),
-      headers: { 'Content-Type': 'application/json' }
-    })
-  },
-  startServerP: function startServerP(port, enableSecurity, extraConfig = {}, securityConfig) {
-    const Server = require('../dist')
-    const props = {
-      config: JSON.parse(JSON.stringify(defaultConfig))
-    }
-    props.config.settings.port = port
-    _.merge(props.config, extraConfig)
+export function sendDelta(delta, deltaUrl) {
+  return fetch(deltaUrl, {
+    method: 'POST',
+    body: JSON.stringify(delta),
+    headers: { 'Content-Type': 'application/json' }
+  })
+}
 
-    if (enableSecurity) {
-      props.config.settings.security = {
-        strategy: './tokensecurity'
-      }
-      props.securityConfig = {
-        ...defaultSecurityConfig,
-        ...(securityConfig || {})
-      }
-    }
-
-    process.env.SIGNALK_NODE_CONFIG_DIR = serverTestConfigDirectory()
-    process.env.SIGNALK_DISABLE_SERVER_UPDATES = 'true'
-
-    const server = new Server(props)
-    return new Promise((resolve, reject) => {
-      server.start().then((s) => {
-        if (enableSecurity) {
-          Promise.all([
-            promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
-              userId: LIMITED_USER_NAME,
-              type: 'read',
-              password: LIMITED_USER_PASSWORD
-            }),
-            promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
-              userId: WRITE_USER_NAME,
-              type: 'readwrite',
-              password: WRITE_USER_PASSWORD
-            }),
-            promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
-              userId: ADMIN_USER_NAME,
-              type: 'admin',
-              password: ADMIN_USER_PASSWORD
-            }),
-            promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
-              userId: NOPASSWORD_USER_NAME,
-              type: 'admin'
-            })
-          ])
-            .then(() => {
-              resolve(s)
-            })
-            .catch(reject)
-        } else {
-          resolve(s)
-        }
-      })
-    })
-  },
-  getReadOnlyToken: (server) => {
-    return login(server, LIMITED_USER_NAME, LIMITED_USER_PASSWORD)
-  },
-  LIMITED_USER_NAME,
-  LIMITED_USER_PASSWORD,
-  getWriteToken: (server) => {
-    return login(server, WRITE_USER_NAME, WRITE_USER_PASSWORD)
-  },
-  WRITE_USER_NAME,
-  WRITE_USER_PASSWORD,
-  getAdminToken: (server) => {
-    return login(server, ADMIN_USER_NAME, ADMIN_USER_PASSWORD)
-  },
-  NOPASSWORD_USER_NAME,
-  getToken: (server, username) => {
-    return jwt.sign(
-      {
-        id: username
-      },
-      server.app.securityStrategy.securityConfig.secretKey,
-      {
-        expiresIn: '1h'
-      }
-    )
+export function startServerP(
+  port,
+  enableSecurity,
+  extraConfig = {},
+  securityConfig
+) {
+  const props = {
+    config: JSON.parse(JSON.stringify(defaultConfig))
   }
+  props.config.settings.port = port
+  merge(props.config, extraConfig)
+
+  if (enableSecurity) {
+    props.config.settings.security = {
+      strategy: './tokensecurity'
+    }
+    props.securityConfig = {
+      ...defaultSecurityConfig,
+      ...(securityConfig || {})
+    }
+  }
+
+  process.env.SIGNALK_NODE_CONFIG_DIR = serverTestConfigDirectory()
+  process.env.SIGNALK_DISABLE_SERVER_UPDATES = 'true'
+
+  const server = new Server(props)
+  return new Promise((resolve, reject) => {
+    server.start().then((s) => {
+      if (enableSecurity) {
+        Promise.all([
+          promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
+            userId: LIMITED_USER_NAME,
+            type: 'read',
+            password: LIMITED_USER_PASSWORD
+          }),
+          promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
+            userId: WRITE_USER_NAME,
+            type: 'readwrite',
+            password: WRITE_USER_PASSWORD
+          }),
+          promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
+            userId: ADMIN_USER_NAME,
+            type: 'admin',
+            password: ADMIN_USER_PASSWORD
+          }),
+          promisify(s.app.securityStrategy.addUser)(props.securityConfig, {
+            userId: NOPASSWORD_USER_NAME,
+            type: 'admin'
+          })
+        ])
+          .then(() => {
+            resolve(s)
+          })
+          .catch(reject)
+      } else {
+        resolve(s)
+      }
+    })
+  })
+}
+
+export function getReadOnlyToken(server) {
+  return login(server, LIMITED_USER_NAME, LIMITED_USER_PASSWORD)
+}
+
+export function getWriteToken(server) {
+  return login(server, WRITE_USER_NAME, WRITE_USER_PASSWORD)
+}
+
+export function getAdminToken(server) {
+  return login(server, ADMIN_USER_NAME, ADMIN_USER_PASSWORD)
+}
+
+export function getToken(server, username) {
+  return jwt.sign(
+    {
+      id: username
+    },
+    server.app.securityStrategy.securityConfig.secretKey,
+    {
+      expiresIn: '1h'
+    }
+  )
 }
 
 function login(server, username, password) {

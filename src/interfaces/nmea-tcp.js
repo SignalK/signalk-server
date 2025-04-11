@@ -13,14 +13,13 @@
  * limitations under the License.
  */
 
-const _ = require('lodash')
+import net from 'net'
 
-import { createDebug } from '../debug'
+import { createDebug } from '../debug.js'
 const debug = createDebug('signalk-server:interfaces:tcp:nmea0183')
 
-module.exports = function (app) {
+export default function (app) {
   'use strict'
-  const net = require('net')
   const openSockets = {}
   let idSequence = 0
   let server = null
@@ -49,7 +48,7 @@ module.exports = function (app) {
       })
     })
     const send = (data) => {
-      _.values(openSockets).forEach(function (socket) {
+      Object.values(openSockets).forEach(function (socket) {
         try {
           socket.write(data + '\r\n')
         } catch (e) {

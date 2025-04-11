@@ -3,7 +3,6 @@
   "version": "4.4.1",
   "description": "Utilities for handling streams of Signal K data",
   "type": "module",
-  "exports": "./index.js",
   "scripts": {
     "ci": "prettier --check .",
     "format": "prettier --write ."

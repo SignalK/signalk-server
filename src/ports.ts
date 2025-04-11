@@ -14,7 +14,7 @@
  * limitations under the License.
 */
 
-import { WithConfig } from './app'
+import { WithConfig } from './app.js'
 
 const SD_LISTEN_FDS_START = 3
 

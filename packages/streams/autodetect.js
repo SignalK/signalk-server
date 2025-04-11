@@ -20,7 +20,7 @@ import N2KJsonToSignalK from './n2k-signalk.js'
 import ActisenseSerialToJSON from './n2kAnalyzer.js'
 import canboatjs from './canboatjs.js'
 import Nmea01832SignalK from './nmea0183-signalk.js'
-import _ from 'lodash'
+import { isUndefined } from 'lodash-es'
 import { inherits } from 'util'
 
 /*
@@ -74,7 +74,7 @@ function Splitter(deMultiplexer, options) {
   this.fromN2KJson = new N2KJsonToSignalK(options)
   this.fromN2KJson.on('data', this.demuxEmitData)
 
-  if (_.isUndefined(options.useCanboatjs) || options.useCanboatjs) {
+  if (isUndefined(options.useCanboatjs) || options.useCanboatjs) {
     this.fromActisenseSerial = new canboatjs(options)
   } else {
     this.fromActisenseSerial = new ActisenseSerialToJSON(options)

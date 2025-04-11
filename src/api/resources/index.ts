@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createDebug } from '../../debug'
+import { createDebug } from '../../debug.js'
 const debug = createDebug('signalk-server:api:resources')
 
 import {
@@ -14,12 +14,12 @@ import {
 
 import { IRouter, NextFunction, Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid'
-import { WithSecurityStrategy } from '../../security'
+import { WithSecurityStrategy } from '../../security.js'
 
-import { Responses } from '../'
-import { validate } from './validate'
-import { SignalKMessageHub, WithConfig } from '../../app'
-import { writeSettingsFile } from '../../config/config'
+import { Responses } from '../index.js'
+import { validate } from './validate.js'
+import { SignalKMessageHub, WithConfig } from '../../app.js'
+import { writeSettingsFile } from '../../config/config.js'
 
 export const RESOURCES_API_PATH = `/signalk/v2/api/resources`
 

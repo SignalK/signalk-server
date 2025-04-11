@@ -14,16 +14,16 @@
  * limitations under the License.
 */
 
-import { createDebug } from '../debug'
+import { createDebug } from '../debug.js'
 const debug = createDebug('signalk-server:interfaces:webapps')
-const fs = require('fs')
-const path = require('path')
-const express = require('express')
-const modulesWithKeyword = require('../modules').modulesWithKeyword
-import { SERVERROUTESPREFIX } from '../constants'
-import { uniqBy } from 'lodash'
+import fs from 'fs'
+import path from 'path'
+import { static as serveStatic } from 'express'
+import { modulesWithKeyword } from '../modules.js'
+import { SERVERROUTESPREFIX } from '../constants.js'
+import { uniqBy } from 'lodash-es'
 
-module.exports = function (app) {
+export default function (app) {
   return {
     start: function () {
       app.webapps = mountWebModules(app, 'signalk-webapp').map(
@@ -56,7 +56,7 @@ function mountWebModules(app, keyword) {
       webappPath += '/public/'
     }
     debug('Mounting web module /' + moduleData.module + ':' + webappPath)
-    app.use('/' + moduleData.module, express.static(webappPath))
+    app.use('/' + moduleData.module, serveStatic(webappPath))
   })
   return modules
 }

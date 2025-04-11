@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createDebug } from '../../debug'
+import { createDebug } from '../../debug.js'
 const debug = createDebug('signalk-server:api:autopilot')
 
 import { IRouter, NextFunction, Request, Response } from 'express'
-import { WithSecurityStrategy } from '../../security'
+import { WithSecurityStrategy } from '../../security.js'
 
-import { Responses } from '../'
-import { SignalKMessageHub } from '../../app'
+import { Responses } from '../index.js'
+import { SignalKMessageHub } from '../../app.js'
 
 import {
   AutopilotProvider,

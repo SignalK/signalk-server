@@ -28,19 +28,21 @@ import {
   RelativePositionOrigin
 } from '@signalk/server-api'
 import Bacon from 'baconjs'
-import { isPointWithinRadius } from 'geolib'
-import _, { forOwn, get, isString } from 'lodash'
-import { createDebug } from './debug'
-import DeltaCache from './deltacache'
-import { StreamBundle, toDelta } from './streambundle'
-import { ContextMatcher } from './types'
+import geolib from 'geolib'
+import { forOwn, get, isString, uniqBy } from 'lodash-es'
+import { createDebug } from './debug.js'
+import { DeltaCache } from './deltacache.js'
+import { StreamBundle, toDelta } from './streambundle.js'
+import { ContextMatcher } from './types.js'
+
 const debug = createDebug('signalk-server:subscriptionmanager')
+const { isPointWithinRadius } = geolib // geolib is not esm compatible
 
 interface BusesMap {
   [path: Path]: Bacon.Bus<unknown, NormalizedDelta>
 }
 
-class SubscriptionManager implements ISubscriptionManager {
+export class SubscriptionManager implements ISubscriptionManager {
   streambundle: StreamBundle
   selfContext: string
   app: any
@@ -190,13 +192,11 @@ function handleSubscribeRow(
           filteredBus = filteredBus
             .bufferWithTime(interval)
             .flatMapLatest((bufferedValues: any) => {
-              const uniqueValues = _(bufferedValues)
-                .reverse()
-                .uniqBy(
-                  (value) =>
-                    value.context + ':' + value.$source + ':' + value.path
-                )
-                .value()
+              const uniqueValues = uniqBy(
+                bufferedValues.reverse(),
+                (value: any) =>
+                  value.context + ':' + value.$source + ':' + value.path
+              )
               return Bacon.fromArray(uniqueValues)
             })
         }
@@ -284,5 +284,3 @@ function checkPosition(
     isPointWithinRadius(position.value, origin.position, origin.radius)
   )
 }
-
-export = SubscriptionManager

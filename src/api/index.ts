@@ -1,10 +1,10 @@
 import { IRouter } from 'express'
-import { SignalKMessageHub, WithConfig, WithFeatures } from '../app'
-import { WithSecurityStrategy } from '../security'
-import { CourseApi } from './course'
-import { FeaturesApi } from './discovery'
-import { ResourcesApi } from './resources'
-import { AutopilotApi } from './autopilot'
+import { SignalKMessageHub, WithConfig, WithFeatures } from '../app.js'
+import { WithSecurityStrategy } from '../security.js'
+import { CourseApi } from './course/index.js'
+import { FeaturesApi } from './discovery/index.js'
+import { ResourcesApi } from './resources/index.js'
+import { AutopilotApi } from './autopilot/index.js'
 import { SignalKApiId } from '@signalk/server-api'
 
 export interface ApiResponse {

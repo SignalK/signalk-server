@@ -1,8 +1,8 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --enable-source-maps
 
-const minimist = require('minimist')
-const fs = require('fs')
-const jwt = require('jsonwebtoken')
+import minimist from 'minimist'
+import fs from 'fs'
+import jwt from 'jsonwebtoken'
 
 var args = minimist(process.argv.slice(2))
 

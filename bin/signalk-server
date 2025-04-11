@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --enable-source-maps
 
 /*
  * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
@@ -16,26 +16,31 @@
  * limitations under the License.
 */
 
-const { engines } = require('../package.json');
-const semver = require('semver');
-const minimumVersion = engines.node;
-const recommendedVersion = "20 - 22";
+import pkg from '../package.json' with { type: 'json'}
+import { satisfies } from 'semver'
+import Server from '../dist/index.js'
 
-if (!semver.satisfies(process.version, minimumVersion)) {
-  console.error(`The installed version of node (${process.version}) is older than the minimum required version (${minimumVersion}). See https://github.com/SignalK/signalk-server/wiki/Installing-and-Updating-Node.js for more information how to upgrade.`);
-  process.exit(1);
-} else if (!semver.satisfies(process.version, recommendedVersion)) {
-  console.warn(`The installed version of node (${process.version}) is different than the recommended version (${recommendedVersion}). See https://github.com/SignalK/signalk-server/wiki/Installing-and-Updating-Node.js for more information how to upgrade.`);
-} 
+const minimumVersion = pkg.engines.node
+const recommendedVersion = '20 - 22'
 
-const Server = require('../dist')
+if (!satisfies(process.version, minimumVersion)) {
+  console.error(
+    `The installed version of node (${process.version}) is older than the minimum required version (${minimumVersion}). See https://github.com/SignalK/signalk-server/wiki/Installing-and-Updating-Node.js for more information how to upgrade.`
+  )
+  process.exit(1)
+} else if (!satisfies(process.version, recommendedVersion)) {
+  console.warn(
+    `The installed version of node (${process.version}) is different than the recommended version (${recommendedVersion}). See https://github.com/SignalK/signalk-server/wiki/Installing-and-Updating-Node.js for more information how to upgrade.`
+  )
+}
+
 const server = new Server()
 
-process.on('uncaughtException', err => {
+process.on('uncaughtException', (err) => {
   console.error(err)
 })
 
-server.start().catch(err => {
+server.start().catch((err) => {
   console.log(err)
   process.exit(-1)
 })

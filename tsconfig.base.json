@@ -7,10 +7,8 @@
     "typeRoots": ["${configDir}/src/types", "./node_modules/@types"],
     "resolveJsonModule": true,
     "composite": true,
+    "sourceMap": true,
     "declaration": true,
     "declarationMap": true
-  },
-  "ts-node": {
-    "files": true
   }
 }

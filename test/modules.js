@@ -1,16 +1,17 @@
-const chai = require('chai')
-const _ = require('lodash')
-const fs = require('fs')
-const path = require('path')
-const {
+import chai from 'chai'
+import { map } from 'lodash-es'
+import fs from 'fs'
+import path from 'path'
+import {
   modulesWithKeyword,
   checkForNewServerVersion,
   getLatestServerVersion,
-  importOrRequire
-} = require('../dist/modules')
+  loadModule
+} from '../dist/modules.js'
+import { tmpdir } from 'os'
 
 describe('modulesWithKeyword', () => {
-  it('returns a list of modules with one "installed" update in config dir', () => {
+  it('returns a list of modules with one "installed" update in config dir', async () => {
     const expectedModules = [
       '@signalk/instrumentpanel',
       '@signalk/freeboard-sk',
@@ -19,13 +20,13 @@ describe('modulesWithKeyword', () => {
     const updateInstalledModule = '@signalk/instrumentpanel'
 
     const testTempDir = path.join(
-      require('os').tmpdir(),
+      tmpdir(),
       '_skservertest_modules' + Date.now()
     )
 
     const app = {
       config: {
-        appPath: path.join(__dirname + '/../'),
+        appPath: path.join(import.meta.dirname + '/../'),
         configPath: testTempDir
       }
     }
@@ -40,18 +41,20 @@ describe('modulesWithKeyword', () => {
     )
     fs.mkdirSync(installedModuleDirectory)
 
-    const fakeInstalledModulePackageJson = require(path.join(
-      app.config.appPath,
-      `node_modules/${updateInstalledModule}/package.json`
-    ))
+    const fakeInstalledModulePackageJson = await import(
+      path.join(
+        app.config.appPath,
+        `node_modules/${updateInstalledModule}/package.json`
+      )
+    )
     fakeInstalledModulePackageJson.version = '1000.0.0'
     fs.writeFileSync(
       path.join(installedModuleDirectory, 'package.json'),
       JSON.stringify(fakeInstalledModulePackageJson)
     )
 
-    const moduleList = modulesWithKeyword(app.config, 'signalk-webapp')
-    chai.expect(_.map(moduleList, 'module')).to.have.members(expectedModules)
+    const moduleList = await modulesWithKeyword(app.config, 'signalk-webapp')
+    chai.expect(map(moduleList, 'module')).to.have.members(expectedModules)
 
     chai.expect(moduleList[0].location).to.not.eql(tempNodeModules)
 
@@ -188,22 +191,22 @@ describe('getLatestServerVersion', () => {
   })
 })
 
-describe('importOrRequire', () => {
+describe('loadModule', () => {
   it('imports a cjs directory', async () => {
     const dir = path.join(
-      __dirname,
+      import.meta.dirname,
       'plugin-test-config/node_modules/testplugin'
     )
-    const mod = await importOrRequire(dir)
+    const mod = await loadModule(dir)
     chai.expect(mod).to.be.a('function')
   })
 
   it('imports an esm directory', async () => {
     const dir = path.join(
-      __dirname,
+      import.meta.dirname,
       'plugin-test-config/node_modules/esm-plugin'
     )
-    const mod = await importOrRequire(dir)
+    const mod = await loadModule(dir)
     chai.expect(mod).to.be.a('function')
   })
 })

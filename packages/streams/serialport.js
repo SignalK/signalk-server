@@ -62,7 +62,7 @@ import { execSync } from 'child_process'
 import shellescape from 'any-shell-escape'
 import { SerialPort } from 'serialport'
 import { ReadlineParser } from '@serialport/parser-readline'
-import { isArray, isBuffer } from 'lodash'
+import { isArray, isBuffer } from 'lodash-es'
 import createDebug from 'debug'
 import { inherits } from 'util'
 

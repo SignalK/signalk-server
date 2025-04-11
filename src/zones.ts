@@ -1,6 +1,6 @@
 import { ALARM_METHOD, Delta, Path, Value, Zone } from '@signalk/server-api'
-import { StreamBundle } from './streambundle'
-import { createDebug } from './debug'
+import { StreamBundle } from './streambundle.js'
+import { createDebug } from './debug.js'
 
 const debug = createDebug('signalk-server:zones')
 

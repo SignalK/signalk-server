@@ -1,10 +1,14 @@
-const chai = require('chai')
+import chai from 'chai'
+import chaiThings from 'chai-things'
+import { chaiModule } from '@signalk/signalk-schema'
+import { freeport } from './ts-servertestutilities.js'
+import fetch from 'node-fetch'
+import { startServerP, sendDelta } from './servertestutilities.js'
+
 chai.Should()
-chai.use(require('chai-things'))
-chai.use(require('@signalk/signalk-schema').chaiModule)
-const { freeport } = require('./ts-servertestutilities')
-const fetch = require('node-fetch')
-const { startServerP, sendDelta } = require('./servertestutilities')
+chai.use(chaiThings)
+chai.use(chaiModule)
+
 const uuid = 'urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d'
 
 const delta = {

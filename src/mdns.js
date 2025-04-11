@@ -14,30 +14,29 @@
  * limitations under the License.
 */
 
-'use strict'
+import { pickBy, isObject, identity } from 'lodash-es'
+import { createDebug } from './debug.js'
+import dnssd from 'dnssd2'
+import { getExternalPort } from './ports.js'
+import { hostname } from 'os'
 
-const _ = require('lodash')
-import { createDebug } from './debug'
 const debug = createDebug('signalk-server:mdns')
-const dnssd = require('dnssd2')
-const ports = require('./ports')
 
-module.exports = function mdnsResponder(app) {
+export default async function mdnsResponder(app) {
   const config = app.config
+  if (typeof config.settings.mdns !== 'undefined' && !config.settings.mdns) {
+    debug('Mdns disabled by configuration')
+    return
+  }
 
   let mdns = dnssd
 
   try {
-    mdns = require('mdns')
+    mdns = await import('mdns')
     debug('using  mdns')
   } catch (ex) {
     debug(ex)
     debug('mdns not found, using dnssd2')
-  }
-
-  if (typeof config.settings.mdns !== 'undefined' && !config.settings.mdns) {
-    debug('Mdns disabled by configuration')
-    return
   }
 
   let txtRecord = {
@@ -53,19 +52,16 @@ module.exports = function mdnsResponder(app) {
   }
 
   // Strip all the null or empty props in txtRecord
-  txtRecord = _.pickBy(txtRecord, _.identity)
+  txtRecord = pickBy(txtRecord, identity)
 
   const types = []
   types.push({
     type: app.config.settings.ssl ? mdns.tcp('https') : mdns.tcp('http'),
-    port: ports.getExternalPort(app)
+    port: getExternalPort(app)
   })
 
   for (const key in app.interfaces) {
-    if (
-      _.isObject(app.interfaces[key]) &&
-      _.isObject(app.interfaces[key].mdns)
-    ) {
+    if (isObject(app.interfaces[key]) && isObject(app.interfaces[key].mdns)) {
       const service = app.interfaces[key].mdns
 
       if (
@@ -92,7 +88,7 @@ module.exports = function mdnsResponder(app) {
 
   const host = app.config.getExternalHostname()
 
-  if (host !== require('os').hostname()) {
+  if (host !== hostname()) {
     options.host = host
   }
 

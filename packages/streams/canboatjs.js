@@ -16,7 +16,7 @@
 
 import { Transform } from 'stream'
 import { FromPgn } from '@canboat/canboatjs'
-import _ from 'lodash'
+import { isObject } from 'lodash-es'
 import createDebug from 'debug'
 import { inherits } from 'util'
 
@@ -50,7 +50,7 @@ export default function CanboatJs(options) {
 inherits(CanboatJs, Transform)
 
 CanboatJs.prototype._transform = function (chunk, encoding, done) {
-  if (_.isObject(chunk) && chunk.fromFile) {
+  if (isObject(chunk) && chunk.fromFile) {
     const pgnData = this.fromPgn.parse(chunk.data)
     if (pgnData) {
       pgnData.timestamp = new Date(Number(chunk.timestamp)).toISOString()

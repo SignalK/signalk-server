@@ -55,7 +55,7 @@ _Example: Plugin registering as a routes & waypoints provider._
 ```javascript
 import { ResourceProvider } from '@signalk/server-api'
 
-module.exports = function (app) {
+export default function (app) {
 
   const plugin = {
     id: 'mypluginid',
@@ -130,7 +130,7 @@ Each method should return a __Promise__ on success and `throw` on error, if a re
 _Example:_
 ```javascript
 // SignalK server plugin
-module.exports = function (app) {
+export default function (app) {
 
   const plugin = {
     id: 'mypluginid',

@@ -1,7 +1,9 @@
-const chai = require('chai')
+import chai from 'chai'
+import assert from 'assert'
+import chaiThings from 'chai-things'
+import tokenSecurity from '../dist/tokensecurity.js'
 chai.Should()
-chai.use(require('chai-things'))
-const assert = require('assert')
+chai.use(chaiThings)
 
 const securitySettings = {
   acls: [
@@ -102,10 +104,7 @@ const dummyApp = {
   put: () => {}
 }
 
-const securityStrategy = require('../dist/tokensecurity')(
-  dummyApp,
-  securitySettings
-)
+const securityStrategy = tokenSecurity(dummyApp, securitySettings)
 
 describe('access control lists work', function () {
   it('vessels.self navigation.position write fails', () => {

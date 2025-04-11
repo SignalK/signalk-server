@@ -1,7 +1,7 @@
 import { constants } from 'fs'
 import { access, mkdir, readFile, writeFile } from 'fs/promises'
 import path from 'path'
-import { WithConfig } from '../app'
+import { WithConfig } from '../app.js'
 
 export const SERVERSTATEDIRNAME = 'serverState'
 

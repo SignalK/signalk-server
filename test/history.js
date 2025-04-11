@@ -1,11 +1,12 @@
-const chai = require('chai')
+import chai from 'chai'
+import chaiThings from 'chai-things'
+import Server from '../dist/index.js'
+import fetch from 'node-fetch'
+import { WsPromiser } from './servertestutilities.js'
+import { freeport } from './ts-servertestutilities.js'
+
 chai.Should()
-chai.use(require('chai-things'))
-const _ = require('lodash')
-const { freeport } = require('./ts-servertestutilities')
-const Server = require('../dist')
-const fetch = require('node-fetch')
-const { WsPromiser } = require('./servertestutilities')
+chai.use(chaiThings)
 
 const testDeltaDate = new Date('2018-08-09T14:07:29.695Z')
 const testDelta = {
@@ -24,7 +25,7 @@ const testDelta = {
   ]
 }
 
-const dummyHistoryProvider = app => {
+const dummyHistoryProvider = (app) => {
   return {
     streamHistory: (cookie, options, onDelta) => {
       setTimeout(() => {
@@ -47,7 +48,7 @@ const dummyHistoryProvider = app => {
   }
 }
 
-describe('History', _ => {
+describe('History', (_) => {
   let server, url, port
 
   before(async function () {

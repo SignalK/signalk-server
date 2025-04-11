@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2016 Teppo Kurki <teppo.kurki@iki.fi>
@@ -31,36 +30,32 @@ import {
   Plugin,
   Path
 } from '@signalk/server-api'
-import { getLogger } from '@signalk/streams/logging'
-import express, { Request, Response } from 'express'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import { getLogger } from '@signalk/streams/logging.js'
+import { static as serveStatic, Request, Response, Router } from 'express'
 import fs from 'fs'
 import { deprecate } from 'util'
-import _ from 'lodash'
+import { sortBy, isUndefined, get, omit } from 'lodash-es'
 import path from 'path'
-import { AutopilotApi } from '../api/autopilot'
-import { CourseApi } from '../api/course'
-import { ResourcesApi } from '../api/resources'
-import { SERVERROUTESPREFIX } from '../constants'
-import { createDebug } from '../debug'
-import { listAllSerialPorts } from '../serialports'
-const debug = createDebug('signalk-server:interfaces:plugins')
-
-import { OpenApiDescription, OpenApiRecord } from '../api/swagger'
+import { AutopilotApi } from '../api/autopilot/index.js'
+import { CourseApi } from '../api/course/index.js'
+import { ResourcesApi } from '../api/resources/index.js'
+import { SERVERROUTESPREFIX } from '../constants.js'
+import { createDebug } from '../debug.js'
+import { listAllSerialPorts } from '../serialports.js'
+import { OpenApiDescription, OpenApiRecord } from '../api/swagger.js'
 import {
   CONNECTION_WRITE_EVENT_NAME,
   ConnectionWriteEvent
-} from '../deltastats'
-import { EventsActorId } from '../events'
-import { importOrRequire, modulesWithKeyword, NpmPackageData } from '../modules'
-
-const put = require('../put')
-const _putPath = put.putPath
-const getModulePublic = require('../config/get').getModulePublic
-const queryRequest = require('../requestResponse').queryRequest
+} from '../deltastats.js'
+import { EventsActorId } from '../events.js'
+import { loadModule, modulesWithKeyword, NpmPackageData } from '../modules.js'
+import { putPath as _putPath } from '../put.js'
+import { queryRequest } from '../requestResponse.js'
 import { getMetadata } from '@signalk/signalk-schema'
 
-// #521 Returns path to load plugin-config assets.
-const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')
+const debug = createDebug('signalk-server:interfaces:plugins')
 
 const DEFAULT_ENABLED_PLUGINS = process.env.DEFAULTENABLEDPLUGINS
   ? process.env.DEFAULTENABLEDPLUGINS.split(',')
@@ -87,7 +82,7 @@ function backwardsCompat(url: string) {
   return [`${SERVERROUTESPREFIX}${url}`, url]
 }
 
-module.exports = (theApp: any) => {
+export default (theApp: any) => {
   const onStopHandlers: any = {}
   return {
     async start() {
@@ -99,10 +94,15 @@ module.exports = (theApp: any) => {
         return await getPluginsList(enabled)
       }
 
-      theApp.use(
-        backwardsCompat('/plugins/configure'),
-        express.static(getPluginConfigPublic(theApp))
+      // #521 Returns path to load plugin-config assets.
+      const pluginPath = path.join(
+        theApp.config.appPath,
+        'node_modules',
+        '@signalk',
+        'plugin-config',
+        'public'
       )
+      theApp.use(backwardsCompat('/plugins/configure'), serveStatic(pluginPath))
 
       theApp.get(backwardsCompat('/plugins'), (req: Request, res: Response) => {
         getPluginResponseInfos()
@@ -119,7 +119,7 @@ module.exports = (theApp: any) => {
   function getPluginResponseInfos() {
     const providerStatus = theApp.getProviderStatus()
     return Promise.all(
-      _.sortBy(theApp.plugins, [
+      sortBy(theApp.plugins, [
         (plugin: PluginInfo) => {
           return plugin.name
         }
@@ -159,7 +159,7 @@ module.exports = (theApp: any) => {
         console.error(e.code + ' ' + e.path)
       }
 
-      if (data && _.isUndefined(data.enabled) && plugin.enabledByDefault) {
+      if (data && isUndefined(data.enabled) && plugin.enabledByDefault) {
         data.enabled = true
       }
 
@@ -293,7 +293,10 @@ module.exports = (theApp: any) => {
   async function startPlugins(app: any) {
     app.plugins = []
     app.pluginsMap = {}
-    const modules = modulesWithKeyword(app.config, 'signalk-node-server-plugin')
+    const modules = await modulesWithKeyword(
+      app.config,
+      'signalk-node-server-plugin'
+    )
     await Promise.all(
       modules.map((moduleData: any) => {
         return registerPlugin(
@@ -308,12 +311,12 @@ module.exports = (theApp: any) => {
 
   function handleMessageWrapper(app: any, id: string) {
     const pluginsLoggingEnabled =
-      _.isUndefined(app.config.settings.enablePluginLogging) ||
+      isUndefined(app.config.settings.enablePluginLogging) ||
       app.config.settings.enablePluginLogging
     return (providerId: string, data: any) => {
       const plugin = app.pluginsMap[id]
       if (
-        !_.isUndefined(plugin) &&
+        !isUndefined(plugin) &&
         pluginsLoggingEnabled &&
         plugin.enableLogging
       ) {
@@ -327,7 +330,7 @@ module.exports = (theApp: any) => {
   }
 
   function getSelfPath(aPath: string) {
-    return _.get(theApp.signalk.self, aPath)
+    return get(theApp.signalk.self, aPath)
   }
 
   function getPath(aPath: string) {
@@ -337,7 +340,7 @@ module.exports = (theApp: any) => {
         ...theApp.deltaCache.getSources()
       }
     } else {
-      return _.get(theApp.signalk.retrieve(), aPath)
+      return get(theApp.signalk.retrieve(), aPath)
     }
   }
 
@@ -426,9 +429,9 @@ module.exports = (theApp: any) => {
         ? plugin.statusMessage()
         : undefined
     if (
-      _.isUndefined(statusMessage) &&
-      _.isUndefined(theApp.providerStatus[plugin.id]) &&
-      _.isUndefined(plugin.statusMessage)
+      isUndefined(statusMessage) &&
+      isUndefined(theApp.providerStatus[plugin.id]) &&
+      isUndefined(plugin.statusMessage)
     ) {
       theApp.setPluginStatus(plugin.id, 'Started')
     }
@@ -477,7 +480,7 @@ module.exports = (theApp: any) => {
     location: string
   ) {
     let plugin: PluginInfo
-    const appCopy: ServerAPI = _.assign({}, app, {
+    const appCopy: ServerAPI = Object.assign({}, app, {
       getSelfPath,
       getPath,
       putSelfPath,
@@ -529,13 +532,13 @@ module.exports = (theApp: any) => {
     appCopy.putPath = putPath
 
     const resourcesApi: ResourcesApi = app.resourcesApi
-    _.omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager
+    omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {
       resourcesApi.register(plugin.id, provider)
     }
 
     const autopilotApi: AutopilotApi = app.autopilotApi
-    _.omit(appCopy, 'autopilotApi') // don't expose the actual autopilot api manager
+    omit(appCopy, 'autopilotApi') // don't expose the actual autopilot api manager
     appCopy.registerAutopilotProvider = (
       provider: AutopilotProvider,
       devices: string[]
@@ -549,10 +552,10 @@ module.exports = (theApp: any) => {
       autopilotApi.apUpdate(plugin.id, deviceId, apInfo)
     }
 
-    _.omit(appCopy, 'apiList') // don't expose the actual apiList
+    omit(appCopy, 'apiList') // don't expose the actual apiList
 
     const courseApi: CourseApi = app.courseApi
-    _.omit(appCopy, 'courseApi') // don't expose the actual course api manager
+    omit(appCopy, 'courseApi') // don't expose the actual course api manager
     appCopy.getCourse = () => {
       return courseApi.getCourse()
     }
@@ -570,9 +573,7 @@ module.exports = (theApp: any) => {
 
     try {
       const moduleDir = path.join(location, packageName)
-      const pluginConstructor: PluginConstructor = await importOrRequire(
-        moduleDir
-      )
+      const pluginConstructor: PluginConstructor = await loadModule(moduleDir)
       plugin = pluginConstructor(appCopy) as PluginInfo
     } catch (e: any) {
       console.error(`${packageName} failed to start: ${e.message}`)
@@ -595,7 +596,7 @@ module.exports = (theApp: any) => {
     const boundEventMethods = (app as any).wrappedEmitter.bindMethodsById(
       `plugin:${plugin.id}` as EventsActorId
     )
-    _.assign(appCopy, boundEventMethods)
+    Object.assign(appCopy, boundEventMethods)
 
     appCopy.savePluginOptions = (configuration, cb) => {
       savePluginOptions(
@@ -683,7 +684,7 @@ module.exports = (theApp: any) => {
     app.plugins.push(plugin)
     app.pluginsMap[plugin.id] = plugin
 
-    const router = express.Router()
+    const router = Router()
     router.get('/', (req: Request, res: Response) => {
       const currentOptions = getPluginOptions(plugin.id)
       const enabledByDefault = isEnabledByPackageEnableDefault(
@@ -732,7 +733,7 @@ module.exports = (theApp: any) => {
     app.use(backwardsCompat('/plugins/' + plugin.id), router)
 
     if (typeof plugin.signalKApiRoutes === 'function') {
-      app.use('/signalk/v1/api', plugin.signalKApiRoutes(express.Router()))
+      app.use('/signalk/v1/api', plugin.signalKApiRoutes(Router()))
     }
   }
 }
@@ -741,5 +742,5 @@ const isEnabledByPackageEnableDefault = (
   options: any,
   metadata: NpmPackageData
 ) =>
-  _.isUndefined(options.enabled) &&
+  isUndefined(options.enabled) &&
   (metadata as any)['signalk-plugin-enabled-by-default']

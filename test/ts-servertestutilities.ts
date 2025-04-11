@@ -7,8 +7,8 @@ import {
   serverTestConfigDirectory,
   startServerP,
   WsPromiser
-} from './servertestutilities'
-import { SERVERSTATEDIRNAME } from '../src/serverstate/store'
+} from './servertestutilities.js'
+import { SERVERSTATEDIRNAME } from '../src/serverstate/store.js'
 import { expect } from 'chai'
 import { Delta, hasValues, PathValue, Value } from '@signalk/server-api'
 

@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
 /*
  * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
  *
@@ -20,23 +18,24 @@
 
 import fs from 'fs'
 import os from 'node:os'
-import _ from 'lodash'
+import { find, get, isObject, isString, isUndefined } from 'lodash-es'
 import path from 'path'
-import semver from 'semver'
+import { satisfies } from 'semver'
 import { v4 as uuidv4 } from 'uuid'
-import { ServerApp, SignalKMessageHub, WithConfig } from '../app'
-import { createDebug } from '../debug'
-import DeltaEditor from '../deltaeditor'
-import { getExternalPort } from '../ports'
+import { ServerApp, SignalKMessageHub, WithConfig } from '../app.js'
+import { createDebug } from '../debug.js'
+import { DeltaEditor } from '../deltaeditor.js'
+import { getExternalPort } from '../ports.js'
+import minimist from 'minimist'
+import development from './development.js'
+import production from './production.js'
+
+import packageJson from '../../package.json' with { type: 'json' }
+export { packageJson as package }
+
 const debug = createDebug('signalk-server:config')
 
 let disableWriteSettings = false
-
-// use dynamic path so that ts compiler does not detect this
-// json file, as ts compile needs to copy all (other) used
-// json files under /dist
-// tslint:disable-next-line
-const packageJson = require('../../' + 'package.json')
 
 export interface Config {
   getExternalHostname: () => string
@@ -45,8 +44,7 @@ export interface Config {
   appPath: string
   configPath: string
   name: string
-  author: string
-  contributors: string[]
+  contributors: { name: string; email?: string }[]
   version: string
   description: string
   vesselName: string
@@ -89,8 +87,8 @@ export interface ConfigApp extends ServerApp, WithConfig, SignalKMessageHub {
   env: any
 }
 
-export function load(app: ConfigApp) {
-  app.argv = require('minimist')(process.argv.slice(2))
+export async function load(app: ConfigApp) {
+  app.argv = minimist(process.argv.slice(2))
 
   const config = (app.config = app.config || {})
   const env = (app.env = process.env)
@@ -98,12 +96,12 @@ export function load(app: ConfigApp) {
   config.getExternalHostname = getExternalHostname.bind(config, config)
   config.getExternalPort = getExternalPort.bind(config, app)
 
-  config.appPath = config.appPath || path.normalize(__dirname + '/../../')
+  config.appPath =
+    config.appPath || path.normalize(import.meta.dirname + '/../../')
   debug('appPath:' + config.appPath)
 
   try {
     config.name = packageJson.name
-    config.author = packageJson.author
     config.contributors = packageJson.contributors
     config.version = packageJson.version
     config.description = packageJson.description
@@ -112,7 +110,7 @@ export function load(app: ConfigApp) {
     //master docker build the version will be like
     //file:signalk-server-admin-ui-1.44.1.tgz
     if (!process.env.SKIP_ADMINUI_VERSION_CHECK) {
-      checkPackageVersion(
+      await checkPackageVersion(
         '@signalk/server-admin-ui',
         packageJson,
         app.config.appPath
@@ -125,14 +123,14 @@ export function load(app: ConfigApp) {
 
   setConfigDirectory(app)
   app.config.baseDeltaEditor = new DeltaEditor()
-  if (_.isObject(app.config.settings)) {
+  if (isObject(app.config.settings)) {
     debug('Using settings from constructor call, not reading defaults')
     disableWriteSettings = true
     if (config.defaults) {
       convertOldDefaultsToDeltas(app.config.baseDeltaEditor, config.defaults)
     }
   } else {
-    readSettingsFile(app)
+    await readSettingsFile(app)
     if (!setBaseDeltas(app)) {
       const defaults = getFullDefaults(app)
       if (defaults) {
@@ -206,7 +204,7 @@ export function load(app: ConfigApp) {
     config.settings.ssl = true
   }
 
-  if (!_.isUndefined(app.env.WSCOMPRESSION)) {
+  if (!isUndefined(app.env.WSCOMPRESSION)) {
     config.settings.wsCompression =
       app.env.WSCOMPRESSION.toLowerCase() === 'true'
   }
@@ -219,11 +217,11 @@ export function load(app: ConfigApp) {
     process.exit(1)
   }
 
-  require('./development')(app)
-  require('./production')(app)
+  development(app)
+  production(app)
 }
 
-function checkPackageVersion(name: string, pkg: any, appPath: string) {
+async function checkPackageVersion(name: string, pkg: any, appPath: string) {
   const expected = pkg.dependencies[name]
   let modulePackageJsonPath = path.join(
     appPath,
@@ -234,9 +232,11 @@ function checkPackageVersion(name: string, pkg: any, appPath: string) {
   if (!fs.existsSync(modulePackageJsonPath)) {
     modulePackageJsonPath = path.join(appPath, '..', name, 'package.json')
   }
-  const installed = require(modulePackageJsonPath)
+  const installed = await import(modulePackageJsonPath, {
+    with: { type: 'json' }
+  })
 
-  if (!semver.satisfies(installed.version, expected)) {
+  if (!satisfies(installed.version, expected)) {
     console.error(
       `invalid version of the ${name} package is installed ${installed.version} !== ${expected}`
     )
@@ -245,7 +245,7 @@ function checkPackageVersion(name: string, pkg: any, appPath: string) {
 }
 
 // Establish what the config directory path is.
-function getConfigDirectory({ argv, config, env }: any) {
+export function getConfigDirectory({ argv, config, env }: any) {
   // Possible paths in order of priority.
   const configPaths = [
     env.SIGNALK_NODE_CONDFIG_DIR,
@@ -257,7 +257,7 @@ function getConfigDirectory({ argv, config, env }: any) {
     config.appPath
   ]
   // Find first config directory path that has a truthy value.
-  const configPath = path.resolve(_.find(configPaths))
+  const configPath = path.resolve(find(configPaths))
   debug('configDirPath: ' + configPath)
   return configPath
 }
@@ -369,11 +369,11 @@ function setSelfSettings(app: ConfigApp) {
   const mmsi = app.config.baseDeltaEditor.getSelfValue('mmsi')
   let uuid = app.config.baseDeltaEditor.getSelfValue('uuid')
 
-  if (mmsi && !_.isString(mmsi)) {
+  if (mmsi && !isString(mmsi)) {
     throw new Error(`invalid mmsi: ${mmsi}`)
   }
 
-  if (uuid && !_.isString(uuid)) {
+  if (uuid && !isString(uuid)) {
     throw new Error(`invalid uuid: ${uuid}`)
   }
 
@@ -398,7 +398,7 @@ function setSelfSettings(app: ConfigApp) {
   app.selfContext = 'vessels.' + app.selfId
 }
 
-function readSettingsFile(app: ConfigApp) {
+async function readSettingsFile(app: ConfigApp) {
   const settings = getSettingsFilename(app)
   if (!app.argv.s && !fs.existsSync(settings)) {
     console.log('Settings file does not exist, using empty settings')
@@ -408,7 +408,7 @@ function readSettingsFile(app: ConfigApp) {
   } else {
     debug('Using settings file: ' + settings)
     try {
-      app.config.settings = require(settings)
+      app.config.settings = await import(settings, { with: { type: 'json' } })
     } catch (_e: any) {
       console.error(
         `Error reading settings file ${settings}, using empty settings`
@@ -418,10 +418,10 @@ function readSettingsFile(app: ConfigApp) {
       }
     }
   }
-  if (_.isUndefined(app.config.settings.pipedProviders)) {
+  if (isUndefined(app.config.settings.pipedProviders)) {
     app.config.settings.pipedProviders = []
   }
-  if (_.isUndefined(app.config.settings.interfaces)) {
+  if (isUndefined(app.config.settings.interfaces)) {
     app.config.settings.interfaces = {}
   }
 }
@@ -464,13 +464,13 @@ function getExternalHostname(config: Config) {
 }
 
 function scanDefaults(deltaEditor: DeltaEditor, vpath: string, item: any) {
-  _.keys(item).forEach((key: string) => {
+  Object.keys(item).forEach((key: string) => {
     const value = item[key]
     if (key === 'meta') {
       deltaEditor.setMeta('vessels.self', vpath, value)
     } else if (key === 'value') {
       deltaEditor.setSelfValue(vpath, value)
-    } else if (_.isObject(value)) {
+    } else if (isObject(value)) {
       const childPath = vpath.length > 0 ? `${vpath}.${key}` : key
       scanDefaults(deltaEditor, childPath, value)
     }
@@ -482,11 +482,11 @@ function convertOldDefaultsToDeltas(
   defaults: object
 ) {
   const deltas: any[] = []
-  const self: any = _.get(defaults, 'vessels.self')
+  const self: any = get(defaults, 'vessels.self')
   if (self) {
-    _.keys(self).forEach((key: any) => {
+    Object.keys(self).forEach((key: any) => {
       const value = self[key]
-      if (!_.isString(value)) {
+      if (!isString(value)) {
         scanDefaults(deltaEditor, key, value)
       } else {
         deltaEditor.setSelfValue(key, value)
@@ -505,15 +505,4 @@ const pluginsPackageJsonTemplate = {
   description: 'This file is here to track your plugin and webapp installs.',
   repository: {},
   license: 'Apache-2.0'
-}
-
-module.exports = {
-  load,
-  getConfigDirectory,
-  writeSettingsFile,
-  writeDefaultsFile,
-  readDefaultsFile,
-  sendBaseDeltas,
-  writeBaseDeltasFile,
-  package: packageJson
 }

@@ -1,5 +1,5 @@
-import { OpenApiDescription } from '../swagger'
-import resourcesApiDoc from './openApi.json'
+import { OpenApiDescription } from '../swagger.js'
+import resourcesApiDoc from './openApi.json' with { type: 'json' }
 
 export const resourcesApiRecord = {
   name: 'resources',
