@@ -181,7 +181,8 @@ describe('Course Api', () => {
       deltaHasPathValue(v2courseDelta, path, value)
     )
 
-    const pathValue = v2courseDelta.updates[0].values.find((x) => x.path === 'navigation.course.startTime')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pathValue = v2courseDelta.updates[0].values.find((x: any) => x.path === 'navigation.course.startTime')
     pathValue.value.should.match(DATETIME_REGEX)
 
 
@@ -328,8 +329,9 @@ describe('Course Api', () => {
       deltaHasPathValue(v2courseDelta, path, value)
     )
     v2courseDelta.updates[0].values.find(
-      (x) => x.path === 'navigation.course.startTime'
-    ).should.not.be.undefined()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (x: any) => x.path === 'navigation.course.startTime'
+    ).should.be.an('object')
 
     await selfGetJson('navigation/course').then(data => {
       delete data.startTime

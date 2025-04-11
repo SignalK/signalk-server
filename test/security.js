@@ -53,13 +53,13 @@ const openNavigationDelta = {
 
 const metaDelta = {
   context: 'vessels.self',
-  updates:[
+  updates: [
     {
-      meta:[
+      meta: [
         {
-          path:"navigation.rateOfTurn",
+          path: 'navigation.rateOfTurn',
           value: {
-            displayName:"Rate Of Turn"
+            displayName: 'Rate Of Turn'
           }
         }
       ]
@@ -108,10 +108,15 @@ describe('Security', () => {
     }
     port = await freeport()
     url = `http://0.0.0.0:${port}`
-    
-    server = await startServerP(port, true, {
-      disableSchemaMetaDeltas: true
-    }, securityConfig)
+
+    server = await startServerP(
+      port,
+      true,
+      {
+        disableSchemaMetaDeltas: true
+      },
+      securityConfig
+    )
 
     readToken = await getReadOnlyToken(server)
     writeToken = await getWriteToken(server)
@@ -123,7 +128,7 @@ describe('Security', () => {
     await server.stop()
   })
 
-  async function login (username, password) {
+  async function login(username, password) {
     const result = await fetch(`${url}/signalk/v1/auth/login`, {
       method: 'POST',
       headers: {
@@ -137,7 +142,7 @@ describe('Security', () => {
     if (result.status !== 200) {
       throw new Error('Login returned ' + result.status)
     }
-    return result.json().then(json => {
+    return result.json().then((json) => {
       return json.token
     })
   }
@@ -168,7 +173,7 @@ describe('Security', () => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        username: NOPASSWORD_USER_NAME,
+        username: NOPASSWORD_USER_NAME
       })
     })
     result.status.should.equal(401)
@@ -182,7 +187,7 @@ describe('Security', () => {
       },
       body: JSON.stringify({
         username: NOPASSWORD_USER_NAME,
-        password: 'incorrect',
+        password: 'incorrect'
       })
     })
     result.status.should.equal(401)
@@ -206,7 +211,7 @@ describe('Security', () => {
     })
     result.status.should.equal(200)
   })
-  
+
   it('authorized read with Authorization header works', async function () {
     const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
       headers: {
@@ -233,7 +238,7 @@ describe('Security', () => {
     })
     result.status.should.equal(200)
   })
-  
+
   it('authorized read with Authorization header works for user without password', async function () {
     const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
       headers: {
@@ -257,8 +262,7 @@ describe('Security', () => {
     result.status.should.equal(401)
   })
 
-
-  it('websocket with no token returns only hello', async function() {
+  it('websocket with no token returns only hello', async function () {
     //send some data semisynchronously, so that there is data in the cache that
     //should not appear
     const writePromiser = new WsPromiser(
@@ -271,11 +275,13 @@ describe('Security', () => {
     const result = new Promise((resolve, reject) => {
       const ws = new WebSocket(`ws://0.0.0.0:${port}/signalk/v1/stream`)
       let msgCount = 0
-      ws.on('message', msg => {
+      ws.on('message', (msg) => {
         msgCount++
         const parsed = JSON.parse(msg)
         if (!parsed.self) {
-          reject(`ws returned non-hello data:${msg} with allow_readonly set to false`)
+          reject(
+            `ws returned non-hello data:${msg} with allow_readonly set to false`
+          )
         }
       })
       ws.on('connect', () => {
@@ -283,8 +289,13 @@ describe('Security', () => {
         writePromiser.send(openNavigationDelta)
       })
       setTimeout(() => {
-        msgCount > 1 && reject(`ws returned ${msgCount} messages, expected only hello with allow_readonly set to false`)
-        resolve()
+        if (msgCount > 1) {
+          reject(
+            `ws returned ${msgCount} messages, expected only hello with allow_readonly set to false`
+          )
+        } else {
+          resolve()
+        }
       }, 250)
     })
     return result
@@ -296,7 +307,7 @@ describe('Security', () => {
       headers: {
         Authorization: `JWT ${readToken.substring(0, readToken.length - 1)}`
       }
-    }).then(response => response.status.should.equal(401))
+    }).then((response) => response.status.should.equal(401))
   })
 
   it('websocket with invalid token returns 401', async () =>
@@ -304,7 +315,7 @@ describe('Security', () => {
       headers: {
         Authorization: `JWT ${readToken[0] + 1}${readToken.substring(1)}`
       }
-    }).then(response => response.status.should.equal(401)))
+    }).then((response) => response.status.should.equal(401)))
 
   it('websockets acls work', async function () {
     const readPromiser = new WsPromiser(
@@ -343,7 +354,7 @@ describe('Security', () => {
     )
     let msg = await readPromiser.nextMsg()
     JSON.parse(msg)
-    
+
     const writePromiser = new WsPromiser(
       `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none&metaDeltas=none&token=${writeToken}`
     )
@@ -359,9 +370,7 @@ describe('Security', () => {
     const d = JSON.parse(succeedingResult)
     d.updates.length.should.equal(1)
     d.updates[0].meta.length.should.equal(1)
-    d.updates[0].meta[0].path.should.equal(
-      metaDelta.updates[0].meta[0].path
-    )
+    d.updates[0].meta[0].path.should.equal(metaDelta.updates[0].meta[0].path)
   })
 
   it('REST acls work', async function () {
@@ -390,7 +399,7 @@ describe('Security', () => {
     const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {})
     result.status.should.equal(401)
   })
-  
+
   it('Device access request and approval works', async function () {
     let result = await fetch(`${url}/signalk/v1/access/requests`, {
       method: 'POST',
@@ -511,4 +520,3 @@ describe('Security', () => {
     json.length.should.equal(1)
   })
 })
-
