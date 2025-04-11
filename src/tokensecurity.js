@@ -202,13 +202,11 @@ module.exports = function (app, config) {
               )
             }
             res.cookie('JAUTHENTICATION', reply.token, cookieOptions)
-            // eslint-disable-next-line no-unused-vars
-            const { httpOnly, cookieOptionsForBrowserCookie } = cookieOptions
+
             res.cookie(
               BROWSER_LOGININFO_COOKIE_NAME,
               JSON.stringify({ status: 'loggedIn', user: reply.user })
-            ),
-              cookieOptionsForBrowserCookie
+            )
 
             if (requestType === 'application/json') {
               res.json({ token: reply.token })

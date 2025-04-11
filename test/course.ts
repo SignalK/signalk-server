@@ -1,11 +1,10 @@
 import { strict as assert } from 'assert'
 import chai from 'chai'
-import resourcesOpenApi from '../src/api/resources/openApi.json'
 import { DATETIME_REGEX, deltaHasPathValue, startServer } from './ts-servertestutilities'
 chai.should()
 
 describe('Course Api', () => {
-  it('can set course destination as position', async function() {
+  it('can set course destination as position', async function () {
     const {
       createWsPromiser,
       selfGetJson,
@@ -33,18 +32,22 @@ describe('Course Api', () => {
       },
       {
         path: 'navigation.course.nextPoint',
-        value: {position: {
-          latitude: -35.5,
-          longitude: 138.7
-        },
-      type: 'Location'}
+        value: {
+          position: {
+            latitude: -35.5,
+            longitude: 138.7
+          },
+          type: 'Location'
+        }
       },
       {
         path: 'navigation.course.previousPoint',
-        value: {position: {
-          latitude: -35.45,
-          longitude: 138
-        }, type: 'VesselPosition'}
+        value: {
+          position: {
+            latitude: -35.45,
+            longitude: 138
+          }, type: 'VesselPosition'
+        }
       }
     ]
     expectedPathValues.forEach(({ path, value }) =>
@@ -71,7 +74,7 @@ describe('Course Api', () => {
     await stop()
   })
 
-  it('can not set course destination as nonexistent waypoint or bad payload', async function() {
+  it('can not set course destination as nonexistent waypoint or bad payload', async function () {
     const { createWsPromiser, selfPut, sendDelta, stop } = await startServer()
 
     const wsPromiser = createWsPromiser()
@@ -90,7 +93,7 @@ describe('Course Api', () => {
     deltaHasPathValue(
       v2courseDelta,
       'navigation.course.nextPoint',
-      {position: validDestinationPosition, type: 'Location'}
+      { position: validDestinationPosition, type: 'Location' }
     )
 
     await selfPut('navigation/course/destination', {
@@ -112,7 +115,7 @@ describe('Course Api', () => {
     await stop()
   })
 
-  it('can set course destination as waypoint with arrivalcircle and then clear destination', async function() {
+  it('can set course destination as waypoint with arrivalcircle and then clear destination', async function () {
     const {
       createWsPromiser,
       post,
@@ -178,7 +181,7 @@ describe('Course Api', () => {
       deltaHasPathValue(v2courseDelta, path, value)
     )
 
-    const pathValue = v2courseDelta.updates[0].values.find((x: any) => x.path === 'navigation.course.startTime')
+    const pathValue = v2courseDelta.updates[0].values.find((x) => x.path === 'navigation.course.startTime')
     pathValue.value.should.match(DATETIME_REGEX)
 
 
@@ -244,7 +247,7 @@ describe('Course Api', () => {
     stop()
   })
 
-  it('can activate route and manipulate it', async function() {
+  it('can activate route and manipulate it', async function () {
     const {
       createWsPromiser,
       post,
@@ -257,11 +260,11 @@ describe('Course Api', () => {
     sendDelta('navigation.position', vesselPosition)
 
     const points = {
-      feature: { 
-        type: "Feature", 
+      feature: {
+        type: "Feature",
         geometry: {
           type: "LineString",
-          coordinates: [[3.3452,65.4567],[3.3352, 65.5567],[3.3261,65.5777]]
+          coordinates: [[3.3452, 65.4567], [3.3352, 65.5567], [3.3261, 65.5777]]
         }
       }
     }
@@ -312,19 +315,21 @@ describe('Course Api', () => {
       },
       {
         path: 'navigation.course.previousPoint',
-        value: {position: {
-          latitude: -35.45,
-          longitude: 138
-        },
-      type: 'VesselPosition'}
+        value: {
+          position: {
+            latitude: -35.45,
+            longitude: 138
+          },
+          type: 'VesselPosition'
+        }
       },
     ]
     expectedPathValues.forEach(({ path, value }) =>
       deltaHasPathValue(v2courseDelta, path, value)
     )
     v2courseDelta.updates[0].values.find(
-      (x: any) => x.path === 'navigation.course.startTime'
-    ).should.not.be.undefined
+      (x) => x.path === 'navigation.course.startTime'
+    ).should.not.be.undefined()
 
     await selfGetJson('navigation/course').then(data => {
       delete data.startTime
@@ -403,7 +408,7 @@ describe('Course Api', () => {
     stop()
   })
 
-  it('can set arrivalCircle', async function() {
+  it('can set arrivalCircle', async function () {
     const { createWsPromiser, selfGetJson, selfPut, stop } = await startServer()
 
     const wsPromiser = createWsPromiser()
