@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 const { expect } = require('chai')
 const { getConfigDirectory } = require('./config')
 const path = require('path')

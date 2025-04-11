@@ -868,7 +868,6 @@ module.exports = function (
   app.get(
     `${SERVERROUTESPREFIX}/eventsRoutingData`,
     (req: Request, res: Response) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       res.json(app.wrappedEmitter.getEventRoutingData())
     }
   )

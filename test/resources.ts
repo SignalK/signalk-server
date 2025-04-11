@@ -7,7 +7,7 @@ chai.should()
 export const skUuid = () => `${uuidv4()}`
 
 describe('Resources Api', () => {
-  it('can put and get a waypoint', async function() {
+  it('can put and get a waypoint', async function () {
     const { createWsPromiser, get, put, stop } = await startServer()
 
     const wsPromiser = createWsPromiser()
@@ -32,7 +32,6 @@ describe('Resources Api', () => {
     const { path, value } = resourceDelta.updates[0].values[0]
     path.should.equal(`resources.waypoints.${resId}`)
     value.should.deep.equal(waypoint)
-    ;(waypoint as any).$source = 'resources-provider'
     await get(`/resources/waypoints/${resId}`)
       .then(response => {
         response.status.should.equal(200)
@@ -40,14 +39,14 @@ describe('Resources Api', () => {
       })
       .then(resData => {
         delete resData.timestamp
-        resData.should.deep.equal(waypoint)
+        resData.should.deep.equal({ ...waypoint, $source: 'resources-provider' })
       })
 
     stop()
   })
 
-  it('bbox search works for waypoints', async function() {
-    const { createWsPromiser, get, post, stop } = await startServer()
+  it('bbox search works for waypoints', async function () {
+    const { get, post } = await startServer()
 
     const resourceIds = await Promise.all(
       [
@@ -65,7 +64,7 @@ describe('Resources Api', () => {
           }
         })
           .then(r => r.json())
-          .then((r: any) => r.id)
+          .then(r => r.id)
       })
     )
     await get('/resources/waypoints?bbox=[24.8,60.16,24.899,60.3]')
@@ -77,7 +76,7 @@ describe('Resources Api', () => {
       })
   })
 
-  it('Create route with route point metadata', async function() {
+  it('Create route with route point metadata', async function () {
     const {
       post,
       stop
@@ -85,11 +84,11 @@ describe('Resources Api', () => {
 
 
     const route = {
-      feature: { 
-        type: "Feature", 
+      feature: {
+        type: "Feature",
         geometry: {
           type: "LineString",
-          coordinates: [[3.3452,65.4567],[3.3352, 65.5567],[3.3261,65.5777]]
+          coordinates: [[3.3452, 65.4567], [3.3352, 65.5567], [3.3261, 65.5777]]
         },
         properties: {
           coordinatesMeta: [
