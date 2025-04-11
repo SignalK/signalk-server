@@ -39,7 +39,9 @@ describe('Put Requests', () => {
           server.app.handleMessage('test', {
             updates: [
               {
-                values: [{ path: 'electrical.switches.switch2.state', value: value }]
+                values: [
+                  { path: 'electrical.switches.switch2.state', value: value }
+                ]
               }
             ]
           })
@@ -49,7 +51,12 @@ describe('Put Requests', () => {
       }
     }
 
-    registerActionHandler('vessels.self', 'electrical.switches.switch2.state', null, switch2Handler)
+    registerActionHandler(
+      'vessels.self',
+      'electrical.switches.switch2.state',
+      null,
+      switch2Handler
+    )
 
     server.app.handleMessage('test', {
       updates: [
@@ -202,7 +209,9 @@ describe('Put Requests', () => {
 
     console.log(result.href)
 
-    result = await fetch(`${url}/signalk/v1/api/vessels/self/notifications/testNotification/value`)
+    result = await fetch(
+      `${url}/signalk/v1/api/vessels/self/notifications/testNotification/value`
+    )
 
     result.status.should.equal(200)
 
@@ -229,7 +238,9 @@ describe('Put Requests', () => {
 
     console.log(result.href)
 
-    result = await fetch(`${url}/signalk/v1/api/vessels/self/notifications/testNotification/value`)
+    result = await fetch(
+      `${url}/signalk/v1/api/vessels/self/notifications/testNotification/value`
+    )
 
     result.status.should.equal(200)
 
@@ -240,7 +251,9 @@ describe('Put Requests', () => {
   })
 
   it('WS put to unhandled path fails', async function () {
-    const ws = new WsPromiser(`ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`)
+    const ws = new WsPromiser(
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
+    )
     let msg = await ws.nextMsg()
 
     ws.clear()
@@ -262,7 +275,9 @@ describe('Put Requests', () => {
   })
 
   it('WS successfull put', async function () {
-    const ws = new WsPromiser(`ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`)
+    const ws = new WsPromiser(
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
+    )
     let msg = await ws.nextMsg()
 
     ws.clear()
@@ -291,7 +306,9 @@ describe('Put Requests', () => {
   })
 
   it('WS failing put', async function () {
-    const ws = new WsPromiser(`ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`)
+    const ws = new WsPromiser(
+      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
+    )
     let msg = await ws.nextMsg()
 
     ws.clear()

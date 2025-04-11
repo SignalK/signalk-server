@@ -1,42 +1,40 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Login form</title>
+  </head>
 
-<head>
-  <meta charset="utf-8">
-  <title>Login form</title>
-</head>
-
-<body>
-  <form id="loginForm">
-    <input type="text" id="username" /><br />
-    <input type="password" id="password" /><br />
-    <button type="submit">Submit</button>
-    <p id="result"></p>
-  </form>
-</body>
-<script>
-  window.onload = function () {
-    document.getElementById('loginForm').onsubmit = function () {
-      document.getElementById('result').innerHTML = ''
-      const username = document.getElementById('username').value
-      const password = document.getElementById('password').value
-      const body = JSON.stringify({ username, password })
-      fetch('http://localhost:3000/signalk/v1/auth/login', {
-        method: 'POST',
-        withCredentials: true,
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body
-      })
-        .then(r => r.json())
-        .then(r => { 
-          document.getElementById('result').innerHTML = JSON.stringify(r)
+  <body>
+    <form id="loginForm">
+      <input type="text" id="username" /><br />
+      <input type="password" id="password" /><br />
+      <button type="submit">Submit</button>
+      <p id="result"></p>
+    </form>
+  </body>
+  <script>
+    window.onload = function () {
+      document.getElementById('loginForm').onsubmit = function () {
+        document.getElementById('result').innerHTML = ''
+        const username = document.getElementById('username').value
+        const password = document.getElementById('password').value
+        const body = JSON.stringify({ username, password })
+        fetch('http://localhost:3000/signalk/v1/auth/login', {
+          method: 'POST',
+          withCredentials: true,
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body
         })
-      return false;
+          .then((r) => r.json())
+          .then((r) => {
+            document.getElementById('result').innerHTML = JSON.stringify(r)
+          })
+        return false
+      }
     }
-  }
-</script>
-
+  </script>
 </html>

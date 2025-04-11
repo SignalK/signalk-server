@@ -52,12 +52,10 @@ function mountApi(app) {
     const boatName = app.config.vesselName
       ? app.config.vesselName
       : app.config.vesselMMSI
-      ? app.config.vesselMMSI
-      : ''
+        ? app.config.vesselMMSI
+        : ''
     const sanitizedBoatName = boatName.replace(/\W/g, '_')
-    const zipFileName = `sk-logs-${sanitizedBoatName}-${moment().format(
-      'YYYY-MM-DD-HH-mm'
-    )}`
+    const zipFileName = `sk-logs-${sanitizedBoatName}-${moment().format('YYYY-MM-DD-HH-mm')}`
 
     res.zip({
       files: [{ path: getFullLogDir(app), name: zipFileName }],

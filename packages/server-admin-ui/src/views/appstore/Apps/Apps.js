@@ -8,7 +8,7 @@ import {
   CardBody,
   CardHeader,
   CardTitle,
-  Input,
+  Input
 } from 'reactstrap'
 import AppsList from '../AppsList'
 import WarningBox from './WarningBox'
@@ -30,7 +30,7 @@ const Apps = function (props) {
         (allApps[app.name] = {
           ...app,
           installed: true,
-          newVersion: updateAvailable(app, props.appStore) ? app.version : null,
+          newVersion: updateAvailable(app, props.appStore) ? app.version : null
         })
     )
     props.appStore.installing.forEach(
@@ -50,7 +50,7 @@ const Apps = function (props) {
             `${window.serverRoutesPrefix}/appstore/install/${app.name}/${app.version}`,
             {
               method: 'POST',
-              credentials: 'include',
+              credentials: 'include'
             }
           )
         }

@@ -27,7 +27,7 @@ const AWS = require('aws-sdk')
 
 function S3Provider({ bucket, prefix }) {
   Transform.call(this, {
-    objectMode: false,
+    objectMode: false
   })
   this.Bucket = bucket
   this.Prefix = prefix
@@ -41,7 +41,7 @@ S3Provider.prototype.pipe = function (pipeTo) {
   const s3 = new AWS.S3()
   const params = {
     Bucket: this.Bucket,
-    Prefix: this.Prefix,
+    Prefix: this.Prefix
   }
   console.log('listobjects')
   s3.listObjects(params)
@@ -55,7 +55,7 @@ S3Provider.prototype.pipe = function (pipeTo) {
               console.log('Starting key ' + item.Key)
               const objectParams = {
                 Bucket: params.Bucket,
-                Key: item.Key,
+                Key: item.Key
               }
               const request = s3.getObject(objectParams)
               request.on('error', (err) => {

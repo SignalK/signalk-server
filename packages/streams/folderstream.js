@@ -3,7 +3,7 @@ const fs = require('fs')
 
 function FolderStreamProvider(folder) {
   Transform.call(this, {
-    objectMode: false,
+    objectMode: false
   })
   this.folder = folder
   this.fileIndex = 0

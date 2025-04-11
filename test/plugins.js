@@ -27,12 +27,14 @@ describe('Demo plugin ', () => {
       config: { settings: { port } }
     })
     await server.start()
-    const plugins = await fetch(`http://0.0.0.0:${port}/skServer/plugins`).then(res =>
-      res.json()
+    const plugins = await fetch(`http://0.0.0.0:${port}/skServer/plugins`).then(
+      (res) => res.json()
     )
-    assert(plugins.find(plugin => plugin.id === 'testplugin'))
+    assert(plugins.find((plugin) => plugin.id === 'testplugin'))
 
-    const plugin = server.app.plugins.find(plugin => plugin.id === 'testplugin')
+    const plugin = server.app.plugins.find(
+      (plugin) => plugin.id === 'testplugin'
+    )
     assert(plugin)
     assert(plugin.started)
 
@@ -42,7 +44,7 @@ describe('Demo plugin ', () => {
     assert(server.app.signalk.self.some.path.value === 'someValue')
 
     const outputValues = []
-    server.app.signalk.on('delta', msg => {
+    server.app.signalk.on('delta', (msg) => {
       outputValues.push(msg.updates[0].values[0].value)
     })
     server.app.handleMessage('foo', {
@@ -124,7 +126,7 @@ function mkDirSync(dirPath) {
   }
 }
 
-function writePluginConfig (config) {
+function writePluginConfig(config) {
   fs.writeFileSync(
     path.join(
       `${__dirname}/plugin-test-config/plugin-config-data/testplugin.json`
@@ -133,7 +135,7 @@ function writePluginConfig (config) {
   )
 }
 
-async function postPluginConfig (port, config) {
+async function postPluginConfig(port, config) {
   await fetch(`http://0.0.0.0:${port}/skServer/plugins/testplugin/config`, {
     method: 'POST',
     headers: {

@@ -3,8 +3,8 @@ name: Build Docker development container
 on:
   push:
     branches:
-    - master
-    - "build-docker"
+      - master
+      - 'build-docker'
     tags:
       - '*'
       - '!v*'
@@ -84,7 +84,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ github.run_id }}
-          
+
   create-and-push-manifest:
     needs: docker_images
     runs-on: ubuntu-latest

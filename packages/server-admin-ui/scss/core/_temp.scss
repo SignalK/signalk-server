@@ -1,4 +1,5 @@
-.pagination-datatables, .pagination {
+.pagination-datatables,
+.pagination {
   li {
     @extend .page-item;
 
@@ -15,7 +16,8 @@
 // temp fix for Vue & React
 
 // Open state for the dropdown
-.open, .show {
+.open,
+.show {
   // Remove the outline when :focus is triggered
   > a {
     outline: 0;

@@ -4,12 +4,13 @@ title: Publishing to The AppStore
 
 # Publishing to The AppStore
 
-
 Plugins and WebApps are available in the AppStore when they have been published to [npm repository](https://www.npmjs.com/) with the one or more of the following keywords in the `package.json` file:
+
 - `signalk-node-server-plugin`
 - `signalk-webapp`
 
 Additionally you can have your plugin appear within one or more AppStore categories by also adding the following keyword(s):
+
 - `signalk-category-chart-plotters`
 - `signalk-category-nmea-2000`
 - `signalk-category-nmea-0183`
@@ -31,6 +32,7 @@ To have your plugin start automatically after being installed, without requiring
 ```
 
 To control the way your WebApp is displayed in the Admin UI add a `signalk` key with the following attributes:
+
 ```JSON
   "signalk": {
     "appIcon": "./img/icon-72x72.png", // path to an image file to use as an icon.
@@ -38,8 +40,8 @@ To control the way your WebApp is displayed in the Admin UI add a `signalk` key 
   }
 ```
 
-
 _Example: package.json_
+
 ```JSON
 {
   "name": "my-signalk-plugin-app",
@@ -68,6 +70,7 @@ _Example: package.json_
 
 Once you have developed and tested your Plugin / WebApp you can publish it to make it visible in the AppStore.
 To do this, in a terminal session from within the folder containing `package.json`:
+
 ```shell
 npm publish
 ```

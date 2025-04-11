@@ -1,4 +1,4 @@
-import net from 'net';
+import net from 'net'
 import fetch from 'node-fetch'
 import path from 'path'
 import { rimraf } from 'rimraf'
@@ -17,8 +17,8 @@ export const DATETIME_REGEX = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)Z?$/
 const emptyConfigDirectory = () =>
   Promise.all(
     [SERVERSTATEDIRNAME, 'resources', 'plugin-config-data', 'baseDeltas.json']
-      .map(subDir => path.join(serverTestConfigDirectory(), subDir))
-      .map(dir => rimraf(dir).then(() => console.error(dir)))
+      .map((subDir) => path.join(serverTestConfigDirectory(), subDir))
+      .map((dir) => rimraf(dir).then(() => console.error(dir)))
   )
 
 export const startServer = async () => {
@@ -41,8 +41,8 @@ export const startServer = async () => {
     createWsPromiser: () =>
       new WsPromiser(
         'ws://localhost:' +
-        port +
-        '/signalk/v1/stream?subscribe=self&metaDeltas=none&sendCachedValues=false'
+          port +
+          '/signalk/v1/stream?subscribe=self&metaDeltas=none&sendCachedValues=false'
       ),
     selfPut: (path: string, body: object) =>
       fetch(`${api}/vessels/self/${path}`, {
@@ -75,9 +75,9 @@ export const startServer = async () => {
         headers: { 'Content-Type': 'application/json' }
       }),
     selfGetJson: (path: string) =>
-      fetch(`${api}/vessels/self/${path}`).then(r => r.json()),
+      fetch(`${api}/vessels/self/${path}`).then((r) => r.json()),
     selfGetJsonV1: (path: string) =>
-      fetch(`${v1Api}/vessels/self/${path}`).then(r => r.json()),
+      fetch(`${v1Api}/vessels/self/${path}`).then((r) => r.json()),
     host,
     sendDelta: (path: string, value: Value) =>
       sendDelta(
@@ -116,23 +116,18 @@ export const deltaHasPathValue = (delta: Delta, path: string, value: any) => {
     expect(pathValue?.value).to.deep.equal(value)
   } catch (_) {
     throw new Error(
-      `No such pathValue ${path}:${JSON.stringify(value)} in ${JSON.stringify(
-        delta,
-        null,
-        2
-      )}`
+      `No such pathValue ${path}:${JSON.stringify(value)} in ${JSON.stringify(delta, null, 2)}`
     )
   }
 }
 
 export function freeport(): Promise<number> {
   return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    let port = 0;
+    const server = net.createServer()
+    let port = 0
 
     server.on('listening', () => {
-      const address = server.address();
-
+      const address = server.address()
 
       if (address == null) {
         return reject(new Error('Server was not listening'))
@@ -144,7 +139,7 @@ export function freeport(): Promise<number> {
 
       port = address.port
       server.close()
-    });
+    })
 
     server.once('close', () => resolve(port))
     server.once('error', reject)

@@ -11,7 +11,7 @@ import {
   Input,
   InputGroup,
   InputGroupAddon,
-  InputGroupText,
+  InputGroupText
 } from 'reactstrap'
 import { connect } from 'react-redux'
 import { enableSecurity, fetchLoginStatus } from '../../actions'
@@ -22,7 +22,7 @@ class EnableSecurity extends Component {
     super(props)
     this.state = {
       enabling: false,
-      errorMessage: null,
+      errorMessage: null
     }
     this.handleInputChange = this.handleInputChange.bind(this)
     this.handleInputKeyUp = this.handleInputKeyUp.bind(this)
@@ -40,7 +40,7 @@ class EnableSecurity extends Component {
         fetchLoginStatus(dispatch)
         this.setState({
           enabling: false,
-          errorMessage: error,
+          errorMessage: error
         })
       }
     )

@@ -104,11 +104,12 @@
 	*/
 
   :root {
-    --font-family-text: -apple-system, BlinkMacSystemFont, 'Segoe UI',
-      'Noto Sans', Helvetica, Arial, sans-serif, 'Apple Color Emoji',
-      'Segoe UI Emoji';
-    --font-family-code: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas,
-      Liberation Mono, monospace;
+    --font-family-text:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica,
+      Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    --font-family-code:
+      ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono,
+      monospace;
   }
 
   body {
@@ -308,7 +309,8 @@
 
   .tsd-page-toolbar {
     background-color: var(--color-background-navbar);
-    box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.1),
+    box-shadow:
+      0px 1px 1px rgba(0, 0, 0, 0.1),
       0px 2px 20px rgba(0, 0, 0, 0.075);
   }
 

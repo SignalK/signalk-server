@@ -10,7 +10,7 @@ import {
   Col,
   Label,
   FormGroup,
-  Table,
+  Table
 } from 'reactstrap'
 import moment from 'moment'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
@@ -25,7 +25,7 @@ const searchStorageKey = 'admin.v1.dataBrowser.search'
 
 function fetchSources() {
   fetch(`/signalk/v1/api/sources`, {
-    credentials: 'include',
+    credentials: 'include'
   })
     .then((response) => response.json())
     .then((sources) => {
@@ -60,7 +60,7 @@ class DataBrowser extends Component {
       data: {},
       meta: {},
       context: localStorage.getItem(contextStorageKey) || 'self',
-      search: localStorage.getItem(searchStorageKey) || '',
+      search: localStorage.getItem(searchStorageKey) || ''
     }
 
     this.fetchSources = fetchSources.bind(this)
@@ -111,7 +111,7 @@ class DataBrowser extends Component {
                   $source: update.$source,
                   pgn,
                   sentence,
-                  timestamp: moment(update.timestamp).format(timestampFormat),
+                  timestamp: moment(update.timestamp).format(timestampFormat)
                 }
               })
             } else {
@@ -121,7 +121,7 @@ class DataBrowser extends Component {
                 value: vp.value,
                 pgn,
                 sentence,
-                timestamp: moment(update.timestamp).format(timestampFormat),
+                timestamp: moment(update.timestamp).format(timestampFormat)
               }
             }
           })
@@ -138,7 +138,7 @@ class DataBrowser extends Component {
           ...this.state,
           hasData: true,
           data: this.state.data,
-          meta: this.state.meta,
+          meta: this.state.meta
         })
       }
     }
@@ -156,9 +156,9 @@ class DataBrowser extends Component {
         subscribe: [
           {
             path: '*',
-            period: 2000,
-          },
-        ],
+            period: 2000
+          }
+        ]
       }
 
       this.props.webSocket.send(JSON.stringify(sub))
@@ -174,9 +174,9 @@ class DataBrowser extends Component {
         context: '*',
         unsubscribe: [
           {
-            path: '*',
-          },
-        ],
+            path: '*'
+          }
+        ]
       }
       this.props.webSocket.send(JSON.stringify(sub))
       this.state.didSubscribe = false
@@ -457,7 +457,7 @@ class CopyToClipboardWithFade extends Component {
   constructor() {
     super()
     this.state = {
-      opacity: 1,
+      opacity: 1
     }
   }
 

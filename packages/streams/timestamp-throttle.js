@@ -25,7 +25,7 @@ rate control
 
 function TimestampThrottle(options) {
   Transform.call(this, {
-    objectMode: true,
+    objectMode: true
   })
   this.lastMsgMillis = new Date().getTime()
   this.getMilliseconds =

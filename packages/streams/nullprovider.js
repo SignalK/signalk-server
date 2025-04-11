@@ -22,7 +22,7 @@ const Transform = require('stream').Transform
 
 function NullProvider() {
   Transform.call(this, {
-    objectMode: true,
+    objectMode: true
   })
 }
 

@@ -28,6 +28,7 @@ At present this relies on the plugin / application knowing which paths in the hi
 The v1 model for using PUT handlers is also very vague and causes confusion. The aim of defining APIs with clear contracts using industry standard OpenApi mechanism is to make APIs discoverable and their use and semantics explicit.
 
 The use of APIs to perform operations addresses these issues providing the following benefits:
+
 1. A standardised interface for all applications / plugins to perform an operation
 1. Provides clear ownership of the paths in the Signal K data model
 1. Ensures values are being maintained in all of the related paths.
@@ -43,7 +44,6 @@ When operating on a vessel you should not assume that a connection to Internet s
 Therefore, it is important that the WebApps and Plugins you create be _"self contained"_ and provide all the resources they require to operate _(i.e. fonts, stylesheets, images, etc)_. This also minimises data charges even if your module does use data over Internet.
 
 For WebApps and Plugins that do connect to Internet based services to provide data, they should be resilient to changes in the connection status to those services and where necessary display their status.
-
 
 ## Deprecations and Breaking Changes
 

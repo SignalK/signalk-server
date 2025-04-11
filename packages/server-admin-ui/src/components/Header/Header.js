@@ -8,7 +8,7 @@ import {
   DropdownItem,
   DropdownMenu,
   DropdownToggle,
-  Dropdown,
+  Dropdown
 } from 'reactstrap'
 import { connect } from 'react-redux'
 import { logout, restart, login } from '../../actions'
@@ -19,7 +19,7 @@ class Header extends Component {
 
     this.toggleDropdown = this.toggleDropdown.bind(this)
     this.state = {
-      dropdownOpen: false,
+      dropdownOpen: false
     }
   }
 
@@ -36,7 +36,7 @@ class Header extends Component {
 
   toggleDropdown() {
     this.setState({
-      dropdownOpen: !this.state.dropdownOpen,
+      dropdownOpen: !this.state.dropdownOpen
     })
   }
 

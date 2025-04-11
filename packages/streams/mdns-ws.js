@@ -20,7 +20,7 @@ const SignalK = require('@signalk/client')
 
 function MdnsWs(options) {
   Transform.call(this, {
-    objectMode: true,
+    objectMode: true
   })
   this.options = options
   this.selfHost = options.app.config.getExternalHostname() + '.'
@@ -65,7 +65,7 @@ function MdnsWs(options) {
       autoConnect: false,
       deltaStreamBehaviour,
       rejectUnauthorized: !(options.selfsignedcert === true),
-      wsKeepaliveInterval: 10,
+      wsKeepaliveInterval: 10
     })
     this.connect(this.signalkClient)
   } else {
@@ -153,9 +153,8 @@ MdnsWs.prototype.connect = function (client) {
         that.dataDebug(JSON.stringify(data))
       }
       data.updates.forEach(function (update) {
-        update[
-          '$source'
-        ] = `${that.options.providerId}.${client.options.hostname}:${client.options.port}`
+        update['$source'] =
+          `${that.options.providerId}.${client.options.hostname}:${client.options.port}`
       })
     }
 

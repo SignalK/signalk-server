@@ -1,11 +1,10 @@
 // Here you can add other styles
 
-
-form.rjsf  label {
+form.rjsf label {
   margin-bottom: 0;
 }
 
-form.rjsf  div>p.field-description {
+form.rjsf div > p.field-description {
   font-size: 0.7rem;
   font-style: italic;
   margin-bottom: 0px;
@@ -21,10 +20,11 @@ form.rjsf div.row.array-item {
 }
 
 @media (max-width: 767px) {
-  .container-fluid, .row {
-    padding:0 2px !important;
+  .container-fluid,
+  .row {
+    padding: 0 2px !important;
   }
   .navbar-header {
-    margin:0px;
+    margin: 0px;
   }
 }

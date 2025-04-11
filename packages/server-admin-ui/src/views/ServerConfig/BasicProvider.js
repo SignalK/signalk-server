@@ -6,13 +6,13 @@ class BasicProvider extends Component {
   constructor() {
     super()
     this.state = {
-      hasAnalyzer: false,
+      hasAnalyzer: false
     }
   }
 
   componentDidMount() {
     fetch(`${window.serverRoutesPrefix}/hasAnalyzer`, {
-      credentials: 'include',
+      credentials: 'include'
     })
       .then((response) => response.json())
       .then((value) => {
@@ -26,7 +26,7 @@ class BasicProvider extends Component {
       NMEA0183: NMEA0183,
       SignalK: SignalK,
       Seatalk: Seatalk,
-      FileStream: FileStream,
+      FileStream: FileStream
     }
     let TypeComponent = lookup[this.props.value.type] || (() => null)
 
@@ -97,8 +97,8 @@ class BasicProvider extends Component {
                     value: (event.target.value || '').replace(
                       /[^a-zA-Z\d-_]/g,
                       ''
-                    ),
-                  },
+                    )
+                  }
                 }
                 this.props.onChange(dummyEvent)
               }}
@@ -179,19 +179,19 @@ class DeviceInput extends Component {
   constructor() {
     super()
     this.state = {
-      devices: {},
+      devices: {}
     }
   }
 
   componentDidMount() {
     fetch(`${window.serverRoutesPrefix}/serialports`, {
-      credentials: 'include',
+      credentials: 'include'
     })
       .then((response) => response.json())
       .then((data) => {
         data.serialports = data.serialports.map((portInfo) => portInfo.path)
         this.setState({
-          devices: data,
+          devices: data
         })
       })
   }
@@ -517,8 +517,8 @@ class StdOutInput extends Component {
       target: {
         type: e.target.type,
         name: e.target.name,
-        value: e.target.value.split(','),
-      },
+        value: e.target.value.split(',')
+      }
     })
   }
   render() {
@@ -555,8 +555,8 @@ class IgnoredSentences extends Component {
       target: {
         type: e.target.type,
         name: e.target.name,
-        value: e.target.value.split(','),
-      },
+        value: e.target.value.split(',')
+      }
     })
   }
   render() {
@@ -1033,7 +1033,7 @@ const SignalK = (props) => {
 }
 
 const gpios = [
-  4, 5, 6, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27,
+  4, 5, 6, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27
 ].map((gpio) => `0${gpio}`.slice(-2))
 const Seatalk = (props) => (
   <span>

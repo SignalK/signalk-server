@@ -18,7 +18,7 @@
     color: $sidebar-color;
     background: 0;
     border: 0;
-    opacity: .8;
+    opacity: 0.8;
 
     &:hover {
       opacity: 1;
@@ -90,14 +90,15 @@
     text-transform: uppercase;
   }
 
-  .nav-divider, .divider {
+  .nav-divider,
+  .divider {
     height: 10px;
   }
 
   .nav-item {
     position: relative;
     margin: 0;
-    transition: background .3s ease-in-out;
+    transition: background 0.3s ease-in-out;
   }
 
   .nav-dropdown-items {
@@ -105,7 +106,7 @@
     padding: 0;
     margin: 0;
     overflow-y: hidden;
-    transition: max-height .3s ease-in-out;
+    transition: max-height 0.3s ease-in-out;
 
     .nav-item {
       padding: 0;
@@ -166,10 +167,10 @@
       &.nav-link-#{$color} {
         background: $value;
         i {
-          color: rgba(255,255,255,.7);
+          color: rgba(255, 255, 255, 0.7);
         }
         &:hover {
-          background: darken($value,5%) !important;
+          background: darken($value, 5%) !important;
           i {
             color: #fff;
           }
@@ -191,11 +192,11 @@
       height: 8px;
       padding: 0;
       margin-top: -4px;
-      content: "";
+      content: '';
       background-image: $sidebar-nav-dropdown-indicator;
       background-repeat: no-repeat;
       background-position: center;
-      transition: transform .3s;
+      transition: transform 0.3s;
     }
   }
 
@@ -244,7 +245,7 @@
     }
   }
 
-  @if (lightness( $sidebar-bg ) < 40) {
+  @if (lightness($sidebar-bg) < 40) {
     .progress {
       background-color: lighten($sidebar-bg, 15%) !important;
     }
@@ -270,12 +271,12 @@
       right: 0;
       width: $sidebar-minimizer-height;
       height: $sidebar-minimizer-height;
-      content: "";
+      content: '';
       background-image: $sidebar-minimizer-indicator;
       background-repeat: no-repeat;
       background-position: center;
       background-size: $sidebar-minimizer-height / 4;
-      transition: .3s;
+      transition: 0.3s;
     }
 
     &:focus,
@@ -327,7 +328,6 @@
             }
 
             &.nav-dropdown-toggle {
-
               &::before {
                 top: 30px;
               }
@@ -355,7 +355,8 @@
         @include sidebar-width($sidebar-borders, $sidebar-minimized-width);
       }
 
-      .nav-divider, .divider,
+      .nav-divider,
+      .divider,
       .nav-title,
       .sidebar-footer,
       .sidebar-form,

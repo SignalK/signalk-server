@@ -21,14 +21,14 @@ _Autopilot API architecture_
 ## Provider Plugins
 
 An autopilot provider plugin is a Signal K server plugin that implements the {@link @signalk/server-api!AutopilotProvider | `AutoPilotProvider`} interface, which:
+
 - Tells server the autopilot devices provided for by the plugin
 - Registers the methods used to action requests passed from the server to perform autopilot operations.
 
-
 Multiple providers can be registered and each provider can manage one or more autopilot devices.
 
-
 **Note: An Autopilot Provider plugin MUST:**
+
 - Implement all Autopilot API interface methods.
 - Facilitate communication on the target autopilot device to send commands and retrieve both status and configuration information
 - Ensure the `engaged` path attribute value is maintained to reflect the operational status of the autopilot.
@@ -36,12 +36,12 @@ Multiple providers can be registered and each provider can manage one or more au
 - Set the state as `off-line` if the autopilot device is not connected or unreachable.
 - Set the mode as `dodge` when the autopilot device is is in dodge mode.
 
-
 ## Registering as an Autopilot Provider
 
 A provider plugin must register itself with the Autopilot API during start up by calling the {@link @signalk/server-api!ServerAPI.registerAutopilotProvider | `registerAutopilotProvider`}.
 
 _Example: Plugin registering as an autopilot provider._
+
 ```javascript
 import { AutopilotProvider } from '@signalk/server-api'
 
@@ -90,6 +90,7 @@ The Autopilot API is responsible for sending both update and notification `delta
 Data received from an autopilot device, regardless of the communications protocol (NMEA2000, etc), should be sent to the Autopilot API by calling the {@link @signalk/server-api!ServerAPI.autopilotUpdate | `autopilotUpdate` } method.
 
 This will ensure:
+
 - Default pilot status is correctly maintained
 - `steering.autopilot.*` both V1 and V2 deltas are sent
 
@@ -97,6 +98,7 @@ This will ensure:
 > The values provided via `autopilotUpdate` will be sent in the relevant delta message, so ensure they are in the correct units (e.g. angles in radians, etc).
 
 _Example Update:_
+
 ```javascript
 app.autopilotUpdate('my-pilot', {
   target: 1.52789,
@@ -114,6 +116,7 @@ Notifications / Alarms are sent using one of the normalised alarm names below as
 - wind
 
 _Example Notification:_
+
 ```javascript
 app.autopilotUpdate('my-pilot', {
   alarm: {
@@ -134,6 +137,7 @@ A provider plugin **MUST** implement **ALL** Autopilot API interface methods, re
 For an operation that is not supported by the autopilot device, then the plugin should `throw` an exception.
 
 _Example:_
+
 ```typescript
 {
     // unsupported operation method definition

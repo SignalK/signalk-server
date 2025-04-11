@@ -42,7 +42,7 @@ Type this in a terminal:
 python -m pydoc gpiod | tail
 ```
 
-If gpiod appears as installed, simply do nothing and go directly to the *Data Connection* section.
+If gpiod appears as installed, simply do nothing and go directly to the _Data Connection_ section.
 
 If it is not installed, type this in a terminal to install the latest version from pip:
 
@@ -65,26 +65,30 @@ _Inspired by [Read SeaTalk1 from the Raspberry Pi GPIO using pigpio](https://git
 Open a terminal and enter the following:
 
 1. Update the package manifest
+
 ```
     sudo apt-get update
 ```
 
 2. Install the software
+
 ```
     sudo apt-get install pigpio python-pigpio python3-pigpio
 ```
 
 3. Enable and start the _pigpio_ [daemon](http://abyz.me.uk/rpi/pigpio/) which handles the data connection.
+
 ```
     sudo systemctl enable pigpiod && sudo systemctl restart  pigpiod
 ```
 
-4. Check the _pigpio_service is running
+4. Check the \_pigpio_service is running
+
 ```
     sudo systemctl status pigpiod
 ```
 
-_Note: The _pigpio_ deamon by default provides a socket interface on port 8888, which may conflict with other software running on your Raspberry Pi. To have the socket interface use another port you will need to change the [pigpiod.service file](http://abyz.me.uk/rpi/pigpio/pigpiod.html) using the [Python program](http://abyz.me.uk/rpi/pigpio/python.html#pigpio.pi) with the -p option._
+_Note: The \_pigpio_ deamon by default provides a socket interface on port 8888, which may conflict with other software running on your Raspberry Pi. To have the socket interface use another port you will need to change the [pigpiod.service file](http://abyz.me.uk/rpi/pigpio/pigpiod.html) using the [Python program](http://abyz.me.uk/rpi/pigpio/python.html#pigpio.pi) with the -p option.\_
 
 ### Data Connection
 
@@ -104,9 +108,9 @@ _Example Data Connection:_
 
 - Enter an _ID_ _(e.g. Seatalk1)_.
 
-- In *GPIO Library*, select the software that is installed on your system as we have seen in the previous section.
+- In _GPIO Library_, select the software that is installed on your system as we have seen in the previous section.
 
-- In _GPIO Pin_, select one of the green GPIO pins from those pictured below _(this will be the pin to which you connect your hardware  e.g. GPIO04)._
+- In _GPIO Pin_, select one of the green GPIO pins from those pictured below _(this will be the pin to which you connect your hardware e.g. GPIO04)._
 
 ![GPIO](./gpio.png)
 
@@ -115,7 +119,6 @@ _Example Data Connection:_
 - Click **Apply** to save your data connection settings.
 
 - Restart the Signal K Server.
-
 
 ### Viewing Received Data
 
