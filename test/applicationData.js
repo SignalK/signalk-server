@@ -11,18 +11,12 @@ const {
   getAdminToken
 } = require('./servertestutilities')
 const fs = require('fs')
-const promisify = require('util').promisify
 const path = require('path')
 const assert = require('assert')
 const rimraf = require('rimraf').rimraf
 
 const APP_ID = 'testApplication'
 const APP_VERSION = '1.0.0'
-
-const TEST_SETTINGS = {
-  something: 100,
-  sometingElse: 'hello'
-}
 
 const tests = [
   {
@@ -32,14 +26,16 @@ const tests = [
       something: 100,
       sometingElse: 'hello'
     }
-  }, {
+  },
+  {
     appid: 'testApplication',
     version: '1.1.1',
     settings: {
       something: 111,
       sometingElse: 'hello 111'
     }
-  }, {
+  },
+  {
     appid: 'anotherApplication',
     version: '2.0.0',
     settings: {
@@ -50,8 +46,7 @@ const tests = [
 ]
 
 describe('Application Data', () => {
-  var server,
-    url,
+  var url,
     port,
     adminToken,
     writeToken,
@@ -93,36 +88,30 @@ describe('Application Data', () => {
   async function post(globalOrUser, token, expected) {
     let server = await start()
     try {
-      for ( const test of tests ) {
-        const req = globalOrUser ?
-              `${url}/signalk/v1/applicationData/global/${test.appid}/${test.version}` :
-              `${url}/signalk/v1/applicationData/user/${test.appid}/${test.version}`
-        var result = await fetch(
-          req,
-          {
-            method: 'POST',
-            headers: {
-              Cookie: `JAUTHENTICATION=${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(test.settings)
-          }
-        )
+      for (const test of tests) {
+        const req = globalOrUser
+          ? `${url}/signalk/v1/applicationData/global/${test.appid}/${test.version}`
+          : `${url}/signalk/v1/applicationData/user/${test.appid}/${test.version}`
+        var result = await fetch(req, {
+          method: 'POST',
+          headers: {
+            Cookie: `JAUTHENTICATION=${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(test.settings)
+        })
         result.status.should.equal(expected)
 
-        if ( globalOrUser ) {
-          result = await fetch(
-            req,
-            {
-              headers: {
-                ...adminHeaders,
-                'Content-Type': 'application/json'
-              }
+        if (globalOrUser) {
+          result = await fetch(req, {
+            headers: {
+              ...adminHeaders,
+              'Content-Type': 'application/json'
             }
-          )
+          })
           result.status.should.equal(200)
           let data = await result.json()
-          if ( expected !== 200 ) {
+          if (expected !== 200) {
             data.should.not.jsonEqual(test.settings)
           } else {
             data.should.jsonEqual(test.settings)
@@ -136,9 +125,16 @@ describe('Application Data', () => {
   }
 
   function readUserData(test, userName) {
-    const userPath = path.join(process.env.SIGNALK_NODE_CONFIG_DIR, 'applicationData', 'users', userName, test.appid, `${test.version}.json`)
+    const userPath = path.join(
+      process.env.SIGNALK_NODE_CONFIG_DIR,
+      'applicationData',
+      'users',
+      userName,
+      test.appid,
+      `${test.version}.json`
+    )
 
-    if ( fs.existsSync(userPath) ) {
+    if (fs.existsSync(userPath)) {
       return JSON.parse(fs.readFileSync(userPath))
     } else {
       return null
@@ -157,7 +153,7 @@ describe('Application Data', () => {
       )
       result.status.should.equal(400)
     }
-    
+
     try {
       await fail('foo/bar', '1.0')
       await fail('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 1.0)
@@ -183,7 +179,7 @@ describe('Application Data', () => {
       await server.stop()
     }
   })
-  
+
   it('post global fails readonly user', async function () {
     await post(true, readToken, 401)
   })
@@ -198,7 +194,7 @@ describe('Application Data', () => {
 
   it('post user data fails readonly user', async function () {
     await post(false, readToken, 401)
-    for (let test of tests ) {
+    for (let test of tests) {
       const data = readUserData(test, 'testuser')
       assert(data === null)
     }
@@ -206,7 +202,7 @@ describe('Application Data', () => {
 
   it('post user data works', async function () {
     await post(false, writeToken, 200)
-    for (let test of tests ) {
+    for (let test of tests) {
       const data = readUserData(test, 'writeuser')
       assert(data !== null)
       data.should.jsonEqual(test.settings)
@@ -216,7 +212,7 @@ describe('Application Data', () => {
   it('json patch works', async function () {
     let server = await start()
     try {
-      for (let test of tests ) {
+      for (let test of tests) {
         var result = await fetch(
           `${url}/signalk/v1/applicationData/user/${test.appid}/${test.version}`,
           {
@@ -231,7 +227,7 @@ describe('Application Data', () => {
           }
         )
         result.status.should.equal(200)
-        
+
         result = await fetch(
           `${url}/signalk/v1/applicationData/user/${test.appid}/${test.version}/testing`,
           {
