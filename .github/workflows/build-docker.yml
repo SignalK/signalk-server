@@ -5,7 +5,6 @@ on:
     branches:
     - master
     - "build-docker"
-    - metadata-editing
     tags:
       - '*'
       - '!v*'
@@ -17,12 +16,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Node setup
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-
       - name: Build npm files locally and upload artifacts
         run: |
           npm cache clean -f
@@ -43,7 +40,6 @@ jobs:
           npm i --save *.tgz
           npm run build
           npm pack
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -52,12 +48,62 @@ jobs:
           path: |
             *.tgz
 
-  build_docker_images:
-    runs-on: ubuntu-latest
-    needs: [signalk-server_npm_files]
+  docker_images:
+    needs: signalk-server_npm_files
+    strategy:
+      matrix:
+        os: [22.04, 24.04]
+        vm: [ubuntu-latest, ubuntu-24.04-arm]
+        include:
+          - vm: ubuntu-latest
+            arch: amd
+            platform: linux/amd64
+          - vm: ubuntu-24.04-arm
+            arch: arm
+            platform: linux/arm64,linux/arm/v7
+    runs-on: ${{ matrix.vm }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: packed-modules
+      - name: Modify Dockerfile for build
+        run: |
+          sed -i \
+            "s|cr.signalk.io/signalk/signalk-server-base:latest|ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}|g" \
+            ./docker/Dockerfile
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ github.run_id }}
+          
+  create-and-push-manifest:
+    needs: docker_images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [22.04, 24.04]
+        include:
+          - os: 24.04
+            suffix: -24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Docker meta
         id: docker_meta
         uses: docker/metadata-action@v5
@@ -68,10 +114,8 @@ jobs:
           tags: |
             type=ref,event=branch
             type=sha
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+          flavor: |
+            suffix=${{ matrix.suffix }}
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -82,16 +126,26 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }} # Personal access tokens (classic) with a scope of "write:packages" is needed to release ghcr.io package registry.
-      - uses: actions/download-artifact@v4
+          password: ${{ secrets.GHCR_PAT }}
+      - name: Create and push multi-arch manifest to GHCR and Docker Hub
+        uses: int128/docker-manifest-create-action@v2
         with:
-          name: packed-modules
+          tags: |
+            ${{ steps.docker_meta.outputs.tags }}
+          sources: |
+            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ github.run_id }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v5
+  housekeeping:
+    needs: create-and-push-manifest
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Remove Docker Image from GHCR
+        uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          context: .
-          file: ./docker/Dockerfile
-          platforms: linux/amd64,linux/arm/v7,linux/arm64
-          push: true
-          tags: ${{ steps.docker_meta.outputs.tags }}
+          packages: signalk-server
+          delete-untagged: true
+          delete-tags: amd-22.04-${{ github.run_id }},arm-22.04-${{ github.run_id }},amd-24.04-${{ github.run_id }},arm-24.04-${{ github.run_id }}
+          token: ${{ secrets.GHCR_PAT }}

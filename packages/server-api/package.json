@@ -1,15 +1,14 @@
 {
   "name": "@signalk/server-api",
-  "version": "2.5.0",
+  "version": "2.6.1",
   "description": "signalk-server Typescript API for plugins etc with relevant implementation classes",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "generate": "ts-auto-guard src/autopilotapi.ts src/weatherapi.ts 2>/dev/null",
-    "build": "npm run generate && tsc --declaration",
+    "build": "npm run generate && tsc -b",
     "watch": "tsc --declaration --watch",
     "prepublishOnly": "npm run build",
-    "typedoc": "typedoc --out docs src",
     "prettier": "prettier -w src/",
     "lint": "eslint --ext .ts --ext .js --fix src/",
     "format": "npm run prettier && npm run lint",
@@ -23,20 +22,7 @@
   "author": "teppo.kurki@iki.fi",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@types/chai": "^4.2.15",
-    "@types/express": "^4.17.1",
-    "@types/mocha": "^10.0.1",
-    "@typescript-eslint/eslint-plugin": "^8.16.0",
-    "chai": "^4.3.0",
-    "eslint": "^8.34.0",
-    "eslint-config-prettier": "^8.6.0",
-    "express": "^4.10.4",
-    "mocha": "^10.2.0",
-    "prettier": "^2.8.4",
-    "ts-auto-guard": "^4.1.4",
-    "ts-node": "^10.9.1",
-    "typedoc": "^0.23.23",
-    "typescript": "^4.1.5"
+    "ts-auto-guard": "^4.1.4"
   },
   "peerDependencies": {
     "baconjs": "^1.0.1"

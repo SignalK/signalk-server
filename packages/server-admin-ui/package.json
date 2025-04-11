@@ -1,6 +1,6 @@
 {
   "name": "@signalk/server-admin-ui",
-  "version": "2.11.0",
+  "version": "2.12.2",
   "description": "Signal K server admin webapp",
   "author": "Scott Bender, Teppo Kurki",
   "contributors": [
@@ -27,7 +27,6 @@
     "buffer": "^6.0.3",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^5.0.0",
-    "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.34.1",
     "file-loader": "^6.1.1",
     "font-awesome": "^4.7.0",
@@ -38,12 +37,11 @@
     "lodash.set": "^4.3.2",
     "lodash.uniq": "^4.5.0",
     "moment": "^2.29.1",
-    "prettier": "^2.3.2",
     "react": "^16.13.1",
     "react-copy-to-clipboard": "^5.0.3",
     "react-dom": "^16.13.1",
     "react-html-parser": "^2.0.2",
-    "react-json-tree": "^0.13.0",
+    "react-json-tree": "^0.20.0",
     "react-jsonschema-form-bs4": "^1.7.1",
     "react-redux": "^5.1.2",
     "react-router-dom": "^4.3.1",
@@ -61,7 +59,7 @@
     "webpack-cli": "^4.2.0"
   },
   "scripts": {
-    "prepublishOnly": "npm run clean && npm run build",
+    "prepublishOnly": "npm run build",
     "watch": "webpack --watch --mode development",
     "build": "webpack --mode=production",
     "format": "prettier --write src/",

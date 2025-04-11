@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import JSONTree from 'react-json-tree'
+import { JSONTree } from 'react-json-tree'
 import {
   Card,
   CardHeader,
@@ -420,7 +420,9 @@ class DataBrowser extends Component {
                             <tr key={path}>
                               <td>{path}</td>
                               <td>
-                                <Meta meta={meta || {}} path={path} />
+                                {!path.startsWith('notifications') && (
+                                  <Meta meta={meta || {}} path={path} />
+                                )}
                               </td>
                             </tr>
                           )
@@ -439,6 +441,7 @@ class DataBrowser extends Component {
               <JSONTree
                 data={this.state.sources}
                 theme="default"
+                invertTheme={true}
                 sortObjectKeys
                 hideRoot
               />

@@ -18,12 +18,14 @@
 import { spawn } from 'child_process'
 import fs from 'fs'
 import _ from 'lodash'
-import fetch, { Response } from 'node-fetch'
+import fetch from 'node-fetch'
 import path from 'path'
 import semver, { SemVer } from 'semver'
 import { Config } from './config/config'
 import { createDebug } from './debug'
+import { nextTick } from 'process'
 const debug = createDebug('signalk:modules')
+const npmDebug = createDebug('signalk:modules:npm')
 
 interface ModuleData {
   module: string
@@ -42,15 +44,11 @@ interface NpmModuleData {
   package: NpmPackageData
 }
 
-interface PersonInPackage {
-  name: string
-  email: string
-}
-
 export interface Package {
   name: string
-  author?: PersonInPackage
-  contributors?: PersonInPackage[]
+  publisher?: {
+    username: string
+  }
   dependencies: { [key: string]: any }
   version: string
   description: string
@@ -211,50 +209,85 @@ function isTheServerModule(moduleName: string, config: Config) {
   return moduleName === config.name
 }
 
-function findModulesWithKeyword(keyword: string) {
+const modulesByKeyword: { [key: string]: any } = {}
+
+function findModulesWithKeyword(keyword: string): Promise<NpmModuleData[]> {
+  return new Promise<NpmModuleData[]>((resolve, reject) => {
+    if (
+      modulesByKeyword[keyword] &&
+      Date.now() - modulesByKeyword[keyword].time < 60 * 1000
+    ) {
+      resolve(modulesByKeyword[keyword].packages)
+      return
+    }
+
+    searchByKeyword(keyword)
+      .then((moduleData) => {
+        npmDebug(
+          `npm search returned ${moduleData.length} modules with keyword ${keyword}`
+        )
+        const result = moduleData.reduce(
+          (
+            acc: { [packageName: string]: NpmModuleData },
+            module: NpmModuleData
+          ) => {
+            const name = module.package.name
+            if (
+              !acc[name] ||
+              semver.gt(module.package.version, acc[name].package.version)
+            ) {
+              acc[name] = module
+            }
+            return acc
+          },
+          {}
+        )
+        const packages = _.values(result)
+        modulesByKeyword[keyword] = {
+          time: Date.now(),
+          packages
+        }
+        resolve(packages)
+      })
+      .catch((e) => {
+        reject(e)
+      })
+  })
+}
+
+function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
   return new Promise((resolve, reject) => {
-    let errorCount = 0
-    const result = {}
-    const handleResultWithTimeout = (fetchResult: Promise<Response>): void => {
-      fetchResult
+    let fetchedCount = 0
+    let toFetchCount = 1
+    let moduleData: NpmModuleData[] = []
+    const npmFetch = () => {
+      npmDebug(
+        `searching ${keyword} from ${fetchedCount + 1} of ${toFetchCount}`
+      )
+      fetch(
+        `https://registry.npmjs.org/-/v1/search?size=250&from=${
+          fetchedCount > 0 ? fetchedCount : 0
+        }&text=keywords:${keyword}`
+      )
         .then((r) => r.json())
         .then((parsed) => {
-          const data = parsed.results || parsed.objects || []
-          data.reduce(
-            (
-              acc: { [packageName: string]: NpmModuleData },
-              module: NpmModuleData
-            ) => {
-              const name = module.package.name
-              if (
-                !acc[name] ||
-                semver.gt(module.package.version, acc[name].package.version)
-              ) {
-                acc[name] = module
-              }
-              return acc
-            },
-            result
-          )
-          resolve(_.values(result))
-        })
-        .catch((e) => {
-          if (errorCount++) {
-            reject(e)
+          moduleData = moduleData.concat(parsed.objects)
+          fetchedCount += parsed.objects.length
+          toFetchCount = parsed.total
+          if (fetchedCount < toFetchCount) {
+            nextTick(() => npmFetch())
+          } else {
+            resolve(moduleData)
           }
         })
+        .catch(reject)
     }
-    ;[
-      fetch(
-        'http://registry.npmjs.org/-/v1/search?size=250&text=keywords:' +
-          keyword
-      )
-    ].forEach(handleResultWithTimeout)
+    npmFetch()
   })
 }
 
 function doFetchDistTags() {
-  return fetch('http://registry.npmjs.org/-/package/signalk-server/dist-tags')
+  return fetch('https://registry.npmjs.org/-/package/signalk-server/dist-tags')
 }
 
 function getLatestServerVersion(
@@ -302,22 +335,52 @@ export function checkForNewServerVersion(
 }
 
 export function getAuthor(thePackage: Package): string {
-  debug(thePackage.name + ' author: ' + thePackage.author)
-  return (
-    (thePackage.author && (thePackage.author.name || thePackage.author.email)) +
-    '' +
-    (thePackage.contributors || [])
-      .map((contributor: any) => contributor.name || contributor.email)
-      .join(',') +
-    '' +
-    (thePackage.name.startsWith('@signalk/') ? ' (Signal K team)' : '')
-  )
+  return `${thePackage.publisher?.username}${
+    thePackage.name.startsWith('@signalk/') ? ' (Signal K team)' : ''
+  }`
 }
 
 export function getKeywords(thePackage: NpmPackageData): string[] {
   const keywords = thePackage.keywords
   debug('%s keywords: %j', thePackage.name, keywords)
   return keywords
+}
+
+export async function importOrRequire(moduleDir: string) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require(moduleDir)
+
+    // Starting with version 20.19.0 and 22 Node will load ESM modules with require
+    // https://nodejs.org/en/blog/release/v20.19.0
+    return mod.default ?? mod
+  } catch (err) {
+    debug(`Failed to require("${moduleDir}") module, trying import()`)
+
+    // `import()` only works with file paths or npm module names. It can't
+    // directly load a path to a directory. One solution would be to refactor
+    // module loading to update `NODE_PATH` with plugin directories, and
+    // then import/require them here using just their module name (e.g.
+    // `import("@signalk/plugin-name")`), which would allow NodeJS to resolve
+    // and load the module. This would be a little more extensive refactoring
+    // that may be worth while once the whole project is entirely using ESM.
+    // For now, this `esm-resolve` package work
+
+    const { buildResolver } = await import('esm-resolve')
+    const resolver = buildResolver(moduleDir, {
+      isDir: true,
+      resolveToAbsolute: true
+    })
+    const modulePath = resolver('.')
+
+    if (modulePath) {
+      const module = await import(modulePath)
+      return module.default
+    } else {
+      // Could not resolve, throw the original error.
+      throw err
+    }
+  }
 }
 
 module.exports = {
@@ -330,5 +393,6 @@ module.exports = {
   checkForNewServerVersion,
   getAuthor,
   getKeywords,
-  restoreModules
+  restoreModules,
+  importOrRequire
 }

@@ -102,7 +102,7 @@ const dummyApp = {
   put: () => {}
 }
 
-const securityStrategy = require('../lib/tokensecurity')(
+const securityStrategy = require('../dist/tokensecurity')(
   dummyApp,
   securitySettings
 )

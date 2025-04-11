@@ -28,7 +28,7 @@ if (!semver.satisfies(process.version, minimumVersion)) {
   console.warn(`The installed version of node (${process.version}) is different than the recommended version (${recommendedVersion}). See https://github.com/SignalK/signalk-server/wiki/Installing-and-Updating-Node.js for more information how to upgrade.`);
 } 
 
-const Server = require('../lib')
+const Server = require('../dist')
 const server = new Server()
 
 process.on('uncaughtException', err => {

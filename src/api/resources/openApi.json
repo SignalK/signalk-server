@@ -406,7 +406,7 @@
             "$ref": "#/components/schemas/NoteBaseModel"
           }
         ],
-        "oneOf": [
+        "anyOf": [
           {
             "$ref": "#/components/schemas/HrefAttribute"
           },
@@ -795,6 +795,17 @@
           "example": [135.5, -25.2]
         }
       },
+      "ZoomParam": {
+        "in": "query",
+        "name": "zoom",
+        "description": "Zoom level of the map used by the client to display the returned resource entries. Refer: [OSM Zoom Levels](https://wiki.openstreetmap.org/wiki/Zoom_levels)",
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 1,
+          "example": 4
+        }
+      },
       "ProviderParam": {
         "in": "query",
         "name": "provider",
@@ -828,7 +839,7 @@
         "summary": "Retrieve list of available resource types",
         "responses": {
           "default": {
-            "description": "List of avaialble resource types identified by name",
+            "description": "List of available resource types identified by name",
             "content": {
               "application/json": {
                 "schema": {
@@ -872,6 +883,9 @@
           },
           {
             "$ref": "#/components/parameters/PositionParam"
+          },
+          {
+            "$ref": "#/components/parameters/ZoomParam"
           }
         ],
         "responses": {
@@ -1002,6 +1016,9 @@
           },
           {
             "$ref": "#/components/parameters/PositionParam"
+          },
+          {
+            "$ref": "#/components/parameters/ZoomParam"
           }
         ],
         "responses": {
@@ -1132,6 +1149,9 @@
           },
           {
             "$ref": "#/components/parameters/PositionParam"
+          },
+          {
+            "$ref": "#/components/parameters/ZoomParam"
           }
         ],
         "responses": {
@@ -1262,6 +1282,9 @@
           },
           {
             "$ref": "#/components/parameters/PositionParam"
+          },
+          {
+            "$ref": "#/components/parameters/ZoomParam"
           },
           {
             "name": "href",

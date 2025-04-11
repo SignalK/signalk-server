@@ -34,7 +34,7 @@ let disableWriteSettings = false
 
 // use dynamic path so that ts compiler does not detect this
 // json file, as ts compile needs to copy all (other) used
-// json files under /lib
+// json files under /dist
 // tslint:disable-next-line
 const packageJson = require('../../' + 'package.json')
 

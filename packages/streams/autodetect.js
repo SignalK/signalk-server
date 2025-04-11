@@ -143,6 +143,12 @@ require('util').inherits(ToTimestamped, Transform)
 // runs only once, self-assigns the actual transform functions
 // on first call
 ToTimestamped.prototype._transform = function (msg, encoding, done) {
+  //ignore empty lines in the beginning of the file, encountered in some cases
+  if (msg.trim().length === 0) {
+    done()
+    return
+  }
+
   const line = msg.toString()
   this.multiplexedFormat =
     line.length > 16 && line.charAt(13) === ';' && line.split(';').length >= 3

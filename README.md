@@ -37,11 +37,11 @@ For Marine vendors who build marine hardware and software, for example those dev
 Signal K Server is already running inside products developed by Victron Energy, Airmar Technology and others.
 
 ### Software Developers & Boat Electronics Hobbyists
-There are many boaters who happen to be highly skilled software developers and engineers, who want to build software for themselves and share with others. If you are one of them, Signal K offers you a free, modern and open platform developed by boaters for other boaters like you. Signal K Server features an extensible [plugin framework](./docs/src/develop/plugins/server_plugin.md), [web applications](./docs/src/develop/webapps.md) as well as a rich set of [REST](https://signalk.org/specification/1.7.0/doc/rest_api.html) and [Streaming APIs](https://signalk.org/specification/1.7.0/doc/streaming_api.html).
+There are many boaters who happen to be highly skilled software developers and engineers, who want to build software for themselves and share with others. If you are one of them, Signal K offers you a free, modern and open platform developed by boaters for other boaters like you. Signal K Server features an extensible [plugin framework](./docs/develop/plugins/README.md), [web applications](./docs/develop/webapps.md) as well as a rich set of [REST](https://signalk.org/specification/1.7.0/doc/rest_api.html) and [Streaming APIs](https://signalk.org/specification/1.7.0/doc/streaming_api.html).
 
 Signal K Server takes care of all the complicated parts of protocol decode, and conversions to and from NMEA2000, NMEA0183 and many more protocols. It can also act as data hub for additional sensors, see the [Signal K SensESP project](https://github.com/SignalK/SensESP) for [ESP32](https://en.wikipedia.org/wiki/ESP32).
 
-Signal K Server makes the data available in JSON format according to the [Signal K standard specification](https://signalk.org/specification/latest/). This allows developers to bypass all the hurdles typically encountered when wanting to implement something for a boat. [Getting started with a plugin](./docs/src/develop/plugins/server_plugin.md#getting-started-with-plugin-development) is surprisingly easy.
+Signal K Server makes the data available in JSON format according to the [Signal K standard specification](https://signalk.org/specification/latest/). This allows developers to bypass all the hurdles typically encountered when wanting to implement something for a boat. [Getting started with a plugin](./docs/develop/plugins/README.md#getting-started-with-plugin-development) is surprisingly easy.
 
 ## Signal K Platform
 
@@ -79,13 +79,17 @@ You can run Signal K Server in Docker:
 
 * [Docker quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/docker/README.md#quickstart)
 
+Or in a Kubernetes cluster:
+
+* [Kubernetes quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/kubernetes/README.md#quickstart)
+
 And an installer for Windows:
 
 * [https://github.com/SignalK/signalk-server-windows](https://github.com/SignalK/signalk-server-windows)
 
 Another level up, this document explains how to install Signal K Server, as well as its dependencies, on a RaspberryPi that is already running Raspberry Pi OS:
 
-* [Installation on a RaspberryPi](./docs/src/installation/raspberry_pi_installation.md)
+* [Installation on a RaspberryPi](./docs/installation/raspberry_pi_installation.md)
 
 Last, here is how to install the Signal K Server application from NPM:
 
@@ -173,7 +177,7 @@ After the restart, the new Plugin needs to be enabled and configured. See the Se
 
 ![image](https://user-images.githubusercontent.com/5200296/226482099-b9dd46ff-72a6-44e4-b384-1d15a4621e63.png)
 
-You can change the admin application's top left logo by placing a SVG file named `logo.svg` in the settings directory (default: $HOME/.signalk/).
+You can change the admin application's top left logo by placing a SVG file named `logo.svg` in the settings directory (default: $HOME/.signalk/). You can also provide a minimized square version of the logo in a file named `logo-minimized.svg` that will be shown when the sidebar is minimized.
 
 ### Server Log
 
@@ -195,38 +199,15 @@ To enable debugging without going through the Admin UI, see the file `~/.signalk
 
 ## Development
 
-### Further reading
-
 The documents provide more details about developing Webapps or Plugings for Signal K Server, as well as working on the server itself:
 
-* [Contributing to this repo](docs/src/develop/contributing.md)
-* [Server Plugins](docs/src/develop/plugins/server_plugin.md)
-* [Webapps](docs/src/develop/webapps.md)
-* [Working with the Course API](docs/src/develop/rest-api/course_api.md)
-* [Working with the Resources API](docs/src/develop/rest-api/resources_api.md)
-* [Resource Provider Plugins](docs/src/develop/plugins/resource_provider_plugins.md)
-* [Security](docs/src/security.md)
-
-### Install from git
-
-```
-git clone https://github.com/SignalK/signalk-server.git
-cd signalk-server
-npm install
-npm run build:all
-```
-
-Start the server with sample data:
-* NMEA0183 sample data: `bin/nmea-from-file`
-* NMEA2000 sample data: `bin/n2k-from-file`
-
-This will start the server with a sample configuration file and the server will start playing back data from a sample file under `samples/`. The data is available immediately via the REST interface at https://localhost:3000/signalk/v1/api/.
-
-This small demo shows how to connect the Signal K Server WebSocket interface from the command line:
-```
-npm install -g wscat2
-wscat 'ws://localhost:3000/signalk/v1/stream?subscribe=all'
-```
+* [Contributing to this repo](docs/develop/contributing.md)
+* [Server Plugins](docs/develop/plugins/README.md)
+* [Webapps](docs/develop/webapps.md)
+* [Working with the Course API](docs/develop/rest-api/course_api.md)
+* [Working with the Resources API](docs/develop/rest-api/resources_api.md)
+* [Resource Provider Plugins](docs/develop/plugins/resource_provider_plugins.md)
+* [Security](docs/security.md)
 
 ## Sponsoring Signal K
 

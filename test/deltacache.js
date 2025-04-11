@@ -3,9 +3,6 @@ chai.Should()
 chai.use(require('chai-things'))
 chai.use(require('@signalk/signalk-schema').chaiModule)
 const _ = require('lodash')
-const freeport = require('freeport-promise')
-const { startServerP, sendDelta } = require('./servertestutilities')
-const { COURSE_API_INITIAL_DELTA_COUNT } = require('../lib/api/course/')
 import { startServer } from './ts-servertestutilities'
 
 const testDelta = {

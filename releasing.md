@@ -2,7 +2,7 @@
 
 ### (0) Update submodule versions
 
-Update package.jsons of individual modules under `packages` as well as dependent module package.jsons.
+Update package.jsons of individual modules under `packages` as well as dependent module package.jsons and root package.json.
 
 Npm Packages are:
 - @signalk/server-admin-ui-dependencies
@@ -12,10 +12,11 @@ Npm Packages are:
 - @signalk/resources-provider
 - signalk-server
 
-### (1) Update package.json and git tag using npm version
+### (1) create new server version
 ```
-npm version [<newversion> | major | minor | patch | premajor | preminor | prepatch | prerelease | from-git]
+npm version major | minor | patch
 ```
+This will update root package.json, commit the change and create the version git tag. Then push master & the tag to Github with `git push && git push --tags` and GH Actions will take care of the rest.
 
 *Prerelease versions*
 

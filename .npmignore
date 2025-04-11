@@ -61,7 +61,7 @@ letsencrypt
 docker
 
 test
-lib/**/*.test.js*
+dist/**/*.test.js*
 
 packages
 
@@ -74,6 +74,5 @@ bin/linkpackages
 fly_io
 .github
 
-docs/src
-docs/book.toml
-docs/server-guide/**/*.dia
+/docs/*
+!/docs/dist

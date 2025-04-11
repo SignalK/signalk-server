@@ -4,7 +4,7 @@ Signalk-server can run in Docker and kubernetes. The following steps provide a g
 
 ## Preparations
 Checkout the Signalk source:
-```bash
+```shell
 $ git clone https://github.com/SignalK/signalk-server-node.git
 $ cd signalk-server-node
 ```
@@ -12,12 +12,12 @@ $ cd signalk-server-node
 ## Docker
 First we build a Docker image with the name "signalk":
 
-```bash
+```shell
 $ docker build -t signalk .
 ```
 
 Then we can run it:
-```bash
+```shell
 $ docker run --publish 3100:3000 --name signalk signalk
 ```
 
@@ -30,14 +30,14 @@ Once the Docker image has been made, it can be deployed to Kubernetes.
 
 For this we first tag the Docker image so we can upload it to a remote registy. E.g:
 
-```bash
+```shell
 $ docker tag signalk gcr.io/wouterdebie-personal/signalk
 ```
 
 The format for the tag is `<REGISTRY>/<PROJECT>/<APPLICATION>`
 
 After that we can push the image to the registry:
-```bash
+```shell
 $ docker push gcr.io/wouterdebie-personal/signalk
 ```
 
@@ -45,7 +45,7 @@ Edit `kubernetes/signalk-deployment.yaml` and set the correct image that is supp
 
 Once the image is pushed, we can deploy the application (this assumes kubernetes is properly setup):
 
-```bash
+```shell
 $ kubectl create -f kubernetes/signalk-deployment.yaml
 ```
 
@@ -55,7 +55,7 @@ This deployment specification does a few things:
 - It creates a `Service` that exposes the application on a public IP on port 80.
 
 To check the external IP of the application:
-```bash
+```shell
 $ kubectl get service
 NAME         TYPE           CLUSTER-IP    EXTERNAL-IP    PORT(S)        AGE
 kubernetes   ClusterIP      10.12.0.1     <none>         443/TCP        27h
@@ -63,4 +63,3 @@ signalk      LoadBalancer   10.12.12.44   <EXTERNAL_IP>  80:31381/TCP   26m
 ```
 
 Test your setup by going to http://<EXTERNAL_IP>
-

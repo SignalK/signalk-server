@@ -102,13 +102,26 @@ module.exports = function (
       '/admin/fonts/signal-k-logo-image-text.*',
       (req: Request, res: Response) => res.sendFile(logopath)
     )
+
+    // Check for custom logo for minimized sidebar, otherwise use the existing logo.
+    const minimizedLogoPath = path.resolve(
+      app.config.configPath,
+      'logo-minimized.svg'
+    )
+    const minimizedLogo = fs.existsSync(minimizedLogoPath)
+      ? minimizedLogoPath
+      : logopath
+    app.use(
+      '/admin/fonts/signal-k-logo-image.*',
+      (req: Request, res: Response) => res.sendFile(minimizedLogo)
+    )
   }
 
   // mount before the main /admin
   mountSwaggerUi(app, '/doc/openapi')
 
   // mount server-guide
-  app.use('/documentation', express.static(__dirname + '/../docs/built'))
+  app.use('/documentation', express.static(__dirname + '/../docs/dist'))
 
   app.get('/admin/', (req: Request, res: Response) => {
     fs.readFile(
