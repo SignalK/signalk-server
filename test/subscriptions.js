@@ -1,7 +1,7 @@
 const _ = require('lodash')
 const assert = require('assert')
-const {sendDelta} = require('./servertestutilities')
-const freeport = require('freeport-promise')
+const { sendDelta } = require('./servertestutilities')
+const { freeport } = require('./ts-servertestutilities')
 const { startServerP, WsPromiser } = require('./servertestutilities')
 
 function getDelta (overwrite) {

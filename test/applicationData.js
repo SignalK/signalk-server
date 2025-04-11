@@ -3,7 +3,7 @@ chai.Should()
 chai.use(require('chai-things'))
 chai.use(require('chai-json-equal'))
 const fetch = require('node-fetch')
-const freeport = require('freeport-promise')
+const { freeport } = require('./ts-servertestutilities')
 const {
   startServerP,
   getReadOnlyToken,
