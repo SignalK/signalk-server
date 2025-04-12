@@ -159,7 +159,7 @@
     "chai": "^4.3.0",
     "chai-json-equal": "0.0.1",
     "chai-things": "^0.2.0",
-    "eslint": "^8.57.0",
+    "eslint": "^9.24.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prefer-arrow": "^1.2.3",
     "eslint-plugin-react": "^7.31.8",
