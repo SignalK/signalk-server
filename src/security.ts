@@ -192,7 +192,10 @@ export interface SecurityStrategy {
     path: string
   ) => boolean
 
-  addAdminMiddleware: (path: string) => void
+  addAdminMiddleware(path: string): void
+  addAdminWriteMiddleware(path: string): void
+  addWriteMiddleware(path: string): void
+  canAuthorizeWS(): boolean
 }
 
 export class InvalidTokenError extends Error {
@@ -390,3 +393,15 @@ export type SecurityConfigSaver = (
   cb: (err: any) => void
 ) => void
 export type SecurityConfigGetter = (app: any) => any
+
+export type Principal = {
+  identifier: string
+  permissions: 'admin' | 'readonly' | 'readwrite'
+}
+
+// Add skPrincipal to the Request interface
+declare module 'express-serve-static-core' {
+  interface Request {
+    skPrincipal: Principal
+  }
+}
