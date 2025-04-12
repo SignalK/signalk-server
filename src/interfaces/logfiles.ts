@@ -14,32 +14,33 @@
  * limitations under the License.
 */
 
-const moment = require('moment')
-const path = require('path')
-const { getFullLogDir, listLogFiles } = require('@signalk/streams/logging')
+import moment from 'moment'
+import path from 'path'
+import { getFullLogDir, listLogFiles } from '@signalk/streams/logging'
 import { SERVERROUTESPREFIX } from '../constants'
+import { ServerApp } from '../app'
 
-module.exports = function (app) {
+module.exports = function (app: ServerApp) {
   return {
-    start: function () {
+    start() {
       mountApi(app)
     },
-    stop: () => undefined
+
+    stop() {}
   }
 }
 
-function mountApi(app) {
+function mountApi(app: ServerApp) {
   app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/logfiles/`)
-  app.get(`${SERVERROUTESPREFIX}/logfiles/`, function (req, res) {
-    listLogFiles(app, (err, files) => {
-      if (err) {
-        console.error(err)
-        res.status(500)
-        res.json('Error reading logfiles list')
-        return
-      }
+  app.get(`${SERVERROUTESPREFIX}/logfiles/`, async function (_, res) {
+    try {
+      const files = await listLogFiles(app)
       res.json(files)
-    })
+    } catch (err) {
+      console.error(err)
+      res.status(500)
+      res.json('Error reading logfiles list')
+    }
   })
   app.get(`${SERVERROUTESPREFIX}/logfiles/:filename`, function (req, res) {
     const sanitizedFilename = req.params.filename.replaceAll(/\.\.(\\|\/)/g, '')
@@ -62,4 +63,19 @@ function mountApi(app) {
       filename: zipFileName + '.zip'
     })
   })
+}
+
+// Add `res.zip` method to the Response interface
+declare module 'express-serve-static-core' {
+  type ZipOptions = {
+    filename: string
+    files: {
+      path: string
+      name: string
+    }[]
+  }
+
+  interface Response {
+    zip(opts: ZipOptions): void
+  }
 }

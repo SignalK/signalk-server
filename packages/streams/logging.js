@@ -17,7 +17,7 @@
 const { FileTimestampStream } = require('file-timestamp-stream')
 const path = require('path')
 let debug = require('debug')('signalk:streams:logging')
-const fs = require('fs')
+const { readdir, unlink } = require('fs/promises')
 const { isUndefined } = require('lodash')
 
 const filenamePattern = /skserver-raw_\d\d\d\d-\d\d-\d\dT\d\d\.log/
@@ -52,10 +52,11 @@ class FileTimestampStreamWithDelete extends FileTimestampStream {
 
   deleteOldFiles() {
     debug(`Checking for old log files`)
-    listLogFiles(this.app, (err, files) => {
-      if (err) {
+    listLogFiles(this.app)
+      .catch((err) => {
         console.error(err)
-      } else {
+      })
+      .then(async (files) => {
         if (files.length > this.filesToKeep) {
           const sortedFiles = files.sort()
           const numToDelete = files.length - this.filesToKeep
@@ -63,17 +64,15 @@ class FileTimestampStreamWithDelete extends FileTimestampStream {
           for (let i = 0; i < numToDelete; i++) {
             const fileName = path.join(this.fullLogDir, sortedFiles[i])
             debug(`Deleting ${fileName}`)
-            fs.unlink(fileName, (err) => {
-              if (err) {
-                console.error(err)
-              } else {
-                debug(`${fileName} was deleted`)
-              }
-            })
+            try {
+              await unlink(fileName)
+              debug(`${fileName} was deleted`)
+            } catch (err) {
+              console.error(err)
+            }
           }
         }
-      }
-    })
+      })
   }
 }
 
@@ -135,15 +134,7 @@ function getFullLogDir(app, logdir) {
     : path.join(app.config.configPath, logdir)
 }
 
-function listLogFiles(app, cb) {
-  fs.readdir(getFullLogDir(app), (err, files) => {
-    if (!err) {
-      cb(
-        undefined,
-        files.filter((filename) => filename.match(filenamePattern))
-      )
-    } else {
-      cb(err)
-    }
-  })
+async function listLogFiles(app) {
+  const files = await readdir(getFullLogDir(app))
+  return files.filter((filename) => filename.match(filenamePattern))
 }
