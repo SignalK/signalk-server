@@ -13,7 +13,7 @@
     "lint": "eslint --ext .ts --ext .js --fix src/",
     "format": "npm run prettier && npm run lint",
     "ci-lint": "eslint --ext .ts --ext .js src/ && prettier --check src/",
-    "test": "mocha --require ts-node/register src/**/*.test.ts && npm run ci-lint"
+    "test": "mocha src/**/*.test.ts && npm run ci-lint"
   },
   "repository": {
     "type": "git",
