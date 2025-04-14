@@ -372,7 +372,7 @@ class DataBrowser extends Component {
                               <td>{units}</td>
                               <td>{data.timestamp}</td>
                               <td>
-                                <CopyToClipboardWithFade text={data.path}>
+                                <CopyToClipboardWithFade text={data.$source}>
                                   {data.$source} <i className="far fa-copy"></i>
                                 </CopyToClipboardWithFade>{' '}
                                 {data.pgn || ''}
