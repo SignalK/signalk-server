@@ -24,7 +24,7 @@ import _ from 'lodash'
 import path from 'path'
 import semver from 'semver'
 import { v4 as uuidv4 } from 'uuid'
-import { SelfIdentity, SignalKMessageHub, WithConfig } from '../app'
+import { ServerApp, SignalKMessageHub, WithConfig } from '../app'
 import { createDebug } from '../debug'
 import DeltaEditor from '../deltaeditor'
 import { getExternalPort } from '../ports'
@@ -84,7 +84,7 @@ export interface Config {
   defaults: object
 }
 
-export interface ConfigApp extends WithConfig, SelfIdentity, SignalKMessageHub {
+export interface ConfigApp extends ServerApp, WithConfig, SignalKMessageHub {
   argv: any
   env: any
 }

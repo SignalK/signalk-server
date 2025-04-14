@@ -23,8 +23,10 @@ if (typeof [].includes !== 'function') {
 }
 
 import {
+  Context,
   Delta,
   DeltaInputHandler,
+  Path,
   PropertyValues,
   SKVersion,
   SignalKApiId,
@@ -39,13 +41,7 @@ import https from 'https'
 import _ from 'lodash'
 import path from 'path'
 import { startApis } from './api'
-import {
-  SelfIdentity,
-  ServerApp,
-  SignalKMessageHub,
-  WithConfig,
-  WithFeatures
-} from './app'
+import { ServerApp, SignalKMessageHub, WithConfig, WithFeatures } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
@@ -58,6 +54,7 @@ import {
   getCertificateOptions,
   getSecurityConfig,
   saveSecurityConfig,
+  SecurityConfig,
   startSecurity,
   WithSecurityStrategy
 } from './security.js'
@@ -73,13 +70,8 @@ const debug = createDebug('signalk-server')
 
 import { StreamBundle } from './streambundle'
 
-interface ServerOptions {
-  securityConfig: any
-}
-
 class Server {
   app: ServerApp &
-    SelfIdentity &
     WithConfig &
     WithFeatures &
     SignalKMessageHub &
@@ -91,7 +83,7 @@ class Server {
       apis?: Array<SignalKApiId>
     }
 
-  constructor(opts: ServerOptions) {
+  constructor(opts: { securityConfig: SecurityConfig }) {
     const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
     const bodyParser = require('body-parser')
     const app = express() as any
@@ -274,7 +266,7 @@ class Server {
 
     app.handleMessage = (
       providerId: string,
-      data: any,
+      data: Partial<Delta>,
       skVersion = SKVersion.v1
     ) => {
       if (data && data.updates) {
@@ -284,7 +276,7 @@ class Server {
           typeof data.context === 'undefined' ||
           data.context === 'vessels.self'
         ) {
-          data.context = 'vessels.' + app.selfId
+          data.context = ('vessels.' + app.selfId) as Context
         }
         const now = new Date()
         data.updates.forEach((update: Update) => {
@@ -383,12 +375,12 @@ class Server {
       }
       const msg = `A new version (${newVersion}) of the server is available`
       console.log(msg)
-      app.handleMessage(app.config.name, {
+      app.handleMessage(app.config.name as Path, {
         updates: [
           {
             values: [
               {
-                path: 'notifications.server.newVersion',
+                path: 'notifications.server.newVersion' as Path,
                 value: {
                   state: 'normal',
                   method: [],

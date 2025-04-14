@@ -4,13 +4,26 @@ export interface WithContext {
   context: Context
 }
 
-export interface NormalizedDelta extends WithContext {
+/** @inline - Not exported as part of the public API */
+type NormalizedBaseDelta = {
+  context: Context
   $source: SourceRef
   source: Source
   path: Path
-  value: Value
-  isMeta: boolean
+  timestamp: Timestamp
 }
+
+export type NormalizedMetaDelta = NormalizedBaseDelta & {
+  value: MetaValue
+  isMeta: true
+}
+
+export type NormalizedValueDelta = NormalizedBaseDelta & {
+  value: Value
+  isMeta: false
+}
+
+export type NormalizedDelta = NormalizedValueDelta | NormalizedMetaDelta
 
 export type SourceRef = Brand<string, 'sourceRef'>
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,18 +34,6 @@ export type Timestamp = Brand<string, 'timestamp'>
 export type Context = Brand<string, 'context'>
 
 export type Value = object | number | string | null | Notification | boolean
-
-// Delta subscription
-export interface DeltaSubscription {
-  context: Context
-  subscribe: Array<{
-    path: Path
-    period: number
-    format: 'delta' | 'full'
-    policy: 'instant' | 'ideal' | 'fixed'
-    minPeriod: number
-  }>
-}
 
 export interface Delta {
   context?: Context
@@ -94,11 +95,8 @@ export interface MetaValue {
     lower: number
     upper: number
   }
-  zones?: {
-    upper: number
-    lower: number
-    state: string
-  }[]
+  zones?: Zone[]
+  supportsPut?: boolean
 }
 
 // Notification attribute types
@@ -114,4 +112,11 @@ export enum ALARM_STATE {
 export enum ALARM_METHOD {
   visual = 'visual',
   sound = 'sound'
+}
+
+export interface Zone {
+  lower: number | undefined
+  upper: number | undefined
+  state: ALARM_STATE
+  message: string
 }
