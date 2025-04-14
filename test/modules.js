@@ -40,10 +40,12 @@ describe('modulesWithKeyword', () => {
     )
     fs.mkdirSync(installedModuleDirectory)
 
-    const fakeInstalledModulePackageJson = require(path.join(
-      app.config.appPath,
-      `node_modules/${updateInstalledModule}/package.json`
-    ))
+    const fakeInstalledModulePackageJson = require(
+      path.join(
+        app.config.appPath,
+        `node_modules/${updateInstalledModule}/package.json`
+      )
+    )
     fakeInstalledModulePackageJson.version = '1000.0.0'
     fs.writeFileSync(
       path.join(installedModuleDirectory, 'package.json'),

@@ -11,7 +11,7 @@ import {
   InputGroup,
   InputGroupAddon,
   InputGroupText,
-  Label,
+  Label
 } from 'reactstrap'
 import { Link } from 'react-router-dom'
 import { connect } from 'react-redux'
@@ -24,7 +24,7 @@ class Login extends Component {
     super(props)
     this.state = {
       loggingIn: false,
-      loginErrorMessage: null,
+      loginErrorMessage: null
     }
     this.handleInputChange = this.handleInputChange.bind(this)
     this.handleInputKeyUp = this.handleInputKeyUp.bind(this)
@@ -42,7 +42,7 @@ class Login extends Component {
       (error) => {
         this.setState({
           loggingIn: false,
-          loginErrorMessage: error,
+          loginErrorMessage: error
         })
       }
     )

@@ -3,7 +3,7 @@ name: Release - build & publish modules and server, build & publish docker conta
 on:
   push:
     tags:
-    - 'v*'
+      - 'v*'
   workflow_dispatch:
 
 jobs:

@@ -13,6 +13,7 @@ Get a list of installed plugins and their configuration data.
 Get information from an installed plugin.
 
 Example result:
+
 ```json
 {
   "enabled": false,

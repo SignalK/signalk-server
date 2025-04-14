@@ -11,7 +11,6 @@ Additionally your device's operating system are constantly evolving to address s
 
 Regularly updating your installation will reduce both the volume of data download and the time taken to complete the process. Connecting your device to a network with good broadband speed before performing an update is recommended.
 
-
 Updates fall into four categories:
 
 1. Device Operating system (e.g. RaspberryPi OS)
@@ -19,12 +18,12 @@ Updates fall into four categories:
 1. Signal K Server
 1. Signal K WebApps and Plugins
 
-
 ## Update Device Operating System
 
 Instructions will vary depending on your device but for linux based systems such as the Raspberry Pi the following instrctions are used to update the OS.
 
 From a terminal window enter the following commands:
+
 ```shell
 sudo apt update
 
@@ -35,12 +34,11 @@ If you have not performed an update for a while these commands may take a while 
 
 After the process has completed `restart` your device.
 
-
-
 ## Update NodeJS and NPM
 
 To ensure the version of NodeJS on your device is supported by Signal K Server _[(see prerequisites)](README.md#prerequisites)_, check the installed version by
 entering the following in a terminal window:
+
 ```shell
 node -v
 
@@ -49,15 +47,16 @@ v18.17.0
 ```
 
 If the version of NodeJS displayed is lower than the version supported by Signal K Server then you can update it with the following command:
+
 ```shell
 sudo apt upgrade nodejs
 ```
 
 It is also recommended to update the version of the Node Package Manager (NPM).
+
 ```shell
 sudo npm install -g npm@latest
 ```
-
 
 ## Update Signal K Server
 
@@ -75,7 +74,6 @@ Click on _Server -> Update_ to display information about the new version.
 Click **Update** to start the installation.
 
 After the installation is complete, click **Restart** to launch the updated Signal K Server.
-
 
 ### WebApps and Plugins
 

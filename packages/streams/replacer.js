@@ -20,7 +20,7 @@ require('util').inherits(Replacer, Transform)
 
 function Replacer(options) {
   Transform.call(this, {
-    objectMode: true,
+    objectMode: true
   })
   this.doPush = this.push.bind(this)
   this.regexp = new RegExp(options.regexp, 'gu')

@@ -107,7 +107,7 @@ SerialStream.prototype.start = function () {
 
   this.serial = new SerialPort({
     path: this.options.device,
-    baudRate: this.options.baudrate,
+    baudRate: this.options.baudrate
   })
 
   this.serial.on(
@@ -168,7 +168,7 @@ SerialStream.prototype.start = function () {
         }
         setImmediate(() => {
           that.options.app.emit('connectionwrite', {
-            providerId: that.options.providerId,
+            providerId: that.options.providerId
           })
         })
         pendingWrites++

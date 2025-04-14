@@ -12,7 +12,7 @@ import {
   FormGroup,
   FormText,
   Table,
-  Row,
+  Row
 } from 'reactstrap'
 import EnableSecurity from './EnableSecurity'
 
@@ -22,7 +22,7 @@ class AccessRequests extends Component {
     this.state = {
       selectedRequest: null,
       accessRequestsApproving: [],
-      accessRequestsDenying: [],
+      accessRequestsDenying: []
     }
     this.handleRequestChange = this.handleRequestChange.bind(this)
   }
@@ -37,7 +37,7 @@ class AccessRequests extends Component {
     var payload = {
       permissions: this.state.selectedRequest.permissions || 'readonly',
       config: this.state.selectedRequest.config,
-      expiration: this.state.selectedRequest.expiration || '1y',
+      expiration: this.state.selectedRequest.expiration || '1y'
     }
 
     fetch(
@@ -48,9 +48,9 @@ class AccessRequests extends Component {
         method: 'PUT',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       }
     )
       .then((response) => response.text())
@@ -60,7 +60,7 @@ class AccessRequests extends Component {
         )
         this.setState({
           stateKey: this.state[stateKey],
-          selectedRequest: null,
+          selectedRequest: null
         })
       })
   }
@@ -69,7 +69,7 @@ class AccessRequests extends Component {
     this.setState(
       {
         selectedRequest: JSON.parse(JSON.stringify(request)),
-        selectedIndex: index,
+        selectedIndex: index
       },
       () => {
         this.refs['selectedRequest'].scrollIntoView()
@@ -84,7 +84,7 @@ class AccessRequests extends Component {
         : event.target.value
     this.state.selectedRequest[event.target.name] = value
     this.setState({
-      selectedRequest: this.state.selectedRequest,
+      selectedRequest: this.state.selectedRequest
     })
   }
   handleCancel() {
@@ -277,7 +277,7 @@ class AccessRequests extends Component {
 
 const mapStateToProps = ({ accessRequests, loginStatus }) => ({
   accessRequests,
-  loginStatus,
+  loginStatus
 })
 
 export default connect(mapStateToProps)(AccessRequests)

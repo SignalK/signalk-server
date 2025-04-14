@@ -17,9 +17,9 @@ export default ({ plugin, onSubmit }) => {
         type: 'object',
         title: ' ',
         description: schema.description,
-        properties: schema.properties,
-      },
-    },
+        properties: schema.properties
+      }
+    }
   }
 
   if (plugin.statusMessage) {
@@ -37,7 +37,7 @@ export default ({ plugin, onSubmit }) => {
           ...submitData.formData,
           enabled,
           enableLogging,
-          enableDebug,
+          enableDebug
         })
       }}
     />

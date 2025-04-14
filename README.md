@@ -1,4 +1,5 @@
 # Signal K Server
+
 ![Signal K logo](https://user-images.githubusercontent.com/5200296/226164888-d33b2349-e608-4bed-965f-ebe4339b4376.png)
 
 [![npm version](https://badge.fury.io/js/signalk-server.svg)](https://badge.fury.io/js/signalk-server)
@@ -8,20 +9,36 @@
 [![Open Collective backers and sponsors](https://img.shields.io/opencollective/all/signalk)](https://opencollective.com/signalk)
 
 ## Contents
-* [Introduction](#introduction)
-* [Signal K Platform](#signal-k-platform)
-* [Documentation, Community & support](#documentation-community--support)
-* [How to get Signal K Server](#how-to-get-signal-k-server)
-* [Configuration and use](#configuration-and-use)
-* [Supported PGNs, Sentences and more](#supported-pgns-sentences-and-more)
-* [Development](#development)
-* [Sponsoring Signal K](#sponsoring-signal-k)
-* [License](#license)
+
+- [Signal K Server](#signal-k-server)
+  - [Contents](#contents)
+  - [Introduction](#introduction)
+    - [Boaters and Boat Owners](#boaters-and-boat-owners)
+    - [Marine Vendors](#marine-vendors)
+    - [Software Developers \& Boat Electronics Hobbyists](#software-developers--boat-electronics-hobbyists)
+  - [Signal K Platform](#signal-k-platform)
+  - [Documentation, Community \& Support](#documentation-community--support)
+  - [How to get Signal K Server?](#how-to-get-signal-k-server)
+  - [Configuration and use](#configuration-and-use)
+    - [Opening the Signal K Server Admin UI](#opening-the-signal-k-server-admin-ui)
+    - [Creating an admin account](#creating-an-admin-account)
+    - [Setting up data connections](#setting-up-data-connections)
+    - [Installing Plugins and Webapps](#installing-plugins-and-webapps)
+    - [Restart after Configuration Changes and Plugin/Webapp Installation](#restart-after-configuration-changes-and-pluginwebapp-installation)
+    - [Configuring Plugins](#configuring-plugins)
+    - [Vessel Base Data and Server Settings](#vessel-base-data-and-server-settings)
+    - [Server Log](#server-log)
+  - [Supported PGNs, sentences and more](#supported-pgns-sentences-and-more)
+  - [Development](#development)
+  - [Sponsoring Signal K](#sponsoring-signal-k)
+  - [License](#license)
 
 ## Introduction
+
 Signal K Server is a server application that runs on a central hub in a boat. If you use or develop marine electronics, Signal K Server has something to offer for you.
 
 ### Boaters and Boat Owners
+
 For boaters, Signal K Server runs in the background and makes functionality and data available to other apps and devices.
 One of its most used features is to be a wireless AIS and navigation server for popular apps like Navionics, iSailor, iNavX, Aqua Map and WilhelmSK on your phones and tablets.
 
@@ -32,11 +49,13 @@ These are all just examples: there is far more to Signal K Server.
 If you are a boat owner, you can easily run Signal K Server on a Victron Cerbo GX, RaspberryPi or similar hardware. To take full advantage, you will probably want to connect it to your boat network via NMEA 0183 or NMEA 2000 but it is not a requirement.
 
 ### Marine Vendors
+
 For Marine vendors who build marine hardware and software, for example those developing navigation, monitoring and tracking systems, Signal K Server is an opportunity to accelerate development and decrease time to market, by taking advantage of a proven, modern and extensible software platform that is open source and available with a permissive Apache 2.0 license. Signal K Server is implemented in Node.js and is easy to integrate into modern systems that run Linux derivatives.
 
 Signal K Server is already running inside products developed by Victron Energy, Airmar Technology and others.
 
 ### Software Developers & Boat Electronics Hobbyists
+
 There are many boaters who happen to be highly skilled software developers and engineers, who want to build software for themselves and share with others. If you are one of them, Signal K offers you a free, modern and open platform developed by boaters for other boaters like you. Signal K Server features an extensible [plugin framework](./docs/develop/plugins/README.md), [web applications](./docs/develop/webapps.md) as well as a rich set of [REST](https://signalk.org/specification/1.7.0/doc/rest_api.html) and [Streaming APIs](https://signalk.org/specification/1.7.0/doc/streaming_api.html).
 
 Signal K Server takes care of all the complicated parts of protocol decode, and conversions to and from NMEA2000, NMEA0183 and many more protocols. It can also act as data hub for additional sensors, see the [Signal K SensESP project](https://github.com/SignalK/SensESP) for [ESP32](https://en.wikipedia.org/wiki/ESP32).
@@ -63,44 +82,46 @@ There is a [Signal K Server FAQ Frequently Asked Questions](https://github.com/S
 
 For the typical boater, not being a software developer nor electrical engineer, the best option is to get a (commercially available) product that already has Signal K Server inside. These are the currently available devices:
 
-* [SmartBoat module](https://www.airmar.com/productdescription.html?id=231&trk=organization_guest_main-feed-card_feed-article-content) by Airmar
-* [Cerbo GX](https://www.victronenergy.com/panel-systems-remote-monitoring/cerbo-gx) and other GX Devices by Victron Energy  ([see Venus OS Large manual](https://www.victronenergy.com/live/venus-os:large))
+- [SmartBoat module](https://www.airmar.com/productdescription.html?id=231&trk=organization_guest_main-feed-card_feed-article-content) by Airmar
+- [Cerbo GX](https://www.victronenergy.com/panel-systems-remote-monitoring/cerbo-gx) and other GX Devices by Victron Energy ([see Venus OS Large manual](https://www.victronenergy.com/live/venus-os:large))
 
 For a more technical DIY oriented boater, a RaspberryPi based setup offers a very cost-attractive alternative.
 Read [this FAQ entry](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions#how-do-i-integrate-with-nmea2000-can-bus) to learn how to connect a RaspberryPi to an NMEA2000 network.
 
 These prebuilt images for RaspberryPis take away most of the complexity involved from the software side:
 
-* [BBN Marine OS](https://github.com/bareboat-necessities/lysmarine_gen#what-is-lysmarine-bbn-edition)
-* [OpenPlotter](https://openmarine.net/openplotter) by OpenMarine
-* [Venus OS for RaspberryPis](https://github.com/victronenergy/venus/wiki/raspberrypi-install-venus-image) by Victron Energy
+- [BBN Marine OS](https://github.com/bareboat-necessities/lysmarine_gen#what-is-lysmarine-bbn-edition)
+- [OpenPlotter](https://openmarine.net/openplotter) by OpenMarine
+- [Venus OS for RaspberryPis](https://github.com/victronenergy/venus/wiki/raspberrypi-install-venus-image) by Victron Energy
 
 You can run Signal K Server in Docker:
 
-* [Docker quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/docker/README.md#quickstart)
+- [Docker quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/docker/README.md#quickstart)
 
 Or in a Kubernetes cluster:
 
-* [Kubernetes quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/kubernetes/README.md#quickstart)
+- [Kubernetes quickstart instructions](https://github.com/SignalK/signalk-server/blob/master/kubernetes/README.md#quickstart)
 
 And an installer for Windows:
 
-* [https://github.com/SignalK/signalk-server-windows](https://github.com/SignalK/signalk-server-windows)
+- [https://github.com/SignalK/signalk-server-windows](https://github.com/SignalK/signalk-server-windows)
 
 Another level up, this document explains how to install Signal K Server, as well as its dependencies, on a RaspberryPi that is already running Raspberry Pi OS:
 
-* [Installation on a RaspberryPi](./docs/installation/raspberry_pi_installation.md)
+- [Installation on a RaspberryPi](./docs/installation/raspberry_pi_installation.md)
 
 Last, here is how to install the Signal K Server application from NPM:
 
 Prerequisites:
-* Node.js version 20 with latest npm installed
 
-    $ sudo npm install -g signalk-server
+- Node.js version 20 with latest npm installed
+
+  $ sudo npm install -g signalk-server
 
 Now you can start the server with sample data:
-* NMEA0183 sample data: `signalk-server --sample-nmea0183-data`
-* NMEA2000 sample data: `signalk-server --sample-n2k-data`
+
+- NMEA0183 sample data: `signalk-server --sample-nmea0183-data`
+- NMEA2000 sample data: `signalk-server --sample-n2k-data`
 
 To generate your own vessel settings file and configure the server to start automatically, run:
 
@@ -158,8 +179,8 @@ To install Plugins and Webapps, click the "Available" menu on the left. It will 
 
 It is also possible to search for and browse Plugins and Webapps in the NPM registry:
 
-  * [Plugins](https://www.npmjs.com/search?q=keywords%3Asignalk-node-server-plugin)
-  * [Webapps](https://www.npmjs.com/search?q=keywords:signalk-webapp)
+- [Plugins](https://www.npmjs.com/search?q=keywords%3Asignalk-node-server-plugin)
+- [Webapps](https://www.npmjs.com/search?q=keywords:signalk-webapp)
 
 ### Restart after Configuration Changes and Plugin/Webapp Installation
 
@@ -193,27 +214,28 @@ To enable debugging without going through the Admin UI, see the file `~/.signalk
 
 ## Supported PGNs, sentences and more
 
-* NMEA2000 PGNs: Reading NMEA2000 data is done by [n2k-signalk](https://github.com/SignalK/n2k-signalk) via [canboatjs](https://github.com/canboat/canboatjs). [Canboat PGN database](https://canboat.github.io/canboat/canboat.html)
-* NMEA0183 sentences: [nmea0183-signalk](https://github.com/SignalK/signalk-parser-nmea0183)
-* TODO ADD OTHER SUPPORTED PROTOCOLS
+- NMEA2000 PGNs: Reading NMEA2000 data is done by [n2k-signalk](https://github.com/SignalK/n2k-signalk) via [canboatjs](https://github.com/canboat/canboatjs). [Canboat PGN database](https://canboat.github.io/canboat/canboat.html)
+- NMEA0183 sentences: [nmea0183-signalk](https://github.com/SignalK/signalk-parser-nmea0183)
+- TODO ADD OTHER SUPPORTED PROTOCOLS
 
 ## Development
 
 The documents provide more details about developing Webapps or Plugings for Signal K Server, as well as working on the server itself:
 
-* [Contributing to this repo](docs/develop/contributing.md)
-* [Server Plugins](docs/develop/plugins/README.md)
-* [Webapps](docs/develop/webapps.md)
-* [Working with the Course API](docs/develop/rest-api/course_api.md)
-* [Working with the Resources API](docs/develop/rest-api/resources_api.md)
-* [Resource Provider Plugins](docs/develop/plugins/resource_provider_plugins.md)
-* [Security](docs/security.md)
+- [Contributing to this repo](docs/develop/contributing.md)
+- [Server Plugins](docs/develop/plugins/README.md)
+- [Webapps](docs/develop/webapps.md)
+- [Working with the Course API](docs/develop/rest-api/course_api.md)
+- [Working with the Resources API](docs/develop/rest-api/resources_api.md)
+- [Resource Provider Plugins](docs/develop/plugins/resource_provider_plugins.md)
+- [Security](docs/security.md)
 
 ## Sponsoring Signal K
 
 See Signal K on [Open Collective](https://opencollective.com/signalk).
 
 ## License
+
 Copyright [2015] [Fabian Tollenaar, Teppo Kurki and Signal K committers]
 
 Licensed under the Apache License, Version 2.0 (the "License");

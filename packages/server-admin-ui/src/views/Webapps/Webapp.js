@@ -15,7 +15,7 @@ const propTypes = {
   children: PropTypes.node,
   className: PropTypes.string,
   cssModule: PropTypes.object,
-  bgImage: PropTypes.string,
+  bgImage: PropTypes.string
 }
 
 const defaultProps = {
@@ -25,7 +25,7 @@ const defaultProps = {
   color: 'primary',
   variant: '0',
   link: '#',
-  bgImage: '',
+  bgImage: ''
 }
 
 class Widget02 extends Component {
@@ -49,12 +49,12 @@ class Widget02 extends Component {
       variant === '0'
         ? { card: 'p-3', icon: 'p-3', lead: 'mt-2' }
         : variant === '1'
-        ? {
-            card: 'p-0',
-            icon: 'p-4',
-            lead: 'pt-3',
-          }
-        : { card: 'p-0', icon: 'p-4 px-5', lead: 'pt-3' }
+          ? {
+              card: 'p-0',
+              icon: 'p-4',
+              lead: 'pt-3'
+            }
+          : { card: 'p-0', icon: 'p-4 px-5', lead: 'pt-3' }
 
     const card = { style: 'clearfix', color: color, icon: icon, classes: '' }
     card.classes = mapToCssModules(
@@ -79,7 +79,7 @@ class Widget02 extends Component {
       )
       const style = {
         backgroundSize: 'cover',
-        backgroundImage: bgImage ? `url(${bgImage})` : 'unset',
+        backgroundImage: bgImage ? `url(${bgImage})` : 'unset'
       }
       if (bgImage) {
         style.width = style.height = '72px'

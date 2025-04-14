@@ -23,6 +23,7 @@ _e.g. `18592f80-3425-43c2-937b-0be64b6be68c`_
 This format is used for both accessing a resource _e.g. `/signalk/v1/api/resources/waypoints/18592f80-3425-43c2-937b-0be64b6be68c`_ as well as the value within an `href` attribute.
 
 _Example:_
+
 ```
 {
    "name": "...",
@@ -35,14 +36,14 @@ _Example:_
 ### 2. Resource Attributes
 
 The Resources API has updated the definition of the following resources and may break applications that simply shift to using the `v2` api without catering for the changes:
+
 - **routes**: removed the `start`, `end` properties.
 - **waypoints**: removed `position` attribute, added `name`, `description` and `type` attributes.
 - **regions**: removed `geohash` attribute, added `name` and `description` properties.
 - **notes**: removed `geohash` and `region` attributes, added `href` and `properties` attributes.
-- **charts**: There has been a significant changes to include support for WMS, WMTS and TileJSON sources. 
+- **charts**: There has been a significant changes to include support for WMS, WMTS and TileJSON sources.
 
 Please see the [Resources OpenAPI definition](https://github.com/SignalK/signalk-server/blob/master/src/api/resources/openApi.json) for details.
-
 
 ---
 
@@ -51,6 +52,7 @@ Please see the [Resources OpenAPI definition](https://github.com/SignalK/signalk
 ### 1. courseGreatCircle, courseRhumbline paths
 
 With the introduction of the Course API the following paths should now be considered deprecated:
+
 - `/signalk/v1/api/vessels/self/navigation/courseGreatCircle`
 - `/signalk/v1/api/vessels/self/navigation/courseRhumbline`
 

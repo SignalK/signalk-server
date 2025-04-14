@@ -1,1 +1,26 @@
-{"activeRoute":{"href":"/resources/routes/ad825f6c-1ae9-4f76-abc4-df2866b14b78","startTime":"2022-04-21T18:40:44.319Z","pointIndex":3,"pointTotal":7,"reverse":true},"nextPoint":{"href":null,"type":"RoutePoint","position":{"latitude":59.92852692137802,"longitude":23.349311506736232},"arrivalCircle":500},"previousPoint":{"href":null,"type":"RoutePoint","position":{"longitude":23.485033333333334,"latitude":60.033516666666664}}}
+{
+  "activeRoute": {
+    "href": "/resources/routes/ad825f6c-1ae9-4f76-abc4-df2866b14b78",
+    "startTime": "2022-04-21T18:40:44.319Z",
+    "pointIndex": 3,
+    "pointTotal": 7,
+    "reverse": true
+  },
+  "nextPoint": {
+    "href": null,
+    "type": "RoutePoint",
+    "position": {
+      "latitude": 59.92852692137802,
+      "longitude": 23.349311506736232
+    },
+    "arrivalCircle": 500
+  },
+  "previousPoint": {
+    "href": null,
+    "type": "RoutePoint",
+    "position": {
+      "longitude": 23.485033333333334,
+      "latitude": 60.033516666666664
+    }
+  }
+}

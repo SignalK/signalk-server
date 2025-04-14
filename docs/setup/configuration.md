@@ -1,7 +1,7 @@
 ---
 title: Configuration
 children:
-- seatalk/README.md
+  - seatalk/README.md
 ---
 
 # Configuring Signal K Server
@@ -26,7 +26,6 @@ Alternatively, from the menu select _Security -> Users_ and then:
 1. In **Permissions** select **Admin**
 1. Click **Apply**.
 
-
 After creating the account, the server needs to be restarted.
 
 How you restart the server will depend on the installation type _(i.e. installed from NPM, embedded on a commercial device, etc)_. Power cycling the device that Signal K Server is always an option.
@@ -36,6 +35,7 @@ How you restart the server will depend on the installation type _(i.e. installed
 To get data into Signal K server you will need to configure one or more data connections via the _Server -> Data Connections_ menu option.
 
 From this screen you can add connections for various data types including:
+
 - NMEA2000
 - NMEA0183
 - Signal K
@@ -75,6 +75,7 @@ Use below command to get the path to a NMEA 2000 file with navigation data and A
 ```
 sudo find / -name "aava-n2k.data"
 ```
+
 Set up according to picture.
 
 ![SK_N2K_file](./SK_file_stream_N2K.png)
@@ -84,6 +85,7 @@ To get the path for the sample file, data type NMEA 0183, use below command.
 ```
 sudo find / -name "plaka.log"
 ```
+
 ## Install Plugins and Webapps
 
 Signal K server functionality can be extended through the use of plugins and webapps.
@@ -110,8 +112,8 @@ To install, click the `download` icon on the right hand side of the entry.
 
 To view a list of Plugins and Webapps directly from the NPM registry select the links below.
 
-  * [Plugins](https://www.npmjs.com/search?q=keywords%3Asignalk-node-server-plugin)
-  * [Webapps](https://www.npmjs.com/search?q=keywords:signalk-webapp)
+- [Plugins](https://www.npmjs.com/search?q=keywords%3Asignalk-node-server-plugin)
+- [Webapps](https://www.npmjs.com/search?q=keywords:signalk-webapp)
 
 **_Note: A restart of the Signal K server is required after plugins or webapps have been installed or updated._**
 
@@ -119,10 +121,9 @@ Click the _Restart_ button at the top right of the screen to restart the server.
 
 After the server has restarted, the installed plugin(s) can be configued by selecting _Server -> Plugin Config_ menu entry.
 
-
 ## Trouble shooting and the Server Log
 
-If things are not working as expected after installing a plugin or webapp, select _Server -> Server Log_ to view the server's log. If the errors logged there are not providing the information required, you can enable  debugging for individual components and plugins by toggling the switch to activate them.
+If things are not working as expected after installing a plugin or webapp, select _Server -> Server Log_ to view the server's log. If the errors logged there are not providing the information required, you can enable debugging for individual components and plugins by toggling the switch to activate them.
 
 Enabling the `Remember debug setting` ensure your selections are remebered after a server restart.
 

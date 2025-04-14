@@ -11,8 +11,7 @@
         {
           "type": "providers/execute",
           "options": {
-            "command":
-              "while true; do echo '{\"updates\": [{\"source\": {\"label\": \"dummy data\",\"timestamp\":\"'`date +'%Y-%m-%dT%H:%M:%S'`'\"},\"values\": [{\"path\": \"environment.airPressure\",\"value\": 1013}]}]}'; sleep 1; done"
+            "command": "while true; do echo '{\"updates\": [{\"source\": {\"label\": \"dummy data\",\"timestamp\":\"'`date +'%Y-%m-%dT%H:%M:%S'`'\"},\"values\": [{\"path\": \"environment.airPressure\",\"value\": 1013}]}]}'; sleep 1; done"
           }
         },
         {

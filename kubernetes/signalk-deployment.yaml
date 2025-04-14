@@ -7,9 +7,9 @@ metadata:
 spec:
   externalTrafficPolicy: Cluster
   ports:
-  - port: 80
-    protocol: TCP
-    targetPort: 3000
+    - port: 80
+      protocol: TCP
+      targetPort: 3000
   selector:
     app: signalk
   sessionAffinity: None
@@ -24,7 +24,7 @@ metadata:
   name: signalkpvc
 spec:
   accessModes:
-  - ReadWriteOnce
+    - ReadWriteOnce
   resources:
     requests:
       storage: 1Gi
@@ -54,15 +54,15 @@ spec:
         app: signalk
     spec:
       containers:
-      - image: signalk/signalk-server:master
-        imagePullPolicy: Always
-        name: signalk
-        resources: {}
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-        volumeMounts:
-        - mountPath: /home/node/.signalk
-          name: home-node-dotsignalk
+        - image: signalk/signalk-server:master
+          imagePullPolicy: Always
+          name: signalk
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /home/node/.signalk
+              name: home-node-dotsignalk
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -72,6 +72,6 @@ spec:
         fsGroup: 1000
       terminationGracePeriodSeconds: 30
       volumes:
-      - name: home-node-dotsignalk
-        persistentVolumeClaim:
-          claimName: signalkpvc
+        - name: home-node-dotsignalk
+          persistentVolumeClaim:
+            claimName: signalkpvc

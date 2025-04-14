@@ -1,7 +1,7 @@
 import React, { Component, Suspense } from 'react'
 import {
   PLUGIN_CONFIG_PANEL,
-  toLazyDynamicComponent,
+  toLazyDynamicComponent
 } from '../Webapps/dynamicutilities'
 
 export default class EmbeddedPluginConfigurationForm extends Component {
@@ -12,7 +12,7 @@ export default class EmbeddedPluginConfigurationForm extends Component {
         props.plugin.packageName,
         PLUGIN_CONFIG_PANEL
       ),
-      configuration: this.props.plugin.data.configuration,
+      configuration: this.props.plugin.data.configuration
     }
   }
 
@@ -25,10 +25,10 @@ export default class EmbeddedPluginConfigurationForm extends Component {
             save: (configuration) => {
               this.props.saveData({
                 ...this.props.plugin.data,
-                configuration,
+                configuration
               })
               this.setState({ configuration })
-            },
+            }
           })}
         </Suspense>
       </div>

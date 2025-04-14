@@ -22,7 +22,7 @@ require('util').inherits(ToSignalK, Transform)
 
 function ToSignalK(options) {
   Transform.call(this, {
-    objectMode: true,
+    objectMode: true
   })
   const n2kOutEvent = 'nmea2000JsonOut'
   this.sourceMeta = {}
@@ -43,7 +43,7 @@ function ToSignalK(options) {
     const existing = this.sourceMeta[n2k.src] || {}
     this.sourceMeta[n2k.src] = {
       ...existing,
-      ...meta,
+      ...meta
     }
     const delta = {
       context: this.app.selfContext,
@@ -54,15 +54,15 @@ function ToSignalK(options) {
             label: this.options.providerId,
             type: 'NMEA2000',
             pgn: Number(n2k.pgn),
-            src: n2k.src.toString(),
+            src: n2k.src.toString()
           },
           timestamp:
             n2k.timestamp.substring(0, 10) +
             'T' +
             n2k.timestamp.substring(11, n2k.timestamp.length),
-          values: [],
-        },
-      ],
+          values: []
+        }
+      ]
     }
     this.app.deltaCache.setSourceDelta(
       `${this.options.providerId}.${n2k.src}`,
@@ -164,9 +164,9 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
                       updates: [
                         {
                           source: update.source,
-                          values: [copy],
-                        },
-                      ],
+                          values: [copy]
+                        }
+                      ]
                     }
                     delete this.notifications[kv.path][src]
                     clearInterval(interval)
@@ -175,7 +175,7 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
                 }, 5000)
                 this.notifications[kv.path][src] = {
                   lastTime: Date.now(),
-                  interval: interval,
+                  interval: interval
                 }
               } else {
                 this.notifications[kv.path][src].lastTime = Date.now()

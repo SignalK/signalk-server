@@ -1,6 +1,7 @@
 ---
 title: Course API
 ---
+
 # Course API
 
 The _Course API_ provides common course operations under the path `/signalk/v2/api/vessels/self/navigation/course` ensuring that all related Signal K data model values are maintained and consistent. This provides a set of data that can be confidently used for _course calculations_ and _autopilot operation_.
@@ -9,14 +10,16 @@ Additionally, the Course API persists course information on the server to ensure
 
 Client applications use `HTTP` requests (`PUT`, `GET`,`DELETE`) to perform operations and retrieve course data.
 
-The Course API also listens for destination information in the NMEA stream and will set / clear the destination accordingly _(e.g. NMEA0183 RMB sentence,  NMEA2000 PGN 129284)_. See [Configuration](#Configuration) for more details.
+The Course API also listens for destination information in the NMEA stream and will set / clear the destination accordingly _(e.g. NMEA0183 RMB sentence, NMEA2000 PGN 129284)_. See [Configuration](#Configuration) for more details.
 
-_Note: You can view the _Course API_ OpenAPI definition in the Admin UI (Documentation => OpenApi)._
+_Note: You can view the \_Course API_ OpenAPI definition in the Admin UI (Documentation => OpenApi).\_
 
 ---
+
 ## Setting a Course
 
 The Course API provides endpoints for:
+
 1. Navigate to a location _(lat, lon)_
 1. Navigate to a waypoint _(href to waypoint resource)_
 1. Follow a Route _(href to a route resource)_.
@@ -29,7 +32,6 @@ To navigate to a point submit a HTTP `PUT` request to `/signalk/v2/api/vessels/s
 HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/destination' {"position": {"latitude": -60.5, "longitude": -166.7}}
 ```
 
-
 ### 2. Navigate to a Waypoint
 
 To navigate to a point submit a HTTP `PUT` request to `/signalk/v2/api/vessels/self/navigation/course/destination` and supply a reference to a waypoint resource entry under `/resources/waypoints`
@@ -37,7 +39,6 @@ To navigate to a point submit a HTTP `PUT` request to `/signalk/v2/api/vessels/s
 ```typescript
 HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/destination' {"href": "/resources/waypoints/5242d307-fbe8-4c65-9059-1f9df1ee126f"}
 ```
-
 
 ### 3. Follow a Route
 
@@ -48,10 +49,12 @@ HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/act
 ```
 
 Additional parameters can be set when following a route including:
+
 - Defining the point along the route to start at
 - The direction to follow the route (forward / reverse)
 
 _Example: Following a route in reverse direction:_
+
 ```typescript
 HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute'
 {
@@ -65,6 +68,7 @@ HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/act
 As progress along a route is made, you can use the following endpoints to update the destination.
 
 To set the destination to the next point along the route:
+
 ```typescript
 HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/nextPoint'
 ```
@@ -74,9 +78,11 @@ To advance the destination to a point `n` places beyond the current destination 
 ```typescript
 HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/nextPoint' {"value": 2}
 ```
+
 _Sets destination to the point after the next in sequence._
 
 To set the destination to the previous point along the route:
+
 ```typescript
 HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/nextPoint' {"value": -1}
 ```
@@ -86,17 +92,21 @@ To set the destination to a point `n` places prior the current destination point
 ```typescript
 HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/nextPoint' {"value": -2}
 ```
+
 _Sets destination to the point two prior to the current destination._
 
 To set the destination to a specific point along the route, supply the zero-based index of the point:
 
 _Example: 4th point along the route._
+
 ```typescript
 HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/pointIndex' {"value": 3}
 ```
+
 _Value contains the 'zero-based' index of the point along the route (i.e. 0 = 1st point, 1 = 2nd point, etc.)_
 
 To reverse the direction along the route:
+
 ```typescript
 HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/reverse'
 ```
@@ -105,7 +115,7 @@ HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/act
 
 The Course API emits delta messages with the following paths when course information has been changed.
 
-_Note: Delta values reflect the relevant property of the Course Information data object as detailed  in the
+_Note: Delta values reflect the relevant property of the Course Information data object as detailed in the
 [Retrieving Course Information](#retrieving-course-information) section._
 
 - `navigation.course.startTime`
@@ -114,8 +124,6 @@ _Note: Delta values reflect the relevant property of the Course Information data
 - `navigation.course.activeRoute`
 - `navigation.course.nextPoint`
 - `navigation.course.previousPoint`
-
-
 
 ## Retrieving Course Information
 
@@ -127,10 +135,10 @@ HTTP GET 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course'
 
 The contents of the response will reflect the operation used to set the current course. The `nextPoint` & `previousPoint` sections will always contain values but `activeRoute` will only contain values when a route is being followed.
 
-
 #### 1. Operation: Navigate to a location _(lat, lon)_
 
 _Example response:_
+
 ```JSON
 {
   "startTime": "2023-01-27T01:47:39.785Z",
@@ -157,6 +165,7 @@ _Example response:_
 #### 2. Operation: Navigate to a waypoint _(href to waypoint resource)_
 
 _Example response:_
+
 ```JSON
 {
   "startTime": "2023-01-27T01:47:39.785Z",
@@ -181,10 +190,10 @@ _Example response:_
 }
 ```
 
-
 #### 3. Operation: Follow a Route _(href to a route resource)_.
 
 _Example response:_
+
 ```JSON
 {
   "startTime": "2023-01-27T01:47:39.785Z",
@@ -248,20 +257,18 @@ _Note: This operation will NOT change the destination information coming from th
 
 To ignore destination data from NMEA sources see [Configuration](#configuration) below.
 
-
-
 ## Configuration
 
 The default configuration of the Course API will accept destination information from both API requests and NMEA stream data sources.
 
 For NMEA sources, Course API monitors the the following Signal K paths populated by both the `nmea0183-to-signalk` and `n2k-to-signalk` plugins:
+
 - _navigation.courseRhumbline.nextPoint.position_
 - _navigation.courseGreatCircle.nextPoint.position_
 
 HTTP requests are prioritised over NMEA data sources, so making an API request will overwrite the destination information received from and NMEA source.
 
 Note: when the destination cleared using an API request, if the NMEA stream is emitting an active destination position, this will then be used by the Course API to populate course data.
-
 
 #### Ignoring NMEA Destination Information
 
@@ -282,7 +289,6 @@ In `apiOnly` mode destination information can only be set / cleared using HTTP A
   - NMEA stream data is ignored
   - Switching to `apiOnly` mode when an NMEA sourced destination is active will clear the destination.
 
-
 #### Retrieving Course API Configuration
 
 To retrieve the Course API configuration settings, submit a HTTP `GET` request to `/signalk/v2/api/vessels/self/navigation/course/_config`.
@@ -292,6 +298,7 @@ HTTP GET 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/_co
 ```
 
 _Example response:_
+
 ```JSON
 {
   "apiOnly": false
@@ -303,6 +310,7 @@ _Example response:_
 To enable `apiOnly` mode, submit a HTTP `POST` request to `/signalk/v2/api/vessels/self/navigation/course/_config/apiOnly`.
 
 _Enable apiOnly mode:_
+
 ```typescript
 HTTP POST 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/_config/apiOnly'
 ```
@@ -310,10 +318,10 @@ HTTP POST 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/_c
 To disable `apiOnly` mode, submit a HTTP `DELETE` request to `/signalk/v2/api/vessels/self/navigation/course/_config/apiOnly`.
 
 _Disable apiOnly mode:_
+
 ```typescript
 HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/_config/apiOnly'
 ```
-
 
 ## Course Calculations
 

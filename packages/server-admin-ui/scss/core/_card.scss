@@ -14,11 +14,10 @@
 }
 
 .text-white .text-muted {
-  color: rgba(255,255,255,.6) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
 }
 
 .card-header {
-
   .icon-bg {
     display: inline-body;
     padding: $card-spacer-y $card-spacer-x !important;
@@ -59,18 +58,17 @@
   }
 
   .btn {
-    margin-top: - $input-btn-padding-y;
+    margin-top: -$input-btn-padding-y;
   }
   .btn-sm {
-    margin-top: - $input-btn-padding-y-sm;
+    margin-top: -$input-btn-padding-y-sm;
   }
   .btn-lg {
-    margin-top: - $input-btn-padding-y-lg;
+    margin-top: -$input-btn-padding-y-lg;
   }
 }
 //
 .card-footer {
-
   ul {
     display: table;
     width: 100%;
@@ -86,7 +84,7 @@
   }
 }
 
-[class*="card-outline-"] {
+[class*='card-outline-'] {
   .card-body {
     background: #fff !important;
   }
@@ -117,7 +115,8 @@
     right: 0;
     //height: inherit;
 
-    a, button {
+    a,
+    button {
       display: block;
       float: left;
       width: 50px;
@@ -134,14 +133,15 @@
         text-decoration: none;
       }
 
-      [class^="icon-"], [class*=" icon-"] {
+      [class^='icon-'],
+      [class*=' icon-'] {
         display: inline-body;
         vertical-align: middle;
       }
 
       i {
         display: inline-body;
-        transition: .4s;
+        transition: 0.4s;
       }
 
       .r180 {
@@ -165,16 +165,15 @@
 }
 
 .card-full {
-  margin-top: - $spacer;
-  margin-right: - $grid-gutter-width / 2;
-  margin-left: - $grid-gutter-width / 2;
+  margin-top: -$spacer;
+  margin-right: -$grid-gutter-width / 2;
+  margin-left: -$grid-gutter-width / 2;
   border: 0;
   border-bottom: $card-border-width solid $border-color;
 }
 
 @include media-breakpoint-up(sm) {
   .card-columns {
-
     &.cols-2 {
       column-count: 2;
     }
@@ -182,12 +181,13 @@
 }
 
 .card {
-  &.drag, .drag {
+  &.drag,
+  .drag {
     cursor: move;
   }
 }
 
 .card-placeholder {
-  background: rgba(0,0,0,.025);
+  background: rgba(0, 0, 0, 0.025);
   border: 1px dashed $gray-300;
 }

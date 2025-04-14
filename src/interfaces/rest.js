@@ -154,9 +154,8 @@ module.exports = function (app) {
         }
 
         if (app.interfaces.tcp && app.interfaces.tcp.data) {
-          services[
-            'signalk-tcp'
-          ] = `tcp://${splitHost[0]}:${app.interfaces.tcp.data.port}`
+          services['signalk-tcp'] =
+            `tcp://${splitHost[0]}:${app.interfaces.tcp.data.port}`
         }
 
         res.json({

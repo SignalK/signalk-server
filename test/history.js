@@ -24,7 +24,7 @@ const testDelta = {
   ]
 }
 
-const dummyHistoryProvider = app => {
+const dummyHistoryProvider = (app) => {
   return {
     streamHistory: (cookie, options, onDelta) => {
       setTimeout(() => {
@@ -47,7 +47,7 @@ const dummyHistoryProvider = app => {
   }
 }
 
-describe('History', _ => {
+describe('History', (_) => {
   let server, url, port
 
   before(async function () {

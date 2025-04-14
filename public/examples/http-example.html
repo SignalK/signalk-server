@@ -1,32 +1,35 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-  <title>Signal K Sample Consumer</title>
-</head>
-<body>
-  <pre>
+    <title>Signal K Sample Consumer</title>
+  </head>
+  <body>
+    <pre>
     <div id="data"/>
   </pre>
-</body>
+  </body>
 
-<script>
-var dataDiv = document.getElementById('data');
-function updateDisplay(event) {
-  console.log(event.target.responseText)
-  dataDiv.innerHTML = event.target.responseText;
-  setTimeout(fetchDataFromRestApi, 1000);
-}
+  <script>
+    var dataDiv = document.getElementById('data')
+    function updateDisplay(event) {
+      console.log(event.target.responseText)
+      dataDiv.innerHTML = event.target.responseText
+      setTimeout(fetchDataFromRestApi, 1000)
+    }
 
-function fetchDataFromRestApi()  {
-  var oReq = new XMLHttpRequest();
-  oReq.addEventListener("load", updateDisplay);
-  oReq.open("GET", "/signalk/v1/api/vessels/self/environment/depth/belowTransducer/value");
-  oReq.send();
-}
+    function fetchDataFromRestApi() {
+      var oReq = new XMLHttpRequest()
+      oReq.addEventListener('load', updateDisplay)
+      oReq.open(
+        'GET',
+        '/signalk/v1/api/vessels/self/environment/depth/belowTransducer/value'
+      )
+      oReq.send()
+    }
 
-fetchDataFromRestApi();
-</script>
+    fetchDataFromRestApi()
+  </script>
 </html>

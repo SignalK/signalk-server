@@ -7,7 +7,7 @@ function saveData(id, data) {
     method: 'POST',
     body: JSON.stringify(data),
     headers: new Headers({ 'Content-Type': 'application/json' }),
-    credentials: 'same-origin',
+    credentials: 'same-origin'
   }).then((response) => {
     if (response.status != 200) {
       console.log(response)
@@ -16,7 +16,7 @@ function saveData(id, data) {
 }
 
 fetch(`${window.serverRoutesPrefix}/plugins`, {
-  credentials: 'same-origin',
+  credentials: 'same-origin'
 }).then((response) => {
   if (response.status == 200) {
     response.json().then((plugins) => {

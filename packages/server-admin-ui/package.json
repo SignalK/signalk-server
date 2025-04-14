@@ -63,7 +63,6 @@
     "build": "webpack --mode=production",
     "format": "prettier --write src/",
     "lint": "eslint --fix",
-    "ci": "prettier --check src/ && eslint",
     "clean": "rimraf ./public",
     "bundle-analyzer": "webpack-bundle-analyzer --port 4200 public/stats.json"
   }

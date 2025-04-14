@@ -549,9 +549,12 @@ const getContextPathMetaKey = (context, path) => {
     contextPaths[path] || (contextPaths[path] = `${context}.${path}`)
   return result
 }
-setInterval(() => {
-  canonical_meta_contextpath_values = {}
-}, 30 * 60 * 1000)
+setInterval(
+  () => {
+    canonical_meta_contextpath_values = {}
+  },
+  30 * 60 * 1000
+)
 
 function handleValuesMeta(kp) {
   const fullContextPathKey = getContextPathMetaKey(this.context, kp.path)
@@ -673,7 +676,9 @@ function wrapWithverifyWS(securityStrategy, spark, theFunction) {
       if (!spark.skPendingAccessRequest) {
         spark.end(
           '{message: "Connection disconnected by security constraint"}',
-          { reconnect: true }
+          {
+            reconnect: true
+          }
         )
       }
       console.error(error)

@@ -42,9 +42,7 @@ export const validate = {
     value: any
   ): void => {
     debug(
-      `*** Validating query params for ${type} ${method} ${JSON.stringify(
-        value
-      )}`
+      `*** Validating query params for ${type} ${method} ${JSON.stringify(value)}`
     )
     const endpoint =
       API_SCHEMA[`${RESOURCES_API_PATH}/${type as string}${id ? '/:id' : ''}`][

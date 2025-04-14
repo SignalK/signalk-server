@@ -8,18 +8,17 @@ The Autopilot API defines the `autopilots` path under `self` _(e.g. `/signalk/v2
 
 The Autopilot API provides a mechanism for applications to issue requests to autopilot devices to perform common operations. Additionally, when multiple autopilot devices are present, each autopilot device is individually addressable.
 
- _Note: Autopilot provider plugins are required to enable the API operation and provide communication with autopilot devices. See [Autopilot Provider Plugins](../plugins/autopilot_provider_plugins.md) for details._
-
+_Note: Autopilot provider plugins are required to enable the API operation and provide communication with autopilot devices. See [Autopilot Provider Plugins](../plugins/autopilot_provider_plugins.md) for details._
 
 ## Common Operations
 
 The following operations are supported:
+
 - Setting the operating mode
 - Engaging / Disengaging the pilot
 - Setting / adjusting the course
 - Dodging port / starboard
 - Tacking / Gybing
-
 
 ## The _Default_ Autopilot
 
@@ -32,17 +31,18 @@ To ensure a consistent API calling profile and to simplify client operations, th
   - An API request is received, the first autopilot device registered, is assigned as the _default_.
   - A request is sent to the `/_providers/_default` API endpoint _(see [Setting the Default Autopilot](#setting-the-default-provider))_.
 
-
 ### Getting the Default Autopilot Identifier
 
 To get the id of the _default_ autopilot, submit an HTTP `GET` request to `/signalk/v2/api/vessels/self/autopilots/_providers/_default`.
 
 _Example:_
+
 ```typescript
 HTTP GET "/signalk/v2/api/vessels/self/autopilots/_providers/_default"
 ```
 
 _Response:_
+
 ```JSON
 {
   "id":"raymarine-id"
@@ -54,12 +54,12 @@ _Response:_
 To set / change the _default_ autopilot, submit an HTTP `POST` request to `/signalk/v2/api/vessels/self/autopilots/_providers/_default/{id}` where `{id}` is the identifier of the autopilot to use as the _default_.
 
 _Example:_
+
 ```typescript
 HTTP POST "/signalk/v2/api/vessels/self/autopilots/_providers/_default/raymarine-id"
 ```
 
 The autopilot with the supplied id will now be the target of requests made to `/signalk/v2/api/vessels/self/autopilots/_default/*`.
-
 
 ## Listing the available Autopilots
 
@@ -70,6 +70,7 @@ The response will be an object containing all the registered autopilot devices, 
 ```typescript
 HTTP GET "/signalk/v2/api/vessels/self/autopilots"
 ```
+
 _Example: List of registered autopilots showing that `pypilot-id` is assigned as the default._
 
 ```JSON
@@ -90,6 +91,7 @@ _Example: List of registered autopilots showing that `pypilot-id` is assigned as
 Deltas emitted by the Autopilot API will have the base path `steering.autopilot` with the `$source` containing the autopilot device identifier.
 
 _Example: Deltas for `autopilot.engaged` from two autopilots (`raymarine-id`)._
+
 ```JSON
 {
   "context":"vessels.self",
@@ -112,7 +114,6 @@ _Example: Deltas for `autopilot.engaged` from two autopilots (`raymarine-id`)._
 }
 ```
 
-
 ## Autopilot Notifications
 
 The Autopilot API will provide notifications under the path `notifications.steering.autopilot` with the `$source` containing the autopilot device identifier.
@@ -127,6 +128,7 @@ A set of normalised notification paths are defined to provide a consistant way f
 - `wind`
 
 _Example:_
+
 ```JSON
 {
   "context":"vessels.self",
@@ -154,10 +156,10 @@ _Example:_
 
 If an autopilot device is not connected or unreachable, the provider for that autopilot device will set the `state` of the device to `off-line`.
 
-
 ## Autopilot Operations
 
 All API operations are invoked by issuing requests to:
+
 1. `/signalk/v2/api/vessels/self/autopilots/_default/*`
 
 Targets the default autopilot device.
@@ -169,6 +171,7 @@ OR
 Target the autopilot with the supplied `{id}`
 
 _Example:_
+
 ```typescript
 HTTP GET "/signalk/v2/api/vessels/self/autopilots/_default/state"
 
@@ -182,6 +185,7 @@ To retrieve the current autopilot configuration as well as a list of available o
 ```typescript
 HTTP GET "/signalk/v2/api/vessels/self/autopilots/{id}"
 ```
+
 _Response:_
 
 ```JSON
@@ -198,12 +202,12 @@ _Response:_
 ```
 
 Where:
+
 - `options` contains arrays of valid `state` and `mode` selection options
 - `state` represents the current state of the device
 - `mode` represents the current mode of the device
 - `target` represents the current target value with respect to the selected `mode`
 - `engaged` will be true when the autopilot is actively steering the vessel.
-
 
 ### Setting the Autopilot State
 
@@ -320,53 +324,57 @@ _Note: The resultant `state` into which the autopilot is placed will be determin
 To send a command to the autopilot to perform a tack in the required direction, submit an HTTP `POST` request to `./autopilots/{id}/tack/{direction}` where _direction_ is either `port` or `starboard`.
 
 _Example: Tack to Port_
+
 ```typescript
 HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/tack/port"
 ```
 
 _Example: Tack to Starboard_
+
 ```typescript
 HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/tack/starboard"
 ```
-
 
 ### Perform a Gybe
 
 To send a command to the autopilot to perform a gybe in the required direction, submit an HTTP `POST` request to `/signalk/v2/api/vessels/self/autopilots/{id}/gybe/{direction}` where _direction_ is either `port` or `starboard`.
 
 _Example: Gybe to Port_
+
 ```typescript
 HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/gybe/port"
 ```
 
 _Example: Gybe to Starboard_
+
 ```typescript
 HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/gybe/starboard"
 ```
-
-
 
 ### Dodging Obstacles
 
 To address the various methods that the `dodge` function could be invoked on pilot devices, the API provides the following endpoints to provide the widest coverage possible:
 
-
 **To enter dodge mode at the current course**
+
 ```javascript
-POST /signalk/v2/api/vessels/self/autopilots/{id}/dodge
+POST / signalk / v2 / api / vessels / self / autopilots / { id } / dodge
 ```
 
 **To enter dodge mode and change course by 5 degrees starboard**
+
 ```javascript
 PUT /signalk/v2/api/vessels/self/autopilots/{id}/dodge {"value": 5, "units": "deg"}
 ```
 
 **To enter dodge mode and change course by 5 degrees port**
+
 ```javascript
 PUT /signalk/v2/api/vessels/self/autopilots/{id}/dodge {"value": -5, "units": "deg"}
 ```
 
 **To cancel dodge mode**
+
 ```javascript
-DELETE /signalk/v2/api/vessels/self/autopilots/{id}/dodge
+DELETE / signalk / v2 / api / vessels / self / autopilots / { id } / dodge
 ```

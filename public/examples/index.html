@@ -1,28 +1,32 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-  <title>Signal K Sample Consumer</title>
-</head>
-<body>
-  <pre>
+    <title>Signal K Sample Consumer</title>
+  </head>
+  <body>
+    <pre>
     <div id="data"/>
   </pre>
-</body>
+  </body>
 
-<script>
-var ws = new WebSocket((window.location.protocol === 'https:' ? 'wss' : 'ws') + "://" + window.location.host + "/signalk/v1/stream?subscribe=all");
+  <script>
+    var ws = new WebSocket(
+      (window.location.protocol === 'https:' ? 'wss' : 'ws') +
+        '://' +
+        window.location.host +
+        '/signalk/v1/stream?subscribe=all'
+    )
 
-ws.onclose = function() {
-  console.log("ws close");
-}
+    ws.onclose = function () {
+      console.log('ws close')
+    }
 
-var dataDiv = document.getElementById('data');
-ws.onmessage = function(event) {
-  dataDiv.innerHTML = JSON.stringify(JSON.parse(event.data), null, 2);
-}
-
-</script>
+    var dataDiv = document.getElementById('data')
+    ws.onmessage = function (event) {
+      dataDiv.innerHTML = JSON.stringify(JSON.parse(event.data), null, 2)
+    }
+  </script>
 </html>
