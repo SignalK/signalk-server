@@ -3,11 +3,13 @@ name: Build Docker development container
 on:
   push:
     branches:
-    - master
-    - "build-docker"
+      - master
+      - 'build-docker'
     tags:
       - '*'
       - '!v*'
+  pull_request:
+
   workflow_dispatch:
 
 jobs:
@@ -82,11 +84,12 @@ jobs:
           context: .
           file: ./docker/Dockerfile
           platforms: ${{ matrix.platform }}
-          push: true
+          push: github.event_name != 'pull_request'
           tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ github.run_id }}
           
   create-and-push-manifest:
     needs: docker_images
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -132,6 +135,7 @@ jobs:
             ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ github.run_id }}
 
   housekeeping:
+    if: github.event_name != 'pull_request'
     needs: create-and-push-manifest
     runs-on: ubuntu-latest
     permissions:
