@@ -71,11 +71,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: packed-modules
-      - name: Modify Dockerfile for build
-        run: |
-          sed -i \
-            "s|cr.signalk.io/signalk/signalk-server-base:latest|ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}|g" \
-            ./docker/Dockerfile
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -84,7 +79,9 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ github.run_id }}
-          
+          build-args: |
+            REGISTRY=ghcr.io
+            UBUNTU_VERSION=$${matrix.os}
   create-and-push-manifest:
     needs: docker_images
     runs-on: ubuntu-latest
