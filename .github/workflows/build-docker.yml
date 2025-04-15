@@ -27,9 +27,7 @@ jobs:
           npm install --package-lock-only
           npm ci && npm cache clean --force
           npm run build:all
-          for dir in packages/*; do
-            pushd $dir && npm pack && mv *.tgz ../../ && popd
-          done
+          npm pack --workspaces
           rm typedoc-signalk-theme*.tgz # This is only needed as a dev dependency
           npm pack
       - name: Upload artifacts
