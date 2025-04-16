@@ -66,7 +66,7 @@ When an update is available for Signal K Server a visual indication is displayed
 **Important!**
 Before updating please ensure the version of NodeJS on your device is [supported by Signal K Server](README.md#prerequisites).
 
-_**If you are updating from Signal K Server version v1.40.0 or earlier please [read this first](https://github.com/SignalK/signalk-server/wiki/Updating-to-Node.js-18) before proceeding.**_
+_**If you are updating from Signal K Server version v1.40.0 or earlier please [read this first](https://github.com/SignalK/signalk-server/wiki/Installing-and-Updating-Node.js) before proceeding.**_
 
 Click on _Server -> Update_ to display information about the new version.
 

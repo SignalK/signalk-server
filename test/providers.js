@@ -2,7 +2,7 @@ const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
 const _ = require('lodash')
-const freeport = require('freeport-promise')
+const { freeport } = require('./ts-servertestutilities')
 const Server = require('../dist')
 const fetch = require('node-fetch')
 

@@ -49,7 +49,7 @@ import {
   WithSecurityStrategy
 } from './security'
 import { listAllSerialPorts } from './serialports'
-import { StreamBundle } from './types'
+import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
@@ -868,7 +868,6 @@ module.exports = function (
   app.get(
     `${SERVERROUTESPREFIX}/eventsRoutingData`,
     (req: Request, res: Response) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       res.json(app.wrappedEmitter.getEventRoutingData())
     }
   )

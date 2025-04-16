@@ -2,7 +2,7 @@ const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
 const assert = require('assert')
-const freeport = require('freeport-promise')
+const { freeport } = require('./ts-servertestutilities')
 const Server = require('../dist')
 const fetch = require('node-fetch')
 const { registerActionHandler } = require('../dist/put')
@@ -10,7 +10,7 @@ const WebSocket = require('ws')
 const _ = require('lodash')
 // const { WsPromiser } = require('./servertestutilities')
 
-const sleep = ms => new Promise(res => setTimeout(res, ms))
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms))
 
 describe('Put Requests', () => {
   let server, url, port
@@ -31,7 +31,7 @@ describe('Put Requests', () => {
     })
     server = await serverApp.start()
 
-    function switch2Handler (context, path, value, cb) {
+    function switch2Handler(context, path, value, cb) {
       if (typeof value !== 'number') {
         return { state: 'COMPLETED', statusCode: 400, message: 'invalid value' }
       } else {
@@ -39,9 +39,7 @@ describe('Put Requests', () => {
           server.app.handleMessage('test', {
             updates: [
               {
-                values: [
-                  { path: 'electrical.switches.switch2.state', value: value }
-                ]
+                values: [{ path: 'electrical.switches.switch2.state', value: value }]
               }
             ]
           })
@@ -51,13 +49,8 @@ describe('Put Requests', () => {
       }
     }
 
-    registerActionHandler(
-      'vessels.self',
-      'electrical.switches.switch2.state',
-      null,
-      switch2Handler
-    )
-    
+    registerActionHandler('vessels.self', 'electrical.switches.switch2.state', null, switch2Handler)
+
     server.app.handleMessage('test', {
       updates: [
         {
@@ -66,7 +59,7 @@ describe('Put Requests', () => {
               path: 'notifications.testNotification',
               value: {
                 state: 'alarm',
-                method: [ 'visual', 'sound' ] 
+                method: ['visual', 'sound']
               }
             }
           ]
@@ -160,7 +153,9 @@ describe('Put Requests', () => {
     json.should.have.property('state')
     json.state.should.equal('COMPLETED')
 
-    result = await fetch(`${url}/signalk/v1/api/vessels/self/electrical/switches/switch2/meta/units`)
+    result = await fetch(
+      `${url}/signalk/v1/api/vessels/self/electrical/switches/switch2/meta/units`
+    )
     result.status.should.equal(200)
     let units = await result.json()
     units.should.equal('number')
@@ -225,7 +220,7 @@ describe('Put Requests', () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          value: [ 'visual' ]
+          value: ['visual']
         })
       }
     )
@@ -245,13 +240,11 @@ describe('Put Requests', () => {
   })
 
   it('WS put to unhandled path fails', async function () {
-    const ws = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
-    )
+    const ws = new WsPromiser(`ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`)
     let msg = await ws.nextMsg()
 
     ws.clear()
-    const something = await ws.send({
+    await ws.send({
       context: 'vessels.self',
       put: {
         path: 'electrical.switches.switch1.state',
@@ -269,13 +262,11 @@ describe('Put Requests', () => {
   })
 
   it('WS successfull put', async function () {
-    const ws = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
-    )
+    const ws = new WsPromiser(`ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`)
     let msg = await ws.nextMsg()
 
     ws.clear()
-    const something = await ws.send({
+    await ws.send({
       context: 'vessels.self',
       put: {
         path: 'electrical.switches.switch2.state',
@@ -300,13 +291,11 @@ describe('Put Requests', () => {
   })
 
   it('WS failing put', async function () {
-    const ws = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
-    )
+    const ws = new WsPromiser(`ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`)
     let msg = await ws.nextMsg()
 
     ws.clear()
-    const something = await ws.send({
+    await ws.send({
       context: 'vessels.self',
       put: {
         path: 'electrical.switches.switch2.state',
@@ -326,7 +315,7 @@ describe('Put Requests', () => {
   })
 })
 
-function WsPromiser (url) {
+function WsPromiser(url) {
   this.ws = new WebSocket(url)
   this.ws.on('message', this.onMessage.bind(this))
   this.callees = []
@@ -339,14 +328,14 @@ WsPromiser.prototype.clear = function () {
 
 WsPromiser.prototype.nextMsg = function () {
   const callees = this.callees
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     if (this.messages.length > 0) {
       const message = this.messages[0]
       this.messages = this.messages.slice(1)
       resolve(message)
     } else {
       callees.push(resolve)
-      setTimeout(_ => {
+      setTimeout((_) => {
         resolve('timeout')
       }, 250)
     }
@@ -357,7 +346,7 @@ WsPromiser.prototype.onMessage = function (message) {
   const theCallees = this.callees
   this.callees = []
   if (theCallees.length > 0) {
-    theCallees.forEach(callee => callee(message))
+    theCallees.forEach((callee) => callee(message))
   } else {
     this.messages.push(message)
   }
@@ -365,7 +354,7 @@ WsPromiser.prototype.onMessage = function (message) {
 
 WsPromiser.prototype.send = function (message) {
   const that = this
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     that.ws.send(JSON.stringify(message))
     setTimeout(() => resolve('wait over'), 100)
   })

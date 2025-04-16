@@ -51,7 +51,7 @@ S3Provider.prototype.pipe = function (pipeTo) {
       const jobs = data.Contents.map(
         (item, i) =>
           function () {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
               console.log('Starting key ' + item.Key)
               const objectParams = {
                 Bucket: params.Bucket,

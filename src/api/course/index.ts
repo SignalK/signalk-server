@@ -8,7 +8,6 @@ import _ from 'lodash'
 import { SignalKMessageHub, WithConfig } from '../../app'
 import { WithSecurityStrategy } from '../../security'
 import { getSourceId } from '@signalk/signalk-schema'
-import { Unsubscribes } from '../../types'
 
 import {
   GeoJsonPoint,
@@ -28,7 +27,8 @@ import {
   SourceRef,
   Waypoint,
   NextPreviousPoint,
-  CoursePointType
+  CoursePointType,
+  Unsubscribes
 } from '@signalk/server-api'
 
 const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
@@ -105,7 +105,6 @@ export class CourseApi {
   }
 
   async start() {
-    // eslint-disable-next-line no-async-promise-executor
     return new Promise<void>(async (resolve) => {
       this.initCourseRoutes()
 

@@ -1,10 +1,10 @@
 const _ = require('lodash')
 const assert = require('assert')
-const {sendDelta} = require('./servertestutilities')
-const freeport = require('freeport-promise')
+const { sendDelta } = require('./servertestutilities')
+const { freeport } = require('./ts-servertestutilities')
 const { startServerP, WsPromiser } = require('./servertestutilities')
 
-function getDelta (overwrite) {
+function getDelta(overwrite) {
   const delta = {
     updates: [
       {
@@ -67,7 +67,7 @@ function getDelta (overwrite) {
   return _.assign(delta, overwrite)
 }
 
-function getEmptyPathDelta (overwrite) {
+function getEmptyPathDelta(overwrite) {
   const delta = {
     updates: [
       {
@@ -80,14 +80,14 @@ function getEmptyPathDelta (overwrite) {
         values: [
           {
             path: '',
-            value: {mmsi: '230000000'}
+            value: { mmsi: '230000000' }
           },
           {
             path: '',
             value: {
-              name: 'SomeBoat' 
+              name: 'SomeBoat'
             }
-          }          
+          }
         ]
       }
     ]
@@ -96,7 +96,7 @@ function getEmptyPathDelta (overwrite) {
   return _.assign(delta, overwrite)
 }
 
-function getClosePosistionDelta (overwrite) {
+function getClosePosistionDelta(overwrite) {
   const delta = {
     updates: [
       {
@@ -124,7 +124,7 @@ function getClosePosistionDelta (overwrite) {
   return _.assign(delta, overwrite)
 }
 
-function getFarPosistionDelta () {
+function getFarPosistionDelta() {
   const delta = {
     updates: [
       {
@@ -152,7 +152,7 @@ function getFarPosistionDelta () {
   return delta
 }
 
-function getNullPositionDelta (overwrite) {
+function getNullPositionDelta(overwrite) {
   const delta = {
     updates: [
       {
@@ -180,20 +180,22 @@ function getNullPositionDelta (overwrite) {
   return _.assign(delta, overwrite)
 }
 
-describe('Subscriptions', _ => {
+describe('Subscriptions', (_) => {
   let serverP, port, deltaUrl
 
   beforeEach(() => {
-    serverP = freeport().then(p => {
+    serverP = freeport().then((p) => {
       port = p
       deltaUrl = 'http://localhost:' + port + '/signalk/v1/api/_test/delta'
-      return startServerP(p, false, { settings: {disableSchemaMetaDeltas: true} })
+      return startServerP(p, false, {
+        settings: { disableSchemaMetaDeltas: true }
+      })
     })
   })
 
-  afterEach(done => {
+  afterEach((done) => {
     serverP
-      .then(server => server.stop())
+      .then((server) => server.stop())
       .then(() => {
         done()
       })
@@ -224,18 +226,26 @@ describe('Subscriptions', _ => {
 
   it('?subscribe=self subscription serves self data', async function () {
     await serverP
-    await testSelfData('ws://localhost:' + port + '/signalk/v1/stream?subscribe=self&metaDeltas=none')
+    await testSelfData(
+      'ws://localhost:' +
+        port +
+        '/signalk/v1/stream?subscribe=self&metaDeltas=none'
+    )
   })
 
   it('default subscription serves self data', async function () {
     await serverP
-    await testSelfData('ws://localhost:' + port + '/signalk/v1/stream?metaDeltas=none')
+    await testSelfData(
+      'ws://localhost:' + port + '/signalk/v1/stream?metaDeltas=none'
+    )
   })
 
   it('?subscribe=all subscription serves all data', async function () {
     await serverP
     const wsPromiser = new WsPromiser(
-      'ws://localhost:' + port + '/signalk/v1/stream?subscribe=all&metaDeltas=none'
+      'ws://localhost:' +
+        port +
+        '/signalk/v1/stream?subscribe=all&metaDeltas=none'
     )
     const self = JSON.parse(await wsPromiser.nthMessage(1)).self
     await sendDelta(getDelta({ context: self }), deltaUrl)
@@ -247,12 +257,13 @@ describe('Subscriptions', _ => {
     const deltasWeSent = deltas.filter(
       (d) => d.updates[0].source && d.updates[0].source.pgn === 128275
     )
-   assert(
+    assert(
       deltasWeSent.filter((d) => d.context === self).length === 1,
       'Received self delta'
     )
     assert(
-      deltasWeSent.filter((d) => d.context === 'vessels.othervessel').length === 1,
+      deltasWeSent.filter((d) => d.context === 'vessels.othervessel').length ===
+        1,
       'Received other vessel delta'
     )
   })
@@ -260,7 +271,9 @@ describe('Subscriptions', _ => {
   it('?subscribe=none subscription serves no data', async function () {
     await serverP
     const wsPromiser = new WsPromiser(
-      'ws://localhost:' + port + '/signalk/v1/stream?subscribe=none&metaDeltas=none'
+      'ws://localhost:' +
+        port +
+        '/signalk/v1/stream?subscribe=none&metaDeltas=none'
     )
 
     const self = JSON.parse(await wsPromiser.nthMessage(1)).self
@@ -279,13 +292,13 @@ describe('Subscriptions', _ => {
     let self, wsPromiser
 
     return serverP
-      .then(_ => {
+      .then((_) => {
         wsPromiser = new WsPromiser(
           'ws://localhost:' + port + '/signalk/v1/stream'
         )
         return wsPromiser.nextMsg()
       })
-      .then(wsHello => {
+      .then((wsHello) => {
         self = JSON.parse(wsHello).self
 
         return wsPromiser.send({ context: '*', unsubscribe: [{ path: '*' }] })
@@ -311,7 +324,7 @@ describe('Subscriptions', _ => {
           )
         ])
       })
-      .then(results => {
+      .then((results) => {
         const delta = JSON.parse(results[0])
         assert(
           delta.updates[0].values[0].path === 'navigation.logTrip',
@@ -327,7 +340,7 @@ describe('Subscriptions', _ => {
           sendDelta(getDelta({ context: 'vessels.othervessel' }), deltaUrl)
         ])
       })
-      .then(results => {
+      .then((results) => {
         const delta = JSON.parse(results[0])
         assert(delta.updates.length === 1, 'Receives just one update')
         assert(delta.updates[0].values.length === 1, 'Receives just one value')
@@ -343,13 +356,13 @@ describe('Subscriptions', _ => {
     let self, wsPromiser
 
     return serverP
-      .then(_ => {
+      .then((_) => {
         wsPromiser = new WsPromiser(
           'ws://localhost:' + port + '/signalk/v1/stream?subsribe=none'
         )
         return wsPromiser.nextMsg()
       })
-      .then(wsHello => {
+      .then((wsHello) => {
         self = JSON.parse(wsHello).self
 
         return wsPromiser.send({
@@ -369,7 +382,10 @@ describe('Subscriptions', _ => {
             }),
             deltaUrl
           ),
-          sendDelta(getEmptyPathDelta({ context: 'vessels.othervessel' }), deltaUrl)
+          sendDelta(
+            getEmptyPathDelta({ context: 'vessels.othervessel' }),
+            deltaUrl
+          )
         ])
       })
       .then(() => wsPromiser.nthMessage(4)) //self, 1st delta with mmsi
@@ -386,7 +402,7 @@ describe('Subscriptions', _ => {
         )
         return wsPromiser.nthMessage(5) //self, 2nd delta with mmsi
       })
-      .then(nextMsg => {
+      .then((nextMsg) => {
         const delta = JSON.parse(nextMsg)
         assert(delta.updates[0].values[0].path === '', 'Path is empty string')
         assert(
@@ -408,29 +424,35 @@ describe('Subscriptions', _ => {
 
         return wsPromiser.nthMessage(6) //othervessel, 1st delta
       })
-      .then(nextMsg => {
+      .then((nextMsg) => {
         const delta = JSON.parse(nextMsg)
         assert(delta.updates.length === 1, 'Receives just one update')
         assert(delta.updates[0].values.length === 1, 'Receives just one value')
-        assert(delta.updates[0].values[0].path === '', 'Receives pathvalue with empty path')
-        assert(typeof delta.updates[0].values[0].value.mmsi === 'string', 'Receives object with mmsi')
+        assert(
+          delta.updates[0].values[0].path === '',
+          'Receives pathvalue with empty path'
+        )
+        assert(
+          typeof delta.updates[0].values[0].value.mmsi === 'string',
+          'Receives object with mmsi'
+        )
         assert(delta.context === 'vessels.othervessel')
       })
   })
 
   it('relativePosition subscription serves correct data', function () {
-    let self, wsPromiser
+    let wsPromiser
 
     return serverP
-      .then(_ => {
+      .then((_) => {
         wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?subsribe=none&metaDeltas=none'
+          'ws://localhost:' +
+            port +
+            '/signalk/v1/stream?subsribe=none&metaDeltas=none'
         )
         return wsPromiser.nextMsg()
       })
-      .then(wsHello => {
-        self = JSON.parse(wsHello).self
-
+      .then(() => {
         return wsPromiser.send({
           context: {
             radius: 1,
@@ -446,19 +468,19 @@ describe('Subscriptions', _ => {
           ]
         })
       })
-      .then(results => {
+      .then(() => {
         return Promise.all([
           wsPromiser.nextMsg(),
           sendDelta(getClosePosistionDelta(), deltaUrl)
         ])
       })
-      .then(results => {
+      .then(() => {
         return Promise.all([
           wsPromiser.nextMsg(),
           sendDelta(getClosePosistionDelta(), deltaUrl)
         ])
       })
-      .then(results => {
+      .then((results) => {
         assert(results[0] != 'timeout', 'Got timeout')
         const delta = JSON.parse(results[0])
 
@@ -468,30 +490,28 @@ describe('Subscriptions', _ => {
 
         return sendDelta(getFarPosistionDelta(), deltaUrl)
       })
-      .then(results => {
+      .then(() => {
         return Promise.all([
           wsPromiser.nextMsg(),
           sendDelta(getFarPosistionDelta(), deltaUrl)
         ])
       })
-      .then(results => {
+      .then((results) => {
         assert(results[0] === 'timeout')
       })
   })
 
-it('relativePosition subscription works with null positions', function () {
-    let self, wsPromiser
+  it('relativePosition subscription works with null positions', function () {
+    let wsPromiser
 
     return serverP
-      .then(_ => {
+      .then((_) => {
         wsPromiser = new WsPromiser(
           'ws://localhost:' + port + '/signalk/v1/stream?subsribe=none'
         )
         return wsPromiser.nextMsg()
       })
-      .then(wsHello => {
-        self = JSON.parse(wsHello).self
-
+      .then(() => {
         return wsPromiser.send({
           context: {
             radius: 1,
@@ -507,20 +527,20 @@ it('relativePosition subscription works with null positions', function () {
           ]
         })
       })
-    .then(results => {
-      return Promise.all([
-        wsPromiser.nextMsg(),
-        sendDelta(getNullPositionDelta(), deltaUrl)
-      ])
-    })
-      .then(results => {
+      .then(() => {
         return Promise.all([
           wsPromiser.nextMsg(),
           sendDelta(getNullPositionDelta(), deltaUrl)
         ])
       })
-    .then(results => {
-      assert(results[0] === 'timeout')
+      .then(() => {
+        return Promise.all([
+          wsPromiser.nextMsg(),
+          sendDelta(getNullPositionDelta(), deltaUrl)
+        ])
+      })
+      .then((results) => {
+        assert(results[0] === 'timeout')
       })
   })
 
@@ -528,13 +548,13 @@ it('relativePosition subscription works with null positions', function () {
     let self, wsPromiser
 
     return serverP
-      .then(_ => {
+      .then((_) => {
         wsPromiser = new WsPromiser(
           'ws://localhost:' + port + '/signalk/v1/stream?subscribe=none'
         )
         return wsPromiser.nextMsg()
       })
-      .then(wsHello => {
+      .then((wsHello) => {
         self = JSON.parse(wsHello).self
 
         //SubscriptionManager does nothing unless we have some matching
