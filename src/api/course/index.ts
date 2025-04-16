@@ -6,6 +6,7 @@ import { IRouter, Request, Response } from 'express'
 import _ from 'lodash'
 
 import { SignalKMessageHub, WithConfig } from '../../app'
+import { Context, Path } from '@signalk/server-api'
 import { WithSecurityStrategy } from '../../security'
 import { getSourceId } from '@signalk/signalk-schema'
 
@@ -39,7 +40,7 @@ import { Store } from '../../serverstate/store'
 import { buildSchemaSync } from 'api-schema-builder'
 import courseOpenApi from './openApi.json'
 import { ResourcesApi } from '../resources'
-import { writeSettingsFile } from '../../config/config'
+import { ConfigApp, writeSettingsFile } from '../../config/config'
 
 const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
 
@@ -56,23 +57,12 @@ export const COURSE_API_V1_DELTA_COUNT = 8
 export const COURSE_API_INITIAL_DELTA_COUNT =
   COURSE_API_V1_DELTA_COUNT * 2 + COURSE_API_V2_DELTA_COUNT
 
-interface CourseApplication
+export interface CourseApplication
   extends IRouter,
+    ConfigApp,
     WithConfig,
     WithSecurityStrategy,
-    SignalKMessageHub {
-  subscriptionmanager?: {
-    subscribe: (
-      subscribe: {
-        context: string
-        subscribe: Array<{ path: string; period: number }>
-      },
-      unsubscribes: Array<any>,
-      errorCallback: (error: any) => void,
-      deltaCallback: (delta: Delta) => void
-    ) => void
-  }
-}
+    SignalKMessageHub {}
 
 interface CommandSource {
   type: string
@@ -129,20 +119,20 @@ export class CourseApi {
 
       this.app.subscriptionmanager?.subscribe(
         {
-          context: 'vessels.self',
+          context: 'vessels.self' as Context,
           subscribe: [
             {
-              path: 'navigation.courseRhumbline.nextPoint.position',
+              path: 'navigation.courseRhumbline.nextPoint.position' as Path,
               period: 500
             },
             {
-              path: 'navigation.courseGreatCircle.nextPoint.position',
+              path: 'navigation.courseGreatCircle.nextPoint.position' as Path,
               period: 500
             }
           ]
         },
         this.unsubscribes,
-        (err: Error) => {
+        (err) => {
           console.log(`Course API: Subscribe failed: ${err}`)
         },
         (msg: Delta) => {
@@ -151,20 +141,20 @@ export class CourseApi {
       )
       this.app.subscriptionmanager?.subscribe(
         {
-          context: 'vessels.self',
+          context: 'vessels.self' as Context,
           subscribe: [
             {
-              path: 'resources.routes.*',
+              path: 'resources.routes.*' as Path,
               period: 500
             },
             {
-              path: 'resources.waypoints.*',
+              path: 'resources.waypoints.*' as Path,
               period: 500
             }
           ]
         },
         this.unsubscribes,
-        (err: Error) => {
+        (err) => {
           console.log(`Course API: Subscribe failed: ${err}`)
         },
         (msg: Delta) => {
@@ -250,7 +240,7 @@ export class CourseApi {
 
   // write to server settings file
   private saveSettings() {
-    writeSettingsFile(this.app as any, this.app.config.settings, () =>
+    writeSettingsFile(this.app, this.app.config.settings, () =>
       debug('***SETTINGS SAVED***')
     )
   }
