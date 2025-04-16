@@ -269,7 +269,7 @@ class Server {
       data: Partial<Delta>,
       skVersion = SKVersion.v1
     ) => {
-      if (data && data.updates) {
+      if (data && Array.isArray(data.updates)) {
         incDeltaStatistics(app, providerId)
 
         if (
@@ -279,21 +279,41 @@ class Server {
           data.context = ('vessels.' + app.selfId) as Context
         }
         const now = new Date()
-        data.updates.forEach((update: Update) => {
-          if (typeof update.source !== 'undefined') {
-            update.source.label = providerId
-            if (!update.$source) {
-              update.$source = getSourceId(update.source)
+        data.updates = data.updates
+          .map((update: Partial<Update>) => {
+            if (typeof update.source !== 'undefined') {
+              update.source.label = providerId
+              if (!update.$source) {
+                update.$source = getSourceId(update.source)
+              }
+            } else {
+              if (typeof update.$source === 'undefined') {
+                update.$source = providerId as SourceRef
+              }
             }
-          } else {
-            if (typeof update.$source === 'undefined') {
-              update.$source = providerId as SourceRef
+            if (!update.timestamp || app.config.overrideTimestampWithNow) {
+              update.timestamp = now.toISOString() as Timestamp
             }
-          }
-          if (!update.timestamp || app.config.overrideTimestampWithNow) {
-            update.timestamp = now.toISOString() as Timestamp
-          }
-        })
+
+            if ('values' in update && !Array.isArray(update.values)) {
+              debug(`handleMessage: ignoring invalid values`, update.values)
+              delete update.values
+            }
+
+            if ('meta' in update && !Array.isArray(update.meta)) {
+              debug(`handleMessage: ignoring invalid meta`, update.meta)
+              delete update.meta
+            }
+
+            if ('values' in update || 'meta' in update) {
+              return update as Update
+            }
+          })
+          .filter((update) => update !== undefined)
+
+        // No valid updates, discarding
+        if (data.updates.length < 1) return
+
         try {
           const preferredDelta = toPreferredDelta(data, now, app.selfContext)
           if (skVersion == SKVersion.v1) {
