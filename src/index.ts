@@ -307,7 +307,7 @@ class Server {
       }
     }
 
-    app.streambundle = new StreamBundle(app, app.selfId)
+    app.streambundle = new StreamBundle(app.selfId)
     new Zones(app.streambundle, (delta: Delta) =>
       app.handleMessage('self.notificationhandler', delta)
     )
