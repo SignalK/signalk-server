@@ -1,5 +1,5 @@
-import { OpenApiDescription } from '../swagger'
-import securityApiDoc from './openApi.json'
+import { OpenApiDescription } from '../swagger.js'
+import securityApiDoc from './openApi.json' with { type: 'json' }
 
 export const securityApiRecord = {
   name: 'security',

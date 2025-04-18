@@ -1,4 +1,4 @@
-import { Position } from '.'
+import { Position } from './index.js'
 
 export interface Route {
   name?: string

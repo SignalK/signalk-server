@@ -1,7 +1,6 @@
-const { v4: uuidv4 } = require('uuid')
-import { createDebug } from './debug'
+import { v4 as uuidv4 } from 'uuid'
+import { createDebug } from './debug.js'
 const debug = createDebug('signalk-server:requestResponse')
-const _ = require('lodash')
 
 const requests = {}
 
@@ -9,7 +8,14 @@ const pruneRequestTimeout = 60 * 60 * 1000
 const pruneIntervalRate = 15 * 60 * 1000
 let pruneInterval
 
-function createRequest(app, type, clientRequest, user, clientIp, updateCb) {
+export function createRequest(
+  app,
+  type,
+  clientRequest,
+  user,
+  clientIp,
+  updateCb
+) {
   return new Promise((resolve) => {
     const requestId = clientRequest.requestId
       ? clientRequest.requestId
@@ -37,7 +43,7 @@ function createRequest(app, type, clientRequest, user, clientIp, updateCb) {
   })
 }
 
-function createReply(request) {
+export function createReply(request) {
   const reply = {
     state: request.state,
     requestId: request.requestId,
@@ -52,7 +58,7 @@ function createReply(request) {
   return reply
 }
 
-function updateRequest(
+export function updateRequest(
   requestId,
   state,
   { statusCode = null, data = null, message = null, percentComplete = null }
@@ -102,19 +108,19 @@ export function queryRequest(requestId) {
   })
 }
 
-function findRequest(matcher) {
-  return _.values(requests).find(matcher)
+export function findRequest(matcher) {
+  return Object.values(requests).find(matcher)
 }
 
-function filterRequests(type, state) {
-  return _.values(requests).filter(
+export function filterRequests(type, state) {
+  return Object.values(requests).filter(
     (r) => r.type === type && (state === null || r.state === state)
   )
 }
 
-function pruneRequests() {
+export function pruneRequests() {
   debug('pruning requests')
-  _.keys(requests).forEach((id) => {
+  Object.keys(requests).forEach((id) => {
     const request = requests[id]
 
     const diff = new Date() - new Date(request.date)
@@ -123,12 +129,4 @@ function pruneRequests() {
       debug('pruned request %s', id)
     }
   })
-}
-
-module.exports = {
-  createRequest,
-  updateRequest,
-  findRequest,
-  filterRequests,
-  queryRequest
 }

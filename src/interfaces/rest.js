@@ -14,16 +14,19 @@
  * limitations under the License.
 */
 
-const { createDebug } = require('../debug')
+import { createDebug } from '../debug.js'
+import { static as serveStatic, Router } from 'express'
+import { getMetadata } from '@signalk/signalk-schema'
+import { getExternalPort } from '../ports.js'
+import pkg from '../../package.json' with { type: 'json' }
+
+const { version } = pkg
 const debug = createDebug('signalk-server:interfaces:rest')
-const express = require('express')
-const { getMetadata } = require('@signalk/signalk-schema')
-const ports = require('../ports')
 
 const iso8601rexexp =
   /^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?Z$/
 
-module.exports = function (app) {
+export default function (app) {
   'use strict'
 
   const pathPrefix = '/signalk'
@@ -35,7 +38,7 @@ module.exports = function (app) {
 
   return {
     start: function () {
-      app.use('/', express.static(__dirname + '/../../public'))
+      app.use('/', serveStatic(import.meta.dirname + '/../../public'))
 
       app.get(apiPathPrefix + '*', function (req, res, next) {
         let path = String(req.path).replace(apiPathPrefix, '')
@@ -148,15 +151,14 @@ module.exports = function (app) {
         }
 
         const services = {
-          version: getVersion(),
+          version,
           'signalk-http': httpProtocol + host + apiPathPrefix,
           'signalk-ws': wsProtocol + host + streamPath
         }
 
         if (app.interfaces.tcp && app.interfaces.tcp.data) {
-          services[
-            'signalk-tcp'
-          ] = `tcp://${splitHost[0]}:${app.interfaces.tcp.data.port}`
+          services['signalk-tcp'] =
+            `tcp://${splitHost[0]}:${app.interfaces.tcp.data.port}`
         }
 
         res.json({
@@ -172,7 +174,7 @@ module.exports = function (app) {
 
       if (app.historyProvider && app.historyProvider.registerHistoryApiRoute) {
         debug('Adding history api route')
-        const historyApiRouter = express.Router()
+        const historyApiRouter = Router()
         app.historyProvider.registerHistoryApiRoute(historyApiRouter)
         app.use(pathPrefix + versionPrefix + '/history', historyApiRouter)
       }
@@ -181,10 +183,7 @@ module.exports = function (app) {
     mdns: {
       name: app.config.settings.ssl ? '_signalk-https' : '_signalk-http',
       type: 'tcp',
-      port: ports.getExternalPort(app)
+      port: getExternalPort(app)
     }
   }
 }
-
-// @ts-ignore
-const getVersion = () => require('../../package.json').version

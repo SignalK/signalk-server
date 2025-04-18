@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { Input, FormGroup, FormText, Col, Label } from 'reactstrap'
-import N2KFilters from './N2KFilters'
+import N2KFilters from './N2KFilters.js'
 
 class BasicProvider extends Component {
   constructor() {

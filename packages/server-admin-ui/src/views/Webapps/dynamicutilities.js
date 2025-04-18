@@ -7,7 +7,7 @@ export const toLazyDynamicComponent = (moduleName, component) =>
         const container = window[toSafeModuleId(moduleName)]
         if (container === undefined) {
           console.error(`Could not load module ${moduleName}`)
-          resolve(import('./loadingerror'))
+          resolve(import('./loadingerror.js'))
           return
         }
         // eslint-disable-next-line no-undef

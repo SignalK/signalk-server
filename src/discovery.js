@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-import { createDebug } from './debug'
-const debug = createDebug('signalk-server:discovery')
-const canboatjs = require('@canboat/canboatjs')
-const dgram = require('dgram')
-const mdns = require('mdns-js')
-const { networkInterfaces } = require('os')
+import { createDebug } from './debug.js'
+import canboatjs from '@canboat/canboatjs'
+import dgram from 'dgram'
+import mdns from 'mdns-js'
+import { networkInterfaces } from 'os'
+import { fileURLToPath } from 'url'
 
-module.exports.runDiscovery = function (app) {
+const debug = createDebug('signalk-server:discovery')
+
+export function runDiscovery(app) {
   if (canboatjs.discover) {
     try {
       canboatjs.discover(app)
@@ -272,7 +274,7 @@ module.exports.runDiscovery = function (app) {
   }
 }
 
-if (require.main === module) {
+if (process.argv[1] && fileURLToPath(import.meta.url)) {
   const app = {
     config: {
       settings: {
@@ -283,5 +285,5 @@ if (require.main === module) {
       console.log(`found ${JSON.stringify(p)}`)
     }
   }
-  module.exports.runDiscovery(app)
+  runDiscovery(app)
 }

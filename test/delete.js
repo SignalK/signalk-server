@@ -1,10 +1,10 @@
-const chai = require('chai')
+import chai from 'chai'
+import chaiThings from 'chai-things'
+import fetch from 'node-fetch'
+import { startServer } from './ts-servertestutilities.js'
+
 chai.Should()
-chai.use(require('chai-things'))
-
-import { startServer } from './ts-servertestutilities'
-
-const fetch = require('node-fetch')
+chai.use(chaiThings)
 
 describe('Delete Requests', () => {
   let doStop, doSendDelta, theHost, doSelfPut, doGet, doCreateWsPromiser
@@ -32,7 +32,7 @@ describe('Delete Requests', () => {
 
   it('HTTP delete to unhandled path fails', async function () {
     await doSendDelta('navigation.logTrip', 43374)
-   
+
     const result = await fetch(
       `${theHost}/signalk/v1/api/vessels/self/navigation/logTrip`,
       {
@@ -73,7 +73,7 @@ describe('Delete Requests', () => {
     result = await doGet('/vessels/self/navigation/logTrip/meta/displayName')
     result.status.should.equal(404)
   })
-  
+
   it('WS delete to unhandled path fails', async function () {
     const ws = doCreateWsPromiser()
 
@@ -93,12 +93,12 @@ describe('Delete Requests', () => {
     response.statusCode.should.equal(405)
   })
 
- 
+
   it('WS successful DELETE', async function () {
     let result = await doSelfPut('navigation/logTrip/meta/displayName', {
       value: 'My Log Trip'
     })
-    
+
     result.status.should.equal(202)
 
     result = await doGet('/vessels/self/navigation/logTrip/meta/displayName')
@@ -107,7 +107,7 @@ describe('Delete Requests', () => {
     name.should.equal('My Log Trip')
 
     const ws = doCreateWsPromiser()
-    
+
     let msg = await ws.nextMsg()
 
     ws.send({

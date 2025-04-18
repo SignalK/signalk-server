@@ -166,7 +166,7 @@ Following are code snippets that can be used as a template for plugin developmen
 Create `index.js` with the following content:
 
 ```javascript
-module.exports = (app) => {
+export default (app) => {
 
   const plugin = {
     id: 'my-signalk-plugin',
@@ -254,10 +254,8 @@ plugin.registerWithRouter = (router) => {
 
 _Example:_
 ```javascript
-const openapi = require('./openApi.json');
-
-plugin.getOpenApi = () => openapi;
-
+import openapi from './openApi.json' with { type: 'json' }
+plugin.getOpenApi = () => openapi
 ```
 
 ---
@@ -270,10 +268,9 @@ You do this by creating an OpenAPI definition within the file `openApi.json` and
 
 _Example:_
 ```javascript
-const openapi = require('./openApi.json');
-...
-
-plugin.getOpenApi = () => openapi;
+import openapi from './openApi.json' with { type: 'json' }
+// ...
+plugin.getOpenApi = () => openapi
 ```
 
 This will include your plugin's OpenApi definition in the documentation in the server's Admin UI under _Documentation -> OpenAPI_.

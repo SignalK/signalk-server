@@ -24,11 +24,12 @@
 
  */
 
-const Transform = require('stream').Transform
+import { Transform } from 'stream'
+import { inherits } from 'util'
 
-require('util').inherits(Liner, Transform)
+inherits(Liner, Transform)
 
-function Liner(options) {
+export default function Liner(options) {
   Transform.call(this, {
     objectMode: true,
   })
@@ -64,5 +65,3 @@ Liner.prototype._flush = function (done) {
   this._lastLineData = null
   done()
 }
-
-module.exports = Liner

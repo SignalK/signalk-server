@@ -14,21 +14,22 @@
  * limitations under the License.
 */
 
-import { createDebug } from '../debug'
-const debug = createDebug('signalk-server:interfaces:appstore')
-const _ = require('lodash')
-const { gt } = require('semver')
-const { installModule, removeModule } = require('../modules')
-const {
+import { createDebug } from '../debug.js'
+import { get, uniqBy } from 'lodash-es'
+import { gt } from 'semver'
+import {
+  installModule,
+  removeModule,
   isTheServerModule,
   findModulesWithKeyword,
   getLatestServerVersion,
   getAuthor,
   getKeywords
-} = require('../modules')
-const { SERVERROUTESPREFIX } = require('../constants')
-const { getCategories, getAvailableCategories } = require('../categories')
+} from '../modules.js'
+import { SERVERROUTESPREFIX } from '../constants.js'
+import { getCategories, getAvailableCategories } from '../categories.js'
 
+const debug = createDebug('signalk-server:interfaces:appstore')
 const npmServerInstallLocations = [
   '/usr/bin/signalk-server',
   '/usr/lib/node_modules/signalk-server/bin/signalk-server',
@@ -36,7 +37,7 @@ const npmServerInstallLocations = [
   '/usr/local/lib/node_modules/signalk-server/bin/signalk-server'
 ]
 
-module.exports = function (app) {
+export default function (app) {
   let moduleInstalling
   const modulesInstalledSinceStartup = {}
   const moduleInstallQueue = []
@@ -157,7 +158,7 @@ module.exports = function (app) {
       const allWebapps = [].concat(embeddableWebapps).concat(webapps)
       return [
         plugins,
-        _.uniqBy(allWebapps, (plugin) => {
+        uniqBy(allWebapps, (plugin) => {
           return plugin.package.name
         })
       ]
@@ -303,7 +304,7 @@ module.exports = function (app) {
   }
 
   function getNpmUrl(moduleInfo) {
-    const npm = _.get(moduleInfo.package, 'links.npm')
+    const npm = get(moduleInfo.package, 'links.npm')
     return npm || null
   }
 

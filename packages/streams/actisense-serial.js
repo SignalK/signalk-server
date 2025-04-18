@@ -1,1 +1,2 @@
-module.exports = require('@canboat/canboatjs').serial
+import { serial } from '@canboat/canboatjs'
+export default serial

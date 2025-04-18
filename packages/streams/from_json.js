@@ -25,15 +25,16 @@
  *
  */
 
-const Transform = require('stream').Transform
+import { Transform } from 'stream'
+import { inherits } from 'util'
 
-function FromJson() {
+export default function FromJson() {
   Transform.call(this, {
     objectMode: true,
   })
 }
 
-require('util').inherits(FromJson, Transform)
+inherits(FromJson, Transform)
 
 FromJson.prototype._transform = function (chunk, encoding, done) {
   let parsed = null
@@ -47,5 +48,3 @@ FromJson.prototype._transform = function (chunk, encoding, done) {
   }
   done()
 }
-
-module.exports = FromJson

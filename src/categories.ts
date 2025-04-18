@@ -14,10 +14,10 @@
  * limitations under the License.
 */
 
-import { createDebug } from './debug'
+import { createDebug } from './debug.js'
 const debug = createDebug('signalk:categories')
 
-import { getKeywords, NpmPackageData } from './modules'
+import { getKeywords, NpmPackageData } from './modules.js'
 
 const NEW_CATEGORY = 'New/Updated'
 
@@ -27,7 +27,7 @@ const isDeprecated = (packageName: string) =>
   DEFAULT_MODULE_CAT_KEYWORDS[packageName] &&
   DEFAULT_MODULE_CAT_KEYWORDS[packageName].includes(CAT_DEPRECATED)
 
-function getCategories(thePackage: NpmPackageData): string[] {
+export function getCategories(thePackage: NpmPackageData): string[] {
   if (isDeprecated(thePackage.name)) {
     return ['Deprecated']
   }
@@ -60,7 +60,7 @@ function getCategories(thePackage: NpmPackageData): string[] {
   return categoryNames
 }
 
-function getAvailableCategories() {
+export function getAvailableCategories() {
   const normal = Object.values(CAT_KEYWORDS_TO_NAMES).slice(0).sort()
 
   return ['All', ...normal]
@@ -292,9 +292,4 @@ const DEFAULT_MODULE_CAT_KEYWORDS: {
     'signalk-category-web-instruments'
   ],
   'signalk-sbd-msg': ['signalk-category-hardware']
-}
-
-module.exports = {
-  getCategories,
-  getAvailableCategories
 }

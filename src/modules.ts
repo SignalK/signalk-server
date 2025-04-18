@@ -17,12 +17,12 @@
 
 import { spawn } from 'child_process'
 import fs from 'fs'
-import _ from 'lodash'
+import { uniqBy } from 'lodash-es'
 import fetch from 'node-fetch'
 import path from 'path'
-import semver, { SemVer } from 'semver'
-import { Config } from './config/config'
-import { createDebug } from './debug'
+import * as semver from 'semver'
+import { Config } from './config/config.js'
+import { createDebug } from './debug.js'
 import { nextTick } from 'process'
 const debug = createDebug('signalk:modules')
 const npmDebug = createDebug('signalk:modules:npm')
@@ -55,48 +55,44 @@ export interface Package {
   license: string
 }
 
-function findModulesInDir(dir: string, keyword: string): ModuleData[] {
+async function findModulesInDir(
+  dir: string,
+  keyword: string
+): Promise<ModuleData[]> {
   // If no directory by name return empty array.
   if (!fs.existsSync(dir)) {
     return []
   }
   debug('findModulesInDir: ' + dir)
-  return fs
-    .readdirSync(dir)
-    .filter((name) => name !== '.bin')
-    .reduce<ModuleData[]>((result, filename) => {
-      if (filename.indexOf('@') === 0) {
-        return result.concat(
-          findModulesInDir(dir + filename + '/', keyword).map((entry) => {
-            return {
-              module: entry.module,
-              metadata: entry.metadata,
-              location: dir
-            }
-          })
-        )
-      } else {
-        let metadata
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          metadata = require(path.join(dir, filename, 'package.json'))
-        } catch (err) {
-          debug(err)
-        }
-        if (
-          metadata &&
-          metadata.keywords &&
-          metadata.keywords.includes(keyword)
-        ) {
-          result.push({
+
+  const modules: ModuleData[] = []
+  const entries = fs.readdirSync(dir).filter((name) => name !== '.bin')
+
+  for (const filename in entries) {
+    if (filename.indexOf('@') === 0) {
+      // @owner/package
+      const subdir = path.join(dir, filename)
+      modules.concat(await findModulesInDir(subdir, keyword))
+    } else {
+      try {
+        const metadata = (await import(
+          path.join(dir, filename, 'package.json'),
+          { with: { type: 'json' } }
+        )) as NpmPackageData
+        if (metadata.keywords?.includes(keyword)) {
+          modules.push({
             module: metadata.name,
             metadata,
             location: dir
           })
         }
+      } catch (err) {
+        debug(err)
       }
-      return result
-    }, [])
+    }
+  }
+
+  return modules
 }
 
 // Extract unique directory paths from app object.
@@ -116,18 +112,15 @@ const priorityPrefix = (a: ModuleData, b: ModuleData) =>
   getModuleSortName(a).localeCompare(getModuleSortName(b))
 
 // Searches for installed modules that contain `keyword`.
-export function modulesWithKeyword(config: Config, keyword: string) {
-  return _.uniqBy(
-    // _.flatten since values are inside an array. [[modules...], [modules...]]
-    _.flatten(
-      getModulePaths(config).map((pathOption) =>
-        findModulesInDir(pathOption, keyword)
-      )
-    ),
-    (moduleData) => moduleData.module
-  ).sort(priorityPrefix)
+export async function modulesWithKeyword(config: Config, keyword: string) {
+  const modules = (
+    await Promise.all(
+      getModulePaths(config).map((path) => findModulesInDir(path, keyword))
+    )
+  ).flat()
+  return uniqBy(modules, ({ module }) => module).sort(priorityPrefix)
 }
-function installModule(
+export function installModule(
   config: Config,
   name: string,
   version: string,
@@ -138,7 +131,7 @@ function installModule(
   runNpm(config, name, version, 'install', onData, onErr, onClose)
 }
 
-function removeModule(
+export function removeModule(
   config: Config,
   name: string,
   version: any,
@@ -205,13 +198,15 @@ function runNpm(
   })
 }
 
-function isTheServerModule(moduleName: string, config: Config) {
+export function isTheServerModule(moduleName: string, config: Config) {
   return moduleName === config.name
 }
 
 const modulesByKeyword: { [key: string]: any } = {}
 
-function findModulesWithKeyword(keyword: string): Promise<NpmModuleData[]> {
+export function findModulesWithKeyword(
+  keyword: string
+): Promise<NpmModuleData[]> {
   return new Promise<NpmModuleData[]>((resolve, reject) => {
     if (
       modulesByKeyword[keyword] &&
@@ -242,7 +237,7 @@ function findModulesWithKeyword(keyword: string): Promise<NpmModuleData[]> {
           },
           {}
         )
-        const packages = _.values(result)
+        const packages = Object.values(result)
         modulesByKeyword[keyword] = {
           time: Date.now(),
           packages
@@ -290,7 +285,7 @@ function doFetchDistTags() {
   return fetch('https://registry.npmjs.org/-/package/signalk-server/dist-tags')
 }
 
-function getLatestServerVersion(
+export function getLatestServerVersion(
   currentVersion: string,
   distTags = doFetchDistTags
 ): Promise<string> {
@@ -325,7 +320,7 @@ export function checkForNewServerVersion(
 ) {
   getLatestServerVersionP(currentVersion)
     .then((version: string) => {
-      if (semver.satisfies(new SemVer(version), `>${currentVersion}`)) {
+      if (semver.satisfies(version, `>${currentVersion}`)) {
         serverUpgradeIsAvailable(undefined, version)
       }
     })
@@ -343,56 +338,30 @@ export function getAuthor(thePackage: Package): string {
 export function getKeywords(thePackage: NpmPackageData): string[] {
   const keywords = thePackage.keywords
   debug('%s keywords: %j', thePackage.name, keywords)
-  return keywords
+  return keywords ?? []
 }
 
-export async function importOrRequire(moduleDir: string) {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require(moduleDir)
+export async function loadModule(moduleDir: string) {
+  // `import()` only works with file paths or npm module names. It can't
+  // directly load a path to a directory. One solution would be to refactor
+  // module loading to update `NODE_PATH` with plugin directories, and
+  // then import/require them here using just their module name (e.g.
+  // `import("@signalk/plugin-name")`), which would allow NodeJS to resolve
+  // and load the module. This would be a little more extensive refactoring
+  // that may be worth while once the whole project is entirely using ESM.
+  // For now, this `esm-resolve` package work
 
-    // Starting with version 20.19.0 and 22 Node will load ESM modules with require
-    // https://nodejs.org/en/blog/release/v20.19.0
-    return mod.default ?? mod
-  } catch (err) {
-    debug(`Failed to require("${moduleDir}") module, trying import()`)
+  const { buildResolver } = await import('esm-resolve')
+  const resolver = buildResolver(moduleDir, {
+    isDir: true,
+    resolveToAbsolute: true
+  })
+  const modulePath = resolver('.')
 
-    // `import()` only works with file paths or npm module names. It can't
-    // directly load a path to a directory. One solution would be to refactor
-    // module loading to update `NODE_PATH` with plugin directories, and
-    // then import/require them here using just their module name (e.g.
-    // `import("@signalk/plugin-name")`), which would allow NodeJS to resolve
-    // and load the module. This would be a little more extensive refactoring
-    // that may be worth while once the whole project is entirely using ESM.
-    // For now, this `esm-resolve` package work
-
-    const { buildResolver } = await import('esm-resolve')
-    const resolver = buildResolver(moduleDir, {
-      isDir: true,
-      resolveToAbsolute: true
-    })
-    const modulePath = resolver('.')
-
-    if (modulePath) {
-      const module = await import(modulePath)
-      return module.default
-    } else {
-      // Could not resolve, throw the original error.
-      throw err
-    }
+  if (modulePath) {
+    const module = await import(modulePath)
+    return module.default
+  } else {
+    throw new Error(`Could not resolve module in ${moduleDir}`)
   }
-}
-
-module.exports = {
-  modulesWithKeyword,
-  installModule,
-  removeModule,
-  isTheServerModule,
-  findModulesWithKeyword,
-  getLatestServerVersion,
-  checkForNewServerVersion,
-  getAuthor,
-  getKeywords,
-  restoreModules,
-  importOrRequire
 }

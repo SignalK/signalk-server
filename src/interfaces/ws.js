@@ -13,25 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-const _ = require('lodash')
-const ports = require('../ports')
-const cookie = require('cookie')
-const { getSourceId, getMetadata } = require('@signalk/signalk-schema')
-const { requestAccess, InvalidTokenError } = require('../security')
-const {
-  findRequest,
-  updateRequest,
-  queryRequest
-} = require('../requestResponse')
-const { putPath, deletePath } = require('../put')
-import { createDebug } from '../debug'
-import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
-import { startEvents, startServerEvents } from '../events'
+import { get, isUndefined } from 'lodash-es'
+import * as ports from '../ports.js'
+import cookie from 'cookie'
+import { getSourceId, getMetadata } from '@signalk/signalk-schema'
+import { requestAccess, InvalidTokenError } from '../security.js'
+import { findRequest, updateRequest, queryRequest } from '../requestResponse.js'
+import { putPath, deletePath } from '../put.js'
+import { createDebug } from '../debug.js'
+import jwt from 'jsonwebtoken'
+import { startEvents, startServerEvents } from '../events.js'
+import Primus from 'primus'
+
+const { JsonWebTokenError, TokenExpiredError } = jwt // jsonwebtoken is not ESM compatible
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
-const Primus = require('primus')
 
-module.exports = function (app) {
+export default function (app) {
   'use strict'
 
   const api = {}
@@ -66,8 +64,8 @@ module.exports = function (app) {
         let spark
         if (source) {
           spark = sources[source]
-        } else if (_.keys(sources).length === 1) {
-          spark = _.values(sources)[0]
+        } else if (Object.keys(sources).length === 1) {
+          spark = Object.values(sources)[0]
         } else {
           updateRequest(requestId, 'COMPLETED', {
             statusCode: 400,
@@ -257,8 +255,8 @@ module.exports = function (app) {
 
           unsubscribes.forEach((unsubscribe) => unsubscribe())
 
-          _.keys(pathSources).forEach((path) => {
-            _.keys(pathSources[path]).forEach((source) => {
+          Object.keys(pathSources).forEach((path) => {
+            Object.keys(pathSources[path]).forEach((source) => {
               if (pathSources[path][source] === spark) {
                 debug('removing source for %s', path)
                 delete pathSources[path][source]
@@ -462,7 +460,7 @@ function createPrimusAuthorize(authorizeWS) {
       authorizeWS(req)
       authorized()
 
-      const identifier = _.get(req, 'skPrincipal.identifier')
+      const identifier = get(req, 'skPrincipal.identifier')
       if (identifier) {
         debug(`authorized username: ${identifier}`)
         req.source = 'ws.' + identifier.replace(/\./g, '_')
@@ -536,7 +534,7 @@ function processUpdates(app, pathSources, spark, msg) {
   This way the string values are shared across ws connections and not recreated
   for each context-path-ws combination. This reduces memory consumption for
   multiple ws clients.
-  Nevertheless we need to purge this data eventually, otherwise the strings for 
+  Nevertheless we need to purge this data eventually, otherwise the strings for
   AIS targets will stay forever, so implement a simple total purge. This may cause
   some thrashing, but is better than not sharing the values.
 */
@@ -549,9 +547,12 @@ const getContextPathMetaKey = (context, path) => {
     contextPaths[path] || (contextPaths[path] = `${context}.${path}`)
   return result
 }
-setInterval(() => {
-  canonical_meta_contextpath_values = {}
-}, 30 * 60 * 1000)
+setInterval(
+  () => {
+    canonical_meta_contextpath_values = {}
+  },
+  30 * 60 * 1000
+)
 
 function handleValuesMeta(kp) {
   const fullContextPathKey = getContextPathMetaKey(this.context, kp.path)
@@ -690,7 +691,7 @@ function sendHello(app, helloProps, spark) {
 }
 
 function handlePlaybackConnection(app, spark, onChange) {
-  if (_.isUndefined(app.historyProvider)) {
+  if (isUndefined(app.historyProvider)) {
     spark.end('No history provider')
     return
   }

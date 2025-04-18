@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Context, Path, SourceRef } from '@signalk/server-api'
-import { createDebug } from './debug'
+import { createDebug } from './debug.js'
 const debug = createDebug('signalk-server:sourcepriorities')
 
 interface SourcePriority {

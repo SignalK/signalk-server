@@ -10,8 +10,8 @@ import {
   writeFile
 } from 'fs/promises'
 import path from 'path'
-import { IResourceStore, StoreRequestParams } from '../types'
-import { passFilter, processParameters } from './utils'
+import { IResourceStore, StoreRequestParams } from '../types/index.js'
+import { passFilter, processParameters } from './utils.js'
 
 export const getUuid = (skIdentifier: string) =>
   skIdentifier.split(':').slice(-1)[0]

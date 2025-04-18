@@ -1,18 +1,21 @@
 'use strict'
 
-const Transform = require('stream').Transform
+import { Transform } from 'stream'
+import createDebug from 'debug'
+import { inherits } from 'util'
 
-function ToSignalK(options) {
+export default function ToSignalK(options) {
   Transform.call(this, {
     objectMode: true,
   })
 
-  const createDebug = options.createDebug || require('debug')
-  this.debug = createDebug('signalk:streams:keys-filter')
+  this.debug = (options.createDebug || createDebug)(
+    'signalk:streams:keys-filter'
+  )
   this.exclude = options.excludeMatchingPaths
 }
 
-require('util').inherits(ToSignalK, Transform)
+inherits(ToSignalK, Transform)
 
 ToSignalK.prototype._transform = function (chunk, encoding, done) {
   // Chunck is a delta. Check options if any of the paths need to be filtered...
@@ -77,5 +80,3 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
 
   done()
 }
-
-module.exports = ToSignalK

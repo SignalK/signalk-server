@@ -1,4 +1,5 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --enable-source-maps
+import { pipedProviders } from '../dist/pipedproviders.js'
 
 if (process.argv.length < 3) {
   console.log('Usage: log2sk <yourlogfilename>')
@@ -7,7 +8,7 @@ if (process.argv.length < 3) {
 
 const app = {
   config: {
-    configPath: __dirname
+    configPath: import.meta.dirname
   },
   emit: () => {},
   on: () => {},
@@ -20,7 +21,7 @@ const app = {
   }
 }
 
-new require('../dist/pipedproviders').pipedProviders(app).createPipedProvider({
+pipedProviders(app).createPipedProvider({
   pipeElements: [
     {
       type: 'providers/simple',

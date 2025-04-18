@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-const Transform = require('stream').Transform
+import { Transform } from 'stream'
+import SignalK from '@signalk/client'
+import createDebug from 'debug'
+import { inherits } from 'util'
 
-const SignalK = require('@signalk/client')
-
-function MdnsWs(options) {
+export default function MdnsWs(options) {
   Transform.call(this, {
     objectMode: true,
   })
@@ -29,8 +30,7 @@ function MdnsWs(options) {
   this.remoteServers[this.selfHost + ':' + this.selfPort] = {}
   const deltaStreamBehaviour = options.subscription ? 'none' : 'all'
 
-  const createDebug = options.createDebug || require('debug')
-  this.debug = createDebug('signalk:streams:mdns-ws')
+  this.debug = (options.createDebug || createDebug)('signalk:streams:mdns-ws')
   this.dataDebug = createDebug('signalk:streams:mdns-ws-data')
   this.debug(`deltaStreamBehaviour:${deltaStreamBehaviour}`)
 
@@ -77,7 +77,7 @@ function MdnsWs(options) {
   }
 }
 
-require('util').inherits(MdnsWs, Transform)
+inherits(MdnsWs, Transform)
 
 function setProviderStatus(that, providerId, message, isError) {
   if (!isError) {
@@ -164,5 +164,3 @@ MdnsWs.prototype.connect = function (client) {
 }
 
 MdnsWs.prototype._transform = function () {}
-
-module.exports = MdnsWs

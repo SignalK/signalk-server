@@ -1,6 +1,7 @@
-const { expect } = require('chai')
-const { getConfigDirectory } = require('./config')
-const path = require('path')
+import { describe, it } from 'mocha'
+import { expect } from 'chai'
+import { getConfigDirectory } from './config.js'
+import path from 'path'
 
 const app = {
   argv: {},
@@ -41,7 +42,7 @@ describe('getConfigDirectory', () => {
     delete theApp.env.SIGNALK_NODE_CONFIG_DIR
     delete theApp.config.configPath
     theApp.argv.s = path.join(
-      __dirname,
+      import.meta.dirname,
       '../../settings/n2k-from-file-settings.json'
     )
     expect(getConfigDirectory(theApp)).to.equal(theApp.config.appPath)

@@ -1,5 +1,5 @@
-import { Position } from '.'
-import { Brand } from './brand'
+import { Position } from './index.js'
+import { Brand } from './brand.js'
 
 export interface HrefDestination {
   href: string

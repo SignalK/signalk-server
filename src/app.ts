@@ -3,8 +3,8 @@ import { Delta, FeatureInfo, ServerAPI, SKVersion } from '@signalk/server-api'
 import { FullSignalK } from '@signalk/signalk-schema'
 import { EventEmitter } from 'node:events'
 
-import { Config } from './config/config'
-import DeltaCache from './deltacache'
+import { Config } from './config/config.js'
+import { DeltaCache } from './deltacache.js'
 
 export interface ServerApp extends ServerAPI {
   started: boolean

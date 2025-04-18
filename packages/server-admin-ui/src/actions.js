@@ -1,4 +1,4 @@
-import { isUndefined } from 'lodash'
+import { isUndefined } from 'lodash-es'
 
 const authFetch = (url, options) => {
   return fetch(url, {

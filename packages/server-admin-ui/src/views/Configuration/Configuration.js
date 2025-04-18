@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
+import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm.js'
 import {
   Button,
   Card,
@@ -12,7 +12,7 @@ import {
   Form,
   FormGroup,
 } from 'reactstrap'
-import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
+import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm.js'
 import { Fragment } from 'react'
 
 const searchStorageKey = 'admin.v1.plugins.search'

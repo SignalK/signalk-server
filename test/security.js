@@ -1,10 +1,9 @@
-const chai = require('chai')
-chai.Should()
-chai.use(require('chai-things'))
-const { freeport } = require('./ts-servertestutilities')
-const fetch = require('node-fetch')
-const WebSocket = require('ws')
-const {
+import chai from 'chai'
+import chaiThings from 'chai-things'
+import { freeport } from './ts-servertestutilities.js'
+import fetch from 'node-fetch'
+import WebSocket from 'ws'
+import {
   startServerP,
   getReadOnlyToken,
   getWriteToken,
@@ -16,7 +15,10 @@ const {
   WsPromiser,
   getToken,
   NOPASSWORD_USER_NAME
-} = require('./servertestutilities')
+} from './servertestutilities.js'
+
+chai.Should()
+chai.use(chaiThings)
 
 const limitedSteeringDelta = {
   updates: [

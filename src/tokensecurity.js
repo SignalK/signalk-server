@@ -14,20 +14,25 @@
  * limitations under the License.
  */
 
-import { createDebug } from './debug'
-const debug = createDebug('signalk-server:tokensecurity')
-const jwt = require('jsonwebtoken')
-const _ = require('lodash')
-const bcrypt = require('bcryptjs')
-const getSourceId = require('@signalk/signalk-schema').getSourceId
-const { InvalidTokenError } = require('./security')
-const {
+import { createDebug } from './debug.js'
+import jwt from 'jsonwebtoken'
+import { merge, isUndefined } from 'lodash-es'
+import bcrypt from 'bcryptjs'
+import { getSourceId } from '@signalk/signalk-schema'
+import { InvalidTokenError } from './security.js'
+import {
   createRequest,
   updateRequest,
   findRequest,
   filterRequests
-} = require('./requestResponse')
-const ms = require('ms')
+} from './requestResponse.js'
+import ms from 'ms'
+import { SERVERROUTESPREFIX } from './constants.js'
+import { randomBytes } from 'crypto'
+import bodyparser from 'body-parser'
+import cookieparser from 'cookie-parser'
+
+const debug = createDebug('signalk-server:tokensecurity')
 
 const CONFIG_PLUGINID = 'sk-simple-token-security-config'
 const passwordSaltRounds = 10
@@ -40,11 +45,9 @@ const skAuthPrefix = `${skPrefix}/auth`
 //cookie to hold login info for webapps to use
 const BROWSER_LOGININFO_COOKIE_NAME = 'skLoginInfo'
 
-import { SERVERROUTESPREFIX } from './constants'
-
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
 
-module.exports = function (app, config) {
+export default function (app, config) {
   const strategy = {}
 
   let {
@@ -57,8 +60,7 @@ module.exports = function (app, config) {
 
   const {
     allow_readonly = true,
-    secretKey = process.env.SECRETKEY ||
-      require('crypto').randomBytes(256).toString('hex'),
+    secretKey = process.env.SECRETKEY || randomBytes(256).toString('hex'),
     devices = [],
     acls = []
   } = config
@@ -107,7 +109,7 @@ module.exports = function (app, config) {
   }
 
   // so that enableSecurity gets the defaults to save
-  _.merge(config, options)
+  merge(config, options)
 
   function getConfiguration() {
     return options
@@ -178,9 +180,9 @@ module.exports = function (app, config) {
   }
 
   function setupApp() {
-    app.use(require('body-parser').urlencoded({ extended: true }))
+    app.use(bodyparser.urlencoded({ extended: true }))
 
-    app.use(require('cookie-parser')())
+    app.use(cookieparser())
 
     app.post(['/login', `${skAuthPrefix}/login`], (req, res) => {
       const name = req.body.username
@@ -593,7 +595,7 @@ module.exports = function (app, config) {
       })
 
       // true if we did not find anything disallowing the write
-      return _.isUndefined(notAllowed)
+      return isUndefined(notAllowed)
     }
     return false
   }
@@ -1058,9 +1060,9 @@ module.exports = function (app, config) {
 
   function validateAccessRequest(request) {
     if (request.userId) {
-      return !_.isUndefined(request.password)
+      return !isUndefined(request.password)
     } else if (request.clientId) {
-      return !_.isUndefined(request.description)
+      return !isUndefined(request.description)
     } else {
       return false
     }
@@ -1085,9 +1087,7 @@ module.exports = function (app, config) {
             return
           }
 
-          request.requestedPermissions = !_.isUndefined(
-            accessRequest.permissions
-          )
+          request.requestedPermissions = !isUndefined(accessRequest.permissions)
           if (!request.requestedPermissions) {
             request.permissions = 'readonly'
           } else {

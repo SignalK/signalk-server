@@ -45,7 +45,7 @@ _Example: Plugin registering as an autopilot provider._
 ```javascript
 import { AutopilotProvider } from '@signalk/server-api'
 
-module.exports = function (app) {
+export default function (app) {
   const plugin = {
     id: 'mypluginid',
     name: 'My autopilot Provider plugin'

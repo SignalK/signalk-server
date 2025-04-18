@@ -16,13 +16,13 @@
  */
 
 import fs from 'fs'
-import _ from 'lodash'
+import { isArray, isUndefined, pull } from 'lodash-es'
 
 const VALUES = 'values'
 const META = 'meta'
 const SELF_VESSEL = 'vessels.self'
 
-class DeltaEditor {
+export class DeltaEditor {
   deltas: any[]
 
   constructor() {
@@ -33,7 +33,7 @@ class DeltaEditor {
     const data = fs.readFileSync(filename, 'utf8')
     const deltas = JSON.parse(data)
 
-    if (!_.isArray(deltas)) {
+    if (!isArray(deltas)) {
       throw new Error(`${filename} should contain an array of deltas`)
     }
     this.deltas = deltas
@@ -48,7 +48,7 @@ class DeltaEditor {
   }
 
   setValue(context: string, path: string, value: any) {
-    if (_.isUndefined(value)) {
+    if (isUndefined(value)) {
       return this.removeValue(context, path)
     }
 
@@ -95,16 +95,16 @@ class DeltaEditor {
       if (deltaInfo && deltaInfo.kp) {
         delete deltaInfo.kp.value[path]
 
-        if (_.keys(deltaInfo.kp.value).length === 0) {
-          _.pull(this.deltas, deltaInfo.delta)
+        if (Object.keys(deltaInfo.kp.value).length === 0) {
+          pull(this.deltas, deltaInfo.delta)
         }
       }
     } else {
       const deltaInfo = getDelta(this.deltas, context, path, VALUES)
       if (deltaInfo && deltaInfo.kp) {
-        _.pull(deltaInfo.delta.updates[0].values, deltaInfo.kp)
+        pull(deltaInfo.delta.updates[0].values, deltaInfo.kp)
         if (deltaInfo.delta.updates[0].values.length === 0) {
-          _.pull(this.deltas, deltaInfo.delta)
+          pull(this.deltas, deltaInfo.delta)
         }
       }
     }
@@ -117,9 +117,9 @@ class DeltaEditor {
   removeMeta(context: string, path: string) {
     const deltaInfo = getDelta(this.deltas, context, path, META)
     if (deltaInfo && deltaInfo.kp) {
-      _.pull(deltaInfo.delta.updates[0].meta, deltaInfo.kp)
+      pull(deltaInfo.delta.updates[0].meta, deltaInfo.kp)
       if (deltaInfo.delta.updates[0].meta.length === 0) {
-        _.pull(this.deltas, deltaInfo.delta)
+        pull(this.deltas, deltaInfo.delta)
       }
     }
   }
@@ -176,5 +176,3 @@ function getDelta(
   }
   return null
 }
-
-export = DeltaEditor

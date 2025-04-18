@@ -30,10 +30,12 @@
 
  */
 
-const Transform = require('stream').Transform
-const GpsdClient = require('node-gpsd-client')
+import { Transform } from 'stream'
+import GpsdClient from 'node-gpsd-client'
+import createDebug from 'debug'
+import { inherits } from 'util'
 
-function Gpsd(options) {
+export default function Gpsd(options) {
   Transform.call(this, {
     objectMode: true,
   })
@@ -46,13 +48,13 @@ function Gpsd(options) {
     options.app.setProviderStatus(options.providerId, msg)
   }
 
-  const createDebug = options.createDebug || require('debug')
+  const info = (options.createDebug || createDebug)('signalk:streams:gpsd')
 
   this.listener = new GpsdClient({
     port: port,
     hostname: hostname,
     logger: {
-      info: createDebug('signalk:streams:gpsd'),
+      info,
       warn: console.warn,
       error: (msg) => {
         options.app.setProviderError(
@@ -85,10 +87,8 @@ function Gpsd(options) {
   this.listener.connect()
 }
 
-require('util').inherits(Gpsd, Transform)
+inherits(Gpsd, Transform)
 
 Gpsd.prototype._transform = function (chunk, encoding, done) {
   done()
 }
-
-module.exports = Gpsd

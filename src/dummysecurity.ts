@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { SecurityStrategy } from './security'
+import { SecurityStrategy } from './security.js'
 
 export default function () {
   const dummyStrategy = {

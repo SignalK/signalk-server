@@ -36,17 +36,19 @@
  * It may also be other commands such as "./aisdeco --gain 33.8 --freq-correction 60 --freq 161975000 --freq 162025000 --net 30007 --udp 5.9.207.224:5351" for starting an AID reception with a USB SRD dongle
  */
 
-const Transform = require('stream').Transform
-const { pgnToActisenseSerialFormat } = require('@canboat/canboatjs')
+import { Transform } from 'stream'
+import { pgnToActisenseSerialFormat } from '@canboat/canboatjs'
+import { createDebug } from 'debug'
+import { inherits } from 'util'
+import { spawn } from 'child_process'
 
-function Execute(options) {
+export default function Execute(options) {
   Transform.call(this, {})
   this.options = options
-  const createDebug = options.createDebug || require('debug')
-  this.debug = options.debug || createDebug('signalk:streams:execute')
+  this.debug = (options.debug || createDebug)('signalk:streams:execute')
 }
 
-require('util').inherits(Execute, Transform)
+inherits(Execute, Transform)
 
 Execute.prototype._transform = function (chunk, encoding, done) {
   this.analyzerProcess.stdin.write(chunk.toString())
@@ -55,9 +57,9 @@ Execute.prototype._transform = function (chunk, encoding, done) {
 function start(command, that) {
   that.debug(`starting |${command}|`)
   if (process.platform === 'win32') {
-    that.childProcess = require('child_process').spawn('cmd', ['/c', command])
+    that.childProcess = spawn('cmd', ['/c', command])
   } else {
-    that.childProcess = require('child_process').spawn('sh', ['-c', command])
+    that.childProcess = spawn('sh', ['-c', command])
   }
   that.lastStartupTime = new Date().getTime()
   that.options.app.setProviderStatus(that.options.providerId, 'Started')
@@ -133,5 +135,3 @@ Execute.prototype.end = function () {
   this.childProcess.kill()
   this.pipeTo.end()
 }
-
-module.exports = Execute

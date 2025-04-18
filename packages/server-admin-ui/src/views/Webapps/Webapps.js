@@ -5,9 +5,9 @@ import {
   ADDON_PANEL,
   toLazyDynamicComponent,
   toSafeModuleId,
-} from './dynamicutilities'
+} from './dynamicutilities.js'
 
-import Webapp from './Webapp'
+import Webapp from './Webapp.js'
 
 class Webapps extends Component {
   constructor(props) {

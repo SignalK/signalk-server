@@ -1,9 +1,9 @@
-const debugCore = require('debug')
-const moment = require('moment')
-const path = require('path')
-const fs = require('fs')
+import debugCore from 'debug'
+import moment from 'moment'
+import path from 'path'
+import fs from 'fs'
 
-module.exports = function (app) {
+export default function (app) {
   const log = []
   let debugEnabled = ''
   let rememberDebug = false

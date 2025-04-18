@@ -1,15 +1,14 @@
-const assert = require('assert')
-
-const fetch = require('node-fetch')
-const { freeport } = require('./ts-servertestutilities')
-const Server = require('../dist/')
-const fs = require('fs')
-const path = require('path')
+import assert from 'assert'
+import fetch from 'node-fetch'
+import { freeport } from './ts-servertestutilities.js'
+import Server from '../dist/index.js'
+import fs from 'fs'
+import path from 'path'
 
 describe('Demo plugin ', () => {
   it('works', async () => {
-    process.env.SIGNALK_NODE_CONFIG_DIR = require('path').join(
-      __dirname,
+    process.env.SIGNALK_NODE_CONFIG_DIR = path.join(
+      import.meta.dirname,
       'plugin-test-config'
     )
     const pluginConfig = {
@@ -19,7 +18,9 @@ describe('Demo plugin ', () => {
       }
     }
 
-    mkDirSync(path.join(`${__dirname}/plugin-test-config/plugin-config-data`))
+    mkDirSync(
+      path.join(`${import.meta.dirname}/plugin-test-config/plugin-config-data`)
+    )
     writePluginConfig(pluginConfig)
 
     const port = await freeport()
@@ -27,12 +28,14 @@ describe('Demo plugin ', () => {
       config: { settings: { port } }
     })
     await server.start()
-    const plugins = await fetch(`http://0.0.0.0:${port}/skServer/plugins`).then(res =>
-      res.json()
+    const plugins = await fetch(`http://0.0.0.0:${port}/skServer/plugins`).then(
+      (res) => res.json()
     )
-    assert(plugins.find(plugin => plugin.id === 'testplugin'))
+    assert(plugins.find((plugin) => plugin.id === 'testplugin'))
 
-    const plugin = server.app.plugins.find(plugin => plugin.id === 'testplugin')
+    const plugin = server.app.plugins.find(
+      (plugin) => plugin.id === 'testplugin'
+    )
     assert(plugin)
     assert(plugin.started)
 
@@ -42,7 +45,7 @@ describe('Demo plugin ', () => {
     assert(server.app.signalk.self.some.path.value === 'someValue')
 
     const outputValues = []
-    server.app.signalk.on('delta', msg => {
+    server.app.signalk.on('delta', (msg) => {
       outputValues.push(msg.updates[0].values[0].value)
     })
     server.app.handleMessage('foo', {
@@ -93,8 +96,8 @@ describe('Demo plugin ', () => {
   })
 
   it('loads ESM plugins', async () => {
-    process.env.SIGNALK_NODE_CONFIG_DIR = require('path').join(
-      __dirname,
+    process.env.SIGNALK_NODE_CONFIG_DIR = path.join(
+      import.meta.dirname,
       'plugin-test-config'
     )
 
@@ -124,16 +127,18 @@ function mkDirSync(dirPath) {
   }
 }
 
-function writePluginConfig (config) {
+function writePluginConfig(config) {
   fs.writeFileSync(
     path.join(
-      `${__dirname}/plugin-test-config/plugin-config-data/testplugin.json`
+      `${
+        import.meta.dirname
+      }/plugin-test-config/plugin-config-data/testplugin.json`
     ),
     JSON.stringify(config)
   )
 }
 
-async function postPluginConfig (port, config) {
+async function postPluginConfig(port, config) {
   await fetch(`http://0.0.0.0:${port}/skServer/plugins/testplugin/config`, {
     method: 'POST',
     headers: {

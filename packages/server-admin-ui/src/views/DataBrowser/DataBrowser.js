@@ -14,7 +14,7 @@ import {
 } from 'reactstrap'
 import moment from 'moment'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
-import Meta from './Meta'
+import Meta from './Meta.js'
 
 const timestampFormat = 'MM/DD HH:mm:ss'
 

@@ -2,7 +2,7 @@ import React, { Component, Suspense } from 'react'
 import {
   PLUGIN_CONFIG_PANEL,
   toLazyDynamicComponent,
-} from '../Webapps/dynamicutilities'
+} from '../Webapps/dynamicutilities.js'
 
 export default class EmbeddedPluginConfigurationForm extends Component {
   constructor(props) {

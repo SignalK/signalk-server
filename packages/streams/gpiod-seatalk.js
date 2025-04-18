@@ -20,7 +20,9 @@
  * Supports Raspberry Pi OS Bookworm and Bullseye on Raspberry Pi 3, 4 and 5
  */
 
-const Execute = require('./execute')
+import Execute from './execute'
+import createDebug from 'debug'
+import { inherits } from 'util'
 
 const cmd = `
 import gpiod, sys, datetime, glob
@@ -366,13 +368,13 @@ if __name__ == "__main__":
     print("exit")
 `
 
-function GpiodSeatalk(options) {
-  const createDebug = options.createDebug || require('debug')
-  Execute.call(this, { debug: createDebug('signalk:streams:gpiod-seatalk') })
+export default function GpiodSeatalk(options) {
+  const debug = (options.createDebug || createDebug)(
+    'signalk:streams:gpiod-seatalk'
+  )
+  Execute.call(this, { debug })
   this.options = options
   this.options.command = `python -u -c '${cmd}' ${options.gpio} ${options.gpioInvert} `
 }
 
-require('util').inherits(GpiodSeatalk, Execute)
-
-module.exports = GpiodSeatalk
+inherits(GpiodSeatalk, Execute)

@@ -2,7 +2,7 @@
   "name": "@signalk/streams",
   "version": "4.4.1",
   "description": "Utilities for handling streams of Signal K data",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
     "ci": "prettier --check .",
     "format": "prettier --write ."

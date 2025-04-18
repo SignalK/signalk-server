@@ -15,19 +15,19 @@
  * limitations under the License.
  */
 
-import { createDebug } from './debug'
+import { createDebug } from './debug.js'
 const debug = createDebug('signalk-server:deltacache')
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
-import _, { isUndefined } from 'lodash'
-import { toDelta, StreamBundle } from './streambundle'
-import { ContextMatcher, SignalKServer } from './types'
+import { get, isUndefined, pickBy } from 'lodash-es'
+import { toDelta, StreamBundle } from './streambundle.js'
+import { ContextMatcher, SignalKServer } from './types.js'
 import { Context, NormalizedDelta, SourceRef } from '@signalk/server-api'
 
 interface StringKeyed {
   [key: string]: any
 }
 
-export default class DeltaCache {
+export class DeltaCache {
   cache: StringKeyed = {}
   lastModifieds: StringKeyed = {}
   app: SignalKServer
@@ -92,7 +92,7 @@ export default class DeltaCache {
     if (msg.path.length !== 0) {
       leaf[sourceRef] = msg
     } else if (msg.value) {
-      _.keys(msg.value).forEach((key) => {
+      Object.keys(msg.value).forEach((key) => {
         if (!leaf[key]) {
           leaf[key] = {}
         }
@@ -150,7 +150,7 @@ export default class DeltaCache {
     const signalk = new FullSignalK(this.app.selfId, this.app.selfType)
 
     const addDelta = signalk.addDelta.bind(signalk)
-    _.values(this.sourceDeltas).forEach(addDelta)
+    Object.values(this.sourceDeltas).forEach(addDelta)
 
     return signalk.retrieve().sources
   }
@@ -165,7 +165,7 @@ export default class DeltaCache {
     const addDelta = signalk.addDelta.bind(signalk)
 
     if (includeSources) {
-      _.values(this.sourceDeltas).forEach(addDelta)
+      Object.values(this.sourceDeltas).forEach(addDelta)
     }
 
     if (deltas && deltas.length) {
@@ -180,8 +180,8 @@ export default class DeltaCache {
 
   getCachedDeltas(contextFilter: ContextMatcher, user?: string, key?: string) {
     const contexts: Context[] = []
-    _.keys(this.cache).forEach((type) => {
-      _.keys(this.cache[type]).forEach((id) => {
+    Object.keys(this.cache).forEach((type) => {
+      Object.keys(this.cache[type]).forEach((id) => {
         const context = `${type}.${id}` as Context
         if (contextFilter({ context })) {
           contexts.push(this.cache[type][id])
@@ -194,14 +194,14 @@ export default class DeltaCache {
         let deltasToProcess
 
         if (key) {
-          deltasToProcess = _.get(context, key)
+          deltasToProcess = get(context, key)
         } else {
           deltasToProcess = findDeltas(context)
         }
         if (deltasToProcess) {
           acc = acc.concat(
-            _.values(
-              _.pickBy(deltasToProcess, (val, akey) => {
+            Object.values(
+              pickBy(deltasToProcess, (val, akey) => {
                 return akey !== 'meta'
               })
             )
@@ -235,7 +235,7 @@ function pickDeltasFromBranch(acc: any[], obj: any) {
   if (typeof obj === 'object') {
     if (isUndefined(obj.path) || isUndefined(obj.value)) {
       // not a delta, so process possible children
-      _.values(obj).reduce(pickDeltasFromBranch, acc)
+      Object.values(obj).reduce(pickDeltasFromBranch, acc)
     } else {
       acc.push(obj)
     }
@@ -244,7 +244,7 @@ function pickDeltasFromBranch(acc: any[], obj: any) {
 }
 
 function findDeltas(branchOrLeaf: any) {
-  return _.values(branchOrLeaf).reduce(pickDeltasFromBranch, [])
+  return Object.values(branchOrLeaf).reduce(pickDeltasFromBranch, [])
 }
 
 function ensureHasDollarSource(normalizedDelta: NormalizedDelta): SourceRef {

@@ -1,10 +1,10 @@
-const _ = require('lodash')
-import { createDebug } from './debug'
-const debug = createDebug('signalk-server:put')
-const { createRequest, updateRequest } = require('./requestResponse')
-const skConfig = require('./config/config')
-const { getMetadata } = require('@signalk/signalk-schema')
+import { isUndefined, set, get } from 'lodash-es'
+import { createDebug } from './debug.js'
+import { createRequest, updateRequest } from './requestResponse.js'
+import * as skConfig from './config/config.js'
+import { getMetadata } from '@signalk/signalk-schema'
 
+const debug = createDebug('signalk-server:put')
 const pathPrefix = '/signalk'
 const versionPrefix = '/v1'
 const apiPathPrefix = pathPrefix + versionPrefix + '/api/'
@@ -12,7 +12,7 @@ const apiPathPrefix = pathPrefix + versionPrefix + '/api/'
 const actionHandlers = {}
 let putMetaHandler, deleteMetaHandler, putNotificationHandler
 
-module.exports = {
+export default {
   start: function (app) {
     app.registerActionHandler = registerActionHandler
     app.deRegisterActionHandler = deRegisterActionHandler
@@ -48,7 +48,7 @@ module.exports = {
 
       const value = req.body
 
-      if (_.isUndefined(value.value)) {
+      if (isUndefined(value.value)) {
         res.status(400).send('input is missing a value')
         return
       }
@@ -134,7 +134,7 @@ module.exports = {
         }
 
         const pathWithContext = context + '.' + path
-        _.set(data, pathWithContext, value)
+        set(data, pathWithContext, value)
 
         skConfig.writeDefaultsFile(app, data, (err) => {
           if (err) {
@@ -235,14 +235,10 @@ module.exports = {
     putNotificationHandler = (context, path, value) => {
       return putNotification(app, context, path, value)
     }
-  },
-
-  registerActionHandler: registerActionHandler,
-  putPath: putPath,
-  deletePath
+  }
 }
 
-function deletePath(app, contextParam, path, req, requestId, updateCb) {
+export function deletePath(app, contextParam, path, req, requestId, updateCb) {
   const context = contextParam || 'vessels.self'
   debug('received delete %s %s', context, path)
   return new Promise((resolve, reject) => {
@@ -324,7 +320,15 @@ function deletePath(app, contextParam, path, req, requestId, updateCb) {
   })
 }
 
-function putPath(app, contextParam, path, body, req, requestId, updateCb) {
+export function putPath(
+  app,
+  contextParam,
+  path,
+  body,
+  req,
+  requestId,
+  updateCb
+) {
   const context = contextParam || 'vessels.self'
   debug('received put %s %s %j', context, path, body)
   return new Promise((resolve, reject) => {
@@ -365,11 +369,11 @@ function putPath(app, contextParam, path, body, req, requestId, updateCb) {
             ? actionHandlers[context][path]
             : null
 
-          if (_.keys(handlers).length > 0) {
+          if (Object.keys(handlers).length > 0) {
             if (body.source) {
               handler = handlers[body.source]
-            } else if (_.keys(handlers).length === 1) {
-              handler = _.values(handlers)[0]
+            } else if (Object.keys(handlers).length === 1) {
+              handler = Object.values(handlers)[0]
             } else {
               updateRequest(request.requestId, 'COMPLETED', {
                 statusCode: 400,
@@ -457,13 +461,13 @@ function putPath(app, contextParam, path, body, req, requestId, updateCb) {
   })
 }
 
-function registerActionHandler(context, path, source, callback) {
+export function registerActionHandler(context, path, source, callback) {
   debug(`registered action handler for ${context} ${path} ${source}`)
 
-  if (_.isUndefined(actionHandlers[context])) {
+  if (isUndefined(actionHandlers[context])) {
     actionHandlers[context] = {}
   }
-  if (_.isUndefined(actionHandlers[context][path])) {
+  if (isUndefined(actionHandlers[context][path])) {
     actionHandlers[context][path] = {}
   }
   actionHandlers[context][path][source] = callback
@@ -488,9 +492,9 @@ function putNotification(app, context, path, value) {
   const notifPath = parts.slice(0, parts.length - 1).join('.')
   const key = parts[parts.length - 1]
 
-  const existing = _.get(app.signalk.self, notifPath)
+  const existing = get(app.signalk.self, notifPath)
 
-  if (_.isUndefined(existing) || !existing.value) {
+  if (isUndefined(existing) || !existing.value) {
     return { state: 'COMPLETED', statusCode: 404 }
   }
 

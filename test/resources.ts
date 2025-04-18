@@ -1,7 +1,7 @@
 import { Waypoint } from '@signalk/server-api'
 import chai from 'chai'
 import { v4 as uuidv4 } from 'uuid'
-import { startServer } from './ts-servertestutilities'
+import { startServer } from './ts-servertestutilities.js'
 chai.should()
 
 export const skUuid = () => `${uuidv4()}`

@@ -14,12 +14,12 @@
  * limitations under the License.
 */
 
-const moment = require('moment')
-const path = require('path')
-const { getFullLogDir, listLogFiles } = require('@signalk/streams/logging')
-import { SERVERROUTESPREFIX } from '../constants'
+import moment from 'moment'
+import path from 'path'
+import { getFullLogDir, listLogFiles } from '@signalk/streams/logging.js'
+import { SERVERROUTESPREFIX } from '../constants.js'
 
-module.exports = function (app) {
+export default function (app) {
   return {
     start: function () {
       mountApi(app)
@@ -52,8 +52,8 @@ function mountApi(app) {
     const boatName = app.config.vesselName
       ? app.config.vesselName
       : app.config.vesselMMSI
-      ? app.config.vesselMMSI
-      : ''
+        ? app.config.vesselMMSI
+        : ''
     const sanitizedBoatName = boatName.replace(/\W/g, '_')
     const zipFileName = `sk-logs-${sanitizedBoatName}-${moment().format(
       'YYYY-MM-DD-HH-mm'

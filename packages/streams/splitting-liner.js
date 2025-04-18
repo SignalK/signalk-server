@@ -24,11 +24,12 @@
 
  */
 
-const Transform = require('stream').Transform
+import { Transform } from 'stream'
+import { inherits } from 'util'
 
-require('util').inherits(SplittingLiner, Transform)
+inherits(SplittingLiner, Transform)
 
-function SplittingLiner(options) {
+export default function SplittingLiner(options) {
   Transform.call(this, {
     objectMode: true,
   })
@@ -42,5 +43,3 @@ SplittingLiner.prototype._transform = function (chunk, encoding, done) {
   lines.forEach(this.doPush)
   done()
 }
-
-module.exports = SplittingLiner

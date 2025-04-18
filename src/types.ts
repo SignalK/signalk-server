@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ServerAPI, WithContext } from '@signalk/server-api'
 import { FullSignalK } from '@signalk/signalk-schema'
-import { SecurityStrategy } from './security'
+import { SecurityStrategy } from './security.js'
 
 export interface HelloMessage {
   name: string
@@ -22,10 +22,12 @@ export interface SignalKServer extends ServerAPI {
   securityStrategy: SecurityStrategy
 }
 
-export class Interface {
-  start?: () => void
+export class Interface<T = void> {
+  start?: () => T
   stop?: () => void
   mdns?: MdnsAdvertisement
+  forceInactive?: boolean
+  data?: T
 }
 
 export interface MdnsAdvertisement {

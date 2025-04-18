@@ -1,10 +1,10 @@
 import React, { Component } from 'react'
 
 import { Table } from 'reactstrap'
-import NameCellRenderer from './Grid/cell-renderers/NameCellRenderer'
-import TypeCellRenderer from './Grid/cell-renderers/TypeCellRenderer'
-import ActionCellRenderer from './Grid/cell-renderers/ActionCellRenderer'
-import VersionCellRenderer from './Grid/cell-renderers/VersionCellRenderer'
+import NameCellRenderer from './Grid/cell-renderers/NameCellRenderer.js'
+import TypeCellRenderer from './Grid/cell-renderers/TypeCellRenderer.js'
+import ActionCellRenderer from './Grid/cell-renderers/ActionCellRenderer.js'
+import VersionCellRenderer from './Grid/cell-renderers/VersionCellRenderer.js'
 
 const XL_WIDTH = 1200
 const L_WIDTH = 992

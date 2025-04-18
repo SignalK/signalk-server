@@ -1,6 +1,6 @@
 import { IRouter } from 'express'
-import { createDebug } from './debug'
-import { SecurityConfig } from './security'
+import { createDebug } from './debug.js'
+import { SecurityConfig } from './security.js'
 import cors, { CorsOptions } from 'cors'
 
 export function setupCors(

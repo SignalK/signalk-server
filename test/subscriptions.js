@@ -1,8 +1,7 @@
-const _ = require('lodash')
-const assert = require('assert')
-const { sendDelta } = require('./servertestutilities')
-const { freeport } = require('./ts-servertestutilities')
-const { startServerP, WsPromiser } = require('./servertestutilities')
+import { assign } from 'lodash-es'
+import assert from 'assert'
+import { sendDelta, startServerP, WsPromiser } from './servertestutilities.js'
+import { freeport } from './ts-servertestutilities.js'
 
 function getDelta(overwrite) {
   const delta = {
@@ -64,7 +63,7 @@ function getDelta(overwrite) {
     ]
   }
 
-  return _.assign(delta, overwrite)
+  return assign(delta, overwrite)
 }
 
 function getEmptyPathDelta(overwrite) {
@@ -93,7 +92,7 @@ function getEmptyPathDelta(overwrite) {
     ]
   }
 
-  return _.assign(delta, overwrite)
+  return Object.assign(delta, overwrite)
 }
 
 function getClosePosistionDelta(overwrite) {
@@ -121,7 +120,7 @@ function getClosePosistionDelta(overwrite) {
     context: 'vessels.closeVessel'
   }
 
-  return _.assign(delta, overwrite)
+  return Object.assign(delta, overwrite)
 }
 
 function getFarPosistionDelta() {
@@ -177,7 +176,7 @@ function getNullPositionDelta(overwrite) {
     context: 'vessels.nullPosition'
   }
 
-  return _.assign(delta, overwrite)
+  return Object.assign(delta, overwrite)
 }
 
 describe('Subscriptions', (_) => {

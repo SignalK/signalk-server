@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-const Transform = require('stream').Transform
-const moment = require('moment')
+import { Transform } from 'stream'
+import moment from 'moment'
+import { inherits } from 'util'
 
 /*
 This Transformer throttles the stream based on the stream's timestamp properties
@@ -23,7 +24,7 @@ so that throughput rate is real time. Aimed at canboat analyzer output
 rate control
 */
 
-function TimestampThrottle(options) {
+export default function TimestampThrottle(options) {
   Transform.call(this, {
     objectMode: true,
   })
@@ -34,7 +35,7 @@ function TimestampThrottle(options) {
       : getMilliseconds
 }
 
-require('util').inherits(TimestampThrottle, Transform)
+inherits(TimestampThrottle, Transform)
 
 TimestampThrottle.prototype._transform = function (msg, encoding, done) {
   const msgMillis = this.getMilliseconds(msg)
@@ -59,5 +60,3 @@ function getMilliseconds(msg) {
   // 2014-08-15-16:00:00.083
   return moment(msg.timestamp, 'YYYY-MM-DD-HH:mm:ss.SSS').valueOf()
 }
-
-module.exports = TimestampThrottle

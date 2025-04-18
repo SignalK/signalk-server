@@ -1,9 +1,9 @@
-import { createDebug } from '../../debug'
+import { createDebug } from '../../debug.js'
 const debug = createDebug('signalk-server:api:features')
 
 import { IRouter, Request, Response } from 'express'
 
-import { WithFeatures } from '../../app'
+import { WithFeatures } from '../../app.js'
 
 const FEATURES_API_PATH = `/signalk/v2/features`
 
@@ -30,8 +30,8 @@ export class FeaturesApi {
         const enabled = ['true', '1'].includes(req.query.enabled as string)
           ? true
           : ['false', '0'].includes(req.query.enabled as string)
-          ? false
-          : undefined
+            ? false
+            : undefined
 
         res.json(await this.app.getFeatures(enabled))
       }

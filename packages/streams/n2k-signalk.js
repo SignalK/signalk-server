@@ -6,7 +6,7 @@
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
- 
+
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-const Transform = require('stream').Transform
+import { Transform } from 'stream'
+import { N2kMapper } from '@signalk/n2k-signalk'
+import { inherits } from 'util'
 
-const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
+inherits(ToSignalK, Transform)
 
-require('util').inherits(ToSignalK, Transform)
-
-function ToSignalK(options) {
+export default function ToSignalK(options) {
   Transform.call(this, {
     objectMode: true,
   })
@@ -191,5 +191,3 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
   }
   done()
 }
-
-module.exports = ToSignalK

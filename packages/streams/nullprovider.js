@@ -18,14 +18,13 @@
  *
  */
 
-const Transform = require('stream').Transform
+import { Transform } from 'stream'
+import { inherits } from 'util'
 
-function NullProvider() {
+export default function NullProvider() {
   Transform.call(this, {
     objectMode: true,
   })
 }
 
-require('util').inherits(NullProvider, Transform)
-
-module.exports = NullProvider
+inherits(NullProvider, Transform)

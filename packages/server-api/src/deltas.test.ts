@@ -1,4 +1,4 @@
-import { Delta, Path } from './deltas'
+import { Delta, Path } from './deltas.js'
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const metaDelta: Delta = {

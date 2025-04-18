@@ -11,7 +11,7 @@ import {
   Dropdown,
 } from 'reactstrap'
 import { connect } from 'react-redux'
-import { logout, restart, login } from '../../actions'
+import { logout, restart, login } from '../../actions.js'
 
 class Header extends Component {
   constructor(props) {

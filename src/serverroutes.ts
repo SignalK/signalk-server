@@ -16,17 +16,23 @@
 
 import busboy from 'busboy'
 import commandExists from 'command-exists'
-import express, { IRouter, NextFunction, Request, Response } from 'express'
+import {
+  IRouter,
+  NextFunction,
+  Request,
+  Response,
+  static as serveStatic
+} from 'express'
 import zip from 'express-easy-zip'
 import fs from 'fs'
-import { forIn, get, isNumber, isUndefined, set, uniq, unset } from 'lodash'
+import { forIn, get, isNumber, isUndefined, set, uniq, unset } from 'lodash-es'
 import moment from 'moment'
 import ncpI from 'ncp'
 import os from 'os'
 import path from 'path'
-import unzipper from 'unzipper'
+import { Extract } from 'unzipper'
 import util from 'util'
-import { mountSwaggerUi } from './api/swagger'
+import { mountSwaggerUi } from './api/swagger.js'
 import {
   ConfigApp,
   readDefaultsFile,
@@ -34,23 +40,26 @@ import {
   writeBaseDeltasFile,
   writeDefaultsFile,
   writeSettingsFile
-} from './config/config'
-import { SERVERROUTESPREFIX } from './constants'
-import { handleAdminUICORSOrigin } from './cors'
-import { createDebug, listKnownDebugs } from './debug'
-import { PluginManager } from './interfaces/plugins'
-import { getAuthor, Package, restoreModules } from './modules'
-import { getHttpPort, getSslPort } from './ports'
-import { queryRequest } from './requestResponse'
+} from './config/config.js'
+import { SERVERROUTESPREFIX } from './constants.js'
+import { handleAdminUICORSOrigin } from './cors.js'
+import { createDebug, listKnownDebugs } from './debug.js'
+import { PluginManager } from './interfaces/plugins.js'
+import { getAuthor, Package, restoreModules } from './modules.js'
+import { getHttpPort, getSslPort } from './ports.js'
+import { queryRequest } from './requestResponse.js'
 import {
   SecurityConfigGetter,
   SecurityConfigSaver,
   SecurityStrategy,
   WithSecurityStrategy
-} from './security'
-import { listAllSerialPorts } from './serialports'
-import { StreamBundle } from './streambundle'
-import { WithWrappedEmitter } from './events'
+} from './security.js'
+import { listAllSerialPorts } from './serialports.js'
+import { StreamBundle } from './streambundle.js'
+import { WithWrappedEmitter } from './events.js'
+import * as availableInterfaces from './interfaces/index.js'
+import tokensecurity from './tokensecurity.js'
+
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
 import { getAISShipTypeName } from '@signalk/signalk-schema'
@@ -58,8 +67,6 @@ const ncp = ncpI.ncp
 
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
-
-import availableInterfaces from './interfaces'
 
 interface ScriptsApp {
   addons: ModuleInfo[]
@@ -87,7 +94,7 @@ interface ModuleInfo {
   name: string
 }
 
-module.exports = function (
+export default function (
   app: App,
   saveSecurityConfig: SecurityConfigSaver,
   getSecurityConfig: SecurityConfigGetter
@@ -121,12 +128,12 @@ module.exports = function (
   mountSwaggerUi(app, '/doc/openapi')
 
   // mount server-guide
-  app.use('/documentation', express.static(__dirname + '/../docs/dist'))
+  app.use('/documentation', serveStatic(import.meta.dirname + '/../docs/dist'))
 
   app.get('/admin/', (req: Request, res: Response) => {
     fs.readFile(
       path.join(
-        __dirname,
+        import.meta.dirname,
         '/../node_modules/@signalk/server-admin-ui/public/index.html'
       ),
       (err, indexContent) => {
@@ -162,8 +169,8 @@ module.exports = function (
 
   app.use(
     '/admin',
-    express.static(
-      __dirname + '/../node_modules/@signalk/server-admin-ui/public'
+    serveStatic(
+      import.meta.dirname + '/../node_modules/@signalk/server-admin-ui/public'
     )
   )
 
@@ -550,12 +557,8 @@ module.exports = function (
               res.status(500).send('Unable to save to settings file')
             } else {
               const config = {}
-              // eslint-disable-next-line @typescript-eslint/no-require-imports
-              const securityStrategy = require(defaultSecurityStrategy)(
-                app,
-                config,
-                saveSecurityConfig
-              )
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const securityStrategy = tokensecurity(app, config) as any
               addUser(req, res, securityStrategy, config)
             }
           })
@@ -1086,7 +1089,7 @@ module.exports = function (
             restoreFilePath = fs.mkdtempSync(`${tmpDir}${path.sep}`)
             const zipFileDir = fs.mkdtempSync(`${tmpDir}${path.sep}`)
             const zipFile = path.join(zipFileDir, 'backup.zip')
-            const unzipStream = unzipper.Extract({ path: restoreFilePath })
+            const unzipStream = Extract({ path: restoreFilePath })
 
             file
               .pipe(fs.createWriteStream(zipFile))

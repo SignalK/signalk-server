@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { EventEmitter } from 'node:events'
-import { createDebug } from './debug'
+import { createDebug } from './debug.js'
 import { Debugger } from 'debug'
 import { Brand } from '@signalk/server-api'
 

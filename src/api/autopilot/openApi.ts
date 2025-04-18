@@ -1,5 +1,5 @@
-import { OpenApiDescription } from '../swagger'
-import autopilotApiDoc from './openApi.json'
+import { OpenApiDescription } from '../swagger.js'
+import autopilotApiDoc from './openApi.json' with { type: 'json' }
 
 export const autopilotApiRecord = {
   name: 'autopilot',

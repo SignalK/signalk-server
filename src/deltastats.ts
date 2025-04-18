@@ -15,7 +15,7 @@
  * limitations under the License.
 */
 
-import { isUndefined, values } from 'lodash'
+import { isUndefined, values } from 'lodash-es'
 import { EventEmitter } from 'node:events'
 
 const STATS_UPDATE_INTERVAL_SECONDS = 5

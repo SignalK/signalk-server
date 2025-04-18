@@ -15,7 +15,7 @@ import {
   Progress,
 } from 'reactstrap'
 
-import { restart } from '../../actions'
+import { restart } from '../../actions.js'
 
 const RESTORE_NONE = 0
 const RESTORE_VALIDATING = 1

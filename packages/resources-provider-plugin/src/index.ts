@@ -5,10 +5,10 @@ import {
   SIGNALKRESOURCETYPES
 } from '@signalk/server-api'
 
-import { FileStore, getUuid } from './lib/filestorage'
-import { StoreRequestParams } from './types'
+import { FileStore, getUuid } from './lib/filestorage.js'
+import { StoreRequestParams } from './types/index.js'
 
-interface ResourceProviderApp extends ServerAPI, ResourceProviderRegistry {}
+interface ResourceProviderApp extends ServerAPI, ResourceProviderRegistry { }
 
 interface ProviderSettings {
   standard: {
@@ -100,7 +100,7 @@ const CONFIG_UISCHEMA = {
   }
 }
 
-module.exports = (server: ResourceProviderApp): Plugin => {
+export default (server: ResourceProviderApp): Plugin => {
   const plugin: Plugin = {
     id: 'resources-provider',
     name: 'Resources Provider (built-in)',

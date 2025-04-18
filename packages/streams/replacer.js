@@ -14,44 +14,18 @@
  * limitations under the License.
  */
 
-const Transform = require('stream').Transform
+import { Transform } from 'stream'
 
-require('util').inherits(Replacer, Transform)
+export default class Replacer extends Transform {
+  constructor(options) {
+    super({ objectMode: true })
+    this.doPush = this.push.bind(this)
+    this.regexp = new RegExp(options.regexp, 'gu')
+    this.template = options.template
+  }
 
-function Replacer(options) {
-  Transform.call(this, {
-    objectMode: true,
-  })
-  this.doPush = this.push.bind(this)
-  this.regexp = new RegExp(options.regexp, 'gu')
-  this.template = options.template
+  _transform(chunk, encoding, done) {
+    this.doPush(chunk.toString().replace(this.regexp, this.template))
+    done()
+  }
 }
-
-Replacer.prototype._transform = function (chunk, encoding, done) {
-  this.doPush(chunk.toString().replace(this.regexp, this.template))
-  done()
-}
-
-module.exports = Replacer
-
-// const replacers = [
-//   {
-//     regexp: '\u0000',
-//     template: '',
-//     testdata: '\u0000$WIMWV,1\u000047,R,0,N,A21',
-//     testresult: '$WIMWV,147,R,0,N,A21'
-//   }
-//   ,
-//   {
-//     regexp: '^...RMC.*',
-//     template: '',
-//     testdata: '$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A',
-//     testresult: ''
-//   }
-// ]
-
-// replacers.forEach(replacerOptions => {
-//   const replacer = new Replacer(replacerOptions)
-//   replacer.doPush = x => console.log(JSON.stringify(x))
-//   replacer._transform(replacerOptions.testdata, null, () => {})
-// })

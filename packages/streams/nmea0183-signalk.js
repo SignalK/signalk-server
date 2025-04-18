@@ -29,17 +29,19 @@
  * }
  */
 
-const Transform = require('stream').Transform
-const Parser = require('@signalk/nmea0183-signalk')
-const utils = require('@signalk/nmea0183-utilities')
-const n2kToDelta = require('@signalk/n2k-signalk').toDelta
-const FromPgn = require('@canboat/canboatjs').FromPgn
+import { Transform } from 'stream'
+import Parser from '@signalk/nmea0183-signalk'
+import * as utils from '@signalk/nmea0183-utilities'
+import { toDelta as n2kToDelta } from '@signalk/n2k-signalk'
+import { FromPgn } from '@canboat/canboatjs'
+import createDebug from 'debug'
+import { inherits } from 'util'
 
-function Nmea0183ToSignalK(options) {
+export default function Nmea0183ToSignalK(options) {
   Transform.call(this, {
     objectMode: true,
   })
-  this.debug = (options.createDebug || require('debug'))(
+  this.debug = (options.createDebug || createDebug)(
     'signalk:streams:nmea0183-signalk'
   )
 
@@ -63,7 +65,7 @@ function Nmea0183ToSignalK(options) {
   }
 }
 
-require('util').inherits(Nmea0183ToSignalK, Transform)
+inherits(Nmea0183ToSignalK, Transform)
 
 Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
   let sentence
@@ -115,5 +117,3 @@ Nmea0183ToSignalK.prototype._transform = function (chunk, encoding, done) {
 
   done()
 }
-
-module.exports = Nmea0183ToSignalK

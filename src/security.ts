@@ -25,14 +25,13 @@ import {
   writeFile,
   writeFileSync
 } from 'fs'
-import _ from 'lodash'
+import { get } from 'lodash-es'
 import path from 'path'
 import { generate } from 'selfsigned'
-import { Mode } from 'stat-mode'
-import { WithConfig } from './app'
-import { createDebug } from './debug'
-import dummysecurity from './dummysecurity'
-import { ICallback } from './types'
+import { WithConfig } from './app.js'
+import { createDebug } from './debug.js'
+import dummysecurity from './dummysecurity.js'
+import { ICallback } from './types.js'
 const debug = createDebug('signalk-server:security')
 
 export interface WithSecurityStrategy {
@@ -202,13 +201,13 @@ export class InvalidTokenError extends Error {
   }
 }
 
-export function startSecurity(
+export async function startSecurity(
   app: WithSecurityStrategy & WithConfig,
-  securityConfig: any
+  securityConfig?: SecurityConfig
 ) {
   let securityStrategyModuleName =
     process.env.SECURITYSTRATEGY ||
-    _.get(app, 'config.settings.security.strategy')
+    get(app, 'config.settings.security.strategy')
 
   if (securityStrategyModuleName) {
     if (securityStrategyModuleName === 'sk-simple-token-security') {
@@ -223,8 +222,10 @@ export function startSecurity(
     }
 
     const config = securityConfig || getSecurityConfig(app, true)
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    app.securityStrategy = require(securityStrategyModuleName)(app, config)
+    app.securityStrategy = (await import(securityStrategyModuleName)).default(
+      app,
+      config
+    )
 
     if (securityConfig) {
       app.securityStrategy.configFromArguments = true
@@ -332,7 +333,9 @@ function hasStrictPermissions(stat: Stats) {
   if (process.platform === 'win32') {
     return true
   } else {
-    return /^-r[-w][-x]------$/.test(new Mode(stat).toString())
+    const mode = stat.mode & 0o777
+    // Ensure only readable/writable by owner
+    return mode === 0o400 || mode === 0o600 || mode === 0o700
   }
 }
 

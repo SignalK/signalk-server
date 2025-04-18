@@ -1,4 +1,4 @@
-import { Brand } from './brand'
+import { Brand } from './brand.js'
 
 export interface WithContext {
   context: Context

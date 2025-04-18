@@ -1,14 +1,15 @@
-const chai = require('chai')
+import chai from 'chai'
+import chaiThings from 'chai-things'
+import { freeport } from './ts-servertestutilities.js'
+import Server from '../dist/index.js'
+import fetch from 'node-fetch'
+
 chai.Should()
-chai.use(require('chai-things'))
-const _ = require('lodash')
-const { freeport } = require('./ts-servertestutilities')
-const Server = require('../dist')
-const fetch = require('node-fetch')
+chai.use(chaiThings)
 
 const nullIdText = 'Please enter a provider ID'
 
-describe('Providers', _ => {
+describe('Providers', (_) => {
   let server, url, port
 
   before(async function () {
@@ -169,7 +170,7 @@ describe('Providers', _ => {
   })
 })
 
-function checkExistingProvider (existing) {
+function checkExistingProvider(existing) {
   existing.id.should.equal('existing')
   existing.enabled.should.equal(false)
   existing.pipeElements.length.should.equal(1)

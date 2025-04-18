@@ -1,4 +1,4 @@
-var Server = require('../dist')
+import Server from '../dist/index.js'
 
 console.log('1. INSTANTIATING instance...');
 var server = new Server({ settings: 'volare-file-settings.json' });

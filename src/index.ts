@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-this-alias */
 /*
  * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
  *
@@ -38,18 +36,27 @@ import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import express, { IRouter, Request, Response } from 'express'
 import http from 'http'
 import https from 'https'
-import _ from 'lodash'
+import { isFunction, isUndefined, merge } from 'lodash-es'
 import path from 'path'
-import { startApis } from './api'
-import { ServerApp, SignalKMessageHub, WithConfig, WithFeatures } from './app'
-import { ConfigApp, load, sendBaseDeltas } from './config/config'
-import { createDebug } from './debug'
-import DeltaCache from './deltacache'
-import DeltaChain from './deltachain'
-import { getToPreferredDelta, ToPreferredDelta } from './deltaPriority'
-import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
-import { checkForNewServerVersion } from './modules'
-import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
+import { startApis } from './api/index.js'
+import {
+  ServerApp,
+  SignalKMessageHub,
+  WithConfig,
+  WithFeatures
+} from './app.js'
+import { ConfigApp, load, sendBaseDeltas } from './config/config.js'
+import { createDebug } from './debug.js'
+import { DeltaCache } from './deltacache.js'
+import { DeltaChain } from './deltachain.js'
+import { getToPreferredDelta, ToPreferredDelta } from './deltaPriority.js'
+import {
+  incDeltaStatistics,
+  startDeltaStatistics,
+  WithProviderStatistics
+} from './deltastats.js'
+import { checkForNewServerVersion } from './modules.js'
+import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports.js'
 import {
   getCertificateOptions,
   getSecurityConfig,
@@ -58,19 +65,30 @@ import {
   startSecurity,
   WithSecurityStrategy
 } from './security.js'
-import { setupCors } from './cors'
-import SubscriptionManager from './subscriptionmanager'
-import { PluginId, PluginManager } from './interfaces/plugins'
-import { OpenApiDescription, OpenApiRecord } from './api/swagger'
-import { WithProviderStatistics } from './deltastats'
-import { pipedProviders } from './pipedproviders'
-import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
-import { Zones } from './zones'
+import { setupCors } from './cors.js'
+import { SubscriptionManager } from './subscriptionmanager.js'
+import { PluginId, PluginManager } from './interfaces/plugins.js'
+import { OpenApiDescription, OpenApiRecord } from './api/swagger.js'
+import { pipedProviders } from './pipedproviders.js'
+import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events.js'
+import { Zones } from './zones.js'
+import bodyParser from 'body-parser'
+import compression from 'compression'
+import logging from './logging.js'
+import serverroutes from './serverroutes.js'
+import put from './put.js'
+import mdns from './mdns.js'
+import * as availableInterfaces from './interfaces/index.js'
+import { StreamBundle } from './streambundle.js'
+import { Interface } from './types.js'
+
 const debug = createDebug('signalk-server')
 
-import { StreamBundle } from './streambundle'
+interface ServerOptions {
+  securityConfig: SecurityConfig
+}
 
-class Server {
+export default class Server {
   app: ServerApp &
     WithConfig &
     WithFeatures &
@@ -79,30 +97,29 @@ class Server {
     WithSecurityStrategy &
     IRouter &
     WithWrappedEmitter &
-    WithProviderStatistics & {
+    WithProviderStatistics &
+    ServerOptions & {
       apis?: Array<SignalKApiId>
     }
 
   constructor(opts: { securityConfig: SecurityConfig }) {
     const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
-    const bodyParser = require('body-parser')
     const app = express() as any
-    app.use(require('compression')())
+    app.use(compression())
     app.use(bodyParser.json({ limit: FILEUPLOADSIZELIMIT }))
 
     this.app = app
     app.started = false
-    _.merge(app, opts)
+    merge(app, opts)
 
     load(app)
-    app.logging = require('./logging')(app)
+    app.logging = logging(app)
     app.version = '0.0.1'
 
     setupCors(app, getSecurityConfig(app))
-    startSecurity(app, opts ? opts.securityConfig : null)
 
-    require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
-    require('./put').start(app)
+    serverroutes(app, saveSecurityConfig, getSecurityConfig)
+    put.start(app)
 
     app.signalk = new FullSignalK(app.selfId, app.selfType)
 
@@ -183,7 +200,7 @@ class Server {
         return
       }
 
-      if (_.isUndefined(app.providerStatus[providerId])) {
+      if (isUndefined(app.providerStatus[providerId])) {
         app.providerStatus[providerId] = {}
       }
       const status = app.providerStatus[providerId]
@@ -208,14 +225,14 @@ class Server {
     }
 
     app.getProviderStatus = () => {
-      const providerStatus = _.values(app.providerStatus)
+      const providerStatus = Object.values(app.providerStatus)
 
       if (app.plugins) {
         app.plugins.forEach((plugin: any) => {
           try {
             if (
               typeof plugin.statusMessage === 'function' &&
-              _.isUndefined(app.providerStatus[plugin.id])
+              isUndefined(app.providerStatus[plugin.id])
             ) {
               let message = plugin.statusMessage()
               if (message) {
@@ -330,8 +347,8 @@ class Server {
   }
 
   start() {
-    const self = this
     const app = this.app
+    startSecurity(app, app?.securityConfig)
 
     app.wrappedEmitter = wrapEmitter(app)
     app.emit = app.wrappedEmitter.emit
@@ -434,8 +451,8 @@ class Server {
 
         app.apis = await startApis(app)
         await startInterfaces(app)
-        startMdns(app)
-        app.providers = pipedProviders(app as any).start()
+        await startMdns(app)
+        app.providers = await pipedProviders(app as any).start()
 
         const primaryPort = getPrimaryPort(app)
         debug(`primary port:${primaryPort}`)
@@ -444,7 +461,7 @@ class Server {
             'signalk-server running at 0.0.0.0:' + primaryPort.toString() + '\n'
           )
           app.started = true
-          resolve(self)
+          resolve(this)
         })
         const secondaryPort = getSecondaryPort(app)
         debug(`secondary port:${primaryPort}`)
@@ -463,13 +480,12 @@ class Server {
     })
   }
 
-  reload(mixed: any) {
+  async reload(mixed: string | object) {
     let settings
-    const self = this
 
     if (typeof mixed === 'string') {
       try {
-        settings = require(path.join(process.cwd(), mixed))
+        settings = (await import(path.join(process.cwd(), mixed)))?.default
       } catch (_e) {
         debug(`Settings file '${settings}' does not exist`)
       }
@@ -486,7 +502,7 @@ class Server {
     this.stop().catch((e) => console.error(e))
 
     setTimeout(() => {
-      self.start().catch((e) => console.error(e))
+      this.start().catch((e) => console.error(e))
     }, 1000)
 
     return this
@@ -498,7 +514,7 @@ class Server {
         resolve(this)
       } else {
         try {
-          _.each(this.app.interfaces, (intf: any) => {
+          Object.values(this.app.interfaces).forEach((intf: any) => {
             if (
               intf !== null &&
               typeof intf === 'object' &&
@@ -518,25 +534,24 @@ class Server {
 
           debug('Closing server...')
 
-          const that = this
           this.app.server.close(() => {
             debug('Server closed')
-            if (that.app.redirectServer) {
+            if (this.app.redirectServer) {
               try {
-                that.app.redirectServer.close(() => {
+                this.app.redirectServer.close(() => {
                   debug('Redirect server closed')
-                  delete that.app.redirectServer
-                  that.app.started = false
+                  delete this.app.redirectServer
+                  this.app.started = false
                   cb && cb()
-                  resolve(that)
+                  resolve(this)
                 })
               } catch (err) {
                 reject(err)
               }
             } else {
-              that.app.started = false
+              this.app.started = false
               cb && cb()
-              resolve(that)
+              resolve(this)
             }
           })
         } catch (err) {
@@ -546,8 +561,6 @@ class Server {
     })
   }
 }
-
-module.exports = Server
 
 function createServer(app: any, cb: (err: any, server?: any) => void) {
   if (app.config.settings.ssl) {
@@ -589,11 +602,11 @@ function startRedirectToSsl(
   })
 }
 
-function startMdns(app: ServerApp & WithConfig) {
-  if (_.isUndefined(app.config.settings.mdns) || app.config.settings.mdns) {
+async function startMdns(app: ServerApp & WithConfig) {
+  if (isUndefined(app.config.settings.mdns) || app.config.settings.mdns) {
     debug(`Starting interface 'mDNS'`)
     try {
-      app.interfaces.mdns = require('./mdns')(app)
+      app.interfaces.mdns = await mdns(app)
     } catch (ex) {
       console.error('Could not start mDNS:' + ex)
     }
@@ -606,13 +619,16 @@ async function startInterfaces(
   app: ServerApp & WithConfig & WithWrappedEmitter
 ) {
   debug('Interfaces config:' + JSON.stringify(app.config.settings.interfaces))
-  const availableInterfaces = require('./interfaces')
   return await Promise.all(
     Object.keys(availableInterfaces).map(async (name) => {
-      const theInterface = availableInterfaces[name]
+      const moduleName = name.replace(
+        '-',
+        '_'
+      ) as keyof typeof availableInterfaces
+      const theInterface = availableInterfaces[moduleName]
       if (
-        _.isUndefined(app.config.settings.interfaces) ||
-        _.isUndefined((app.config.settings.interfaces || {})[name]) ||
+        isUndefined(app.config.settings.interfaces) ||
+        isUndefined((app.config.settings.interfaces || {})[name]) ||
         (app.config.settings.interfaces || {})[name]
       ) {
         debug(`Loading interface '${name}'`)
@@ -635,10 +651,10 @@ async function startInterfaces(
         }
         const _interface = (appCopy.interfaces[name] = theInterface(
           new Proxy(appCopy, handler)
-        ))
-        if (_interface && _.isFunction(_interface.start)) {
+        )) as Interface
+        if (_interface && isFunction(_interface.start)) {
           if (
-            _.isUndefined(_interface.forceInactive) ||
+            isUndefined(_interface.forceInactive) ||
             !_interface.forceInactive
           ) {
             debug(`Starting interface '${name}'`)

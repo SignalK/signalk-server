@@ -2,8 +2,8 @@ import dgram from 'dgram'
 import { promisify } from 'util'
 import { exec } from 'child_process'
 import { networkInterfaces } from 'os'
-import { createDebug } from '../debug'
-import { getExternalPort } from '../ports'
+import { createDebug } from '../debug.js'
+import { getExternalPort } from '../ports.js'
 const PUBLISH_PORT = 2053
 const MULTICAST_GROUP_IP = '239.2.1.1'
 const debug = createDebug('signalk-server:interfaces:mfd_webapps')
@@ -13,7 +13,7 @@ const execP = promisify(exec)
 // tcpdump -i en0 -A  -v net 239.2.1.1
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-module.exports = (theApp: any) => {
+export default (theApp: any) => {
   return {
     start() {
       const port = getExternalPort(theApp)

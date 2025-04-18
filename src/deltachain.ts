@@ -2,7 +2,7 @@
 
 import { DeltaInputHandler } from '@signalk/server-api'
 
-export default class DeltaChain {
+export class DeltaChain {
   chain: any
   next: any
   constructor(private dispatchMessage: any) {

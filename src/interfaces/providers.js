@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-const _ = require('lodash')
-const config = require('../config/config')
-const { runDiscovery } = require('../discovery')
-import { SERVERROUTESPREFIX } from '../constants'
+import { isUndefined } from 'lodash-es'
+import * as config from '../config/config.js'
+import { runDiscovery } from '../discovery.js'
+import { SERVERROUTESPREFIX } from '../constants.js'
 
-module.exports = function (app) {
+export default function (app) {
   app.on('discovered', (provider) => {
     app.discoveredProviders.push(provider)
     app.emit('serverevent', {
@@ -98,7 +98,7 @@ module.exports = function (app) {
   })
 
   function updateProvider(idToUpdate, provider, res) {
-    const isNew = _.isUndefined(idToUpdate) || idToUpdate === null
+    const isNew = isUndefined(idToUpdate) || idToUpdate === null
     const existing = app.config.settings.pipedProviders.find(
       (p) => p.id === (isNew ? provider.id : idToUpdate)
     )
@@ -194,7 +194,7 @@ function applyProviderSettings(target, source, res) {
     options.subOptions = {}
   }
 
-  _.assign(options.subOptions, source.options)
+  Object.assign(options.subOptions, source.options)
 
   return true
 }

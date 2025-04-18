@@ -1,4 +1,8 @@
-import { PointDestination, RouteDestination, CourseInfo } from './coursetypes'
+import {
+  PointDestination,
+  RouteDestination,
+  CourseInfo
+} from './coursetypes.js'
 
 /**
  * @see [Course REST API](../../../docs/develop/rest-api/course_api.md) provides the following functions for use by plugins.

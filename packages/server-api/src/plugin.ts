@@ -1,5 +1,5 @@
 import { IRouter } from 'express'
-import { ServerAPI } from './serverapi'
+import { ServerAPI } from './serverapi.js'
 
 /**
  * A plugin constructor is the interface that all plugins must export.
@@ -28,7 +28,7 @@ export type PluginConstructor = (app: ServerAPI) => Plugin
  * ```typescript
  * import { Plugin, ServerAPI } from '@signalk/server-api';
  *
- * module.exports = (app: ServerAPI): Plugin => {
+ * export default (app: ServerAPI): Plugin => {
  *   const plugin: Plugin = {
  *     id: 'my-signalk-plugin',
  *     name: 'My Great Plugin',

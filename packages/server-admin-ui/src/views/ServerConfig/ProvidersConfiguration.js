@@ -12,8 +12,8 @@ import {
   Row,
 } from 'reactstrap'
 
-import BasicProvider from './BasicProvider'
-import SourcePriorities from './SourcePriorities'
+import BasicProvider from './BasicProvider.js'
+import SourcePriorities from './SourcePriorities.js'
 import set from 'lodash.set'
 
 function fetchProviders() {

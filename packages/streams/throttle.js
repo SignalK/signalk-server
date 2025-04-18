@@ -26,6 +26,4 @@
 
  */
 
-const Throttle = require('stream-throttle').Throttle
-
-module.exports = Throttle
+export { Throttle as default } from 'stream-throttle'

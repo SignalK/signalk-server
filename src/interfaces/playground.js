@@ -14,24 +14,17 @@
  * limitations under the License.
 */
 
-//const canboatjs = require('@signalk/streams/canboatjs')
-//const N2kToSignalK = require('@signalk/streams/n2k-signalk')
-//const nmea0183Signalk = require('@signalk/streams/nmea0183-signalk')
+import Parser0183 from '@signalk/nmea0183-signalk'
+import { N2kMapper } from '@signalk/n2k-signalk'
+import { putPath, deletePath } from '../put.js'
+import canboat from '@canboat/canboatjs'
 
-const Parser0183 = require('@signalk/nmea0183-signalk')
-const N2kMapper = require('@signalk/n2k-signalk').N2kMapper
-const { putPath, deletePath } = require('../put')
-const {
-  isN2KString,
-  FromPgn,
-  pgnToActisenseSerialFormat
-} = require('@canboat/canboatjs')
-
+const { isN2KString, FromPgn, pgnToActisenseSerialFormat } = canboat // canboat is not ESM compatible
 const serverRoutesPrefix = '/skServer'
 
 let n2kOutAvailable = false
 
-module.exports = function (app) {
+export default function (app) {
   const n2kMapper = new N2kMapper({ app }, app.propertyValues)
   const pgnParser = new FromPgn({}, app.propertyValues)
 

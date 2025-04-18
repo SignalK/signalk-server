@@ -15,9 +15,9 @@ import {
 } from 'reactstrap'
 import { Link } from 'react-router-dom'
 import { connect } from 'react-redux'
-import { login } from '../../actions'
-import Dashboard from '../Dashboard/Dashboard'
-import EnableSecurity from './EnableSecurity'
+import { login } from '../../actions.js'
+import Dashboard from '../Dashboard/Dashboard.js'
+import EnableSecurity from './EnableSecurity.js'
 
 class Login extends Component {
   constructor(props) {

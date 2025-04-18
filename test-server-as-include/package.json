@@ -1,8 +1,0 @@
-{
-  "name": "empty",
-  "version": "1.0.0",
-  "main": "works-as-include.js",
-  "dependencies": {
-    "app-root-path": "^2.1.0"
-  }
-}

@@ -1,14 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createDebug } from '../../debug'
-const debug = createDebug('signalk-server:api:course')
-
+import { createDebug } from '../../debug.js'
 import { IRouter, Request, Response } from 'express'
-import _ from 'lodash'
-
-import { SignalKMessageHub, WithConfig } from '../../app'
-import { WithSecurityStrategy } from '../../security'
+import { get } from 'lodash-es'
+import { SignalKMessageHub, WithConfig } from '../../app.js'
+import { WithSecurityStrategy } from '../../security.js'
 import { getSourceId } from '@signalk/signalk-schema'
-
 import {
   GeoJsonPoint,
   PathValue,
@@ -28,27 +24,24 @@ import {
   Waypoint,
   Unsubscribes
 } from '@signalk/server-api'
-
-const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
-import { isValidCoordinate } from 'geolib'
-import { Responses } from '../'
-import { Store } from '../../serverstate/store'
-
+import geolib from 'geolib'
+import { Responses } from '../index.js'
+import { Store } from '../../serverstate/store.js'
 import { buildSchemaSync } from 'api-schema-builder'
-import courseOpenApi from './openApi.json'
-import { ResourcesApi } from '../resources'
-import { writeSettingsFile } from '../../config/config'
+import courseOpenApi from './openApi.json' with { type: 'json' }
+import { ResourcesApi } from '../resources/index.js'
+import { writeSettingsFile } from '../../config/config.js'
 
+const { isValidCoordinate } = geolib // geolib is not esm compatable
+const debug = createDebug('signalk-server:api:course')
+const { Location, RoutePoint, VesselPosition } = COURSE_POINT_TYPES
 const COURSE_API_SCHEMA = buildSchemaSync(courseOpenApi)
-
 const SIGNALK_API_PATH = `/signalk/v2/api`
 const COURSE_API_PATH = `${SIGNALK_API_PATH}/vessels/self/navigation/course`
-
 const API_CMD_SRC: CommandSource = {
   $source: 'courseApi' as SourceRef,
   type: 'API'
 }
-
 export const COURSE_API_V2_DELTA_COUNT = 13
 export const COURSE_API_V1_DELTA_COUNT = 8
 export const COURSE_API_INITIAL_DELTA_COUNT =
@@ -317,7 +310,7 @@ export class CourseApi {
   }
 
   private getVesselPosition() {
-    return _.get((this.app.signalk as any).self, 'navigation.position')
+    return get((this.app.signalk as any).self, 'navigation.position')
   }
 
   private async validateCourseInfo(info: CourseInfo) {

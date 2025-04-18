@@ -33,18 +33,19 @@
 
  */
 
-const path = require('path')
-const PassThrough = require('stream').PassThrough
-const fs = require('fs')
+import path from 'path'
+import { PassThrough } from 'stream'
+import { createReadStream, existsSync } from 'fs'
+import { inherits } from 'util'
 
 function EndIgnoringPassThrough() {
   PassThrough.call(this)
 }
 
-require('util').inherits(EndIgnoringPassThrough, PassThrough)
+inherits(EndIgnoringPassThrough, PassThrough)
 EndIgnoringPassThrough.prototype.end = function () {}
 
-const FileStream = function (options) {
+export default function FileStream(options) {
   this.options = options
   this.keepRunning =
     typeof options.keepRunning === 'undefined' ? true : options.keepRunning
@@ -66,12 +67,12 @@ FileStream.prototype.startStream = function () {
       this.options.app.config.configPath,
       this.options.filename
     )
-    if (!fs.existsSync(filename)) {
-      filename = path.join(__dirname, '..', this.options.filename)
+    if (!existsSync(filename)) {
+      filename = path.join(import.meta.dirname, '..', this.options.filename)
     }
   }
 
-  this.filestream = require('fs').createReadStream(filename)
+  this.filestream = createReadStream(filename)
   this.filestream.on('error', (err) => {
     console.error(err.message)
     this.keepRunning = false
@@ -86,5 +87,3 @@ FileStream.prototype.end = function () {
   this.pipeTo.end()
   this.filestream.close()
 }
-
-module.exports = FileStream
