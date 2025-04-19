@@ -18,7 +18,7 @@ WORKDIR /home/node/signalk
 COPY *.tgz .
 USER root
 
-RUN npm i -g signalk-server-*.tgz
+RUN npm i -g *.tgz
 # move server-admin-ui that gets installed as sibling of signalk-server
 RUN mv /usr/lib/node_modules/@signalk/* /usr/lib/node_modules/signalk-server/node_modules/@signalk/
 
