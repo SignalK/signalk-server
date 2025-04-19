@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { DeltaInputHandler } from '@signalk/server-api'
+import { Delta, DeltaInputHandler } from '@signalk/server-api'
 
 export default class DeltaChain {
   chain: any
@@ -10,7 +10,7 @@ export default class DeltaChain {
     this.next = []
   }
 
-  process(msg: any) {
+  process(msg: Delta) {
     return this.doProcess(0, msg)
   }
 

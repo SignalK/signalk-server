@@ -422,8 +422,8 @@ export interface ServerAPI
 export type PluginServerApp = ServerAPI
 
 export type DeltaInputHandler = (
-  delta: object,
-  next: (delta: object) => void
+  delta: Delta,
+  next: (delta: Delta) => void
 ) => void
 
 export interface Ports {

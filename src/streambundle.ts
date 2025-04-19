@@ -19,7 +19,6 @@ import {
   Delta,
   NormalizedDelta,
   Path,
-  ServerAPI,
   Update,
   Value,
   NormalizedMetaDelta
@@ -36,11 +35,10 @@ export class StreamBundle implements IStreamBundle {
   selfAllPathsStream: Bacon.Bus<unknown, Value>
   keys: Bacon.Bus<unknown, Path>
   availableSelfPaths: { [key: Path]: true }
-  app: ServerAPI
   metaBus: Bacon.Bus<unknown, NormalizedMetaDelta>
   selfMetaBus: Bacon.Bus<unknown, NormalizedMetaDelta>
 
-  constructor(app: ServerAPI, selfId: string) {
+  constructor(selfId: string) {
     this.selfContext = 'vessels.' + selfId
     this.buses = {}
     this.allPathsBus = new Bacon.Bus()
@@ -50,7 +48,6 @@ export class StreamBundle implements IStreamBundle {
     this.selfAllPathsStream = new Bacon.Bus()
     this.keys = new Bacon.Bus()
     this.availableSelfPaths = {}
-    this.app = app
     this.metaBus = new Bacon.Bus()
     this.selfMetaBus = new Bacon.Bus()
   }
@@ -87,7 +84,7 @@ export class StreamBundle implements IStreamBundle {
               })
             })
           }
-        }, this)
+        })
       }
     } catch (e) {
       console.error(e)

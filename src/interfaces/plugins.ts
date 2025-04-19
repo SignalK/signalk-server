@@ -29,7 +29,8 @@ import {
   SourceRef,
   PluginConstructor,
   Plugin,
-  Path
+  Path,
+  Delta
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express, { Request, Response } from 'express'
@@ -489,7 +490,7 @@ module.exports = (theApp: any) => {
         }
       },
       debug: createDebug(packageName),
-      registerDeltaInputHandler: (handler: any) => {
+      registerDeltaInputHandler: (handler: Delta) => {
         onStopHandlers[plugin.id].push(app.registerDeltaInputHandler(handler))
       },
       setProviderStatus: deprecate((msg: string) => {
