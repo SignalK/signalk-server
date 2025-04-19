@@ -20,6 +20,7 @@ export interface Route {
 export interface Waypoint {
   name?: string
   description?: string
+  type?: string
   feature: {
     type: 'Feature'
     geometry: {
