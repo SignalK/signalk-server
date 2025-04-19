@@ -51,6 +51,7 @@ import {
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
+import { Logging } from './logging'
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
 import { getAISShipTypeName } from '@signalk/signalk-schema'
@@ -75,10 +76,7 @@ interface App
     PluginManager,
     WithWrappedEmitter {
   webapps: Package[]
-  logging: {
-    rememberDebug: (r: boolean) => void
-    enableDebug: (r: string) => boolean
-  }
+  logging: Logging
   activateSourcePriorities: () => void
   streambundle: StreamBundle
 }
