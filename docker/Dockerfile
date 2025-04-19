@@ -1,4 +1,7 @@
-FROM cr.signalk.io/signalk/signalk-server-base:latest AS base
+ARG REGISTRY="cr.signalk.io"
+ARG UBUNTU_VERSION="24.04"
+
+FROM ${REGISTRY}/signalk/signalk-server-base:latest-${UBUNTU_VERSION} AS base
 
 USER node
 RUN mkdir -p /home/node/.signalk/ \
@@ -35,7 +38,7 @@ COPY --chown=node docker/startup.sh startup.sh
 RUN chmod +x startup.sh
 
 EXPOSE 3000
-ENV IS_IN_DOCKER true
-ENV SKIP_ADMINUI_VERSION_CHECK true
+ENV IS_IN_DOCKER=true
+ENV SKIP_ADMINUI_VERSION_CHECK=true
 WORKDIR /home/node/.signalk
-ENTRYPOINT /home/node/signalk/startup.sh
+ENTRYPOINT ["/home/node/signalk/startup.sh"]

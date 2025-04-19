@@ -54,3 +54,26 @@ docker run --init --name signalk-server -p 3000:3000 -v $(pwd):/home/node/.signa
 * settings files and plugins: `/home/node/.signalk`
 
 You most probably want to mount `/home/node/.signalk` from the host or as a volume to persist your settings.
+
+## Building from source
+
+To build a docker image locally from source, first build and pack the server:
+
+```sh
+npm install
+npm run build:all
+npm pack --workspaces
+npm pack
+```
+
+Then build the docker image:
+
+```sh
+$ docker build -t signalk-server:master -f docker/Dockerfile .
+```
+
+Now you can run the local image:
+
+```sh
+docker run --init --name signalk-server -p 3000:3000 -v $(pwd):/home/node/.signalk signalk-server:master
+```
