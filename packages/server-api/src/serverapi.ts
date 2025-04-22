@@ -4,11 +4,14 @@ import {
   Features,
   PropertyValuesEmitter,
   ResourceProviderRegistry,
-  Delta
+  Delta,
+  KeyPathOf
 } from '.'
 import { CourseApi } from './course'
+import { SignalK, Vessel } from './schema';
 import { StreamBundle } from './streambundle'
 import { SubscriptionManager } from './subscriptionmanager'
+import { GetFieldType } from "lodash";
 
 /**
  * SignalK server provides an interface to allow {@link Plugin | Plugins } to:
@@ -46,7 +49,7 @@ export interface ServerAPI
    * @category Data Model
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getSelfPath(path: string): any
+  getSelfPath<Path extends KeyPathOf<Vessel>>(path: Path): GetFieldType<Vessel, Path>
 
   /**
    * Returns the entry for the provided path starting from the `root` of the full data model.
@@ -72,25 +75,26 @@ export interface ServerAPI
    *
    * @category Data Model
    */
+  getPath<Path extends KeyPathOf<SignalK>>(path: Path): GetFieldType<SignalK, Path>
+
+  /**
+   * @category Data Model
+   */
+  getMetadata<Path extends KeyPathOf<SignalK>>(path: Path): Metadata | undefined
+
+  /**
+   * @category Data Model
+   */
+  // TODO: Define type to extract `value` type, e.g. GetFieldType<Vessel, Path>["value"]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getPath(path: string): any // TODO: return SignalK data model type
+  putSelfPath<Path extends KeyPathOf<Vessel>>(path: Path, value: any, updateCb: () => void): Promise<any>
 
   /**
    * @category Data Model
    */
-  getMetadata(path: string): Metadata | undefined
-
-  /**
-   * @category Data Model
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  putSelfPath(aPath: string, value: any, updateCb: () => void): Promise<any>
-
-  /**
-   * @category Data Model
-   */
-  putPath(
-    aPath: string,
+  putPath<Path extends KeyPathOf<SignalK>>(
+    path: Path,
+    // TODO: Define type to extract `value` type, e.g. GetFieldType<SignalK, Path>["value"]
     value: number | string | object | boolean,
     updateCb: (err?: Error) => void,
     source: string
