@@ -76,7 +76,7 @@ jobs:
           tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ github.run_id }}
           build-args: |
             REGISTRY=ghcr.io
-            UBUNTU_VERSION=$${matrix.os}
+            UBUNTU_VERSION=${{ matrix.os }}
   create-and-push-manifest:
     needs: docker_images
     runs-on: ubuntu-latest
