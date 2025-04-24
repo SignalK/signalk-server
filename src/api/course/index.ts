@@ -662,15 +662,15 @@ export class CourseApi {
         }
 
         if (req.params.action === 'refresh') {
-          this.courseInfo.activeRoute.pointTotal =
-            rte.feature.geometry.coordinates.length
+          const points = rte.feature?.geometry.coordinates.length ?? 0
+          this.courseInfo.activeRoute.pointTotal = points
           let idx = -1
-          for (let i = 0; i < rte.feature.geometry.coordinates.length; i++) {
+          for (let i = 0; i < points; i++) {
             if (
-              rte.feature.geometry.coordinates[i][0] ===
+              rte.feature?.geometry.coordinates[i][0] ===
                 this.courseInfo.nextPoint?.position?.longitude &&
-              rte.feature.geometry.coordinates[i][1] ===
-                this.courseInfo.nextPoint.position?.latitude
+              rte.feature?.geometry.coordinates[i][1] ===
+                this.courseInfo.nextPoint?.position?.latitude
             ) {
               idx = i
             }

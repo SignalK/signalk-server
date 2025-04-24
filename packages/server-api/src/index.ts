@@ -1,8 +1,9 @@
+import { Position } from './schema/resources'
+
 export * from './plugin'
 export * from './serverapi'
 export * from './deltas'
 export * from './coursetypes'
-export * from './resourcetypes'
 export * from './resourcesapi'
 export * from './features'
 export * from './course'
@@ -12,13 +13,7 @@ export * from './propertyvalues'
 export * from './brand'
 export * from './streambundle'
 export * from './subscriptionmanager'
-export * from './schema'
-
-export interface Position {
-  latitude: number
-  longitude: number
-  altitude?: number
-}
+export * from './schema/index.js'
 
 export interface RelativePositionOrigin {
   radius: number
@@ -52,7 +47,7 @@ export enum SKVersion {
  *   e: "hi"
  * }
  *
- * const validKeys: KeyPathOf<typeof obj> = [
+ * const validKeys: Paths<typeof obj> = [
  *   "a",
  *   "a.b",
  *   "a.b.c",
@@ -61,13 +56,22 @@ export enum SKVersion {
  * ]
  *
  * // This will be a TypeScript error
- * const invalidKeys: KeyPathOf<typeof obj> = [
+ * const invalidKeys: Paths<typeof obj> = [
  *   "a.b.c.d"
  *   "a.f",
  *   "f",
  * ]
  */
+export type Paths<T> = T extends object
+  ? {
+    [K in keyof T]-?: K extends string | number
+    ? `${K}` | Join<K, Paths<T[K]>>
+    : never
+  }[keyof T]
+  : '';
 
-export type KeyPathOf<ObjectType extends object> = {
-  [Key in keyof ObjectType & (string | number)]-?: ObjectType[Key] extends object ? `${Key}` | `${Key}.${KeyPathOf<ObjectType[Key]>}` : `${Key}`;
-}[keyof ObjectType & (string | number)];
+export type Join<K, P> = K extends string | number
+  ? P extends string | number
+  ? `${K}.${P}`
+  : never
+  : never

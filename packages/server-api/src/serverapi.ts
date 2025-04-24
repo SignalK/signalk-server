@@ -5,13 +5,13 @@ import {
   PropertyValuesEmitter,
   ResourceProviderRegistry,
   Delta,
-  KeyPathOf
+  Paths
 } from '.'
 import { CourseApi } from './course'
-import { SignalK, Vessel } from './schema';
+import { SignalK, Vessel } from './schema/index.js'
 import { StreamBundle } from './streambundle'
 import { SubscriptionManager } from './subscriptionmanager'
-import { GetFieldType } from "lodash";
+import { GetFieldType } from 'lodash'
 
 /**
  * SignalK server provides an interface to allow {@link Plugin | Plugins } to:
@@ -29,11 +29,11 @@ import { GetFieldType } from "lodash";
  */
 export interface ServerAPI
   extends PropertyValuesEmitter,
-    ResourceProviderRegistry,
-    AutopilotProviderRegistry,
-    Features,
-    CourseApi,
-    SelfIdentity {
+  ResourceProviderRegistry,
+  AutopilotProviderRegistry,
+  Features,
+  CourseApi,
+  SelfIdentity {
   /**
    * Returns the entry for the provided path starting from `vessels.self` in the full data model.
    *
@@ -48,8 +48,9 @@ export interface ServerAPI
    *
    * @category Data Model
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getSelfPath<Path extends KeyPathOf<Vessel>>(path: Path): GetFieldType<Vessel, Path>
+  getSelfPath<Path extends Paths<Vessel>>(
+    path: Path
+  ): GetFieldType<Vessel, Path>
 
   /**
    * Returns the entry for the provided path starting from the `root` of the full data model.
@@ -75,24 +76,31 @@ export interface ServerAPI
    *
    * @category Data Model
    */
-  getPath<Path extends KeyPathOf<SignalK>>(path: Path): GetFieldType<SignalK, Path>
+  getPath<Path extends Paths<SignalK>>(
+    path: Path
+  ): GetFieldType<SignalK, Path>
 
   /**
    * @category Data Model
    */
-  getMetadata<Path extends KeyPathOf<SignalK>>(path: Path): Metadata | undefined
+  getMetadata<Path extends Paths<SignalK>>(path: Path): Metadata | undefined
 
   /**
    * @category Data Model
    */
   // TODO: Define type to extract `value` type, e.g. GetFieldType<Vessel, Path>["value"]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  putSelfPath<Path extends KeyPathOf<Vessel>>(path: Path, value: any, updateCb: () => void): Promise<any>
+  putSelfPath<Path extends Paths<Vessel>>(
+    path: Path,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    value: any,
+    updateCb: () => void
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any>
 
   /**
    * @category Data Model
    */
-  putPath<Path extends KeyPathOf<SignalK>>(
+  putPath<Path extends Paths<SignalK>>(
     path: Path,
     // TODO: Define type to extract `value` type, e.g. GetFieldType<SignalK, Path>["value"]
     value: number | string | object | boolean,

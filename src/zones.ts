@@ -1,16 +1,22 @@
-import { ALARM_METHOD, Delta, Path, Value, Zone } from '@signalk/server-api'
+import {
+  Delta,
+  NotificationMethod,
+  Path,
+  UnspecifiedValue,
+  Zone
+} from '@signalk/server-api'
 import { StreamBundle } from './streambundle'
 import { createDebug } from './debug'
 
 const debug = createDebug('signalk-server:zones')
 
 interface ZoneMethods {
-  normalMethod?: ALARM_METHOD
-  nominalMethod?: ALARM_METHOD
-  alertMethod?: ALARM_METHOD
-  warnMethod?: ALARM_METHOD
-  alarmMethod?: ALARM_METHOD
-  emergencyMethod?: ALARM_METHOD
+  normalMethod?: NotificationMethod
+  nominalMethod?: NotificationMethod
+  alertMethod?: NotificationMethod
+  warnMethod?: NotificationMethod
+  alarmMethod?: NotificationMethod
+  emergencyMethod?: NotificationMethod
 }
 
 export class Zones {
@@ -59,7 +65,7 @@ export class Zones {
     const tests = zones.map((zone) => {
       const { upper = Infinity, lower = -Infinity } = zone
 
-      return (value: Value) => {
+      return (value: UnspecifiedValue) => {
         return typeof value === 'number' && value < upper && value >= lower
       }
     })

@@ -1,4 +1,4 @@
-import { Value } from './deltas'
+import { UnspecifiedValue } from './deltas'
 
 export type AutopilotUpdateAttrib =
   | 'mode'
@@ -48,7 +48,7 @@ export interface AutopilotApi {
   apUpdate(
     pluginId: string,
     deviceId: string,
-    apInfo: { [path: string]: Value }
+    apInfo: { [path: string]: UnspecifiedValue }
   ): void
 }
 
@@ -343,5 +343,5 @@ export interface AutopilotProviderRegistry {
    * @param deviceId - the autopilot device identifier
    * @param apInfo - object containing values keyed by {@link AutopilotInfo}
    */
-  autopilotUpdate(deviceId: string, apInfo: { [path: string]: Value }): void
+  autopilotUpdate(deviceId: string, apInfo: { [path: string]: UnspecifiedValue }): void
 }

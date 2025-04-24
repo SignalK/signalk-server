@@ -5,9 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "generate:schema": "ts-node script/build",
-    "generate:guard": "ts-auto-guard src/autopilotapi.ts 2>/dev/null",
-    "generate": "npm run generate:schema && npm run generate:guard",
+    "generate": "ts-auto-guard src/autopilotapi.ts 2>/dev/null",
     "build": "npm run generate && tsc -b",
     "watch": "tsc --watch",
     "prepublishOnly": "npm run build",
