@@ -137,7 +137,7 @@ export function wrapEmitter(targetEmitter: EventEmitter): WrappedEmitter {
   let emittedCount = 0
 
   function safeEmit(this: any, eventName: string, ...args: any[]): boolean {
-    if (eventName !== 'serverlog') {
+    if (!/serverlog$/.test(eventName)) {
       let eventDebug = eventDebugs[eventName]
       if (!eventDebug) {
         eventDebugs[eventName] = eventDebug = createDebug(
