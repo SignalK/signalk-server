@@ -17,7 +17,7 @@
 import { createDebug } from '../debug'
 const debug = createDebug('signalk-server:interfaces:appstore')
 const _ = require('lodash')
-const compareVersions = require('compare-versions')
+const { gt } = require('semver')
 const { installModule, removeModule } = require('../modules')
 const {
   isTheServerModule,
@@ -199,7 +199,7 @@ module.exports = function (app) {
       !process.env.SIGNALK_DISABLE_SERVER_UPDATES
     ) {
       all.canUpdateServer = !all.isInDocker && true
-      if (compareVersions(serverVersion, app.config.version) > 0) {
+      if (gt(serverVersion, app.config.version)) {
         all.serverUpdate = serverVersion
 
         const info = {
@@ -285,7 +285,7 @@ module.exports = function (app) {
         pluginInfo.isRemove = modulesInstalledSinceStartup[name].isRemove
         addIfNotDuplicate(result.installing, pluginInfo)
       } else if (installedModule) {
-        if (compareVersions(version, installedModule.version) > 0) {
+        if (gt(version, installedModule.version)) {
           addIfNotDuplicate(result.updates, pluginInfo)
         }
         addIfNotDuplicate(result.installed, pluginInfo)

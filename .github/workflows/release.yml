@@ -3,7 +3,7 @@ name: Release - build & publish modules and server, build & publish docker conta
 on:
   push:
     tags:
-    - 'v*'
+      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -135,7 +135,7 @@ jobs:
     steps:
       - name: Build Changelog
         id: github_release
-        uses: mikepenz/release-changelog-builder-action@v4
+        uses: mikepenz/release-changelog-builder-action@v5
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
 
@@ -182,7 +182,7 @@ jobs:
             "s|cr.signalk.io/signalk/signalk-server-base:latest|ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}|g" \
             ./docker/Dockerfile_rel
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./docker/Dockerfile_rel

@@ -10,7 +10,7 @@ import {
   CardFooter,
   Collapse,
   Input,
-  Table,
+  Table
 } from 'reactstrap'
 import Creatable from 'react-select/creatable'
 import remove from 'lodash.remove'
@@ -102,7 +102,7 @@ export const reduceSourcePriorities = (state, action) => {
       saveState = {
         ...saveState,
         isSaving: true,
-        saveFailed: false,
+        saveFailed: false
       }
       break
 
@@ -111,7 +111,7 @@ export const reduceSourcePriorities = (state, action) => {
         ...saveState,
         dirty: false,
         isSaving: false,
-        saveFailed: false,
+        saveFailed: false
       }
       break
 
@@ -119,14 +119,14 @@ export const reduceSourcePriorities = (state, action) => {
       saveState = {
         ...saveState,
         isSaving: false,
-        saveFailed: true,
+        saveFailed: true
       }
       break
 
     case SOURCEPRIOS_SAVE_FAILED_OVER:
       saveState = {
         ...saveState,
-        saveFailed: false,
+        saveFailed: false
       }
       break
 
@@ -139,7 +139,7 @@ export const reduceSourcePriorities = (state, action) => {
 
 function fetchSourceRefs(path, cb) {
   fetch(`/signalk/v1/api/vessels/self/${path.replace(/\./g, '/')}`, {
-    credentials: 'include',
+    credentials: 'include'
   })
     .then((response) => response.json())
     .then((pathResponse) => {
@@ -191,7 +191,7 @@ class PrefsEditor extends Component {
                 ({ sourceRef, timeout }, index) => {
                   const options = this.state.sourceRefs.map((sourceRef) => ({
                     label: sourceRef,
-                    value: sourceRef,
+                    value: sourceRef
                   }))
                   return (
                     <tr key={index}>
@@ -208,8 +208,8 @@ class PrefsEditor extends Component {
                                 pathIndex: this.props.pathIndex,
                                 sourceRef: e.value,
                                 timeout,
-                                index,
-                              },
+                                index
+                              }
                             })
                           }}
                         />
@@ -226,8 +226,8 @@ class PrefsEditor extends Component {
                                   pathIndex: this.props.pathIndex,
                                   sourceRef,
                                   timeout: e.target.value,
-                                  index,
-                                },
+                                  index
+                                }
                               })
                             }
                             value={timeout}
@@ -244,8 +244,8 @@ class PrefsEditor extends Component {
                                 data: {
                                   pathIndex: this.props.pathIndex,
                                   index,
-                                  change: -1,
-                                },
+                                  change: -1
+                                }
                               })
                             }
                           >
@@ -261,8 +261,8 @@ class PrefsEditor extends Component {
                                 data: {
                                   pathIndex: this.props.pathIndex,
                                   index,
-                                  change: 1,
-                                },
+                                  change: 1
+                                }
                               })
                             }
                           >
@@ -280,8 +280,8 @@ class PrefsEditor extends Component {
                                 type: SOURCEPRIOS_PRIO_DELETED,
                                 data: {
                                   pathIndex: this.props.pathIndex,
-                                  index,
-                                },
+                                  index
+                                }
                               })
                             }
                           />
@@ -301,25 +301,25 @@ class PrefsEditor extends Component {
 
 const sourcePrioritySave = (sourcePriorities) => (dispatch) => {
   dispatch({
-    type: SOURCEPRIOS_SAVING,
+    type: SOURCEPRIOS_SAVING
   })
   fetch(`${window.serverRoutesPrefix}/sourcePriorities`, {
     method: 'PUT',
     credentials: 'include',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify(
       sourcePriorities.reduce((acc, pathPriority) => {
         acc[pathPriority.path] = pathPriority.priorities
         return acc
       }, {})
-    ),
+    )
   })
     .then((response) => {
       if (response.status === 200) {
         dispatch({
-          type: SOURCEPRIOS_SAVED,
+          type: SOURCEPRIOS_SAVED
         })
       } else {
         throw new Error()
@@ -327,7 +327,7 @@ const sourcePrioritySave = (sourcePriorities) => (dispatch) => {
     })
     .catch(() => {
       dispatch({
-        type: SOURCEPRIOS_SAVE_FAILED,
+        type: SOURCEPRIOS_SAVE_FAILED
       })
       setTimeout(
         () => dispatch({ type: SOURCEPRIOS_SAVE_FAILED_OVER }),
@@ -338,7 +338,7 @@ const sourcePrioritySave = (sourcePriorities) => (dispatch) => {
 
 function fetchAvailablePaths(cb) {
   fetch(`${window.serverRoutesPrefix}/availablePaths`, {
-    credentials: 'include',
+    credentials: 'include'
   })
     .then((response) => response.json())
     .then(cb)
@@ -348,14 +348,14 @@ class SourcePriorities extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      availablePaths: [],
+      availablePaths: []
     }
     fetchAvailablePaths((pathsArray) => {
       this.setState({
         availablePaths: pathsArray.map((path) => ({
           value: path,
-          label: path,
-        })),
+          label: path
+        }))
       })
     })
   }
@@ -408,7 +408,7 @@ class SourcePriorities extends Component {
                         onChange={(e) => {
                           this.props.dispatch({
                             type: SOURCEPRIOS_PATH_CHANGED,
-                            data: { path: e.value, index },
+                            data: { path: e.value, index }
                           })
                         }}
                       />
@@ -431,8 +431,8 @@ class SourcePriorities extends Component {
                             this.props.dispatch({
                               type: SOURCEPRIOS_PATH_DELETED,
                               data: {
-                                index,
-                              },
+                                index
+                              }
                             })
                           }
                         />
@@ -480,7 +480,7 @@ class SourcePriorities extends Component {
 
 const mapStateToProps = ({ sourcePrioritiesData }) => ({
   sourcePriorities: sourcePrioritiesData.sourcePriorities,
-  saveState: sourcePrioritiesData.saveState,
+  saveState: sourcePrioritiesData.saveState
 })
 
 export default connect(mapStateToProps)(SourcePriorities)

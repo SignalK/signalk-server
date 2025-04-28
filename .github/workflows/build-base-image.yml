@@ -2,7 +2,7 @@ name: Build Docker base images
 
 on:
   schedule:
-    - cron: "0 0 * * 1"
+    - cron: '0 0 * * 1'
   workflow_dispatch:
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
           password: ${{ secrets.GHCR_PAT }}
 
       - name: Build baseimages
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./docker/Dockerfile_base_${{ matrix.os }}
@@ -45,9 +45,9 @@ jobs:
           sed -i \
             "s|cr.signalk.io/signalk/signalk-server-base:latest|ghcr.io/signalk/signalk-server-base:${{ matrix.arch }}-${{ matrix.os }}|g" \
             ./docker/Dockerfile_rel
-          
+
       - name: Build Signal K test docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./docker/Dockerfile_rel

@@ -11,37 +11,27 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [20.x, 22.x]
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-    - run: npm install
-    - run: npm run build:all
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm install
+      - run: npm run build:all
 
-    - name: streams
-      working-directory: ./packages/streams
-      run: |
-        npm run ci
+      - name: server-api
+        working-directory: ./packages/server-api
+        run: |
+          npm run test
 
-    - name: server-api
-      working-directory: ./packages/server-api
-      run: |
-        npm run test
+      - name: resources-provider-plugin
+        working-directory: ./packages/resources-provider-plugin
+        run: |
+          npm run test
 
-    - name: resources-provider-plugin
-      working-directory: ./packages/resources-provider-plugin
-      run: |
-        npm run test
-
-    - name: server-admin-ui
-      working-directory: ./packages/server-admin-ui
-      run: |
-        npm run ci
-
-    - run: npm test
-      env:
-        CI: true
+      - run: npm test
+        env:
+          CI: true

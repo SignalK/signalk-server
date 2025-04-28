@@ -7,13 +7,12 @@
   "scripts": {
     "generate": "ts-auto-guard src/autopilotapi.ts src/weatherapi.ts 2>/dev/null",
     "build": "npm run generate && tsc -b",
-    "watch": "tsc --declaration --watch",
+    "watch": "tsc --watch",
     "prepublishOnly": "npm run build",
-    "prettier": "prettier -w src/",
-    "lint": "eslint --ext .ts --ext .js --fix src/",
+    "prettier": "prettier --write .",
+    "lint": "eslint --fix",
     "format": "npm run prettier && npm run lint",
-    "ci-lint": "eslint --ext .ts --ext .js src/ && prettier --check src/",
-    "test": "mocha --require ts-node/register src/**/*.test.ts && npm run ci-lint"
+    "test": "mocha src/**/*.test.ts"
   },
   "repository": {
     "type": "git",

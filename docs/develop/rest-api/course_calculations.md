@@ -6,7 +6,7 @@ title: Course Providers
 
 The _Course API_ defines the path `/vessels/self/navigation/course/calcValues` to accommodate the calculated values related to course navigation.
 
-These paths are available to be populated by a "course provider" plugin that uses the course information set using the  _Course API_. This approach promotes the extensibility of Signal K server providing flexibility and interoperability. See [Course Provider Plugins](#course-provider-plugins) below.
+These paths are available to be populated by a "course provider" plugin that uses the course information set using the _Course API_. This approach promotes the extensibility of Signal K server providing flexibility and interoperability. See [Course Provider Plugins](#course-provider-plugins) below.
 
 <img src="../../img/course_provider.svg" width="300px"/>
 
@@ -27,8 +27,8 @@ The following paths are defined to hold values calculated using the information 
 - targetSpeed
 - previousPoint.distance
 
-
 _Example:_
+
 ```
 {
   "calcMethod": "Rhumbline",
@@ -53,9 +53,9 @@ _Example:_
 Calculated course values that cross a threshold should trigger a notification so that the necessary action can be taken.
 
 The Course API defines the following notifications which should be implemented by a course provider:
+
 - `navigation.course.arrivalCircleEntered`
 - `navigation.course.perpendicularPassed`
-
 
 ## Course Provider Plugins
 
@@ -64,6 +64,7 @@ Signal K server includes the `Course Data Provider` plugin as part of the instal
 This plugin can be replaced with others from the AppStore, or your own, to extend the number and types of calculations performed.
 
 If you are looking to develop a course provider plugin, following are the recommended guidlines:
+
 1. Ensure values are generated for ALL the defined paths (above)
 1. Values MUST be calculated using `/vessels/self/navigation/course` path values mainntained by the _Course API_
 1. Ensure values are set to null when no destination is set or the value cannot be calculated

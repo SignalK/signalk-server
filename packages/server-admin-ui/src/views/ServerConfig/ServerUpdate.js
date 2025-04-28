@@ -7,7 +7,7 @@ class ServerUpdate extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      chanelog: null,
+      chanelog: null
     }
 
     this.handleUpdate = this.handleUpdate.bind(this)
@@ -33,7 +33,7 @@ class ServerUpdate extends Component {
         `${window.serverRoutesPrefix}/appstore/install/signalk-server/${this.props.appStore.serverUpdate}`,
         {
           method: 'POST',
-          credentials: 'include',
+          credentials: 'include'
         }
       ).then(() => {
         this.history.pushState(null, 'appstore/updates')

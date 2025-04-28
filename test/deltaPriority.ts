@@ -1,31 +1,33 @@
+import { SourceRef } from '@signalk/server-api'
+import {
+  getToPreferredDelta,
+  SourcePrioritiesData
+} from '../dist/deltaPriority.js'
 import chai from 'chai'
 chai.should()
 
-
-const { getToPreferredDelta } = require('../dist/deltaPriority')
-
 describe('toPreferredDelta logic', () => {
   it('works', () => {
-    const sourcePreferences = {
+    const sourcePreferences: SourcePrioritiesData = {
       'environment.wind.speedApparent': [
         {
-          sourceRef: 'a',
+          sourceRef: 'a' as SourceRef,
           timeout: 0
         },
         {
-          sourceRef: 'b',
+          sourceRef: 'b' as SourceRef,
           timeout: 150
         },
         {
-          sourceRef: 'c',
+          sourceRef: 'c' as SourceRef,
           timeout: 150
         }
       ]
     }
     const toPreferredDelta = getToPreferredDelta(sourcePreferences, 200)
 
-
     let totalDelay = 0
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any[] = []
     const expectedResult: string[] = []
     let n = 0
@@ -35,16 +37,26 @@ describe('toPreferredDelta logic', () => {
         expectedResult.push(sourceRef)
       }
       setTimeout(() => {
-        result.push(toPreferredDelta({
-          context: 'self',
-          updates: [{
-            $source: sourceRef,
-            values: [{
-              path: 'environment.wind.speedApparent',
-              value: n++
-            }]
-          }]
-        }, new Date(), 'self'))
+        result.push(
+          toPreferredDelta(
+            {
+              context: 'self',
+              updates: [
+                {
+                  $source: sourceRef,
+                  values: [
+                    {
+                      path: 'environment.wind.speedApparent',
+                      value: n++
+                    }
+                  ]
+                }
+              ]
+            },
+            new Date(),
+            'self'
+          )
+        )
       }, totalDelay)
     }
 
@@ -66,13 +78,12 @@ describe('toPreferredDelta logic', () => {
     push('c', 150, true)
     push('d', 205, true)
 
-
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         try {
           result
-            .filter(r => r.updates[0].values.length > 0)
-            .map(r => r.updates[0].$source)
+            .filter((r) => r.updates[0].values.length > 0)
+            .map((r) => r.updates[0].$source)
             .should.eql(expectedResult)
           resolve(undefined)
         } catch (err) {

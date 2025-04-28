@@ -48,6 +48,6 @@ export default connect(
     loginStatus,
     serverSpecification,
     appStore,
-    vesselInfo,
+    vesselInfo
   })
 )(Footer)

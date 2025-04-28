@@ -2,11 +2,9 @@ const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
 chai.use(require('@signalk/signalk-schema').chaiModule)
-const freeport = require('freeport-promise')
+const { freeport } = require('./ts-servertestutilities')
 const fetch = require('node-fetch')
 const { startServerP, sendDelta } = require('./servertestutilities')
-
-
 const uuid = 'urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d'
 
 const delta = {
@@ -58,8 +56,7 @@ describe('Server', function () {
     return sendDelta(delta, deltaUrl)
       .then(function () {
         console.log('back1')
-        return fetch(restUrl)
-          .then(r => r.json())
+        return fetch(restUrl).then((r) => r.json())
       })
       .then(function (treeAfterFirstDelta) {
         console.log('back2')
@@ -78,7 +75,7 @@ describe('Server', function () {
         return sendDelta(delta, deltaUrl)
       })
       .then(function () {
-        return fetch(restUrl).then(r => r.json())
+        return fetch(restUrl).then((r) => r.json())
       })
       .then(function (treeAfterSecondDelta) {
         treeAfterSecondDelta.vessels[uuid].should.have.nested.property(
@@ -96,8 +93,8 @@ describe('Server', function () {
         delta.updates[0].source.src = '116'
         return sendDelta(delta, deltaUrl)
       })
-      .then(function (body) {
-        return fetch(restUrl).then(r => r.json())
+      .then(function () {
+        return fetch(restUrl).then((r) => r.json())
       })
       .then(function (treeAfterOtherSourceDelta) {
         treeAfterOtherSourceDelta.vessels[uuid].should.have.nested.property(

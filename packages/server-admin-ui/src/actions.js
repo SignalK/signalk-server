@@ -3,17 +3,17 @@ import { isUndefined } from 'lodash'
 const authFetch = (url, options) => {
   return fetch(url, {
     ...options,
-    credentials: 'include',
+    credentials: 'include'
   })
 }
 
 export function logout() {
   return (dispatch) => {
     dispatch({
-      type: 'LOGOUT_REQUESTED',
+      type: 'LOGOUT_REQUESTED'
     })
     authFetch('/signalk/v1/auth/logout', {
-      method: 'PUT',
+      method: 'PUT'
     })
       .then((response) => {
         if (!response.ok) {
@@ -23,13 +23,13 @@ export function logout() {
       })
       .then(() => {
         dispatch({
-          type: 'LOGOUT_SUCCESS',
+          type: 'LOGOUT_SUCCESS'
         })
       })
       .catch((error) => {
         dispatch({
           type: 'LOGOUT_FAILED',
-          data: error,
+          data: error
         })
       })
       .then(() => {
@@ -48,27 +48,27 @@ export async function login(
   const payload = {
     username: username,
     password: password,
-    rememberMe: rememberMe,
+    rememberMe: rememberMe
   }
   const request = await authFetch('/signalk/v1/auth/login', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payload)
   })
 
   const response = await request.json()
   if (request.status !== 200) {
     dispatch({
       type: 'LOGIN_FAILURE',
-      data: response.message,
+      data: response.message
     })
     callback(response.message)
   } else if (response) {
     fetchAllData(dispatch)
     dispatch({
-      type: 'LOGIN_SUCCESS',
+      type: 'LOGIN_SUCCESS'
     })
     callback(null)
   }
@@ -78,14 +78,14 @@ export function enableSecurity(dispatch, userId, password, callback) {
   var payload = {
     userId: userId,
     password: password,
-    type: 'admin',
+    type: 'admin'
   }
   fetch(`${window.serverRoutesPrefix}/enableSecurity`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payload)
   }).then((response) => {
     if (response.status != 200) {
       response.text().then((text) => {
@@ -102,7 +102,7 @@ export function restart() {
     if (confirm('Are you sure you want to restart?')) {
       fetch(`${window.serverRoutesPrefix}/restart`, {
         credentials: 'include',
-        method: 'PUT',
+        method: 'PUT'
       }).then(() => {
         dispatch({ type: 'SERVER_RESTART' })
       })
@@ -120,7 +120,7 @@ export const buildFetchAction =
       const data = await response.json()
       dispatch({
         type,
-        data,
+        data
       })
     }
   }
@@ -152,7 +152,8 @@ export function fetchAllData(dispatch) {
   fetchAddons(dispatch)
   fetchApps(dispatch)
   fetchLoginStatus(dispatch)
-  fetchServerSpecification(dispatch), fetchAccessRequests(dispatch)
+  fetchServerSpecification(dispatch)
+  fetchAccessRequests(dispatch)
 }
 
 export function openServerEventsConnection(dispatch, isReconnect) {
@@ -177,19 +178,19 @@ export function openServerEventsConnection(dispatch, isReconnect) {
   ws.onclose = () => {
     console.log('closed')
     dispatch({
-      type: 'WEBSOCKET_CLOSE',
+      type: 'WEBSOCKET_CLOSE'
     })
   }
   ws.onerror = () => {
     dispatch({
-      type: 'WEBSOCKET_ERROR',
+      type: 'WEBSOCKET_ERROR'
     })
   }
   ws.onopen = () => {
     console.log('connected')
     dispatch({
       type: 'WEBSOCKET_OPEN',
-      data: ws,
+      data: ws
     })
     if (isReconnect) {
       window.location.reload()

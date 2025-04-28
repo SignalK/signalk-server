@@ -1,44 +1,43 @@
 {
-    "name": "@signalk/resources-provider",
-    "version": "1.3.2",
-    "description": "Resources provider plugin for Signal K server.",
-    "main": "dist/index.js",
-    "keywords": [
-        "signalk-node-server-plugin",
-        "signalk-category-utility",
-        "signalk",
-        "resources",
-        "routes",
-        "waypoints",
-        "regions",
-        "notes"
-    ],
-    "repository": "git+https://github.com/SignalK/signalk-server.git",
-    "author": "AdrianP",
-    "contributors": [
-        {
-            "name": "panaaj@hotmail.com"
-        }
-    ],
-    "license": "Apache-20",
-    "scripts": {
-        "build": "tsc",
-        "watch": "npm run build -- -w",
-        "prettier": "prettier -w src/",
-        "lint": "eslint --ext .ts --ext .js --fix src/",
-        "format": "npm run prettier && npm run lint",
-        "ci-lint": "eslint --ext .ts --ext .js src/ && prettier --check src/",
-        "prepublishOnly": "npm run build",
-        "test": "npm run build && npm run ci-lint"
-    },
-    "dependencies": {
-        "@signalk/server-api": "^2.5.0",
-        "geojson-validation": "^0.2.0",
-        "geolib": "^3.3.3",
-        "ngeohash": "^0.6.3"
-    },
-    "devDependencies": {
-        "@types/ngeohash": "^0.6.4"
-    },
-    "signalk-plugin-enabled-by-default": true
+  "name": "@signalk/resources-provider",
+  "version": "1.3.2",
+  "description": "Resources provider plugin for Signal K server.",
+  "main": "dist/index.js",
+  "keywords": [
+    "signalk-node-server-plugin",
+    "signalk-category-utility",
+    "signalk",
+    "resources",
+    "routes",
+    "waypoints",
+    "regions",
+    "notes"
+  ],
+  "repository": "git+https://github.com/SignalK/signalk-server.git",
+  "author": "AdrianP",
+  "contributors": [
+    {
+      "name": "panaaj@hotmail.com"
+    }
+  ],
+  "license": "Apache-20",
+  "scripts": {
+    "build": "tsc",
+    "watch": "npm run build -- -w",
+    "prettier": "prettier -w src/",
+    "lint": "eslint --fix",
+    "format": "npm run prettier && npm run lint",
+    "prepublishOnly": "npm run build",
+    "test": "npm run build"
+  },
+  "dependencies": {
+    "@signalk/server-api": "^2.5.0",
+    "geojson-validation": "^0.2.0",
+    "geolib": "^3.3.3",
+    "ngeohash": "^0.6.3"
+  },
+  "devDependencies": {
+    "@types/ngeohash": "^0.6.4"
+  },
+  "signalk-plugin-enabled-by-default": true
 }

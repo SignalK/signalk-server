@@ -11,12 +11,12 @@ import {
   Col,
   Label,
   FormGroup,
-  FormText,
+  FormText
 } from 'reactstrap'
 
 function fetchVessel() {
   fetch(`${window.serverRoutesPrefix}/vessel`, {
-    credentials: 'include',
+    credentials: 'include'
   })
     .then((response) => response.json())
     .then((data) => {
@@ -28,7 +28,7 @@ class VesselConfiguration extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      hasData: false,
+      hasData: false
     }
 
     this.fetchVessel = fetchVessel.bind(this)
@@ -53,10 +53,10 @@ class VesselConfiguration extends Component {
     fetch(`${window.serverRoutesPrefix}/vessel`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(this.state),
-      credentials: 'include',
+      credentials: 'include'
     })
       .then((response) => response.text())
       .then((response) => {

@@ -11,13 +11,13 @@ import {
   Col,
   Label,
   FormGroup,
-  FormText,
+  FormText
 } from 'reactstrap'
 import EnableSecurity from './EnableSecurity'
 
 export function fetchSecurityConfig() {
   fetch(`${window.serverRoutesPrefix}/security/config`, {
-    credentials: 'include',
+    credentials: 'include'
   })
     .then((response) => response.json())
     .then((data) => {
@@ -31,7 +31,7 @@ class Settings extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      hasData: false,
+      hasData: false
     }
 
     this.handleChange = this.handleChange.bind(this)
@@ -69,15 +69,15 @@ class Settings extends Component {
       allowNewUserRegistration: this.state.allowNewUserRegistration,
       allowDeviceAccessRequests: this.state.allowDeviceAccessRequests,
       allowedCorsOrigins: this.state.allowedCorsOrigins,
-      adminUIOrigin,
+      adminUIOrigin
     }
     fetch(`${window.serverRoutesPrefix}/security/config`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload),
-      credentials: 'include',
+      credentials: 'include'
     })
       .then((response) => response.text())
       .then((response) => {

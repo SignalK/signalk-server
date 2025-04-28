@@ -37,7 +37,7 @@ const Transform = require('stream').Transform
 
 function Udp(options) {
   Transform.call(this, {
-    objectMode: false,
+    objectMode: false
   })
   this.options = options
   this.debug = (options.createDebug || require('debug'))('signalk:streams:udp')
@@ -62,7 +62,7 @@ Udp.prototype.pipe = function (pipeTo) {
     })
   }
 
-  socket.on('message', function (message, remote) {
+  socket.on('message', function (message) {
     self.debug(message.toString())
     self.push(message)
   })

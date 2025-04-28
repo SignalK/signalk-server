@@ -34,7 +34,7 @@ const getLogger = require('./logging').getLogger
 
 function Log(options) {
   Transform.call(this, {
-    objectMode: true,
+    objectMode: true
   })
 
   this.logger = getLogger(options.app, options.discriminator, options.logdir)
@@ -46,10 +46,6 @@ Log.prototype._transform = function (msg, encoding, done) {
   this.push(msg)
   this.logger(msg)
   done()
-}
-
-function pad(num) {
-  return (num > 9 ? '' : '0') + num
 }
 
 module.exports = Log

@@ -13,7 +13,7 @@ function ActionCellRenderer(props) {
       `${window.serverRoutesPrefix}/appstore/install/${props.data.name}/${props.data.version}`,
       {
         method: 'POST',
-        credentials: 'include',
+        credentials: 'include'
       }
     )
   }
@@ -22,7 +22,7 @@ function ActionCellRenderer(props) {
     if (confirm(`Are you sure you want to uninstall ${props.data.name}?`)) {
       fetch(`${window.serverRoutesPrefix}/appstore/remove/${props.data.name}`, {
         method: 'POST',
-        credentials: 'include',
+        credentials: 'include'
       })
     }
   }
@@ -39,8 +39,8 @@ function ActionCellRenderer(props) {
       status = app.isRemove
         ? 'Removing'
         : app.isWaiting
-        ? 'Waiting..'
-        : 'Installing'
+          ? 'Waiting..'
+          : 'Installing'
       progress = (
         <Progress
           className="progress-sm progress__bar"

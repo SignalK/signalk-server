@@ -30,8 +30,8 @@ export class FeaturesApi {
         const enabled = ['true', '1'].includes(req.query.enabled as string)
           ? true
           : ['false', '0'].includes(req.query.enabled as string)
-          ? false
-          : undefined
+            ? false
+            : undefined
 
         res.json(await this.app.getFeatures(enabled))
       }

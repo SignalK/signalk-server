@@ -20,13 +20,13 @@ let debug = require('debug')('signalk:streams:logging')
 const fs = require('fs')
 const { isUndefined } = require('lodash')
 
-const filenamePattern = /skserver\-raw\_\d\d\d\d\-\d\d\-\d\dT\d\d\.log/
+const filenamePattern = /skserver-raw_\d\d\d\d-\d\d-\d\dT\d\d\.log/
 const loggers = {}
 
 module.exports = {
   getLogger,
   getFullLogDir,
-  listLogFiles,
+  listLogFiles
 }
 
 class FileTimestampStreamWithDelete extends FileTimestampStream {

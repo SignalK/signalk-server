@@ -4,7 +4,7 @@ const Transform = require('stream').Transform
 
 function ToSignalK(options) {
   Transform.call(this, {
-    objectMode: true,
+    objectMode: true
   })
 
   const createDebug = options.createDebug || require('debug')
@@ -44,18 +44,18 @@ ToSignalK.prototype._transform = function (chunk, encoding, done) {
 
         if (values.length > 0) {
           const upd = {
-            values,
+            values
           }
 
-          if (update.hasOwnProperty('$source')) {
+          if (update.$source) {
             upd.$source = update.$source
           }
 
-          if (update.hasOwnProperty('source')) {
+          if (update.source) {
             upd.source = update.source
           }
 
-          if (update.hasOwnProperty('timestamp')) {
+          if (update.timestamp) {
             upd.timestamp = update.timestamp
           }
 

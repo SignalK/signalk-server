@@ -2,7 +2,7 @@ const chai = require('chai')
 chai.Should()
 chai.use(require('chai-things'))
 const _ = require('lodash')
-const freeport = require('freeport-promise')
+const { freeport } = require('./ts-servertestutilities')
 const Server = require('../dist')
 const fetch = require('node-fetch')
 const { WsPromiser } = require('./servertestutilities')
@@ -24,7 +24,7 @@ const testDelta = {
   ]
 }
 
-const dummyHistoryProvider = app => {
+const dummyHistoryProvider = (app) => {
   return {
     streamHistory: (cookie, options, onDelta) => {
       setTimeout(() => {
@@ -47,7 +47,7 @@ const dummyHistoryProvider = app => {
   }
 }
 
-describe('History', _ => {
+describe('History', (_) => {
   let server, url, port
 
   before(async function () {

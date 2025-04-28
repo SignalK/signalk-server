@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  * Copyright 2016 Teppo Kurki <teppo.kurki@iki.fi>
@@ -33,10 +32,10 @@ import {
   SignalKApiId,
   SourceRef,
   PluginConstructor,
-  Plugin
+  Plugin,
+  Path,
+  Delta
 } from '@signalk/server-api'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import { getLogger } from '@signalk/streams/logging'
 import express, { Request, Response } from 'express'
 import fs from 'fs'
@@ -496,7 +495,7 @@ module.exports = (theApp: any) => {
         }
       },
       debug: createDebug(packageName),
-      registerDeltaInputHandler: (handler: any) => {
+      registerDeltaInputHandler: (handler: Delta) => {
         onStopHandlers[plugin.id].push(app.registerDeltaInputHandler(handler))
       },
       setProviderStatus: deprecate((msg: string) => {
@@ -590,9 +589,8 @@ module.exports = (theApp: any) => {
 
     try {
       const moduleDir = path.join(location, packageName)
-      const pluginConstructor: PluginConstructor = await importOrRequire(
-        moduleDir
-      )
+      const pluginConstructor: PluginConstructor =
+        await importOrRequire(moduleDir)
       plugin = pluginConstructor(appCopy) as PluginInfo
     } catch (e: any) {
       console.error(`${packageName} failed to start: ${e.message}`)
@@ -635,7 +633,7 @@ module.exports = (theApp: any) => {
           {
             meta: [
               {
-                path: aPath,
+                path: aPath as Path,
                 value: {
                   supportsPut: true
                 }

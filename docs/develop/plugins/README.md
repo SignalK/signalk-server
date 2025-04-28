@@ -25,7 +25,6 @@ For example, if the plugin you are looking to develop is providing access to inf
 
 Or if you are looking to perform course calculations or integrate with an auotpilot, you will want to review the _[Course API](../rest-api/course_api.md)_ documentation prior to commencing your project.
 
-
 **OpenApi description for your plugin's API**
 
 If your plugin provides an API you should consider providing an OpenApi description. This promotes cooperation with other plugin/webapp authors and also paves the way for incorporating new APIs piloted within a plugin into the Signal K specification. _See [Add OpenAPI definition](#add-an-openapi-definition)_ below.
@@ -37,8 +36,9 @@ If your plugin provides an API you should consider providing an OpenApi descript
 ### Prerequisites
 
 To get started developing your plugin you will need the following:
+
 - Signal K server instance on your device _(clone of GIT repository or docker instance)_
-- NodeJs version 18 or later and NPM installed
+- NodeJs version 20 or later and NPM installed
 - SignalK server configuration folder. _(Created when Signal K server is started. default location is `$HOME/.signalk`)_.
 
 ---
@@ -46,6 +46,7 @@ To get started developing your plugin you will need the following:
 ### Setting up your project
 
 1. Create a folder for your plugin code and create the necessary file structure:
+
 ```shell
 mkdir my-pluin
 cd my-plugin
@@ -53,6 +54,7 @@ npm init      # create package.json file
 ```
 
 2. Create the folders to hold your plugin code and webapp UI.
+
 ```shell
 /my-plugin
   /plugin     # plugin (javascript code / built typesrcipt code)
@@ -89,16 +91,17 @@ npm init      # create package.json file
 ```
 
 4. _Optional:_ Install any dependencies or third party packages.
+
 ```shell
 npm i
 ```
-
 
 ### Link your project to Signal K server.
 
 Once you have developed your plugin code and are ready to debug, the most convenient way is to use `npm link` to link your plugin code to your instance of Signal K server.
 
 To do this, from within a terminal window:
+
 ```shell
 # Ensure you are in the folder containing your built plugin code
 cd my_plugin_src
@@ -118,12 +121,12 @@ When you start Signal K server the plugin will now appear in the **Plugin Config
 
 Updating and/or installing new plugins will remove the link and you need to re-link your plugin.
 
-
 ### Debugging
 
 The simplest way to debug your plugin is to turn on **Enable Debug log** for your plugin in the **Plugin Config** screen.
 
 Alternatively, you can debug your plugin by starting the Signal K server with the `DEBUG` environment variable:
+
 ```shell
 $ DEBUG=my-signalk-plugin signalk-server
 
@@ -133,6 +136,7 @@ my-signalk-plugin Plugin started +2ms
 ```
 
 You can also view debug information about the plugin loading process:
+
 ```shell
 $ DEBUG=signalk:interfaces:plugins signalk-server
 
@@ -146,9 +150,11 @@ signalk:interfaces:plugins Could not find options for plugin my-signalk-plugin, 
 For development purposes, it's often nice to have some mocked data. SignalK comes with a synthesized NMEA2000 data set that can be used as sample data.
 
 You can enable this by adding `--sample-n2k-data` to the command line:
+
 ```shell
 $ DEBUG=my-signalk-plugin signalk-server --sample-n2k-data
 ```
+
 ---
 
 ## Start Coding
@@ -159,7 +165,7 @@ They are installed into the `node_modules` folder that resides inside the Signal
 
 A Signal K plugin is passed a reference to the Signal K server plugin interface which it can use to interact with the server.
 
-Following are code snippets that can be used as a template for plugin development ensuring the returned Plugin object contains the required  functions.
+Following are code snippets that can be used as a template for plugin development ensuring the returned Plugin object contains the required functions.
 
 ### Javascript
 
@@ -167,7 +173,6 @@ Create `index.js` with the following content:
 
 ```javascript
 module.exports = (app) => {
-
   const plugin = {
     id: 'my-signalk-plugin',
     name: 'My Great Plugin',
@@ -182,10 +187,10 @@ module.exports = (app) => {
         // plugin configuration goes here
       }
     }
-  };
+  }
 
-  return plugin;
-};
+  return plugin
+}
 ```
 
 ### Typescript
@@ -193,10 +198,9 @@ module.exports = (app) => {
 Create `index.js` with the following content:
 
 ```typescript
-import { Plugin, ServerAPI } from '@signalk/server-api';
+import { Plugin, ServerAPI } from '@signalk/server-api'
 
 export default (app: ServerAPI): Plugin => {
-
   const plugin: Plugin = {
     id: 'my-signalk-plugin',
     name: 'My Great Plugin',
@@ -211,9 +215,9 @@ export default (app: ServerAPI): Plugin => {
         // plugin configuration goes here
       }
     }
-  };
+  }
 
-  return plugin;
+  return plugin
 }
 ```
 
@@ -222,8 +226,8 @@ A plugin must return an object containing the following functions:
 - `start(settings, restartPlugin)`: This function is called when the plugin is enabled or when the server starts (and the plugin is enabled). The `settings` parameter contains the configuration data entered via the **Plugin Config** screen. `restartPlugin` is a function that can be called by the plugin to restart itself.
 
 - `stop()`: This function is called when the plugin is disabled or after configuration changes. Use this function to "clean up" the resources consumed by the plugin i.e. unsubscribe from streams, stop timers / loops and close devices.
-If there are asynchronous operations in your plugin's stop implementation you should return a Promise that resolves
-when stopping is complete.
+  If there are asynchronous operations in your plugin's stop implementation you should return a Promise that resolves
+  when stopping is complete.
 
 - `schema()`: A function that returns an object defining the schema of the plugin's configuration data. It is used by the server to generate the user interface in the **Plugin Config** screen.
 
@@ -236,28 +240,28 @@ A plugin can also contain the following optional functions:
 - `registerWithRouter(router)`: This function (which is called during plugin startup) enables plugins to provide an API by registering paths with the Express router is passed as a parameter when invoked. It is strongly recommended that he plugin implement `getOpenAPI()` if this function is used.
 
 _Example:_
+
 ```javascript
 plugin.registerWithRouter = (router) => {
-    router.get('/preferences', (req, res) => {
+  router.get('/preferences', (req, res) => {
     res.status(200).json({
       preferences: {
         color: 'red',
         speed: 1.23
       }
-    });
-  });
-};
-
+    })
+  })
+}
 ```
 
 - `getOpenApi()`: Function to return the OpenAPI definition. This should be implemented when your plugin provides HTTP endpoints for clients to call. Doing so makes the OpenAPI definition available in the server Admin UI under `Documentation -> OpenAPI`.
 
 _Example:_
+
 ```javascript
-const openapi = require('./openApi.json');
+const openapi = require('./openApi.json')
 
-plugin.getOpenApi = () => openapi;
-
+plugin.getOpenApi = () => openapi
 ```
 
 ---
@@ -269,6 +273,7 @@ If your plugin exposes an API to interact with it then you should include an Ope
 You do this by creating an OpenAPI definition within the file `openApi.json` and then returning the content of the file with the `getOpenApi` method.
 
 _Example:_
+
 ```javascript
 const openapi = require('./openApi.json');
 ...
@@ -280,6 +285,7 @@ This will include your plugin's OpenApi definition in the documentation in the s
 
 Note: If the plugin's OpenApi description DOES NOT include a `servers` property, the API path presented in the documentation will be relative to the Signal K API path. You should include this property the plugin API is rooted elsewhere.
 _Example:_
+
 ```JSON
   "servers": [
     {
@@ -303,14 +309,15 @@ To record deltas sent by the plugin in the server's data log, enable the **Log p
 Plugins can be removed via the AppStore.
 
 You can also remove a plugin manually by:
+
 1. Deleting it's folder under `~/.signalk/node_modules`
 1. Deleting it's entry from `~/.signalk/package.json`
 1. Run `npm prune` from the `~/.signalk/` directory.
 
 Alternatively you can:
+
 1. Remove the folder `~/.signalk/node_modules`
 1. Run `npm install` from the `~/.signalk/` directory.
-
 
 Finally you can remove the plugin setting file in `~/.signalk/plugin-config-data/`.
 
@@ -319,5 +326,6 @@ Finally you can remove the plugin setting file in `~/.signalk/plugin-config-data
 ## Examples
 
 Following are links to some published SignalK plugins that serve as an example of working plugins:
+
 - [set-system-time](https://github.com/SignalK/set-system-time/blob/master/index.js)
 - [Ais Reporter](https://github.com/SignalK/aisreporter/issues)

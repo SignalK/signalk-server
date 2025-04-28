@@ -6,7 +6,7 @@ import {
   Card,
   CardBody,
   CardHeader,
-  Label,
+  Label
 } from 'reactstrap'
 
 class N2KFilters extends Component {

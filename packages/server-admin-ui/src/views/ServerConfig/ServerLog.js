@@ -10,7 +10,7 @@ import {
   Col,
   Label,
   FormGroup,
-  FormText,
+  FormText
 } from 'reactstrap'
 import LogFiles from './Logging'
 import Creatable from 'react-select/creatable'
@@ -24,7 +24,7 @@ class ServerLogs extends Component {
       webSocket: null,
       didSubScribe: false,
       pause: false,
-      debugKeys: [],
+      debugKeys: []
     }
 
     this.handleDebug = this.handleDebug.bind(this)
@@ -56,7 +56,7 @@ class ServerLogs extends Component {
 
   fetchDebugKeys() {
     fetch(`${window.serverRoutesPrefix}/debugKeys`, {
-      credentials: 'include',
+      credentials: 'include'
     })
       .then((response) => response.json())
       .then((debugKeys) => {
@@ -98,10 +98,10 @@ class ServerLogs extends Component {
     fetch(`${window.serverRoutesPrefix}/debug`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ value }),
-      credentials: 'include',
+      credentials: 'include'
     }).then((response) => response.text())
   }
 
@@ -109,10 +109,10 @@ class ServerLogs extends Component {
     fetch(`${window.serverRoutesPrefix}/rememberDebug`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ value: event.target.checked }),
-      credentials: 'include',
+      credentials: 'include'
     }).then((response) => response.text())
   }
 
@@ -152,7 +152,7 @@ class ServerLogs extends Component {
                       isMulti
                       options={this.state.debugKeys.map((key) => ({
                         label: key,
-                        value: key,
+                        value: key
                       }))}
                       value={
                         this.props.log.debugEnabled
@@ -239,7 +239,7 @@ class LogList extends Component {
           maxHeight: '60vh',
           border: '1px solid',
           padding: '5px',
-          fontFamily: 'monospace',
+          fontFamily: 'monospace'
         }}
       >
         {this.props.value.entries &&

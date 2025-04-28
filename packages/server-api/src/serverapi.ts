@@ -5,8 +5,11 @@ import {
   PropertyValuesEmitter,
   ResourceProviderRegistry,
   WeatherProviderRegistry,
+  Delta
 } from '.'
 import { CourseApi } from './course'
+import { StreamBundle } from './streambundle'
+import { SubscriptionManager } from './subscriptionmanager'
 
 /**
  * SignalK server provides an interface to allow {@link Plugin | Plugins } to:
@@ -28,7 +31,8 @@ export interface ServerAPI
     AutopilotProviderRegistry,
     WeatherProviderRegistry,
     Features,
-    CourseApi {
+    CourseApi,
+    SelfIdentity {
   /**
    * Returns the entry for the provided path starting from `vessels.self` in the full data model.
    *
@@ -94,6 +98,17 @@ export interface ServerAPI
     source: string
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any>
+
+  /**
+   * @category Data Model
+   */
+  streambundle: StreamBundle
+
+  /**
+   * @see [Processing data from the server](../../../docs/develop/plugins/deltas.md#subscribing-to-deltas)
+   * @category Data Model
+   */
+  subscriptionmanager: SubscriptionManager
 
   //TSTODO convert queryRequest to ts
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -211,8 +226,7 @@ export interface ServerAPI
    * @param skVersion Optional parameter to specify the Signal K version of the delta.
    * @category Data Model
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleMessage(id: string, msg: any, skVersion?: SKVersion): void
+  handleMessage(id: string, msg: Partial<Delta>, skVersion?: SKVersion): void
 
   /**
    * Save changes to the plugin's configuration options.
@@ -410,8 +424,8 @@ export interface ServerAPI
 export type PluginServerApp = ServerAPI
 
 export type DeltaInputHandler = (
-  delta: object,
-  next: (delta: object) => void
+  delta: Delta,
+  next: (delta: Delta) => void
 ) => void
 
 export interface Ports {
@@ -420,6 +434,12 @@ export interface Ports {
   byOpenPlotter: string[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   serialports: any
+}
+
+export interface SelfIdentity {
+  selfType: string
+  selfId: string
+  selfContext: string
 }
 
 export interface Metadata {
