@@ -20,7 +20,7 @@ describe('toPreferredDelta logic', () => {
             meta: [
               {
                 path: 'environment.wind.speedApparent',
-                value: {'units': 'A'}
+                value: { units: 'A' }
               }
             ]
           }
@@ -31,7 +31,7 @@ describe('toPreferredDelta logic', () => {
     )
     assert(delta.updates[0].values === undefined)
   })
-    
+
   it('works', () => {
     const sourcePreferences: SourcePrioritiesData = {
       'environment.wind.speedApparent': [
