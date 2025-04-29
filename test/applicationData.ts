@@ -1,19 +1,19 @@
-const chai = require('chai')
-chai.Should()
-chai.use(require('chai-things'))
-chai.use(require('chai-json-equal'))
-const fetch = require('node-fetch')
-const { freeport } = require('./ts-servertestutilities')
-const {
+import { use, expect } from 'chai'
+import chaiThings from 'chai-things'
+import fetch from 'node-fetch'
+import { freeport } from './ts-servertestutilities'
+import {
   startServerP,
   getReadOnlyToken,
   getWriteToken,
   getAdminToken
-} = require('./servertestutilities')
-const fs = require('fs')
-const path = require('path')
-const assert = require('assert')
-const rimraf = require('rimraf').rimraf
+} from './servertestutilities'
+import fs from 'fs'
+import path from 'path'
+import assert from 'assert'
+import { rimraf } from 'rimraf'
+
+use(chaiThings)
 
 const APP_ID = 'testApplication'
 const APP_VERSION = '1.0.0'
@@ -45,15 +45,17 @@ const tests = [
   }
 ]
 
+type Headers = { [key: string]: string }
+
 describe('Application Data', () => {
-  var url,
-    port,
-    adminToken,
-    writeToken,
-    readToken,
-    readHeaders,
-    writeHeaders,
-    adminHeaders
+  let url: string
+  let port: number
+  let adminToken: string
+  let writeToken: string
+  let readToken: string
+  let readHeaders: Headers
+  let writeHeaders: Headers
+  let adminHeaders: Headers
 
   before(async function () {
     this.timeout(5000)
@@ -62,7 +64,7 @@ describe('Application Data', () => {
   })
 
   async function start() {
-    let server = await startServerP(port, true)
+    const server = await startServerP(port, true)
 
     readToken = await getReadOnlyToken(server)
     writeToken = await getWriteToken(server)
@@ -79,20 +81,24 @@ describe('Application Data', () => {
     }
 
     await rimraf(
-      path.join(process.env.SIGNALK_NODE_CONFIG_DIR, 'applicationData')
+      path.join(process.env.SIGNALK_NODE_CONFIG_DIR!, 'applicationData')
     )
 
     return server
   }
 
-  async function post(globalOrUser, token, expected) {
-    let server = await start()
+  async function post(
+    globalOrUser: boolean,
+    token: string,
+    expectedStatus: number
+  ) {
+    const server = await start()
     try {
       for (const test of tests) {
         const req = globalOrUser
           ? `${url}/signalk/v1/applicationData/global/${test.appid}/${test.version}`
           : `${url}/signalk/v1/applicationData/user/${test.appid}/${test.version}`
-        var result = await fetch(req, {
+        let result = await fetch(req, {
           method: 'POST',
           headers: {
             Cookie: `JAUTHENTICATION=${token}`,
@@ -100,7 +106,7 @@ describe('Application Data', () => {
           },
           body: JSON.stringify(test.settings)
         })
-        result.status.should.equal(expected)
+        expect(result.status).to.equal(expectedStatus)
 
         if (globalOrUser) {
           result = await fetch(req, {
@@ -109,12 +115,12 @@ describe('Application Data', () => {
               'Content-Type': 'application/json'
             }
           })
-          result.status.should.equal(200)
-          let data = await result.json()
-          if (expected !== 200) {
-            data.should.not.jsonEqual(test.settings)
+          expect(result.status).to.equal(200)
+          const data = await result.json()
+          if (expectedStatus !== 200) {
+            expect(data).to.not.eql(test.settings)
           } else {
-            data.should.jsonEqual(test.settings)
+            expect(data).to.eql(test.settings)
           }
         }
       }
@@ -124,9 +130,9 @@ describe('Application Data', () => {
     }
   }
 
-  function readUserData(test, userName) {
+  function readUserData(test: (typeof tests)[number], userName: string) {
     const userPath = path.join(
-      process.env.SIGNALK_NODE_CONFIG_DIR,
+      process.env.SIGNALK_NODE_CONFIG_DIR!,
       'applicationData',
       'users',
       userName,
@@ -135,23 +141,23 @@ describe('Application Data', () => {
     )
 
     if (fs.existsSync(userPath)) {
-      return JSON.parse(fs.readFileSync(userPath))
+      return JSON.parse(fs.readFileSync(userPath).toString())
     } else {
       return null
     }
   }
 
   it('invalid appid or version fails', async function () {
-    let server = await start()
+    const server = await start()
 
-    async function fail(appid, version) {
-      var result = await fetch(
+    async function fail(appid: string, version: string | number) {
+      const result = await fetch(
         `${url}/signalk/v1/applicationData/global/${appid}/${version}`,
         {
           headers: readHeaders
         }
       )
-      result.status.should.equal(400)
+      expect(result.status).to.equal(400)
     }
 
     try {
@@ -164,17 +170,17 @@ describe('Application Data', () => {
   })
 
   it('fetch global returns empty data', async function () {
-    let server = await start()
+    const server = await start()
     try {
-      var result = await fetch(
+      const result = await fetch(
         `${url}/signalk/v1/applicationData/global/${APP_ID}/:${APP_VERSION}`,
         {
           headers: readHeaders
         }
       )
-      result.status.should.equal(200)
-      let data = await result.json()
-      data.should.jsonEqual({})
+      expect(result.status).to.equal(200)
+      const data = await result.json()
+      expect(data).to.eql({})
     } finally {
       await server.stop()
     }
@@ -194,7 +200,7 @@ describe('Application Data', () => {
 
   it('post user data fails readonly user', async function () {
     await post(false, readToken, 401)
-    for (let test of tests) {
+    for (const test of tests) {
       const data = readUserData(test, 'testuser')
       assert(data === null)
     }
@@ -202,18 +208,18 @@ describe('Application Data', () => {
 
   it('post user data works', async function () {
     await post(false, writeToken, 200)
-    for (let test of tests) {
+    for (const test of tests) {
       const data = readUserData(test, 'writeuser')
       assert(data !== null)
-      data.should.jsonEqual(test.settings)
+      expect(data).to.eql(test.settings)
     }
   })
 
   it('json patch works', async function () {
-    let server = await start()
+    const server = await start()
     try {
-      for (let test of tests) {
-        var result = await fetch(
+      for (const test of tests) {
+        let result = await fetch(
           `${url}/signalk/v1/applicationData/user/${test.appid}/${test.version}`,
           {
             method: 'POST',
@@ -226,7 +232,7 @@ describe('Application Data', () => {
             ])
           }
         )
-        result.status.should.equal(200)
+        expect(result.status).to.equal(200)
 
         result = await fetch(
           `${url}/signalk/v1/applicationData/user/${test.appid}/${test.version}/testing`,
@@ -237,9 +243,9 @@ describe('Application Data', () => {
             }
           }
         )
-        result.status.should.equal(200)
-        let data = await result.json()
-        data.should.equal(test.settings.something)
+        expect(result.status).to.equal(200)
+        const data = await result.json()
+        expect(data).to.equal(test.settings.something)
       }
     } finally {
       await server.stop()
