@@ -174,7 +174,7 @@
       "CourseCalculationsModel": {
         "type": "object",
         "required": ["calcMethod"],
-        "description": "Request error response",
+        "description": "Calculated course data values.",
         "properties": {
           "calcMethod": {
             "type": "string",
@@ -247,6 +247,28 @@
                 "minimum": 0,
                 "description": "The distance in meters between the vessel's present position and the start point.",
                 "example": 10157
+              }
+            }
+          },
+          "route": {
+            "type": "object",
+            "description": "Calculations relative to last route point.",
+            "properties": {
+              "distance": {
+                "type": "number",
+                "minimum": 0,
+                "description": "The distance in meters along the route to the last point.",
+                "example": 15936
+              },
+              "timeToGo": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Time in seconds to reach perpendicular of last point in route with current speed & direction.",
+                "example": 10452
+              },
+              "estimatedTimeOfArrival": {
+                "$ref": "#/components/schemas/IsoTime",
+                "description": "The estimated time of arrival at last point in route."
               }
             }
           }
