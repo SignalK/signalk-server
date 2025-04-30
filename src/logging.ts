@@ -1,20 +1,35 @@
-const debugCore = require('debug')
-const moment = require('moment')
-const path = require('path')
-const fs = require('fs')
+import debugCore from 'debug'
+import moment from 'moment'
+import path from 'path'
+import fs from 'fs'
+import type { SignalKServer } from './types'
+import type { WithConfig } from './app'
+import type { WrappedEmitter } from './events'
 
-module.exports = function (app) {
-  const log = []
-  let debugEnabled = ''
+export interface Logging {
+  getLog: () => LogMessage[]
+  enableDebug: (enabled: string) => boolean
+  getDebugSettings: () => { debugEnabled: string; rememberDebug: boolean }
+  rememberDebug: (enabled: boolean) => void
+  addDebug: (name: string) => void
+  removeDebug: (name: string) => void
+}
+
+type LogMessage = {
+  ts: string
+  row: string
+  isError?: boolean
+}
+
+export default function (
+  app: SignalKServer & WithConfig & WrappedEmitter
+): Logging {
+  const log: LogMessage[] = []
+  let debugEnabled = process.env.DEBUG ?? ''
   let rememberDebug = false
   const size = 100
-  let debugPath
+  const debugPath = path.join(app.config.configPath, 'debug')
 
-  if (process.env.DEBUG) {
-    debugEnabled = process.env.DEBUG
-  }
-
-  debugPath = path.join(app.config.configPath, 'debug')
   if (fs.existsSync(debugPath)) {
     const enabled = fs.readFileSync(debugPath, 'utf8')
     if (enabled.length > 0) {
@@ -24,8 +39,8 @@ module.exports = function (app) {
     }
   }
 
-  function storeOutput(output, isError) {
-    const data = {
+  function storeOutput(output: string, isError: boolean) {
+    const data: LogMessage = {
       ts: moment().format('MMM DD HH:mm:ss'),
       row: output
     }
@@ -47,22 +62,22 @@ module.exports = function (app) {
   const outWrite = process.stdout.write
   const errWrite = process.stderr.write
 
-  process.stdout.write = function (string) {
-    outWrite.apply(process.stdout, arguments)
-    storeOutput(string, false)
+  process.stdout.write = function (...args) {
+    storeOutput(args[0].toString(), false)
+    return outWrite.apply(process.stdout, args as Parameters<typeof outWrite>)
   }
 
-  process.stderr.write = function (string) {
-    errWrite.apply(process.stderr, arguments)
-    storeOutput(string, true)
+  process.stderr.write = function (...args) {
+    storeOutput(args[0].toString(), true)
+    return errWrite.apply(process.stderr, args as Parameters<typeof errWrite>)
   }
 
   // send debug to stdout so it does not look like an error
   debugCore.log = console.info.bind(console)
 
-  function enableDebug(enabled) {
+  function enableDebug(enabled: string) {
     if (enabled.length > 0) {
-      let all = enabled.split(',')
+      const all = enabled.split(',')
 
       if (all.indexOf('*') !== -1) {
         return false
@@ -97,7 +112,7 @@ module.exports = function (app) {
     getDebugSettings: () => {
       return { debugEnabled, rememberDebug }
     },
-    rememberDebug: (enabled) => {
+    rememberDebug: (enabled: boolean) => {
       if (debugPath) {
         if (enabled) {
           fs.writeFileSync(debugPath, debugEnabled)
@@ -115,7 +130,7 @@ module.exports = function (app) {
         }
       })
     },
-    addDebug: (name) => {
+    addDebug: (name: string) => {
       if (debugEnabled.length > 0) {
         const all = debugEnabled.split(',')
         if (all.indexOf(name) === -1) {
@@ -125,7 +140,7 @@ module.exports = function (app) {
         enableDebug(name)
       }
     },
-    removeDebug: (name) => {
+    removeDebug: (name: string) => {
       if (debugEnabled.length > 0) {
         const all = debugEnabled.split(',')
         const idx = all.indexOf(name)
