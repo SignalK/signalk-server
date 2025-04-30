@@ -1,4 +1,5 @@
 import { SourceRef } from '@signalk/server-api'
+import assert from 'assert'
 import {
   getToPreferredDelta,
   SourcePrioritiesData
@@ -7,6 +8,30 @@ import chai from 'chai'
 chai.should()
 
 describe('toPreferredDelta logic', () => {
+  it('handles undefined values', () => {
+    const sourcePreferences: SourcePrioritiesData = {}
+    const toPreferredDelta = getToPreferredDelta(sourcePreferences, 200)
+
+    const delta = toPreferredDelta(
+      {
+        context: 'self',
+        updates: [
+          {
+            meta: [
+              {
+                path: 'environment.wind.speedApparent',
+                value: { units: 'A' }
+              }
+            ]
+          }
+        ]
+      },
+      new Date(),
+      'self'
+    )
+    assert(delta.updates[0].values === undefined)
+  })
+
   it('works', () => {
     const sourcePreferences: SourcePrioritiesData = {
       'environment.wind.speedApparent': [

@@ -145,31 +145,34 @@ export const getToPreferredDelta = (
       const millis = now.getTime()
       delta.updates &&
         delta.updates.forEach((update: any) => {
-          update.values =
-            update.values &&
-            update.values.reduce((acc: any, pathValue: PathValue) => {
-              const latest = getLatest(
-                delta.context as Context,
-                pathValue.path as Path
-              )
-              const isPreferred = isPreferredValue(
-                pathValue.path as Path,
-                latest,
-                update.$source,
-                millis
-              )
-              if (isPreferred) {
-                setLatest(
+          if ('values' in update) {
+            update.values = update.values.reduce(
+              (acc: any, pathValue: PathValue) => {
+                const latest = getLatest(
                   delta.context as Context,
+                  pathValue.path as Path
+                )
+                const isPreferred = isPreferredValue(
                   pathValue.path as Path,
-                  update.$source as SourceRef,
+                  latest,
+                  update.$source,
                   millis
                 )
-                acc.push(pathValue)
+                if (isPreferred) {
+                  setLatest(
+                    delta.context as Context,
+                    pathValue.path as Path,
+                    update.$source as SourceRef,
+                    millis
+                  )
+                  acc.push(pathValue)
+                  return acc
+                }
                 return acc
-              }
-              return acc
-            }, [])
+              },
+              []
+            )
+          }
         })
     }
     return delta
