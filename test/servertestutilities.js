@@ -1,7 +1,6 @@
 const WebSocket = require('ws')
 const _ = require('lodash')
 const promisify = require('util').promisify
-const fetch = require('node-fetch')
 const jwt = require('jsonwebtoken')
 
 // Connects to the url via ws
