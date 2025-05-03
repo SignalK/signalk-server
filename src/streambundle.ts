@@ -20,7 +20,7 @@ import {
   NormalizedDelta,
   Path,
   Update,
-  Value,
+  UnspecifiedValue,
   NormalizedMetaDelta
 } from '@signalk/server-api'
 import Bacon from 'baconjs'
@@ -31,8 +31,8 @@ export class StreamBundle implements IStreamBundle {
   allPathsBus: Bacon.Bus<unknown, NormalizedDelta>
   selfBuses: Record<Path, Bacon.Bus<unknown, NormalizedDelta>>
   selfAllPathsBus: Bacon.Bus<unknown, NormalizedDelta>
-  selfStreams: Record<Path, Bacon.Bus<unknown, Value>>
-  selfAllPathsStream: Bacon.Bus<unknown, Value>
+  selfStreams: Record<Path, Bacon.Bus<unknown, UnspecifiedValue>>
+  selfAllPathsStream: Bacon.Bus<unknown, UnspecifiedValue>
   keys: Bacon.Bus<unknown, Path>
   availableSelfPaths: { [key: Path]: true }
   metaBus: Bacon.Bus<unknown, NormalizedMetaDelta>
@@ -57,10 +57,11 @@ export class StreamBundle implements IStreamBundle {
       if (delta.updates) {
         delta.updates.forEach((update) => {
           const base = {
-            context: delta.context!, // TSTODO: make optional/required match
-            source: update.source,
-            $source: update.$source!, // TSTODO: make optional/required match
-            timestamp: update.timestamp! // TSTODO: make optional/required match
+            // TSTODO: make optional/required match for all of these
+            context: delta.context!,
+            source: update.source!,
+            $source: update.$source!,
+            timestamp: update.timestamp!
           }
 
           if ('meta' in update) {

@@ -24,7 +24,7 @@ import {
   AutopilotProvider,
   ServerAPI,
   RouteDestination,
-  Value,
+  UnspecifiedValue,
   SignalKApiId,
   SourceRef,
   PluginConstructor,
@@ -545,7 +545,7 @@ module.exports = (theApp: any) => {
     }
     appCopy.autopilotUpdate = (
       deviceId: SourceRef,
-      apInfo: { [k: string]: Value }
+      apInfo: { [k: string]: UnspecifiedValue }
     ) => {
       autopilotApi.apUpdate(plugin.id, deviceId, apInfo)
     }

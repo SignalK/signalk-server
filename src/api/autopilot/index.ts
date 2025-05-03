@@ -13,7 +13,7 @@ import {
   AutopilotInfo,
   SKVersion,
   Path,
-  Value,
+  UnspecifiedValue,
   Delta,
   isAutopilotProvider,
   isAutopilotUpdateAttrib,
@@ -144,7 +144,7 @@ export class AutopilotApi {
   apUpdate(
     pluginId: string,
     deviceId: SourceRef = pluginId as SourceRef,
-    apInfo: { [path: string]: Value }
+    apInfo: { [path: string]: UnspecifiedValue }
   ) {
     try {
       if (deviceId && !this.deviceToProvider.has(deviceId)) {
@@ -747,7 +747,7 @@ export class AutopilotApi {
   }
 
   // build autopilot delta PathValue
-  private buildPathValue(path: Path, value: Value): PathValue {
+  private buildPathValue(path: Path, value: UnspecifiedValue): PathValue {
     return {
       path: `steering.autopilot${path ? '.' + path : ''}` as Path,
       value: value

@@ -1,4 +1,4 @@
-import { NormalizedDelta, Path, Value } from './deltas'
+import { NormalizedDelta, Path, UnspecifiedValue } from './deltas'
 
 export interface StreamBundle {
   /**
@@ -120,7 +120,7 @@ export interface StreamBundle {
    *
    * @param path - If it is not provided the returned stream produces values for all paths.
    */
-  getSelfStream(path?: Path): Bacon.Bus<unknown, Value>
+  getSelfStream(path?: Path): Bacon.Bus<unknown, UnspecifiedValue>
 
   /**
    * Get a list of available full data model paths maintained by the server.

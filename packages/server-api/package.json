@@ -21,6 +21,7 @@
   "author": "teppo.kurki@iki.fi",
   "license": "Apache-2.0",
   "devDependencies": {
+    "json-schema-to-typescript": "^15.0.4",
     "ts-auto-guard": "^4.1.4"
   },
   "peerDependencies": {

@@ -1,4 +1,5 @@
 import { Brand } from './brand'
+import { MetaValue, Source, Timestamp } from './schema'
 
 export interface WithContext {
   context: Context
@@ -19,21 +20,19 @@ export type NormalizedMetaDelta = NormalizedBaseDelta & {
 }
 
 export type NormalizedValueDelta = NormalizedBaseDelta & {
-  value: Value
+  value: UnspecifiedValue
   isMeta: false
 }
 
 export type NormalizedDelta = NormalizedValueDelta | NormalizedMetaDelta
 
 export type SourceRef = Brand<string, 'sourceRef'>
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Source = any
 
 export type Path = Brand<string, 'path'>
-export type Timestamp = Brand<string, 'timestamp'>
 export type Context = Brand<string, 'context'>
 
-export type Value = object | number | string | null | Notification | boolean
+// TSTODO: All uses of this should be replaced with `GetFieldType<SignalK, Path>`
+export type UnspecifiedValue = unknown
 
 export interface Delta {
   context?: Context
@@ -68,55 +67,11 @@ export function hasMeta(u: Update): u is Update & { meta: Meta[] } {
 // Update delta
 export interface PathValue {
   path: Path
-  value: Value
-}
-
-// Notification payload
-export interface Notification {
-  state: ALARM_STATE
-  method: ALARM_METHOD[]
-  message: string
+  value: UnspecifiedValue
 }
 
 // MetaMessage
 export interface Meta {
   path: Path
   value: MetaValue
-}
-
-// Meta payload
-export interface MetaValue {
-  description?: string
-  units?: string
-  example?: string
-  timeout?: number
-  displayName?: string
-  displayScale?: {
-    lower: number
-    upper: number
-  }
-  zones?: Zone[]
-  supportsPut?: boolean
-}
-
-// Notification attribute types
-export enum ALARM_STATE {
-  nominal = 'nominal',
-  normal = 'normal',
-  alert = 'alert',
-  warn = 'warn',
-  alarm = 'alarm',
-  emergency = 'emergency'
-}
-
-export enum ALARM_METHOD {
-  visual = 'visual',
-  sound = 'sound'
-}
-
-export interface Zone {
-  lower: number | undefined
-  upper: number | undefined
-  state: ALARM_STATE
-  message: string
 }

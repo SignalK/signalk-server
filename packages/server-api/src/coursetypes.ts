@@ -1,4 +1,4 @@
-import { Position } from '.'
+import { Position } from './schema/index.js'
 import { Brand } from './brand'
 
 export interface HrefDestination {
