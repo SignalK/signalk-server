@@ -23,6 +23,7 @@ function CanboatJs(options) {
     objectMode: true
   })
 
+  options.useCamel = true
   this.fromPgn = new FromPgn(options)
   const createDebug = options.createDebug || require('debug')
   const debug = createDebug('signalk:streams:canboatjs')
