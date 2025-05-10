@@ -12,18 +12,13 @@ import {
   WeatherProvider,
   WeatherProviders,
   WeatherProviderMethods,
-  WeatherWarning,
   WeatherData,
-  isWeatherProvider,
-  SKVersion,
-  Path,
-  Delta,
-  Position,
-  ALARM_STATE,
-  ALARM_METHOD
+  isWeatherProvider
 } from '@signalk/server-api'
 
 const WEATHER_API_PATH = `/signalk/v2/api/weather`
+const DEFAULT_POINT_COUNT = 8
+const DEFAULT_DAY_COUNT = 1
 
 interface WeatherApplication
   extends WithSecurityStrategy,
@@ -95,15 +90,6 @@ export class WeatherApi {
     )
   }
 
-  // Send warning Notification
-  emitWarning(
-    pluginId: string,
-    position?: Position,
-    warnings?: WeatherWarning[]
-  ) {
-    this.sendNotification(pluginId, position, warnings)
-  }
-
   // *************************************
 
   private updateAllowed(request: Request): boolean {
@@ -127,7 +113,6 @@ export class WeatherApi {
   }
 
   private parseRequest(req: Request, res: Response, next: NextFunction) {
-    debug(`Autopilot path`, req.method, req.params)
     try {
       debug(`Weather`, req.method, req.path, req.query, req.body)
       if (['PUT', 'POST'].includes(req.method)) {
@@ -192,7 +177,6 @@ export class WeatherApi {
             }
           })
           res.status(200).json(r)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
           res.status(400).json({
             statusCode: 400,
@@ -222,7 +206,6 @@ export class WeatherApi {
           } else {
             throw new Error(`Provider ${req.body.id} not found!`)
           }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
           res.status(400).json({
             statusCode: 400,
@@ -232,36 +215,20 @@ export class WeatherApi {
         }
       }
     )
-
-    // fetch weather data for provided lat / lon
-    this.app.get(`${WEATHER_API_PATH}`, async (req: Request, res: Response) => {
-      debug(`** route = ${req.method} ${req.path}`)
-      try {
-        const r = await this.useProvider().getData({
-          latitude: Number(req.query.lat),
-          longitude: Number(req.query.lon)
-        })
-        res.status(200).json(r)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (err: any) {
-        res.status(400).json({
-          statusCode: 400,
-          state: 'FAILED',
-          message: err.message
-        })
-      }
-    })
 
     // return observation data at the provided lat / lon
     this.app.get(
       `${WEATHER_API_PATH}/observations`,
       async (req: Request, res: Response) => {
-        debug(`** route = ${req.method} ${req.path}`)
+        debug(`** ${req.method} ${req.path}`)
         try {
-          const r = await this.useProvider().getObservations({
-            latitude: Number(req.query.lat),
-            longitude: Number(req.query.lon)
-          })
+          const r = await this.useProvider().getObservations(
+            {
+              latitude: this.parseQueryAsNumber(req.query.lat, 0),
+              longitude: this.parseQueryAsNumber(req.query.lon, 0)
+            },
+            this.parseQueryAsNumber(req.query.count, 1)
+          )
           res.status(200).json(r)
         } catch (err: any) {
           res.status(400).json({
@@ -273,64 +240,24 @@ export class WeatherApi {
       }
     )
 
-    // return specific observation entry at the provided lat / lon
-    this.app.get(
-      `${WEATHER_API_PATH}/observations/:id`,
-      async (req: Request, res: Response) => {
-        debug(`** route = ${req.method} ${req.path}`)
-        try {
-          if (isNaN(Number(req.params.id))) {
-            throw new Error('Invalid index supplied!')
-          }
-          const r = await this.useProvider().getObservations({
-            latitude: Number(req.query.lat),
-            longitude: Number(req.query.lon)
-          })
-          if (Number(req.params.id) >= r.length) {
-            throw new Error('Index out of range!')
-          }
-          res.status(200).json(r[Number(req.params.id)])
-        } catch (err: any) {
-          res.status(400).json({
-            statusCode: 400,
-            state: 'FAILED',
-            message: err.message
-          })
-        }
-      }
-    )
-
-    // return all forecasts at the provided lat / lon
-    this.app.get(
-      `${WEATHER_API_PATH}/forecasts`,
-      async (req: Request, res: Response) => {
-        debug(`** route = ${req.method} ${req.path}`)
-        try {
-          const r = await this.useProvider().getForecasts({
-            latitude: Number(req.query.lat),
-            longitude: Number(req.query.lon)
-          })
-          res.status(200).json(r)
-        } catch (err: any) {
-          res.status(400).json({
-            statusCode: 400,
-            state: 'FAILED',
-            message: err.message
-          })
-        }
-      }
-    )
-
-    // return daily forecast data at the provided lat / lon
+    /**
+     * Return daily forecast data at the provided lat / lon for the supplied number of days
+     * ?days=x
+     *
+     */
     this.app.get(
       `${WEATHER_API_PATH}/forecasts/daily`,
       async (req: Request, res: Response) => {
-        debug(`** route = ${req.method} ${req.path}`)
+        debug(`** ${req.method} ${req.path}`)
         try {
-          const r = await this.useProvider().getForecasts({
-            latitude: Number(req.query.lat),
-            longitude: Number(req.query.lon)
-          })
+          const r = await this.useProvider().getForecasts(
+            {
+              latitude: this.parseQueryAsNumber(req.query.lat, 0),
+              longitude: this.parseQueryAsNumber(req.query.lon, 0)
+            },
+            'daily',
+            this.parseQueryAsNumber(req.query.count, DEFAULT_DAY_COUNT)
+          )
           const df = r.filter((i: WeatherData) => {
             return i.type === 'daily'
           })
@@ -349,43 +276,20 @@ export class WeatherApi {
     this.app.get(
       `${WEATHER_API_PATH}/forecasts/point`,
       async (req: Request, res: Response) => {
-        debug(`** route = ${req.method} ${req.path}`)
+        debug(`** ${req.method} ${req.path}`)
         try {
-          const r = await this.useProvider().getForecasts({
-            latitude: Number(req.query.lat),
-            longitude: Number(req.query.lon)
-          })
+          const r = await this.useProvider().getForecasts(
+            {
+              latitude: this.parseQueryAsNumber(req.query.lat, 0),
+              longitude: this.parseQueryAsNumber(req.query.lon, 0)
+            },
+            'point',
+            this.parseQueryAsNumber(req.query.count, DEFAULT_POINT_COUNT)
+          )
           const pf = r.filter((i: WeatherData) => {
             return i.type === 'point'
           })
           res.status(200).json(pf)
-        } catch (err: any) {
-          res.status(400).json({
-            statusCode: 400,
-            state: 'FAILED',
-            message: err.message
-          })
-        }
-      }
-    )
-
-    // return specific forecast entry at the provided lat / lon
-    this.app.get(
-      `${WEATHER_API_PATH}/forecasts/:id`,
-      async (req: Request, res: Response) => {
-        debug(`** route = ${req.method} ${req.path}`)
-        try {
-          if (isNaN(Number(req.params.id))) {
-            throw new Error('Invalid index supplied!')
-          }
-          const r = await this.useProvider().getForecasts({
-            latitude: Number(req.query.lat),
-            longitude: Number(req.query.lon)
-          })
-          if (Number(req.params.id) >= r.length) {
-            throw new Error('Index out of range!')
-          }
-          res.status(200).json(r[Number(req.params.id)])
         } catch (err: any) {
           res.status(400).json({
             statusCode: 400,
@@ -403,37 +307,10 @@ export class WeatherApi {
         debug(`** route = ${req.method} ${req.path}`)
         try {
           const r = await this.useProvider().getWarnings({
-            latitude: Number(req.query.lat),
-            longitude: Number(req.query.lon)
+            latitude: this.parseQueryAsNumber(req.query.lat, 0),
+            longitude: this.parseQueryAsNumber(req.query.lon, 0)
           })
           res.status(200).json(r)
-        } catch (err: any) {
-          res.status(400).json({
-            statusCode: 400,
-            state: 'FAILED',
-            message: err.message
-          })
-        }
-      }
-    )
-
-    // return specific warning entry at the provided lat / lon
-    this.app.get(
-      `${WEATHER_API_PATH}/warnings/:id`,
-      async (req: Request, res: Response) => {
-        debug(`** route = ${req.method} ${req.path}`)
-        try {
-          if (isNaN(Number(req.params.id))) {
-            throw new Error('Invalid index supplied!')
-          }
-          const r = await this.useProvider().getWarnings({
-            latitude: Number(req.query.lat),
-            longitude: Number(req.query.lon)
-          })
-          if (Number(req.params.id) >= r.length) {
-            throw new Error('Index out of range!')
-          }
-          res.status(200).json(r[Number(req.params.id)])
         } catch (err: any) {
           res.status(400).json({
             statusCode: 400,
@@ -493,47 +370,14 @@ export class WeatherApi {
     }
   }
 
-  // send weather warning notification
-  private sendNotification(
-    sourceId: string,
-    pos?: Position,
-    warnings?: WeatherWarning[]
-  ) {
-    let value: { [key: string]: any }
-    if (
-      !pos ||
-      !warnings ||
-      (Array.isArray(warnings) && warnings.length === 0)
-    ) {
-      value = {
-        state: ALARM_STATE.normal,
-        method: [],
-        message: ``
-      }
-    } else {
-      value = {
-        state: ALARM_STATE.warn,
-        method: [ALARM_METHOD.visual],
-        message: `Weather Warning`,
-        data: {
-          position: pos,
-          warnings: warnings
-        }
-      }
-    }
-    const msg: Delta = {
-      updates: [
-        {
-          values: [
-            {
-              path: `notifications.weather.warning` as Path,
-              value: value
-            }
-          ]
-        }
-      ]
-    }
-    debug(`delta -> ${sourceId}:`, msg.updates[0])
-    this.app.handleMessage(sourceId, msg, SKVersion.v2)
+  /**
+   * Ensure the query parameter value is a number
+   * @param q Query param value
+   * @param defaultValue Value to assign if q cannot be represented as a number
+   * @returns q or defaultValue
+   */
+  private parseQueryAsNumber(q: unknown, defaultValue: number): number {
+    const n = Number(q)
+    return isNaN(n) ? defaultValue : n
   }
 }

@@ -26,7 +26,7 @@ APIs are available via `/signalk/v2/api/<endpoint>`
 | [Course](./course_api.md)         | Set a course, follow a route, advance to next point, etc.                          | `vessels/self/navigation/course` |
 | [Resources](./resources_api.md)   | Create, view, update and delete waypoints, routes, etc.                            | `resources`                      |
 | [`Autopilot`](./autopilot_api.md) | Provide the ability to send common commands to an autopilot via a provider plugin. | `vessels/self/autopilot`         |
-| [`Weather`](./weather_api.md) | Provide the ability to surface meteorological data from weather providers. | `weather`         |
+| [`Weather`](./weather_api.md)     | Provide the ability to surface meteorological data from weather providers.         | `weather`                        |
 
 ---
 

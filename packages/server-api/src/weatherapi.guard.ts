@@ -16,7 +16,6 @@ export function isWeatherProvider(obj: unknown): obj is WeatherProvider {
             typeof typedObj["methods"] === "function") &&
         (typeof typedObj["methods"]["pluginId"] === "undefined" ||
             typeof typedObj["methods"]["pluginId"] === "string") &&
-        typeof typedObj["methods"]["getData"] === "function" &&
         typeof typedObj["methods"]["getObservations"] === "function" &&
         typeof typedObj["methods"]["getForecasts"] === "function" &&
         typeof typedObj["methods"]["getWarnings"] === "function"

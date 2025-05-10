@@ -26,8 +26,6 @@ import {
   RouteDestination,
   WeatherProvider,
   WeatherApi,
-  Position,
-  WeatherWarning,
   Value,
   SignalKApiId,
   SourceRef,
@@ -538,13 +536,6 @@ module.exports = (theApp: any) => {
     _.omit(appCopy, 'weatherApi') // don't expose the actual weather api manager
     appCopy.registerWeatherProvider = (provider: WeatherProvider) => {
       weatherApi.register(plugin.id, provider)
-    }
-    appCopy.emitWeatherWarning = (
-      pluginId: string,
-      position?: Position,
-      warnings?: WeatherWarning[]
-    ) => {
-      return weatherApi.emitWarning(pluginId, position, warnings)
     }
 
     const resourcesApi: ResourcesApi = app.resourcesApi

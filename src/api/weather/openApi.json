@@ -46,19 +46,6 @@
         "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2}(?:\\.\\d*)?)((-(\\d{2}):(\\d{2})|Z)?)$",
         "example": "2022-04-22T05:02:56.484Z"
       },
-      "WeatherSourceInfoModel": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "example": "12345678",
-            "description": "Source identifier."
-          },
-          "position": {
-            "$ref": "#/components/schemas/Position"
-          }
-        }
-      },
       "WeatherDataModel": {
         "type": "object",
         "required": ["date", "type"],
@@ -312,58 +299,6 @@
             "example": "HEAT ADVISORY REMAINS IN EFFECT FROM 1 PM THIS AFTERNOON...."
           }
         }
-      },
-      "ObservationsAttribute": {
-        "type": "object",
-        "required": ["observations"],
-        "properties": {
-          "observations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WeatherDataModel"
-            }
-          }
-        }
-      },
-      "ForecastsAttribute": {
-        "type": "object",
-        "required": ["forecasts"],
-        "properties": {
-          "forecasts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WeatherDataModel"
-            }
-          }
-        }
-      },
-      "WarningsAttribute": {
-        "type": "object",
-        "required": ["warnings"],
-        "properties": {
-          "warnings": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WeatherWarningModel"
-            }
-          }
-        }
-      },
-      "WeatherResponseModel": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/WeatherSourceInfoModel"
-          },
-          {
-            "$ref": "#/components/schemas/WarningsAttribute"
-          },
-          {
-            "$ref": "#/components/schemas/ObservationsAttribute"
-          },
-          {
-            "$ref": "#/components/schemas/ForecastsAttribute"
-          }
-        ]
       }
     },
     "responses": {
@@ -416,15 +351,6 @@
       }
     },
     "parameters": {
-      "IndexParam": {
-        "in": "path",
-        "required": true,
-        "name": "index",
-        "description": "Index of entry in a collection.",
-        "schema": {
-          "type": "number"
-        }
-      },
       "LatitudeParam": {
         "in": "query",
         "required": true,
@@ -446,6 +372,16 @@
           "min": -180,
           "max": 180
         }
+      },
+      "CountParam": {
+        "in": "query",
+        "required": false,
+        "name": "count",
+        "description": "Number of entries to return.",
+        "schema": {
+          "type": "number",
+          "min": 1
+        }
       }
     },
     "securitySchemes": {
@@ -463,32 +399,6 @@
   },
   "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
   "paths": {
-    "/weather": {
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/LatitudeParam"
-        },
-        {
-          "$ref": "#/components/parameters/LongitudeParam"
-        }
-      ],
-      "get": {
-        "tags": ["Weather"],
-        "summary": "Return / fetch weather data at the specified location (lat / lon).",
-        "responses": {
-          "default": {
-            "description": "Fetches from weather service and returns data for the specified location (lat / lon).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WeatherResponseModel"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/weather/observations": {
       "parameters": [
         {
@@ -496,6 +406,9 @@
         },
         {
           "$ref": "#/components/parameters/LongitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/CountParam"
         }
       ],
       "get": {
@@ -518,64 +431,6 @@
         }
       }
     },
-    "/weather/observations/{index}": {
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/LatitudeParam"
-        },
-        {
-          "$ref": "#/components/parameters/LongitudeParam"
-        },
-        {
-          "$ref": "#/components/parameters/IndexParam"
-        }
-      ],
-      "get": {
-        "tags": ["Weather"],
-        "summary": "Retrieve supplied observation entry.",
-        "responses": {
-          "default": {
-            "description": "Return the observation entry at the specified index in the observation list.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WeatherDataModel"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/weather/forecasts": {
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/LatitudeParam"
-        },
-        {
-          "$ref": "#/components/parameters/LongitudeParam"
-        }
-      ],
-      "get": {
-        "tags": ["Weather"],
-        "summary": "Retrieve forecast data.",
-        "responses": {
-          "default": {
-            "description": "Returns the forecast data for the specified location (lat / lon).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/WeatherDataModel"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/weather/forecasts/daily": {
       "parameters": [
         {
@@ -583,6 +438,9 @@
         },
         {
           "$ref": "#/components/parameters/LongitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/CountParam"
         }
       ],
       "get": {
@@ -612,6 +470,9 @@
         },
         {
           "$ref": "#/components/parameters/LongitudeParam"
+        },
+        {
+          "$ref": "#/components/parameters/CountParam"
         }
       ],
       "get": {
@@ -627,35 +488,6 @@
                   "items": {
                     "$ref": "#/components/schemas/WeatherDataModel"
                   }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/weather/forecasts/{index}": {
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/LatitudeParam"
-        },
-        {
-          "$ref": "#/components/parameters/LongitudeParam"
-        },
-        {
-          "$ref": "#/components/parameters/IndexParam"
-        }
-      ],
-      "get": {
-        "tags": ["Weather"],
-        "summary": "Retrieve supplied forecast entry.",
-        "responses": {
-          "default": {
-            "description": "Return the forecast entry at the specified index in the forecast list.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WeatherDataModel"
                 }
               }
             }
@@ -685,35 +517,6 @@
                   "items": {
                     "$ref": "#/components/schemas/WeatherWarningModel"
                   }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/weather/warnings/{index}": {
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/LatitudeParam"
-        },
-        {
-          "$ref": "#/components/parameters/LongitudeParam"
-        },
-        {
-          "$ref": "#/components/parameters/IndexParam"
-        }
-      ],
-      "get": {
-        "tags": ["Weather"],
-        "summary": "Retrieve supplied warning entry.",
-        "responses": {
-          "default": {
-            "description": "Return the warning entry at the specified index in the warning list.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WeatherWarningModel"
                 }
               }
             }

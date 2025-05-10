@@ -4,7 +4,6 @@ title: Weather Providers
 
 # Weather Provider Plugins
 
-
 The Signal K server [Weather API](../rest-api/weather_api.md) will provide a common set of operations for retrieving meteorological data and will rely on a "provider plugin" to facilitate communication with the weather service provider.
 
 ---
@@ -12,6 +11,7 @@ The Signal K server [Weather API](../rest-api/weather_api.md) will provide a com
 ## Provider plugins:
 
 A weather provider plugin is a Signal K server plugin that implements the **Weather Provider Interface** which:
+
 - Tells server that the plugin is a weather data source
 - Registers the methods used to action requests passed from the server to retrieve data from the weather provider.
 
@@ -25,20 +25,19 @@ interface WeatherProvider {
   methods: WeatherProviderMethods
 }
 ```
+
 where:
 
-- `name`: The weather ssource name. _(e.g. `'OpenWeather'`, `'Open-Meteo'`)_ 
+- `name`: The weather ssource name. _(e.g. `'OpenWeather'`, `'Open-Meteo'`)_
 
-- `methods`: An object implementing the `WeatherProviderMethods` interface defining the functions to which requests are passed by the SignalK server. _Note: The plugin __MUST__ implement each method, even if that operation is NOT supported by the plugin!_
+- `methods`: An object implementing the `WeatherProviderMethods` interface defining the functions to which requests are passed by the SignalK server. _Note: The plugin **MUST** implement each method, even if that operation is NOT supported by the plugin!_
 
 The `WeatherProviderMethods` interface is defined as follows in _`@signalk/server-api`_:
 
 ```typescript
 interface WeatherProviderMethods {
   getData: (position: Position) => Promise<WeatherProviderData>
-  getObservations: (
-    position: Position
-  ) => Promise<WeatherData[]>
+  getObservations: (position: Position) => Promise<WeatherData[]>
   getForecasts: (position: Position) => Promise<WeatherData[]>
   getWarnings: (position: Position) => Promise<WeatherWarning[]>
 }
@@ -86,21 +85,24 @@ module.exports = function (app) {
 
 **`getData(position)`**: This method is called when a request to retrieve weather data for the provided position is made.
 
-
 - `position:` Object containing the location of interest. _e.g. {latitude: 16.34765, longitude: 12.5432}_
 
 returns: `Promise<WeatherProviderData>`
 
-_Example: Return weather information for location {latitude: 16.34765, longitude: 12.5432}:_ 
+_Example: Return weather information for location {latitude: 16.34765, longitude: 12.5432}:_
+
 ```
 GET /signalk/v2/api/weather?lat=6.34765&lon=12.5432
 ```
+
 _WeatherProvider method invocation:_
+
 ```javascript
-getData({latitude: 16.34765, longitude: 12.5432});
+getData({ latitude: 16.34765, longitude: 12.5432 })
 ```
 
 _Returns:_
+
 ```JSON
 {
   "id": "df85kfo",
@@ -115,24 +117,24 @@ _Returns:_
 
 **`getObservations(position)`**: This method is called when a request to retrieve observation data for the provided position is made.
 
-
 - `position:` Object containing the location of interest. _e.g. {latitude: 16.34765, longitude: 12.5432}_
-
 
 returns: `Promise<WeatherData[]>`
 
+_Example: Return observations for location {latitude: 16.34765, longitude: 12.5432}:_
 
-_Example: Return observations for location {latitude: 16.34765, longitude: 12.5432}:_ 
 ```
 GET /signalk/v2/api/weather/observations?lat=6.34765&lon=12.5432
 ```
 
 _WeatherProvider method invocation:_
+
 ```javascript
-getObservations({latitude: 16.34765, longitude: 12.5432});
+getObservations({ latitude: 16.34765, longitude: 12.5432 })
 ```
 
 _Returns:_
+
 ```JSON
 [
     {
@@ -152,23 +154,24 @@ _Returns:_
 
 **`getForecasts(position)`**: This method is called when a request to retrieve observation data for the provided position is made.
 
-
 - `position:` Object containing the location of interest. _e.g. {latitude: 16.34765, longitude: 12.5432}_
 
 returns: `Promise<WeatherData[]>`
 
+_Example: Return forecasts for location {latitude: 16.34765, longitude: 12.5432}:_
 
-_Example: Return forecasts for location {latitude: 16.34765, longitude: 12.5432}:_ 
 ```
 GET /signalk/v2/api/weather/forecasts?lat=6.34765&lon=12.5432
 ```
 
 _WeatherProvider method invocation:_
+
 ```javascript
-getForecasts({latitude: 16.34765, longitude: 12.5432});
+getForecasts({ latitude: 16.34765, longitude: 12.5432 })
 ```
 
 _Returns:_
+
 ```JSON
 [
     {
@@ -192,17 +195,20 @@ _Returns:_
 
 returns: `Promise<WeatherWarning[]>`
 
+_Example: Return warnings for location {latitude: 16.34765, longitude: 12.5432}:_
 
-_Example: Return warnings for location {latitude: 16.34765, longitude: 12.5432}:_ 
 ```
 GET /signalk/v2/api/weather/warnings?lat=6.34765&lon=12.5432
 ```
+
 _WeatherProvider method invocation:_
+
 ```javascript
-getWarnings({latitude: 16.34765, longitude: 12.5432});
+getWarnings({ latitude: 16.34765, longitude: 12.5432 })
 ```
 
 _Returns:_
+
 ```JSON
 [
   {

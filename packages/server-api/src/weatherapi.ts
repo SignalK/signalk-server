@@ -1,43 +1,9 @@
 import { Position } from '.'
 
-
 export interface WeatherApi {
   register: (pluginId: string, provider: WeatherProvider) => void
   unRegister: (pluginId: string) => void
-  /**
-   * This method is called to emit a Signal K notification message containing
-   * weather warning details.
-   * 
-   * @category Weather API
-   * 
-   * @param pluginId - the weather provider plugin identifier
-   * @param position - Position object {@link Position}
-   * @param warnings - Array of WeatherWarning objects {@link WeatherWarning}
-   *
-   * @example
-    ```
-    emitWarning: (
-      pluginId: 'myPluginId',
-      position: {latitude: 59.3, longitude: 9.1234},
-      warnings: [
-        {
-            details: 'Strong wind warning',
-            startTime: '2025-05-02T04:01:00.000Z';
-            endTime: '2025-05-02T04:18:00.000Z';
-            source: 'MyWeatherService';
-            type: 'Warning';
-        }
-      ]
-    )
-    ```
-  */
-  emitWarning: (
-    pluginId: string,
-    position?: Position,
-    warnings?: WeatherWarning[]
-  ) => void
 }
-
 
 export interface WeatherProviderRegistry {
   /**
@@ -47,12 +13,6 @@ export interface WeatherProviderRegistry {
    * @category Weather API
    */
   registerWeatherProvider: (provider: WeatherProvider) => void
-
-  emitWeatherWarning (
-    pluginId: string,
-    position?: Position,
-    warnings?: WeatherWarning[]
-  ): void
 }
 
 /**
@@ -75,39 +35,18 @@ export interface WeatherProvider {
 
 export interface WeatherProviderMethods {
   pluginId?: string
-  /**
-   * Retrieves weather data from the weather provider for the supplied position.
-   *
-   * @category Weather API
-   * 
-   * @param position Location of interest 
-   * 
-   * @example
-    ```javascript
-    getData({latitude: 16.34765, longitude: 12.5432});
-    ```
-    ```JSON
-    {
-      "id": "df85kfo",
-      "position": {"latitude": 16.34765, "longitude": 12.5432},
-      "observations": [...],
-      "forecasts": [...],
-      "warnings": [...]
-    }
-    ```
-  */
-  getData: (position: Position) => Promise<WeatherProviderData>
-  
+
   /**
    * Retrieves observation data from the weather provider for the supplied position.
    *
    * @category Weather API
    * 
    * @param position Location of interest 
+   * @param count Number of observation entries to return
    * 
    * @example
     ```javascript
-    getObservations({latitude: 16.34765, longitude: 12.5432});
+    getObservations({latitude: 16.34765, longitude: 12.5432}, 1);
     ```
 
     ```JSON
@@ -125,18 +64,24 @@ export interface WeatherProviderMethods {
     ]
     ```
   */
-  getObservations: (position: Position) => Promise<WeatherData[]>
+  getObservations: (
+    position: Position,
+    count?: number
+  ) => Promise<WeatherData[]>
 
   /**
-   * Retrieves forecast data from the weather provider for the supplied position.
+   * Retrieves forecast data from the weather provider for the supplied position, forecast type and number of intervals.
    *
    * @category Weather API
    * 
    * @param position Location of interest 
+   * @param type Type of forecast point | daily
+   * @param count Number of forecast entries to return
    * 
    * @example
+   * Retrieve point forecast data for the next eight point intervalss
     ```javascript
-    getForecasts({latitude: 16.34765, longitude: 12.5432});
+    getForecasts({latitude: 16.34765, longitude: 12.5432}, 'point', 8);
     ```
 
     ```JSON
@@ -154,7 +99,11 @@ export interface WeatherProviderMethods {
     ]
     ```
   */
-  getForecasts: (position: Position) => Promise<WeatherData[]>
+  getForecasts: (
+    position: Position,
+    type: WeatherForecastType,
+    count?: number
+  ) => Promise<WeatherData[]>
 
   /**
    * Retrieves warning data from the weather provider for the supplied position.
@@ -162,7 +111,7 @@ export interface WeatherProviderMethods {
    * @category Weather API
    * 
    * @param position Location of interest 
-   * 
+   *
    * @example
     ```javascript
     getWarnings({latitude: 16.34765, longitude: 12.5432});
@@ -183,17 +132,6 @@ export interface WeatherProviderMethods {
   getWarnings: (position: Position) => Promise<WeatherWarning[]>
 }
 
-/**
- * @hidden visible through ServerAPI
- */
-export interface WeatherProviderData {
-  id: string
-  position: Position
-  observations: WeatherData[]
-  forecasts: WeatherData[]
-  warnings?: Array<WeatherWarning>
-}
-
 export interface WeatherWarning {
   startTime: string
   endTime: string
@@ -202,6 +140,9 @@ export interface WeatherWarning {
   type: string
 }
 
+export type WeatherForecastType = 'daily' | 'point'
+export type WeatherDataType = WeatherForecastType | 'observation'
+
 // Aligned with Signal K environment specification
 /**
  * @hidden visible through ServerAPI
@@ -209,7 +150,7 @@ export interface WeatherWarning {
 export interface WeatherData {
   description?: string
   date: string
-  type: 'daily' | 'point' | 'observation' // daily forecast, point-in-time forecast, observed values
+  type: WeatherDataType // daily forecast, point-in-time forecast, observed values
   outside?: {
     minTemperature?: number
     maxTemperature?: number
@@ -261,7 +202,7 @@ export type TendencyKind =
   | 'increasing'
   | 'not available'
 
-  /**
+/**
  * @hidden visible through ServerAPI
  */
 export type PrecipitationKind =
