@@ -13,12 +13,12 @@ import {
   WeatherProviders,
   WeatherProviderMethods,
   WeatherData,
-  isWeatherProvider
+  isWeatherProvider,
+  Position,
+  WeatherReqParams
 } from '@signalk/server-api'
 
 const WEATHER_API_PATH = `/signalk/v2/api/weather`
-const DEFAULT_POINT_COUNT = 8
-const DEFAULT_DAY_COUNT = 1
 
 interface WeatherApplication
   extends WithSecurityStrategy,
@@ -222,12 +222,10 @@ export class WeatherApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         try {
+          const q = this.parseQueryOptions(req.query)
           const r = await this.useProvider().getObservations(
-            {
-              latitude: this.parseQueryAsNumber(req.query.lat, 0),
-              longitude: this.parseQueryAsNumber(req.query.lon, 0)
-            },
-            this.parseQueryAsNumber(req.query.count, 1)
+            q.position,
+            q.options
           )
           res.status(200).json(r)
         } catch (err: any) {
@@ -250,13 +248,11 @@ export class WeatherApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         try {
+          const q = this.parseQueryOptions(req.query)
           const r = await this.useProvider().getForecasts(
-            {
-              latitude: this.parseQueryAsNumber(req.query.lat, 0),
-              longitude: this.parseQueryAsNumber(req.query.lon, 0)
-            },
+            q.position,
             'daily',
-            this.parseQueryAsNumber(req.query.count, DEFAULT_DAY_COUNT)
+            q.options
           )
           const df = r.filter((i: WeatherData) => {
             return i.type === 'daily'
@@ -278,13 +274,11 @@ export class WeatherApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         try {
+          const q = this.parseQueryOptions(req.query)
           const r = await this.useProvider().getForecasts(
-            {
-              latitude: this.parseQueryAsNumber(req.query.lat, 0),
-              longitude: this.parseQueryAsNumber(req.query.lon, 0)
-            },
+            q.position,
             'point',
-            this.parseQueryAsNumber(req.query.count, DEFAULT_POINT_COUNT)
+            q.options
           )
           const pf = r.filter((i: WeatherData) => {
             return i.type === 'point'
@@ -306,10 +300,8 @@ export class WeatherApi {
       async (req: Request, res: Response) => {
         debug(`** route = ${req.method} ${req.path}`)
         try {
-          const r = await this.useProvider().getWarnings({
-            latitude: this.parseQueryAsNumber(req.query.lat, 0),
-            longitude: this.parseQueryAsNumber(req.query.lon, 0)
-          })
+          const q = this.parseQueryOptions(req.query)
+          const r = await this.useProvider().getWarnings(q.position)
           res.status(200).json(r)
         } catch (err: any) {
           res.status(400).json({
@@ -371,13 +363,43 @@ export class WeatherApi {
   }
 
   /**
+   * Parse request.query into weather provider options
+   * @param query req.query
+   */
+  private parseQueryOptions(query: any): WeatherReqOptions {
+    const q: WeatherReqOptions = {
+      position: {
+        latitude: this.parseValueAsNumber(query.lat) ?? 0,
+        longitude: this.parseValueAsNumber(query.lon) ?? 0
+      },
+      options: {}
+    }
+    if ('count' in query) {
+      const n = this.parseValueAsNumber(query.count)
+      if (typeof n === 'number') {
+        q.options.maxCount = n
+      }
+    }
+    if ('date' in query) {
+      const pattern = /[0-9]{4}-[0-9]{2}-[0-9]{2}/
+      if ((query.date as string).match(pattern)) {
+        q.options.startDate = query.date?.toString()
+      }
+    }
+    return q
+  }
+
+  /**
    * Ensure the query parameter value is a number
    * @param q Query param value
-   * @param defaultValue Value to assign if q cannot be represented as a number
-   * @returns q or defaultValue
    */
-  private parseQueryAsNumber(q: unknown, defaultValue: number): number {
-    const n = Number(q)
-    return isNaN(n) ? defaultValue : n
+  private parseValueAsNumber(value: unknown): number | undefined {
+    const n = Number(value)
+    return isNaN(n) ? undefined : n
   }
+}
+
+interface WeatherReqOptions {
+  position: Position
+  options: WeatherReqParams
 }

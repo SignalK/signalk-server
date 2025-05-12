@@ -382,6 +382,16 @@
           "type": "number",
           "min": 1
         }
+      },
+      "StartDateParam": {
+        "in": "query",
+        "required": false,
+        "name": "date",
+        "description": "Start date for weather data to return.",
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        }
       }
     },
     "securitySchemes": {
@@ -409,6 +419,9 @@
         },
         {
           "$ref": "#/components/parameters/CountParam"
+        },
+        {
+          "$ref": "#/components/parameters/StartDateParam"
         }
       ],
       "get": {
@@ -441,6 +454,9 @@
         },
         {
           "$ref": "#/components/parameters/CountParam"
+        },
+        {
+          "$ref": "#/components/parameters/StartDateParam"
         }
       ],
       "get": {
@@ -473,6 +489,9 @@
         },
         {
           "$ref": "#/components/parameters/CountParam"
+        },
+        {
+          "$ref": "#/components/parameters/StartDateParam"
         }
       ],
       "get": {

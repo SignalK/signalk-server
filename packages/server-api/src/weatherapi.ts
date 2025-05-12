@@ -26,10 +26,11 @@ export interface WeatherProviders {
 }
 
 /**
- * @hidden visible through ServerAPI
+ * @prop name Weather Provider name (e.g. OpenWeather, Open-Meteo, NOAA, etc)
+ * @prop methods An object implementing the `WeatherProviderMethods` interface defining the functions to which weather requests are passed by the SignalK server.
  * @see {isWeatherProvider} ts-auto-guard:type-guard */
 export interface WeatherProvider {
-  name: string // e.g. OpenWeather, Open-Meteo, NOAA
+  name: string
   methods: WeatherProviderMethods
 }
 
@@ -42,11 +43,11 @@ export interface WeatherProviderMethods {
    * @category Weather API
    * 
    * @param position Location of interest 
-   * @param count Number of observation entries to return
+   * @param options
    * 
    * @example
     ```javascript
-    getObservations({latitude: 16.34765, longitude: 12.5432}, 1);
+    getObservations({latitude: 16.34765, longitude: 12.5432}, {maxCount: 1});
     ```
 
     ```JSON
@@ -66,7 +67,7 @@ export interface WeatherProviderMethods {
   */
   getObservations: (
     position: Position,
-    count?: number
+    options?: WeatherReqParams
   ) => Promise<WeatherData[]>
 
   /**
@@ -76,12 +77,16 @@ export interface WeatherProviderMethods {
    * 
    * @param position Location of interest 
    * @param type Type of forecast point | daily
-   * @param count Number of forecast entries to return
+   * @param options Options
    * 
    * @example
    * Retrieve point forecast data for the next eight point intervalss
     ```javascript
-    getForecasts({latitude: 16.34765, longitude: 12.5432}, 'point', 8);
+    getForecasts(
+      {latitude: 16.34765, longitude: 12.5432}, 
+      'point',
+      {maxCount: 8}
+    );
     ```
 
     ```JSON
@@ -102,7 +107,7 @@ export interface WeatherProviderMethods {
   getForecasts: (
     position: Position,
     type: WeatherForecastType,
-    count?: number
+    options?: WeatherReqParams
   ) => Promise<WeatherData[]>
 
   /**
@@ -132,6 +137,9 @@ export interface WeatherProviderMethods {
   getWarnings: (position: Position) => Promise<WeatherWarning[]>
 }
 
+/**
+ * @hidden visible through ServerAPI
+ */
 export interface WeatherWarning {
   startTime: string
   endTime: string
@@ -140,7 +148,24 @@ export interface WeatherWarning {
   type: string
 }
 
+/**
+ * Request options
+ *
+ * @prop maxCount Maximum number of records to return
+ * @prop startDate Start date of forecast / observation data (format: YYYY-MM-DD)
+ */
+export interface WeatherReqParams {
+  maxCount?: number
+  startDate?: string
+}
+
+/**
+ * @hidden visible through ServerAPI
+ */
 export type WeatherForecastType = 'daily' | 'point'
+/**
+ * @hidden visible through ServerAPI
+ */
 export type WeatherDataType = WeatherForecastType | 'observation'
 
 // Aligned with Signal K environment specification
