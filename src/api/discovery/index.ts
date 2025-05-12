@@ -1,9 +1,8 @@
+import { WithFeatures } from '@signalk/server-api'
 import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:api:features')
 
 import { IRouter, Request, Response } from 'express'
-
-import { WithFeatures } from '../../app'
 
 const FEATURES_API_PATH = `/signalk/v2/features`
 

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Delta, FeatureInfo, ServerAPI, SKVersion } from '@signalk/server-api'
+import { Delta, ServerAPI, SKVersion } from '@signalk/server-api'
 import { FullSignalK } from '@signalk/signalk-schema'
 import { EventEmitter } from 'node:events'
 
@@ -30,8 +30,4 @@ export interface SignalKMessageHub extends EventEmitter {
 
 export interface WithConfig {
   config: Config
-}
-
-export interface WithFeatures {
-  getFeatures: (enabledOnly?: boolean) => FeatureInfo
 }
