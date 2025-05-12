@@ -1,7 +1,7 @@
 import {
   SKVersion,
   AutopilotProviderRegistry,
-  Features,
+  WithFeatures,
   PropertyValuesEmitter,
   ResourceProviderRegistry,
   Delta
@@ -28,7 +28,7 @@ export interface ServerAPI
   extends PropertyValuesEmitter,
     ResourceProviderRegistry,
     AutopilotProviderRegistry,
-    Features,
+    WithFeatures,
     CourseApi,
     SelfIdentity {
   /**
