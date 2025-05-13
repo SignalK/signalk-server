@@ -4,8 +4,7 @@ import {
   getToPreferredDelta,
   SourcePrioritiesData
 } from '../dist/deltaPriority.js'
-import chai from 'chai'
-chai.should()
+import { expect } from 'chai'
 
 describe('toPreferredDelta logic', () => {
   it('handles undefined values', () => {
@@ -106,10 +105,11 @@ describe('toPreferredDelta logic', () => {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         try {
-          result
-            .filter((r) => r.updates[0].values.length > 0)
-            .map((r) => r.updates[0].$source)
-            .should.eql(expectedResult)
+          expect(
+            result
+              .filter((r) => r.updates[0].values.length > 0)
+              .map((r) => r.updates[0].$source)
+          ).to.eql(expectedResult)
           resolve(undefined)
         } catch (err) {
           reject(err)
