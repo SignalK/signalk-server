@@ -143,7 +143,7 @@
     "@tsconfig/node20": "^20.1.5",
     "@types/baconjs": "^0.7.34",
     "@types/busboy": "^1.5.0",
-    "@types/chai": "^4.2.15",
+    "@types/chai": "^5.2.2",
     "@types/command-exists": "^1.2.0",
     "@types/cors": "^2.8.12",
     "@types/debug": "^4.1.5",
