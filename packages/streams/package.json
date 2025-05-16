@@ -29,7 +29,7 @@
     "@signalk/nmea0183-utilities": "^0.8.0",
     "@signalk/signalk-schema": "^1.5.0",
     "any-shell-escape": "^0.1.1",
-    "file-timestamp-stream": "^2.1.2",
+    "file-timestamp-stream": "^3.0.0",
     "lodash": "^4.17.4",
     "moment": "^2.24.0",
     "node-gpsd-client": "^1.4.1",
