@@ -1,5 +1,11 @@
 import { Position } from '.'
 
+/** A resource returned from the API will always have these fields */
+export type Resource<T> = T & {
+  timestamp: string
+  $source: string
+}
+
 export interface Route {
   name?: string
   description?: string

@@ -4,8 +4,6 @@ chai.use(require('chai-things'))
 
 import { startServer } from './ts-servertestutilities'
 
-const fetch = require('node-fetch')
-
 describe('Delete Requests', () => {
   let doStop, doSendDelta, theHost, doSelfPut, doGet, doCreateWsPromiser
 

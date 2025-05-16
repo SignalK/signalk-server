@@ -12,6 +12,7 @@ import {
 import path from 'path'
 import { IResourceStore, StoreRequestParams } from '../types'
 import { passFilter, processParameters } from './utils'
+import { Resource } from '@signalk/server-api'
 
 export const getUuid = (skIdentifier: string) =>
   skIdentifier.split(':').slice(-1)[0]
@@ -95,7 +96,7 @@ export class FileStore implements IResourceStore {
     type: string,
     itemUuid: string,
     property?: string
-  ): Promise<object> {
+  ): Promise<Resource<object>> {
     try {
       let result = JSON.parse(
         await readFile(path.join(this.resources[type].path, itemUuid), 'utf8')
@@ -111,9 +112,11 @@ export class FileStore implements IResourceStore {
         }
       }
       const stats = await stat(path.join(this.resources[type].path, itemUuid))
-      result.timestamp = stats.mtime
-      result.$source = this.pkg.id
-      return result
+      return {
+        ...result,
+        timestamp: stats.mtime,
+        $source: this.pkg.id
+      }
     } catch (e: any) {
       if (e.code === 'ENOENT') {
         throw new Error(`No such resource ${type} ${itemUuid}`)
@@ -127,7 +130,7 @@ export class FileStore implements IResourceStore {
   async getResources(
     type: string,
     params: any
-  ): Promise<{ [key: string]: any }> {
+  ): Promise<{ [key: string]: Resource<any> }> {
     const result: any = {}
     // ** parse supplied params
     params = processParameters(params)
@@ -156,10 +159,12 @@ export class FileStore implements IResourceStore {
           // apply param filters
           if (passFilter(res, type, params)) {
             const uuid = files[f].name
-            result[uuid] = res
             const stats = await stat(path.join(rt.path, files[f].name))
-            result[uuid].timestamp = stats.mtime
-            result[uuid].$source = this.pkg.id
+            result[uuid] = {
+              ...res,
+              timestamp: stats.mtime,
+              $source: this.pkg.id
+            }
           }
         } catch (err) {
           console.error(err)
@@ -188,7 +193,7 @@ export class FileStore implements IResourceStore {
         return
       } catch (error) {
         console.error('Error deleting resource!')
-        ;(error as Error).message = 'Error deleting resource!'
+          ; (error as Error).message = 'Error deleting resource!'
         throw error
       }
     } else {
