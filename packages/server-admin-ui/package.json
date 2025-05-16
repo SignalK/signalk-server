@@ -48,7 +48,7 @@
     "reactstrap": "^5.0.0",
     "reconnecting-websocket": "^4.4.0",
     "redux": "^3.7.2",
-    "redux-thunk": "2.3.0",
+    "redux-thunk": "3.1.0",
     "sass": "^1.81.0",
     "sass-loader": "^16.0.3",
     "simple-line-icons": "^2.5.5",
