@@ -121,7 +121,7 @@
     "stat-mode": "^1.0.0",
     "swagger-ui-express": "^4.5.0",
     "unzipper": "^0.10.10",
-    "uuid": "^8.1.0",
+    "uuid": "^11.1.0",
     "ws": "^7.0.0"
   },
   "optionalDependencies": {
