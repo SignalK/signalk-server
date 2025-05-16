@@ -51,15 +51,15 @@ import {
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
+import { getAISShipTypeName } from '@signalk/signalk-schema'
+import availableInterfaces from './interfaces'
+import redirects from '../docs/redirects.json'
+
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
-import { getAISShipTypeName } from '@signalk/signalk-schema'
 const ncp = ncpI.ncp
-
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
-
-import availableInterfaces from './interfaces'
 
 interface ScriptsApp {
   addons: ModuleInfo[]
@@ -122,6 +122,17 @@ module.exports = function (
 
   // mount server-guide
   app.use('/documentation', express.static(__dirname + '/../docs/dist'))
+
+  // Redirect old documentation URLs to new ones
+  let oldpath: keyof typeof redirects
+  for (oldpath in redirects) {
+    const from = `/documentation/${oldpath}`
+    const to = `/documentation/${redirects[oldpath]}`
+
+    app.get(from, (_: Request, res: Response) => {
+      res.redirect(301, to)
+    })
+  }
 
   app.get('/admin/', (req: Request, res: Response) => {
     fs.readFile(
