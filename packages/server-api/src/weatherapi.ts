@@ -43,7 +43,7 @@ export interface WeatherProviderMethods {
    * @category Weather API
    * 
    * @param position Location of interest 
-   * @param options
+   * @param options Options
    * 
    * @example
     ```javascript
