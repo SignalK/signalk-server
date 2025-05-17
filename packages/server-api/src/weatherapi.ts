@@ -8,7 +8,7 @@ export interface WeatherApi {
 export interface WeatherProviderRegistry {
   /**
    * Used by _Weather Provider plugins_ to register the weather service from which the data is sourced.
-   * See [`Weather Provider Plugins`](../../../docs/develop/plugins/weather_provider_plugins.md#registering-as-a-weather-provider) for details.
+   * See [`Weather Provider Plugins`](../../../docs/develop/plugins/weather_provider_plugins.md#registering-a-weather-provider) for details.
    *
    * @category Weather API
    */
@@ -27,8 +27,11 @@ export interface WeatherProviders {
 
 /**
  * @prop name Weather Provider name (e.g. OpenWeather, Open-Meteo, NOAA, etc)
- * @prop methods An object implementing the `WeatherProviderMethods` interface defining the functions to which weather requests are passed by the SignalK server.
- * @see {isWeatherProvider} ts-auto-guard:type-guard */
+ * @prop An object implementing the `WeatherProviderMethods` interface defining the functions to which requests are passed by the SignalK server.
+ * _Note: The plugin **MUST** implement each method, even if that operation is NOT supported by the plugin!_
+ *
+ * @see {isWeatherProvider} ts-auto-guard:type-guard
+ */
 export interface WeatherProvider {
   name: string
   methods: WeatherProviderMethods
@@ -39,6 +42,7 @@ export interface WeatherProviderMethods {
 
   /**
    * Retrieves observation data from the weather provider for the supplied position.
+   * The returned array of observations should be ordered in descending date order.
    *
    * @category Weather API
    * 
@@ -72,7 +76,8 @@ export interface WeatherProviderMethods {
 
   /**
    * Retrieves forecast data from the weather provider for the supplied position, forecast type and number of intervals.
-   *
+   * The returned array of forecasts should be ordered in ascending date order.
+   * 
    * @category Weather API
    * 
    * @param position Location of interest 
@@ -112,6 +117,7 @@ export interface WeatherProviderMethods {
 
   /**
    * Retrieves warning data from the weather provider for the supplied position.
+   * The returned array of warnings should be ordered in ascending date order.
    *
    * @category Weather API
    * 
