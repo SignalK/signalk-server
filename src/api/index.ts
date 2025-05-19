@@ -1,7 +1,7 @@
 import { IRouter } from 'express'
 import { SignalKMessageHub, WithConfig, WithFeatures } from '../app'
 import { WithSecurityStrategy } from '../security'
-import { CourseApi } from './course'
+import { CourseApi, CourseApplication } from './course'
 import { FeaturesApi } from './discovery'
 import { ResourcesApi } from './resources'
 import { AutopilotApi } from './autopilot'
@@ -57,7 +57,7 @@ export const startApis = (
   ;(app as any).resourcesApi = resourcesApi
   apiList.push('resources')
 
-  const courseApi = new CourseApi(app, resourcesApi)
+  const courseApi = new CourseApi(app as CourseApplication, resourcesApi)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).courseApi = courseApi
   apiList.push('course')

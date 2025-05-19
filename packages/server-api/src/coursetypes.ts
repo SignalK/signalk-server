@@ -26,6 +26,12 @@ export interface ActiveRoute {
   name: string
 }
 
+export interface NextPreviousPoint {
+  href?: string
+  type: CoursePointType
+  position: Position
+}
+
 export type CoursePointType = Brand<string, 'coursepointtype'>
 
 export const COURSE_POINT_TYPES = {
@@ -39,14 +45,6 @@ export interface CourseInfo {
   targetArrivalTime: string | null
   arrivalCircle: number
   activeRoute: ActiveRoute | null
-  nextPoint: {
-    href?: string
-    type: CoursePointType
-    position: Position
-  } | null
-  previousPoint: {
-    href?: string
-    type: CoursePointType
-    position: Position
-  } | null
+  nextPoint: NextPreviousPoint | null
+  previousPoint: NextPreviousPoint | null
 }
