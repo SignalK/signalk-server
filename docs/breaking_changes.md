@@ -1,4 +1,8 @@
-# Changes & Deprecations
+---
+title: Breaking Changes
+---
+
+# Breaking Changes & Deprecations
 
 The introduction of new REST APIs in version 2 and the move to an operations based model has resulted in some version 1 paths being flagged for deprecation.
 
