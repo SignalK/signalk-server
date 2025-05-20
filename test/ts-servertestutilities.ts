@@ -1,5 +1,4 @@
 import net from 'net'
-import fetch from 'node-fetch'
 import path from 'path'
 import { rimraf } from 'rimraf'
 import {

@@ -1,4 +1,4 @@
-import { Waypoint } from '@signalk/server-api'
+import { Resource, Waypoint } from '@signalk/server-api'
 import chai from 'chai'
 import { v4 as uuidv4 } from 'uuid'
 import { startServer } from './ts-servertestutilities'
@@ -23,27 +23,20 @@ describe('Resources Api', () => {
       }
     }
     const resId = skUuid()
-    await put(`/resources/waypoints/${resId}`, waypoint).then((response) => {
-      // response.json().then(x => console.log(x))
-      response.status.should.equal(200)
-    })
+    let response = await put(`/resources/waypoints/${resId}`, waypoint)
+    response.status.should.equal(200)
 
     const resourceDelta = JSON.parse(await wsPromiser.nthMessage(2))
     const { path, value } = resourceDelta.updates[0].values[0]
     path.should.equal(`resources.waypoints.${resId}`)
     value.should.deep.equal(waypoint)
-    await get(`/resources/waypoints/${resId}`)
-      .then((response) => {
-        response.status.should.equal(200)
-        return response.json()
-      })
-      .then((resData) => {
-        delete resData.timestamp
-        resData.should.deep.equal({
-          ...waypoint,
-          $source: 'resources-provider'
-        })
-      })
+    response = await get(`/resources/waypoints/${resId}`)
+    const resData = (await response.json()) as Resource<Waypoint>
+    resData.should.deep.equal({
+      ...waypoint,
+      timestamp: resData.timestamp,
+      $source: 'resources-provider'
+    })
 
     stop()
   })
@@ -56,8 +49,8 @@ describe('Resources Api', () => {
         [60.151672, 24.891637],
         [60.251672, 24.891637],
         [60.151672, 24.991637]
-      ].map(([latitude, longitude]) => {
-        return post(`/resources/waypoints/`, {
+      ].map(async ([latitude, longitude]) => {
+        const r = await post(`/resources/waypoints/`, {
           feature: {
             type: 'Feature',
             geometry: {
@@ -66,17 +59,16 @@ describe('Resources Api', () => {
             }
           }
         })
-          .then((r) => r.json())
-          .then((r) => r.id)
+        const { id } = (await r.json()) as { id: string }
+        return id
       })
     )
-    await get('/resources/waypoints?bbox=[24.8,60.16,24.899,60.3]')
-      .then((r) => r.json())
-      .then((r) => {
-        const returnedIds = Object.keys(r)
-        returnedIds.length.should.equal(1)
-        returnedIds[0].should.equal(resourceIds[1])
-      })
+    const r = (await (
+      await get('/resources/waypoints?bbox=[24.8,60.16,24.899,60.3]')
+    ).json()) as object
+    const returnedIds = Object.keys(r)
+    returnedIds.length.should.equal(1)
+    returnedIds[0].should.equal(resourceIds[1])
   })
 
   it('Create route with route point metadata', async function () {
@@ -112,10 +104,9 @@ describe('Resources Api', () => {
       }
     }
 
-    const { id } = await post('/resources/routes', route).then((response) => {
-      response.status.should.equal(201)
-      return response.json()
-    })
+    const response = await post('/resources/routes', route)
+    response.status.should.equal(201)
+    const { id } = (await response.json()) as { id: string }
     id.length.should.equal('ac3a3b2d-07e8-4f25-92bc-98e7c92f7f1a'.length)
 
     stop()
