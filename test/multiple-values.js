@@ -3,7 +3,6 @@ chai.Should()
 chai.use(require('chai-things'))
 chai.use(require('@signalk/signalk-schema').chaiModule)
 const { freeport } = require('./ts-servertestutilities')
-const fetch = require('node-fetch')
 const { startServerP, sendDelta } = require('./servertestutilities')
 const uuid = 'urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d'
 

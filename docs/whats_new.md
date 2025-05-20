@@ -1,3 +1,7 @@
+---
+title: What's New
+---
+
 # What's new in Version 2.
 
 Signal K Server version 2 introduces new REST APIs designed to perform specific operations _(e.g. set destination, advance to next point, etc)_.

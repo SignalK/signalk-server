@@ -1,6 +1,5 @@
 const assert = require('assert')
 
-const fetch = require('node-fetch')
 const { freeport } = require('./ts-servertestutilities')
 const Server = require('../dist/')
 const fs = require('fs')
