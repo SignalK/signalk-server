@@ -53,7 +53,7 @@ import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
 import { getAISShipTypeName } from '@signalk/signalk-schema'
 import availableInterfaces from './interfaces'
-import redirects from '../docs/redirects.json'
+import redirects from './redirects.json'
 
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
