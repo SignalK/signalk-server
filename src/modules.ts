@@ -264,7 +264,7 @@ async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
   while (fetchedCount < toFetchCount) {
     npmDebug(`searching ${keyword} from ${fetchedCount + 1} of ${toFetchCount}`)
     const res = await fetch(
-      `https://registry.npmjs.org/-/v1/search?size=10&from=${
+      `https://registry.npmjs.org/-/v1/search?size=250&from=${
         fetchedCount > 0 ? fetchedCount : 0
       }&text=keywords:${keyword}`
     )
