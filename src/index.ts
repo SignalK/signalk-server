@@ -680,7 +680,7 @@ function filterStaticSelfData(delta: any, selfContext: string) {
   if (delta.context === selfContext) {
     delta.updates &&
       delta.updates.forEach((update: any) => {
-        if ('values' in update) {
+        if ('values' in update && update['$source'] !== 'defaults') {
           update.values = update.values.reduce((acc: any, pathValue: any) => {
             const nvp = filterSelfDataKP(pathValue)
             if (nvp) {
