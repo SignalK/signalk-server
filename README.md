@@ -93,6 +93,7 @@ These prebuilt images for RaspberryPis take away most of the complexity involved
 - [BBN Marine OS](https://github.com/bareboat-necessities/lysmarine_gen#what-is-lysmarine-bbn-edition)
 - [OpenPlotter](https://openmarine.net/openplotter) by OpenMarine
 - [Venus OS for RaspberryPis](https://github.com/victronenergy/venus/wiki/raspberrypi-install-venus-image) by Victron Energy
+- [AvNav Headless/Touch](git@github.com:free-x/signalk-server.git)
 
 You can run Signal K Server in Docker:
 
