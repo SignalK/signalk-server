@@ -315,11 +315,13 @@ class Server {
         if (data.updates.length < 1) return
 
         try {
-          const preferredDelta = toPreferredDelta(data, now, app.selfContext)
+          let delta = filterStaticSelfData(data, app.selfContext)
+          delta = toPreferredDelta(delta, now, app.selfContext)
+
           if (skVersion == SKVersion.v1) {
-            deltachainV1.process(preferredDelta)
+            deltachainV1.process(delta)
           } else {
-            deltachainV2.process(preferredDelta)
+            deltachainV2.process(delta)
           }
         } catch (err) {
           console.error(err)
@@ -672,4 +674,53 @@ async function startInterfaces(
       }
     })
   )
+}
+
+function filterStaticSelfData(delta: any, selfContext: string) {
+  if (delta.context === selfContext) {
+    delta.updates &&
+      delta.updates.forEach((update: any) => {
+        if ('values' in update) {
+          update.values = update.values.reduce((acc: any, pathValue: any) => {
+            const nvp = filterSelfDataKP(pathValue)
+            if (nvp) {
+              acc.push(nvp)
+            }
+            return acc
+          }, [])
+          if (update.values.length == 0) {
+            delete update.values
+          }
+        }
+      })
+  }
+  return delta
+}
+
+function filterSelfDataKP(pathValue: any) {
+  const emptyKeys = ['name', 'mmsi']
+
+  const filteredPaths = [
+    'design.aisShipType',
+    'design.beam',
+    'design.length',
+    'design.draft',
+    'sensors.gps.fromBow',
+    'sensors.gps.fromCenter'
+  ]
+
+  if (pathValue.path === '') {
+    if (Object.keys(pathValue.value).some((k) => emptyKeys.includes(k))) {
+      const value = pathValue.value
+      pathValue.value = {}
+      Object.keys(value).forEach((k) => {
+        if (!emptyKeys.includes(k)) {
+          pathValue.value[k] = value[k]
+        }
+      })
+    }
+  } else if (filteredPaths.includes(pathValue.path)) {
+    return null
+  }
+  return pathValue
 }
