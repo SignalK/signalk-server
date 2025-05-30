@@ -698,9 +698,12 @@ function filterStaticSelfData(delta: any, selfContext: string) {
 }
 
 function filterSelfDataKP(pathValue: any) {
-  const emptyKeys = ['name', 'mmsi']
+  const deepKeys: { [key: string]: string[] } = {
+    '': ['name', 'mmsi'],
+    communication: ['callsignVhf']
+  }
 
-  const filteredPaths = [
+  const filteredPaths: string[] = [
     'design.aisShipType',
     'design.beam',
     'design.length',
@@ -709,15 +712,20 @@ function filterSelfDataKP(pathValue: any) {
     'sensors.gps.fromCenter'
   ]
 
-  if (pathValue.path === '') {
-    if (Object.keys(pathValue.value).some((k) => emptyKeys.includes(k))) {
+  const deep = deepKeys[pathValue.path]
+
+  if (deep !== undefined) {
+    if (Object.keys(pathValue.value).some((k) => deep.includes(k))) {
       const value = pathValue.value
       pathValue.value = {}
       Object.keys(value).forEach((k) => {
-        if (!emptyKeys.includes(k)) {
+        if (!deep.includes(k)) {
           pathValue.value[k] = value[k]
         }
       })
+      if (Object.keys(pathValue.value).length == 0) {
+        return null
+      }
     }
   } else if (filteredPaths.includes(pathValue.path)) {
     return null
