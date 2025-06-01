@@ -102,7 +102,7 @@
     "flatmap": "0.0.3",
     "geolib": "3.2.2",
     "get-installed-path": "^4.0.8",
-    "inquirer": "^7.0.0",
+    "inquirer": "^12.6.3",
     "json-patch": "^0.7.0",
     "jsonwebtoken": "^9.0.0",
     "listr": "^0.14.1",
