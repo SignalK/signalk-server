@@ -4,10 +4,11 @@ on:
   push:
     tags:
       - 'v*'
+    branches: [release-test]
   workflow_dispatch:
 
 jobs:
-  server-admin-ui-dependencies:
+  build_and_publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,109 +16,67 @@ jobs:
         with:
           node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
-      - run: |
+
+      - name: Install and build all
+        run: |
+          npm cache clean -f
+          npm install npm@latest -g
+          npm install --package-lock-only
+          npm ci && npm cache clean --force
+          npm run build:all
+
+      - name: Publish server-admin-ui-dependencies
+        run: |
           if [[ "$(npm view @signalk/server-admin-ui-dependencies version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui-dependencies/package.json)" ]]; then
             cd packages/server-admin-ui-dependencies
-            npm install --package-lock-only
-            npm ci && npm cache clean --force
             npm publish --access public
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  server-admin-ui:
-    runs-on: ubuntu-latest
-    needs: server-admin-ui-dependencies
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
-      - run: |
+      - name: Publish server-admin-ui
+        run: |
           if [[ "$(npm view @signalk/server-admin-ui version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui/package.json)" ]]; then
             cd packages/server-admin-ui
-            npm install --package-lock-only
-            npm ci && npm cache clean --force
             npm publish --access public
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  server-api:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
-      - run: |
+      - name: Publish server-api
+        run: |
           if [[ "$(npm view @signalk/server-api version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-api/package.json)" ]]; then
             cd packages/server-api
-            npm install --package-lock-only
-            npm ci && npm cache clean --force
             npm publish --access public
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  streams:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
-      - run: |
+      - name: Publish streams
+        run: |
           if [[ "$(npm view @signalk/streams version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/streams/package.json)" ]]; then
             cd packages/streams
-            npm install --package-lock-only
-            npm ci && npm cache clean --force
             npm publish --access public
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  resources-provider-plugin:
-    needs: server-api
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
-      - run: |
+      - name: Publish resources-provider
+        run: |
           if [[ "$(npm view @signalk/resources-provider version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/resources-provider-plugin/package.json)" ]]; then
-            # to disable workspaces, otherwise npm will not install @signalk/server-api
-            rm package.json
             cd packages/resources-provider-plugin
-            npm install --package-lock-only
-            npm ci && npm cache clean --force
             npm publish --access public
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  signalk-server:
-    runs-on: ubuntu-latest
-    needs: [server-admin-ui, server-api, streams, resources-provider-plugin]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
       - name: Set tag variable
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-      - name: Install, build & publish
+
+      - name: Publish signalk-server
         run: |
-          npm install --package-lock-only
-          npm ci && npm cache clean --force
-          if [[ "$tag" == *beta* ]];
+          if [[ "${{ steps.vars.outputs.tag }}" == *beta* ]];
             then
               npm publish --tag beta
             else
@@ -131,7 +90,7 @@ jobs:
       contents: write
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
-    needs: signalk-server
+    needs: build_and_publish
     steps:
       - name: Build Changelog
         id: github_release
@@ -149,7 +108,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
 
   docker_images:
-    needs: signalk-server
+    needs: build_and_publish
     strategy:
       matrix:
         os: [22.04, 24.04]
