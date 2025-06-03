@@ -61,7 +61,7 @@ module.exports = function (app) {
 
   const plugin = {
     id: 'mypluginid',
-    name: 'My Resource Providerplugin'
+    name: 'My Resource Provider plugin'
   }
 
   const routesProvider: ResourceProvider = {
