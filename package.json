@@ -13,7 +13,6 @@
     "lint": "eslint --fix",
     "format": "npm run prettier && npm run lint",
     "ci-lint": "eslint && prettier --check .",
-    "prepublishOnly": "npm run lint && npm run build:all",
     "update-latest-release": "git checkout master && git branch -D latest-release || git checkout -b latest-release && git push -f origin/latest-release",
     "start": "bin/signalk-server",
     "test-only": "mocha 'test/**/*.[jt]s' 'dist/**/*.test.js'",
