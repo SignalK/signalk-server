@@ -21,8 +21,15 @@ jobs:
         run: npm install
       - name: Build server and packages
         run: npm run build:all
-      - name: Publish all workspaces
-        run: npm publish --workspaces --access public
+      - name: Publish workspaces
+        run: |
+          for workspace in packages/*; do
+            name=$(jq -r .name $workspace/package.json)
+            v1=$(jq -r .version $workspace/package.json)
+            v2=$(npm view $name version)
+            # Only publish if local version and published version do not match
+            [ "$v1" == "v2" ] || npm publish --workspace=$workspace --access public
+          done
       - name: Publish server
         run: |
           if [[ "$GITHUB_REF_NAME" == *beta* ]];

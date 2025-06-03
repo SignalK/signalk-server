@@ -1,0 +1,11 @@
+#!/bin/sh
+
+for workspace in packages/*; do
+  name=$(jq -r .name $workspace/package.json)
+  v1=$(jq -r .version $workspace/package.json)
+  v2=$(npm view $name version)
+  # Only publish if local version and published version do not match
+  if [[ "$v1" != "$v2" ]]; then
+    echo npm publish --workspace=$workspace --access public
+  fi
+done
