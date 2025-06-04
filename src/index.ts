@@ -32,7 +32,8 @@ import {
   SignalKApiId,
   SourceRef,
   Timestamp,
-  Update
+  Update,
+  WithFeatures
 } from '@signalk/server-api'
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import express, { IRouter, Request, Response } from 'express'
@@ -41,7 +42,7 @@ import https from 'https'
 import _ from 'lodash'
 import path from 'path'
 import { startApis } from './api'
-import { ServerApp, SignalKMessageHub, WithConfig, WithFeatures } from './app'
+import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
