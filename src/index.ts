@@ -699,8 +699,7 @@ function filterStaticSelfData(delta: any, selfContext: string) {
 
 function filterSelfDataKP(pathValue: any) {
   const deepKeys: { [key: string]: string[] } = {
-    '': ['name', 'mmsi', 'communication']
-    //communication: ['callsignVhf']
+    '': ['name', 'mmsi']
   }
 
   const filteredPaths: string[] = [
@@ -718,7 +717,7 @@ function filterSelfDataKP(pathValue: any) {
     const res: { [key: string]: any } = {}
     Object.keys(obj).forEach((k) => {
       if (!items.includes(k)) {
-        res[k] = obj.value[k]
+        res[k] = obj[k]
       }
     })
     return res
@@ -727,18 +726,18 @@ function filterSelfDataKP(pathValue: any) {
   if (deep !== undefined) {
     if (Object.keys(pathValue.value).some((k) => deep.includes(k))) {
       pathValue.value = filterValues(pathValue.value, deep)
-      if (
-        pathValue.path === '' &&
+    }
+    if (
+      pathValue.path === '' &&
         pathValue.value.communication !== undefined
-      ) {
-        pathValue.value.communication = filterValues(
-          pathValue.value.communication,
-          ['callsignVhf']
-        )
-      }
-      if (Object.keys(pathValue.value).length == 0) {
-        return null
-      }
+    ) {
+      pathValue.value.communication = filterValues(
+        pathValue.value.communication,
+        ['callsignVhf']
+      )
+    }
+    if (Object.keys(pathValue.value).length == 0) {
+      return null
     }
   } else if (filteredPaths.includes(pathValue.path)) {
     return null
