@@ -28,8 +28,8 @@ const testDelta = {
         {
           path: 'design.aisShipType',
           value: {
-            "name": "Sailing",
-            "id": 36
+            name: 'Sailing',
+            id: 36
           }
         },
         {
@@ -39,7 +39,7 @@ const testDelta = {
         {
           path: 'design.length',
           value: {
-            "overall":9
+            overall: 9
           }
         },
         {
@@ -53,7 +53,7 @@ const testDelta = {
         {
           path: 'design.displacement',
           value: 1
-        },
+        }
       ]
     }
   ]
@@ -77,7 +77,7 @@ describe('Static Data', () => {
     const delta = JSON.parse(JSON.stringify(testDelta))
     delta.context = 'vessels.self'
     await doSendADelta(delta)
-    
+
     const fullTree = theServer.app.deltaCache.buildFull(null, [])
 
     const vessel = _.get(fullTree, fullTree.self)
@@ -85,7 +85,7 @@ describe('Static Data', () => {
     vessel.should.have.property('flag', 'NZ')
     vessel.should.have.nested.property('design.displacement.value', 1)
     vessel.should.have.nested.property('communication.phoneNumber', '8675309')
-    
+
     vessel.should.not.have.property('mmsi')
     vessel.should.not.have.property('name')
     vessel.should.not.have.nested.property('design.draft')
@@ -96,12 +96,12 @@ describe('Static Data', () => {
     vessel.should.not.have.nested.property('sensors.gps.fromCenter')
     vessel.should.not.have.nested.property('communication.callsignVhf')
   })
-  
+
   it('handles others static updates', async function () {
     const delta = JSON.parse(JSON.stringify(testDelta))
     delta.context = 'vessels.123456789'
     await doSendADelta(delta)
-    
+
     const fullTree = theServer.app.deltaCache.buildFull(null, [])
 
     const self = _.get(fullTree, delta.context)
@@ -109,7 +109,7 @@ describe('Static Data', () => {
     self.should.have.property('flag', 'NZ')
     self.should.have.nested.property('design.displacement.value', 1)
     self.should.have.nested.property('communication.phoneNumber', '8675309')
-    
+
     self.should.have.property('mmsi', '230083471')
     self.should.have.property('name', 'TestBoat')
     self.should.have.nested.property('design.draft')
@@ -120,13 +120,13 @@ describe('Static Data', () => {
     self.should.have.nested.property('sensors.gps.fromCenter')
     self.should.have.nested.property('communication.callsignVhf')
   })
-  
+
   it('allows static updates from defaults', async function () {
     const delta = JSON.parse(JSON.stringify(testDelta))
     delta.context = 'vessels.self'
     delta.updates[0]['$source'] = 'defaults'
     await doSendADelta(delta)
-    
+
     const fullTree = theServer.app.deltaCache.buildFull(null, [])
 
     const self = _.get(fullTree, fullTree.self)
@@ -134,7 +134,7 @@ describe('Static Data', () => {
     self.should.have.property('flag', 'NZ')
     self.should.have.nested.property('design.displacement.value', 1)
     self.should.have.nested.property('communication.phoneNumber', '8675309')
-    
+
     self.should.have.property('mmsi', '230083471')
     self.should.have.property('name', 'TestBoat')
     self.should.have.nested.property('design.draft')
@@ -144,5 +144,5 @@ describe('Static Data', () => {
     self.should.have.nested.property('sensors.gps.fromBow')
     self.should.have.nested.property('sensors.gps.fromCenter')
     self.should.have.nested.property('communication.callsignVhf')
-   })
+  })
 })

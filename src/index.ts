@@ -727,10 +727,7 @@ function filterSelfDataKP(pathValue: any) {
     if (Object.keys(pathValue.value).some((k) => deep.includes(k))) {
       pathValue.value = filterValues(pathValue.value, deep)
     }
-    if (
-      pathValue.path === '' &&
-        pathValue.value.communication !== undefined
-    ) {
+    if (pathValue.path === '' && pathValue.value.communication !== undefined) {
       pathValue.value.communication = filterValues(
         pathValue.value.communication,
         ['callsignVhf']
