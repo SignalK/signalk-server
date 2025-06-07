@@ -82,8 +82,8 @@ There is a [Signal K Server FAQ Frequently Asked Questions](https://github.com/S
 
 For the typical boater, not being a software developer nor electrical engineer, the best option is to get a (commercially available) product that already has Signal K Server inside. These are the currently available devices:
 
-- [SmartBoat module](https://www.airmar.com/productdescription.html?id=231&trk=organization_guest_main-feed-card_feed-article-content) by Airmar
 - [Cerbo GX](https://www.victronenergy.com/panel-systems-remote-monitoring/cerbo-gx) and other GX Devices by Victron Energy ([see Venus OS Large manual](https://www.victronenergy.com/live/venus-os:large))
+- [SmartBoat module](https://www.airmar.com/Catalog/SmartBoat-SmartFlex) by Airmar
 
 For a more technical DIY oriented boater, a RaspberryPi based setup offers a very cost-attractive alternative.
 Read [this FAQ entry](https://github.com/SignalK/signalk-server/wiki/FAQ:-Frequently-Asked-Questions#how-do-i-integrate-with-nmea2000-can-bus) to learn how to connect a RaspberryPi to an NMEA2000 network.
