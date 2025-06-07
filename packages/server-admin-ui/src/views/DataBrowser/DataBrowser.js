@@ -212,12 +212,20 @@ class DataBrowser extends Component {
     localStorage.setItem(metaStorageKey, event.target.checked)
   }
 
+  resetAllTimestampAnimations() {
+    const cells = document.querySelectorAll('.timestamp-updated')
+    cells.forEach((cell) => {
+      cell.classList.remove('timestamp-updated')
+    })
+  }
+
   handlePause(event) {
     this.state.pause = event.target.checked
     this.setState(this.state)
     localStorage.setItem(pauseStorageKey, this.state.pause)
     if (this.state.pause) {
       this.unsubscribeToData()
+      this.resetAllTimestampAnimations()
     } else {
       this.fetchSources()
       this.subscribeToDataIfNeeded()
@@ -227,6 +235,33 @@ class DataBrowser extends Component {
   render() {
     return (
       <div className="animated fadeIn">
+        <style>
+          {`
+            .timestamp-updated {
+              position: relative;
+            }
+
+            .timestamp-updated::before {
+              content: '';
+              position: absolute;
+              left: 0;
+              top: 0;
+              bottom: 0;
+              width: 3px;
+              background-color: #28a745;
+              animation: highlightFade 15s ease-out;
+            }
+
+            @keyframes highlightFade {
+              0% {
+                opacity: 1;
+              }
+              100% {
+                opacity: 0;
+              }
+            }
+          `}
+        </style>
         <Card>
           <CardBody>
             <Form
@@ -370,7 +405,10 @@ class DataBrowser extends Component {
                                 </pre>
                               </td>
                               <td>{units}</td>
-                              <td>{data.timestamp}</td>
+                              <TimestampCell
+                                timestamp={data.timestamp}
+                                isPaused={this.state.pause}
+                              />
                               <td>
                                 <CopyToClipboardWithFade text={data.$source}>
                                   {data.$source} <i className="far fa-copy"></i>
@@ -449,6 +487,64 @@ class DataBrowser extends Component {
           </Card>
         )}
       </div>
+    )
+  }
+}
+
+class TimestampCell extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      isUpdated: false,
+      animationKey: 0
+    }
+    this.timeoutId = null
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.timestamp !== this.props.timestamp) {
+      if (this.timeoutId) {
+        clearTimeout(this.timeoutId)
+      }
+
+      this.setState((state) => ({
+        isUpdated: true,
+        animationKey: state.animationKey + 1
+      }))
+
+      this.timeoutId = setTimeout(() => {
+        if (!this.props.isPaused) {
+          // Only clear if not paused
+          this.setState({ isUpdated: false })
+        }
+      }, 15000)
+    }
+  }
+
+  componentDidMount() {
+    if (this.props.isPaused) {
+      this.setState({ isUpdated: false })
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId)
+    }
+  }
+
+  render() {
+    return (
+      <td
+        className={
+          this.state.isUpdated && !this.props.isPaused
+            ? 'timestamp-updated'
+            : ''
+        }
+        key={this.state.animationKey}
+      >
+        {this.props.timestamp}
+      </td>
     )
   }
 }
