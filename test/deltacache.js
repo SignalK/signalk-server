@@ -46,6 +46,7 @@ const testDelta = {
     },
     {
       timestamp: '2014-05-03T09:14:11.096Z',
+      $source: 'defaults',
       values: [
         {
           path: '',
