@@ -545,9 +545,6 @@ describe('Security', () => {
       ws.on('error', reject)
     })
 
-    // Give a moment for the client to be registered
-    await new Promise(resolve => setTimeout(resolve, 100))
-
     const result = await fetch(`${url}/skServer/security/devices/active`, {
       headers: {
         Cookie: `JAUTHENTICATION=${adminToken}`
@@ -620,8 +617,6 @@ describe('Security', () => {
       ws.on('open', resolve)
       ws.on('error', reject)
     })
-
-    await new Promise(resolve => setTimeout(resolve, 100))
 
     result = await fetch(`${url}/skServer/security/devices/active`, {
       headers: {
