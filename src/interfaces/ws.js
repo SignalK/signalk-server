@@ -54,6 +54,23 @@ module.exports = function (app) {
     return count
   }
 
+  api.getActiveClients = function () {
+    const clients = []
+    primuses.forEach((primus) =>
+      primus.forEach((spark) => {
+        clients.push({
+          id: spark.id,
+          skPrincipal: spark.request.skPrincipal,
+          remoteAddress: spark.request.headers['x-forwarded-for'] || 
+                        spark.request.connection.remoteAddress,
+          userAgent: spark.request.headers['user-agent'],
+          connectedAt: spark.request.connectedAt || new Date().toISOString()
+        })
+      })
+    )
+    return clients
+  }
+
   api.canHandlePut = function (path, source) {
     const sources = pathSources[path]
     return sources && (!source || sources[source])

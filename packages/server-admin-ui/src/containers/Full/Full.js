@@ -19,6 +19,7 @@ import Login from '../../views/security/Login'
 import SecuritySettings from '../../views/security/Settings'
 import Users from '../../views/security/Users'
 import Devices from '../../views/security/Devices'
+import ActiveClients from '../../views/security/ActiveClients'
 import Register from '../../views/security/Register'
 import AccessRequests from '../../views/security/AccessRequests'
 import ProvidersConfiguration from '../../views/ServerConfig/ProvidersConfiguration'
@@ -114,6 +115,10 @@ class Full extends Component {
                 <Route
                   path="/security/devices"
                   component={loginOrOriginal(Devices)}
+                />
+                <Route
+                  path="/security/clients"
+                  component={loginOrOriginal(ActiveClients)}
                 />
                 <Route
                   path="/security/access/requests"

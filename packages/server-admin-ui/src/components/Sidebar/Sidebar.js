@@ -286,6 +286,10 @@ const mapStateToProps = (state) => {
         name: 'Devices',
         url: '/security/devices'
       })
+      security.children.push({
+        name: 'Active Clients',
+        url: '/security/clients'
+      })
     }
     if (
       state.loginStatus.allowNewUserRegistration ||
