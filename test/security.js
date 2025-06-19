@@ -518,4 +518,73 @@ describe('Security', () => {
     json = await result.json()
     json.length.should.equal(1)
   })
+
+  it('Active devices endpoint returns connected clients with device info', async function () {
+    // First create a WebSocket connection to simulate an active client
+    const ws = new WebSocket(`ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=all`)
+    
+    await new Promise((resolve) => {
+      ws.on('open', resolve)
+    })
+
+    // Wait a moment for the connection to be registered
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    try {
+      // Test the active devices endpoint
+      const result = await fetch(`${url}/skServer/security/devices/active`, {
+        headers: {
+          Cookie: `JAUTHENTICATION=${adminToken}`
+        }
+      })
+      
+      result.status.should.equal(200)
+      const json = await result.json()
+      
+      // Should return an array
+      json.should.be.an('array')
+      
+      // Should have at least one active client (our WebSocket connection)
+      json.length.should.be.at.least(1)
+      
+      // Each active client should have the expected structure
+      const client = json[0]
+      client.should.have.property('clientId')
+      client.should.have.property('description')
+      client.should.have.property('remoteAddress')
+      client.should.have.property('connectedAt')
+      client.should.have.property('isActive')
+      client.isActive.should.equal(true)
+      
+      // The description should be user-friendly (not just the raw client ID)
+      client.description.should.be.a('string')
+      client.description.length.should.be.greaterThan(0)
+      
+    } finally {
+      // Clean up the WebSocket connection
+      ws.close()
+    }
+  })
+
+  it('Active devices endpoint requires admin authentication', async function () {
+    // Test without authentication
+    let result = await fetch(`${url}/skServer/security/devices/active`)
+    result.status.should.equal(401)
+
+    // Test with read-only token (should fail)
+    result = await fetch(`${url}/skServer/security/devices/active`, {
+      headers: {
+        Cookie: `JAUTHENTICATION=${readToken}`
+      }
+    })
+    result.status.should.equal(403)
+
+    // Test with admin token (should succeed)
+    result = await fetch(`${url}/skServer/security/devices/active`, {
+      headers: {
+        Cookie: `JAUTHENTICATION=${adminToken}`
+      }
+    })
+    result.status.should.equal(200)
+  })
 })
