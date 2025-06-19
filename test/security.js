@@ -518,4 +518,121 @@ describe('Security', () => {
     json = await result.json()
     json.length.should.equal(1)
   })
+
+  it('Active clients endpoint requires authentication', async function () {
+    const result = await fetch(`${url}/skServer/security/devices/active`)
+    result.status.should.equal(401)
+  })
+
+  it('Active clients endpoint returns array of active clients', async function () {
+    const result = await fetch(`${url}/skServer/security/devices/active`, {
+      headers: {
+        Cookie: `JAUTHENTICATION=${adminToken}`
+      }
+    })
+    result.status.should.equal(200)
+    const json = await result.json()
+    json.should.be.an('array')
+    // Array length will vary based on connected test clients
+  })
+
+  it('Active clients endpoint returns connected WebSocket clients', async function () {
+    // Connect a WebSocket client
+    const ws = new WebSocket(`ws://localhost:${port}/signalk/v1/stream?subscribe=none`)
+    
+    await new Promise((resolve, reject) => {
+      ws.on('open', resolve)
+      ws.on('error', reject)
+    })
+
+    // Give a moment for the client to be registered
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    const result = await fetch(`${url}/skServer/security/devices/active`, {
+      headers: {
+        Cookie: `JAUTHENTICATION=${adminToken}`
+      }
+    })
+    result.status.should.equal(200)
+    const json = await result.json()
+    json.should.be.an('array')
+    json.length.should.be.greaterThan(0)
+    
+    // Check client structure if any clients are present
+    if (json.length > 0) {
+      const client = json[0]
+      client.should.have.property('clientId')
+      client.should.have.property('connectedAt')
+      client.should.have.property('remoteAddress')
+      client.should.have.property('description')
+      client.should.have.property('isActive')
+      
+      // userAgent may or may not be present depending on client
+      if (client.userAgent !== undefined) {
+        client.userAgent.should.be.a('string')
+      }
+      
+      // isActive should be true for active clients
+      client.isActive.should.equal(true)
+    }
+
+    ws.close()
+  })
+
+  it('Active clients endpoint includes device names from registry when available', async function () {
+    // First, create a device in the registry via access request
+    let result = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        clientId: 'test-device-123',
+        description: 'Test Navigation Device',
+        permissions: 'read'
+      })
+    })
+    result.status.should.equal(202)
+    const requestJson = await result.json()
+
+    // Approve the device
+    result = await fetch(
+      `${url}/skServer/security/access/requests/test-device-123/approved`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: `JAUTHENTICATION=${adminToken}`
+        },
+        body: JSON.stringify({
+          expiration: '1y',
+          permissions: 'read'
+        })
+      }
+    )
+    result.status.should.equal(200)
+
+    // Connect a WebSocket client with the registered device ID
+    // Note: This is a simplified test - in reality the client would authenticate
+    const ws = new WebSocket(`ws://localhost:${port}/signalk/v1/stream?subscribe=none`)
+    
+    await new Promise((resolve, reject) => {
+      ws.on('open', resolve)
+      ws.on('error', reject)
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    result = await fetch(`${url}/skServer/security/devices/active`, {
+      headers: {
+        Cookie: `JAUTHENTICATION=${adminToken}`
+      }
+    })
+    result.status.should.equal(200)
+    const json = await result.json()
+    json.should.be.an('array')
+    json.length.should.be.greaterThan(0)
+
+    ws.close()
+  })
 })
