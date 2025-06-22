@@ -100,6 +100,10 @@ class Server {
 
     setupCors(app, getSecurityConfig(app))
     startSecurity(app, opts ? opts.securityConfig : null)
+    
+    // Initialize device registry cache after security is set up
+    const { initializeDeviceRegistryCache } = require('./deviceRegistryCacheInit')
+    initializeDeviceRegistryCache(app)
 
     require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
     require('./put').start(app)

@@ -54,18 +54,28 @@ module.exports = function (app) {
     return count
   }
 
-  api.getActiveClients = function () {
+  api.getActiveClients = function (securityContext) {
     const clients = []
     primuses.forEach((primus) =>
       primus.forEach((spark) => {
-        clients.push({
+        const clientInfo = {
           id: spark.id,
           skPrincipal: spark.request.skPrincipal,
           remoteAddress: spark.request.headers['x-forwarded-for'] || 
                         spark.request.connection.remoteAddress,
           userAgent: spark.request.headers['user-agent'],
           connectedAt: spark.request.connectedAt || new Date().toISOString()
-        })
+        }
+        
+        // If security context is provided, enhance with device description
+        if (securityContext && securityContext.getDevice) {
+          const device = securityContext.getDevice(spark.id)
+          if (device && device.description) {
+            clientInfo.deviceDescription = device.description
+          }
+        }
+        
+        clients.push(clientInfo)
       })
     )
     return clients
