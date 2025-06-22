@@ -519,4 +519,3 @@ describe('Security', () => {
     json.length.should.equal(1)
   })
 })
-
