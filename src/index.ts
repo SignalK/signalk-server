@@ -101,7 +101,7 @@ class Server {
 
     setupCors(app, getSecurityConfig(app))
     startSecurity(app, opts ? opts.securityConfig : null)
-    
+
     // Initialize device registry cache after security is set up
     initializeDeviceRegistryCache(app)
 
