@@ -17,6 +17,7 @@
 
 import { isUndefined, values } from 'lodash'
 import { EventEmitter } from 'node:events'
+import { resolveDeviceName } from './deviceNameResolver'
 
 const STATS_UPDATE_INTERVAL_SECONDS = 5
 export const CONNECTION_WRITE_EVENT_NAME = 'connectionwrite'
@@ -33,6 +34,7 @@ class ProviderStats {
   deltaRate: number
   deltaCount: number
   lastIntervalDeltaCount: number
+  displayName?: string
   constructor() {
     this.writeRate =
       this.writeCount =
@@ -73,6 +75,29 @@ export function startDeltaStatistics(
   return setInterval(() => {
     updateProviderPeriodStats(app)
     const anyApp = app as any
+    
+    // Add display names for WebSocket connections
+    if (anyApp.securityStrategy?.getDevices && anyApp.interfaces?.ws && anyApp.getSecurityConfig) {
+      const securityConfig = anyApp.getSecurityConfig(anyApp)
+      const devices = anyApp.securityStrategy.getDevices(securityConfig)
+      const activeClients = anyApp.interfaces.ws.getActiveClients()
+      
+      Object.keys(app.providerStatistics).forEach((providerId) => {
+        if (providerId.startsWith('ws.')) {
+          const clientId = providerId.substring(3).replace(/_/g, '.')
+          const clientInfo = activeClients.find((c: any) => c.skPrincipal?.identifier === clientId)
+          
+          if (clientInfo) {
+            app.providerStatistics[providerId].displayName = resolveDeviceName(
+              clientId,
+              devices || [],
+              clientInfo
+            )
+          }
+        }
+      })
+    }
+    
     app.emit('serverevent', {
       type: 'SERVERSTATISTICS',
       from: 'signalk-server',

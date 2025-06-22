@@ -353,68 +353,6 @@ module.exports = function (
   )
 
   app.get(
-    `${SERVERROUTESPREFIX}/security/devices/active`,
-    (req: Request, res: Response) => {
-      if (checkAllowConfigure(req, res)) {
-        const activeClients: any[] = []
-        const devices = app.securityStrategy.getDevices(getSecurityConfig(app))
-        
-        // Get active WebSocket clients from the WS interface
-        const anyApp = app as any
-        if (anyApp.interfaces && anyApp.interfaces.ws) {
-          anyApp.interfaces.ws.getActiveClients().forEach((client: any) => {
-            const clientId = client.skPrincipal?.identifier
-            if (clientId) {
-              // Find matching device info
-              const device = devices.find((d: any) => d.clientId === clientId)
-              
-              // Build user-friendly display name with priority:
-              // 1. Device description from registry
-              // 2. Principal name from authentication
-              // 3. User agent (shortened)
-              // 4. Fall back to client ID
-              let displayName = device?.description
-              
-              if (!displayName && client.skPrincipal?.name) {
-                displayName = client.skPrincipal.name
-              }
-              
-              if (!displayName && client.userAgent) {
-                // Extract meaningful parts from user agent
-                const ua = client.userAgent
-                if (ua.includes('SensESP')) {
-                  displayName = 'SensESP Device'
-                } else if (ua.includes('SignalK')) {
-                  displayName = 'SignalK Client'
-                } else if (ua.includes('OpenCPN')) {
-                  displayName = 'OpenCPN'
-                } else if (ua.includes('Chrome') || ua.includes('Firefox') || ua.includes('Safari')) {
-                  displayName = 'Web Browser'
-                } else {
-                  // Take first meaningful part of user agent
-                  const parts = ua.split(/[\s\/\(]/)
-                  displayName = parts[0] || 'Unknown Client'
-                }
-              }
-              
-              activeClients.push({
-                clientId,
-                description: displayName || clientId,
-                remoteAddress: client.remoteAddress,
-                userAgent: client.userAgent,
-                connectedAt: client.connectedAt,
-                isActive: true
-              })
-            }
-          })
-        }
-        
-        res.json(activeClients)
-      }
-    }
-  )
-
-  app.get(
     `${SERVERROUTESPREFIX}/security/users`,
     (req: Request, res: Response) => {
       if (checkAllowConfigure(req, res)) {
