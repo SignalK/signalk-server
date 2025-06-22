@@ -66,6 +66,7 @@ import { WithProviderStatistics } from './deltastats'
 import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { Zones } from './zones'
+import checkNodeVersion from './version'
 const debug = createDebug('signalk-server')
 
 import { StreamBundle } from './streambundle'
@@ -84,6 +85,7 @@ class Server {
     }
 
   constructor(opts: { securityConfig: SecurityConfig }) {
+    checkNodeVersion()
     const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
     const bodyParser = require('body-parser')
     const app = express() as any
