@@ -79,19 +79,25 @@ export function startDeltaStatistics(
   return setInterval(() => {
     updateProviderPeriodStats(app)
     const anyApp = app as any
-    
+
     // Add display names for WebSocket connections
     if (anyApp.interfaces?.ws) {
       // Use device registry cache for background stats generation
       const devices = deviceRegistryCache.getAllDevices()
       const activeClients = anyApp.interfaces.ws.getActiveClients()
       debug('Active WebSocket clients:', activeClients.length)
-      debug('Cached devices:', devices.map(d => ({ clientId: d.clientId, description: d.description })))
-      
+      debug(
+        'Cached devices:',
+        devices.map((d) => ({
+          clientId: d.clientId,
+          description: d.description
+        }))
+      )
+
       Object.keys(app.providerStatistics).forEach((providerId) => {
         if (providerId.startsWith('ws.')) {
           debug('Processing WebSocket provider:', providerId)
-          
+
           // Find matching client by various ID formats
           const clientInfo = activeClients.find((c: any) => {
             // Try direct ID match first
@@ -99,51 +105,63 @@ export function startDeltaStatistics(
               debug('Found matching client by direct ID:', c.id)
               return true
             }
-            
+
             // Try principal identifier match
-            if (c.skPrincipal?.identifier && `ws.${c.skPrincipal.identifier.replace(/\./g, '_')}` === providerId) {
-              debug('Found matching client by principal:', c.skPrincipal.identifier)
+            if (
+              c.skPrincipal?.identifier &&
+              `ws.${c.skPrincipal.identifier.replace(/\./g, '_')}` ===
+                providerId
+            ) {
+              debug(
+                'Found matching client by principal:',
+                c.skPrincipal.identifier
+              )
               return true
             }
-            
+
             return false
           })
-          
+
           if (clientInfo) {
-            debug('Client info:', { 
-              id: clientInfo.id, 
+            debug('Client info:', {
+              id: clientInfo.id,
               principal: clientInfo.skPrincipal?.identifier,
-              userAgent: clientInfo.userAgent 
+              userAgent: clientInfo.userAgent
             })
-            
+
             // Use device registry cache for name resolution
             // Try multiple ID formats for device lookup
             let deviceId = clientInfo.id
-            
+
             // If we have a principal identifier, it might be the device ID
             if (clientInfo.skPrincipal?.identifier) {
               // Check if any device matches the principal identifier
-              const deviceByPrincipal = devices.find(d => d.clientId === clientInfo.skPrincipal.identifier)
+              const deviceByPrincipal = devices.find(
+                (d) => d.clientId === clientInfo.skPrincipal.identifier
+              )
               if (deviceByPrincipal) {
                 deviceId = clientInfo.skPrincipal.identifier
                 debug('Found device by principal identifier:', deviceId)
               }
             }
-            
-            const displayName = resolveDeviceName(
-              deviceId,
-              devices,
-              clientInfo
-            )
+
+            const displayName = resolveDeviceName(deviceId, devices, clientInfo)
             app.providerStatistics[providerId].displayName = displayName
-            debug('Resolved display name:', displayName, 'for', providerId, 'using device ID:', deviceId)
+            debug(
+              'Resolved display name:',
+              displayName,
+              'for',
+              providerId,
+              'using device ID:',
+              deviceId
+            )
           } else {
             debug('No matching client found for', providerId)
           }
         }
       })
     }
-    
+
     app.emit('serverevent', {
       type: 'SERVERSTATISTICS',
       from: 'signalk-server',

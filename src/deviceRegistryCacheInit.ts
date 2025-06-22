@@ -19,10 +19,10 @@ interface AppWithEvents extends WithSecurityStrategy, EventEmitter {
 
 export function initializeDeviceRegistryCache(app: AppWithEvents) {
   debug('Initializing device registry cache')
-  
+
   // Initial load of devices
   loadDevices(app)
-  
+
   // Listen for security configuration changes
   if (app.on) {
     app.on('securityConfigChange', () => {
@@ -30,19 +30,19 @@ export function initializeDeviceRegistryCache(app: AppWithEvents) {
       loadDevices(app)
     })
   }
-  
+
   // Also listen for specific device updates if available
   if (app.on) {
     app.on('deviceAdded', (device: Device) => {
       debug('Device added:', device.clientId)
       deviceRegistryCache.setDevice(device)
     })
-    
+
     app.on('deviceUpdated', (device: Device) => {
       debug('Device updated:', device.clientId)
       deviceRegistryCache.setDevice(device)
     })
-    
+
     app.on('deviceRemoved', (clientId: string) => {
       debug('Device removed:', clientId)
       deviceRegistryCache.removeDevice(clientId)
@@ -52,12 +52,15 @@ export function initializeDeviceRegistryCache(app: AppWithEvents) {
 
 function loadDevices(app: AppWithEvents) {
   try {
-    if (app.securityStrategy && typeof app.securityStrategy.getDevices === 'function') {
+    if (
+      app.securityStrategy &&
+      typeof app.securityStrategy.getDevices === 'function'
+    ) {
       // Get the current configuration
-      const config = app.securityStrategy.getConfiguration ? 
-        app.securityStrategy.getConfiguration() : 
-        {}
-      
+      const config = app.securityStrategy.getConfiguration
+        ? app.securityStrategy.getConfiguration()
+        : {}
+
       const devices = app.securityStrategy.getDevices(config)
       debug(`Loading ${devices.length} devices into cache`)
       deviceRegistryCache.initialize(devices)

@@ -23,7 +23,7 @@ interface CacheEventEmitter extends EventEmitter {
 export class DeviceRegistryCache {
   private devices: Map<string, Device> = new Map()
   private events: CacheEventEmitter = new EventEmitter()
-  
+
   constructor() {
     debug('Device registry cache initialized')
   }
@@ -33,7 +33,7 @@ export class DeviceRegistryCache {
    */
   initialize(devices: Device[]): void {
     this.devices.clear()
-    devices.forEach(device => {
+    devices.forEach((device) => {
       this.devices.set(device.clientId, device)
     })
     debug(`Cache initialized with ${this.devices.size} devices`)

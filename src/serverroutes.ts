@@ -324,10 +324,15 @@ module.exports = function (
           config,
           req.params.uuid,
           req.body,
-          (err: any, updatedConfig: any) => {
+          (err: unknown, updatedConfig: unknown) => {
             if (!err && updatedConfig) {
               // Find the updated device
-              const updatedDevice = updatedConfig.devices?.find((d: any) => d.clientId === req.params.uuid)
+              const config = updatedConfig as {
+                devices?: Array<{ clientId: string }>
+              }
+              const updatedDevice = config.devices?.find(
+                (d) => d.clientId === req.params.uuid
+              )
               if (updatedDevice) {
                 app.emit('deviceUpdated', updatedDevice)
               }
@@ -352,7 +357,7 @@ module.exports = function (
         app.securityStrategy.deleteDevice(
           config,
           deviceId,
-          (err: any, updatedConfig: any) => {
+          (err: unknown, updatedConfig: unknown) => {
             if (!err && updatedConfig) {
               app.emit('deviceRemoved', deviceId)
             }
