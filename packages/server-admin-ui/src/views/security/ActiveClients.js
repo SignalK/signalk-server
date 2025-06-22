@@ -155,10 +155,12 @@ class ActiveClients extends Component {
                               }
                             </strong>
                             {client.userAgent && client.description !== client.clientId && (
-                              <br />
-                              <small className="text-muted" title={client.userAgent}>
-                                {client.userAgent.length > 50 ? client.userAgent.substring(0, 50) + '...' : client.userAgent}
-                              </small>
+                              <>
+                                <br />
+                                <small className="text-muted" title={client.userAgent}>
+                                  {client.userAgent.length > 50 ? client.userAgent.substring(0, 50) + '...' : client.userAgent}
+                                </small>
+                              </>
                             )}
                           </td>
                           <td>
