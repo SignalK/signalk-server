@@ -17,6 +17,29 @@ interface AppWithEvents extends WithSecurityStrategy, EventEmitter {
   }
 }
 
+/**
+ * Initializes the device registry cache and sets up event listeners for real-time updates.
+ * 
+ * This function performs the following tasks:
+ * 1. Loads all existing devices from the security configuration into the cache
+ * 2. Sets up event listeners for security configuration changes to reload all devices
+ * 3. Sets up event listeners for individual device operations (add/update/remove) for real-time updates
+ * 
+ * The cache is used by the delta statistics module to resolve WebSocket client IDs to user-friendly
+ * device names that are displayed in the Dashboard. This provides a better user experience by showing
+ * descriptive names instead of cryptic WebSocket IDs.
+ * 
+ * @param app - The SignalK server application instance with security strategy and event emitter capabilities
+ * 
+ * @example
+ * // Called during server initialization after security is set up
+ * initializeDeviceRegistryCache(app)
+ * 
+ * @remarks
+ * - Requires the security strategy to be initialized before calling
+ * - Gracefully handles cases where security is not enabled or devices are not supported
+ * - All errors are caught and logged to prevent server startup failures
+ */
 export function initializeDeviceRegistryCache(app: AppWithEvents) {
   debug('Initializing device registry cache')
 
