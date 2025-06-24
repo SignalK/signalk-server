@@ -87,8 +87,7 @@ class Sidebar extends Component {
             <RsNavLink
               href={url}
               className={classes.link}
-              {...(item.target ? { target: item.target } : {})}
-              {...(item.rel ? { rel: item.rel } : {})}
+              {...(item.props || {})}
             >
               <i className={classes.icon} />
               {item.name}
@@ -99,8 +98,7 @@ class Sidebar extends Component {
               to={url}
               className={classes.link}
               activeClassName="active"
-              {...(item.target ? { target: item.target } : {})}
-              {...(item.rel ? { rel: item.rel } : {})}
+              {...(item.props || {})}
             >
               <i className={classes.icon} />
               {item.name}
@@ -315,16 +313,20 @@ const mapStateToProps = (state) => {
     name: 'Documentation',
     url: `${window.location.protocol}//${window.location.host}/documentation`,
     icon: 'icon-book-open',
-    target: '_blank',
-    rel: 'noopener noreferrer'
+    props: {
+      target: '_blank',
+      rel: 'noopener noreferrer'
+    }
   })
 
   result.items.push({
     name: 'OpenApi',
     url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
     icon: 'icon-energy',
-    target: '_blank',
-    rel: 'noopener noreferrer'
+    props: {
+      target: '_blank',
+      rel: 'noopener noreferrer'
+    }
   })
 
   return result
