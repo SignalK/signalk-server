@@ -1,6 +1,6 @@
 {
   "name": "@signalk/streams",
-  "version": "4.5.0",
+  "version": "5.0.0",
   "description": "Utilities for handling streams of Signal K data",
   "main": "index.js",
   "scripts": {
