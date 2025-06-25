@@ -1,7 +1,7 @@
 import { engines } from '../package.json'
 import { satisfies } from 'semver'
 
-const minimumVersion = '18'
+const minimumVersion = '>=18'
 const recommendedVersion = '22'
 
 export default function checkNodeVersion() {
