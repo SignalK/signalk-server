@@ -51,14 +51,14 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish streams
-        run: |
-          if [[ "$(npm view @signalk/streams version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/streams/package.json)" ]]; then
-            cd packages/streams
-            npm publish --access public
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+#      - name: Publish streams
+#        run: |
+#          if [[ "$(npm view @signalk/streams version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/streams/package.json)" ]]; then
+#            cd packages/streams
+#            npm publish --access public
+#          fi
+#        env:
+#          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish resources-provider
         run: |
