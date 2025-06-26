@@ -26,7 +26,8 @@ jobs:
 
       - name: Publish server-admin-ui-dependencies
         run: |
-          if [[ "$(npm view @signalk/server-admin-ui-dependencies version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui-dependencies/package.json)" ]]; then
+          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui-dependencies/package.json)
+          if ! npm view @signalk/server-admin-ui-dependencies@$LOCAL_VERSION version &>/dev/null; then
             cd packages/server-admin-ui-dependencies
             npm publish --access public
           fi
@@ -35,7 +36,8 @@ jobs:
 
       - name: Publish server-admin-ui
         run: |
-          if [[ "$(npm view @signalk/server-admin-ui version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui/package.json)" ]]; then
+          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui/package.json)
+          if ! npm view @signalk/server-admin-ui@$LOCAL_VERSION version &>/dev/null; then
             cd packages/server-admin-ui
             npm publish --access public
           fi
@@ -44,7 +46,8 @@ jobs:
 
       - name: Publish server-api
         run: |
-          if [[ "$(npm view @signalk/server-api version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-api/package.json)" ]]; then
+          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-api/package.json)
+          if ! npm view @signalk/server-api@$LOCAL_VERSION version &>/dev/null; then
             cd packages/server-api
             npm publish --access public
           fi
@@ -53,7 +56,8 @@ jobs:
 
       - name: Publish streams
         run: |
-          if [[ "$(npm view @signalk/streams version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/streams/package.json)" ]]; then
+          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/streams/package.json)
+          if ! npm view @signalk/streams@$LOCAL_VERSION version &>/dev/null; then
             cd packages/streams
             npm publish --access public
           fi
@@ -62,7 +66,8 @@ jobs:
 
       - name: Publish resources-provider
         run: |
-          if [[ "$(npm view @signalk/resources-provider version)" !=  "$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/resources-provider-plugin/package.json)" ]]; then
+          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/resources-provider-plugin/package.json)
+          if ! npm view @signalk/resources-provider@$LOCAL_VERSION version &>/dev/null; then
             cd packages/resources-provider-plugin
             npm publish --access public
           fi
