@@ -62,6 +62,7 @@ import { setupCors } from './cors'
 import SubscriptionManager from './subscriptionmanager'
 import { PluginId, PluginManager } from './interfaces/plugins'
 import { OpenApiDescription, OpenApiRecord } from './api/swagger'
+import { initializeDeviceRegistryCache } from './deviceRegistryCacheInit'
 import { WithProviderStatistics } from './deltastats'
 import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
@@ -102,6 +103,9 @@ class Server {
 
     setupCors(app, getSecurityConfig(app))
     startSecurity(app, opts ? opts.securityConfig : null)
+
+    // Initialize device registry cache after security is set up
+    initializeDeviceRegistryCache(app)
 
     require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
     require('./put').start(app)
