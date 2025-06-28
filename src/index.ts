@@ -737,6 +737,9 @@ function filterSelfDataKP(pathValue: any) {
         pathValue.value.communication,
         ['callsignVhf']
       )
+      if (Object.keys(pathValue.value.communication).length === 0) {
+        delete pathValue.value.communication
+      }
     }
     if (Object.keys(pathValue.value).length == 0) {
       return null
