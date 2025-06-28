@@ -1,4 +1,3 @@
-import { engines } from '../package.json'
 import { satisfies } from 'semver'
 
 const minimumVersion = '>=18'
