@@ -14,7 +14,7 @@
     "format": "npm run prettier && npm run lint",
     "ci-lint": "eslint && prettier --check .",
     "update-latest-release": "git checkout master && git branch -D latest-release || git checkout -b latest-release && git push -f origin/latest-release",
-    "start": "bin/signalk-server",
+    "start": "node bin/signalk-server",
     "test-only": "mocha 'test/**/*.[jt]s' 'dist/**/*.test.js'",
     "test": "npm run build && npm run test-only && npm run ci-lint",
     "heroku-postbuild": "npm run build:all",

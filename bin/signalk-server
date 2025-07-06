@@ -1,4 +1,4 @@
-#!/usr/bin/env -S node --enable-source-maps
+#!/usr/bin/env node
 
 /*
  * Copyright 2014-2015 Fabian Tollenaar <fabian@starting-point.nl>
