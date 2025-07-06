@@ -426,7 +426,7 @@ class DataBrowser extends Component {
                       })}
                   </Input>
                 </Col>
-                <Col xs="8" md="2">
+                <Col xs="6" md="2">
                   <Label className="switch switch-text switch-primary">
                     <Input
                       type="checkbox"
@@ -443,9 +443,9 @@ class DataBrowser extends Component {
                     />
                     <span className="switch-handle" />
                   </Label>{' '}
-                  Meta Data
+                  <span style={{ whiteSpace: 'nowrap' }}>Meta data</span>
                 </Col>
-                <Col xs="8" md="2">
+                <Col xs="6" md="2">
                   <Label className="switch switch-text switch-primary">
                     <Input
                       type="checkbox"
