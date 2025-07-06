@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { JSONTree } from 'react-json-tree'
+import Select from 'react-select'
 import {
   Card,
   CardHeader,
@@ -203,9 +204,41 @@ class DataBrowser extends Component {
     this.unsubscribeToData()
   }
 
-  handleContextChange(event) {
-    this.setState({ ...this.state, context: event.target.value })
-    localStorage.setItem(contextStorageKey, event.target.value)
+  handleContextChange(selectedOption) {
+    const value = selectedOption ? selectedOption.value : 'none'
+    this.setState({ ...this.state, context: value })
+    localStorage.setItem(contextStorageKey, value)
+  }
+
+  getContextLabel(contextKey) {
+    const contextData = this.state.data[contextKey]
+    const contextName = contextData?.name?.value
+    return `${contextName || ''} ${contextKey}`
+  }
+
+  getContextOptions() {
+    const contexts = Object.keys(this.state.data || {}).sort()
+
+    const options = []
+
+    if (contexts.includes('self')) {
+      const selfLabel = this.getContextLabel('self')
+      options.push({ value: 'self', label: selfLabel })
+    }
+
+    contexts.forEach((key) => {
+      if (key !== 'self') {
+        const contextLabel = this.getContextLabel(key)
+        options.push({ value: key, label: contextLabel })
+      }
+    })
+
+    return options
+  }
+
+  getCurrentContextValue() {
+    const options = this.getContextOptions()
+    return options.find((option) => option.value === this.state.context) || null
   }
 
   handleSearch(event) {
@@ -239,6 +272,9 @@ class DataBrowser extends Component {
   }
 
   render() {
+    const contextOptions = this.getContextOptions()
+    const currentContext = this.getCurrentContextValue()
+
     return (
       <div className="animated fadeIn">
         <style>
@@ -408,23 +444,15 @@ class DataBrowser extends Component {
             >
               <FormGroup row>
                 <Col xs="12" md="4">
-                  <Input
-                    type="select"
-                    value={this.state.context}
-                    name="context"
+                  <Select
+                    value={currentContext}
                     onChange={this.handleContextChange}
-                  >
-                    <option value="none">Select a context</option>
-                    {Object.keys(this.state.data || {})
-                      .sort()
-                      .map((key) => {
-                        return (
-                          <option key={key} value={key}>
-                            {key}
-                          </option>
-                        )
-                      })}
-                  </Input>
+                    options={contextOptions}
+                    placeholder="Select a context"
+                    isSearchable={true}
+                    isClearable={true}
+                    noOptionsMessage={() => 'No contexts available'}
+                  />
                 </Col>
                 <Col xs="6" md="2">
                   <Label className="switch switch-text switch-primary">
