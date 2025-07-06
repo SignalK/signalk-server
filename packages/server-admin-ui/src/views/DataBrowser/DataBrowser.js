@@ -16,7 +16,8 @@ import moment from 'moment'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
 import Meta from './Meta'
 
-const timestampFormat = 'MM/DD HH:mm:ss'
+const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
+const TIME_ONLY_FORMAT = 'HH:mm:ss'
 
 const metaStorageKey = 'admin.v1.dataBrowser.meta'
 const pauseStorageKey = 'admin.v1.dataBrowser.v1.pause'
@@ -103,6 +104,11 @@ class DataBrowser extends Component {
             update.source.sentence &&
             `(${update.source.sentence})`
           update.values.forEach((vp) => {
+            const timestamp = moment(update.timestamp)
+            const formattedTimestamp = timestamp.isSame(moment(), 'day')
+              ? timestamp.format(TIME_ONLY_FORMAT)
+              : timestamp.format(TIMESTAMP_FORMAT)
+
             if (vp.path === '') {
               Object.keys(vp.value).forEach((k) => {
                 context[k] = {
@@ -111,7 +117,7 @@ class DataBrowser extends Component {
                   $source: update.$source,
                   pgn,
                   sentence,
-                  timestamp: moment(update.timestamp).format(timestampFormat)
+                  timestamp: formattedTimestamp
                 }
               })
             } else {
@@ -121,7 +127,7 @@ class DataBrowser extends Component {
                 value: vp.value,
                 pgn,
                 sentence,
-                timestamp: moment(update.timestamp).format(timestampFormat)
+                timestamp: formattedTimestamp
               }
             }
           })
