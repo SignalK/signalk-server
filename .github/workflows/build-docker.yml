@@ -30,7 +30,7 @@ jobs:
           npm ci && npm cache clean --force
           npm run build:all
           npm pack --workspaces
-          rm typedoc-signalk-theme*.tgz # This is only needed as a dev dependency
+          rm signalk-typedoc-signalk-theme*.tgz # This is only needed as a dev dependency
           npm pack
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
