@@ -555,7 +555,7 @@ class DataBrowser extends Component {
                           )
 
                           if (typeof data.value === 'number' && units) {
-                            formattedValue = `${data.value} ${units}`
+                            formattedValue = `${data.value} `
                           }
 
                           return (
@@ -575,6 +575,8 @@ class DataBrowser extends Component {
                                 ) : (
                                   <span className="text-primary">
                                     {formattedValue}
+                                    {typeof data.value === 'number' &&
+                                      units && <strong>{units}</strong>}
                                   </span>
                                 )}
                               </td>
