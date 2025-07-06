@@ -266,6 +266,133 @@ class DataBrowser extends Component {
                 opacity: 0;
               }
             }
+
+            .responsive-table {
+              font-size: 0.875rem;
+            }
+
+            .responsive-table td {
+              padding: 0.5rem 0.25rem;
+              vertical-align: top;
+              word-wrap: break-word;
+              word-break: break-word;
+            }
+
+            .responsive-table th {
+              padding: 0.5rem 0.25rem;
+              font-size: 0.8rem;
+              font-weight: 600;
+            }
+
+            .responsive-table .path-cell {
+              min-width: 150px;
+              max-width: 200px;
+            }
+
+            .responsive-table .value-cell {
+              min-width: 120px;
+              max-width: 300px;
+            }
+
+            .responsive-table .timestamp-cell {
+              min-width: 80px;
+              max-width: 100px;
+              white-space: nowrap;
+            }
+
+            .responsive-table .source-cell {
+              min-width: 100px;
+              max-width: 150px;
+            }
+
+            .responsive-table pre {
+              margin: 0;
+              padding: 0;
+              font-size: 0.8rem;
+              white-space: pre-wrap;
+              word-wrap: break-word;
+              word-break: break-word;
+            }
+
+            @media (max-width: 1200px) {
+              .responsive-table {
+                font-size: 0.8rem;
+              }
+              
+              .responsive-table td {
+                padding: 0.4rem 0.2rem;
+              }
+              
+              .responsive-table th {
+                padding: 0.4rem 0.2rem;
+                font-size: 0.75rem;
+              }
+            }
+
+            @media (max-width: 992px) {
+              .responsive-table .path-cell {
+                max-width: 150px;
+              }
+              
+              .responsive-table .value-cell {
+                max-width: 200px;
+              }
+              
+              .responsive-table .source-cell {
+                max-width: 120px;
+              }
+            }
+
+            @media (max-width: 768px) {
+              .responsive-table {
+                font-size: 0.75rem;
+              }
+              
+              .responsive-table td {
+                padding: 0.3rem 0.15rem;
+              }
+              
+              .responsive-table th {
+                padding: 0.3rem 0.15rem;
+                font-size: 0.7rem;
+              }
+              
+              .responsive-table .path-cell {
+                max-width: 120px;
+              }
+              
+              .responsive-table .value-cell {
+                max-width: 150px;
+              }
+              
+              .responsive-table .source-cell {
+                max-width: 100px;
+              }
+              
+              .responsive-table pre {
+                font-size: 0.7rem;
+              }
+            }
+
+            @media (max-width: 576px) {
+              .responsive-table {
+                font-size: 0.7rem;
+              }
+              
+              .responsive-table td {
+                padding: 0.25rem 0.1rem;
+              }
+              
+              .responsive-table th {
+                padding: 0.25rem 0.1rem;
+                font-size: 0.65rem;
+              }
+              
+              .responsive-table .timestamp-cell {
+                min-width: 70px;
+                max-width: 80px;
+              }
+            }
           `}
         </style>
         <Card>
@@ -357,13 +484,19 @@ class DataBrowser extends Component {
               {!this.state.includeMeta &&
                 this.state.context &&
                 this.state.context !== 'none' && (
-                  <Table responsive bordered striped size="sm">
+                  <Table
+                    responsive
+                    bordered
+                    striped
+                    size="sm"
+                    className="responsive-table"
+                  >
                     <thead>
                       <tr>
-                        <th>Path</th>
-                        <th>Value</th>
-                        <th>Timestamp</th>
-                        <th>Source</th>
+                        <th className="path-cell">Path</th>
+                        <th className="value-cell">Value</th>
+                        <th className="timestamp-cell">Timestamp</th>
+                        <th className="source-cell">Source</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -399,26 +532,30 @@ class DataBrowser extends Component {
 
                           return (
                             <tr key={key}>
-                              <td>
+                              <td className="path-cell">
                                 <CopyToClipboardWithFade text={data.path}>
                                   <span>
                                     {data.path} <i className="far fa-copy"></i>
                                   </span>
                                 </CopyToClipboardWithFade>
                               </td>
-                              <td>
-                                <pre
-                                  className="text-primary"
-                                  style={{ whiteSpace: 'pre-wrap' }}
-                                >
-                                  {formattedValue}
-                                </pre>
+                              <td className="value-cell">
+                                {typeof data.value === 'object' ? (
+                                  <pre className="text-primary">
+                                    {formattedValue}
+                                  </pre>
+                                ) : (
+                                  <span className="text-primary">
+                                    {formattedValue}
+                                  </span>
+                                )}
                               </td>
                               <TimestampCell
                                 timestamp={data.timestamp}
                                 isPaused={this.state.pause}
+                                className="timestamp-cell"
                               />
-                              <td>
+                              <td className="source-cell">
                                 <CopyToClipboardWithFade text={data.$source}>
                                   {data.$source} <i className="far fa-copy"></i>
                                 </CopyToClipboardWithFade>{' '}
@@ -545,11 +682,11 @@ class TimestampCell extends Component {
   render() {
     return (
       <td
-        className={
+        className={`${this.props.className || ''} ${
           this.state.isUpdated && !this.props.isPaused
             ? 'timestamp-updated'
             : ''
-        }
+        }`}
         key={this.state.animationKey}
       >
         {this.props.timestamp}
