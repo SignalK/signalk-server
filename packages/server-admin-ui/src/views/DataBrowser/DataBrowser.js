@@ -356,7 +356,6 @@ class DataBrowser extends Component {
                       <tr>
                         <th>Path</th>
                         <th>Value</th>
-                        <th>Units</th>
                         <th>Timestamp</th>
                         <th>Source</th>
                       </tr>
@@ -375,7 +374,11 @@ class DataBrowser extends Component {
                         .sort()
                         .map((key) => {
                           const data = this.state.data[this.state.context][key]
-                          const formatted = JSON.stringify(
+                          const meta =
+                            this.state.meta[this.state.context][data.path]
+                          const units = meta && meta.units ? meta.units : ''
+
+                          let formattedValue = JSON.stringify(
                             data.value,
                             null,
                             typeof data.value === 'object' &&
@@ -383,9 +386,10 @@ class DataBrowser extends Component {
                               ? 2
                               : 0
                           )
-                          const meta =
-                            this.state.meta[this.state.context][data.path]
-                          const units = meta && meta.units ? meta.units : ''
+
+                          if (typeof data.value === 'number' && units) {
+                            formattedValue = `${data.value} ${units}`
+                          }
 
                           return (
                             <tr key={key}>
@@ -401,10 +405,9 @@ class DataBrowser extends Component {
                                   className="text-primary"
                                   style={{ whiteSpace: 'pre-wrap' }}
                                 >
-                                  {formatted}
+                                  {formattedValue}
                                 </pre>
                               </td>
-                              <td>{units}</td>
                               <TimestampCell
                                 timestamp={data.timestamp}
                                 isPaused={this.state.pause}
