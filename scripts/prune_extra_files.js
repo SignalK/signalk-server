@@ -62,7 +62,9 @@ if (process.env.MINIMIZE_DISK_USAGE) {
     'node_modules/@signalk/instrumentpanel/public/',
     'node_modules/listr/node_modules/rxjs/bundles/',
     'node_modules/inquirer/node_modules/rxjs/bundles/',
-    'node_modules/rxjs/dist/bundles/'
+    'node_modules/rxjs/dist/bundles/',
+    'node_modules/tar/dist/commonjs/',
+    'node_modules/tar/dist/esm/'
   ].forEach(removeMapFiles)
 
   // Specific files to remove
