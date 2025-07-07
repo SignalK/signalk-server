@@ -19,14 +19,14 @@ function removeMapFiles(dirPath) {
   }
 
   console.log(`Removing .js.map files from ${dirPath}`)
-  
+
   function traverseDirectory(dir) {
     const files = fs.readdirSync(dir)
-    
-    files.forEach(file => {
+
+    files.forEach((file) => {
       const filePath = path.join(dir, file)
       const stat = fs.statSync(filePath)
-      
+
       if (stat.isDirectory()) {
         traverseDirectory(filePath)
       } else if (file.endsWith('.js.map')) {
@@ -35,7 +35,7 @@ function removeMapFiles(dirPath) {
       }
     })
   }
-  
+
   traverseDirectory(dirPath)
 }
 
@@ -50,31 +50,29 @@ function removeFile(filePath) {
 
 if (process.env.MINIMIZE_DISK_USAGE) {
   console.log('Removing extra files to minimize disk usage')
-  
-  // Remove samples directory
+
   removeDirectory('samples/')
-  
-  // Directories to clean of .js.map files
-  const directoriesToClean = [
+  // https://github.com/jfromaniello/selfsigned/issues/73
+  removeDirectory('node_modules/@types')
+
+  console.log('Removing .js.map files from specified directories...')
+  ;[
     'node_modules/@signalk/server-admin-ui/public/',
     'node_modules/swagger-ui-dist/',
     'node_modules/@signalk/instrumentpanel/public/',
     'node_modules/listr/node_modules/rxjs/bundles/',
     'node_modules/inquirer/node_modules/rxjs/bundles/',
     'node_modules/rxjs/dist/bundles/'
-  ]
-  
-  console.log('Removing .js.map files from specified directories...')
-  directoriesToClean.forEach(removeMapFiles)
-  
+  ].forEach(removeMapFiles)
+
   // Specific files to remove
   const filesToRemove = [
     'node_modules/@mxtommy/kip/public/assets/steelseries-min.js.map'
   ]
-  
+
   console.log('Removing specific files...')
   filesToRemove.forEach(removeFile)
-  
+
   console.log('File cleanup completed')
 } else {
   console.log('MINIMIZE_DISK_USAGE not set, skipping file cleanup')
