@@ -23,7 +23,7 @@ function CanboatJs(options) {
     objectMode: true
   })
 
-  if ( options.useCamelCompat === undefined ) {
+  if (options.useCamelCompat === undefined) {
     options.useCamelCompat = true
   }
   this.fromPgn = new FromPgn(options)

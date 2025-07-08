@@ -866,16 +866,13 @@ const NMEA2000 = (props) => {
           />
         </div>
       )}
-        <UseCanNameInput
+      <UseCanNameInput value={props.value.options} onChange={props.onChange} />
+      {props.value.options.type.indexOf('canboatjs') != -1 && (
+        <CamelCaseCompatInput
           value={props.value.options}
           onChange={props.onChange}
         />
-      {(props.value.options.type.indexOf('canboatjs') != -1) && (
-          <CamelCaseCompatInput
-            value={props.value.options}
-            onChange={props.onChange}
-          />
-        )}
+      )}
     </div>
   )
 }
