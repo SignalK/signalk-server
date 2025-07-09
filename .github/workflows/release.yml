@@ -100,7 +100,7 @@ jobs:
         id: github_release
         uses: mikepenz/release-changelog-builder-action@v5
         with:
-          ignorePreReleases: "true"
+          ignorePreReleases: 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
 
