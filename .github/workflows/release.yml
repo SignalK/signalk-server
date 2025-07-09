@@ -20,7 +20,7 @@ jobs:
         run: |
           npm cache clean -f
           npm install npm@latest -g
-          npm install --package-lock-only
+          npm install --package-lock-only --ignore-scripts
           npm ci && npm cache clean --force
           npm run build:all
 
