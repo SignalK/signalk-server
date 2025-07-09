@@ -26,12 +26,12 @@ function N2KAnalyzer(options) {
   if (process.platform === 'win32') {
     this.analyzerProcess = require('child_process').spawn('cmd', [
       '/c',
-      'analyzer -json -si'
+      'analyzer -json -si -camel'
     ])
   } else {
     this.analyzerProcess = require('child_process').spawn('sh', [
       '-c',
-      'analyzer -json -si'
+      'analyzer -json -si -camel'
     ])
   }
   this.analyzerProcess.stderr.on('data', function (data) {

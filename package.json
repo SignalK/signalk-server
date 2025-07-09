@@ -1,6 +1,6 @@
 {
   "name": "signalk-server",
-  "version": "2.14.4",
+  "version": "2.15.0-beta.4",
   "description": "An implementation of a [Signal K](http://signalk.org) server for boats.",
   "main": "index.js",
   "scripts": {
@@ -70,13 +70,13 @@
   ],
   "dependencies": {
     "@signalk/course-provider": "^1.0.0",
-    "@signalk/n2k-signalk": "^3.0.0",
+    "@signalk/n2k-signalk": ">=4.1.0-beta",
     "@signalk/nmea0183-signalk": "^3.0.0",
     "@signalk/resources-provider": "^1.4.0",
-    "@signalk/server-admin-ui": "2.14.x",
+    "@signalk/server-admin-ui": "2.15.x",
     "@signalk/server-api": "2.7.x",
     "@signalk/signalk-schema": "^1.7.1",
-    "@signalk/streams": "^4.5.0",
+    "@signalk/streams": "^5.0.0",
     "api-schema-builder": "^2.0.11",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",

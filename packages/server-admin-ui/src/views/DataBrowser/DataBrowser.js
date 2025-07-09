@@ -35,10 +35,10 @@ function fetchSources() {
         if (source.type === 'NMEA2000') {
           Object.keys(source).forEach((key) => {
             let device = source[key]
-            if (device.n2k && device.n2k.productName) {
+            if (device.n2k && device.n2k.modelId) {
               source[
-                `${device.n2k.manufacturerName || ''} ${
-                  device.n2k.productName
+                `${device.n2k.manufacturerCode || ''} ${
+                  device.n2k.modelId
                 } (${key})`
               ] = device
               delete source[key]
