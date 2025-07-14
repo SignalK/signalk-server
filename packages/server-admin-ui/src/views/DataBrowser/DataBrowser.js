@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { JSONTree } from 'react-json-tree'
+import Select from 'react-select'
 import {
   Card,
   CardHeader,
@@ -16,7 +17,8 @@ import moment from 'moment'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
 import Meta from './Meta'
 
-const timestampFormat = 'MM/DD HH:mm:ss'
+const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
+const TIME_ONLY_FORMAT = 'HH:mm:ss'
 
 const metaStorageKey = 'admin.v1.dataBrowser.meta'
 const pauseStorageKey = 'admin.v1.dataBrowser.v1.pause'
@@ -33,10 +35,10 @@ function fetchSources() {
         if (source.type === 'NMEA2000') {
           Object.keys(source).forEach((key) => {
             let device = source[key]
-            if (device.n2k && device.n2k.productName) {
+            if (device.n2k && device.n2k.modelId) {
               source[
-                `${device.n2k.manufacturerName || ''} ${
-                  device.n2k.productName
+                `${device.n2k.manufacturerCode || ''} ${
+                  device.n2k.modelId
                 } (${key})`
               ] = device
               delete source[key]
@@ -103,6 +105,11 @@ class DataBrowser extends Component {
             update.source.sentence &&
             `(${update.source.sentence})`
           update.values.forEach((vp) => {
+            const timestamp = moment(update.timestamp)
+            const formattedTimestamp = timestamp.isSame(moment(), 'day')
+              ? timestamp.format(TIME_ONLY_FORMAT)
+              : timestamp.format(TIMESTAMP_FORMAT)
+
             if (vp.path === '') {
               Object.keys(vp.value).forEach((k) => {
                 context[k] = {
@@ -111,7 +118,7 @@ class DataBrowser extends Component {
                   $source: update.$source,
                   pgn,
                   sentence,
-                  timestamp: moment(update.timestamp).format(timestampFormat)
+                  timestamp: formattedTimestamp
                 }
               })
             } else {
@@ -121,7 +128,7 @@ class DataBrowser extends Component {
                 value: vp.value,
                 pgn,
                 sentence,
-                timestamp: moment(update.timestamp).format(timestampFormat)
+                timestamp: formattedTimestamp
               }
             }
           })
@@ -197,9 +204,41 @@ class DataBrowser extends Component {
     this.unsubscribeToData()
   }
 
-  handleContextChange(event) {
-    this.setState({ ...this.state, context: event.target.value })
-    localStorage.setItem(contextStorageKey, event.target.value)
+  handleContextChange(selectedOption) {
+    const value = selectedOption ? selectedOption.value : 'none'
+    this.setState({ ...this.state, context: value })
+    localStorage.setItem(contextStorageKey, value)
+  }
+
+  getContextLabel(contextKey) {
+    const contextData = this.state.data[contextKey]
+    const contextName = contextData?.name?.value
+    return `${contextName || ''} ${contextKey}`
+  }
+
+  getContextOptions() {
+    const contexts = Object.keys(this.state.data || {}).sort()
+
+    const options = []
+
+    if (contexts.includes('self')) {
+      const selfLabel = this.getContextLabel('self')
+      options.push({ value: 'self', label: selfLabel })
+    }
+
+    contexts.forEach((key) => {
+      if (key !== 'self') {
+        const contextLabel = this.getContextLabel(key)
+        options.push({ value: key, label: contextLabel })
+      }
+    })
+
+    return options
+  }
+
+  getCurrentContextValue() {
+    const options = this.getContextOptions()
+    return options.find((option) => option.value === this.state.context) || null
   }
 
   handleSearch(event) {
@@ -212,12 +251,20 @@ class DataBrowser extends Component {
     localStorage.setItem(metaStorageKey, event.target.checked)
   }
 
+  resetAllTimestampAnimations() {
+    const cells = document.querySelectorAll('.timestamp-updated')
+    cells.forEach((cell) => {
+      cell.classList.remove('timestamp-updated')
+    })
+  }
+
   handlePause(event) {
     this.state.pause = event.target.checked
     this.setState(this.state)
     localStorage.setItem(pauseStorageKey, this.state.pause)
     if (this.state.pause) {
       this.unsubscribeToData()
+      this.resetAllTimestampAnimations()
     } else {
       this.fetchSources()
       this.subscribeToDataIfNeeded()
@@ -225,8 +272,165 @@ class DataBrowser extends Component {
   }
 
   render() {
+    const contextOptions = this.getContextOptions()
+    const currentContext = this.getCurrentContextValue()
+
     return (
       <div className="animated fadeIn">
+        <style>
+          {`
+            .timestamp-updated {
+              position: relative;
+            }
+
+            .timestamp-updated::before {
+              content: '';
+              position: absolute;
+              left: 0;
+              top: 0;
+              bottom: 0;
+              width: 3px;
+              background-color: #28a745;
+              animation: highlightFade 15s ease-out;
+            }
+
+            @keyframes highlightFade {
+              0% {
+                opacity: 1;
+              }
+              100% {
+                opacity: 0;
+              }
+            }
+
+            .responsive-table {
+              font-size: 0.875rem;
+            }
+
+            .responsive-table td {
+              padding: 0.5rem 0.25rem;
+              vertical-align: top;
+              word-wrap: break-word;
+              word-break: break-word;
+            }
+
+            .responsive-table th {
+              padding: 0.5rem 0.25rem;
+              font-size: 0.8rem;
+              font-weight: 600;
+            }
+
+            .responsive-table .path-cell {
+              min-width: 150px;
+              max-width: 200px;
+            }
+
+            .responsive-table .value-cell {
+              min-width: 120px;
+              max-width: 300px;
+            }
+
+            .responsive-table .timestamp-cell {
+              min-width: 80px;
+              max-width: 100px;
+              white-space: nowrap;
+            }
+
+            .responsive-table .source-cell {
+              min-width: 100px;
+              max-width: 150px;
+            }
+
+            .responsive-table pre {
+              margin: 0;
+              padding: 0;
+              font-size: 0.8rem;
+              white-space: pre-wrap;
+              word-wrap: break-word;
+              word-break: break-word;
+            }
+
+            @media (max-width: 1200px) {
+              .responsive-table {
+                font-size: 0.8rem;
+              }
+              
+              .responsive-table td {
+                padding: 0.4rem 0.2rem;
+              }
+              
+              .responsive-table th {
+                padding: 0.4rem 0.2rem;
+                font-size: 0.75rem;
+              }
+            }
+
+            @media (max-width: 992px) {
+              .responsive-table .path-cell {
+                max-width: 150px;
+              }
+              
+              .responsive-table .value-cell {
+                max-width: 200px;
+              }
+              
+              .responsive-table .source-cell {
+                max-width: 120px;
+              }
+            }
+
+            @media (max-width: 768px) {
+              .responsive-table {
+                font-size: 0.75rem;
+              }
+              
+              .responsive-table td {
+                padding: 0.3rem 0.15rem;
+              }
+              
+              .responsive-table th {
+                padding: 0.3rem 0.15rem;
+                font-size: 0.7rem;
+              }
+              
+              .responsive-table .path-cell {
+                max-width: 120px;
+              }
+              
+              .responsive-table .value-cell {
+                max-width: 150px;
+              }
+              
+              .responsive-table .source-cell {
+                max-width: 100px;
+              }
+              
+              .responsive-table pre {
+                font-size: 0.7rem;
+              }
+            }
+
+            @media (max-width: 576px) {
+              .responsive-table {
+                font-size: 0.7rem;
+              }
+              
+              .responsive-table td {
+                padding: 0.25rem 0.1rem;
+              }
+              
+              .responsive-table th {
+                padding: 0.25rem 0.1rem;
+                font-size: 0.65rem;
+              }
+              
+              .responsive-table .timestamp-cell {
+                min-width: 70px;
+                max-width: 80px;
+              }
+            }
+          `}
+        </style>
         <Card>
           <CardBody>
             <Form
@@ -240,25 +444,17 @@ class DataBrowser extends Component {
             >
               <FormGroup row>
                 <Col xs="12" md="4">
-                  <Input
-                    type="select"
-                    value={this.state.context}
-                    name="context"
+                  <Select
+                    value={currentContext}
                     onChange={this.handleContextChange}
-                  >
-                    <option value="none">Select a context</option>
-                    {Object.keys(this.state.data || {})
-                      .sort()
-                      .map((key) => {
-                        return (
-                          <option key={key} value={key}>
-                            {key}
-                          </option>
-                        )
-                      })}
-                  </Input>
+                    options={contextOptions}
+                    placeholder="Select a context"
+                    isSearchable={true}
+                    isClearable={true}
+                    noOptionsMessage={() => 'No contexts available'}
+                  />
                 </Col>
-                <Col xs="8" md="2">
+                <Col xs="6" md="2">
                   <Label className="switch switch-text switch-primary">
                     <Input
                       type="checkbox"
@@ -275,9 +471,9 @@ class DataBrowser extends Component {
                     />
                     <span className="switch-handle" />
                   </Label>{' '}
-                  Meta Data
+                  <span style={{ whiteSpace: 'nowrap' }}>Meta data</span>
                 </Col>
-                <Col xs="8" md="2">
+                <Col xs="6" md="2">
                   <Label className="switch switch-text switch-primary">
                     <Input
                       type="checkbox"
@@ -316,14 +512,19 @@ class DataBrowser extends Component {
               {!this.state.includeMeta &&
                 this.state.context &&
                 this.state.context !== 'none' && (
-                  <Table responsive bordered striped size="sm">
+                  <Table
+                    responsive
+                    bordered
+                    striped
+                    size="sm"
+                    className="responsive-table"
+                  >
                     <thead>
                       <tr>
-                        <th>Path</th>
-                        <th>Value</th>
-                        <th>Units</th>
-                        <th>Timestamp</th>
-                        <th>Source</th>
+                        <th className="path-cell">Path</th>
+                        <th className="value-cell">Value</th>
+                        <th className="timestamp-cell">Timestamp</th>
+                        <th className="source-cell">Source</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -340,7 +541,11 @@ class DataBrowser extends Component {
                         .sort()
                         .map((key) => {
                           const data = this.state.data[this.state.context][key]
-                          const formatted = JSON.stringify(
+                          const meta =
+                            this.state.meta[this.state.context][data.path]
+                          const units = meta && meta.units ? meta.units : ''
+
+                          let formattedValue = JSON.stringify(
                             data.value,
                             null,
                             typeof data.value === 'object' &&
@@ -348,30 +553,39 @@ class DataBrowser extends Component {
                               ? 2
                               : 0
                           )
-                          const meta =
-                            this.state.meta[this.state.context][data.path]
-                          const units = meta && meta.units ? meta.units : ''
+
+                          if (typeof data.value === 'number' && units) {
+                            formattedValue = `${data.value} `
+                          }
 
                           return (
                             <tr key={key}>
-                              <td>
+                              <td className="path-cell">
                                 <CopyToClipboardWithFade text={data.path}>
                                   <span>
                                     {data.path} <i className="far fa-copy"></i>
                                   </span>
                                 </CopyToClipboardWithFade>
                               </td>
-                              <td>
-                                <pre
-                                  className="text-primary"
-                                  style={{ whiteSpace: 'pre-wrap' }}
-                                >
-                                  {formatted}
-                                </pre>
+                              <td className="value-cell">
+                                {typeof data.value === 'object' ? (
+                                  <pre className="text-primary">
+                                    {formattedValue}
+                                  </pre>
+                                ) : (
+                                  <span className="text-primary">
+                                    {formattedValue}
+                                    {typeof data.value === 'number' &&
+                                      units && <strong>{units}</strong>}
+                                  </span>
+                                )}
                               </td>
-                              <td>{units}</td>
-                              <td>{data.timestamp}</td>
-                              <td>
+                              <TimestampCell
+                                timestamp={data.timestamp}
+                                isPaused={this.state.pause}
+                                className="timestamp-cell"
+                              />
+                              <td className="source-cell">
                                 <CopyToClipboardWithFade text={data.$source}>
                                   {data.$source} <i className="far fa-copy"></i>
                                 </CopyToClipboardWithFade>{' '}
@@ -449,6 +663,64 @@ class DataBrowser extends Component {
           </Card>
         )}
       </div>
+    )
+  }
+}
+
+class TimestampCell extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      isUpdated: false,
+      animationKey: 0
+    }
+    this.timeoutId = null
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.timestamp !== this.props.timestamp) {
+      if (this.timeoutId) {
+        clearTimeout(this.timeoutId)
+      }
+
+      this.setState((state) => ({
+        isUpdated: true,
+        animationKey: state.animationKey + 1
+      }))
+
+      this.timeoutId = setTimeout(() => {
+        if (!this.props.isPaused) {
+          // Only clear if not paused
+          this.setState({ isUpdated: false })
+        }
+      }, 15000)
+    }
+  }
+
+  componentDidMount() {
+    if (this.props.isPaused) {
+      this.setState({ isUpdated: false })
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId)
+    }
+  }
+
+  render() {
+    return (
+      <td
+        className={`${this.props.className || ''} ${
+          this.state.isUpdated && !this.props.isPaused
+            ? 'timestamp-updated'
+            : ''
+        }`}
+        key={this.state.animationKey}
+      >
+        {this.props.timestamp}
+      </td>
     )
   }
 }

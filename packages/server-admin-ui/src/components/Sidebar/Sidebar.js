@@ -84,13 +84,22 @@ class Sidebar extends Component {
       return (
         <NavItem key={key} className={classes.item}>
           {isExternal(url) ? (
-            <RsNavLink href={url} className={classes.link}>
+            <RsNavLink
+              href={url}
+              className={classes.link}
+              {...(item.props || {})}
+            >
               <i className={classes.icon} />
               {item.name}
               {badge(item.badge)}
             </RsNavLink>
           ) : (
-            <NavLink to={url} className={classes.link} activeClassName="active">
+            <NavLink
+              to={url}
+              className={classes.link}
+              activeClassName="active"
+              {...(item.props || {})}
+            >
               <i className={classes.icon} />
               {item.name}
               {badge(item.badge)}
@@ -303,13 +312,21 @@ const mapStateToProps = (state) => {
   result.items.push({
     name: 'Documentation',
     url: `${window.location.protocol}//${window.location.host}/documentation`,
-    icon: 'icon-book-open'
+    icon: 'icon-book-open',
+    props: {
+      target: '_blank',
+      rel: 'noopener noreferrer'
+    }
   })
 
   result.items.push({
     name: 'OpenApi',
     url: `${window.location.protocol}//${window.location.host}/doc/openapi`,
-    icon: 'icon-energy'
+    icon: 'icon-energy',
+    props: {
+      target: '_blank',
+      rel: 'noopener noreferrer'
+    }
   })
 
   return result

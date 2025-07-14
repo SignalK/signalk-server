@@ -1,4 +1,5 @@
 import { NormalizedDelta, Path, Value } from './deltas'
+import * as Bacon from 'baconjs'
 
 export interface StreamBundle {
   /**

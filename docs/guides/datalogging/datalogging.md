@@ -4,7 +4,7 @@ title: Data Logging
 
 # Data Logging
 
-Signal K server can log all input data from the configure input connections to a hourly data log files.
+Signal K server can log all input data from the configured input connections into hourly data log files.
 
 You can activate data logging for each connection by switching on Data Logging under Server / Data Connections, saving the connection settings. The setting takes effect after restarting the server.
 

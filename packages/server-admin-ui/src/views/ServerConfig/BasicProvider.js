@@ -683,6 +683,35 @@ class UseCanNameInput extends Component {
   }
 }
 
+class CamelCaseCompatInput extends Component {
+  render() {
+    return (
+      <FormGroup row>
+        <Col xs="3" md="3">
+          <Label>CamcelCase Compat (for legacy N2K plugins)</Label>
+        </Col>
+        <Col xs="2" md="3">
+          <Label className="switch switch-text switch-primary">
+            <Input
+              type="checkbox"
+              name="options.useCamelCompat"
+              className="switch-input"
+              onChange={(event) => this.props.onChange(event)}
+              checked={
+                this.props.value.useCamelCompat !== undefined
+                  ? this.props.value.useCamelCompat
+                  : true
+              }
+            />
+            <span className="switch-label" data-on="Yes" data-off="No" />
+            <span className="switch-handle" />
+          </Label>
+        </Col>
+      </FormGroup>
+    )
+  }
+}
+
 class CollectNetworkStatsInput extends Component {
   constructor(props) {
     super(props)
@@ -838,6 +867,12 @@ const NMEA2000 = (props) => {
         </div>
       )}
       <UseCanNameInput value={props.value.options} onChange={props.onChange} />
+      {props.value.options.type.indexOf('canboatjs') != -1 && (
+        <CamelCaseCompatInput
+          value={props.value.options}
+          onChange={props.onChange}
+        />
+      )}
     </div>
   )
 }

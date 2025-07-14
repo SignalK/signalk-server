@@ -32,7 +32,8 @@ import {
   SignalKApiId,
   SourceRef,
   Timestamp,
-  Update
+  Update,
+  WithFeatures
 } from '@signalk/server-api'
 import { FullSignalK, getSourceId } from '@signalk/signalk-schema'
 import express, { IRouter, Request, Response } from 'express'
@@ -41,7 +42,7 @@ import https from 'https'
 import _ from 'lodash'
 import path from 'path'
 import { startApis } from './api'
-import { ServerApp, SignalKMessageHub, WithConfig, WithFeatures } from './app'
+import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache from './deltacache'
@@ -66,6 +67,7 @@ import { WithProviderStatistics } from './deltastats'
 import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { Zones } from './zones'
+import checkNodeVersion from './version'
 const debug = createDebug('signalk-server')
 
 import { StreamBundle } from './streambundle'
@@ -84,6 +86,7 @@ class Server {
     }
 
   constructor(opts: { securityConfig: SecurityConfig }) {
+    checkNodeVersion()
     const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
     const bodyParser = require('body-parser')
     const app = express() as any
@@ -315,11 +318,13 @@ class Server {
         if (data.updates.length < 1) return
 
         try {
-          const preferredDelta = toPreferredDelta(data, now, app.selfContext)
+          let delta = filterStaticSelfData(data, app.selfContext)
+          delta = toPreferredDelta(delta, now, app.selfContext)
+
           if (skVersion == SKVersion.v1) {
-            deltachainV1.process(preferredDelta)
+            deltachainV1.process(delta)
           } else {
-            deltachainV2.process(preferredDelta)
+            deltachainV2.process(delta)
           }
         } catch (err) {
           console.error(err)
@@ -329,7 +334,9 @@ class Server {
 
     app.streambundle = new StreamBundle(app.selfId)
     new Zones(app.streambundle, (delta: Delta) =>
-      app.handleMessage('self.notificationhandler', delta)
+      process.nextTick(() =>
+        app.handleMessage('self.notificationhandler', delta)
+      )
     )
     app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
     app.subscriptionmanager = new SubscriptionManager(app)
@@ -672,4 +679,73 @@ async function startInterfaces(
       }
     })
   )
+}
+
+function filterStaticSelfData(delta: any, selfContext: string) {
+  if (delta.context === selfContext) {
+    delta.updates &&
+      delta.updates.forEach((update: any) => {
+        if ('values' in update && update['$source'] !== 'defaults') {
+          update.values = update.values.reduce((acc: any, pathValue: any) => {
+            const nvp = filterSelfDataKP(pathValue)
+            if (nvp) {
+              acc.push(nvp)
+            }
+            return acc
+          }, [])
+          if (update.values.length == 0) {
+            delete update.values
+          }
+        }
+      })
+  }
+  return delta
+}
+
+function filterSelfDataKP(pathValue: any) {
+  const deepKeys: { [key: string]: string[] } = {
+    '': ['name', 'mmsi']
+  }
+
+  const filteredPaths: string[] = [
+    'design.aisShipType',
+    'design.beam',
+    'design.length',
+    'design.draft',
+    'sensors.gps.fromBow',
+    'sensors.gps.fromCenter'
+  ]
+
+  const deep = deepKeys[pathValue.path]
+
+  const filterValues = (obj: any, items: string[]) => {
+    const res: { [key: string]: any } = {}
+    Object.keys(obj).forEach((k) => {
+      if (!items.includes(k)) {
+        res[k] = obj[k]
+      }
+    })
+    return res
+  }
+
+  if (deep !== undefined) {
+    if (Object.keys(pathValue.value).some((k) => deep.includes(k))) {
+      pathValue.value = filterValues(pathValue.value, deep)
+    }
+    if (pathValue.path === '' && pathValue.value.communication !== undefined) {
+      pathValue.value.communication = filterValues(
+        pathValue.value.communication,
+        ['callsignVhf']
+      )
+      if (Object.keys(pathValue.value.communication).length === 0) {
+        delete pathValue.value.communication
+      }
+    }
+    if (Object.keys(pathValue.value).length == 0) {
+      return null
+    }
+  } else if (filteredPaths.includes(pathValue.path)) {
+    return null
+  }
+  return pathValue
 }

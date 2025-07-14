@@ -1,7 +1,7 @@
 import {
   SKVersion,
   AutopilotProviderRegistry,
-  Features,
+  WithFeatures,
   PropertyValuesEmitter,
   ResourceProviderRegistry,
   WeatherProviderRegistry,
@@ -30,7 +30,7 @@ export interface ServerAPI
     ResourceProviderRegistry,
     AutopilotProviderRegistry,
     WeatherProviderRegistry,
-    Features,
+    WithFeatures,
     CourseApi,
     SelfIdentity {
   /**

@@ -96,8 +96,6 @@ module.exports = (theApp: any) => {
     async start() {
       ensureExists(path.join(theApp.config.configPath, 'plugin-config-data'))
 
-      await startPlugins(theApp)
-
       theApp.getPluginsList = async (enabled?: boolean) => {
         return await getPluginsList(enabled)
       }
@@ -116,6 +114,8 @@ module.exports = (theApp: any) => {
             res.json(err)
           })
       })
+
+      await startPlugins(theApp)
     }
   }
 

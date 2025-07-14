@@ -1,7 +1,7 @@
 /**
  * @ignore this is extended by {@link ServerAPI}, no need to document separately
  */
-export interface Features {
+export interface WithFeatures {
   /**
    * Returns the available APIs and Plugins.
    *
@@ -47,7 +47,7 @@ export interface Features {
    * - `true`: list only enabled features
    * - `false`: list only disabled features
    */
-  getFeatures(onlyEnabled?: boolean): FeatureInfo
+  getFeatures(onlyEnabled?: boolean): Promise<FeatureInfo>
 }
 
 /**

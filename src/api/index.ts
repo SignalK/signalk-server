@@ -1,12 +1,12 @@
 import { IRouter } from 'express'
-import { SignalKMessageHub, WithConfig, WithFeatures } from '../app'
+import { SignalKMessageHub, WithConfig } from '../app'
 import { WithSecurityStrategy } from '../security'
 import { CourseApi, CourseApplication } from './course'
 import { FeaturesApi } from './discovery'
 import { ResourcesApi } from './resources'
 import { WeatherApi } from './weather'
 import { AutopilotApi } from './autopilot'
-import { SignalKApiId } from '@signalk/server-api'
+import { SignalKApiId, WithFeatures } from '@signalk/server-api'
 
 export interface ApiResponse {
   state: 'FAILED' | 'COMPLETED' | 'PENDING'

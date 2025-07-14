@@ -207,7 +207,7 @@ const dataTypeMapping = {
   NMEA2000YD: (options) => {
     const result = [
       new Ydwg02(
-        options.subOptions,
+        { ...options.subOptions },
         options.subOptions.type === 'ydwg02-usb-canboatjs' ? 'usb' : 'network'
       )
     ]
