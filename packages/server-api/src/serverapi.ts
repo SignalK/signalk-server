@@ -130,7 +130,7 @@ export interface ServerAPI
    *
    * @category Status and Debugging
    */
-  debug(msg: string): void
+  debug(msg: any, ...args:any[]): void
 
   /**
    * Register a function to intercept all delta messages _before_ they are processed by the server.
@@ -359,15 +359,23 @@ export interface ServerAPI
   registerPutHandler(
     context: string,
     path: string,
-    callback: () => void,
-    source: string
+    callback: (context: string,
+      path: string,
+      value: any,
+      cb: (result: any) => void
+) => void,
+    source?: string
   ): void
 
   registerActionHandler(
     context: string,
     path: string,
-    callback: () => void,
-    source: string
+    callback: (context: string,
+      path: string,
+      value: any,
+      cb: (result: any) => void
+) => void,
+    source?: string
   ): void
 
   registerHistoryProvider(provider: {
