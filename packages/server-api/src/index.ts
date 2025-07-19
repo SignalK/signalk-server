@@ -24,13 +24,6 @@ export interface RelativePositionOrigin {
   position: Position
 }
 
-export interface ActionResult {
-  state: 'COMPLETED' | 'PENDING' | 'FAILED'
-  statusCode: number
-  message?: string
-  resultStatus?: number
-}
-
 export enum SKVersion {
   v1 = 'v1',
   v2 = 'v2'
