@@ -445,18 +445,17 @@ export interface Metadata {
   description?: string
 }
 
-// Command Types
 export type ActionHandler = (
   context: string,
   path: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any,
   callback?: (result: ActionResult) => void
-) => ActionResult;
+) => ActionResult
 
 export interface ActionResult {
-  state: 'COMPLETED' | 'PENDING' | 'FAILED';
-  statusCode?: number;
-  message?: string;
-  timestamp: string;
+  state: 'COMPLETED' | 'PENDING' | 'FAILED'
+  statusCode?: number
+  message?: string
+  timestamp: string
 }
