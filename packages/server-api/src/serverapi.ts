@@ -359,15 +359,15 @@ export interface ServerAPI
   registerPutHandler(
     context: string,
     path: string,
-    callback: () => void,
-    source: string
+    callback: ActionHandler,
+    source?: string
   ): void
 
   registerActionHandler(
     context: string,
     path: string,
-    callback: () => void,
-    source: string
+    callback: ActionHandler,
+    source?: string
   ): void
 
   registerHistoryProvider(provider: {
@@ -443,4 +443,19 @@ export interface SelfIdentity {
 export interface Metadata {
   units?: string
   description?: string
+}
+
+export type ActionHandler = (
+  context: string,
+  path: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  value: any,
+  callback?: (result: ActionResult) => void
+) => ActionResult
+
+export interface ActionResult {
+  state: 'COMPLETED' | 'PENDING' | 'FAILED'
+  statusCode?: number
+  message?: string
+  timestamp: string
 }
