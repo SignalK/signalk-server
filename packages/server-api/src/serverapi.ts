@@ -130,7 +130,8 @@ export interface ServerAPI
    *
    * @category Status and Debugging
    */
-  debug(msg: string): void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  debug(msg: any, ...args: any[]): void
 
   /**
    * Register a function to intercept all delta messages _before_ they are processed by the server.
