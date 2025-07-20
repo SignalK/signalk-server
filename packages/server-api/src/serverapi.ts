@@ -360,14 +360,14 @@ export interface ServerAPI
     context: string,
     path: string,
     callback: ActionHandler,
-    source: string
+    source?: string
   ): void
 
   registerActionHandler(
     context: string,
     path: string,
     callback: ActionHandler,
-    source: string
+    source?: string
   ): void
 
   registerHistoryProvider(provider: {
