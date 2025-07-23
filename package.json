@@ -18,7 +18,19 @@
     "test-only": "mocha 'test/**/*.[jt]s' 'dist/**/*.test.js'",
     "test": "npm run build && npm run test-only && npm run ci-lint",
     "heroku-postbuild": "npm run build:all",
-    "master-changed-files": "git diff --name-status $(git tag | tail -1)..master"
+    "master-changed-files": "git diff --name-status $(git tag | tail -1)..master",
+    "prepare": "husky install"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,scss,md}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   },
   "bin": {
     "signalk-server": "./bin/signalk-server",
@@ -161,7 +173,8 @@
     "eslint-plugin-prefer-arrow": "^1.2.3",
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.0.0",
-    "lint-staged": "^10.0.3",
+    "husky": "^8.0.0",
+    "lint-staged": "^10.5.4",
     "mocha": "^10.2.0",
     "prettier": "^3.5.3",
     "rimraf": "^6.0.1",
