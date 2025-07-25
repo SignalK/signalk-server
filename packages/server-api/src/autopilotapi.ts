@@ -113,7 +113,7 @@ export interface AutopilotProvider {
    *
    * @param deviceId - identifier of the autopilot device to query.
    */
-  getState(deviceId: string): Promise<string>
+  getState(deviceId: string): Promise<string | null>
 
   /**
    * Sets the autopilot device with the supplied identifier to the supplied state value.
@@ -135,7 +135,7 @@ export interface AutopilotProvider {
    */
   setState(state: string, deviceId: string): Promise<void>
 
-  getMode(deviceId: string): Promise<string>
+  getMode(deviceId: string): Promise<string | null>
   /**
    * Sets the autopilot device with the supplied identifier to the supplied mode value.
    *
@@ -154,7 +154,7 @@ export interface AutopilotProvider {
    * @throws if supplied mode value is invalid.
    */
   setMode(mode: string, deviceId: string): Promise<void>
-  getTarget(deviceId: string): Promise<number>
+  getTarget(deviceId: string): Promise<number | null>
 
   /**
    * Sets target for the autopilot device with the supplied identifier to the supplied value.
