@@ -83,7 +83,8 @@ export interface AutopilotProvider {
    *             engaged: false // not actively steering
    *         }
    *     ]
-   *     modes: ['compass', 'gps', 'wind']
+   *     modes: ['compass', 'gps', 'wind'],  // supported modes of operation
+   *     actions: ['tack', 'gybe']  // actions the autopilot supports
    * },
    *   target: 0.326
    *   mode: 'compass'
@@ -316,6 +317,7 @@ export interface AutopilotStateDef {
 export interface AutopilotOptions {
   states: AutopilotStateDef[]
   modes: string[]
+  actions: string[]
 }
 
 export interface AutopilotInfo {

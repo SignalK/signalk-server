@@ -72,6 +72,14 @@
             },
             "description": "List of valid Mode values.",
             "example": ["compass", "gps"]
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of valid Actions.",
+            "example": ["tack", "gybe"]
           }
         }
       },
