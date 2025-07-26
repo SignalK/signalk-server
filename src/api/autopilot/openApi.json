@@ -72,6 +72,14 @@
             },
             "description": "List of valid Mode values.",
             "example": ["compass", "gps"]
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of valid Actions.",
+            "example": ["tack", "gybe"]
           }
         }
       },
@@ -718,6 +726,26 @@
             }
           }
         },
+        "responses": {
+          "200ActionResponse": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/{id}/advanceWaypoint": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AutopilotIdParam"
+        }
+      ],
+      "post": {
+        "tags": ["autopilot"],
+        "summary": "Advance to next waypoint in route",
+        "description": "Provider plugin will instruct the autopilot to advance to the next waypoint along the route.",
         "responses": {
           "200ActionResponse": {
             "$ref": "#/components/responses/200ActionResponse"

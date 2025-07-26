@@ -6,6 +6,7 @@ export type AutopilotUpdateAttrib =
   | 'target'
   | 'engaged'
   | 'options'
+  | 'availableActions'
   | 'alarm'
 
 const AUTOPILOTUPDATEATTRIBS: AutopilotUpdateAttrib[] = [
@@ -14,6 +15,7 @@ const AUTOPILOTUPDATEATTRIBS: AutopilotUpdateAttrib[] = [
   'target',
   'engaged',
   'options',
+  'availableActions',
   'alarm'
 ]
 
@@ -40,6 +42,13 @@ const AUTOPILOTALARMS: AutopilotAlarm[] = [
 export const isAutopilotAlarm = (s: string) =>
   AUTOPILOTALARMS.includes(s as AutopilotAlarm)
 
+export type AutopilotAction = 'tack' | 'gybe' | 'advanceWaypoint'
+
+const AUTOPILOTACTIONS: AutopilotAction[] = ['tack', 'gybe', 'advanceWaypoint']
+
+export const isAutopilotAction = (s: string) =>
+  AUTOPILOTACTIONS.includes(s as AutopilotAction)
+
 export type TackGybeDirection = 'port' | 'starboard'
 
 export interface AutopilotApi {
@@ -52,13 +61,15 @@ export interface AutopilotApi {
   ): void
 }
 
-/** @see {isAutopilotProvider} ts-auto-guard:type-guard */
 export interface AutopilotProvider {
   /**
    * This method returns an AutopilotInfo object containing the current data values and valid options for the supplied autopilot device identifier.
    *
    * > [!NOTE]
    * > It is the responsibility of the autopilot provider plugin to map the value of `engaged` to the current `state`.
+   *
+   * Additionally, the plugin can maintain a list of `availableActions` that can be taken in the current
+   * operational state.
    *
    * @example
    * API request:
@@ -83,12 +94,14 @@ export interface AutopilotProvider {
    *             engaged: false // not actively steering
    *         }
    *     ]
-   *     modes: ['compass', 'gps', 'wind']
+   *     modes: ['compass', 'gps', 'wind'],  // supported modes of operation
+   *     actions: ['tack', 'gybe']  // actions the autopilot supports
    * },
    *   target: 0.326
    *   mode: 'compass'
    *   state: 'auto'
-   *   engaged: true
+   *   engaged: true,
+   *   availableActions: ['tack']
    * }
    * ```
    *
@@ -112,7 +125,7 @@ export interface AutopilotProvider {
    *
    * @param deviceId - identifier of the autopilot device to query.
    */
-  getState(deviceId: string): Promise<string>
+  getState(deviceId: string): Promise<string | null>
 
   /**
    * Sets the autopilot device with the supplied identifier to the supplied state value.
@@ -134,7 +147,7 @@ export interface AutopilotProvider {
    */
   setState(state: string, deviceId: string): Promise<void>
 
-  getMode(deviceId: string): Promise<string>
+  getMode(deviceId: string): Promise<string | null>
   /**
    * Sets the autopilot device with the supplied identifier to the supplied mode value.
    *
@@ -153,7 +166,7 @@ export interface AutopilotProvider {
    * @throws if supplied mode value is invalid.
    */
   setMode(mode: string, deviceId: string): Promise<void>
-  getTarget(deviceId: string): Promise<number>
+  getTarget(deviceId: string): Promise<number | null>
 
   /**
    * Sets target for the autopilot device with the supplied identifier to the supplied value.
@@ -229,6 +242,24 @@ export interface AutopilotProvider {
    * @throws on error.
    */
   disengage(deviceId: string): Promise<void>
+
+  /**
+   * instructs the autopilot device to advance to the next waypoint on the route.
+   *
+   * @example
+   * API request
+   * ```
+   * POST /signalk/v2/api/vessels/self/autopilots/mypilot1/advanceWaypoint
+   * ```
+   * AutopilotProvider method invocation
+   * ```javascript
+   * advanceWaypoint('mypilot1');
+   * ```
+   *
+   * @param deviceId - identifier of the autopilot device to query.
+   * @throws on error.
+   */
+  advanceWaypoint(deviceId: string): Promise<void>
 
   /**
    * Instructs the autopilot device with the supplied identifier to perform a tack in the supplied direction.
@@ -316,6 +347,7 @@ export interface AutopilotStateDef {
 export interface AutopilotOptions {
   states: AutopilotStateDef[]
   modes: string[]
+  actions: AutopilotAction[]
 }
 
 export interface AutopilotInfo {
@@ -324,6 +356,7 @@ export interface AutopilotInfo {
   mode: string | null
   state: string | null
   engaged: boolean
+  availableActions: AutopilotAction[]
 }
 
 /**
