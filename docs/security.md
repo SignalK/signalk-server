@@ -22,6 +22,7 @@ When Signal K Server does not have security enabled, the `Login` option at the t
 Security can be enabled in several ways:
 
 1. Using the Admin UI, select _Security -> Users_ and then:
+
    - Click **Add**
    - Enter a **user id**
    - Enter a **password** and confirm it

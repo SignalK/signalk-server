@@ -735,6 +735,26 @@
           }
         }
       }
+    },
+    "/{id}/advanceWaypoint": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AutopilotIdParam"
+        }
+      ],
+      "post": {
+        "tags": ["autopilot"],
+        "summary": "Advance to next waypoint in route",
+        "description": "Provider plugin will instruct the autopilot to advance to the next waypoint along the route.",
+        "responses": {
+          "200ActionResponse": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
     }
   }
 }
