@@ -15,7 +15,7 @@ import {
   Path,
   Value,
   Delta,
-  isAutopilotProvider,
+  //isAutopilotProvider,
   isAutopilotUpdateAttrib,
   isAutopilotAlarm,
   PathValue,
@@ -68,20 +68,20 @@ export class AutopilotApi {
     if (!devices) {
       throw new Error(`${pluginId} has not supplied a device list!`)
     }
-    if (!isAutopilotProvider(provider)) {
+    /*if (!isAutopilotProvider(provider)) {
       throw new Error(
         `${pluginId} is missing AutopilotProvider properties/methods!`
       )
-    } else {
-      if (!this.autopilotProviders.has(pluginId)) {
-        this.autopilotProviders.set(pluginId, provider)
-      }
-      devices.forEach((id: string) => {
-        if (!this.deviceToProvider.has(id)) {
-          this.deviceToProvider.set(id, pluginId)
-        }
-      })
+    } else {*/
+    if (!this.autopilotProviders.has(pluginId)) {
+      this.autopilotProviders.set(pluginId, provider)
     }
+    devices.forEach((id: string) => {
+      if (!this.deviceToProvider.has(id)) {
+        this.deviceToProvider.set(id, pluginId)
+      }
+    })
+    //}
     debug(
       `No. of AutoPilotProviders registered =`,
       this.autopilotProviders.size
@@ -333,7 +333,7 @@ export class AutopilotApi {
       (req: Request, res: Response) => {
         this.useProvider(req)
           .getState(req.params.id)
-          .then((r: string) => {
+          .then((r: string | null) => {
             res.json({ value: r })
           })
           .catch((err) => {
@@ -375,7 +375,7 @@ export class AutopilotApi {
       (req: Request, res: Response) => {
         this.useProvider(req)
           .getMode(req.params.id)
-          .then((r: string) => {
+          .then((r: string | null) => {
             res.json({ value: r })
           })
           .catch((err) => {
@@ -417,7 +417,7 @@ export class AutopilotApi {
       (req: Request, res: Response) => {
         this.useProvider(req)
           .getTarget(req.params.id)
-          .then((r: number) => {
+          .then((r: number | null) => {
             res.json({ value: r })
           })
           .catch((err) => {
@@ -483,6 +483,25 @@ export class AutopilotApi {
         debug('target = ', v)
         this.useProvider(req)
           .adjustTarget(v, req.params.id)
+          .then(() => {
+            res.status(Responses.ok.statusCode).json(Responses.ok)
+          })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
+          })
+      }
+    )
+
+    // advance waypoint
+    this.server.post(
+      `${AUTOPILOT_API_PATH}/:id/advanceWaypoint`,
+      (req: Request, res: Response) => {
+        this.useProvider(req)
+          .advanceWaypoint(req.params.id)
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
