@@ -15,7 +15,7 @@ import {
   Path,
   Value,
   Delta,
-  //isAutopilotProvider,
+  isAutopilotProvider,
   isAutopilotUpdateAttrib,
   isAutopilotAlarm,
   PathValue,
@@ -68,20 +68,20 @@ export class AutopilotApi {
     if (!devices) {
       throw new Error(`${pluginId} has not supplied a device list!`)
     }
-    /*if (!isAutopilotProvider(provider)) {
+    if (!isAutopilotProvider(provider)) {
       throw new Error(
         `${pluginId} is missing AutopilotProvider properties/methods!`
       )
-    } else {*/
-    if (!this.autopilotProviders.has(pluginId)) {
-      this.autopilotProviders.set(pluginId, provider)
-    }
-    devices.forEach((id: string) => {
-      if (!this.deviceToProvider.has(id)) {
-        this.deviceToProvider.set(id, pluginId)
+    } else {
+      if (!this.autopilotProviders.has(pluginId)) {
+        this.autopilotProviders.set(pluginId, provider)
       }
-    })
-    //}
+      devices.forEach((id: string) => {
+        if (!this.deviceToProvider.has(id)) {
+          this.deviceToProvider.set(id, pluginId)
+        }
+      })
+    }
     debug(
       `No. of AutoPilotProviders registered =`,
       this.autopilotProviders.size

@@ -1,5 +1,8 @@
 import { Value } from './deltas'
 
+/**
+ * Valid autopilot delta path names.
+ */
 export type AutopilotUpdateAttrib =
   | 'mode'
   | 'state'
@@ -9,6 +12,7 @@ export type AutopilotUpdateAttrib =
   | 'availableActions'
   | 'alarm'
 
+/**@hidden */
 const AUTOPILOTUPDATEATTRIBS: AutopilotUpdateAttrib[] = [
   'mode',
   'state',
@@ -19,9 +23,15 @@ const AUTOPILOTUPDATEATTRIBS: AutopilotUpdateAttrib[] = [
   'alarm'
 ]
 
-export const isAutopilotUpdateAttrib = (s: string) =>
-  AUTOPILOTUPDATEATTRIBS.includes(s as AutopilotUpdateAttrib)
+/**
+ * This method returns true if the supplied value represents a valid autopilot delta path.
+ */
+export const isAutopilotUpdateAttrib = (value: string) =>
+  AUTOPILOTUPDATEATTRIBS.includes(value as AutopilotUpdateAttrib)
 
+/**
+ * Valid autopilot alarm delta path names.
+ */
 export type AutopilotAlarm =
   | 'waypointAdvance'
   | 'waypointArrival'
@@ -30,6 +40,7 @@ export type AutopilotAlarm =
   | 'heading'
   | 'wind'
 
+/** @hidden */
 const AUTOPILOTALARMS: AutopilotAlarm[] = [
   'waypointAdvance',
   'waypointArrival',
@@ -39,17 +50,54 @@ const AUTOPILOTALARMS: AutopilotAlarm[] = [
   'wind'
 ]
 
-export const isAutopilotAlarm = (s: string) =>
-  AUTOPILOTALARMS.includes(s as AutopilotAlarm)
+/**
+ * This method returns true if the supplied value represents a valid autopilot alarm delta path.
+ */
+export const isAutopilotAlarm = (value: string) =>
+  AUTOPILOTALARMS.includes(value as AutopilotAlarm)
 
+/**
+ * Valid autopilot actions.
+ */
 export type AutopilotAction = 'tack' | 'gybe' | 'advanceWaypoint'
 
+/** @hidden */
 const AUTOPILOTACTIONS: AutopilotAction[] = ['tack', 'gybe', 'advanceWaypoint']
 
-export const isAutopilotAction = (s: string) =>
-  AUTOPILOTACTIONS.includes(s as AutopilotAction)
+/**
+ * This method returns true if the supplied value represents a valid autopilot action.
+ */
+export const isAutopilotAction = (value: string) =>
+  AUTOPILOTACTIONS.includes(value as AutopilotAction)
 
+/**
+ * Valid tack / gybe action direction values.
+ */
 export type TackGybeDirection = 'port' | 'starboard'
+
+/**
+ * This method returns true if the supplied object is a valid AutopilotProvider.
+ */
+export const isAutopilotProvider = (obj: unknown) => {
+  const typedObj = obj as AutopilotProvider
+  return (
+    ((typedObj !== null && typeof typedObj === 'object') ||
+      typeof typedObj === 'function') &&
+    typeof typedObj['getData'] === 'function' &&
+    typeof typedObj['getState'] === 'function' &&
+    typeof typedObj['setState'] === 'function' &&
+    typeof typedObj['getMode'] === 'function' &&
+    typeof typedObj['setMode'] === 'function' &&
+    typeof typedObj['getTarget'] === 'function' &&
+    typeof typedObj['setTarget'] === 'function' &&
+    typeof typedObj['adjustTarget'] === 'function' &&
+    typeof typedObj['engage'] === 'function' &&
+    typeof typedObj['disengage'] === 'function' &&
+    typeof typedObj['tack'] === 'function' &&
+    typeof typedObj['gybe'] === 'function' &&
+    typeof typedObj['dodge'] === 'function'
+  )
+}
 
 export interface AutopilotApi {
   register(pluginId: string, provider: AutopilotProvider): void
