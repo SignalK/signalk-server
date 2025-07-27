@@ -326,4 +326,4 @@ HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/
 
 Whilst not performing course calculations, the _Course API_ defines the paths to accommodate the values calculated during course navigation.
 
-Click [here](./course_calculations.md) for details.
+Click [here](../plugins/course_calculations.md) for details.
