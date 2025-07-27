@@ -47,16 +47,20 @@
           { "name": "standby", "engaged": false }
         ]
       },
+      "autopilotActions": {
+        "title": "Autopilot actions",
+        "description": "List of actions that can be invoked by the autopilot",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["tack", "gybe", "advanceWaypoint"]
+        },
+        "example": ["tack", "gybe"]
+      },
       "autopilotOptions": {
         "type": "object",
         "title": "Autopilot configuration options",
         "description": "A collection of configuration options and their valid values",
-        "additionalProperties": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
         "properties": {
           "states": {
             "type": "array",
@@ -74,12 +78,7 @@
             "example": ["compass", "gps"]
           },
           "actions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "List of valid Actions.",
-            "example": ["tack", "gybe"]
+            "$ref": "#/components/schemas/autopilotActions"
           }
         }
       },
@@ -296,6 +295,9 @@
                       "description": "Current target value (radians)",
                       "type": "number",
                       "example": 2.8762
+                    },
+                    "availableActions": {
+                      "$ref": "#/components/schemas/autopilotActions"
                     },
                     "options": {
                       "$ref": "#/components/schemas/autopilotOptions"
