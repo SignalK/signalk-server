@@ -5,6 +5,7 @@ const tseslint = require('typescript-eslint')
 const prettier = require('eslint-config-prettier/flat')
 const react = require('eslint-plugin-react')
 const chai = require('eslint-plugin-chai-friendly')
+const importPlugin = require('eslint-plugin-import')
 
 module.exports = defineConfig([
   globalIgnores(['**/public', '**/dist']),
@@ -13,9 +14,15 @@ module.exports = defineConfig([
   {
     files: ['**/*.ts'],
     extends: [common('@typescript-eslint/'), tseslint.configs.recommended],
+    plugins: {
+      import: importPlugin
+    },
     languageOptions: {
       parser: tseslint.parser,
       globals: globals.node
+    },
+    rules: {
+      'import/no-extraneous-dependencies': 'error'
     }
   },
 
@@ -23,8 +30,14 @@ module.exports = defineConfig([
   {
     files: ['**/*.js'],
     extends: [common(), js.configs.recommended],
+    plugins: {
+      import: importPlugin
+    },
     languageOptions: {
       globals: globals.node
+    },
+    rules: {
+      'import/no-extraneous-dependencies': 'error'
     }
   },
 
@@ -34,10 +47,14 @@ module.exports = defineConfig([
       '{src,packages/*/src}/**/*.test.{ts,js}',
       '{test,packages/*/test}/**/*.{js,ts}'
     ],
-    plugins: { chai },
+    plugins: {
+      chai,
+      import: importPlugin
+    },
     rules: {
       'no-unused-expressions': 'off', // disable original rule
-      'chai/no-unused-expressions': 'error'
+      'chai/no-unused-expressions': 'error',
+      'import/no-extraneous-dependencies': ['error', { devDependencies: true }]
     },
     languageOptions: {
       parser: tseslint.parser,
@@ -54,6 +71,9 @@ module.exports = defineConfig([
     },
     files: ['packages/server-admin-ui/src/**/*.js'],
     extends: [common(), react.configs.flat.recommended],
+    plugins: {
+      import: importPlugin
+    },
     languageOptions: {
       parserOptions: {
         ecmaFeatures: {
@@ -67,7 +87,8 @@ module.exports = defineConfig([
     rules: {
       'react/prop-types': 'off',
       'react/no-string-refs': 'off',
-      'react/no-direct-mutation-state': 'off'
+      'react/no-direct-mutation-state': 'off',
+      'import/no-extraneous-dependencies': 'error'
     }
   },
 
