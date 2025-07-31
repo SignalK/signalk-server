@@ -84,6 +84,8 @@ If you choose not to use `signalk-server-setup` you can start the server by ente
 signalk-server
 ```
 
+There is an experimental MINIMIZE_DISK_USAGE environment flag that when set runs a postinstall cleanup script that removes files that strictly not needed for operating the server, like sample data files and debugging related files.
+
 ---
 
 ## Installing on Windows
