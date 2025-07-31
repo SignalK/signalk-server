@@ -16,6 +16,7 @@
 
 const Transform = require('stream').Transform
 const FromPgn = require('@canboat/canboatjs').FromPgn
+const { checkPrime } = require('crypto')
 const _ = require('lodash')
 
 function CanboatJs(options) {
@@ -56,6 +57,9 @@ CanboatJs.prototype._transform = function (chunk, encoding, done) {
     } else {
       this.app.emit('canboatjs:unparsed:object', chunk)
     }
+    if ( chunk.fromFile ) {
+      this.app.emit('canboatjs:rawoutput', chunk.data)
+    }
   } else {
     const pgnData = this.fromPgn.parse(chunk)
     if (pgnData) {
@@ -64,6 +68,7 @@ CanboatJs.prototype._transform = function (chunk, encoding, done) {
     } else {
       this.app.emit('canboatjs:unparsed:data', chunk)
     }
+    this.app.emit('canboatjs:rawoutput', chunk)
   }
   done()
 }
