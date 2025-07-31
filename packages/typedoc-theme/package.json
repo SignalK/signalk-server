@@ -1,5 +1,5 @@
 {
-  "name": "typedoc-signalk-theme",
+  "name": "@signalk/typedoc-signalk-theme",
   "description": "A TypeDoc theme for SignalK",
   "version": "0.3.0",
   "main": "./dist/index.js",
