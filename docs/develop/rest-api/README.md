@@ -1,13 +1,12 @@
 ---
 title: REST APIs
 children:
-  - course_api.md
-  - course_calculations.md
-  - resources_api.md
-  - notifications_api.md
   - autopilot_api.md
-  - anchor_api.md
+  - course_api.md
   - plugin_api.md
+  - resources_api.md
+  - ./proposed/README.md
+ 
 ---
 
 # REST APIs
@@ -32,7 +31,7 @@ APIs are available via `/signalk/v2/api/<endpoint>`
 
 | Proposed API                              | Description                                                                                                                                          | Endpoint                         |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| _[`Notifications`](notifications_api.md)_ | Provide the ability to raise, update and clear notifications from multiple sources. _[View PR](https://github.com/SignalK/signalk-server/pull/1560)_ | `notifications`                  |
-| _[`Anchor`](./anchor_api.md)_             | Provide endpoints to perform operations and facilitate an anchor alarm.                                                                              | `vessels/self/navigation/anchor` |
+| _[`Notifications`](proposed/notifications_api.md)_ | Provide the ability to raise, update and clear notifications from multiple sources. _[View PR](https://github.com/SignalK/signalk-server/pull/1560)_ | `notifications`                  |
+| _[`Anchor`](proposed/anchor_api.md)_             | Provide endpoints to perform operations and facilitate an anchor alarm.                                                                              | `vessels/self/navigation/anchor` |
 
 ---

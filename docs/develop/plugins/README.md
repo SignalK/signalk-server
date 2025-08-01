@@ -4,9 +4,9 @@ children:
   - ../webapps.md
   - deltas.md
   - configuration.md
-  - resource_provider_plugins.md
-  - ../rest-api/course_calculations.md
   - autopilot_provider_plugins.md
+  - course_calculations.md
+  - resource_provider_plugins.md
   - publishing.md
 ---
 

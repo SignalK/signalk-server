@@ -277,6 +277,7 @@ The Course API can be configured to ignore destination data in the NMEA stream b
 In `apiOnly` mode destination information can only be set / cleared using HTTP API requests.
 
 - **`apiOnly` Mode = Off _(default)_**
+
   - Destination data is accepted from both _HTTP API_ and _NMEA_ sources
   - Setting a destination using the HTTP API will override the destination data received via NMEA
   - When clearing the destination using the HTTP API, if destination data is received via NMEA this will then be used as the active destination.
@@ -325,4 +326,4 @@ HTTP DELETE 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/
 
 Whilst not performing course calculations, the _Course API_ defines the paths to accommodate the values calculated during course navigation.
 
-Click [here](./course_calculations.md) for details.
+Click [here](../plugins/course_calculations.md) for details.

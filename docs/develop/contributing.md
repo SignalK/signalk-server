@@ -76,6 +76,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
 1. Create your patch.
 1. Commit your changes using a descriptive commit message that follows the
    [conventions outlined here](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#commits). Whilst we are not 100% strict about this, it really helps when reviewing the PR and in making the commit history readable. The TL;DR of it is below.
+
    - The subject line should be in the format `<type>: <subject>`, where `<type>` should be one of:
      - feat (feature)
      - fix (bug fix)
@@ -105,6 +106,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
 
 - Use the same guidelines as commit messages to write the PR title and description. The server's release notes are automatically generated from PR titles, so think about how you can make them informative and easy to understand. The description should tell how the change affects the server's behavior and motivation for doing the change.
 - If we suggest changes to your PR we expect you to:
+
   - Implement the agreed changes.
   - Rebase your branch and force push to your GitHub repository (this will update your Pull Request):
 
