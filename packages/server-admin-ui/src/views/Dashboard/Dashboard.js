@@ -84,7 +84,7 @@ const Dashboard = (props) => {
         <span className="title">
           {linkType === 'plugin'
             ? pluginNameLink(providerId)
-            : providerIdLink(providerId)}
+            : providerIdLink(providerId, providerStats.displayName)}
         </span>
         {providerStats.writeRate > 0 && (
           <span className="value">
@@ -285,13 +285,14 @@ function pluginNameLink(id) {
   return <a href={'#/serverConfiguration/plugins/' + id}>{id}</a>
 }
 
-function providerIdLink(id) {
+function providerIdLink(id, displayName) {
+  const linkText = displayName || id
   if (id === 'defaults') {
-    return <a href={'#/serverConfiguration/settings'}>{id}</a>
+    return <a href={'#/serverConfiguration/settings'}>{linkText}</a>
   } else if (id.startsWith('ws.')) {
-    return <a href={'#/security/devices'}>{id}</a>
+    return <a href={'#/security/devices'}>{linkText}</a>
   } else {
-    return <a href={'#/serverConfiguration/connections/' + id}>{id}</a>
+    return <a href={'#/serverConfiguration/connections/' + id}>{linkText}</a>
   }
 }
 
