@@ -9,7 +9,8 @@ jobs:
   build-images:
     strategy:
       matrix:
-        os: [22.04, 24.04]
+        os: [24.04]
+        node: [22.x, 24.x]
         vm: [ubuntu-latest, ubuntu-24.04-arm]
         include:
           - vm: ubuntu-latest
@@ -38,12 +39,14 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           tags: |
-            ghcr.io/signalk/signalk-server-base:${{ matrix.arch }}-${{ matrix.os }}
+            ghcr.io/signalk/signalk-server-base:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node }}
+          build-args: |
+            NODE=${{ matrix.node }}
 
       - name: Modify Dockerfile_rel for testing
         run: |
           sed -i \
-            "s|cr.signalk.io/signalk/signalk-server-base:latest|ghcr.io/signalk/signalk-server-base:${{ matrix.arch }}-${{ matrix.os }}|g" \
+            "s|cr.signalk.io/signalk/signalk-server-base:latest|ghcr.io/signalk/signalk-server-base:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node }}|g" \
             ./docker/Dockerfile_rel
 
       - name: Build Signal K test docker image
@@ -60,7 +63,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [22.04, 24.04]
+        os: [24.04]
+        node: [22.x, 24.x]
 
     steps:
       - name: Login to ghcr.io
@@ -80,11 +84,11 @@ jobs:
         uses: int128/docker-manifest-create-action@v2
         with:
           tags: |
-            ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}
-            signalk/signalk-server-base:latest-${{ matrix.os }}
+            ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}-${{ matrix.node }}
+            signalk/signalk-server-base:latest-${{ matrix.os }}-${{ matrix.node }}
           sources: |
-            ghcr.io/signalk/signalk-server-base:amd-${{ matrix.os }}
-            ghcr.io/signalk/signalk-server-base:arm-${{ matrix.os }}
+            ghcr.io/signalk/signalk-server-base:amd-${{ matrix.os }}-${{ matrix.node }}
+            ghcr.io/signalk/signalk-server-base:arm-${{ matrix.os }}-${{ matrix.node }}
 
   housekeeping:
     needs: create-and-push-manifest
@@ -98,5 +102,5 @@ jobs:
         with:
           packages: signalk-server-base
           delete-untagged: true
-          delete-tags: amd-22.04,arm-22.04,amd-24.04,arm-24.04
+          delete-tags: amd-24.04-22.x,arm-24.04-24.x
           token: ${{ secrets.GHCR_PAT }} # Need to have delete permission
