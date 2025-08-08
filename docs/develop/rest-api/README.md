@@ -6,7 +6,6 @@ children:
   - plugin_api.md
   - resources_api.md
   - ./proposed/README.md
- 
 ---
 
 # REST APIs
@@ -29,9 +28,9 @@ APIs are available via `/signalk/v2/api/<endpoint>`
 
 #### Following is a list of proposed APIs for implementation:
 
-| Proposed API                              | Description                                                                                                                                          | Endpoint                         |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| Proposed API                                       | Description                                                                                                                                          | Endpoint                         |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | _[`Notifications`](proposed/notifications_api.md)_ | Provide the ability to raise, update and clear notifications from multiple sources. _[View PR](https://github.com/SignalK/signalk-server/pull/1560)_ | `notifications`                  |
-| _[`Anchor`](proposed/anchor_api.md)_             | Provide endpoints to perform operations and facilitate an anchor alarm.                                                                              | `vessels/self/navigation/anchor` |
+| _[`Anchor`](proposed/anchor_api.md)_               | Provide endpoints to perform operations and facilitate an anchor alarm.                                                                              | `vessels/self/navigation/anchor` |
 
 ---
