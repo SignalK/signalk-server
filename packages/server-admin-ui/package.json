@@ -38,7 +38,7 @@
     "moment": "^2.29.1",
     "react": "^16.13.1",
     "react-copy-to-clipboard": "^5.0.3",
-    "react-dom": "^16.13.1",
+    "react-dom": "^19.1.1",
     "react-html-parser": "^2.0.2",
     "react-json-tree": "^0.20.0",
     "react-jsonschema-form-bs4": "^1.7.1",
