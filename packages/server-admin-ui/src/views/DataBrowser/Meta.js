@@ -241,7 +241,8 @@ const UNITS = {
   rad: 'Radian',
   'rad/s': 'Radians per second',
   ratio: 'Ratio',
-  s: 'Second'
+  s: 'Second',
+  bool: 'Boolean'
 }
 
 const saveMeta = (path, meta) => {
