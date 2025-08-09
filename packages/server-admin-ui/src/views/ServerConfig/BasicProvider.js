@@ -808,6 +808,7 @@ const NMEA2000 = (props) => {
       )}
       {props.value.options.type === 'ydwg02-udp-canboatjs' && (
         <div>
+          <HostInput value={props.value.options} onChange={props.onChange} />
           <PortInput value={props.value.options} onChange={props.onChange} />
         </div>
       )}
