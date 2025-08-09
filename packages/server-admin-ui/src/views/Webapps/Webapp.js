@@ -15,7 +15,8 @@ const propTypes = {
   children: PropTypes.node,
   className: PropTypes.string,
   cssModule: PropTypes.object,
-  bgImage: PropTypes.string
+  bgImage: PropTypes.string,
+  bgImageUrl: PropTypes.string
 }
 
 const defaultProps = {
@@ -109,7 +110,7 @@ class Widget02 extends Component {
           <CardBody className={card.classes} {...attributes}>
             {blockIcon(
               card.icon,
-              this.props.bgImage && `${this.props.url}/${this.props.bgImage}`
+              this.props.bgImageUrl || (this.props.bgImage && `${this.props.url}/${this.props.bgImage}`)
             )}
             <div className={lead.classes}>{header}</div>
             <div className="text-muted font-xs">{mainText}</div>

@@ -52,6 +52,9 @@ class Webapps extends Component {
                   )
                     ? `/admin/#/e/${toSafeModuleId(webappInfo.name)}`
                     : `/${webappInfo.name}`
+                  const bgImageUrl = webappInfo.signalk && webappInfo.signalk.appIcon
+                    ? `/${webappInfo.name}/${webappInfo.signalk.appIcon}`
+                    : undefined
                   return (
                     <Col xs="12" md="12" lg="6" xl="4" key={webappInfo.name}>
                       <Webapp
@@ -69,11 +72,10 @@ class Webapps extends Component {
                             : 'icon-grid'
                         }`}
                         color="primary"
-                        bgImage={
-                          webappInfo.signalk && webappInfo.signalk.appIcon
-                            ? webappInfo.signalk.appIcon
-                            : undefined
-                        }
+                        bgImage={webappInfo.signalk && webappInfo.signalk.appIcon
+                          ? webappInfo.signalk.appIcon
+                          : undefined}
+                        bgImageUrl={bgImageUrl}
                       />
                     </Col>
                   )
