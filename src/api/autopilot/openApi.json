@@ -47,16 +47,20 @@
           { "name": "standby", "engaged": false }
         ]
       },
+      "autopilotActions": {
+        "title": "Autopilot actions",
+        "description": "List of actions that can be invoked by the autopilot",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["tack", "gybe", "advanceWaypoint"]
+        },
+        "example": ["tack", "gybe"]
+      },
       "autopilotOptions": {
         "type": "object",
         "title": "Autopilot configuration options",
         "description": "A collection of configuration options and their valid values",
-        "additionalProperties": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
         "properties": {
           "states": {
             "type": "array",
@@ -72,6 +76,9 @@
             },
             "description": "List of valid Mode values.",
             "example": ["compass", "gps"]
+          },
+          "actions": {
+            "$ref": "#/components/schemas/autopilotActions"
           }
         }
       },
@@ -288,6 +295,9 @@
                       "description": "Current target value (radians)",
                       "type": "number",
                       "example": 2.8762
+                    },
+                    "availableActions": {
+                      "$ref": "#/components/schemas/autopilotActions"
                     },
                     "options": {
                       "$ref": "#/components/schemas/autopilotOptions"
@@ -718,6 +728,26 @@
             }
           }
         },
+        "responses": {
+          "200ActionResponse": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/{id}/advanceWaypoint": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AutopilotIdParam"
+        }
+      ],
+      "post": {
+        "tags": ["autopilot"],
+        "summary": "Advance to next waypoint in route",
+        "description": "Provider plugin will instruct the autopilot to advance to the next waypoint along the route.",
         "responses": {
           "200ActionResponse": {
             "$ref": "#/components/responses/200ActionResponse"

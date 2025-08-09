@@ -90,6 +90,15 @@ _Example: List of registered autopilots showing that `pypilot-id` is assigned as
 
 Deltas emitted by the Autopilot API will have the base path `steering.autopilot` with the `$source` containing the autopilot device identifier.
 
+Deltas are emitted for the following paths:
+
+- `steering.autopilot.defaultPilot`
+- `steering.autopilot.engaged`
+- `steering.autopilot.state`
+- `steering.autopilot.mode`
+- `steering.autopilot.target`
+- `steering.autopilot.availableActions`
+
 _Example: Deltas for `autopilot.engaged` from two autopilots (`raymarine-id`)._
 
 ```JSON
@@ -155,6 +164,33 @@ _Example:_
 ## Autopilot offline / unreachable
 
 If an autopilot device is not connected or unreachable, the provider for that autopilot device will set the `state` of the device to `off-line`.
+
+## Autopilot Actions
+
+The Autopilot API allows providers to list all the "actions" that are supported by the device _(e.g. tack, gybe, etc)_.
+
+A set of normalised actions are defined to simplify client processing and UI trimming:
+
+- `tack`
+- `gybe`
+- `advanceWaypoint`
+
+These actions are listed inin the current state of operation can be provided to clients to facilitate UI trimming.
+
+```JSON
+{
+  "options": {
+    "states": [...],
+    "modes": [...],
+    "actions": ["tack", "advanceWaypoint"] // all actions provided by the device
+  },
+  "state": "disabled",
+  "mode": "wind",
+  "target": 0.43,
+  "engaged": true,
+  "availableActions": ["tack"]  // actions relevant to current operating mode
+}
+```
 
 ## Autopilot Operations
 
@@ -349,6 +385,16 @@ _Example: Gybe to Starboard_
 
 ```typescript
 HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/gybe/starboard"
+```
+
+### Advancing Waypoint
+
+To send a command to the autopilot to advance to the next waypoint on a route, submit an HTTP `POST` request to `./autopilots/{id}/advanceWaypoint`.
+
+_Example:_
+
+```typescript
+HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/advanceWaypoint"
 ```
 
 ### Dodging Obstacles
