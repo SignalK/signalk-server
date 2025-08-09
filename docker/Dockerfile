@@ -1,5 +1,5 @@
 ARG REGISTRY="cr.signalk.io"
-ARG UBUNTU_VERSION="24.04"
+ARG UBUNTU_VERSION="24.04-22.x"
 
 FROM ${REGISTRY}/signalk/signalk-server-base:latest-${UBUNTU_VERSION} AS base
 

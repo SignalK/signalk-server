@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Context, Path, SourceRef } from '@signalk/server-api'
+import type { Context, Path, SourceRef } from '@signalk/server-api'
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:sourcepriorities')
 
@@ -11,6 +11,8 @@ interface SourcePriority {
 export interface SourcePrioritiesData {
   [path: string]: SourcePriority[]
 }
+
+export const SourcePrioritiesData: SourcePrioritiesData = {}
 
 interface PathValue {
   path: string

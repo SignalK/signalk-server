@@ -1,4 +1,5 @@
 FROM ubuntu:24.04
+ARG NODE
 
 RUN userdel -r ubuntu
 RUN groupadd --gid 1000 node \
@@ -11,7 +12,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteract
 # Modification to set time without need to use sudo
 RUN chmod u+s /usr/bin/date
 
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+RUN curl -fsSL https://deb.nodesource.com/setup_$NODE | bash - \
   && DEBIAN_FRONTEND=noninteractive apt-get -y install nodejs \
   && npm config rm proxy \
   && npm config rm https-proxy \
