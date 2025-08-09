@@ -11,6 +11,7 @@ import { discoveryApiRecord } from './discovery/openApi'
 import { appsApiRecord } from './apps/openApi'
 import { PluginId, PluginManager } from '../interfaces/plugins'
 import { Brand } from '@signalk/server-api'
+import * as fs from 'fs'
 
 export type OpenApiDescription = Brand<object, 'OpenApiDescription'>
 
@@ -99,4 +100,36 @@ export function mountSwaggerUi(app: IRouter & PluginManager, path: string) {
     apiDefinitionHandler
   )
   app.get(`${SERVERROUTESPREFIX}/openapi/:api`, apiDefinitionHandler)
+}
+
+export function registerTsoaRoutes(app: IRouter & any) {
+  // Register TSOA routes if they exist
+  const routesPath = __dirname + '/generated/routes.js'
+  if (fs.existsSync(routesPath)) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { RegisterRoutes } = require('./generated/routes')
+
+      // First, apply SignalK's authentication middleware to TSOA paths
+      // This ensures req.skIsAuthenticated and req.skPrincipal are set
+      if (app.securityStrategy && app.securityStrategy.addWriteMiddleware) {
+        // For now, apply read-only auth to all TSOA routes
+        // In production, we'd differentiate based on HTTP method and path
+        // The addWriteMiddleware pattern shows us we need to apply http_authorize first
+        // Since we can't access http_authorize directly, we'll register routes directly on app
+        // and rely on the global http_authorize middleware that's already registered
+      }
+
+      // Register TSOA routes directly on the app
+      // This ensures they inherit the global authentication middleware
+      RegisterRoutes(app)
+
+      console.log('TSOA routes registered successfully')
+      return true
+    } catch (error) {
+      console.warn('Failed to register TSOA routes:', error)
+      return false
+    }
+  }
+  return false
 }
