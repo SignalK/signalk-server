@@ -57,20 +57,6 @@ export const isAutopilotAlarm = (value: string) =>
   AUTOPILOTALARMS.includes(value as AutopilotAlarm)
 
 /**
- * Valid autopilot actions.
- */
-export type AutopilotAction = 'tack' | 'gybe' | 'advanceWaypoint'
-
-/** @hidden */
-const AUTOPILOTACTIONS: AutopilotAction[] = ['tack', 'gybe', 'advanceWaypoint']
-
-/**
- * This method returns true if the supplied value represents a valid autopilot action.
- */
-export const isAutopilotAction = (value: string) =>
-  AUTOPILOTACTIONS.includes(value as AutopilotAction)
-
-/**
  * Valid tack / gybe action direction values.
  */
 export type TackGybeDirection = 'port' | 'starboard'
@@ -131,7 +117,7 @@ export interface AutopilotProvider {
    *
    * // Returns:
    * {
-   *   options: {
+   *    options: {
    *     states: [
    *         {
    *             name: 'auto' // autopilot state name
@@ -143,13 +129,23 @@ export interface AutopilotProvider {
    *         }
    *     ]
    *     modes: ['compass', 'gps', 'wind'],  // supported modes of operation
-   *     actions: ['tack', 'gybe']  // actions the autopilot supports
+   *     actions: [
+   *     {
+   *        id: 'tack',
+   *        name: 'Tack',
+   *        available: true
+   *     },
+   *     {
+   *        id: 'gybe',
+   *        name: 'Gybe',
+   *        available: false
+   *     }
+   *      ]  // actions the autopilot supports
    * },
    *   target: 0.326
    *   mode: 'compass'
    *   state: 'auto'
-   *   engaged: true,
-   *   availableActions: ['tack']
+   *   engaged: true
    * }
    * ```
    *
@@ -292,22 +288,45 @@ export interface AutopilotProvider {
   disengage(deviceId: string): Promise<void>
 
   /**
-   * instructs the autopilot device to advance to the next waypoint on the route.
+   * Instructs the autopilot device to steer for the currently set destination position.
+   *
+   * It is assumed that a destination has been set prior to invoking this action.
+   *
+   * The intended result of this action is that the autopilot device be engaged in the
+   * appropriate mode to steer to the active waypoint / position.
    *
    * @example
    * API request
    * ```
-   * POST /signalk/v2/api/vessels/self/autopilots/mypilot1/advanceWaypoint
+   * POST /signalk/v2/api/vessels/self/autopilots/mypilot1/courseCurrentPoint
    * ```
    * AutopilotProvider method invocation
    * ```javascript
-   * advanceWaypoint('mypilot1');
+   * courseCurrentPoint('mypilot1');
    * ```
    *
    * @param deviceId - identifier of the autopilot device to query.
    * @throws on error.
    */
-  advanceWaypoint(deviceId: string): Promise<void>
+  courseCurrentPoint(deviceId: string): Promise<void>
+
+  /**
+   * Instructs the autopilot device to advance to the next waypoint on the route.
+   *
+   * @example
+   * API request
+   * ```
+   * POST /signalk/v2/api/vessels/self/autopilots/mypilot1/courseNextPoint
+   * ```
+   * AutopilotProvider method invocation
+   * ```javascript
+   * courseNextPoint('mypilot1');
+   * ```
+   *
+   * @param deviceId - identifier of the autopilot device to query.
+   * @throws on error.
+   */
+  courseNextPoint(deviceId: string): Promise<void>
 
   /**
    * Instructs the autopilot device with the supplied identifier to perform a tack in the supplied direction.
@@ -392,10 +411,16 @@ export interface AutopilotStateDef {
   engaged: boolean // true if state indicates actively steering
 }
 
+export interface AutopilotActionDef {
+  id: 'tack' | 'gybe' | 'courseCurrentPoint' | 'courseNextPoint'
+  name: string // display name
+  available: boolean // true if can be used in current AP mode of operation
+}
+
 export interface AutopilotOptions {
   states: AutopilotStateDef[]
   modes: string[]
-  actions: AutopilotAction[]
+  actions: AutopilotActionDef[]
 }
 
 export interface AutopilotInfo {
@@ -404,7 +429,6 @@ export interface AutopilotInfo {
   mode: string | null
   state: string | null
   engaged: boolean
-  availableActions: AutopilotAction[]
 }
 
 /**

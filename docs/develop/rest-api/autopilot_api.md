@@ -387,14 +387,27 @@ _Example: Gybe to Starboard_
 HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/gybe/starboard"
 ```
 
-### Advancing Waypoint
+### Steer to current destination
 
-To send a command to the autopilot to advance to the next waypoint on a route, submit an HTTP `POST` request to `./autopilots/{id}/advanceWaypoint`.
+When a course has been set to a GPS position or waypoint (`APB`, `RMB`, etc data is available) submitting an HTTP `POST` request to `./autopilots/{id}/courseCurrentPoint` will send commands to the autopilot to:
+
+1. Set the autopilot to the appropriate mode
+2. Activate / engage the autopilot.
 
 _Example:_
 
 ```typescript
-HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/advanceWaypoint"
+HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/courseNextPoint"
+```
+
+### Advancing Waypoint
+
+To send a command to the autopilot to advance to the next waypoint on a route, submit an HTTP `POST` request to `./autopilots/{id}/courseNextPoint`.
+
+_Example:_
+
+```typescript
+HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/courseNextPoint"
 ```
 
 ### Dodging Obstacles

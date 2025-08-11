@@ -26,7 +26,11 @@
   ],
   "components": {
     "schemas": {
-      "autopilotStateOption": {
+      "apAction": {
+        "type": "array",
+        "enum": ["tack", "gybe", "courseCurrentPoint", "courseNextPoint"]
+      },
+      "autopilotStateDef": {
         "type": "object",
         "title": "Autopilot state option definition",
         "description": "Autopilot `state` option and indication whether pilot is actively steering.",
@@ -42,20 +46,41 @@
             "example": true
           }
         },
-        "example": [
-          { "name": "auto", "engaged": true },
-          { "name": "standby", "engaged": false }
-        ]
+        "example": { "name": "auto", "engaged": true }
+      },
+      "autopilotActionDef": {
+        "type": "object",
+        "title": "Autopilot action option definition",
+        "description": "Autopilot `action` definition.",
+        "properties": {
+          "id": {
+            "description": "Action identifier",
+            "$ref": "#/components/schemas/apAction"
+          },
+          "name": {
+            "type": "string",
+            "description": "Action display name / label",
+            "example": "enabled"
+          },
+          "available": {
+            "type": "boolean",
+            "description": "Set `true` if the action is available in the current operating mode.",
+            "example": true
+          }
+        },
+        "example": { "id": "tack", "name": "Tack", "available": true }
       },
       "autopilotActions": {
         "title": "Autopilot actions",
         "description": "List of actions that can be invoked by the autopilot",
         "type": "array",
         "items": {
-          "type": "string",
-          "enum": ["tack", "gybe", "advanceWaypoint"]
+          "$ref": "#/components/schemas/autopilotActionDef"
         },
-        "example": ["tack", "gybe"]
+        "example": [
+          { "id": "tack", "name": "Tack", "available": true },
+          { "id": "gybe", "name": "Gybe", "available": false }
+        ]
       },
       "autopilotOptions": {
         "type": "object",
@@ -65,9 +90,13 @@
           "states": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/autopilotStateOption"
+              "$ref": "#/components/schemas/autopilotStateDef"
             },
-            "description": "List of valid autopilot states."
+            "description": "List of valid autopilot states.",
+            "example": [
+              { "name": "auto", "engaged": true },
+              { "name": "standby", "engaged": false }
+            ]
           },
           "modes": {
             "type": "array",
@@ -738,7 +767,27 @@
         }
       }
     },
-    "/{id}/advanceWaypoint": {
+    "/{id}/courseCurrentPoint": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AutopilotIdParam"
+        }
+      ],
+      "post": {
+        "tags": ["autopilot"],
+        "summary": "Steer to the currently set destination position",
+        "description": "Provider plugin will instruct the autopilot to steer to the destination position.",
+        "responses": {
+          "200ActionResponse": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/{id}/courseNextPoint": {
       "parameters": [
         {
           "$ref": "#/components/parameters/AutopilotIdParam"
