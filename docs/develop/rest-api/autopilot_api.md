@@ -167,28 +167,29 @@ If an autopilot device is not connected or unreachable, the provider for that au
 
 ## Autopilot Actions
 
-The Autopilot API allows providers to list all the "actions" that are supported by the device _(e.g. tack, gybe, etc)_.
+The Autopilot API allows providers to list all the "actions" that are supported by the device _(e.g. tack, gybe, etc)_ and their availability in the current state of operation.
 
 A set of normalised actions are defined to simplify client processing and UI trimming:
 
 - `tack`
 - `gybe`
-- `advanceWaypoint`
-
-These actions are listed inin the current state of operation can be provided to clients to facilitate UI trimming.
+- `courseCurrentPoint`
+- `courseNextPoint`
 
 ```JSON
 {
   "options": {
     "states": [...],
     "modes": [...],
-    "actions": ["tack", "advanceWaypoint"] // all actions provided by the device
+    "actions": [
+      {"id": "tack", "name": "Tack", "available": true},
+      {"id": "gybe", "name": "Gybe", "available": false}
+    ]
   },
   "state": "disabled",
   "mode": "wind",
   "target": 0.43,
-  "engaged": true,
-  "availableActions": ["tack"]  // actions relevant to current operating mode
+  "engaged": true
 }
 ```
 
