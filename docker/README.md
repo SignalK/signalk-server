@@ -10,21 +10,26 @@ Release images:
 ## Docker Images based on Ubuntu 24.04 LTS
 
 ### Node.js 22.x
+
 **Image tag:** `v2.16.0` (example version)
 
 **Supported architectures:**
+
 - `linux/amd64`
 - `linux/arm64`
 - `linux/arm/v7`
 
 ### Node.js 24.x
+
 **Image tag:** `v2.16.0-24.x` (example version with suffix -24.x)
 
 **Supported architectures:**
+
 - `linux/amd64`
 - `linux/arm64`
 
 **Not supported:**
+
 - `linux/arm/v7`
 
 ### Important Note
@@ -32,6 +37,7 @@ Release images:
 Node.js version 24.x dropped support for the `linux/arm/v7` (ARMv7) architecture. This affects older hardware, particularly early Raspberry Pi models:
 
 **Affected devices:**
+
 - Raspberry Pi Model A and B (original)
 - Raspberry Pi Zero (original)
 - Raspberry Pi 2 Model B v1.1 (with BCM2836 processor)
