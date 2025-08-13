@@ -5,13 +5,38 @@ Release process first publishes the server's modules to npm. Docker images are t
 Release images:
 
 - cr.signalk.io/signalk/signalk-server:latest
-- cr.signalk.io/signalk/signalk-server:`<release tag>`, e.g. `v1.40.0`
+- cr.signalk.io/signalk/signalk-server:`<release tag>`, e.g. `v2.16.0`
 
-Supported os/architectures:
+## Docker Images based on Ubuntu 24.04 LTS
 
-- linux/amd64
-- linux/arm/v7
-- linux/arm64
+### Node.js 22.x
+**Image tag:** `v2.16.0` (example version)
+
+**Supported architectures:**
+- `linux/amd64`
+- `linux/arm64`
+- `linux/arm/v7`
+
+### Node.js 24.x
+**Image tag:** `v2.16.0-24.x` (example version with suffix -24.x)
+
+**Supported architectures:**
+- `linux/amd64`
+- `linux/arm64`
+
+**Not supported:**
+- `linux/arm/v7`
+
+### Important Note
+
+Node.js version 24.x dropped support for the `linux/arm/v7` (ARMv7) architecture. This affects older hardware, particularly early Raspberry Pi models:
+
+**Affected devices:**
+- Raspberry Pi Model A and B (original)
+- Raspberry Pi Zero (original)
+- Raspberry Pi 2 Model B v1.1 (with BCM2836 processor)
+
+**Recommendation:** If you're using any of the affected devices, use the Node.js 22.x images instead of 24.x to maintain compatibility.
 
 # Quickstart
 
