@@ -74,6 +74,16 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Publish typedoc-theme
+        run: |
+          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/typedoc-theme/package.json)
+          if ! npm view @signalk/typedoc-theme@$LOCAL_VERSION version &>/dev/null; then
+            cd packages/typedoc-theme
+            npm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Set tag variable
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
