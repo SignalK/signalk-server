@@ -1,9 +1,6 @@
 import { SourceRef } from '@signalk/server-api'
 import assert from 'assert'
-import {
-  getToPreferredDelta,
-  SourcePrioritiesData
-} from '../dist/deltaPriority.js'
+import { getToPreferredDelta, SourcePrioritiesData } from '../src/deltaPriority'
 import chai from 'chai'
 chai.should()
 
