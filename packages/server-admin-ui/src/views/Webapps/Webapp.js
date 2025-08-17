@@ -1,8 +1,7 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
-import { Card, CardBody, CardFooter } from 'reactstrap'
+import { Card, CardBody } from 'reactstrap'
 import classNames from 'classnames'
-import { mapToCssModules } from 'reactstrap/lib/utils'
 import { toSafeModuleId } from './dynamicutilities'
 
 const propTypes = {
@@ -14,54 +13,20 @@ const propTypes = {
       appIcon: PropTypes.string
     })
   }).isRequired,
-  variant: PropTypes.string,
-  footer: PropTypes.bool,
-  link: PropTypes.string,
-  children: PropTypes.node,
-  className: PropTypes.string,
-  cssModule: PropTypes.object
-}
-
-const defaultProps = {
-  icon: 'fa fa-cogs',
-  variant: '0',
-  link: '#',
+  children: PropTypes.node
 }
 
 class Webapp extends Component {
   render() {
-    const {
-      webAppInfo,
-      className,
-      cssModule,
-      footer,
-      link,
-      variant,
-      ...attributes
-    } = this.props
+    const { webAppInfo, ...attributes } = this.props
 
-    // demo purposes only
-    const padding =
-      variant === '0'
-        ? { card: 'p-3', icon: 'p-3', lead: 'mt-2' }
-        : variant === '1'
-          ? {
-              card: 'p-0',
-              icon: 'p-4',
-              lead: 'pt-3'
-            }
-          : { card: 'p-0', icon: 'p-4 px-5', lead: 'pt-3' }
+    const padding = { card: 'p-3', icon: 'p-3', lead: 'mt-2' }
 
     const card = {
       style: 'clearfix',
       color: 'primary',
-      icon: `fa ${webAppInfo?.signalk?.displayName ? '' : 'icon-grid'}`,
-      classes: ''
+      icon: `fa ${webAppInfo?.signalk?.displayName ? '' : 'icon-grid'}`
     }
-    card.classes = mapToCssModules(
-      classNames(className, card.style, padding.card),
-      cssModule
-    )
 
     const lead = { style: 'h5 mb-0', color: card.color, classes: '' }
     lead.classes = classNames(
@@ -94,22 +59,6 @@ class Webapp extends Component {
       return <i className={classes} style={style} />
     }
 
-    const cardFooter = function () {
-      if (footer) {
-        return (
-          <CardFooter className="px-3 py-2">
-            <a
-              className="font-weight-bold font-xs btn-block text-muted"
-              href={link}
-            >
-              View More
-              <i className="fa fa-angle-right float-right font-lg" />
-            </a>
-          </CardFooter>
-        )
-      }
-    }
-
     return (
       <a href={url}>
         <Card>
@@ -118,7 +67,6 @@ class Webapp extends Component {
             <div className={lead.classes}>{header}</div>
             <div className="text-muted font-xs">{webAppInfo.description}</div>
           </CardBody>
-          {cardFooter()}
         </Card>
       </a>
     )
@@ -126,6 +74,5 @@ class Webapp extends Component {
 }
 
 Webapp.propTypes = propTypes
-Webapp.defaultProps = defaultProps
 
 export default Webapp
