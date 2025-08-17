@@ -8,8 +8,6 @@ on:
     tags:
       - '*'
       - '!v*'
-  pull_request:
-
   workflow_dispatch:
 
 jobs:
@@ -21,7 +19,7 @@ jobs:
       - name: Node setup
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
+          node-version: '20.x'
       - name: Build npm files locally and upload artifacts
         run: |
           npm cache clean -f
@@ -44,8 +42,7 @@ jobs:
     needs: signalk-server_npm_files
     strategy:
       matrix:
-        os: [24.04]
-        node: [22.x, 24.x]
+        os: [22.04, 24.04]
         vm: [ubuntu-latest, ubuntu-24.04-arm]
         include:
           - vm: ubuntu-latest
@@ -53,12 +50,7 @@ jobs:
             platform: linux/amd64
           - vm: ubuntu-24.04-arm
             arch: arm
-            node: 22.x
             platform: linux/arm64,linux/arm/v7
-          - vm: ubuntu-24.04-arm
-            arch: arm
-            node: 24.x
-            platform: linux/arm64 #,linux/arm/v7 Nodejs 24.x is working correctly and therefore disabled for now
     runs-on: ${{ matrix.vm }}
     steps:
       - name: Checkout
@@ -81,24 +73,20 @@ jobs:
           context: .
           file: ./docker/Dockerfile
           platforms: ${{ matrix.platform }}
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
+          push: true
+          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ github.run_id }}
           build-args: |
             REGISTRY=ghcr.io
-            UBUNTU_VERSION=${{ matrix.os }}-${{ matrix.node }}
-
+            UBUNTU_VERSION=${{ matrix.os }}
   create-and-push-manifest:
     needs: docker_images
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [24.04]
-        node: [22.x, 24.x]
+        os: [22.04, 24.04]
         include:
           - os: 24.04
-            node: 24.x
-            suffix: -24.x
+            suffix: -24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -133,11 +121,10 @@ jobs:
           tags: |
             ${{ steps.docker_meta.outputs.tags }}
           sources: |
-            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
-            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ github.run_id }}
 
   housekeeping:
-    if: github.event_name != 'pull_request'
     needs: create-and-push-manifest
     runs-on: ubuntu-latest
     permissions:
@@ -148,5 +135,5 @@ jobs:
         with:
           packages: signalk-server
           delete-untagged: true
-          delete-tags: amd-24.04-22.x-${{ github.run_id }},arm-24.04-24.x-${{ github.run_id }}
+          delete-tags: amd-22.04-${{ github.run_id }},arm-22.04-${{ github.run_id }},amd-24.04-${{ github.run_id }},arm-24.04-${{ github.run_id }}
           token: ${{ secrets.GHCR_PAT }}
