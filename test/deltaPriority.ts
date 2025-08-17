@@ -1,4 +1,4 @@
-import { SourceRef } from '@signalk/server-api'
+import type { SourceRef } from '@signalk/server-api'
 import assert from 'assert'
 import {
   getToPreferredDelta,

@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '22.x'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install and build all
@@ -74,6 +74,16 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Publish typedoc-theme
+        run: |
+          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/typedoc-theme/package.json)
+          if ! npm view @signalk/typedoc-theme@$LOCAL_VERSION version &>/dev/null; then
+            cd packages/typedoc-theme
+            npm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Set tag variable
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
@@ -118,7 +128,8 @@ jobs:
     needs: build_and_publish
     strategy:
       matrix:
-        os: [22.04, 24.04]
+        os: [24.04]
+        node: [22.x, 24.x]
         vm: [ubuntu-latest, ubuntu-24.04-arm]
         include:
           - vm: ubuntu-latest
@@ -126,7 +137,12 @@ jobs:
             platform: linux/amd64
           - vm: ubuntu-24.04-arm
             arch: arm
+            node: 22.x
             platform: linux/arm64,linux/arm/v7
+          - vm: ubuntu-24.04-arm
+            arch: arm
+            node: 24.x
+            platform: linux/arm64 #,linux/arm/v7 Nodejs 24.x is working correctly and therefore disabled for now
     runs-on: ${{ matrix.vm }}
     steps:
       - name: Checkout
@@ -145,7 +161,7 @@ jobs:
       - name: Modify Dockerfile_rel for build
         run: |
           sed -i \
-            "s|cr.signalk.io/signalk/signalk-server-base:latest|ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}|g" \
+            "s|cr.signalk.io/signalk/signalk-server-base:latest|ghcr.io/signalk/signalk-server-base:latest-${{ matrix.os }}-${{ matrix.node }}|g" \
             ./docker/Dockerfile_rel
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -154,7 +170,7 @@ jobs:
           file: ./docker/Dockerfile_rel
           platforms: ${{ matrix.platform }}
           push: true
-          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ github.run_id }}
+          tags: ghcr.io/signalk/signalk-server:${{ matrix.arch }}-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
           build-args: |
             TAG=${{ steps.vars.outputs.tag }}
 
@@ -163,13 +179,16 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [22.04, 24.04]
+        os: [24.04]
+        node: [22.x, 24.x]
         include:
-          - os: 22.04
+          - os: 24.04
+            node: 22.x
             tag: latest
           - os: 24.04
+            node: 24.x
             tag: latest
-            suffix: -24.04
+            suffix: -24.x
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -206,8 +225,8 @@ jobs:
           tags: |
             ${{ steps.docker_meta.outputs.tags }}
           sources: |
-            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ github.run_id }}
-            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
+            ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
 
   housekeeping:
     needs: create-and-push-manifest
@@ -220,7 +239,7 @@ jobs:
         with:
           packages: signalk-server
           delete-untagged: true
-          delete-tags: amd-22.04-${{ github.run_id }},arm-22.04-${{ github.run_id }},amd-24.04-${{ github.run_id }},arm-24.04-${{ github.run_id }}
+          delete-tags: amd-24.04-22.x-${{ github.run_id }},arm-24.04-24.x-${{ github.run_id }}
           token: ${{ secrets.GHCR_PAT }}
 
   deploy_fly:
