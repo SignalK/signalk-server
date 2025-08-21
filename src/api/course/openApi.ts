@@ -1,8 +1,21 @@
 import { OpenApiDescription } from '../swagger'
-import courseApiDoc from './openApi.json'
+import { getMergedCourseSpec } from './openApiMerger'
 
+// Lazy load the merged spec to ensure TSOA spec file is available
+let cachedMergedSpec: OpenApiDescription | null = null
+
+/**
+ * Course API OpenAPI specification with TSOA-generated and static endpoints merged
+ * TSOA handles the GET endpoint with runtime validation
+ * Static spec handles PUT/POST/DELETE operations
+ */
 export const courseApiRecord = {
   name: 'course',
   path: '/signalk/v2/api/vessels/self/navigation',
-  apiDoc: courseApiDoc as unknown as OpenApiDescription
+  get apiDoc(): OpenApiDescription {
+    if (!cachedMergedSpec) {
+      cachedMergedSpec = getMergedCourseSpec()
+    }
+    return cachedMergedSpec
+  }
 }

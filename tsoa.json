@@ -1,0 +1,34 @@
+{
+  "entryFile": "src/index.ts",
+  "noImplicitAdditionalProperties": "throw-on-extras",
+  "controllerPathGlobs": ["src/api/course/CourseController.ts"],
+  "spec": {
+    "outputDirectory": "src/api/generated",
+    "specVersion": 3,
+    "basePath": "/signalk/v2/api",
+    "specFileBaseName": "course-tsoa",
+    "name": "Course API (TSOA)",
+    "version": "2.0.0",
+    "license": "Apache-2.0",
+    "tags": [
+      {
+        "name": "Navigation",
+        "description": "Course and navigation operations"
+      }
+    ],
+    "securityDefinitions": {
+      "signalK": {
+        "type": "apiKey",
+        "name": "JAUTHENTICATION",
+        "in": "cookie",
+        "description": "SignalK JWT authentication token"
+      }
+    }
+  },
+  "routes": {
+    "routesDir": "src/api/generated",
+    "basePath": "/signalk/v2/api",
+    "middleware": "express",
+    "authenticationModule": "./src/api/tsoa-auth.ts"
+  }
+}

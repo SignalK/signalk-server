@@ -6,6 +6,7 @@ import { FeaturesApi } from './discovery'
 import { ResourcesApi } from './resources'
 import { AutopilotApi } from './autopilot'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
+import { registerTsoaRoutes } from './swagger'
 
 export interface ApiResponse {
   state: 'FAILED' | 'COMPLETED' | 'PENDING'
@@ -74,6 +75,9 @@ export const startApis = (
     courseApi.start(),
     featuresApi.start(),
     autopilotApi.start()
-  ])
+  ]).then(() => {
+    // Register TSOA routes after APIs are initialized
+    registerTsoaRoutes(app)
+  })
   return apiList
 }

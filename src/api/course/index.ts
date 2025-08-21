@@ -94,6 +94,14 @@ export class CourseApi {
     this.parseSettings()
   }
 
+  /**
+   * Get current course information
+   * Public method for TSOA controller access
+   */
+  public getCourseInfo(): CourseInfo {
+    return this.courseInfo
+  }
+
   async start() {
     return new Promise<void>(async (resolve) => {
       this.initCourseRoutes()
