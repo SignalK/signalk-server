@@ -25,5 +25,14 @@
   },
   "peerDependencies": {
     "baconjs": "^1.0.1"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./HistoryAPI": "./dist/HistoryAPI.js"
+  },
+  "typesVersions": {
+    "*": {
+      "HistoryAPI": ["dist/HistoryAPI.d.ts"]
+    }
   }
 }
