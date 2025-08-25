@@ -239,7 +239,7 @@ jobs:
         with:
           packages: signalk-server
           delete-untagged: true
-          delete-tags: amd-24.04-22.x-${{ github.run_id }},arm-24.04-24.x-${{ github.run_id }}
+          delete-tags: amd-24.04-24.x-${{ github.run_id }},amd-24.04-22.x-${{ github.run_id }},arm-24.04-24.x-${{ github.run_id }},arm-24.04-22.x-${{ github.run_id }}
           token: ${{ secrets.GHCR_PAT }}
 
   deploy_fly:
