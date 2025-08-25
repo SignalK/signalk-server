@@ -18,7 +18,12 @@ jobs:
             platform: linux/amd64
           - vm: ubuntu-24.04-arm
             arch: arm
+            node: 22.x
             platform: linux/arm64,linux/arm/v7
+          - vm: ubuntu-24.04-arm
+            arch: arm
+            node: 24.x
+            platform: linux/arm64
     runs-on: ${{ matrix.vm }}
     steps:
       - uses: actions/checkout@v4
@@ -102,5 +107,5 @@ jobs:
         with:
           packages: signalk-server-base
           delete-untagged: true
-          delete-tags: amd-24.04-22.x,arm-24.04-24.x
+          delete-tags: amd-24.04-24.x,amd-24.04-22.x,arm-24.04-24.x,arm-24.04-22.x
           token: ${{ secrets.GHCR_PAT }} # Need to have delete permission
