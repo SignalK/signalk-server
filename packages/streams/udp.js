@@ -58,7 +58,13 @@ Udp.prototype.pipe = function (pipeTo) {
   if (this.options.outEvent && this.options.port !== undefined) {
     this.options.app.on(this.options.outEvent, function (d) {
       self.debug('sending over udp: %s', d)
-      socket.send(d, 0, d.length, self.options.port, '255.255.255.255')
+      socket.send(
+        d,
+        0,
+        d.length,
+        self.options.port,
+        self.options.host || '255.255.255.255'
+      )
     })
   }
 
