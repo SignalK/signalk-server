@@ -451,12 +451,12 @@ export type ActionHandler = (
   path: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any,
-  callback?: (result: ActionResult) => void
+  callback: (result: ActionResult) => void
 ) => ActionResult
 
 export interface ActionResult {
   state: 'COMPLETED' | 'PENDING' | 'FAILED'
   statusCode?: number
   message?: string
-  timestamp: string
+  timestamp?: string
 }
