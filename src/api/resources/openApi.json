@@ -479,7 +479,7 @@
           "type": {
             "type": "string",
             "description": "Source type of map data.",
-            "enum": ["tilejson", "WMS", "WMTS", "mapboxstyle", "S-57"],
+            "enum": ["tileJSON", "WMS", "WMTS", "mapstyleJSON", "S-57"],
             "example": "WMTS"
           }
         }
