@@ -90,6 +90,15 @@ _Example: List of registered autopilots showing that `pypilot-id` is assigned as
 
 Deltas emitted by the Autopilot API will have the base path `steering.autopilot` with the `$source` containing the autopilot device identifier.
 
+Deltas are emitted for the following paths:
+
+- `steering.autopilot.defaultPilot`
+- `steering.autopilot.engaged`
+- `steering.autopilot.state`
+- `steering.autopilot.mode`
+- `steering.autopilot.target`
+- `steering.autopilot.availableActions`
+
 _Example: Deltas for `autopilot.engaged` from two autopilots (`raymarine-id`)._
 
 ```JSON
@@ -155,6 +164,34 @@ _Example:_
 ## Autopilot offline / unreachable
 
 If an autopilot device is not connected or unreachable, the provider for that autopilot device will set the `state` of the device to `off-line`.
+
+## Autopilot Actions
+
+The Autopilot API allows providers to list all the "actions" that are supported by the device _(e.g. tack, gybe, etc)_ and their availability in the current state of operation.
+
+A set of normalised actions are defined to simplify client processing and UI trimming:
+
+- `tack`
+- `gybe`
+- `courseCurrentPoint`
+- `courseNextPoint`
+
+```JSON
+{
+  "options": {
+    "states": [...],
+    "modes": [...],
+    "actions": [
+      {"id": "tack", "name": "Tack", "available": true},
+      {"id": "gybe", "name": "Gybe", "available": false}
+    ]
+  },
+  "state": "disabled",
+  "mode": "wind",
+  "target": 0.43,
+  "engaged": true
+}
+```
 
 ## Autopilot Operations
 
@@ -349,6 +386,29 @@ _Example: Gybe to Starboard_
 
 ```typescript
 HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/gybe/starboard"
+```
+
+### Steer to current destination
+
+When a course has been set to a GPS position or waypoint (`APB`, `RMB`, etc data is available) submitting an HTTP `POST` request to `./autopilots/{id}/courseCurrentPoint` will send commands to the autopilot to:
+
+1. Set the autopilot to the appropriate mode
+2. Activate / engage the autopilot.
+
+_Example:_
+
+```typescript
+HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/courseNextPoint"
+```
+
+### Advancing Waypoint
+
+To send a command to the autopilot to advance to the next waypoint on a route, submit an HTTP `POST` request to `./autopilots/{id}/courseNextPoint`.
+
+_Example:_
+
+```typescript
+HTTP POST "/signalk/v2/api/vessels/self/autopilots/{id}/courseNextPoint"
 ```
 
 ### Dodging Obstacles
