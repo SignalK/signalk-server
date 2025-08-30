@@ -74,10 +74,10 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish typedoc-theme
+      - name: Publish typedoc-signalk-theme
         run: |
           LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/typedoc-theme/package.json)
-          if ! npm view @signalk/typedoc-theme@$LOCAL_VERSION version &>/dev/null; then
+          if ! npm view @signalk/typedoc-signalk-theme@$LOCAL_VERSION version &>/dev/null; then
             cd packages/typedoc-theme
             npm publish --access public
           fi
