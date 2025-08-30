@@ -2,6 +2,7 @@
 title: Configuration
 children:
   - seatalk/README.md
+  - nmea.md
 ---
 
 # Configuring Signal K Server

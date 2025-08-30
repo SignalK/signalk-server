@@ -20,7 +20,7 @@ Updates fall into four categories:
 
 ## Update Device Operating System
 
-Instructions will vary depending on your device but for linux based systems such as the Raspberry Pi the following instrctions are used to update the OS.
+Instructions will vary depending on your device but for linux based systems such as the Raspberry Pi the following instructions are used to update the OS.
 
 From a terminal window enter the following commands:
 
