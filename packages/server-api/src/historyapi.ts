@@ -1,6 +1,6 @@
 import { Context, Path, Timestamp } from '.'
 
-export type AggregateMethod =   'average' | 'min' | 'max' | 'first' | 'last' | 'mid' | 'middle_index'
+export type AggregateMethod = 'average' | 'min' | 'max' | 'first' | 'last' | 'mid' | 'middle_index'
 
 type ValueList = {
   path: Path
