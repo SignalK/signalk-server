@@ -375,18 +375,12 @@ describe('Subscriptions', (_) => {
         })
       })
       .then(() => {
-        return Promise.all([
-          sendDelta(
-            getEmptyPathDelta({
-              context: 'vessels.' + self
-            }),
-            deltaUrl
-          ),
-          sendDelta(
-            getEmptyPathDelta({ context: 'vessels.othervessel' }),
-            deltaUrl
-          )
-        ])
+        sendDelta(
+          getEmptyPathDelta({
+            context: 'vessels.' + self
+          }),
+          deltaUrl
+        )
       })
       .then(() => wsPromiser.nthMessage(4)) //self, 1st delta with mmsi
       .then((nextMsg) => {
@@ -419,8 +413,19 @@ describe('Subscriptions', (_) => {
         )
         assert(delta.updates.length === 1, 'Receives just one update')
         assert(delta.updates[0].values.length === 1, 'Receives just one value')
-        assert(delta.context === `vessels.${self}`)
-        assert(delta.updates[0].timestamp, '2014-05-03T09:14:11.001Z')
+        assert(
+          delta.context === `vessels.${self}`,
+          `Context is vessels.${self}, got ${delta.context}`
+        )
+        assert(
+          delta.updates[0].timestamp == '2014-05-03T09:14:11.000Z',
+          'Timestamp is correct'
+        )
+
+        sendDelta(
+          getEmptyPathDelta({ context: 'vessels.othervessel' }),
+          deltaUrl
+        )
 
         return wsPromiser.nthMessage(6) //othervessel, 1st delta
       })
@@ -436,7 +441,10 @@ describe('Subscriptions', (_) => {
           typeof delta.updates[0].values[0].value.mmsi === 'string',
           'Receives object with mmsi'
         )
-        assert(delta.context === 'vessels.othervessel')
+        assert(
+          delta.context === 'vessels.othervessel',
+          'Context is vessels.othervessel'
+        )
       })
   })
 

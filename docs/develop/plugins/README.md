@@ -48,7 +48,7 @@ To get started developing your plugin you will need the following:
 1. Create a folder for your plugin code and create the necessary file structure:
 
 ```shell
-mkdir my-pluin
+mkdir my-plugin
 cd my-plugin
 npm init      # create package.json file
 ```
