@@ -25,23 +25,40 @@
   "paths": {
     "/values": {
       "get": {
-        "summary": "Retrive historical data",
+        "summary": "Retrieve historical data",
         "description": "Returns historical data series for the paths and time range specified in query parameters",
         "parameters": [
           {
             "in": "query",
             "name": "from",
-            "description": "Start of the time range, inclusive",
+            "description": "Start of the time range, inclusive as ISO 8601 timestamp",
             "schema": {
               "type": "string",
               "format": "date-time"
-            },
-            "required": true
+            }
+          },
+          {
+            "in": "query",
+            "name": "duration",
+            "description": "Duration of the time range in milliseconds (integer) or as an ISO8601 Duration string. Can be specified with either 'from' or 'to'. If they are both omitted is relative to 'now'. See https://datatracker.ietf.org/doc/html/rfc3339#appendix-A",
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "description": "Duration in milliseconds"
+                },
+                {
+                  "type": "string",
+                  "format": "duration",
+                  "description": "ISO8601 Duration string"
+                }
+              ]
+            }
           },
           {
             "in": "query",
             "name": "to",
-            "description": "End of the time range, inclusive",
+            "description": "End of the time range, inclusive. 'Now' if omitted",
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -57,8 +74,8 @@
           },
           {
             "in": "query",
-            "name": "interval",
-            "description": "Length of data sample time windows",
+            "name": "resolution",
+            "description": "Length of data sample time window in milliseconds or as a time expression ('1s', '1m', '1h', '1d')",
             "schema": {
               "type": "number",
               "format": "integer"
@@ -67,19 +84,12 @@
           {
             "in": "query",
             "name": "paths",
-            "description": "Comma separated ist of Signal K paths whose data should be retrieved, optional aggregation methods for each path as postfix separated by a colon. Aggregation methods: average(default), min, max, first",
+            "description": "Comma separated ist of Signal K paths whose data should be retrieved, optional aggregation methods for each path as postfix separated by a colon. Aggregation methods: 'average' | 'min' | 'max' | 'first' | 'last' | 'mid' | 'middle_index'",
             "example": "navigation.speedOverGround,navigation.speedThroughWater:max",
             "schema": {
               "type": "string"
             },
             "required": true
-          },
-          {
-            "in": "query",
-            "name": "format",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -102,13 +112,13 @@
                         "from": {
                           "type": "string",
                           "format": "date-time",
-                          "description": "Start of the time range, inclusive",
+                          "description": "Start of the time range, inclusive, as UTC timestamp",
                           "example": "2018-03-20T09:12:28Z"
                         },
                         "to": {
                           "type": "string",
                           "format": "date-time",
-                          "description": "End of the time range, inclusive",
+                          "description": "End of the time range, inclusive, as UTC timestamp",
                           "example": "2018-03-20T09:13:28Z"
                         }
                       }
@@ -134,13 +144,16 @@
                       "items": {
                         "type": "array",
                         "items": {
-                          "description": "Data for a point in time. The first array element is the timestamp in ISO 8601 format",
+                          "description": "Data for a point in time. The first array element is the timestamp in ISO 8601 format. Missing data for a path is returned as null",
                           "oneOf": [
                             {
                               "type": "string"
                             },
                             {
                               "type": "number"
+                            },
+                            {
+                              "type": "null"
                             },
                             {
                               "type": "array",

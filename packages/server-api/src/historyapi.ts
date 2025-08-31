@@ -39,3 +39,34 @@ const _example: HistoryResponse = {
     ['2025-08-11T05:26:10.000Z' as Timestamp, 3.14]
   ]
 }
+
+export type HistoryRequestQueryParams = (
+  ({
+    // only duration, to defaults to now
+    duration: number | string
+    from?: never
+    to?: never
+  }) | ({
+    // duration from
+    duration: number | string
+    from: string
+    to?: never
+  }) | ({
+    // duration to
+    duration: number | string
+    from?: never
+    to: string
+  }) | ({
+    // no duration, only from, to defaults to now
+    duration?: never
+    from: string
+    to?: never
+  }) | ({
+    // from - to
+    duration: never
+    from: string
+    to: string
+  })) & {
+    context?: string
+    resolution?: number
+  }
