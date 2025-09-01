@@ -12,7 +12,7 @@ export * from './propertyvalues'
 export * from './brand'
 export * from './streambundle'
 export * from './subscriptionmanager'
-export * as HistoryAPI from './historyapi'
+export * as history from './history'
 
 export interface Position {
   latitude: number

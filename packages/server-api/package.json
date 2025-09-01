@@ -28,11 +28,11 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./HistoryAPI": "./dist/HistoryAPI.js"
+    "./history": "./dist/history.js"
   },
   "typesVersions": {
     "*": {
-      "HistoryAPI": ["dist/HistoryAPI.d.ts"]
+      "history": ["dist/history.d.ts"]
     }
   }
 }
