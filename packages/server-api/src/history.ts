@@ -1,6 +1,13 @@
 import { Context, Path, Timestamp } from '.'
 
-export type AggregateMethod = 'average' | 'min' | 'max' | 'first' | 'last' | 'mid' | 'middle_index'
+export type AggregateMethod =
+  | 'average'
+  | 'min'
+  | 'max'
+  | 'first'
+  | 'last'
+  | 'mid'
+  | 'middle_index'
 
 export type ValueList = {
   path: Path
@@ -41,32 +48,37 @@ const _example: HistoryResponse = {
 }
 
 export type HistoryRequestQueryParams = (
-  ({
-    // only duration, to defaults to now
-    duration: number | string
-    from?: never
-    to?: never
-  }) | ({
-    // duration from
-    duration: number | string
-    from: string
-    to?: never
-  }) | ({
-    // duration to
-    duration: number | string
-    from?: never
-    to: string
-  }) | ({
-    // no duration, only from, to defaults to now
-    duration?: never
-    from: string
-    to?: never
-  }) | ({
-    // from - to
-    duration: never
-    from: string
-    to: string
-  })) & {
-    context?: string
-    resolution?: number
-  }
+  | {
+      // only duration, to defaults to now
+      duration: number | string
+      from?: never
+      to?: never
+    }
+  | {
+      // duration from
+      duration: number | string
+      from: string
+      to?: never
+    }
+  | {
+      // duration to
+      duration: number | string
+      from?: never
+      to: string
+    }
+  | {
+      // no duration, only from, to defaults to now
+      duration?: never
+      from: string
+      to?: never
+    }
+  | {
+      // from - to
+      duration: never
+      from: string
+      to: string
+    }
+) & {
+  context?: string
+  resolution?: number
+}

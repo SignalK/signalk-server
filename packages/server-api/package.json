@@ -32,7 +32,9 @@
   },
   "typesVersions": {
     "*": {
-      "history": ["dist/history.d.ts"]
+      "history": [
+        "dist/history.d.ts"
+      ]
     }
   }
 }
