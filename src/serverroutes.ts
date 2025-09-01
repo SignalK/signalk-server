@@ -324,11 +324,25 @@ module.exports = function (
           config,
           req.params.uuid,
           req.body,
-          getConfigSavingCallback(
-            'Device updated',
-            'Unable to update device',
-            res
-          )
+          (err: unknown, updatedConfig: unknown) => {
+            if (!err && updatedConfig) {
+              // Find the updated device
+              const config = updatedConfig as {
+                devices?: Array<{ clientId: string }>
+              }
+              const updatedDevice = config.devices?.find(
+                (d) => d.clientId === req.params.uuid
+              )
+              if (updatedDevice) {
+                app.emit('deviceUpdated', updatedDevice)
+              }
+            }
+            getConfigSavingCallback(
+              'Device updated',
+              'Unable to update device',
+              res
+            )(err, updatedConfig)
+          }
         )
       }
     }
@@ -339,14 +353,20 @@ module.exports = function (
     (req: Request, res: Response) => {
       if (checkAllowConfigure(req, res)) {
         const config = getSecurityConfig(app)
+        const deviceId = req.params.uuid
         app.securityStrategy.deleteDevice(
           config,
-          req.params.uuid,
-          getConfigSavingCallback(
-            'Device deleted',
-            'Unable to delete device',
-            res
-          )
+          deviceId,
+          (err: unknown, updatedConfig: unknown) => {
+            if (!err && updatedConfig) {
+              app.emit('deviceRemoved', deviceId)
+            }
+            getConfigSavingCallback(
+              'Device deleted',
+              'Unable to delete device',
+              res
+            )(err, updatedConfig)
+          }
         )
       }
     }
