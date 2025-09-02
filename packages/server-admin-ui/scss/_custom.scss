@@ -28,3 +28,9 @@ form.rjsf div.row.array-item {
     margin: 0px;
   }
 }
+
+/** Utility class to attempt to wrap text in a more balanced way. **/
+.text-pretty {
+  text-wrap: balance; /* Fallback for older browsers */
+  text-wrap: pretty; /* Future spec */
+}
