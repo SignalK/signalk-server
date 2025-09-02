@@ -302,8 +302,6 @@ function promptForVesselName(configDirectory, updateExisting) {
                 let serverd = `[Service]
 ExecStart=${startupLocation}
 Restart=always
-StandardOutput=syslog
-StandardError=syslog
 WorkingDirectory=${configDirectory}
 User=${process.env.SUDO_USER}
 Environment=EXTERNALPORT=${primaryPort}
