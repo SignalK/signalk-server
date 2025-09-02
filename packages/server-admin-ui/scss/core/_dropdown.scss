@@ -1,7 +1,7 @@
 // Links, buttons, and more within the dropdown menu
 .dropdown-item {
   position: relative;
-  padding: 10px 20px;
+  padding: 0.375rem 0.75rem;
   border-bottom: 1px solid $dropdown-border-color;
 
   &:last-child {

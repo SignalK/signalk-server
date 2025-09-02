@@ -265,6 +265,7 @@ module.exports = function (app) {
       const installedModule = existing(name)
 
       if (installedModule) {
+        pluginInfo.id = installedModule.id
         pluginInfo.installedVersion = installedModule.version
       }
 
