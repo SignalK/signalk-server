@@ -257,6 +257,22 @@
           color: #00cd79;
         }
       }
+
+      .icon__remove {
+        path {
+          color: #df6c42;
+        }
+      }
+
+      .icon__versions {
+        path {
+          color: #007bff;
+        }
+        
+        &:hover path {
+          color: #0056b3;
+        }
+      }
     }
 
     .cell__renderer.center {
