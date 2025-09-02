@@ -1,9 +1,22 @@
 import React, { useState } from 'react'
-import { Button, Progress, Modal, ModalHeader, ModalBody, ModalFooter, ListGroup, ListGroupItem } from 'reactstrap'
+import {
+  Button,
+  Progress,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ListGroup,
+  ListGroupItem
+} from 'reactstrap'
 import { connect } from 'react-redux'
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faTrashCan, faCloudArrowDown, faHistory } from '@fortawesome/free-solid-svg-icons'
+import {
+  faTrashCan,
+  faCloudArrowDown,
+  faHistory
+} from '@fortawesome/free-solid-svg-icons'
 
 function ActionCellRenderer(props) {
   const app = props.data
@@ -35,25 +48,27 @@ function ActionCellRenderer(props) {
   const handleVersionsClick = async () => {
     setLoadingVersions(true)
     setShowVersionsModal(true)
-    
+
     try {
       // Fetch versions from npm registry
-      const response = await fetch(`https://registry.npmjs.org/${props.data.name}`)
+      const response = await fetch(
+        `https://registry.npmjs.org/${props.data.name}`
+      )
       const packageData = await response.json()
-      
+
       if (packageData.versions) {
         // Get all versions and sort them by semver (newest first)
         const versionList = Object.keys(packageData.versions)
-          .filter(version => version !== props.data.version) // Exclude current version
+          .filter((version) => version !== props.data.version) // Exclude current version
           .sort((a, b) => {
             // Simple version comparison - newer versions first
             const aParts = a.split('.').map(Number)
             const bParts = b.split('.').map(Number)
-            
+
             for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
               const aPart = aParts[i] || 0
               const bPart = bParts[i] || 0
-              
+
               if (bPart !== aPart) {
                 return bPart - aPart
               }
@@ -61,7 +76,7 @@ function ActionCellRenderer(props) {
             return 0
           })
           .slice(0, 20) // Limit to 20 versions
-        
+
         setVersions(versionList)
       }
     } catch (error) {
@@ -140,7 +155,7 @@ function ActionCellRenderer(props) {
           icon={faTrashCan}
           onClick={handleRemoveClick}
         />
-        
+
         <FontAwesomeIcon
           className="icon__versions"
           icon={faHistory}
@@ -158,7 +173,7 @@ function ActionCellRenderer(props) {
         >
           Install
         </Button>
-        
+
         <FontAwesomeIcon
           className="icon__versions"
           icon={faHistory}
@@ -171,9 +186,13 @@ function ActionCellRenderer(props) {
   return (
     <div className="cell__renderer cell-action center">
       <div>{content}</div>
-      
+
       {/* Versions Modal */}
-      <Modal isOpen={showVersionsModal} toggle={() => setShowVersionsModal(!showVersionsModal)} size="md">
+      <Modal
+        isOpen={showVersionsModal}
+        toggle={() => setShowVersionsModal(!showVersionsModal)}
+        size="md"
+      >
         <ModalHeader toggle={() => setShowVersionsModal(!showVersionsModal)}>
           Older Versions - {props.data.name}
         </ModalHeader>
@@ -188,11 +207,16 @@ function ActionCellRenderer(props) {
           ) : versions.length > 0 ? (
             <ListGroup>
               {versions.map((version) => (
-                <ListGroupItem key={version} className="d-flex justify-content-between align-items-center">
+                <ListGroupItem
+                  key={version}
+                  className="d-flex justify-content-between align-items-center"
+                >
                   <span>
                     <strong>{version}</strong>
                     {props.data.installedVersion === version && (
-                      <span className="badge badge-success ml-2">Installed</span>
+                      <span className="badge badge-success ml-2">
+                        Installed
+                      </span>
                     )}
                   </span>
                   <Button
@@ -201,13 +225,17 @@ function ActionCellRenderer(props) {
                     onClick={() => handleInstallVersionClick(version)}
                     disabled={props.data.installedVersion === version}
                   >
-                    {props.data.installedVersion === version ? 'Installed' : 'Install'}
+                    {props.data.installedVersion === version
+                      ? 'Installed'
+                      : 'Install'}
                   </Button>
                 </ListGroupItem>
               ))}
             </ListGroup>
           ) : (
-            <p className="text-muted">No older versions available or failed to load versions.</p>
+            <p className="text-muted">
+              No older versions available or failed to load versions.
+            </p>
           )}
         </ModalBody>
         <ModalFooter>
