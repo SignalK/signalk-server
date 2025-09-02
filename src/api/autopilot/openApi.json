@@ -28,7 +28,7 @@
     "schemas": {
       "apAction": {
         "type": "array",
-        "enum": ["tack", "gybe", "courseCurrentPoint", "courseNextPoint"]
+        "enum": ["dodge", "tack", "gybe", "courseCurrentPoint", "courseNextPoint"]
       },
       "autopilotStateDef": {
         "type": "object",

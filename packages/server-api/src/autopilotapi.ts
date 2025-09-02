@@ -412,7 +412,7 @@ export interface AutopilotStateDef {
 }
 
 export interface AutopilotActionDef {
-  id: 'tack' | 'gybe' | 'courseCurrentPoint' | 'courseNextPoint'
+  id: 'dodge' | 'tack' | 'gybe' | 'courseCurrentPoint' | 'courseNextPoint'
   name: string // display name
   available: boolean // true if can be used in current AP mode of operation
 }

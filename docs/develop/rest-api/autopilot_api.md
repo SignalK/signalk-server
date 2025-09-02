@@ -171,6 +171,7 @@ The Autopilot API allows providers to list all the "actions" that are supported 
 
 A set of normalised actions are defined to simplify client processing and UI trimming:
 
+- `dodge`
 - `tack`
 - `gybe`
 - `courseCurrentPoint`
@@ -417,24 +418,24 @@ To address the various methods that the `dodge` function could be invoked on pil
 
 **To enter dodge mode at the current course**
 
-```javascript
-POST / signalk / v2 / api / vessels / self / autopilots / { id } / dodge
+```typescript
+POST "/signalk/v2/api/vessels/self/autopilots/{id}/dodge"
 ```
 
 **To enter dodge mode and change course by 5 degrees starboard**
 
-```javascript
-PUT /signalk/v2/api/vessels/self/autopilots/{id}/dodge {"value": 5, "units": "deg"}
+```typescript
+PUT "/signalk/v2/api/vessels/self/autopilots/{id}/dodge" {"value": 5, "units": "deg"}
 ```
 
 **To enter dodge mode and change course by 5 degrees port**
 
-```javascript
-PUT /signalk/v2/api/vessels/self/autopilots/{id}/dodge {"value": -5, "units": "deg"}
+```typescript
+PUT "/signalk/v2/api/vessels/self/autopilots/{id}/dodge" {"value": -5, "units": "deg"}
 ```
 
 **To cancel dodge mode**
 
-```javascript
-DELETE / signalk / v2 / api / vessels / self / autopilots / { id } / dodge
+```typescript
+DELETE "/signalk/v2/api/vessels/self/autopilots/{id}/dodge"
 ```
