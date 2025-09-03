@@ -1,10 +1,10 @@
 ---
 title: Developing
 children:
-  - plugins/README.md
-  - rest-api/README.md
   - ../whats_new.md
   - ../breaking_changes.md
+  - plugins/README.md
+  - rest-api/README.md
   - contributing.md
 ---
 

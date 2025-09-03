@@ -333,7 +333,7 @@ export class AutopilotApi {
       (req: Request, res: Response) => {
         this.useProvider(req)
           .getState(req.params.id)
-          .then((r: string) => {
+          .then((r: string | null) => {
             res.json({ value: r })
           })
           .catch((err) => {
@@ -375,7 +375,7 @@ export class AutopilotApi {
       (req: Request, res: Response) => {
         this.useProvider(req)
           .getMode(req.params.id)
-          .then((r: string) => {
+          .then((r: string | null) => {
             res.json({ value: r })
           })
           .catch((err) => {
@@ -417,7 +417,7 @@ export class AutopilotApi {
       (req: Request, res: Response) => {
         this.useProvider(req)
           .getTarget(req.params.id)
-          .then((r: number) => {
+          .then((r: number | null) => {
             res.json({ value: r })
           })
           .catch((err) => {
@@ -483,6 +483,44 @@ export class AutopilotApi {
         debug('target = ', v)
         this.useProvider(req)
           .adjustTarget(v, req.params.id)
+          .then(() => {
+            res.status(Responses.ok.statusCode).json(Responses.ok)
+          })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
+          })
+      }
+    )
+
+    // steer to current destination point
+    this.server.post(
+      `${AUTOPILOT_API_PATH}/:id/courseCurrentPoint`,
+      (req: Request, res: Response) => {
+        this.useProvider(req)
+          .courseCurrentPoint(req.params.id)
+          .then(() => {
+            res.status(Responses.ok.statusCode).json(Responses.ok)
+          })
+          .catch((err) => {
+            res.status(err.statusCode ?? 500).json({
+              state: err.state ?? 'FAILED',
+              statusCode: err.statusCode ?? 500,
+              message: err.message ?? 'No autopilots available!'
+            })
+          })
+      }
+    )
+
+    // advance to next point
+    this.server.post(
+      `${AUTOPILOT_API_PATH}/:id/courseNextPoint`,
+      (req: Request, res: Response) => {
+        this.useProvider(req)
+          .courseNextPoint(req.params.id)
           .then(() => {
             res.status(Responses.ok.statusCode).json(Responses.ok)
           })
