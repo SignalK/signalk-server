@@ -7,7 +7,7 @@ updates:
     # Check the npm registry for updates every day (weekdays)
     schedule:
       interval: 'monthly'
-    open-pull-requests-limit: 25
+    open-pull-requests-limit: 5
 
   # Enable version updates for Docker
   - package-ecosystem: 'docker'

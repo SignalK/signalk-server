@@ -1,9 +1,13 @@
 ---
 title: REST APIs
 children:
+  - conventions.md
   - autopilot_api.md
   - course_api.md
   - course_calculations.md
+  - resources_api.md
+  - notifications_api.md
+  - anchor_api.md
   - plugin_api.md
   - resources_api.md
   - weather_api.md
@@ -23,6 +27,7 @@ APIs are available via `/signalk/v2/api/<endpoint>`
 
 | API                               | Description                                                                        | Endpoint                         |
 | --------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------- |
+| [`Autopilot`](./autopilot_api.md) | Provide the ability to send common commands to an autopilot via a provider plugin. | `vessels/self/autopilot`         |
 | [Course](./course_api.md)         | Set a course, follow a route, advance to next point, etc.                          | `vessels/self/navigation/course` |
 | [Resources](./resources_api.md)   | Create, view, update and delete waypoints, routes, etc.                            | `resources`                      |
 | [`Autopilot`](./autopilot_api.md) | Provide the ability to send common commands to an autopilot via a provider plugin. | `vessels/self/autopilot`         |

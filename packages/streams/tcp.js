@@ -115,8 +115,16 @@ TcpStream.prototype.pipe = function (pipeTo) {
       that.debug(`Disconnected ${this.options.host} ${this.options.port}`)
     })
     .on('error', (err) => {
-      this.options.app.setProviderError(this.options.providerId, err.message)
-      console.error('TcpProvider:' + err.message)
+      let msg = err
+      if (err.message && err.message.length > 0) {
+        msg = err.message
+      } else if (err.errors) {
+        msg = err.errors.toString()
+      } else {
+        msg = err.toString()
+      }
+      this.options.app.setProviderError(this.options.providerId, msg)
+      console.error('TcpProvider:' + msg)
     })
     .connect(this.options)
 

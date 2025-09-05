@@ -1,11 +1,7 @@
 import React, { Component, Suspense } from 'react'
 import { connect } from 'react-redux'
 import { Card, CardBody, CardHeader, Col } from 'reactstrap'
-import {
-  ADDON_PANEL,
-  toLazyDynamicComponent,
-  toSafeModuleId
-} from './dynamicutilities'
+import { ADDON_PANEL, toLazyDynamicComponent } from './dynamicutilities'
 
 import Webapp from './Webapp'
 
@@ -46,35 +42,10 @@ class Webapps extends Component {
                 .filter(
                   (webAppInfo) => webAppInfo.name !== '@signalk/server-admin-ui'
                 )
-                .map((webappInfo) => {
-                  const url = webappInfo.keywords.includes(
-                    'signalk-embeddable-webapp'
-                  )
-                    ? `/admin/#/e/${toSafeModuleId(webappInfo.name)}`
-                    : `/${webappInfo.name}`
+                .map((webAppInfo) => {
                   return (
-                    <Col xs="12" md="12" lg="6" xl="4" key={webappInfo.name}>
-                      <Webapp
-                        key={webappInfo.name}
-                        header={
-                          webappInfo.signalk && webappInfo.signalk.displayName
-                            ? webappInfo.signalk.displayName
-                            : webappInfo.name
-                        }
-                        mainText={webappInfo.description}
-                        url={url}
-                        icon={`fa ${
-                          webappInfo.signalk && webappInfo.signalk.displayName
-                            ? ''
-                            : 'icon-grid'
-                        }`}
-                        color="primary"
-                        bgImage={
-                          webappInfo.signalk && webappInfo.signalk.appIcon
-                            ? webappInfo.signalk.appIcon
-                            : undefined
-                        }
-                      />
+                    <Col xs="12" md="12" lg="6" xl="4" key={webAppInfo.name}>
+                      <Webapp key={webAppInfo.name} webAppInfo={webAppInfo} />
                     </Col>
                   )
                 })}

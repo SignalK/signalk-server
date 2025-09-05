@@ -808,6 +808,7 @@ const NMEA2000 = (props) => {
       )}
       {props.value.options.type === 'ydwg02-udp-canboatjs' && (
         <div>
+          <HostInput value={props.value.options} onChange={props.onChange} />
           <PortInput value={props.value.options} onChange={props.onChange} />
         </div>
       )}
@@ -867,12 +868,13 @@ const NMEA2000 = (props) => {
         </div>
       )}
       <UseCanNameInput value={props.value.options} onChange={props.onChange} />
-      {props.value.options.type.indexOf('canboatjs') != -1 && (
-        <CamelCaseCompatInput
-          value={props.value.options}
-          onChange={props.onChange}
-        />
-      )}
+      {props.value.options.type !== undefined &&
+        props.value.options.type.indexOf('canboatjs') != -1 && (
+          <CamelCaseCompatInput
+            value={props.value.options}
+            onChange={props.onChange}
+          />
+        )}
     </div>
   )
 }
