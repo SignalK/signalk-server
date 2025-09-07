@@ -90,3 +90,18 @@ export type PathsResponse = Path[]
 
 export type ContextsRequestQueryParams = TimeRangeQueryParams
 export type ContextsResponse = Context[]
+
+export interface HistoryProvider {
+  getHistory(
+    query: ValuesRequestQueryParams
+  ): Promise<ValuesResponse>
+}
+
+export function isHistoryProvider(
+  obj: unknown
+): obj is HistoryProvider {
+  if (typeof obj !== 'object' || obj === null) {
+    return false
+  }
+  return typeof (obj as HistoryProvider).getHistory === 'function'
+}
