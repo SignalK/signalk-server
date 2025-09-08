@@ -17,7 +17,7 @@ export type ValueList = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataRow = [Timestamp, ...any[]]
 
-export interface HistoryResponse {
+export interface ValuesResponse {
   context: Context
   range: {
     from: Timestamp
@@ -28,7 +28,7 @@ export interface HistoryResponse {
   data: DataRow[]
 }
 
-const _example: HistoryResponse = {
+const _example: ValuesResponse = {
   context:
     'vessels.urn:mrn:signalk:uuid:2ffee4a6-52f6-4d4e-8179-0fc9aaf22c87' as Context,
   range: {
@@ -47,7 +47,7 @@ const _example: HistoryResponse = {
   ]
 }
 
-export type HistoryRequestQueryParams = (
+export type ValuesRequestQueryParams = (
   | {
       // only duration, to defaults to now
       duration: number | string
