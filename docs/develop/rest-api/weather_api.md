@@ -60,12 +60,12 @@ The first plugin registered is set as the _default_ provider and all requests wi
 Requests can be directed to a specific provider by using the `provider` parameter in the request with the _id_ of the provider plugin.
 
 _Example:_
+
 ```javascript
 GET "/signalk/v2/api/weather/warnings?lat=5.432&lon=7.334?provider=my-weather-plugin"
 ```
 
->[!NOTE] Any installed weather provider can be set as the default. _See [Setting the Default provider](#setting-a-provider-as-the-default)_
-
+> [!NOTE] Any installed weather provider can be set as the default. _See [Setting the Default provider](#setting-a-provider-as-the-default)_
 
 ### Listing the available Weather Providers
 
