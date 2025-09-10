@@ -17,7 +17,10 @@ They are installed via the AppStore and configured via the Admin UI.
 
 Signal K server exposes an interface for plugins to use in order to interact with the full data model, emit delta messages and process requests.
 
-Plugins can also provide a webapp by placing the relavent files in a folder named `/public/` which the server will mount under `http://{skserver}:3000/{pluginId}`.
+Plugins can:
+- Expose _[REST APIs](../rest-api/README.md)_ to provide consumers/clients a way to perform operations offered by your plugin. The APIs will be published under `http://{skserver}:3000/plugins/{pluginId}`.
+
+- Provide a webapp by placing the relevant files in a folder named `/public/` which the server will mount under `http://{skserver}:3000/{pluginId}`.
 
 **Note: With the move towards Signal K server providing APIs to perform operations, it is important that you consider how the proposed functionality provided by your plugin aligns with the Signal K architecture before starting development.**
 
@@ -100,7 +103,7 @@ npm i
 
 Once you have developed your plugin code and are ready to debug, the most convenient way is to use `npm link` to link your plugin code to your instance of Signal K server.
 
-To do this, from within a terminal window:
+To do this, from within a terminal window (if you are using Docker, the following must be executed from the container terminal):
 
 ```shell
 # Ensure you are in the folder containing your built plugin code
@@ -237,13 +240,14 @@ A plugin can also contain the following optional functions:
 
 - `uiSchema()`: A function that returns an object defining the attributes of the UI components displayed in the **Plugin Config** screen.
 
-- `registerWithRouter(router)`: This function (which is called during plugin startup) enables plugins to provide an API by registering paths with the Express router is passed as a parameter when invoked. It is strongly recommended that he plugin implement `getOpenAPI()` if this function is used.
+- `registerWithRouter(router)`: This function (which is called during plugin startup) enables plugins to provide an API (REST API in our context) by registering paths with the Express router. The APIs will be published under `http://{skserver}:3000/plugins/{pluginId}{path string}`. It is strongly recommended that the plugin implement `getOpenAPI()` to publish API documentation if this function is used.
 
 _Example:_
 
 ```javascript
 plugin.registerWithRouter = (router) => {
   router.get('/preferences', (req, res) => {
+    // URL will be http://{skserver}:3000/plugins/{pluginId}/preferences
     res.status(200).json({
       preferences: {
         color: 'red',
