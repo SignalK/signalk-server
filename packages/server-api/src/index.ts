@@ -11,7 +11,6 @@ export * from './autopilotapi.guard'
 export * from './propertyvalues'
 export * from './brand'
 export * from './weatherapi'
-export * from './weatherapi.guard'
 export * from './streambundle'
 export * from './subscriptionmanager'
 

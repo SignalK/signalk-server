@@ -25,13 +25,24 @@ export interface WeatherProviders {
   }
 }
 
-/**
- * @prop name Weather Provider name (e.g. OpenWeather, Open-Meteo, NOAA, etc)
- * @prop An object implementing the `WeatherProviderMethods` interface defining the functions to which requests are passed by the SignalK server.
- * _Note: The plugin **MUST** implement each method, even if that operation is NOT supported by the plugin!_
- *
- * @see {isWeatherProvider} ts-auto-guard:type-guard
- */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const isWeatherProvider = (obj: any) => {
+  const typedObj = obj
+  return (
+    ((typedObj !== null && typeof typedObj === 'object') ||
+      typeof typedObj === 'function') &&
+    typeof typedObj['name'] === 'string' &&
+    ((typedObj['methods'] !== null &&
+      typeof typedObj['methods'] === 'object') ||
+      typeof typedObj['methods'] === 'function') &&
+    (typeof typedObj['methods']['pluginId'] === 'undefined' ||
+      typeof typedObj['methods']['pluginId'] === 'string') &&
+    typeof typedObj['methods']['getObservations'] === 'function' &&
+    typeof typedObj['methods']['getForecasts'] === 'function' &&
+    typeof typedObj['methods']['getWarnings'] === 'function'
+  )
+}
+
 export interface WeatherProvider {
   name: string
   methods: WeatherProviderMethods

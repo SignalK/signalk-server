@@ -122,6 +122,10 @@ export class WeatherApi {
           next()
         }
       } else {
+        if (req.path === `/` || req.path === `/forecasts`) {
+          next()
+          return
+        }
         const l = this.checkLocation(req)
         if (l === 1) {
           next()
@@ -163,6 +167,29 @@ export class WeatherApi {
       }
     )
 
+    this.app.get(`${WEATHER_API_PATH}`, async (req: Request, res: Response) => {
+      debug(`** ${req.method} ${req.path}`)
+      try {
+        res.status(200).json({
+          forecasts: {
+            description: 'Forecast data for the supplied location.'
+          },
+          observations: {
+            description: 'Observation data for the supplied location.'
+          },
+          warnings: {
+            description: 'Weather warnings for the supplied location.'
+          }
+        })
+      } catch (err: any) {
+        res.status(400).json({
+          statusCode: 400,
+          state: 'FAILED',
+          message: err.message
+        })
+      }
+    })
+
     // return list of weather providers
     this.app.get(
       `${WEATHER_API_PATH}/_providers`,
@@ -187,24 +214,43 @@ export class WeatherApi {
       }
     )
 
+    // return default weather provider identifier
+    this.app.get(
+      `${WEATHER_API_PATH}/_providers/_default`,
+      async (req: Request, res: Response) => {
+        debug(`**route = ${req.method} ${req.path}`)
+        try {
+          res.status(200).json({
+            id: this.defaultProviderId
+          })
+        } catch (err: any) {
+          res.status(400).json({
+            statusCode: 400,
+            state: 'FAILED',
+            message: err.message
+          })
+        }
+      }
+    )
+
     // change weather provider
     this.app.post(
-      `${WEATHER_API_PATH}/_providers`,
+      `${WEATHER_API_PATH}/_providers/_default/:id`,
       async (req: Request, res: Response) => {
-        debug(`**route = ${req.method} ${req.path} ${JSON.stringify(req.body)}`)
+        debug(`**route = ${req.method} ${req.path}`)
         try {
-          if (!req.body.id) {
+          if (!req.params.id) {
             throw new Error('Provider id not supplied!')
           }
-          if (this.weatherProviders.has(req.body.id)) {
-            this.defaultProviderId = req.body.id
+          if (this.weatherProviders.has(req.params.id)) {
+            this.defaultProviderId = req.params.id
             res.status(200).json({
               statusCode: 200,
               state: 'COMPLETED',
-              message: `Default provider set to ${req.body.id}.`
+              message: `Default provider set to ${req.params.id}.`
             })
           } else {
-            throw new Error(`Provider ${req.body.id} not found!`)
+            throw new Error(`Provider ${req.params.id} not found!`)
           }
         } catch (err: any) {
           res.status(400).json({
@@ -223,11 +269,36 @@ export class WeatherApi {
         debug(`** ${req.method} ${req.path}`)
         try {
           const q = this.parseQueryOptions(req.query)
-          const r = await this.useProvider().getObservations(
+          const r = await this.useProvider(req).getObservations(
             q.position,
             q.options
           )
           res.status(200).json(r)
+        } catch (err: any) {
+          res.status(400).json({
+            statusCode: 400,
+            state: 'FAILED',
+            message: err.message
+          })
+        }
+      }
+    )
+
+    this.app.get(
+      `${WEATHER_API_PATH}/forecasts`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        try {
+          res.status(200).json({
+            daily: {
+              description:
+                'Daily forecast data for the requested number of days.'
+            },
+            point: {
+              description:
+                'Point forecast data for the requested number of intervals.'
+            }
+          })
         } catch (err: any) {
           res.status(400).json({
             statusCode: 400,
@@ -249,7 +320,7 @@ export class WeatherApi {
         debug(`** ${req.method} ${req.path}`)
         try {
           const q = this.parseQueryOptions(req.query)
-          const r = await this.useProvider().getForecasts(
+          const r = await this.useProvider(req).getForecasts(
             q.position,
             'daily',
             q.options
@@ -275,7 +346,7 @@ export class WeatherApi {
         debug(`** ${req.method} ${req.path}`)
         try {
           const q = this.parseQueryOptions(req.query)
-          const r = await this.useProvider().getForecasts(
+          const r = await this.useProvider(req).getForecasts(
             q.position,
             'point',
             q.options
@@ -301,7 +372,7 @@ export class WeatherApi {
         debug(`** route = ${req.method} ${req.path}`)
         try {
           const q = this.parseQueryOptions(req.query)
-          const r = await this.useProvider().getWarnings(q.position)
+          const r = await this.useProvider(req).getWarnings(q.position)
           res.status(200).json(r)
         } catch (err: any) {
           res.status(400).json({
@@ -333,14 +404,23 @@ export class WeatherApi {
   }
 
   /** Returns provider to use as data source.
-   * @param req If not supplied default provider is returned.
+   * @param req API request.
    */
-  private useProvider(req?: Request): WeatherProviderMethods {
+  private useProvider(req: Request): WeatherProviderMethods {
     debug('** useProvider()')
     if (this.weatherProviders.size === 0) {
       throw new Error('No providers registered!')
     }
-    if (!req) {
+    if (req.query.provider) {
+      debug(`Use requested provider... ${req.query.provider}`)
+      if (this.weatherProviders.has(req.query.provider as string)) {
+        debug(`Requested provider found...using ${req.query.provider}`)
+        return this.weatherProviders.get(req.query.provider as string)
+          ?.methods as WeatherProviderMethods
+      } else {
+        throw new Error(`Requested provider not found! (${req.query.provider})`)
+      }
+    } else {
       if (
         this.defaultProviderId &&
         this.weatherProviders.has(this.defaultProviderId)
@@ -350,14 +430,6 @@ export class WeatherApi {
           ?.methods as WeatherProviderMethods
       } else {
         throw new Error(`Default provider not found!`)
-      }
-    } else {
-      if (this.weatherProviders.has(req.params.id)) {
-        debug(`Provider found...using ${req.params.id}`)
-        return this.weatherProviders.get(req.params.id)
-          ?.methods as WeatherProviderMethods
-      } else {
-        throw new Error(`Cannot get provider (${req.params.id})!`)
       }
     }
   }

@@ -14,6 +14,8 @@ A weather provider plugin is a Signal K server plugin that brokers communication
 
 For a plugin to be a weather provider it must implement the {@link @signalk/server-api!WeatherProvider | `WeatherProvider`} Interface which provides the Signal K server with methods to pass the details contained in API requests.
 
+**A weather provider MUST return data as defined by the OpenAPI definition.**
+
 > [!NOTE]
 > Multiple weather providers can be registered with the Signal K server to enable meteorogical data retrieval from multiple sources.
 

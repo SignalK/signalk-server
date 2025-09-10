@@ -14,6 +14,11 @@
     "url": "http://signalk.org/specification/",
     "description": "Signal K specification."
   },
+  "servers": [
+    {
+      "url": "/signalk/v2/api/weather"
+    }
+  ],
   "tags": [
     {
       "name": "Weather",
@@ -351,6 +356,27 @@
       }
     },
     "parameters": {
+      "ProviderIdParam": {
+        "name": "id",
+        "in": "path",
+        "description": "Plugin id of the weather provider the request will be directed to.",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "example": "myweather-provider"
+        }
+      },
+      "ProviderIdQuery": {
+        "in": "query",
+        "name": "provider",
+        "description": "Plugin id of the weather provider the request will be directed to.",
+        "style": "form",
+        "explode": false,
+        "schema": {
+          "type": "string",
+          "example": "myweather-provider"
+        }
+      },
       "LatitudeParam": {
         "in": "query",
         "required": true,
@@ -409,8 +435,11 @@
   },
   "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
   "paths": {
-    "/weather/observations": {
+    "/observations": {
       "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderIdQuery"
+        },
         {
           "$ref": "#/components/parameters/LatitudeParam"
         },
@@ -444,8 +473,11 @@
         }
       }
     },
-    "/weather/forecasts/daily": {
+    "/forecasts/daily": {
       "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderIdQuery"
+        },
         {
           "$ref": "#/components/parameters/LatitudeParam"
         },
@@ -479,8 +511,11 @@
         }
       }
     },
-    "/weather/forecasts/point": {
+    "/forecasts/point": {
       "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderIdQuery"
+        },
         {
           "$ref": "#/components/parameters/LatitudeParam"
         },
@@ -514,8 +549,11 @@
         }
       }
     },
-    "/weather/warnings": {
+    "/warnings": {
       "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderIdQuery"
+        },
         {
           "$ref": "#/components/parameters/LatitudeParam"
         },
@@ -543,7 +581,7 @@
         }
       }
     },
-    "/weather/_providers": {
+    "/_providers": {
       "get": {
         "tags": ["Provider"],
         "summary": "Retrieve list of registered providers.",
@@ -556,6 +594,7 @@
                   "type": "object",
                   "additionalProperties": {
                     "type": "object",
+                    "description": "Provider identifier",
                     "required": ["name", "isDefault"],
                     "properties": {
                       "name": {
@@ -564,12 +603,12 @@
                       },
                       "isDefault": {
                         "type": "boolean",
-                        "description": "true if this provider is set as the default."
+                        "description": "`true` if this provider is set as the default."
                       }
                     },
                     "example": {
-                      "name": "OpenWeather",
-                      "isDefault": false
+                      "name": "OpenMeteo",
+                      "isDefault": true
                     }
                   }
                 }
@@ -577,10 +616,46 @@
             }
           }
         }
-      },
+      }
+    },
+    "/_providers/_default": {
+      "get": {
+        "tags": ["Provider"],
+        "summary": "Get the default weather provider id.",
+        "responses": {
+          "default": {
+            "description": "Returns the id of the provider id that is the target of requests (if provider is not specified).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["id"],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Provider identifier."
+                    }
+                  },
+                  "example": {
+                    "id": "open-meteo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_providers/_default/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ProviderIdParam"
+        }
+      ],
       "post": {
         "tags": ["Provider"],
-        "summary": "Retrieve supplied warning entry.",
+        "summary": "Sets the default weather provider.",
+        "description": "Sets the proivder with the supplied `id` as the default.",
         "body": {
           "type": "object",
           "required": ["id"],

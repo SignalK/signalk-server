@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "generate": "ts-auto-guard src/autopilotapi.ts src/weatherapi.ts 2>/dev/null",
+    "generate": "ts-auto-guard src/autopilotapi.ts",
     "build": "npm run generate && tsc -b",
     "watch": "tsc --watch",
     "prepublishOnly": "npm run build",
