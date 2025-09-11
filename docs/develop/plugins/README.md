@@ -203,7 +203,7 @@ Create `index.js` with the following content:
 ```typescript
 import { Plugin, ServerAPI } from '@signalk/server-api'
 
-export default (app: ServerAPI): Plugin => {
+const start = (app: ServerAPI): Plugin => {
   const plugin: Plugin = {
     id: 'my-signalk-plugin',
     name: 'My Great Plugin',
@@ -222,6 +222,7 @@ export default (app: ServerAPI): Plugin => {
 
   return plugin
 }
+module.exports = start;
 ```
 
 A plugin must return an object containing the following functions:
