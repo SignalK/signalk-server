@@ -3,6 +3,7 @@
   "info": {
     "version": "0.0.1",
     "title": "Signal K History API",
+    "description": "API for querying historical data, typically stored in a database. The actual storage backend is not defined by this API and can be implemented in various ways, typically as a plugin like [signalk-parquet](https://www.npmjs.com/package/signalk-parquet) and [signalk-to-influxdb2](https://www.npmjs.com/package/signalk-to-influxdb2). The most common use case for the API is to show graphs of past values.\n\n The time range can be defined as a combination of **from**, **to** and **duration** parameters. Omitted from and to parameters default to current moment in time, so that for example specifying just **duration** refers to the length of duration up to this moment.",
     "license": {
       "name": "Apache 2.0",
       "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
@@ -13,15 +14,48 @@
       "url": "/signalk/v2/api/history"
     }
   ],
-  "components": {},
-  "security": [
-    {
-      "cookieAuth": []
-    },
-    {
-      "bearerAuth": []
+  "components": {
+    "parameters": {
+      "TimeRangeFrom": {
+        "name": "from",
+        "in": "query",
+        "description": "Start of the time range, inclusive as ISO 8601 timestamp",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "example": "2018-03-20T09:13:28Z"
+        }
+      },
+      "TimeRangeDuration": {
+        "name": "duration",
+        "in": "query",
+        "description": "Duration of the time range in milliseconds (integer) or as an ISO8601 Duration string. Can be specified with either 'from' or 'to'. If they are both omitted is relative to 'now'. See https://datatracker.ietf.org/doc/html/rfc3339#appendix-A",
+        "schema": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "description": "Duration in milliseconds"
+            },
+            {
+              "type": "string",
+              "format": "duration",
+              "description": "ISO8601 Duration string"
+            }
+          ]
+        }
+      },
+      "TimeRangeTo": {
+        "name": "to",
+        "in": "query",
+        "description": "End of the time range, inclusive. 'Now' if omitted",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "example": "2018-03-20T09:13:28Z"
+        }
+      }
     }
-  ],
+  },
   "paths": {
     "/values": {
       "get": {
@@ -29,67 +63,41 @@
         "description": "Returns historical data series for the paths and time range specified in query parameters",
         "parameters": [
           {
-            "in": "query",
-            "name": "from",
-            "description": "Start of the time range, inclusive as ISO 8601 timestamp",
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
+            "$ref": "#/components/parameters/TimeRangeFrom"
           },
           {
-            "in": "query",
-            "name": "duration",
-            "description": "Duration of the time range in milliseconds (integer) or as an ISO8601 Duration string. Can be specified with either 'from' or 'to'. If they are both omitted is relative to 'now'. See https://datatracker.ietf.org/doc/html/rfc3339#appendix-A",
-            "schema": {
-              "oneOf": [
-                {
-                  "type": "integer",
-                  "description": "Duration in milliseconds"
-                },
-                {
-                  "type": "string",
-                  "format": "duration",
-                  "description": "ISO8601 Duration string"
-                }
-              ]
-            }
+            "$ref": "#/components/parameters/TimeRangeDuration"
           },
           {
-            "in": "query",
-            "name": "to",
-            "description": "End of the time range, inclusive. 'Now' if omitted",
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            },
-            "required": true
+            "$ref": "#/components/parameters/TimeRangeTo"
           },
           {
-            "in": "query",
-            "name": "context",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "resolution",
-            "description": "Length of data sample time window in milliseconds or as a time expression ('1s', '1m', '1h', '1d')",
-            "schema": {
-              "type": "number",
-              "format": "integer"
-            }
-          },
-          {
-            "in": "query",
             "name": "paths",
+            "in": "query",
             "description": "Comma separated ist of Signal K paths whose data should be retrieved, optional aggregation methods for each path as postfix separated by a colon. Aggregation methods: 'average' | 'min' | 'max' | 'first' | 'last' | 'mid' | 'middle_index'",
             "example": "navigation.speedOverGround,navigation.speedThroughWater:max",
             "schema": {
               "type": "string"
             },
             "required": true
+          },
+          {
+            "name": "context",
+            "in": "query",
+            "description": "Signal K context that the data is about, defaults to 'vessels.self'",
+            "example": "vessels.urn:mrn:imo:mmsi:123456789",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resolution",
+            "in": "query",
+            "description": "Length of data sample time window in milliseconds or as a time expression ('1s', '1m', '1h', '1d'). If resolution is not specified the server should provide data in a reasonable time resolution, depending on the time range in the request.",
+            "schema": {
+              "type": "number",
+              "format": "integer"
+            }
           }
         ],
         "responses": {
@@ -99,7 +107,11 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["context", "", "target"],
+                  "required": [
+                    "context",
+                    "",
+                    "target"
+                  ],
                   "properties": {
                     "context": {
                       "type": "string",
@@ -165,7 +177,15 @@
                         }
                       },
                       "example": [
-                        ["2023-11-09T02:45:38.160Z", 13.2, null, [-120.5, 59.2]]
+                        [
+                          "2023-11-09T02:45:38.160Z",
+                          13.2,
+                          null,
+                          [
+                            -120.5,
+                            59.2
+                          ]
+                        ]
                       ]
                     }
                   }
@@ -177,10 +197,72 @@
       }
     },
     "/contexts": {
-      "get": {}
+      "get": {
+        "summary": "Get contexts that have some historical data",
+        "description": "Returns an array of contexts that have some historical data to query with /values for the specified time range",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimeRangeFrom"
+          },
+          {
+            "$ref": "#/components/parameters/TimeRangeDuration"
+          },
+          {
+            "$ref": "#/components/parameters/TimeRangeTo"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of contexts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "Signal K Context",
+                    "example": "vessels.urn:mrn:imo:mmsi:123456789"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "/paths": {
-      "get": {}
+      "get": {
+        "summary": "Get paths that have some historical data",
+        "description": "Returns an array of path that have some historical data to query with /values for the specified time range",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TimeRangeFrom"
+          },
+          {
+            "$ref": "#/components/parameters/TimeRangeDuration"
+          },
+          {
+            "$ref": "#/components/parameters/TimeRangeTo"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of paths",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "Signal K Path",
+                    "example": "navigation.speedOverGround"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
