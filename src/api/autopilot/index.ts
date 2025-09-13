@@ -19,7 +19,8 @@ import {
   isAutopilotUpdateAttrib,
   isAutopilotAlarm,
   PathValue,
-  SourceRef
+  SourceRef,
+  AutopilotActionDef
 } from '@signalk/server-api'
 
 const AUTOPILOT_API_PATH = `/signalk/v2/api/vessels/self/autopilots`
@@ -167,6 +168,15 @@ export class AutopilotApi {
             values.push({
               path: `notifications.steering.autopilot.${alarm.path}` as Path,
               value: alarm.value
+            })
+          }
+        } else if (attrib === 'availableActions') {
+          const actions = apInfo[attrib] as AutopilotActionDef
+          if (Array.isArray(actions)) {
+            const av = actions.filter((i) => i.available).map((i) => i.id)
+            values.push({
+              path: `notifications.steering.autopilot.${attrib}` as Path,
+              value: av
             })
           }
         } else {

@@ -88,6 +88,13 @@ export const isAutopilotProvider = (obj: unknown) => {
 export interface AutopilotApi {
   register(pluginId: string, provider: AutopilotProvider): void
   unRegister(pluginId: string): void
+  /**
+   * This method instructs the server to send deltas for the provided paths.
+   *
+   * > [!NOTE]
+   * > Valid `apInfo` paths are defined in {@link AutopilotUpdateAttrib}
+   * > `apInfo.availabeActions` value must contain an Array<{@link AutopilotActionDef}>
+   */
   apUpdate(
     pluginId: string,
     deviceId: string,
