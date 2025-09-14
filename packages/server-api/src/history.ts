@@ -47,46 +47,45 @@ const _example: ValuesResponse = {
   ]
 }
 
-type TimeWindowQueryParams = (
+export type TimeRangeQueryParams =
   | {
-    // only duration, to defaults to now
-    duration: number | string
-    from?: never
-    to?: never
-  }
+      // only duration, to defaults to now
+      duration: number | string
+      from?: never
+      to?: never
+    }
   | {
-    // duration from
-    duration: number | string
-    from: string
-    to?: never
-  }
+      // duration from
+      duration: number | string
+      from: string
+      to?: never
+    }
   | {
-    // duration to
-    duration: number | string
-    from?: never
-    to: string
-  }
+      // duration to
+      duration: number | string
+      from?: never
+      to: string
+    }
   | {
-    // no duration, only from, to defaults to now
-    duration?: never
-    from: string
-    to?: never
-  }
+      // no duration, only from, to defaults to now
+      duration?: never
+      from: string
+      to?: never
+    }
   | {
-    // from - to
-    duration: never
-    from: string
-    to: string
-  }
-)
+      // from - to
+      duration: never
+      from: string
+      to: string
+    }
 
-export type ValuesRequestQueryParams = TimeWindowQueryParams & {
+export type ValuesRequestQueryParams = TimeRangeQueryParams & {
   context?: string
   resolution?: number
 }
 
-export type PathsRequestQueryParams = TimeWindowQueryParams
+export type PathsRequestQueryParams = TimeRangeQueryParams
 export type PathsResponse = Path[]
 
-export type ContextsRequestQueryParams = TimeWindowQueryParams
+export type ContextsRequestQueryParams = TimeRangeQueryParams
 export type ContextsResponse = Context[]

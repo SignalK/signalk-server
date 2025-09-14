@@ -107,11 +107,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "context",
-                    "",
-                    "target"
-                  ],
+                  "required": ["context", "", "target"],
                   "properties": {
                     "context": {
                       "type": "string",
@@ -177,15 +173,7 @@
                         }
                       },
                       "example": [
-                        [
-                          "2023-11-09T02:45:38.160Z",
-                          13.2,
-                          null,
-                          [
-                            -120.5,
-                            59.2
-                          ]
-                        ]
+                        ["2023-11-09T02:45:38.160Z", 13.2, null, [-120.5, 59.2]]
                       ]
                     }
                   }
