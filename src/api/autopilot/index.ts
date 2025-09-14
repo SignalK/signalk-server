@@ -170,12 +170,12 @@ export class AutopilotApi {
               value: alarm.value
             })
           }
-        } else if (attrib === 'availableActions') {
+        } else if (attrib === 'actions') {
           const actions = apInfo[attrib] as AutopilotActionDef
           if (Array.isArray(actions)) {
             const av = actions.filter((i) => i.available).map((i) => i.id)
             values.push({
-              path: `notifications.steering.autopilot.${attrib}` as Path,
+              path: `notifications.steering.autopilot.availableActions` as Path,
               value: av
             })
           }

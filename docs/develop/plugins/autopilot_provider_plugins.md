@@ -97,6 +97,8 @@ This will ensure:
 > [!IMPORTANT]
 > The values provided via `autopilotUpdate` will be sent in the relevant delta message, so ensure they are in the correct units (e.g. angles in radians, etc).
 
+See {@link AutopilotApi} for details.
+
 _Example Update:_
 
 ```javascript

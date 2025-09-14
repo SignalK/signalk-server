@@ -9,7 +9,7 @@ export type AutopilotUpdateAttrib =
   | 'target'
   | 'engaged'
   | 'options'
-  | 'availableActions'
+  | 'actions'
   | 'alarm'
 
 /**@hidden */
@@ -19,7 +19,7 @@ const AUTOPILOTUPDATEATTRIBS: AutopilotUpdateAttrib[] = [
   'target',
   'engaged',
   'options',
-  'availableActions',
+  'actions',
   'alarm'
 ]
 
@@ -93,8 +93,18 @@ export interface AutopilotApi {
    *
    * > [!NOTE]
    * > Valid `apInfo` paths are defined in {@link AutopilotUpdateAttrib}
-   * > `apInfo.availabeActions` value must contain an Array<{@link AutopilotActionDef}>
-   */
+   * > `apInfo.actions` value (like `options.actions`) must contain an Array<{@link AutopilotActionDef}>
+   
+  @example
+   * ```javascript
+   * apUpdate({
+   *  'mode': 'gps',
+   *  'actions': [{id: 'tack', name: 'Tack', available: true}]
+   * });
+   * ```
+  
+  
+  */
   apUpdate(
     pluginId: string,
     deviceId: string,
