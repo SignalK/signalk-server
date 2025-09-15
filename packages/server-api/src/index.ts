@@ -13,6 +13,7 @@ export * from './brand'
 export * from './weatherapi'
 export * from './streambundle'
 export * from './subscriptionmanager'
+export * as history from './history'
 
 export interface Position {
   latitude: number
