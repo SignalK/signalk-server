@@ -9,6 +9,10 @@ children:
   - notifications_api.md
   - anchor_api.md
   - plugin_api.md
+  - resources_api.md
+  - weather_api.md
+  - anchor_api.md
+  - notifications_api.md
 ---
 
 # REST APIs
@@ -26,6 +30,8 @@ APIs are available via `/signalk/v2/api/<endpoint>`
 | [`Autopilot`](./autopilot_api.md) | Provide the ability to send common commands to an autopilot via a provider plugin. | `vessels/self/autopilot`         |
 | [Course](./course_api.md)         | Set a course, follow a route, advance to next point, etc.                          | `vessels/self/navigation/course` |
 | [Resources](./resources_api.md)   | Create, view, update and delete waypoints, routes, etc.                            | `resources`                      |
+| [`Autopilot`](./autopilot_api.md) | Provide the ability to send common commands to an autopilot via a provider plugin. | `vessels/self/autopilot`         |
+| [`Weather`](./weather_api.md)     | Provide the ability to surface meteorological data from weather providers.         | `weather`                        |
 
 ---
 
@@ -33,7 +39,7 @@ APIs are available via `/signalk/v2/api/<endpoint>`
 
 | Proposed API                              | Description                                                                                                                                          | Endpoint                         |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| _[`Notifications`](notifications_api.md)_ | Provide the ability to raise, update and clear notifications from multiple sources. _[View PR](https://github.com/SignalK/signalk-server/pull/1560)_ | `notifications`                  |
 | _[`Anchor`](./anchor_api.md)_             | Provide endpoints to perform operations and facilitate an anchor alarm.                                                                              | `vessels/self/navigation/anchor` |
+| _[`Notifications`](notifications_api.md)_ | Provide the ability to raise, update and clear notifications from multiple sources. _[View PR](https://github.com/SignalK/signalk-server/pull/1560)_ | `notifications`                  |
 
 ---

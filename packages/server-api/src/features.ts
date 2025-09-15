@@ -64,8 +64,9 @@ export interface FeatureInfo {
 }
 
 export type SignalKApiId =
-  | 'resources'
+  | 'weather'
   | 'course'
+  | 'resources'
   | 'history'
   | 'autopilot'
   | 'anchor'
