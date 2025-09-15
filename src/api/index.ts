@@ -4,6 +4,7 @@ import { WithSecurityStrategy } from '../security'
 import { CourseApi, CourseApplication } from './course'
 import { FeaturesApi } from './discovery'
 import { ResourcesApi } from './resources'
+import { WeatherApi } from './weather'
 import { AutopilotApi } from './autopilot'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
 
@@ -62,6 +63,11 @@ export const startApis = (
   ;(app as any).courseApi = courseApi
   apiList.push('course')
 
+  const weatherApi = new WeatherApi(app)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).weatherApi = weatherApi
+  apiList.push('weather')
+
   const autopilotApi = new AutopilotApi(app)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).autopilotApi = autopilotApi
@@ -72,6 +78,7 @@ export const startApis = (
   Promise.all([
     resourcesApi.start(),
     courseApi.start(),
+    weatherApi.start(),
     featuresApi.start(),
     autopilotApi.start()
   ])

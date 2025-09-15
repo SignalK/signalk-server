@@ -7,6 +7,7 @@ children:
   - autopilot_provider_plugins.md
   - course_calculations.md
   - resource_provider_plugins.md
+  - weather_provider_plugins.md
   - publishing.md
 ---
 

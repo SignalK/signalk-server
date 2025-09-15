@@ -24,6 +24,8 @@ import {
   AutopilotProvider,
   ServerAPI,
   RouteDestination,
+  WeatherProvider,
+  WeatherApi,
   Value,
   SignalKApiId,
   SourceRef,
@@ -460,6 +462,7 @@ module.exports = (theApp: any) => {
       onStopHandlers[plugin.id].push(() => {
         app.resourcesApi.unRegister(plugin.id)
         app.autopilotApi.unRegister(plugin.id)
+        app.weatherApi.unRegister(plugin.id)
       })
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
@@ -528,6 +531,12 @@ module.exports = (theApp: any) => {
       }
     })
     appCopy.putPath = putPath
+
+    const weatherApi: WeatherApi = app.weatherApi
+    _.omit(appCopy, 'weatherApi') // don't expose the actual weather api manager
+    appCopy.registerWeatherProvider = (provider: WeatherProvider) => {
+      weatherApi.register(plugin.id, provider)
+    }
 
     const resourcesApi: ResourcesApi = app.resourcesApi
     _.omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager

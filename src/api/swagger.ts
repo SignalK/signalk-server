@@ -8,7 +8,9 @@ import { resourcesApiRecord } from './resources/openApi'
 import { autopilotApiRecord } from './autopilot/openApi'
 import { securityApiRecord } from './security/openApi'
 import { discoveryApiRecord } from './discovery/openApi'
+import { weatherApiRecord } from './weather/openApi'
 import { appsApiRecord } from './apps/openApi'
+import { historyApiRecord } from './history/openApi'
 import { PluginId, PluginManager } from '../interfaces/plugins'
 import { Brand } from '@signalk/server-api'
 
@@ -31,7 +33,9 @@ const apiDocs = [
   courseApiRecord,
   notificationsApiRecord,
   resourcesApiRecord,
-  securityApiRecord
+  weatherApiRecord,
+  securityApiRecord,
+  historyApiRecord
 ].reduce<ApiRecords>((acc, apiRecord: OpenApiRecord) => {
   acc[apiRecord.name] = apiRecord
   return acc

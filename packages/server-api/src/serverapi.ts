@@ -4,6 +4,7 @@ import {
   WithFeatures,
   PropertyValuesEmitter,
   ResourceProviderRegistry,
+  WeatherProviderRegistry,
   Delta
 } from '.'
 import { CourseApi } from './course'
@@ -28,6 +29,7 @@ export interface ServerAPI
   extends PropertyValuesEmitter,
     ResourceProviderRegistry,
     AutopilotProviderRegistry,
+    WeatherProviderRegistry,
     WithFeatures,
     CourseApi,
     SelfIdentity {

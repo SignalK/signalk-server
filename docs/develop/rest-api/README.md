@@ -8,6 +8,10 @@ children:
   - resources_api.md
   - plugin_api.md
   - ./proposed/README.md
+  - resources_api.md
+  - weather_api.md
+  - anchor_api.md
+  - notifications_api.md
 ---
 
 # REST APIs
