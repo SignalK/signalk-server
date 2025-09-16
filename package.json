@@ -99,7 +99,7 @@
     "figlet": "^1.2.0",
     "file-timestamp-stream": "^2.1.2",
     "geolib": "3.2.2",
-    "inquirer": "^7.0.0",
+    "inquirer": "^12.9.0",
     "json-patch": "^0.7.0",
     "jsonwebtoken": "^9.0.0",
     "listr": "^0.14.1",
