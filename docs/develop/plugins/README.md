@@ -18,6 +18,7 @@ They are installed via the AppStore and configured via the Admin UI.
 Signal K server exposes an interface for plugins to use in order to interact with the full data model, emit delta messages and process requests.
 
 Plugins can:
+
 - Expose _[REST APIs](../rest-api/README.md)_ to provide consumers/clients a way to perform operations offered by your plugin. The APIs will be published under `http://{skserver}:3000/plugins/{pluginId}`.
 
 - Provide a webapp by placing the relevant files in a folder named `/public/` which the server will mount under `http://{skserver}:3000/{pluginId}`.
@@ -222,7 +223,7 @@ const start = (app: ServerAPI): Plugin => {
 
   return plugin
 }
-module.exports = start;
+module.exports = start
 ```
 
 A plugin must return an object containing the following functions:
