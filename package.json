@@ -69,6 +69,7 @@
     "packages/typedoc-theme"
   ],
   "dependencies": {
+    "@js-temporal/polyfill": "^0.5.1",
     "@signalk/course-provider": "^1.0.0",
     "@signalk/n2k-signalk": ">=4.1.0-beta",
     "@signalk/nmea0183-signalk": "^3.0.0",
