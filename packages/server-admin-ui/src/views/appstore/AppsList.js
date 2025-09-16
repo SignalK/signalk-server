@@ -1,75 +1,65 @@
-import React, { Component } from 'react'
-
-import { Table } from 'reactstrap'
-import NameCellRenderer from './Grid/cell-renderers/NameCellRenderer'
-import TypeCellRenderer from './Grid/cell-renderers/TypeCellRenderer'
+import React, { useEffect, useState } from 'react'
+import InfiniteScroll from 'react-infinite-scroll-component'
+import { ListGroup, ListGroupItem } from 'reactstrap'
 import ActionCellRenderer from './Grid/cell-renderers/ActionCellRenderer'
-import VersionCellRenderer from './Grid/cell-renderers/VersionCellRenderer'
 
-const XL_WIDTH = 1200
-const L_WIDTH = 992
-const M_WIDTH = 768
-const S_WIDTH = 576
-
-class AppsList extends Component {
-  render() {
-    return (
-      <Table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th
-              className={
-                'text-center ' + (window.innerWidth < S_WIDTH ? 'd-none' : '')
-              }
-            >
-              Version
-            </th>
-            <th className={window.innerWidth < L_WIDTH ? 'd-none' : ''}>
-              Description
-            </th>
-            <th className={window.innerWidth < XL_WIDTH ? 'd-none' : ''}>
-              Author
-            </th>
-            <th
-              className={
-                'text-center ' + (window.innerWidth < M_WIDTH ? 'd-none' : '')
-              }
-            >
-              <div>Type</div>
-            </th>
-
-            <th className="text-center">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {this.props.apps.map((app) => (
-            <tr key={app.name}>
-              <td>
-                <NameCellRenderer data={app} value={app.name} />
-              </td>
-              <td className={window.innerWidth < S_WIDTH ? 'd-none' : ''}>
-                <VersionCellRenderer data={app} />
-              </td>
-              <td className={window.innerWidth < L_WIDTH ? 'd-none' : ''}>
-                {app.description}
-              </td>
-              <td className={window.innerWidth < XL_WIDTH ? 'd-none' : ''}>
-                {app.author}
-              </td>
-              <td className={window.innerWidth < M_WIDTH ? 'd-none' : ''}>
-                <TypeCellRenderer data={app} />
-              </td>
-
-              <td>
-                <ActionCellRenderer data={app} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-    )
-  }
+export function AppListItem(app) {
+  return (
+    <ListGroupItem className="p-3">
+      <div className="d-md-flex align-items-center flex-grow-1">
+        <div className="flex-grow-1 mr-3">
+          <h5 className="text-dark mb-0">{app.name}</h5>
+          <div className="text-muted">
+            <span className="font-weight-bolder">
+              v{app.installedVersion || app.version}{' '}
+            </span>
+            {app.newVersion && (
+              <>
+                <span className="text-secondary"> → </span>
+                <span className="font-weight-bolder text-success font-italic">
+                  v{app.newVersion}
+                </span>{' '}
+              </>
+            )}
+            released by
+            <span className="text-nowrap font-weight-bolder">
+              {' '}
+              {app.author}
+            </span>{' '}
+            on
+            <span className="text-nowrap"> {app.updated.substring(0, 10)}</span>
+          </div>
+          <p className="text-pretty mb-0">{app.description}</p>
+        </div>
+        <div className="mt-3 mt-md-0">
+          <ActionCellRenderer data={app} />
+        </div>
+      </div>
+    </ListGroupItem>
+  )
 }
 
-export default AppsList
+export default function AppList(props) {
+  const [apps, setApps] = useState([])
+
+  function loadMore() {
+    setApps(props.apps.slice(0, apps.length + 20))
+  }
+
+  // Load initial list of apps
+  useEffect(loadMore, [props.apps])
+
+  return (
+    <ListGroup>
+      <InfiniteScroll
+        dataLength={apps.length}
+        next={loadMore}
+        hasMore={apps.length != props.apps.length}
+      >
+        {apps.map((app) => (
+          <AppListItem key={app.name} {...app} />
+        ))}
+      </InfiniteScroll>
+    </ListGroup>
+  )
+}

@@ -1,47 +1,4 @@
 .appstore {
-  height: 100%;
-
-  .card {
-    height: 100%;
-  }
-
-  td[col-id='type'],
-  td[col-id='action'] {
-    height: 100%;
-    vertical-align: middle;
-  }
-
-  button {
-    border-radius: 5px;
-    margin: 5px 5px;
-
-    &.btn-outline-primary {
-      color: #26363e;
-      border-color: #26363e;
-
-      &:hover {
-        background-color: #26363e;
-        color: white;
-      }
-    }
-
-    &.active.btn.btn-outline-primary {
-      background-color: #26363e;
-    }
-    &.btn-primary {
-      background-color: #26363e;
-    }
-
-    &.btn.btn-secondary {
-      background-color: #d3d3d3;
-    }
-  }
-
-  .card-body {
-    display: flex;
-    flex-direction: column;
-  }
-
   &__warning {
     margin-bottom: 20px;
 
@@ -160,73 +117,8 @@
       justify-content: flex-end;
     }
 
-    .cell-type {
-      .tag {
-        font-size: 10px;
-        padding: 5px;
-        border: solid 1px grey;
-        border-radius: 10px;
-        margin: 3px;
-      }
-    }
-
-    .cell-name {
-      display: flex;
-
-      .name {
-        font-size: 14px;
-        color: black;
-      }
-      .link {
-        cursor: pointer;
-        color: blue;
-        margin-left: 5px;
-      }
-    }
-
-    .cell-description {
-      color: grey;
-      font-size: 14px;
-      white-space: normal;
-    }
-
-    .cell-version {
-      min-width: 80px;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      align-items: center;
-      justify-content: center;
-
-      .version__container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-
-        .version--update {
-          color: #00cd79;
-          font-weight: 700;
-          font-style: italic;
-        }
-
-        .update__arrow {
-          height: 10px;
-          margin: 0 5px;
-        }
-      }
-
-      .last-update {
-        text-align: center;
-        font-size: 12px;
-        margin: 0;
-      }
-    }
-
     .cell-action {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      width: 160px;
 
       .proress__wrapper {
         display: flex;
@@ -236,36 +128,11 @@
       .progress__status {
         text-align: center;
         width: 100%;
-        margin: 10px 0;
       }
 
       .progress__bar {
         width: 100%;
       }
-
-      svg {
-        font-size: 15px;
-        cursor: pointer;
-        margin: 0 5px;
-      }
-
-      path {
-        color: grey;
-      }
-
-      .icon__update {
-        path {
-          color: #00cd79;
-        }
-      }
-    }
-
-    .cell__renderer.center {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 100%;
-      height: 100%;
     }
   }
 }

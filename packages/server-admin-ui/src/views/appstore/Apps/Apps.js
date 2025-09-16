@@ -58,7 +58,7 @@ const Apps = function (props) {
     }
   }
 
-  /* 
+  /*
   Show different warning message
   whether the store is available or if an app was installed or removed
   */
@@ -103,19 +103,19 @@ const Apps = function (props) {
             <CardTitle>Apps & Plugins</CardTitle>
             <div className="button-wrapper">
               <Button
-                color={view === 'All' ? 'primary' : 'secondary'}
+                color={view === 'All' ? 'secondary' : 'light'}
                 onClick={() => setSelectedView('All')}
               >
                 All
               </Button>
               <Button
-                color={view === 'Installed' ? 'primary' : 'secondary'}
+                color={view === 'Installed' ? 'secondary' : 'light'}
                 onClick={() => setSelectedView('Installed')}
               >
                 Installed
               </Button>
               <Button
-                color={view === 'Updates' ? 'primary' : 'secondary'}
+                color={view === 'Updates' ? 'secondary' : 'light'}
                 onClick={() => setSelectedView('Updates')}
               >
                 Updates
@@ -128,7 +128,7 @@ const Apps = function (props) {
               {props.appStore.installing.length > 0 && (
                 <>
                   <Button
-                    color={view === 'Installing' ? 'primary' : 'secondary'}
+                    color={view === 'Installing' ? 'secondary' : 'light'}
                     onClick={() => setSelectedView('Installing')}
                   >
                     Installs & Removes
@@ -174,7 +174,7 @@ const Apps = function (props) {
             {props.appStore.categories?.map((item) => (
               <Button
                 key={item}
-                color="primary"
+                color="secondary"
                 className={category === item ? 'active' : undefined}
                 outline
                 onClick={() => setSelectedCategory(item)}

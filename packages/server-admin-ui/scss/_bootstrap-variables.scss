@@ -45,12 +45,12 @@ $colors: (
 
 $theme-colors: (
   primary: $blue,
-  secondary: $gray-300,
+  secondary: $gray-700,
   success: $green,
   info: $cyan,
   warning: $yellow,
   danger: $red,
-  light: $gray-100,
+  light: $gray-200,
   dark: $gray-800
 );
 
@@ -59,7 +59,7 @@ $theme-colors: (
 // Quickly modify global styling by enabling or disabling optional features.
 
 $enable-transitions: true;
-$enable-rounded: false;
+$enable-rounded: true;
 
 // Body
 //

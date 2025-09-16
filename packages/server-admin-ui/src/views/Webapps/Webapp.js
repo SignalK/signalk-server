@@ -16,6 +16,12 @@ const propTypes = {
   children: PropTypes.node
 }
 
+export function urlToWebapp(webAppInfo) {
+  return webAppInfo.keywords.includes('signalk-embeddable-webapp')
+    ? `/admin/#/e/${toSafeModuleId(webAppInfo.name)}`
+    : `/${webAppInfo.name}`
+}
+
 class Webapp extends Component {
   render() {
     const { webAppInfo, ...attributes } = this.props
@@ -36,9 +42,7 @@ class Webapp extends Component {
       'text-capitalize'
     )
     const header = webAppInfo?.signalk?.displayName || webAppInfo.name
-    const url = webAppInfo.keywords.includes('signalk-embeddable-webapp')
-      ? `/admin/#/e/${toSafeModuleId(webAppInfo.name)}`
-      : `/${webAppInfo.name}`
+    const url = urlToWebapp(webAppInfo)
 
     const blockIcon = function (icon, appIcon = null) {
       const classes = classNames(
