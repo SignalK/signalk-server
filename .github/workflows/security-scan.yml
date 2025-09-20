@@ -1,0 +1,39 @@
+name: Security Scan for Docker Images
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+  
+permissions:
+  contents: read
+  security-events: write
+  
+jobs:
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22.x', '24.x']
+        include:
+          - node-version: '22.x'
+            image-tag: 'latest'
+          - node-version: '24.x'
+            image-tag: 'latest-24.x'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5        
+      - name: Run Trivy vulnerability scanner for Docker Image
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: 'ghcr.io/signalk/signalk-server:${{ matrix.image-tag }}'
+          format: 'sarif'
+          output: 'trivy-results-docker-node${{ matrix.node-version }}.sarif'
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results-docker-node${{ matrix.node-version }}.sarif'
+          category: 'trivy-docker-node${{ matrix.node-version }}'
