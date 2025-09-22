@@ -86,7 +86,10 @@ class ServerUpdate extends Component {
               </p>
               <p>
                 More info about running Signal K in Docker can be found at{' '}
-                <a href="https://github.com/SignalK/signalk-server/blob/master/docker/README.md">
+                <a
+                  href="https://github.com/SignalK/signalk-server/blob/master/docker/README.md"
+                  target="_blank"
+                >
                   Docker README
                 </a>{' '}
                 .
