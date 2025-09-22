@@ -81,7 +81,7 @@ class ServerUpdate extends Component {
                 The server is running as a Docker container. You need to pull a
                 new server version from Container registry to update.
                 <ul>
-                  <li>docker pull cr.signalk.io/signalk/signalk-server</li>
+                  <code>docker pull cr.signalk.io/signalk/signalk-server</code>
                 </ul>
               </p>
               <p>
