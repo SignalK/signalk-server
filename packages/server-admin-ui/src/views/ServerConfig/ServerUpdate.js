@@ -77,12 +77,20 @@ class ServerUpdate extends Component {
           <Card className="border-warning">
             <CardHeader>Running as a Docker container</CardHeader>
             <CardBody>
-              The server is running as a Docker container. You need to pull a
-              new server version from{' '}
-              <a href="https://cr.signalk.io/signalk/signalk-server">
-                Container registry
-              </a>{' '}
-              to update.
+              <p>
+                The server is running as a Docker container. You need to pull a
+                new server version from Container registry to update.
+                <ul>
+                  <li>docker pull cr.signalk.io/signalk/signalk-server</li>
+                </ul>
+              </p>
+              <p>
+                More info about running Signal K in Docker can be found at{' '}
+                <a href="https://github.com/SignalK/signalk-server/blob/master/docker/README.md">
+                  Docker README
+                </a>{' '}
+                .
+              </p>
             </CardBody>
           </Card>
         )}
