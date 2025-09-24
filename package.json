@@ -82,7 +82,7 @@
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.14.1",
     "busboy": "^1.6.0",
-    "chalk": "^3.0.0",
+    "chalk": "^5.5.0",
     "clear": "^0.1.0",
     "command-exists": "^1.2.8",
     "compression": "^1.7.3",
