@@ -21,7 +21,8 @@
   "author": "teppo.kurki@iki.fi",
   "license": "Apache-2.0",
   "devDependencies": {
-    "ts-auto-guard": "^5.0.1"
+    "ts-auto-guard": "^5.0.1",
+    "@js-temporal/polyfill": "^0.5.1"
   },
   "peerDependencies": {
     "baconjs": "^1.0.1"
