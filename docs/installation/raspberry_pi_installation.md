@@ -2,7 +2,7 @@
 title: Raspberry Pi
 ---
 
-# Installation on Raspberry Pi
+# Installing on Raspberry Pi
 
 Installation of Signal K server can consists of the following steps:
 
@@ -12,7 +12,7 @@ Installation of Signal K server can consists of the following steps:
 
 _**Important:** If you are updating a Signal K server installation, especially if upgrading an installed version <= 1.40.0, [please check here first](./updating.md)._
 
-### Prerequisites:
+## Prerequisites:
 
 Raspberry Pi OS is installed on the device.
 
