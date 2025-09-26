@@ -23,8 +23,8 @@ Pi](https://www.raspberrypi.com). Any Raspberry Pi (even the very first model) c
 
 ## Getting Started
 
-* [Installing on Raspberry Pi](raspberry_pi_installation.md)
-* [Installing on Windows](https://github.com/SignalK/signalk-server-windows)
-* [Installing from NPM](npm.md)
-* [Installing from Docker](docker.md)
-* [Installing from Source](source.md)
+- [Installing on Raspberry Pi](raspberry_pi_installation.md)
+- [Installing on Windows](https://github.com/SignalK/signalk-server-windows)
+- [Installing from NPM](npm.md)
+- [Installing from Docker](docker.md)
+- [Installing from Source](source.md)
