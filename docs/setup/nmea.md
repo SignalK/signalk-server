@@ -8,7 +8,7 @@ Most equipment on boats use NMEA 0183, NMEA 2000, or other proprietary interface
 
 ## NMEA 0183
 
-There are a number of NMEA to USB adaptors around, like 
+There are a number of NMEA to USB adaptors around, like
 [Actisense](http://www.actisense.com/product/usg-2/) and
 [Digital Yacht](http://digitalyacht.co.uk/product/usb-nmea-adaptor/), which allow
 bi-directional transfer of the NMEA 0183 Serial data (electrically similar to RS-422) and convert it in to a USB
