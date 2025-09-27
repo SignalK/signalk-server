@@ -5,7 +5,7 @@ children:
   - deltas.md
   - configuration.md
   - autopilot_provider_plugins.md
-  - ../rest-api/course_calculations.md
+  - course_calculations.md
   - resource_provider_plugins.md
   - weather_provider_plugins.md
   - publishing.md

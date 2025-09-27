@@ -1,25 +1,37 @@
 import { Value } from './deltas'
 
+/**
+ * Valid autopilot delta path names.
+ */
 export type AutopilotUpdateAttrib =
   | 'mode'
   | 'state'
   | 'target'
   | 'engaged'
   | 'options'
+  | 'actions'
   | 'alarm'
 
+/**@hidden */
 const AUTOPILOTUPDATEATTRIBS: AutopilotUpdateAttrib[] = [
   'mode',
   'state',
   'target',
   'engaged',
   'options',
+  'actions',
   'alarm'
 ]
 
-export const isAutopilotUpdateAttrib = (s: string) =>
-  AUTOPILOTUPDATEATTRIBS.includes(s as AutopilotUpdateAttrib)
+/**
+ * This method returns true if the supplied value represents a valid autopilot delta path.
+ */
+export const isAutopilotUpdateAttrib = (value: string) =>
+  AUTOPILOTUPDATEATTRIBS.includes(value as AutopilotUpdateAttrib)
 
+/**
+ * Valid autopilot alarm delta path names.
+ */
 export type AutopilotAlarm =
   | 'waypointAdvance'
   | 'waypointArrival'
@@ -28,6 +40,7 @@ export type AutopilotAlarm =
   | 'heading'
   | 'wind'
 
+/** @hidden */
 const AUTOPILOTALARMS: AutopilotAlarm[] = [
   'waypointAdvance',
   'waypointArrival',
@@ -37,14 +50,61 @@ const AUTOPILOTALARMS: AutopilotAlarm[] = [
   'wind'
 ]
 
-export const isAutopilotAlarm = (s: string) =>
-  AUTOPILOTALARMS.includes(s as AutopilotAlarm)
+/**
+ * This method returns true if the supplied value represents a valid autopilot alarm delta path.
+ */
+export const isAutopilotAlarm = (value: string) =>
+  AUTOPILOTALARMS.includes(value as AutopilotAlarm)
 
+/**
+ * Valid tack / gybe action direction values.
+ */
 export type TackGybeDirection = 'port' | 'starboard'
+
+/**
+ * This method returns true if the supplied object is a valid AutopilotProvider.
+ */
+export const isAutopilotProvider = (obj: unknown) => {
+  const typedObj = obj as AutopilotProvider
+  return (
+    ((typedObj !== null && typeof typedObj === 'object') ||
+      typeof typedObj === 'function') &&
+    typeof typedObj['getData'] === 'function' &&
+    typeof typedObj['getState'] === 'function' &&
+    typeof typedObj['setState'] === 'function' &&
+    typeof typedObj['getMode'] === 'function' &&
+    typeof typedObj['setMode'] === 'function' &&
+    typeof typedObj['getTarget'] === 'function' &&
+    typeof typedObj['setTarget'] === 'function' &&
+    typeof typedObj['adjustTarget'] === 'function' &&
+    typeof typedObj['engage'] === 'function' &&
+    typeof typedObj['disengage'] === 'function' &&
+    typeof typedObj['tack'] === 'function' &&
+    typeof typedObj['gybe'] === 'function' &&
+    typeof typedObj['dodge'] === 'function'
+  )
+}
 
 export interface AutopilotApi {
   register(pluginId: string, provider: AutopilotProvider): void
   unRegister(pluginId: string): void
+  /**
+   * This method instructs the server to send deltas for the provided paths.
+   *
+   * > [!NOTE]
+   * > Valid `apInfo` paths are defined in {@link AutopilotUpdateAttrib}
+   * > `apInfo.actions` value (like `options.actions`) must contain an Array<{@link AutopilotActionDef}>
+   
+  @example
+   * ```javascript
+   * apUpdate({
+   *  'mode': 'gps',
+   *  'actions': [{id: 'tack', name: 'Tack', available: true}]
+   * });
+   * ```
+  
+  
+  */
   apUpdate(
     pluginId: string,
     deviceId: string,
@@ -52,13 +112,15 @@ export interface AutopilotApi {
   ): void
 }
 
-/** @see {isAutopilotProvider} ts-auto-guard:type-guard */
 export interface AutopilotProvider {
   /**
    * This method returns an AutopilotInfo object containing the current data values and valid options for the supplied autopilot device identifier.
    *
    * > [!NOTE]
    * > It is the responsibility of the autopilot provider plugin to map the value of `engaged` to the current `state`.
+   *
+   * Additionally, the plugin can maintain a list of `availableActions` that can be taken in the current
+   * operational state.
    *
    * @example
    * API request:
@@ -72,7 +134,7 @@ export interface AutopilotProvider {
    *
    * // Returns:
    * {
-   *   options: {
+   *    options: {
    *     states: [
    *         {
    *             name: 'auto' // autopilot state name
@@ -83,7 +145,19 @@ export interface AutopilotProvider {
    *             engaged: false // not actively steering
    *         }
    *     ]
-   *     modes: ['compass', 'gps', 'wind']
+   *     modes: ['compass', 'gps', 'wind'],  // supported modes of operation
+   *     actions: [
+   *     {
+   *        id: 'tack',
+   *        name: 'Tack',
+   *        available: true
+   *     },
+   *     {
+   *        id: 'gybe',
+   *        name: 'Gybe',
+   *        available: false
+   *     }
+   *      ]  // actions the autopilot supports
    * },
    *   target: 0.326
    *   mode: 'compass'
@@ -112,7 +186,7 @@ export interface AutopilotProvider {
    *
    * @param deviceId - identifier of the autopilot device to query.
    */
-  getState(deviceId: string): Promise<string>
+  getState(deviceId: string): Promise<string | null>
 
   /**
    * Sets the autopilot device with the supplied identifier to the supplied state value.
@@ -134,7 +208,7 @@ export interface AutopilotProvider {
    */
   setState(state: string, deviceId: string): Promise<void>
 
-  getMode(deviceId: string): Promise<string>
+  getMode(deviceId: string): Promise<string | null>
   /**
    * Sets the autopilot device with the supplied identifier to the supplied mode value.
    *
@@ -153,7 +227,7 @@ export interface AutopilotProvider {
    * @throws if supplied mode value is invalid.
    */
   setMode(mode: string, deviceId: string): Promise<void>
-  getTarget(deviceId: string): Promise<number>
+  getTarget(deviceId: string): Promise<number | null>
 
   /**
    * Sets target for the autopilot device with the supplied identifier to the supplied value.
@@ -229,6 +303,47 @@ export interface AutopilotProvider {
    * @throws on error.
    */
   disengage(deviceId: string): Promise<void>
+
+  /**
+   * Instructs the autopilot device to steer for the currently set destination position.
+   *
+   * It is assumed that a destination has been set prior to invoking this action.
+   *
+   * The intended result of this action is that the autopilot device be engaged in the
+   * appropriate mode to steer to the active waypoint / position.
+   *
+   * @example
+   * API request
+   * ```
+   * POST /signalk/v2/api/vessels/self/autopilots/mypilot1/courseCurrentPoint
+   * ```
+   * AutopilotProvider method invocation
+   * ```javascript
+   * courseCurrentPoint('mypilot1');
+   * ```
+   *
+   * @param deviceId - identifier of the autopilot device to query.
+   * @throws on error.
+   */
+  courseCurrentPoint(deviceId: string): Promise<void>
+
+  /**
+   * Instructs the autopilot device to advance to the next waypoint on the route.
+   *
+   * @example
+   * API request
+   * ```
+   * POST /signalk/v2/api/vessels/self/autopilots/mypilot1/courseNextPoint
+   * ```
+   * AutopilotProvider method invocation
+   * ```javascript
+   * courseNextPoint('mypilot1');
+   * ```
+   *
+   * @param deviceId - identifier of the autopilot device to query.
+   * @throws on error.
+   */
+  courseNextPoint(deviceId: string): Promise<void>
 
   /**
    * Instructs the autopilot device with the supplied identifier to perform a tack in the supplied direction.
@@ -313,9 +428,16 @@ export interface AutopilotStateDef {
   engaged: boolean // true if state indicates actively steering
 }
 
+export interface AutopilotActionDef {
+  id: 'dodge' | 'tack' | 'gybe' | 'courseCurrentPoint' | 'courseNextPoint'
+  name: string // display name
+  available: boolean // true if can be used in current AP mode of operation
+}
+
 export interface AutopilotOptions {
   states: AutopilotStateDef[]
   modes: string[]
+  actions: AutopilotActionDef[]
 }
 
 export interface AutopilotInfo {
