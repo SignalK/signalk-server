@@ -3,6 +3,108 @@ import { Position } from '.'
 export interface WeatherApi {
   register: (pluginId: string, provider: WeatherProvider) => void
   unRegister: (pluginId: string) => void
+
+  /**
+   * Retrieves observation data from the weather provider for the supplied position.
+   * The returned array of observations should be ordered in descending date order.
+   *
+   * @category Weather API
+   * 
+   * @param position Location of interest 
+   * @param options Options
+   * 
+   * @example
+    ```javascript
+    getObservations({latitude: 16.34765, longitude: 12.5432}, {maxCount: 1});
+    ```
+
+    ```JSON
+    [
+        {
+            "date": "2024-05-03T06:00:00.259Z",
+            "type": "observation",
+            "outside": { ... }
+        },
+        {
+            "date": "2024-05-03T05:00:00.259Z",
+            "type": "observation",
+            "outside": { ... }
+        }
+    ]
+    ```
+  */
+  getObservations: (
+    position: Position,
+    options?: WeatherReqParams
+  ) => Promise<WeatherData[]>
+
+  /**
+   * Retrieves forecast data from the weather provider for the supplied position, forecast type and number of intervals.
+   * The returned array of forecasts should be ordered in ascending date order.
+   * 
+   * @category Weather API
+   * 
+   * @param position Location of interest 
+   * @param type Type of forecast point | daily
+   * @param options Options
+   * 
+   * @example
+   * Retrieve point forecast data for the next eight point intervalss
+    ```javascript
+    getForecasts(
+      {latitude: 16.34765, longitude: 12.5432}, 
+      'point',
+      {maxCount: 8}
+    );
+    ```
+
+    ```JSON
+    [
+        {
+            "date": "2024-05-03T06:00:00.259Z",
+            "type": "point",
+            "outside": { ... }
+        },
+        {
+            "date": "2024-05-03T05:00:00.259Z",
+            "type": "point",
+            "outside": { ... }
+        }
+    ]
+    ```
+  */
+  getForecasts: (
+    position: Position,
+    type: WeatherForecastType,
+    options?: WeatherReqParams
+  ) => Promise<WeatherData[]>
+
+  /**
+   * Retrieves warning data from the weather provider for the supplied position.
+   * The returned array of warnings should be ordered in ascending date order.
+   *
+   * @category Weather API
+   * 
+   * @param position Location of interest 
+   *
+   * @example
+    ```javascript
+    getWarnings({latitude: 16.34765, longitude: 12.5432});
+    ```
+
+    ```JSON
+    [
+      {
+        "startTime": "2024-05-03T05:00:00.259Z",
+        "endTime": "2024-05-03T08:00:00.702Z",
+        "details": "Strong wind warning.",
+        "source": "MyWeatherService",
+        "type": "Warning"
+      }
+    ]
+    ```
+  */
+  getWarnings: (position: Position) => Promise<WeatherWarning[]>
 }
 
 export interface WeatherProviderRegistry {
@@ -13,6 +115,12 @@ export interface WeatherProviderRegistry {
    * @category Weather API
    */
   registerWeatherProvider: (provider: WeatherProvider) => void
+  /**
+   * Access the Weather API to get observations, forcasts and warnings.
+   *
+   * @category Weather API
+   */
+  weatherApi: WeatherApi
 }
 
 /**
