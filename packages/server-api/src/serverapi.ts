@@ -417,6 +417,25 @@ export interface ServerAPI
    * @category Status and Debugging
    */
   reportOutputMessages(count?: number): void
+
+  /**
+   * Parse the supplied MMSI value into its constiuant parts.
+   *
+   * @example
+   * ```javascript
+   * app.parseMmsi('123456789');
+   * ```
+   *
+   * @param mmsi - string containing the vessel MMSI.
+   *
+   * @category Data Model
+   */
+  parseMmsi(mmsi: string): {
+    mid: number
+    msi: number
+    type: string
+    flag: string
+  } | null
 }
 
 /**
