@@ -419,23 +419,42 @@ export interface ServerAPI
   reportOutputMessages(count?: number): void
 
   /**
-   * Parse the supplied MMSI value into its constiuant parts.
+   * Parse the supplied MMSI value into object containing mid, msi, type and flag.
    *
    * @example
    * ```javascript
-   * app.parseMmsi('123456789');
+   * app.parseMmsi('201456789')
+   *
+   * returns: {
+   *   mid: 201,
+   *   msi: 456789,
+   *   type: 'ship',
+   *   flag: 'AL'
+   * }
    * ```
    *
-   * @param mmsi - string containing the vessel MMSI.
+   * @param mmsi - MMSI.
    *
    * @category Data Model
    */
-  parseMmsi(mmsi: string): {
-    mid: number
-    msi: number
-    type: string
-    flag: string
-  } | null
+  parseMmsi(mmsi: string): MmsiDef | null
+
+  /**
+   * Return the two letter country code for the MID from the supplied MMSI.
+   *
+   * @example
+   * ```javascript
+   * app.getFlag('201456789')
+
+   * returns: 'AL'
+   * ```
+   *
+   * @param mmsi - MMSI.
+   * @returns Two letter country code.
+   *
+   * @category Data Model
+   */
+  getFlag(mmsi: string): string | null
 }
 
 /**
@@ -480,4 +499,25 @@ export interface ActionResult {
   statusCode?: number
   message?: string
   timestamp?: string
+}
+
+export interface MmsiDef {
+  /** Maritime identifier */
+  mid: number
+  /** Mobile station identifier */
+  msi: number
+  /** Source type */
+  type?:
+    | 'ship'
+    | 'coastalStation'
+    | 'group'
+    | 'aton'
+    | 'auxiliaryCraft'
+    | 'sart'
+    | 'sarAircraft'
+    | 'mobDevice'
+    | 'epirb'
+    | 'diverRadio'
+  /** Two character country code */
+  flag?: string
 }

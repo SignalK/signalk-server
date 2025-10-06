@@ -32,7 +32,8 @@ import {
   PluginConstructor,
   Plugin,
   Path,
-  Delta
+  Delta,
+  MmsiDef
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express, { Request, Response } from 'express'
@@ -601,95 +602,95 @@ module.exports = (theApp: any) => {
       return
     }
 
-    /**
-     * Parse MMSI value supplied and return the MID
-     * @param mmsi MMSI value
-     * @returns object {mid: number, msi: number, type: string, flag: string } or `null` on error
-     */
-    appCopy.parseMmsi = (mmsi: string) => {
-      let def = {
-        mid: 0,
-        msi: 0,
-        type: '',
-        flag: ''
+    appCopy.parseMmsi = (mmsi: string): MmsiDef | null => {
+      if (typeof mmsi !== 'string') {
+        return null
       }
+      let def: MmsiDef
       try {
         if (mmsi.startsWith('00')) {
           // coast station
-          def = Object.assign(def, {
+          def = {
             mid: parseInt(mmsi.slice(2, 5)),
             msi: parseInt(mmsi.slice(5)),
-            type: 'coast station'
-          })
+            type: 'coastalStation'
+          }
         } else if (mmsi.startsWith('0')) {
           // Group of ships
-          def = Object.assign(def, {
+          def = {
             mid: parseInt(mmsi.slice(1, 4)),
             msi: parseInt(mmsi.slice(4)),
             type: 'group'
-          })
+          }
         } else if (mmsi.startsWith('99')) {
           // AtoN
-          def = Object.assign(def, {
+          def = {
             mid: parseInt(mmsi.slice(2, 5)),
             msi: parseInt(mmsi.slice(5)),
             type: 'aton'
-          })
+          }
         } else if (mmsi.startsWith('98')) {
           // Aux craft associated with parent ship
-          def = Object.assign(def, {
+          def = {
             mid: parseInt(mmsi.slice(2, 5)),
             msi: parseInt(mmsi.slice(5)),
-            type: 'auxilliary craft'
-          })
+            type: 'auxiliaryCraft'
+          }
         } else if (mmsi.startsWith('970')) {
           // SART transmitter
-          def = Object.assign(def, {
+          def = {
             mid: parseInt(mmsi.slice(3, 6)),
             msi: parseInt(mmsi.slice(6)),
             type: 'sart'
-          })
+          }
         } else if (mmsi.startsWith('972')) {
           // MOB device
-          def = Object.assign(def, {
+          def = {
             mid: parseInt(mmsi.slice(3, 6)),
             msi: parseInt(mmsi.slice(6)),
-            type: 'mob'
-          })
+            type: 'mobDevice'
+          }
         } else if (mmsi.startsWith('974')) {
           // EPIRB
-          def = Object.assign(def, {
+          def = {
             mid: parseInt(mmsi.slice(3, 6)),
             msi: parseInt(mmsi.slice(6)),
             type: 'epirb'
-          })
+          }
         } else if (mmsi.startsWith('8')) {
           // diver
-          def = Object.assign(def, {
+          def = {
             mid: parseInt(mmsi.slice(1, 4)),
             msi: parseInt(mmsi.slice(4)),
-            type: 'diver'
-          })
+            type: 'diverRadio'
+          }
         } else if (mmsi.startsWith('111')) {
           // SaR
-          def = Object.assign(def, {
+          def = {
             mid: parseInt(mmsi.slice(3, 6)),
             msi: parseInt(mmsi.slice(6)),
-            type: 'sar'
-          })
+            type: 'sarAircraft'
+          }
         } else {
           // ship
-          def = Object.assign(def, {
+          def = {
             mid: parseInt(mmsi.slice(0, 3)),
             msi: parseInt(mmsi.slice(3)),
             type: 'ship'
-          })
+          }
         }
-        def.flag = MID[def.mid][0]
+        if (MID[def.mid]) {
+          def.flag = MID[def.mid][0]
+        }
         return def
       } catch {
         return null
       }
+    }
+
+    appCopy.getFlag = (mmsi: string): string | null => {
+      const m = appCopy.parseMmsi(mmsi)
+      return m?.flag ?? null
     }
 
     appCopy.handleMessage = handleMessageWrapper(app, plugin.id)
