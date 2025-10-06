@@ -1,5 +1,6 @@
 import { Position } from '.'
 
+/** @category  Weather API  */
 export interface WeatherApi {
   register: (pluginId: string, provider: WeatherProvider) => void
   unRegister: (pluginId: string) => void
@@ -17,6 +18,7 @@ export interface WeatherProviderRegistry {
 
 /**
  * @hidden visible through ServerAPI
+ * @category  Weather API
  */
 export interface WeatherProviders {
   [id: string]: {
@@ -25,6 +27,7 @@ export interface WeatherProviders {
   }
 }
 
+/**@category  Weather API */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const isWeatherProvider = (obj: any) => {
   const typedObj = obj
@@ -43,11 +46,13 @@ export const isWeatherProvider = (obj: any) => {
   )
 }
 
+/** @category  Weather API */
 export interface WeatherProvider {
   name: string
   methods: WeatherProviderMethods
 }
 
+/** @category  Weather API */
 export interface WeatherProviderMethods {
   pluginId?: string
 
@@ -156,6 +161,7 @@ export interface WeatherProviderMethods {
 
 /**
  * @hidden visible through ServerAPI
+ * @category  Weather API
  */
 export interface WeatherWarning {
   startTime: string
@@ -170,6 +176,7 @@ export interface WeatherWarning {
  *
  * @prop maxCount Maximum number of records to return
  * @prop startDate Start date of forecast / observation data (format: YYYY-MM-DD)
+ * @category  Weather API
  */
 export interface WeatherReqParams {
   maxCount?: number
@@ -178,16 +185,19 @@ export interface WeatherReqParams {
 
 /**
  * @hidden visible through ServerAPI
+ * @category  Weather API
  */
 export type WeatherForecastType = 'daily' | 'point'
 /**
  * @hidden visible through ServerAPI
+ * @category  Weather API
  */
 export type WeatherDataType = WeatherForecastType | 'observation'
 
 // Aligned with Signal K environment specification
 /**
  * @hidden visible through ServerAPI
+ * @category  Weather API
  */
 export interface WeatherData {
   description?: string
@@ -237,6 +247,7 @@ export interface WeatherData {
 
 /**
  * @hidden visible through ServerAPI
+ * @category  Weather API
  */
 export type TendencyKind =
   | 'steady'
@@ -246,6 +257,7 @@ export type TendencyKind =
 
 /**
  * @hidden visible through ServerAPI
+ * @category  Weather API
  */
 export type PrecipitationKind =
   | 'reserved'

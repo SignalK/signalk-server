@@ -1,3 +1,4 @@
 dist
 src/autopilotapi.guard.ts
+src/weatherapi.guard.ts
 docs
