@@ -93,6 +93,25 @@ function Simple(options) {
     getLogger(options.app, options.logging, discriminatorByDataType[dataType]),
     dataTypeMapping[mappingType](options)
   )
+
+  const dataReceivedEventName = `${options.subOptions.providerId}-input`
+
+  const spy = new Transform({
+    transform(chunk, encoding, callback) {
+      options.app.emit(dataReceivedEventName, chunk)
+      callback(null, chunk)
+    }
+  })
+  pipeline.splice(pipeline.length - 1, 0, spy)
+
+  options.subOptions.app.emitPropertyValue('pipedprovider', {
+    id: options.subOptions.providerId,
+    type: mappingType,
+    eventNames: {
+      received: dataReceivedEventName
+    }
+  })
+
   if (options.subOptions.overrideTimestamp) {
     pipeline.push(
       new Transform({
