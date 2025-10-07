@@ -28,6 +28,7 @@ export interface ValuesResponse {
   data: DataRow[]
 }
 
+/** @ignore */
 const _example: ValuesResponse = {
   context:
     'vessels.urn:mrn:signalk:uuid:2ffee4a6-52f6-4d4e-8179-0fc9aaf22c87' as Context,

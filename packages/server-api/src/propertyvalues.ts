@@ -33,6 +33,7 @@ import Bacon from 'baconjs'
  * **Note: The _PropertyValues_ mechanism is not intended to be used for data passing on a regular basis, as the total history makes it a potential memory leak.**
  *
  * To safeguard against a component accidentally emitting regularly, via a fixed upper bound is enforced for the value array per _property name_. New values will be ignored if the upper bound is reached and are logged as errors.
+ * @category Server API
  */
 export interface PropertyValuesEmitter {
   /**
@@ -47,6 +48,7 @@ export interface PropertyValuesEmitter {
   onPropertyValues(name: string, cb: PropertyValuesCallback): Unsubscribe
 }
 
+/** @category Server API */
 export interface PropertyValue {
   timestamp: number // millis
   setter: string // plugin id, server
@@ -55,16 +57,19 @@ export interface PropertyValue {
   value: any
 }
 
+/** @category Server API */
 export type PropertyValuesCallback = (
   propValuesHistory: PropertyValue[]
 ) => void
 
+/** @hidden */
 interface StreamTuple {
   bus: Bacon.Bus<unknown, PropertyValue | undefined>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   stream: any
 }
 
+/** @category Server API */
 export class PropertyValues {
   private streams: {
     [key: string]: StreamTuple
@@ -114,5 +119,6 @@ export class PropertyValues {
 
 /**
  * @inline
+ * @category Server API
  */
 type Unsubscribe = () => void

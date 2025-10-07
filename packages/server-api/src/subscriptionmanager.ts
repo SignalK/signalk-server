@@ -1,6 +1,7 @@
 import { RelativePositionOrigin } from '.'
 import { Context, Delta, Path } from './deltas'
 
+/** @category Server API  */
 export interface SubscriptionManager {
   subscribe(
     command: SubscribeMessage,
@@ -13,14 +14,17 @@ export interface SubscriptionManager {
   unsubscribe(msg: UnsubscribeMessage, unsubscribes: Unsubscribes): void
 }
 
+/** @category Server API  */
 export type SubscribeCallback = (delta: Delta) => void
 
+/** @category Server API  */
 export type Unsubscribes = Array<() => void>
 
 /**
  * A message to allow a client to subscribe for data updates from a signalk server
  *
  * @see [SignalK Specification: Subscription Protocol](https://signalk.org/specification/1.7.0/doc/subscription_protocol.html?highlight=subscribe#introduction)
+ * @category Server API
  */
 export interface SubscribeMessage {
   /**
@@ -34,7 +38,8 @@ export interface SubscribeMessage {
   subscribe: SubscriptionOptions[]
 }
 
-/** @inline */
+/** @inline
+ */
 type FixedPolicyOptions = {
   /**
    * - `fixed` - Send the last known values every `period`.
@@ -53,7 +58,8 @@ type FixedPolicyOptions = {
   minPeriod?: never
 }
 
-/** @inline docs inherited from above */
+/** @inline docs inherited from above
+ */
 type InstantPolicyOptions = {
   policy?: 'instant'
   minPeriod?: number
@@ -63,6 +69,7 @@ type InstantPolicyOptions = {
 /**
  * A path object with optional criteria to control output
  * @inline
+ * @category Server API
  */
 export type SubscriptionOptions = (
   | FixedPolicyOptions
@@ -81,6 +88,7 @@ export type SubscriptionOptions = (
 
 /**
  * A message to allow a client to unsubscribe from data updates from a signalk server
+ * @category Server API
  */
 export interface UnsubscribeMessage {
   /**

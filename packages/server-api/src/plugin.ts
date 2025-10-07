@@ -4,6 +4,7 @@ import { ServerAPI } from './serverapi'
 /**
  * A plugin constructor is the interface that all plugins must export.
  * It is called by the server when the server is starting up.
+ *  @category Server API
  */
 export type PluginConstructor = (app: ServerAPI) => Plugin
 
@@ -48,6 +49,7 @@ export type PluginConstructor = (app: ServerAPI) => Plugin
  *   return plugin;
  * }
  * ```
+ * @category Server API
  * @see [Developing Server Plugins](../../../docs/develop/plugins/README.md)
  */
 export interface Plugin {

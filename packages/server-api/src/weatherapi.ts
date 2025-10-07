@@ -6,6 +6,7 @@ export interface WeatherApi {
   unRegister: (pluginId: string) => void
 }
 
+/** @category Weather API  */
 export interface WeatherProviderRegistry {
   /**
    * Used by _Weather Provider plugins_ to register the weather service from which the data is sourced.
@@ -160,7 +161,6 @@ export interface WeatherProviderMethods {
 }
 
 /**
- * @hidden visible through ServerAPI
  * @category  Weather API
  */
 export interface WeatherWarning {
@@ -184,19 +184,16 @@ export interface WeatherReqParams {
 }
 
 /**
- * @hidden visible through ServerAPI
  * @category  Weather API
  */
 export type WeatherForecastType = 'daily' | 'point'
 /**
- * @hidden visible through ServerAPI
  * @category  Weather API
  */
 export type WeatherDataType = WeatherForecastType | 'observation'
 
 // Aligned with Signal K environment specification
 /**
- * @hidden visible through ServerAPI
  * @category  Weather API
  */
 export interface WeatherData {
@@ -246,7 +243,6 @@ export interface WeatherData {
 }
 
 /**
- * @hidden visible through ServerAPI
  * @category  Weather API
  */
 export type TendencyKind =
@@ -256,7 +252,6 @@ export type TendencyKind =
   | 'not available'
 
 /**
- * @hidden visible through ServerAPI
  * @category  Weather API
  */
 export type PrecipitationKind =
