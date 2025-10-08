@@ -94,7 +94,7 @@ function Simple(options) {
     dataTypeMapping[mappingType](options)
   )
 
-  const dataReceivedEventName = `${options.subOptions.providerId}-input`
+  const dataReceivedEventName = `${options.subOptions.providerId}-received`
 
   const spy = new Transform({
     transform(chunk, encoding, callback) {
@@ -181,7 +181,8 @@ const dataTypeMapping = {
     if (options.type === 'FileStream') {
       result.unshift(
         new Throttle({
-          rate: options.subOptions.throttleRate || 1000
+          rate: options.subOptions.throttleRate || 1000,
+          chunksize: options.subOptions.throttleRate || 1000
         })
       )
     }
