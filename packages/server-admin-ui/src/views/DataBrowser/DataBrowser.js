@@ -16,6 +16,7 @@ import {
 import moment from 'moment'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
 import Meta from './Meta'
+import { getValueRenderer, DefaultValueRenderer } from './ValueRenderers'
 
 const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
@@ -639,19 +640,6 @@ class DataBrowser extends Component {
                             this.state.meta[this.state.context][data.path]
                           const units = meta && meta.units ? meta.units : ''
 
-                          let formattedValue = JSON.stringify(
-                            data.value,
-                            null,
-                            typeof data.value === 'object' &&
-                              Object.keys(data.value || {}).length > 1
-                              ? 2
-                              : 0
-                          )
-
-                          if (typeof data.value === 'number' && units) {
-                            formattedValue = `${data.value} `
-                          }
-
                           return (
                             <tr key={key}>
                               <td className="path-cell">
@@ -662,17 +650,25 @@ class DataBrowser extends Component {
                                 </CopyToClipboardWithFade>
                               </td>
                               <td className="value-cell">
-                                {typeof data.value === 'object' ? (
-                                  <pre className="text-primary">
-                                    {formattedValue}
-                                  </pre>
-                                ) : (
-                                  <span className="text-primary">
-                                    {formattedValue}
-                                    {typeof data.value === 'number' &&
-                                      units && <strong>{units}</strong>}
-                                  </span>
-                                )}
+                                {(() => {
+                                  const CustomRenderer = getValueRenderer(
+                                    data.path
+                                  )
+                                  if (CustomRenderer) {
+                                    return (
+                                      <CustomRenderer
+                                        value={data.value}
+                                        units={units}
+                                      />
+                                    )
+                                  }
+                                  return (
+                                    <DefaultValueRenderer
+                                      value={data.value}
+                                      units={units}
+                                    />
+                                  )
+                                })()}
                               </td>
                               <TimestampCell
                                 timestamp={data.timestamp}
@@ -731,7 +727,6 @@ class DataBrowser extends Component {
                           (key) => this.state.data[this.state.context][key].path
                         )
                         .filter((path, index, array) => {
-                          //filter dups
                           return array.indexOf(path) === index
                         })
                         .sort()
@@ -797,7 +792,6 @@ class TimestampCell extends Component {
 
       this.timeoutId = setTimeout(() => {
         if (!this.props.isPaused) {
-          // Only clear if not paused
           this.setState({ isUpdated: false })
         }
       }, 15000)
