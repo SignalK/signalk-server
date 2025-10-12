@@ -1,5 +1,24 @@
+/**
+ * Represents a country with its ISO 3166 country codes and name.
+ *
+ * @see {@link https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes | List of ISO 3166 country codes}
+ * @category MMSI
+ */
+export interface FlagCountry {
+  /** ISO 3166-1 alpha-2 country code (2 letters) */
+  alpha2: string
+  /** ISO 3166-1 alpha-3 country code (3 letters) */
+  alpha3: string
+  /** Country name */
+  name: string
+}
+
+export const mid2Country = (mid: string): FlagCountry | undefined => MID[mid]
+
+type Mid2FlagCountries = { [mid: string]: FlagCountry }
+
 // source: https://github.com/michaeljfazio/MIDs/blob/master/mids.json
-export const MID: { [mid: string]: string[] } = {
+export const MID: Mid2FlagCountries = Object.entries({
   '201': ['AL', 'ALB', '', 'Albania'],
   '202': ['AD', 'AND', '', 'Andorra'],
   '203': ['AT', 'AUT', '', 'Austria'],
@@ -290,4 +309,7 @@ export const MID: { [mid: string]: string[] } = {
   '765': ['SR', 'SUR', '', 'Suriname'],
   '770': ['UY', 'URY', '', 'Uruguay'],
   '775': ['VE', 'VEN', '', 'Venezuela']
-}
+}).reduce<Mid2FlagCountries>((acc, [key, [alpha2, alpha3, _unused, name]]) => {
+  acc[key] = { alpha2, alpha3, name }
+  return acc
+}, {})
