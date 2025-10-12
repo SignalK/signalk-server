@@ -1,4 +1,6 @@
-import { MID } from './mid'
+import { FlagCountry, mid2Country } from './mid'
+
+export { FlagCountry } from './mid'
 
 export type MMSISourceType =
   | 'ship'
@@ -21,11 +23,11 @@ export interface MMSIInfo {
   /** Source type */
   type?: MMSISourceType
   /** Two character country code */
-  flag?: string
+  flagCountry?: FlagCountry
 }
 
 /**
- * Parse the supplied MMSI value into object containing mid, msi, type and flag.
+ * Parse the supplied MMSI value into object containing mid, msi, type and flagCountry.
  *
  * @example
  * ```javascript
@@ -35,7 +37,11 @@ export interface MMSIInfo {
  *   mid: 201,
  *   msi: 456789,
  *   type: 'ship',
- *   flag: 'AL'
+ *   flagCountry: {
+ *     alpha2: 'AL',
+ *     alpha3: 'ALB',
+ *     name: 'Albania'
+ *   }
  * }
  * ```
  *
@@ -120,9 +126,7 @@ export const parseMmsi = (mmsi: string): MMSIInfo | null => {
         type: 'ship'
       }
     }
-    if (MID[info.mid]) {
-      info.flag = MID[info.mid][0]
-    }
+    info.flagCountry = mid2Country(info.mid.toString()) ?? undefined
     return info
   } catch {
     return null
@@ -146,5 +150,29 @@ export const parseMmsi = (mmsi: string): MMSIInfo | null => {
 */
 export const getFlag = (mmsi: string): string | null => {
   const m = parseMmsi(mmsi)
-  return m?.flag ?? null
+  return m?.flagCountry?.alpha2 ?? null
+}
+
+/**
+ * Return the flag country information for the MID from the supplied MMSI.
+ *
+ * @example
+ * ```javascript
+ * app.getFlagCountry('201456789')
+ *
+ * returns: {
+ *   alpha2: 'AL',
+ *   alpha3: 'ALB',
+ *   name: 'Albania'
+ * }
+ * ```
+ *
+ * @param mmsi - MMSI.
+ * @returns Flag country information with ISO codes and name, or null if not found.
+ *
+ * @category MMSI
+ */
+export const getFlagCountry = (mmsi: string): FlagCountry | null => {
+  const m = parseMmsi(mmsi)
+  return m?.flagCountry ?? null
 }
