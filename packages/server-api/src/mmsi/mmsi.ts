@@ -13,7 +13,7 @@ export type MMSISourceType =
   | 'diverRadio'
 
 /** @category MMSI */
-export interface MmsiDef {
+export interface MMSIInfo {
   /** Maritime identifier */
   mid: number
   /** Mobile station identifier */
@@ -43,87 +43,87 @@ export interface MmsiDef {
  *
  * @category MMSI
  */
-export const parseMmsi = (mmsi: string): MmsiDef | null => {
+export const parseMmsi = (mmsi: string): MMSIInfo | null => {
   if (typeof mmsi !== 'string') {
     return null
   }
-  let def: MmsiDef
+  let info: MMSIInfo
   try {
     if (mmsi.startsWith('00')) {
       // coast station
-      def = {
+      info = {
         mid: parseInt(mmsi.slice(2, 5)),
         msi: parseInt(mmsi.slice(5)),
         type: 'coastalStation'
       }
     } else if (mmsi.startsWith('0')) {
       // Group of ships
-      def = {
+      info = {
         mid: parseInt(mmsi.slice(1, 4)),
         msi: parseInt(mmsi.slice(4)),
         type: 'group'
       }
     } else if (mmsi.startsWith('99')) {
       // AtoN
-      def = {
+      info = {
         mid: parseInt(mmsi.slice(2, 5)),
         msi: parseInt(mmsi.slice(5)),
         type: 'aton'
       }
     } else if (mmsi.startsWith('98')) {
       // Aux craft associated with parent ship
-      def = {
+      info = {
         mid: parseInt(mmsi.slice(2, 5)),
         msi: parseInt(mmsi.slice(5)),
         type: 'auxiliaryCraft'
       }
     } else if (mmsi.startsWith('970')) {
       // SART transmitter
-      def = {
+      info = {
         mid: parseInt(mmsi.slice(3, 6)),
         msi: parseInt(mmsi.slice(6)),
         type: 'sart'
       }
     } else if (mmsi.startsWith('972')) {
       // MOB device
-      def = {
+      info = {
         mid: parseInt(mmsi.slice(3, 6)),
         msi: parseInt(mmsi.slice(6)),
         type: 'mobDevice'
       }
     } else if (mmsi.startsWith('974')) {
       // EPIRB
-      def = {
+      info = {
         mid: parseInt(mmsi.slice(3, 6)),
         msi: parseInt(mmsi.slice(6)),
         type: 'epirb'
       }
     } else if (mmsi.startsWith('8')) {
       // diver
-      def = {
+      info = {
         mid: parseInt(mmsi.slice(1, 4)),
         msi: parseInt(mmsi.slice(4)),
         type: 'diverRadio'
       }
     } else if (mmsi.startsWith('111')) {
       // SaR
-      def = {
+      info = {
         mid: parseInt(mmsi.slice(3, 6)),
         msi: parseInt(mmsi.slice(6)),
         type: 'sarAircraft'
       }
     } else {
       // ship
-      def = {
+      info = {
         mid: parseInt(mmsi.slice(0, 3)),
         msi: parseInt(mmsi.slice(3)),
         type: 'ship'
       }
     }
-    if (MID[def.mid]) {
-      def.flag = MID[def.mid][0]
+    if (MID[info.mid]) {
+      info.flag = MID[info.mid][0]
     }
-    return def
+    return info
   } catch {
     return null
   }
