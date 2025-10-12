@@ -1,4 +1,17 @@
 import { MID } from './mid'
+
+export type MMSISourceType =
+  | 'ship'
+  | 'coastalStation'
+  | 'group'
+  | 'aton'
+  | 'auxiliaryCraft'
+  | 'sart'
+  | 'sarAircraft'
+  | 'mobDevice'
+  | 'epirb'
+  | 'diverRadio'
+
 /** @category MMSI */
 export interface MmsiDef {
   /** Maritime identifier */
@@ -6,17 +19,7 @@ export interface MmsiDef {
   /** Mobile station identifier */
   msi: number
   /** Source type */
-  type?:
-    | 'ship'
-    | 'coastalStation'
-    | 'group'
-    | 'aton'
-    | 'auxiliaryCraft'
-    | 'sart'
-    | 'sarAircraft'
-    | 'mobDevice'
-    | 'epirb'
-    | 'diverRadio'
+  type?: MMSISourceType
   /** Two character country code */
   flag?: string
 }
