@@ -21,7 +21,7 @@ WORKDIR /home/node/signalk
 COPY *.tgz .
 USER root
 
-RUN npm i -g *.tgz
+RUN MINIMIZE_DISK_USAGE=1 npm i -g *.tgz && /usr/lib/node_modules/signalk-server/scripts/prune_extra_files.js
 # move server-admin-ui that gets installed as sibling of signalk-server
 RUN mv /usr/lib/node_modules/@signalk/* /usr/lib/node_modules/signalk-server/node_modules/@signalk/
 
