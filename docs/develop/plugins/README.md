@@ -28,7 +28,7 @@ Plugins can:
 
 For example, if the plugin you are looking to develop is providing access to information such as `route,` `waypoint`, `POI`, or `charts` you should be creating a _[Resources Provider Plugin](./resource_provider_plugins.md)_ for the _[Resources API](../rest-api/resources_api.md)_.
 
-Or if you are looking to perform course calculations or integrate with an auotpilot, you will want to review the _[Course API](../rest-api/course_api.md)_ documentation prior to commencing your project.
+Or if you are looking to perform course calculations or integrate with an autopilot, you will want to review the _[Course API](../rest-api/course_api.md)_ documentation prior to commencing your project.
 
 **OpenApi description for your plugin's API**
 

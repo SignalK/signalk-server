@@ -2,6 +2,7 @@ import { Value } from './deltas'
 
 /**
  * Valid autopilot delta path names.
+ * @category  Autopilot API
  */
 export type AutopilotUpdateAttrib =
   | 'mode'
@@ -12,7 +13,9 @@ export type AutopilotUpdateAttrib =
   | 'actions'
   | 'alarm'
 
-/**@hidden */
+/**@hidden
+ * @category  Autopilot API
+ */
 const AUTOPILOTUPDATEATTRIBS: AutopilotUpdateAttrib[] = [
   'mode',
   'state',
@@ -25,12 +28,14 @@ const AUTOPILOTUPDATEATTRIBS: AutopilotUpdateAttrib[] = [
 
 /**
  * This method returns true if the supplied value represents a valid autopilot delta path.
+ * @category  Autopilot API
  */
 export const isAutopilotUpdateAttrib = (value: string) =>
   AUTOPILOTUPDATEATTRIBS.includes(value as AutopilotUpdateAttrib)
 
 /**
  * Valid autopilot alarm delta path names.
+ * @category  Autopilot API
  */
 export type AutopilotAlarm =
   | 'waypointAdvance'
@@ -40,7 +45,9 @@ export type AutopilotAlarm =
   | 'heading'
   | 'wind'
 
-/** @hidden */
+/** @hidden
+ * @category  Autopilot API
+ */
 const AUTOPILOTALARMS: AutopilotAlarm[] = [
   'waypointAdvance',
   'waypointArrival',
@@ -52,17 +59,20 @@ const AUTOPILOTALARMS: AutopilotAlarm[] = [
 
 /**
  * This method returns true if the supplied value represents a valid autopilot alarm delta path.
+ * @category  Autopilot API
  */
 export const isAutopilotAlarm = (value: string) =>
   AUTOPILOTALARMS.includes(value as AutopilotAlarm)
 
 /**
  * Valid tack / gybe action direction values.
+ * @category  Autopilot API
  */
 export type TackGybeDirection = 'port' | 'starboard'
 
 /**
  * This method returns true if the supplied object is a valid AutopilotProvider.
+ * @category  Autopilot API
  */
 export const isAutopilotProvider = (obj: unknown) => {
   const typedObj = obj as AutopilotProvider
@@ -85,6 +95,7 @@ export const isAutopilotProvider = (obj: unknown) => {
   )
 }
 
+/** @category  Autopilot API  */
 export interface AutopilotApi {
   register(pluginId: string, provider: AutopilotProvider): void
   unRegister(pluginId: string): void
@@ -112,6 +123,7 @@ export interface AutopilotApi {
   ): void
 }
 
+/** @category  Autopilot API  */
 export interface AutopilotProvider {
   /**
    * This method returns an AutopilotInfo object containing the current data values and valid options for the supplied autopilot device identifier.
@@ -423,23 +435,27 @@ export interface AutopilotProvider {
   dodge(value: number | null, deviceId: string): Promise<void>
 }
 
+/** @category  Autopilot API  */
 export interface AutopilotStateDef {
   name: string // autopilot state
   engaged: boolean // true if state indicates actively steering
 }
 
+/** @category  Autopilot API  */
 export interface AutopilotActionDef {
   id: 'dodge' | 'tack' | 'gybe' | 'courseCurrentPoint' | 'courseNextPoint'
   name: string // display name
   available: boolean // true if can be used in current AP mode of operation
 }
 
+/** @category  Autopilot API  */
 export interface AutopilotOptions {
   states: AutopilotStateDef[]
   modes: string[]
   actions: AutopilotActionDef[]
 }
 
+/** @category  Autopilot API  */
 export interface AutopilotInfo {
   options: AutopilotOptions
   target: number | null

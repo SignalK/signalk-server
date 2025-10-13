@@ -1,3 +1,4 @@
+/** @category  Resources API */
 export type SignalKResourceType =
   | 'routes'
   | 'waypoints'
@@ -5,6 +6,9 @@ export type SignalKResourceType =
   | 'regions'
   | 'charts'
 
+/**
+ * @hidden
+ * @category  Resources API */
 export const SIGNALKRESOURCETYPES: SignalKResourceType[] = [
   'routes',
   'waypoints',
@@ -12,11 +16,14 @@ export const SIGNALKRESOURCETYPES: SignalKResourceType[] = [
   'regions',
   'charts'
 ]
+/** @category  Resources API */
 export const isSignalKResourceType = (s: string) =>
   SIGNALKRESOURCETYPES.includes(s as SignalKResourceType)
 
+/** @category  Resources API */
 export type ResourceType = SignalKResourceType | string
 
+/** @category  Resources API */
 export interface ResourcesApi {
   register(pluginId: string, provider: ResourceProvider): void
   unRegister(pluginId: string): void
@@ -162,6 +169,7 @@ export interface ResourcesApi {
   ): Promise<void>
 }
 
+/** @category  Resources API */
 export interface ResourceProvider {
   /**
    * The resource type provided for by the plugin.These can be either __Standard__ _(Signal K defined)_ types defined in {@link SignalKResourceType},  or __Custom__ _(user defined)_ resource types _(e.g. `'fishingZones'`)_
@@ -174,6 +182,7 @@ export interface ResourceProvider {
   methods: ResourceProviderMethods
 }
 
+/** @category  Resources API */
 export interface ResourceProviderMethods {
   /**
    * This method is called when a request is made for resource entries that match a specific criteria.
@@ -382,6 +391,7 @@ export interface ResourceProviderMethods {
   deleteResource(id: string): Promise<void>
 }
 
+/** @category  Resources API */
 export interface ResourceProviderRegistry {
   /**
    * Used by _Resource Provider plugins_ to register each resource type it handles.

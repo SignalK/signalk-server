@@ -1,6 +1,7 @@
 import { NormalizedDelta, Path, Value } from './deltas'
 import * as Bacon from 'baconjs'
 
+/** @category Server API */
 export interface StreamBundle {
   /**
    * Get a [Bacon JS 1.0](https://baconjs.github.io/api.html) stream for a Signal K path that will stream values from any context.

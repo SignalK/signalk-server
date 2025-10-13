@@ -1,11 +1,14 @@
 import { Position } from '.'
 
-/** A resource returned from the API will always have these fields */
+/** A resource returned from the API will always have these fields
+ * @hidden
+ */
 export type Resource<T> = T & {
   timestamp: string
   $source: string
 }
 
+/** @category  Resources API */
 export interface Route {
   name?: string
   description?: string
@@ -23,6 +26,7 @@ export interface Route {
   }
 }
 
+/** @category  Resources API */
 export interface Waypoint {
   name?: string
   description?: string
@@ -38,6 +42,7 @@ export interface Waypoint {
   }
 }
 
+/** @category  Resources API */
 export interface Note {
   name?: string
   description?: string
@@ -48,12 +53,14 @@ export interface Note {
   url?: string
 }
 
+/** @category  Resources API */
 export interface Region {
   name?: string
   description?: string
   feature: Polygon | MultiPolygon
 }
 
+/** @category  Resources API */
 export interface Chart {
   name: string
   identifier: string
@@ -68,11 +75,16 @@ export interface Chart {
   chartFormat: string
 }
 
+/** @hidden */
 export type GeoJsonPoint = [number, number, number?]
+/** @hidden */
 export type GeoJsonLinestring = GeoJsonPoint[]
+/** @hidden */
 export type GeoJsonPolygon = GeoJsonLinestring[]
+/** @hidden */
 export type GeoJsonMultiPolygon = GeoJsonPolygon[]
 
+/** @hidden */
 export interface Polygon {
   type: 'Feature'
   geometry: {
@@ -83,6 +95,7 @@ export interface Polygon {
   id?: string
 }
 
+/** @hidden */
 export interface MultiPolygon {
   type: 'Feature'
   geometry: {

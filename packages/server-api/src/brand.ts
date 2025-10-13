@@ -3,7 +3,7 @@ declare const __brand: unique symbol
 /**
  * An interface for creating branded types, which create a more specific and unique data type
  * with greater clarity and specificity,
- *
+ * @hidden
  * @example
  * ```ts
  * type Path = Branded<string, "path">
