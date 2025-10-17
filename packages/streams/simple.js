@@ -97,6 +97,7 @@ function Simple(options) {
   const dataReceivedEventName = `${options.subOptions.providerId}-received`
 
   const spy = new Transform({
+    objectMode: true,
     transform(chunk, encoding, callback) {
       options.app.emit(dataReceivedEventName, chunk)
       callback(null, chunk)
