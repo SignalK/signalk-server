@@ -7,6 +7,8 @@ import {
 
 import { FileStore, getUuid } from './lib/filestorage'
 import { StoreRequestParams } from './types'
+import { IRouter, Request, Response } from 'express'
+import * as openapi from './openApi.json'
 
 interface ResourceProviderApp extends ServerAPI, ResourceProviderRegistry {}
 
@@ -101,17 +103,24 @@ const CONFIG_UISCHEMA = {
 }
 
 module.exports = (server: ResourceProviderApp): Plugin => {
+  let restart: (settings: object) => void
+
   const plugin: Plugin = {
     id: 'resources-provider',
     name: 'Resources Provider (built-in)',
     schema: () => CONFIG_SCHEMA,
     uiSchema: () => CONFIG_UISCHEMA,
-    start: (settings) => {
+    start: (settings, restartPlugin) => {
+      restart = restartPlugin
       doStartup(settings as ProviderSettings)
     },
     stop: () => {
       doShutdown()
-    }
+    },
+    registerWithRouter(router) {
+      initMgtEndpoints(router)
+    },
+    getOpenApi: () => openapi
   }
 
   const db: FileStore = new FileStore(plugin.id, server.debug)
@@ -227,6 +236,82 @@ module.exports = (server: ResourceProviderApp): Plugin => {
     })
 
     return options
+  }
+
+  /** plugin management endpoints */
+  const initMgtEndpoints = (router: IRouter) => {
+    const ApiResponses = {
+      ok: {
+        state: 'COMPLETED',
+        statusCode: 200,
+        message: 'OK'
+      },
+      invalid: {
+        state: 'FAILED',
+        statusCode: 400,
+        message: `Invalid Data supplied.`
+      },
+      unauthorised: {
+        state: 'FAILED',
+        statusCode: 403,
+        message: 'Unauthorised'
+      },
+      exists: {
+        state: 'FAILED',
+        statusCode: 400,
+        message: 'Collection already exists.'
+      },
+      errorCreate: {
+        state: 'FAILED',
+        statusCode: 500,
+        message: 'Error creating collection!'
+      }
+    }
+
+    // add new resource collection
+    router.post(
+      '/_config/:rescollection',
+      async (req: Request, res: Response) => {
+        console.log(req.params)
+        if (!req.params.rescollection) {
+          res.status(ApiResponses.invalid.statusCode).json(ApiResponses.invalid)
+          return
+        }
+        const e = config.custom.find(
+          (i) =>
+            i.name.toLocaleLowerCase() ===
+            req.params.rescollection.toLocaleLowerCase()
+        )
+        if (
+          e ||
+          req.params.rescollection.toLocaleLowerCase() in config.standard
+        ) {
+          res.status(ApiResponses.exists.statusCode).json(ApiResponses.exists)
+          return
+        }
+        console.log('****** Create collection ***')
+        const coll: { [key: string]: boolean } = {}
+        coll[req.params.rescollection] = true
+        const r = await db.createSavePaths(coll)
+        if (r.error) {
+          console.log(r.message)
+          res
+            .status(ApiResponses.errorCreate.statusCode)
+            .json(ApiResponses.errorCreate)
+        } else {
+          config.custom.push({ name: req.params.rescollection })
+          server.savePluginOptions(config, () => {
+            console.log('settings saved...')
+          })
+          res.status(200).json(ApiResponses.ok)
+          restart(config)
+        }
+      }
+    )
+    // get configuration
+    router.get('/_config', (req: Request, res: Response) => {
+      res.json(config)
+    })
   }
 
   const getVesselPosition = () => {
