@@ -76,7 +76,7 @@
     "@signalk/server-admin-ui": "2.17.x",
     "@signalk/server-api": "2.9.x",
     "@signalk/signalk-schema": "^1.7.1",
-    "@signalk/streams": "5.0.x",
+    "@signalk/streams": "5.1.x",
     "api-schema-builder": "^2.0.11",
     "baconjs": "^1.0.1",
     "bcryptjs": "^2.4.3",
