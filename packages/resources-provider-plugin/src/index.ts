@@ -20,7 +20,7 @@ interface ProviderSettings {
     regions: boolean
     charts: boolean
   }
-  custom: Array<{ name: string }>
+  custom: Array<{ name: string; description: string }>
 }
 
 const CONFIG_SCHEMA = {
@@ -56,15 +56,20 @@ const CONFIG_SCHEMA = {
     custom: {
       type: 'array',
       title: 'Resources (custom)',
-      description: 'Add provider for custom resource types.',
+      description: 'Add provider for custom resource collections.',
       items: {
         type: 'object',
         required: ['name'],
         properties: {
           name: {
             type: 'string',
-            title: 'Resource Type',
-            description: '/signalk/v2/api/resources/'
+            title: 'Collection Name',
+            description: '/signalk/v2/api/resources/{name}'
+          },
+          description: {
+            type: 'string',
+            title: 'Description',
+            description: 'Type of resource in this collection.'
           }
         }
       }
@@ -141,9 +146,11 @@ module.exports = (server: ResourceProviderApp): Plugin => {
       })
 
       if (config.custom && Array.isArray(config.custom)) {
-        const customTypes = config.custom.map((i: { name: string }) => {
-          return i.name
-        })
+        const customTypes = config.custom.map(
+          (i: { name: string; description?: string }) => {
+            return i.name
+          }
+        )
         apiProviderFor = apiProviderFor.concat(customTypes)
       }
 
@@ -221,6 +228,10 @@ module.exports = (server: ResourceProviderApp): Plugin => {
     if (!Array.isArray(options?.custom)) {
       options.custom = []
     }
+    options.custom.forEach((i: { name: string; description?: string }) => {
+      i.description = i.description ?? ''
+    })
+
     SIGNALKRESOURCETYPES.forEach((r) => {
       if (!(r in options.standard)) {
         options.standard[r] = true
@@ -299,7 +310,10 @@ module.exports = (server: ResourceProviderApp): Plugin => {
             .status(ApiResponses.errorCreate.statusCode)
             .json(ApiResponses.errorCreate)
         } else {
-          config.custom.push({ name: req.params.rescollection })
+          config.custom.push({
+            name: req.params.rescollection,
+            description: req.body.description ?? ''
+          })
           server.savePluginOptions(config, () => {
             console.log('settings saved...')
           })
