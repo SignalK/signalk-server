@@ -181,6 +181,36 @@
       "post": {
         "tags": ["configuration"],
         "summary": "Add a new resource collection with the supplied name and restarts the plugin.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["description"],
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "description": "Text describing the collection contents.",
+                    "example": "Fishing zones"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["configuration"],
+        "summary": "Remove the resource collection with the supplied name. `Note: This does NOT delete collection folder & files.",
         "responses": {
           "200": {
             "$ref": "#/components/responses/200ActionResponse"

@@ -260,7 +260,12 @@ module.exports = (server: ResourceProviderApp): Plugin => {
       invalid: {
         state: 'FAILED',
         statusCode: 400,
-        message: `Invalid Data supplied.`
+        message: `Invalid Data supplied!`
+      },
+      notFound: {
+        state: 'FAILED',
+        statusCode: 400,
+        message: `Entry not found!`
       },
       unauthorised: {
         state: 'FAILED',
@@ -270,7 +275,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
       exists: {
         state: 'FAILED',
         statusCode: 400,
-        message: 'Collection already exists.'
+        message: 'Collection already exists!'
       },
       errorCreate: {
         state: 'FAILED',
@@ -283,29 +288,24 @@ module.exports = (server: ResourceProviderApp): Plugin => {
     router.post(
       '/_config/:rescollection',
       async (req: Request, res: Response) => {
-        console.log(req.params)
+        server.debug('Add collection request...', req.params)
         if (!req.params.rescollection) {
           res.status(ApiResponses.invalid.statusCode).json(ApiResponses.invalid)
           return
         }
         const e = config.custom.find(
-          (i) =>
-            i.name.toLocaleLowerCase() ===
-            req.params.rescollection.toLocaleLowerCase()
+          (i) => i.name.toLowerCase() === req.params.rescollection.toLowerCase()
         )
-        if (
-          e ||
-          req.params.rescollection.toLocaleLowerCase() in config.standard
-        ) {
+        if (e || req.params.rescollection.toLowerCase() in config.standard) {
           res.status(ApiResponses.exists.statusCode).json(ApiResponses.exists)
           return
         }
-        console.log('****** Create collection ***')
+        server.debug('****** Creating collection ***')
         const coll: { [key: string]: boolean } = {}
         coll[req.params.rescollection] = true
         const r = await db.createSavePaths(coll)
         if (r.error) {
-          console.log(r.message)
+          server.debug(r.message)
           res
             .status(ApiResponses.errorCreate.statusCode)
             .json(ApiResponses.errorCreate)
@@ -315,11 +315,42 @@ module.exports = (server: ResourceProviderApp): Plugin => {
             description: req.body.description ?? ''
           })
           server.savePluginOptions(config, () => {
-            console.log('settings saved...')
+            server.debug('settings saved...')
           })
           res.status(200).json(ApiResponses.ok)
           restart(config)
         }
+      }
+    )
+    // remove resource collection config (does not remove folder of files.)
+    router.delete(
+      '/_config/:rescollection',
+      async (req: Request, res: Response) => {
+        server.debug('Remove collection request...', req.params)
+        if (!req.params.rescollection) {
+          res.status(ApiResponses.invalid.statusCode).json(ApiResponses.invalid)
+          return
+        }
+        const e = config.custom.findIndex(
+          (i) => i.name.toLowerCase() === req.params.rescollection.toLowerCase()
+        )
+        if (e === -1) {
+          res
+            .status(ApiResponses.notFound.statusCode)
+            .json(ApiResponses.notFound)
+          return
+        }
+        if (req.params.rescollection.toLowerCase() in config.standard) {
+          res.status(ApiResponses.invalid.statusCode).json(ApiResponses.invalid)
+          return
+        }
+        server.debug('****** Removing collection ***')
+        config.custom.splice(e, 1)
+        server.savePluginOptions(config, () => {
+          server.debug('settings saved...')
+        })
+        res.status(200).json(ApiResponses.ok)
+        restart(config)
       }
     )
     // get configuration
