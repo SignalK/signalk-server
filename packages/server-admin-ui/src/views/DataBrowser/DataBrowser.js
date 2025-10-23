@@ -53,6 +53,15 @@ function fetchSources() {
     })
 }
 
+async function fetchSelfPaths() {
+  fetch(`/signalk/v2/api/selfPaths`, {
+    credentials: 'include'
+  }).then((response) => response.json()).then((paths) => {
+    this.setState({ ...this.state, paths })
+    console.log(paths)
+  })
+}
+
 class DataBrowser extends Component {
   constructor(props) {
     super(props)
@@ -70,10 +79,12 @@ class DataBrowser extends Component {
         JSON.parse(localStorage.getItem(selectedSourcesStorageKey) || '[]')
       ),
       sourceFilterActive:
-        localStorage.getItem(sourceFilterActiveStorageKey) === 'true'
+        localStorage.getItem(sourceFilterActiveStorageKey) === 'true',
+      paths: {}
     }
 
     this.fetchSources = fetchSources.bind(this)
+    this.fetchSelfPaths = fetchSelfPaths.bind(this)
     this.handlePause = this.handlePause.bind(this)
     this.handleMessage = this.handleMessage.bind(this)
     this.handleContextChange = this.handleContextChange.bind(this)
@@ -203,6 +214,7 @@ class DataBrowser extends Component {
 
   componentDidMount() {
     this.fetchSources()
+    this.fetchSelfPaths()
     this.subscribeToDataIfNeeded()
   }
 
@@ -666,6 +678,7 @@ class DataBrowser extends Component {
                                     <DefaultValueRenderer
                                       value={data.value}
                                       units={units}
+                                      pathInfo={this.state.paths[data.path]}
                                     />
                                   )
                                 })()}

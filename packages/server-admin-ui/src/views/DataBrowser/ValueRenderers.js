@@ -1,4 +1,5 @@
 import React from 'react'
+import { evaluateFormula} from '@signalk/formula-evaluator'
 
 const PositionRenderer = ({ value }) => {
   if (!value || typeof value !== 'object') {
@@ -257,7 +258,7 @@ export const getValueRenderer = (path) => {
   return null
 }
 
-export const DefaultValueRenderer = ({ value, units }) => {
+export const DefaultValueRenderer = ({ value, units, pathInfo }) => {
   let formattedValue = JSON.stringify(
     value,
     null,
@@ -268,6 +269,34 @@ export const DefaultValueRenderer = ({ value, units }) => {
     formattedValue = `${value} `
   }
 
+  // Get conversion info if available
+  let conversionInfo = null
+  if (pathInfo && pathInfo.conversions && typeof value === 'number') {
+    const conversions = pathInfo.conversions
+    const conversionKeys = Object.keys(conversions)
+    if (conversionKeys.length > 0) {
+      const firstConversionKey = conversionKeys[0]
+      const conversion = conversions[firstConversionKey]
+      
+      // Evaluate the formula to get the converted value
+      let convertedValue = null
+      try {
+        convertedValue = evaluateFormula(conversion.formula, value)
+      } catch (error) {
+        console.error('Error evaluating conversion formula:', error)
+      }
+      
+      conversionInfo = {
+        name: firstConversionKey,
+        formula: conversion.formula,
+        convertedValue: convertedValue,
+        symbol: conversion.symbol
+      }
+    }
+  }
+
+  
+
   return (
     <>
       {typeof value === 'object' ? (
@@ -276,6 +305,7 @@ export const DefaultValueRenderer = ({ value, units }) => {
         <span className="text-primary">
           {formattedValue}
           {typeof value === 'number' && units && <strong>{units}</strong>}
+          {conversionInfo && <> = {conversionInfo.convertedValue.toFixed(2)} {conversionInfo.symbol}</>}
         </span>
       )}
     </>
