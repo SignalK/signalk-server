@@ -82,13 +82,52 @@ function SerialStream(options) {
 
   const createDebug = options.createDebug || require('debug')
   this.debug = createDebug('signalk:streams:serialport')
+
+  let pendingWrites = 0
+  const stdOutEvents = isArray(this.options.toStdout)
+    ? this.options.toStdout
+    : [this.options.toStdout]
+  const standardOutEventName = `serial-${this.options.providerId}-toStdout`
+  stdOutEvents.push(standardOutEventName)
+
+  const that = this
+  stdOutEvents.forEach((event) => {
+    const onDrain = () => {
+      pendingWrites--
+    }
+
+    that.options.app.on(event, (d) => {
+      if (pendingWrites > that.maxPendingWrites) {
+        that.debug('Buffer overflow, not writing:' + d)
+        return
+      }
+      that.debug('Writing:' + d)
+      if (isBuffer(d)) {
+        that.serial.write(d)
+      } else {
+        that.serial.write(d + '\r\n')
+      }
+      setImmediate(() => {
+        that.options.app.emit('connectionwrite', {
+          providerId: that.options.providerId
+        })
+      })
+      pendingWrites++
+      that.serial.drain(onDrain)
+    })
+  })
+
+  this.options.app.emitPropertyValue('serialport', {
+    id: this.options.providerId,
+    eventNames: {
+      toStdout: standardOutEventName
+    }
+  })
 }
 
 require('util').inherits(SerialStream, Transform)
 
 SerialStream.prototype.start = function () {
-  const that = this
-
   if (this.serial !== null) {
     this.serial.unpipe(this)
     this.serial.removeAllListeners()
@@ -146,46 +185,6 @@ SerialStream.prototype.start = function () {
       this.scheduleReconnect()
     }.bind(this)
   )
-
-  let pendingWrites = 0
-  const stdOutEvents = isArray(this.options.toStdout)
-    ? this.options.toStdout
-    : [this.options.toStdout]
-  const standardOutEventName = `serial-${this.options.providerId}-toStdout`
-  stdOutEvents.push(standardOutEventName)
-
-  stdOutEvents.forEach((event) => {
-    const onDrain = () => {
-      pendingWrites--
-    }
-
-    that.options.app.on(event, (d) => {
-      if (pendingWrites > that.maxPendingWrites) {
-        that.debug('Buffer overflow, not writing:' + d)
-        return
-      }
-      that.debug('Writing:' + d)
-      if (isBuffer(d)) {
-        that.serial.write(d)
-      } else {
-        that.serial.write(d + '\r\n')
-      }
-      setImmediate(() => {
-        that.options.app.emit('connectionwrite', {
-          providerId: that.options.providerId
-        })
-      })
-      pendingWrites++
-      that.serial.drain(onDrain)
-    })
-  })
-
-  this.options.app.emitPropertyValue('serialport', {
-    id: this.options.providerId,
-    eventNames: {
-      toStdout: standardOutEventName
-    }
-  })
 }
 
 SerialStream.prototype.end = function () {
