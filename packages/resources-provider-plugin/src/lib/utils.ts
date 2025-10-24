@@ -80,8 +80,8 @@ export const passFilter = (res: any, type: string, params: any) => {
         ha.length === 1
           ? 'regions'
           : ha.length > 2
-          ? ha[ha.length - 2]
-          : 'regions'
+            ? ha[ha.length - 2]
+            : 'regions'
       const hId = ha.length === 1 ? ha[0] : ha[ha.length - 1]
 
       // deconstruct param.href value
@@ -90,8 +90,8 @@ export const passFilter = (res: any, type: string, params: any) => {
         pa.length === 1
           ? 'regions'
           : pa.length > 2
-          ? pa[pa.length - 2]
-          : 'regions'
+            ? pa[pa.length - 2]
+            : 'regions'
       const pId = pa.length === 1 ? pa[0] : pa[pa.length - 1]
 
       ok = ok && hType === pType && hId === pId

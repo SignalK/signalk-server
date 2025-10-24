@@ -23,7 +23,10 @@ export class FileStore implements IResourceStore {
   resources: any
   pkg: { id: string }
 
-  constructor(pluginId: string, private debug: (s: any) => void) {
+  constructor(
+    pluginId: string,
+    private debug: (s: any) => void
+  ) {
     this.savePath = ''
     this.resources = {}
     this.pkg = { id: pluginId }
@@ -193,7 +196,7 @@ export class FileStore implements IResourceStore {
         return
       } catch (error) {
         console.error('Error deleting resource!')
-          ; (error as Error).message = 'Error deleting resource!'
+        ;(error as Error).message = 'Error deleting resource!'
         throw error
       }
     } else {
