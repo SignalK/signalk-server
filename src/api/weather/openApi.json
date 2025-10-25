@@ -147,7 +147,7 @@
                   "mixed/ice"
                 ],
                 "example": "rain",
-                "description": "Type of preceipitation"
+                "description": "Type of precipitation"
               },
               "precipitationVolume": {
                 "type": "number",
