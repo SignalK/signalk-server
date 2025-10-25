@@ -15,7 +15,8 @@ import {
   WeatherData,
   isWeatherProvider,
   Position,
-  WeatherReqParams
+  WeatherReqParams,
+  WeatherForecastType
 } from '@signalk/server-api'
 
 const WEATHER_API_PATH = `/signalk/v2/api/weather`
@@ -88,6 +89,85 @@ export class WeatherApi {
       'defaultProvider =',
       this.defaultProviderId
     )
+  }
+
+  /** Server API methods */
+
+  /**
+   * @description Return array of observations for the provided location
+   * @param position Location for which to retrieve observation data
+   * @param options Parameters to filter the returned data
+   */
+  async getObservations(position: Position, options?: WeatherReqParams) {
+    const q = this.parseQueryOptions({
+      position: position,
+      options: options
+    })
+    if (
+      this.defaultProviderId &&
+      this.weatherProviders.has(this.defaultProviderId)
+    ) {
+      debug(`Using default provider...${this.defaultProviderId}`)
+      return await this.weatherProviders
+        .get(this.defaultProviderId as string)
+        ?.methods.getObservations(q.position, q.options)
+    } else {
+      throw new Error(`Provider not found!`)
+    }
+  }
+
+  /**
+   * @description Return array of forecasts for the provided location
+   * @param position Location for which to retrieve forecast data
+   * @param type Type of forecast point | daily
+   * @param options Parameters to filter the returned data
+   */
+  async getForecasts(
+    position: Position,
+    type: WeatherForecastType,
+    options?: WeatherReqParams
+  ) {
+    const q = this.parseQueryOptions({
+      position: position,
+      options: options
+    })
+    if (
+      this.defaultProviderId &&
+      this.weatherProviders.has(this.defaultProviderId)
+    ) {
+      debug(`Using default provider...${this.defaultProviderId}`)
+      const fdata = await this.weatherProviders
+        .get(this.defaultProviderId as string)
+        ?.methods.getForecasts(q.position, type, q.options)
+      return fdata
+        ? fdata.filter((i: WeatherData) => {
+            return i.type === type
+          })
+        : []
+    } else {
+      throw new Error(`Provider not found!`)
+    }
+  }
+
+  /**
+   * @description Return array of warnings for the provided location
+   * @param position Location for which to retrieve warning data
+   */
+  async getWarnings(position: Position) {
+    const q = this.parseQueryOptions({
+      position: position
+    })
+    if (
+      this.defaultProviderId &&
+      this.weatherProviders.has(this.defaultProviderId)
+    ) {
+      debug(`Using default provider...${this.defaultProviderId}`)
+      return await this.weatherProviders
+        .get(this.defaultProviderId as string)
+        ?.methods.getWarnings(q.position)
+    } else {
+      throw new Error(`Provider not found!`)
+    }
   }
 
   // *************************************
