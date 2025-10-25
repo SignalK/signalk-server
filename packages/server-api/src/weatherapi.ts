@@ -176,13 +176,11 @@ export interface WeatherWarning {
  *
  * @prop maxCount Maximum number of records to return
  * @prop startDate Start date of forecast / observation data (format: YYYY-MM-DD)
- * @prop custom Additional query parameters in the API request
  * @category  Weather API
  */
 export interface WeatherReqParams {
   maxCount?: number
   startDate?: string
-  custom?: { [key: string]: string | number | boolean | object | null }
 }
 
 /**

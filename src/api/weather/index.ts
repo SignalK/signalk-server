@@ -446,24 +446,18 @@ export class WeatherApi {
       },
       options: {}
     }
-    delete query.lat
-    delete query.lon
-    delete query.provider
     if ('count' in query) {
       const n = this.parseValueAsNumber(query.count)
       if (typeof n === 'number') {
         q.options.maxCount = n
       }
-      delete query.count
     }
     if ('date' in query) {
       const pattern = /[0-9]{4}-[0-9]{2}-[0-9]{2}/
       if ((query.date as string).match(pattern)) {
         q.options.startDate = query.date?.toString()
       }
-      delete query.date
     }
-    Object.assign(q.options, { custom: query })
     return q
   }
 
