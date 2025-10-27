@@ -1,5 +1,14 @@
-import React from 'react'
-import { Button, Progress } from 'reactstrap'
+import React, { useState } from 'react'
+import {
+  Button,
+  Progress,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ListGroup,
+  ListGroupItem
+} from 'reactstrap'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -20,6 +29,9 @@ import { urlToWebapp } from '../../../Webapps/Webapp'
 
 function ActionCellRenderer(props) {
   const app = props.data
+  const [showVersionsModal, setShowVersionsModal] = useState(false)
+  const [versions, setVersions] = useState([])
+  const [loadingVersions, setLoadingVersions] = useState(false)
 
   const handleInstallClick = () => {
     fetch(
@@ -29,6 +41,59 @@ function ActionCellRenderer(props) {
         credentials: 'include'
       }
     )
+  }
+
+  const handleInstallVersionClick = (version) => {
+    fetch(
+      `${window.serverRoutesPrefix}/appstore/install/${props.data.name}/${version}`,
+      {
+        method: 'POST',
+        credentials: 'include'
+      }
+    )
+    setShowVersionsModal(false)
+  }
+
+  const handleVersionsClick = async () => {
+    setLoadingVersions(true)
+    setShowVersionsModal(true)
+
+    try {
+      // Fetch versions from npm registry
+      const response = await fetch(
+        `https://registry.npmjs.org/${props.data.name}`
+      )
+      const packageData = await response.json()
+
+      if (packageData.versions) {
+        // Get all versions and sort them by semver (newest first)
+        const versionList = Object.keys(packageData.versions)
+          .filter((version) => version !== props.data.version) // Exclude current version
+          .sort((a, b) => {
+            // Simple version comparison - newer versions first
+            const aParts = a.split('.').map(Number)
+            const bParts = b.split('.').map(Number)
+
+            for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+              const aPart = aParts[i] || 0
+              const bPart = bParts[i] || 0
+
+              if (bPart !== aPart) {
+                return bPart - aPart
+              }
+            }
+            return 0
+          })
+          .slice(0, 20) // Limit to 20 versions
+
+        setVersions(versionList)
+      }
+    } catch (error) {
+      console.error('Failed to fetch versions:', error)
+      setVersions([])
+    } finally {
+      setLoadingVersions(false)
+    }
   }
 
   const handleRemoveClick = () => {
@@ -154,6 +219,11 @@ function ActionCellRenderer(props) {
               </a>
             )}
 
+            <DropdownItem onClick={handleVersionsClick} className="text-left">
+                <FontAwesomeIcon className="mr-2" icon={faCloudArrowDown} />
+                Older versions
+            </DropdownItem>
+
             {app.installed && (
               <DropdownItem onClick={handleRemoveClick} className="text-danger">
                 <FontAwesomeIcon className="mr-2" icon={faTrashCan} />
@@ -165,7 +235,68 @@ function ActionCellRenderer(props) {
       </>
     )
   }
-  return <div className="cell__renderer cell-action">{content}</div>
+  return (
+   <div className="cell__renderer cell-action">
+    <div>{content}</div>
+    {/* Versions Modal */}
+      <Modal
+        isOpen={showVersionsModal}
+        toggle={() => setShowVersionsModal(!showVersionsModal)}
+        size="md"
+      >
+        <ModalHeader toggle={() => setShowVersionsModal(!showVersionsModal)}>
+          Older Versions - {props.data.name}
+        </ModalHeader>
+        <ModalBody>
+          {loadingVersions ? (
+            <div className="text-center">
+              <div className="spinner-border text-primary" role="status">
+                <span className="sr-only">Loading...</span>
+              </div>
+              <p className="mt-2">Loading versions...</p>
+            </div>
+          ) : versions.length > 0 ? (
+            <ListGroup>
+              {versions.map((version) => (
+                <ListGroupItem
+                  key={version}
+                  className="d-flex justify-content-between align-items-center"
+                >
+                  <span>
+                    <strong>{version}</strong>
+                    {props.data.installedVersion === version && (
+                      <span className="badge badge-success ml-2">
+                        Installed
+                      </span>
+                    )}
+                  </span>
+                  <Button
+                    size="sm"
+                    color="primary"
+                    onClick={() => handleInstallVersionClick(version)}
+                    disabled={props.data.installedVersion === version}
+                  >
+                    {props.data.installedVersion === version
+                      ? 'Installed'
+                      : 'Install'}
+                  </Button>
+                </ListGroupItem>
+              ))}
+            </ListGroup>
+          ) : (
+            <p className="text-muted">
+              No older versions available or failed to load versions.
+            </p>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button color="secondary" onClick={() => setShowVersionsModal(false)}>
+            Close
+          </Button>
+        </ModalFooter>
+      </Modal>
+    </div>
+  )
 }
 
 const mapStateToProps = ({ appStore }) => ({ appStore })
