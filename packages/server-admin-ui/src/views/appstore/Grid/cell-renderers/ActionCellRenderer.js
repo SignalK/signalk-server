@@ -220,8 +220,8 @@ function ActionCellRenderer(props) {
             )}
 
             <DropdownItem onClick={handleVersionsClick} className="text-left">
-                <FontAwesomeIcon className="mr-2" icon={faCloudArrowDown} />
-                Older versions
+              <FontAwesomeIcon className="mr-2" icon={faCloudArrowDown} />
+              Older versions
             </DropdownItem>
 
             {app.installed && (
@@ -236,9 +236,9 @@ function ActionCellRenderer(props) {
     )
   }
   return (
-   <div className="cell__renderer cell-action">
-    <div>{content}</div>
-    {/* Versions Modal */}
+    <div className="cell__renderer cell-action">
+      <div>{content}</div>
+      {/* Versions Modal */}
       <Modal
         isOpen={showVersionsModal}
         toggle={() => setShowVersionsModal(!showVersionsModal)}
