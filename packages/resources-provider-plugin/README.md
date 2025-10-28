@@ -51,7 +51,7 @@ HTTP GET "/plugins/resources-provider/_config"
 ```
 
 - **Add a resource collection:**
-```bash
+```
 HTTP POST "/plugins/resources-provider/_config/:name" {
     "description": "My custom collection"
 }
