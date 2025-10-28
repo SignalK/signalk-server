@@ -69,7 +69,7 @@ function ActionCellRenderer(props) {
         // Get all versions and sort them by semver (newest first)
         const versionList = semver
           .rsort(Object.keys(packageData.versions))
-          .slice(0, 50) // Limit to 20 versions
+          .slice(0, 20) // Limit to 20 versions
 
         setVersions(versionList)
       }
