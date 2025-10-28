@@ -25,6 +25,7 @@ import {
   DropdownItem
 } from 'reactstrap'
 import { urlToWebapp } from '../../../Webapps/Webapp'
+import semver from 'semver'
 
 function ActionCellRenderer(props) {
   const app = props.data
@@ -66,24 +67,9 @@ function ActionCellRenderer(props) {
 
       if (packageData.versions) {
         // Get all versions and sort them by semver (newest first)
-        const versionList = Object.keys(packageData.versions)
-          .filter((version) => version !== props.data.version) // Exclude current version
-          .sort((a, b) => {
-            // Simple version comparison - newer versions first
-            const aParts = a.split('.').map(Number)
-            const bParts = b.split('.').map(Number)
-
-            for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-              const aPart = aParts[i] || 0
-              const bPart = bParts[i] || 0
-
-              if (bPart !== aPart) {
-                return bPart - aPart
-              }
-            }
-            return 0
-          })
-          .slice(0, 20) // Limit to 20 versions
+        const versionList = semver
+          .rsort(Object.keys(packageData.versions))
+          .slice(0, 50) // Limit to 20 versions
 
         setVersions(versionList)
       }
@@ -220,7 +206,7 @@ function ActionCellRenderer(props) {
 
             <DropdownItem onClick={handleVersionsClick} className="text-left">
               <FontAwesomeIcon className="mr-2" icon={faCloudArrowDown} />
-              Older versions
+              Versions
             </DropdownItem>
 
             {app.installed && (
@@ -244,7 +230,7 @@ function ActionCellRenderer(props) {
         size="md"
       >
         <ModalHeader toggle={() => setShowVersionsModal(!showVersionsModal)}>
-          Older Versions - {props.data.name}
+          Versions - {props.data.name}
         </ModalHeader>
         <ModalBody>
           {loadingVersions ? (
