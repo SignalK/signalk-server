@@ -67,10 +67,7 @@ function ActionCellRenderer(props) {
 
       if (packageData.versions) {
         // Get all versions and sort them by semver (newest first)
-        const versionList = semver
-          .rsort(Object.keys(packageData.versions))
-          .slice(0, 20) // Limit to 20 versions
-
+        const versionList = semver.rsort(Object.keys(packageData.versions))
         setVersions(versionList)
       }
     } catch (error) {
@@ -241,36 +238,44 @@ function ActionCellRenderer(props) {
               <p className="mt-2">Loading versions...</p>
             </div>
           ) : versions.length > 0 ? (
-            <ListGroup>
-              {versions.map((version) => (
-                <ListGroupItem
-                  key={version}
-                  className="d-flex justify-content-between align-items-center"
-                >
-                  <span>
-                    <strong>{version}</strong>
-                    {props.data.installedVersion === version && (
-                      <span className="badge badge-success ml-2">
-                        Installed
-                      </span>
+            <div
+              style={{
+                maxHeight: '450px',
+                overflowY: 'auto',
+                border: '1px solid #ccc'
+              }}
+            >
+              <ListGroup>
+                {versions.map((version) => (
+                  <ListGroupItem
+                    key={version}
+                    className="d-flex justify-content-between align-items-center"
+                  >
+                    <span>
+                      <strong>{version}</strong>
+                      {props.data.installedVersion === version && (
+                        <span className="badge badge-success ml-2">
+                          Installed
+                        </span>
+                      )}
+                    </span>
+                    {props.data.installedVersion !== version && (
+                      <Button
+                        size="sm"
+                        color="light"
+                        onClick={() => handleInstallVersionClick(version)}
+                      >
+                        <FontAwesomeIcon
+                          className="icon__update mr-2"
+                          icon={faCloudArrowDown}
+                        />
+                        Install
+                      </Button>
                     )}
-                  </span>
-                  {props.data.installedVersion !== version && (
-                    <Button
-                      size="sm"
-                      color="light"
-                      onClick={() => handleInstallVersionClick(version)}
-                    >
-                      <FontAwesomeIcon
-                        className="icon__update mr-2"
-                        icon={faCloudArrowDown}
-                      />
-                      Install
-                    </Button>
-                  )}
-                </ListGroupItem>
-              ))}
-            </ListGroup>
+                  </ListGroupItem>
+                ))}
+              </ListGroup>
+            </div>
           ) : (
             <p className="text-muted">
               No older versions available or failed to load versions.
