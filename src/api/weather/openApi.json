@@ -88,8 +88,8 @@
               },
               "cloudCover": {
                 "type": "number",
-                "example": 85,
-                "description": "Amount of cloud cover (%)"
+                "example": 0.85,
+                "description": "Amount of cloud cover (ratio)"
               },
               "horizontalVisibility": {
                 "type": "number",
@@ -129,13 +129,13 @@
               },
               "absoluteHumidity": {
                 "type": "number",
-                "example": 56,
-                "description": "Absolute humidity (%)"
+                "example": 0.56,
+                "description": "Absolute humidity (ratio)"
               },
               "relativeHumidity": {
                 "type": "number",
-                "example": 56,
-                "description": "Relative humidity (%)"
+                "example": 0.56,
+                "description": "Relative humidity (ratio)"
               },
               "precipitationType": {
                 "type": "string",
@@ -147,12 +147,12 @@
                   "mixed/ice"
                 ],
                 "example": "rain",
-                "description": "Type of preceipitation"
+                "description": "Type of precipitation"
               },
               "precipitationVolume": {
                 "type": "number",
-                "example": 56,
-                "description": "Amount of precipitation (mm)"
+                "example": 0.56,
+                "description": "Amount of precipitation (m)"
               }
             }
           },
@@ -191,8 +191,8 @@
             "properties": {
               "temperature": {
                 "type": "number",
-                "example": 21.6,
-                "description": "Wind gust (m/s)"
+                "example": 281.6,
+                "description": "Water temperature (K)"
               },
               "level": {
                 "type": "number",
@@ -252,8 +252,8 @@
               },
               "salinity": {
                 "type": "number",
-                "example": 12,
-                "description": "Water salinity (%)"
+                "example": 0.12,
+                "description": "Water salinity (ratio)"
               },
               "ice": {
                 "type": "boolean",
