@@ -5,7 +5,6 @@ import {
   Modal,
   ModalHeader,
   ModalBody,
-  ModalFooter,
   ListGroup,
   ListGroupItem
 } from 'reactstrap'
