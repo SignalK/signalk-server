@@ -270,16 +270,15 @@ function ActionCellRenderer(props) {
                       </span>
                     )}
                   </span>
+                   {props.data.installedVersion !== version && (
                   <Button
                     size="sm"
                     color="primary"
                     onClick={() => handleInstallVersionClick(version)}
-                    disabled={props.data.installedVersion === version}
                   >
-                    {props.data.installedVersion === version
-                      ? 'Installed'
-                      : 'Install'}
+                    Install
                   </Button>
+                  )}
                 </ListGroupItem>
               ))}
             </ListGroup>
