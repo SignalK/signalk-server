@@ -36,7 +36,6 @@ By default the plugin is enabled with all standdard resource types enabled.
 
 ![image](https://user-images.githubusercontent.com/38519157/227807566-966a5640-87e1-4db8-a7f2-aadf06deb3f3.png)
 
-
 ### Configuration API
 
 The following API endpoints are made avaialable to configure the plugin programatically.
@@ -46,11 +45,13 @@ The following API endpoints are made avaialable to configure the plugin programa
 > _**NOTE:** You must be authenticated to the Signal K Server to access these endpoints!_
 
 - **Retrieve configured resource collections:**
+
 ```bash
 HTTP GET "/plugins/resources-provider/_config"
 ```
 
 - **Add a resource collection:**
+
 ```
 HTTP POST "/plugins/resources-provider/_config/:name" {
     "description": "My custom collection"
@@ -61,6 +62,7 @@ WHERE `:name` is the name of the collection to create
 AND the request body contains the collection `description`.
 
 - **Remove a resource collection:**
+
 ```bash
 HTTP DELETE "/plugins/resources-provider/_config/:name"
 ```
