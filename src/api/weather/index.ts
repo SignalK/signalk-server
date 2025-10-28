@@ -439,31 +439,28 @@ export class WeatherApi {
    * @param query req.query
    */
   private parseQueryOptions(query: any): WeatherReqOptions {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { lat, lon, provider, count, date, ...custom } = query
+
     const q: WeatherReqOptions = {
       position: {
-        latitude: this.parseValueAsNumber(query.lat) ?? 0,
-        longitude: this.parseValueAsNumber(query.lon) ?? 0
+        latitude: this.parseValueAsNumber(lat) ?? 0,
+        longitude: this.parseValueAsNumber(lon) ?? 0
       },
-      options: {}
+      options: { custom }
     }
-    delete query.lat
-    delete query.lon
-    delete query.provider
-    if ('count' in query) {
-      const n = this.parseValueAsNumber(query.count)
+    if (count) {
+      const n = this.parseValueAsNumber(count)
       if (typeof n === 'number') {
         q.options.maxCount = n
       }
-      delete query.count
     }
-    if ('date' in query) {
+    if (date) {
       const pattern = /[0-9]{4}-[0-9]{2}-[0-9]{2}/
-      if ((query.date as string).match(pattern)) {
-        q.options.startDate = query.date?.toString()
+      if ((date as string).match(pattern)) {
+        q.options.startDate = date?.toString()
       }
-      delete query.date
     }
-    Object.assign(q.options, { custom: query })
     return q
   }
 
