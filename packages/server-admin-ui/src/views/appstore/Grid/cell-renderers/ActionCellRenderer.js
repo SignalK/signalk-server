@@ -288,11 +288,6 @@ function ActionCellRenderer(props) {
             </p>
           )}
         </ModalBody>
-        <ModalFooter>
-          <Button color="secondary" onClick={() => setShowVersionsModal(false)}>
-            Close
-          </Button>
-        </ModalFooter>
       </Modal>
     </div>
   )
