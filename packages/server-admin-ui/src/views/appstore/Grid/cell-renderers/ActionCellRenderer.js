@@ -273,9 +273,13 @@ function ActionCellRenderer(props) {
                    {props.data.installedVersion !== version && (
                   <Button
                     size="sm"
-                    color="primary"
+                    color="light"
                     onClick={() => handleInstallVersionClick(version)}
                   >
+                    <FontAwesomeIcon
+                  className="icon__update mr-2"
+                  icon={faCloudArrowDown}
+                />
                     Install
                   </Button>
                   )}
