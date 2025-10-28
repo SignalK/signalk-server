@@ -270,18 +270,18 @@ function ActionCellRenderer(props) {
                       </span>
                     )}
                   </span>
-                   {props.data.installedVersion !== version && (
-                  <Button
-                    size="sm"
-                    color="light"
-                    onClick={() => handleInstallVersionClick(version)}
-                  >
-                    <FontAwesomeIcon
-                  className="icon__update mr-2"
-                  icon={faCloudArrowDown}
-                />
-                    Install
-                  </Button>
+                  {props.data.installedVersion !== version && (
+                    <Button
+                      size="sm"
+                      color="light"
+                      onClick={() => handleInstallVersionClick(version)}
+                    >
+                      <FontAwesomeIcon
+                        className="icon__update mr-2"
+                        icon={faCloudArrowDown}
+                      />
+                      Install
+                    </Button>
                   )}
                 </ListGroupItem>
               ))}
