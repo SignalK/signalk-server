@@ -257,7 +257,97 @@ export const getValueRenderer = (path) => {
   return null
 }
 
-export const DefaultValueRenderer = ({ value, units }) => {
+export const DefaultValueRenderer = ({ value, units, originalUnits, converter, path }) => {
+  // Debug server-side conversions
+  if (!window._serverConversionDebugCount) window._serverConversionDebugCount = 0
+  if (window._serverConversionDebugCount < 5 && value && typeof value === 'object' && 'original' in value) {
+    console.log('Server conversion detected:', { path, value, units, originalUnits })
+    window._serverConversionDebugCount++
+  }
+
+  // Check if value is already converted by the server (has original/converted/formatted structure)
+  if (value && typeof value === 'object' && value !== null && !Array.isArray(value) && 'original' in value && 'formatted' in value) {
+    // Server-side conversion
+    const baseValue = value.original
+    const formattedValue = value.formatted
+    const baseUnits = originalUnits || units
+
+    // If formatted is different from original, show both
+    if (String(formattedValue) !== String(baseValue)) {
+      return (
+        <span className="text-primary">
+          {String(baseValue)} <strong>{baseUnits}</strong>
+          {' '}
+          <span style={{ opacity: 0.6 }}>
+            ({formattedValue})
+          </span>
+        </span>
+      )
+    }
+    // If they're the same, just show the value
+    return (
+      <span className="text-primary">
+        {String(baseValue)} <strong>{baseUnits}</strong>
+      </span>
+    )
+  }
+
+  // Handle client-side conversion if converter is available
+  if (converter && path && (typeof value === 'number' || typeof value === 'string')) {
+    try {
+      const result = converter.convertPath(path, value)
+
+      if (result) {
+        // Check if this is a datetime/time format - formatted value exists
+        const hasFormatted = result.formatted && typeof result.formatted === 'string'
+        const isDateTime = hasFormatted && result.formatted !== String(value)
+
+        if (isDateTime) {
+          // For datetime/time, show base value and formatted value: base (formatted)
+          return (
+            <span className="text-primary">
+              {String(value)} <strong>{result.baseUnit || originalUnits || units || ''}</strong>
+              {' '}
+              <span style={{ opacity: 0.6 }}>
+                ({result.formatted})
+              </span>
+            </span>
+          )
+        }
+
+        // For numeric conversions, show both base and target
+        if (typeof value === 'number' && typeof result.value === 'number' && result.value !== undefined && result.value !== null) {
+          const decimals = result.displayFormat === '0' ? 0 :
+                          result.displayFormat?.match(/\.(\d+)/)?.[1]?.length || 1
+
+          return (
+            <span className="text-primary">
+              {value} <strong>{result.baseUnit || originalUnits || units || ''}</strong>
+              {' '}
+              <span style={{ opacity: 0.6 }}>
+                ({result.value.toFixed(decimals)} <strong>{result.symbol || result.targetUnit}</strong>)
+              </span>
+            </span>
+          )
+        }
+      }
+    } catch (error) {
+      // Conversion error - check if it's a time conversion issue
+      const errorMsg = error.message || String(error)
+      if (errorMsg.includes('No conversion found') && typeof value === 'number' && originalUnits === 's') {
+        // This is a seconds value that failed conversion - show it anyway with units
+        return (
+          <span className="text-primary">
+            {value} <strong>{originalUnits}</strong>
+          </span>
+        )
+      }
+      console.debug('Conversion failed for', path, error)
+      // Fall through to default rendering
+    }
+  }
+
+  // Default rendering (existing code)
   let formattedValue = JSON.stringify(
     value,
     null,
