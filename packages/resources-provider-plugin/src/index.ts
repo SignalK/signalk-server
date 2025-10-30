@@ -7,6 +7,8 @@ import {
 
 import { FileStore, getUuid } from './lib/filestorage'
 import { StoreRequestParams } from './types'
+import { IRouter, Request, Response } from 'express'
+import * as openapi from './openApi.json'
 
 interface ResourceProviderApp extends ServerAPI, ResourceProviderRegistry {}
 
@@ -18,7 +20,7 @@ interface ProviderSettings {
     regions: boolean
     charts: boolean
   }
-  custom: Array<{ name: string }>
+  custom: Array<{ name: string; description: string }>
 }
 
 const CONFIG_SCHEMA = {
@@ -54,15 +56,20 @@ const CONFIG_SCHEMA = {
     custom: {
       type: 'array',
       title: 'Resources (custom)',
-      description: 'Add provider for custom resource types.',
+      description: 'Add provider for custom resource collections.',
       items: {
         type: 'object',
         required: ['name'],
         properties: {
           name: {
             type: 'string',
-            title: 'Resource Type',
-            description: '/signalk/v2/api/resources/'
+            title: 'Collection Name',
+            description: '/signalk/v2/api/resources/{name}'
+          },
+          description: {
+            type: 'string',
+            title: 'Description',
+            description: 'Type of resource in this collection.'
           }
         }
       }
@@ -101,17 +108,24 @@ const CONFIG_UISCHEMA = {
 }
 
 module.exports = (server: ResourceProviderApp): Plugin => {
+  let restart: (settings: object) => void
+
   const plugin: Plugin = {
     id: 'resources-provider',
     name: 'Resources Provider (built-in)',
     schema: () => CONFIG_SCHEMA,
     uiSchema: () => CONFIG_UISCHEMA,
-    start: (settings) => {
+    start: (settings, restartPlugin) => {
+      restart = restartPlugin
       doStartup(settings as ProviderSettings)
     },
     stop: () => {
       doShutdown()
-    }
+    },
+    registerWithRouter(router) {
+      initMgtEndpoints(router)
+    },
+    getOpenApi: () => openapi
   }
 
   const db: FileStore = new FileStore(plugin.id, server.debug)
@@ -132,9 +146,11 @@ module.exports = (server: ResourceProviderApp): Plugin => {
       })
 
       if (config.custom && Array.isArray(config.custom)) {
-        const customTypes = config.custom.map((i: { name: string }) => {
-          return i.name
-        })
+        const customTypes = config.custom.map(
+          (i: { name: string; description?: string }) => {
+            return i.name
+          }
+        )
         apiProviderFor = apiProviderFor.concat(customTypes)
       }
 
@@ -212,6 +228,10 @@ module.exports = (server: ResourceProviderApp): Plugin => {
     if (!Array.isArray(options?.custom)) {
       options.custom = []
     }
+    options.custom.forEach((i: { name: string; description?: string }) => {
+      i.description = i.description ?? ''
+    })
+
     SIGNALKRESOURCETYPES.forEach((r) => {
       if (!(r in options.standard)) {
         options.standard[r] = true
@@ -227,6 +247,116 @@ module.exports = (server: ResourceProviderApp): Plugin => {
     })
 
     return options
+  }
+
+  /** plugin management endpoints */
+  const initMgtEndpoints = (router: IRouter) => {
+    const ApiResponses = {
+      ok: {
+        state: 'COMPLETED',
+        statusCode: 200,
+        message: 'OK'
+      },
+      invalid: {
+        state: 'FAILED',
+        statusCode: 400,
+        message: `Invalid Data supplied!`
+      },
+      notFound: {
+        state: 'FAILED',
+        statusCode: 400,
+        message: `Entry not found!`
+      },
+      unauthorised: {
+        state: 'FAILED',
+        statusCode: 403,
+        message: 'Unauthorised'
+      },
+      exists: {
+        state: 'FAILED',
+        statusCode: 400,
+        message: 'Collection already exists!'
+      },
+      errorCreate: {
+        state: 'FAILED',
+        statusCode: 500,
+        message: 'Error creating collection!'
+      }
+    }
+
+    // add new resource collection
+    router.post(
+      '/_config/:rescollection',
+      async (req: Request, res: Response) => {
+        server.debug('Add collection request...', req.params)
+        if (!req.params.rescollection) {
+          res.status(ApiResponses.invalid.statusCode).json(ApiResponses.invalid)
+          return
+        }
+        const e = config.custom.find(
+          (i) => i.name.toLowerCase() === req.params.rescollection.toLowerCase()
+        )
+        if (e || req.params.rescollection.toLowerCase() in config.standard) {
+          res.status(ApiResponses.exists.statusCode).json(ApiResponses.exists)
+          return
+        }
+        server.debug('****** Creating collection ***')
+        const coll: { [key: string]: boolean } = {}
+        coll[req.params.rescollection] = true
+        const r = await db.createSavePaths(coll)
+        if (r.error) {
+          server.debug(r.message)
+          res
+            .status(ApiResponses.errorCreate.statusCode)
+            .json(ApiResponses.errorCreate)
+        } else {
+          config.custom.push({
+            name: req.params.rescollection,
+            description: req.body.description ?? ''
+          })
+          server.savePluginOptions(config, () => {
+            server.debug('settings saved...')
+          })
+          res.status(200).json(ApiResponses.ok)
+          restart(config)
+        }
+      }
+    )
+    // remove resource collection config (does not remove folder of files.)
+    router.delete(
+      '/_config/:rescollection',
+      async (req: Request, res: Response) => {
+        server.debug('Remove collection request...', req.params)
+        if (!req.params.rescollection) {
+          res.status(ApiResponses.invalid.statusCode).json(ApiResponses.invalid)
+          return
+        }
+        const e = config.custom.findIndex(
+          (i) => i.name.toLowerCase() === req.params.rescollection.toLowerCase()
+        )
+        if (e === -1) {
+          res
+            .status(ApiResponses.notFound.statusCode)
+            .json(ApiResponses.notFound)
+          return
+        }
+        if (req.params.rescollection.toLowerCase() in config.standard) {
+          res.status(ApiResponses.invalid.statusCode).json(ApiResponses.invalid)
+          return
+        }
+        server.debug('****** Removing collection ***')
+        config.custom.splice(e, 1)
+        server.savePluginOptions(config, () => {
+          server.debug('settings saved...')
+        })
+        res.status(200).json(ApiResponses.ok)
+        restart(config)
+      }
+    )
+    // get configuration
+    router.get('/_config', (req: Request, res: Response) => {
+      res.json(config)
+    })
   }
 
   const getVesselPosition = () => {

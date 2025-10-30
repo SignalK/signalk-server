@@ -1,0 +1,225 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "2.0.0",
+    "title": "Resources Provider (Built-in)",
+    "termsOfService": "http://signalk.org/terms/",
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "externalDocs": {
+    "url": "http://signalk.org/specification/",
+    "description": "Signal K specification."
+  },
+  "tags": [
+    {
+      "name": "configuration",
+      "description": "Configure Resource Collections"
+    }
+  ],
+  "components": {
+    "schemas": {},
+    "responses": {
+      "200ActionResponse": {
+        "description": "PUT, DELETE OK response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["COMPLETED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [200]
+                }
+              },
+              "required": ["id", "statusCode", "state"]
+            }
+          }
+        }
+      },
+      "201ActionResponse": {
+        "description": "POST OK response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["COMPLETED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [201]
+                },
+                "id": {
+                  "$ref": "#/components/schemas/SignalKUuid"
+                }
+              },
+              "required": ["id", "statusCode", "state"]
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "description": "Failed operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "description": "Request error response",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": ["FAILED"]
+                },
+                "statusCode": {
+                  "type": "number",
+                  "enum": [404]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["state", "statusCode", "message"]
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "CollectionParam": {
+        "name": "collection",
+        "in": "path",
+        "description": "Resource collection",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "JAUTHENTICATION"
+      }
+    }
+  },
+  "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+  "paths": {
+    "/_config": {
+      "get": {
+        "tags": ["configuration"],
+        "summary": "Retrieve plugin configuration",
+        "responses": {
+          "default": {
+            "description": "List of available resource collections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["standard", "custom"],
+                  "properties": {
+                    "standard": {
+                      "type": "object",
+                      "properties": {
+                        "routes": {
+                          "type": "boolean"
+                        },
+                        "waypoints": {
+                          "type": "boolean"
+                        },
+                        "notes": {
+                          "type": "boolean"
+                        },
+                        "regions": {
+                          "type": "boolean"
+                        },
+                        "charts": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "custom": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["name"],
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_config/{collection}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/CollectionParam"
+        }
+      ],
+      "post": {
+        "tags": ["configuration"],
+        "summary": "Add a new resource collection with the supplied name and restarts the plugin.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["description"],
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "description": "Text describing the collection contents.",
+                    "example": "Fishing zones"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["configuration"],
+        "summary": "Remove the resource collection with the supplied name. `Note: This does NOT delete collection folder & files.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200ActionResponse"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    }
+  }
+}

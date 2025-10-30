@@ -3,7 +3,7 @@
   "compilerOptions": {
     "allowJs": false
   },
-  "include": ["./src/**/*"],
+  "include": ["./src/**/*", "./src/openApi.json"],
   "references": [
     {
       "path": "../server-api"
