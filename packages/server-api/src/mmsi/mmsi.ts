@@ -2,6 +2,7 @@ import { FlagCountry, mid2Country } from './mid'
 
 export { FlagCountry } from './mid'
 
+/** @category MMSI */
 export type MMSISourceType =
   | 'ship'
   | 'coastalStation'
