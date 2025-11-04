@@ -7,6 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState } from 'react'
+import { connect } from 'react-redux'
 import { Col, Form, FormGroup, FormText, Input, Label, Row } from 'reactstrap'
 
 const UnitSelect = ({ disabled, value, setValue }) => (
@@ -254,9 +255,15 @@ const saveMeta = (path, meta) => {
   })
 }
 
-export default function Meta({ meta, path }) {
+function Meta({ meta, path, loginStatus }) {
   const [isEditing, setIsEditing] = useState(false)
   const [localMeta, setLocalMeta] = useState(meta)
+
+  // Check if user can edit metadata
+  const canEditMetadata =
+    !loginStatus.authenticationRequired ||
+    (loginStatus.status === 'loggedIn' && loginStatus.userLevel === 'admin')
+
   let metaValues = METAFIELDS.reduce((acc, key) => {
     if (localMeta[key] !== undefined) {
       acc.push({ key, value: localMeta[key] })
@@ -280,7 +287,7 @@ export default function Meta({ meta, path }) {
   const zones = zonesMetaValue ? zonesMetaValue.value : []
   return (
     <>
-      {!isEditing && (
+      {!isEditing && canEditMetadata && (
         <FontAwesomeIcon icon={faPencil} onClick={() => setIsEditing(true)} />
       )}
       {isEditing && (
@@ -494,3 +501,5 @@ const Zones = ({ zones, isEditing, setZones }) => (
 )
 
 const clone = (o) => JSON.parse(JSON.stringify(o))
+
+export default connect(({ loginStatus }) => ({ loginStatus }))(Meta)
