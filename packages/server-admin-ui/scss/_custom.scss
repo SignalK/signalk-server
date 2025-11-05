@@ -19,6 +19,47 @@ form.rjsf div.row.array-item {
   margin-bottom: 3px;
 }
 
+// Custom styling for RJSF buttons to match original appearance
+
+// Add button styling - cyan color
+form.rjsf button.btn-add,
+form.rjsf button.array-item-add button {
+  background-color: #20a8d8 !important;
+  border-color: #20a8d8 !important;
+  color: white !important;
+}
+
+form.rjsf button.btn-add:hover,
+form.rjsf button.array-item-add button:hover {
+  background-color: #1985ac !important;
+  border-color: #1985ac !important;
+}
+
+form.rjsf button.btn-add:focus,
+form.rjsf button.array-item-add button:focus {
+  background-color: #1985ac !important;
+  border-color: #1985ac !important;
+  box-shadow: 0 0 0 0.2rem rgba(32, 168, 216, 0.5) !important;
+}
+
+// Remove button styling
+form.rjsf button.array-item-remove {
+  background-color: #f86c6b !important;
+  border-color: #f86c6b !important;
+  color: white !important;
+}
+
+form.rjsf button.array-item-remove:hover {
+  background-color: #f63c3a !important;
+  border-color: #f63c3a !important;
+}
+
+form.rjsf button.array-item-remove:focus {
+  background-color: #f63c3a !important;
+  border-color: #f63c3a !important;
+  box-shadow: 0 0 0 0.2rem rgba(248, 108, 107, 0.5) !important;
+}
+
 @media (max-width: 767px) {
   .container-fluid,
   .row {

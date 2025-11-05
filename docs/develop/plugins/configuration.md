@@ -33,7 +33,7 @@ plugin.schema = {
 
 JSON Schema approach works reasonably well for simple to medium complex configuration data. The server supports also [custom plugin configuration components](../webapps.md), bypassing the automatic configuration format generation.
 
-It should ne noted that some JSON schema constructs are not supported. Refer ([details](https://github.com/peterkelly/react-jsonschema-form-bs4/blob/v1.7.1-bs4/docs/index.md#json-schema-supporting-status)) for details.
+It should be noted that some JSON schema constructs are not supported. Refer to the [RJSF documentation](https://rjsf-team.github.io/react-jsonschema-form/docs/) for details.
 
 The configuration data is stored by the server under the following path `$SIGNALK_NODE_CONFIG_DIR/plugin-config-data/<plugin-name>.json`. _(Default value of SIGNALK_NODE_CONFIG_DIR is $HOME/.signalk.)_
 
@@ -48,21 +48,9 @@ plugin.start = (settings, restartPlugin) => {
 
 ## UI Schema
 
-The plugin can define {@link @signalk/server-api!Plugin.uiSchema | `uiSchema`} by returning a [uiSchema object](https://github.com/mozilla-services/react-jsonschema-form#the-uischema-object) which is used to control how the user interface is rendered in the Admin UI.
+The plugin can define {@link @signalk/server-api!Plugin.uiSchema | `uiSchema`} by returning a [uiSchema object](https://rjsf-team.github.io/react-jsonschema-form/docs/api-reference/uiSchema) which is used to control how the user interface is rendered in the Admin UI.
 
-_Example: Make all data in an object called 'myObject' collapsible:_
-
-```javascript
-uiSchema['myObject'] = {
-  'ui:field': 'collapsible',
-  collapse: {
-    field: 'ObjectField',
-    wrapClassName: 'panel-group'
-  }
-}
-```
-
-For more information, see [react-jsonschema-form-extras](https://github.com/RxNT/react-jsonschema-form-extras#collapsible-fields-collapsible)
+For more information, see the [RJSF documentation on uiSchema](https://rjsf-team.github.io/react-jsonschema-form/docs/api-reference/uiSchema)
 
 ## Making a plugin enabled by default
 
