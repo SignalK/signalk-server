@@ -23,20 +23,27 @@ const ArrayFieldItemTemplate = (props) => {
     uiSchema
   } = props
 
-  const { MoveUpButton, MoveDownButton, RemoveButton } = registry.templates.ButtonTemplates
+  const { MoveUpButton, MoveDownButton, RemoveButton } =
+    registry.templates.ButtonTemplates
 
   return (
     <div className="row array-item">
-      <div className="col-9">
-        {children}
-      </div>
+      <div className="col-9">{children}</div>
       <div className="col-3 array-item-toolbox">
         {hasToolbar && (
-          <div className="btn-group" style={{ display: 'flex', justifyContent: 'space-around' }}>
+          <div
+            className="btn-group"
+            style={{ display: 'flex', justifyContent: 'space-around' }}
+          >
             {(hasMoveUp || hasMoveDown) && (
               <MoveUpButton
                 className="array-item-move-up"
-                style={{ flex: '1 1 0%', paddingLeft: 6, paddingRight: 6, fontWeight: 'bold' }}
+                style={{
+                  flex: '1 1 0%',
+                  paddingLeft: 6,
+                  paddingRight: 6,
+                  fontWeight: 'bold'
+                }}
                 disabled={disabled || readonly || !hasMoveUp}
                 onClick={onReorderClick(index, index - 1)}
                 uiSchema={uiSchema}
@@ -46,7 +53,12 @@ const ArrayFieldItemTemplate = (props) => {
             {(hasMoveUp || hasMoveDown) && (
               <MoveDownButton
                 className="array-item-move-down"
-                style={{ flex: '1 1 0%', paddingLeft: 6, paddingRight: 6, fontWeight: 'bold' }}
+                style={{
+                  flex: '1 1 0%',
+                  paddingLeft: 6,
+                  paddingRight: 6,
+                  fontWeight: 'bold'
+                }}
                 disabled={disabled || readonly || !hasMoveDown}
                 onClick={onReorderClick(index, index + 1)}
                 uiSchema={uiSchema}
@@ -56,7 +68,12 @@ const ArrayFieldItemTemplate = (props) => {
             {hasRemove && (
               <RemoveButton
                 className="array-item-remove"
-                style={{ flex: '1 1 0%', paddingLeft: 6, paddingRight: 6, fontWeight: 'bold' }}
+                style={{
+                  flex: '1 1 0%',
+                  paddingLeft: 6,
+                  paddingRight: 6,
+                  fontWeight: 'bold'
+                }}
                 disabled={disabled || readonly}
                 onClick={onDropIndexClick(index)}
                 uiSchema={uiSchema}
@@ -97,7 +114,8 @@ const FieldTemplate = (props) => {
       if (typeof node === 'number') return String(node)
       if (!node) return ''
       if (Array.isArray(node)) return node.map(extractText).join('')
-      if (node.props && node.props.children) return extractText(node.props.children)
+      if (node.props && node.props.children)
+        return extractText(node.props.children)
       return ''
     }
     descriptionText = extractText(description).trim()
@@ -132,9 +150,7 @@ const ObjectFieldTemplate = (props) => {
 
   return (
     <fieldset id={idSchema.$id}>
-      {title && (
-        <legend id={`${idSchema.$id}__title`}>{title}</legend>
-      )}
+      {title && <legend id={`${idSchema.$id}__title`}>{title}</legend>}
       {description && (
         <p id={`${idSchema.$id}__description`} className="field-description">
           {description}
@@ -161,11 +177,20 @@ const ArrayFieldTemplate = (props) => {
   } = props
 
   const uiOptions = getUiOptions(uiSchema)
-  const ArrayFieldItemTemplate = getTemplate('ArrayFieldItemTemplate', registry, uiOptions)
-  const { ButtonTemplates: { AddButton } } = registry.templates
+  const ArrayFieldItemTemplate = getTemplate(
+    'ArrayFieldItemTemplate',
+    registry,
+    uiOptions
+  )
+  const {
+    ButtonTemplates: { AddButton }
+  } = registry.templates
 
   return (
-    <fieldset className="field field-array field-array-of-object" id={idSchema.$id}>
+    <fieldset
+      className="field field-array field-array-of-object"
+      id={idSchema.$id}
+    >
       {(uiOptions.title || title) && (
         <legend id={`${idSchema.$id}__title`}>
           {uiOptions.title || title}
@@ -177,9 +202,10 @@ const ArrayFieldTemplate = (props) => {
         </div>
       )}
       <div className="array-item-list">
-        {items && items.map(({ key, ...itemProps }) => (
-          <ArrayFieldItemTemplate key={key} {...itemProps} />
-        ))}
+        {items &&
+          items.map(({ key, ...itemProps }) => (
+            <ArrayFieldItemTemplate key={key} {...itemProps} />
+          ))}
       </div>
       {canAdd && (
         <div className="row">
@@ -231,7 +257,9 @@ const TextWidget = (props) => {
       type="text"
       value={value || ''}
       disabled={disabled || readonly}
-      onChange={(event) => onChange(event.target.value === '' ? undefined : event.target.value)}
+      onChange={(event) =>
+        onChange(event.target.value === '' ? undefined : event.target.value)
+      }
     />
   )
 }
@@ -265,13 +293,16 @@ const SelectWidget = (props) => {
       className="form-control"
       value={value || ''}
       disabled={disabled || readonly}
-      onChange={(event) => onChange(event.target.value === '' ? undefined : event.target.value)}
+      onChange={(event) =>
+        onChange(event.target.value === '' ? undefined : event.target.value)
+      }
     >
-      {enumOptions && enumOptions.map(({ value: optionValue, label }) => (
-        <option key={optionValue} value={optionValue}>
-          {label}
-        </option>
-      ))}
+      {enumOptions &&
+        enumOptions.map(({ value: optionValue, label }) => (
+          <option key={optionValue} value={optionValue}>
+            {label}
+          </option>
+        ))}
     </select>
   )
 }
