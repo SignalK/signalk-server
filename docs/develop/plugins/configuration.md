@@ -48,9 +48,21 @@ plugin.start = (settings, restartPlugin) => {
 
 ## UI Schema
 
-The plugin can define {@link @signalk/server-api!Plugin.uiSchema | `uiSchema`} by returning a [uiSchema object](https://rjsf-team.github.io/react-jsonschema-form/docs/api-reference/uiSchema) which is used to control how the user interface is rendered in the Admin UI.
+The plugin can define {@link @signalk/server-api!Plugin.uiSchema | `uiSchema`} by returning a [uiSchema object](https://github.com/mozilla-services/react-jsonschema-form#the-uischema-object) which is used to control how the user interface is rendered in the Admin UI.
 
-For more information, see the [RJSF documentation on uiSchema](https://rjsf-team.github.io/react-jsonschema-form/docs/api-reference/uiSchema)
+_Example: Make all data in an object called 'myObject' collapsible:_
+
+```javascript
+uiSchema['myObject'] = {
+  'ui:field': 'collapsible',
+  collapse: {
+    field: 'ObjectField',
+    wrapClassName: 'panel-group'
+  }
+}
+```
+
+For more information, see [react-jsonschema-form-extras](https://github.com/RxNT/react-jsonschema-form-extras#collapsible-fields-collapsible)
 
 ## Making a plugin enabled by default
 
