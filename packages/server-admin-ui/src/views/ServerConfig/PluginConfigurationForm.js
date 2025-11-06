@@ -283,7 +283,8 @@ const NumberWidget = (props) => {
 }
 
 const SelectWidget = (props) => {
-  const { id, value, disabled, readonly, onChange, options, placeholder } = props
+  const { id, value, disabled, readonly, onChange, options, placeholder } =
+    props
   const { enumOptions } = options
   return (
     <select
