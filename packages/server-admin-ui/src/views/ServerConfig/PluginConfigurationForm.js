@@ -177,7 +177,7 @@ const ArrayFieldTemplate = (props) => {
   } = props
 
   const uiOptions = getUiOptions(uiSchema)
-  const ArrayFieldItemTemplate = getTemplate(
+  const ResolvedArrayFieldItemTemplate = getTemplate(
     'ArrayFieldItemTemplate',
     registry,
     uiOptions
@@ -204,7 +204,7 @@ const ArrayFieldTemplate = (props) => {
       <div className="array-item-list">
         {items &&
           items.map(({ key, ...itemProps }) => (
-            <ArrayFieldItemTemplate key={key} {...itemProps} />
+            <ResolvedArrayFieldItemTemplate key={key} {...itemProps} />
           ))}
       </div>
       {canAdd && (
@@ -238,7 +238,7 @@ const CheckboxWidget = (props) => {
           disabled={disabled || readonly}
           onChange={(event) => onChange(event.target.checked)}
         />
-        <label className="form-check-label" htmlFor="defaultCheck1">
+        <label className="form-check-label" htmlFor={id}>
           {label}
         </label>
       </div>
@@ -247,12 +247,11 @@ const CheckboxWidget = (props) => {
 }
 
 const TextWidget = (props) => {
-  const { id, placeholder, value, disabled, readonly, onChange, label } = props
+  const { id, placeholder, value, disabled, readonly, onChange } = props
   return (
     <input
       className="form-control"
       id={id}
-      label={label}
       placeholder={placeholder || ''}
       type="text"
       value={value || ''}
@@ -265,12 +264,11 @@ const TextWidget = (props) => {
 }
 
 const NumberWidget = (props) => {
-  const { id, placeholder, value, disabled, readonly, onChange, label } = props
+  const { id, placeholder, value, disabled, readonly, onChange } = props
   return (
     <input
       className="form-control"
       id={id}
-      label={label}
       placeholder={placeholder || ''}
       type="number"
       step="any"
@@ -285,7 +283,7 @@ const NumberWidget = (props) => {
 }
 
 const SelectWidget = (props) => {
-  const { id, value, disabled, readonly, onChange, options } = props
+  const { id, value, disabled, readonly, onChange, options, placeholder } = props
   const { enumOptions } = options
   return (
     <select
@@ -297,6 +295,11 @@ const SelectWidget = (props) => {
         onChange(event.target.value === '' ? undefined : event.target.value)
       }
     >
+      {!value && (
+        <option value="" disabled>
+          {placeholder || 'Select...'}
+        </option>
+      )}
       {enumOptions &&
         enumOptions.map(({ value: optionValue, label }) => (
           <option key={optionValue} value={optionValue}>
