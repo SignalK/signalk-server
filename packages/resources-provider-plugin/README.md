@@ -38,7 +38,7 @@ By default the plugin is enabled with all standdard resource types enabled.
 
 ### Configuration API
 
-The following API endpoints are made avaialable to configure the plugin programatically.
+The following API endpoints are made available to configure the plugin programatically.
 
 > See **OpenApi** documentaion in the Signal K Server admin console for details.
 >
