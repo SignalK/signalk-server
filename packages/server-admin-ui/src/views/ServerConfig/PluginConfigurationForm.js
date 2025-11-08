@@ -156,9 +156,12 @@ const FieldTemplate = (props) => {
 const ObjectFieldTemplate = (props) => {
   const { title, description, properties, idSchema } = props
 
-  // Check if this is an array item by looking for pattern like "fieldname_0", "fieldname_1", etc.
-  // Array items have auto-generated titles that we want to suppress
-  const isArrayItem = /_\d+$/.test(idSchema.$id)
+  // Check if this is an array item by looking for RJSF-generated IDs ending with "_<number>"
+  // RJSF generates IDs like "root_configuration_arrayField_0" for array items
+  // We detect array items by checking for underscore-number at the end of a multi-segment path
+  // This is more specific than just checking /_\d+$/ which could match legitimate field names
+  const isArrayItem =
+    /_\d+$/.test(idSchema.$id) && idSchema.$id.split('_').length > 2
 
   return (
     <fieldset id={idSchema.$id}>
@@ -296,11 +299,45 @@ const TextWidget = (props) => {
       onChange={(event) => {
         const newValue = event.target.value
         if (inputType === 'number') {
-          onChange(newValue === '' ? undefined : parseFloat(newValue))
+          if (schema.type === 'integer') {
+            onChange(newValue === '' ? undefined : parseInt(newValue, 10))
+          } else {
+            onChange(newValue === '' ? undefined : parseFloat(newValue))
+          }
         } else {
           onChange(newValue === '' ? undefined : newValue)
         }
       }}
+    />
+  )
+}
+
+const TextareaWidget = (props) => {
+  const {
+    id,
+    placeholder,
+    value,
+    disabled,
+    readonly,
+    required,
+    onChange,
+    options
+  } = props
+  const { rows = 5 } = options || {}
+
+  return (
+    <textarea
+      className="form-control"
+      id={id}
+      placeholder={placeholder || ''}
+      value={value || ''}
+      disabled={disabled || readonly}
+      required={required}
+      aria-required={required}
+      rows={rows}
+      onChange={(event) =>
+        onChange(event.target.value === '' ? undefined : event.target.value)
+      }
     />
   )
 }
@@ -348,7 +385,7 @@ const SelectWidget = (props) => {
 const customWidgets = {
   CheckboxWidget,
   TextWidget,
-  TextareaWidget: TextWidget, // Use same as text for now
+  TextareaWidget,
   SelectWidget
 }
 
