@@ -158,7 +158,7 @@ const ObjectFieldTemplate = (props) => {
 
   // Check if this is an array item by looking for pattern like "fieldname_0", "fieldname_1", etc.
   // Array items have auto-generated titles that we want to suppress
-  const isArrayItem = /\_\d+$/.test(idSchema.$id)
+  const isArrayItem = /_\d+$/.test(idSchema.$id)
 
   return (
     <fieldset id={idSchema.$id}>
