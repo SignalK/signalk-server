@@ -97,6 +97,7 @@ const FieldTemplate = (props) => {
     help,
     required,
     description,
+    rawDescription,
     errors,
     children,
     displayLabel,
@@ -104,11 +105,13 @@ const FieldTemplate = (props) => {
   } = props
 
   const isCheckbox = schema.type === 'boolean'
+  const isObject = schema.type === 'object'
 
-  // Extract text from description if it's wrapped in JSX
-  let descriptionText = description
-  if (description && typeof description === 'object' && description.props) {
-    // Description is JSX, try to extract text content
+  // Get description from rawDescription (RJSF v5) or schema.description, or fall back to description prop
+  let descriptionText = rawDescription || schema.description || description
+
+  // If description is JSX, extract text content
+  if (descriptionText && typeof descriptionText === 'object' && descriptionText.props) {
     const extractText = (node) => {
       if (typeof node === 'string') return node
       if (typeof node === 'number') return String(node)
@@ -118,11 +121,11 @@ const FieldTemplate = (props) => {
         return extractText(node.props.children)
       return ''
     }
-    descriptionText = extractText(description).trim()
+    descriptionText = extractText(descriptionText).trim()
   }
 
   // Only show description if it has actual content
-  const hasDescription = descriptionText && descriptionText.length > 0
+  const hasDescription = descriptionText && String(descriptionText).trim().length > 0
 
   return (
     <div className={classNames} style={style}>
@@ -132,7 +135,7 @@ const FieldTemplate = (props) => {
           {required && <span className="required">*</span>}
         </label>
       )}
-      {hasDescription && (
+      {hasDescription && !isObject && (
         <p id={`${id}__description`} className="field-description">
           {descriptionText}
         </p>
@@ -148,9 +151,13 @@ const FieldTemplate = (props) => {
 const ObjectFieldTemplate = (props) => {
   const { title, description, properties, idSchema } = props
 
+  // Check if this is an array item by looking for pattern like "fieldname_0", "fieldname_1", etc.
+  // Array items have auto-generated titles that we want to suppress
+  const isArrayItem = /\_\d+$/.test(idSchema.$id)
+
   return (
     <fieldset id={idSchema.$id}>
-      {title && <legend id={`${idSchema.$id}__title`}>{title}</legend>}
+      {title && !isArrayItem && <legend id={`${idSchema.$id}__title`}>{title}</legend>}
       {description && (
         <p id={`${idSchema.$id}__description`} className="field-description">
           {description}
@@ -247,43 +254,37 @@ const CheckboxWidget = (props) => {
 }
 
 const TextWidget = (props) => {
-  const { id, placeholder, value, disabled, readonly, onChange } = props
-  return (
-    <input
-      className="form-control"
-      id={id}
-      placeholder={placeholder || ''}
-      type="text"
-      value={value || ''}
-      disabled={disabled || readonly}
-      onChange={(event) =>
-        onChange(event.target.value === '' ? undefined : event.target.value)
-      }
-    />
-  )
-}
+  const { id, placeholder, value, disabled, readonly, required, onChange, schema } = props
 
-const NumberWidget = (props) => {
-  const { id, placeholder, value, disabled, readonly, onChange } = props
+  // Determine input type based on schema - RJSF v5 uses TextWidget for number fields too
+  const inputType = schema.type === 'number' || schema.type === 'integer' ? 'number' : 'text'
+  const step = schema.type === 'number' ? 'any' : (schema.type === 'integer' ? '1' : undefined)
+
   return (
     <input
       className="form-control"
       id={id}
       placeholder={placeholder || ''}
-      type="number"
-      step="any"
+      type={inputType}
+      step={step}
       value={value === null || value === undefined ? '' : value}
       disabled={disabled || readonly}
+      required={required}
+      aria-required={required}
       onChange={(event) => {
         const newValue = event.target.value
-        onChange(newValue === '' ? undefined : parseFloat(newValue))
+        if (inputType === 'number') {
+          onChange(newValue === '' ? undefined : parseFloat(newValue))
+        } else {
+          onChange(newValue === '' ? undefined : newValue)
+        }
       }}
     />
   )
 }
 
 const SelectWidget = (props) => {
-  const { id, value, disabled, readonly, onChange, options, placeholder } =
+  const { id, value, disabled, readonly, required, onChange, options, placeholder } =
     props
   const { enumOptions } = options
   return (
@@ -292,6 +293,8 @@ const SelectWidget = (props) => {
       className="form-control"
       value={value || ''}
       disabled={disabled || readonly}
+      required={required}
+      aria-required={required}
       onChange={(event) =>
         onChange(event.target.value === '' ? undefined : event.target.value)
       }
@@ -316,7 +319,6 @@ const customWidgets = {
   CheckboxWidget,
   TextWidget,
   TextareaWidget: TextWidget, // Use same as text for now
-  NumberWidget,
   SelectWidget
 }
 
