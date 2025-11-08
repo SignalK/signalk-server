@@ -111,7 +111,11 @@ const FieldTemplate = (props) => {
   let descriptionText = rawDescription || schema.description || description
 
   // If description is JSX, extract text content
-  if (descriptionText && typeof descriptionText === 'object' && descriptionText.props) {
+  if (
+    descriptionText &&
+    typeof descriptionText === 'object' &&
+    descriptionText.props
+  ) {
     const extractText = (node) => {
       if (typeof node === 'string') return node
       if (typeof node === 'number') return String(node)
@@ -125,7 +129,8 @@ const FieldTemplate = (props) => {
   }
 
   // Only show description if it has actual content
-  const hasDescription = descriptionText && String(descriptionText).trim().length > 0
+  const hasDescription =
+    descriptionText && String(descriptionText).trim().length > 0
 
   return (
     <div className={classNames} style={style}>
@@ -157,7 +162,9 @@ const ObjectFieldTemplate = (props) => {
 
   return (
     <fieldset id={idSchema.$id}>
-      {title && !isArrayItem && <legend id={`${idSchema.$id}__title`}>{title}</legend>}
+      {title && !isArrayItem && (
+        <legend id={`${idSchema.$id}__title`}>{title}</legend>
+      )}
       {description && (
         <p id={`${idSchema.$id}__description`} className="field-description">
           {description}
@@ -254,11 +261,26 @@ const CheckboxWidget = (props) => {
 }
 
 const TextWidget = (props) => {
-  const { id, placeholder, value, disabled, readonly, required, onChange, schema } = props
+  const {
+    id,
+    placeholder,
+    value,
+    disabled,
+    readonly,
+    required,
+    onChange,
+    schema
+  } = props
 
   // Determine input type based on schema - RJSF v5 uses TextWidget for number fields too
-  const inputType = schema.type === 'number' || schema.type === 'integer' ? 'number' : 'text'
-  const step = schema.type === 'number' ? 'any' : (schema.type === 'integer' ? '1' : undefined)
+  const inputType =
+    schema.type === 'number' || schema.type === 'integer' ? 'number' : 'text'
+  const step =
+    schema.type === 'number'
+      ? 'any'
+      : schema.type === 'integer'
+        ? '1'
+        : undefined
 
   return (
     <input
@@ -284,8 +306,16 @@ const TextWidget = (props) => {
 }
 
 const SelectWidget = (props) => {
-  const { id, value, disabled, readonly, required, onChange, options, placeholder } =
-    props
+  const {
+    id,
+    value,
+    disabled,
+    readonly,
+    required,
+    onChange,
+    options,
+    placeholder
+  } = props
   const { enumOptions } = options
   return (
     <select
