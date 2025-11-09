@@ -1,63 +1,84 @@
 // Here you can add other styles
 
-form.rjsf label {
-  margin-bottom: 0;
-}
+// RJSF Form Styling
 
-form.rjsf div > p.field-description {
-  font-size: 0.7rem;
-  font-style: italic;
-  margin-bottom: 0px;
-}
-
-form.rjsf input {
-  width: auto;
-}
-
-form.rjsf div.row.array-item {
-  background-color: aliceblue;
-  margin-bottom: 3px;
-}
-
-// Custom styling for RJSF buttons to match original appearance
-
-// Add button styling - cyan color
-form.rjsf button.btn-add,
-form.rjsf button.array-item-add button {
-  background-color: #20a8d8 !important;
-  border-color: #20a8d8 !important;
+// Mixin for button state variants to reduce duplication
+@mixin button-variant(
+  $bg-color,
+  $border-color,
+  $hover-bg,
+  $hover-border,
+  $shadow-color
+) {
+  background-color: $bg-color !important;
+  border-color: $border-color !important;
   color: white !important;
+
+  &:hover {
+    background-color: $hover-bg !important;
+    border-color: $hover-border !important;
+  }
+
+  &:focus {
+    background-color: $hover-bg !important;
+    border-color: $hover-border !important;
+    box-shadow: 0 0 0 0.2rem $shadow-color !important;
+  }
 }
 
-form.rjsf button.btn-add:hover,
-form.rjsf button.array-item-add button:hover {
-  background-color: #1985ac !important;
-  border-color: #1985ac !important;
-}
+form.rjsf {
+  // General form element styling
+  label {
+    margin-bottom: 0;
+  }
 
-form.rjsf button.btn-add:focus,
-form.rjsf button.array-item-add button:focus {
-  background-color: #1985ac !important;
-  border-color: #1985ac !important;
-  box-shadow: 0 0 0 0.2rem rgba(32, 168, 216, 0.5) !important;
-}
+  div > p.field-description {
+    font-size: 0.7rem;
+    font-style: italic;
+    margin-bottom: 0px;
+  }
 
-// Remove button styling
-form.rjsf button.array-item-remove {
-  background-color: #f86c6b !important;
-  border-color: #f86c6b !important;
-  color: white !important;
-}
+  input {
+    width: auto;
+  }
 
-form.rjsf button.array-item-remove:hover {
-  background-color: #f63c3a !important;
-  border-color: #f63c3a !important;
-}
+  div.row.array-item {
+    background-color: aliceblue;
+    margin-bottom: 3px;
+  }
 
-form.rjsf button.array-item-remove:focus {
-  background-color: #f63c3a !important;
-  border-color: #f63c3a !important;
-  box-shadow: 0 0 0 0.2rem rgba(248, 108, 107, 0.5) !important;
+  // Custom button styling for RJSF buttons to match original appearance
+
+  // Add button styling - cyan color
+  button.btn-add,
+  button.array-item-add button {
+    @include button-variant(
+      #20a8d8,
+      // background
+      #20a8d8,
+      // border
+      #1985ac,
+      // hover background
+      #1985ac,
+      // hover border
+      rgba(32, 168, 216, 0.5) // focus shadow
+    );
+  }
+
+  // Remove button styling - red color
+  button.array-item-remove {
+    @include button-variant(
+      #f86c6b,
+      // background
+      #f86c6b,
+      // border
+      #f63c3a,
+      // hover background
+      #f63c3a,
+      // hover border
+      rgba(248, 108, 107, 0.5) // focus shadow
+    );
+  }
 }
 
 @media (max-width: 767px) {
