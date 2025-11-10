@@ -1,4 +1,5 @@
 import React from 'react'
+import { getConversions } from '@signalk/server-api/units'
 
 const PositionRenderer = ({ value }) => {
   if (!value || typeof value !== 'object') {
@@ -257,27 +258,47 @@ export const getValueRenderer = (path) => {
   return null
 }
 
-export const DefaultValueRenderer = ({ value, units }) => {
-  let formattedValue = JSON.stringify(
-    value,
-    null,
-    typeof value === 'object' && Object.keys(value || {}).length > 1 ? 2 : 0
-  )
-
-  if (typeof value === 'number' && units) {
-    formattedValue = `${value} `
-  }
+export const DefaultValueRenderer = ({ _key, value, units, meta }) => {
+  const formattedValue =
+    (typeof value === 'number' || typeof value === 'string') && units
+      ? `${displayValue(value, meta)}`
+      : JSON.stringify(
+          value,
+          null,
+          typeof value === 'object' && Object.keys(value || {}).length > 1
+            ? 2
+            : 0
+        )
 
   return (
     <>
       {typeof value === 'object' ? (
         <pre className="text-primary">{formattedValue}</pre>
       ) : (
-        <span className="text-primary">
-          {formattedValue}
+        <span key={_key} className="text-primary">
+          {value}
           {typeof value === 'number' && units && <strong>{units}</strong>}
+          {meta?.preferredUnits && (
+            <>
+              {' / '}
+              {formattedValue}
+              {typeof value === 'number' && units && (
+                <strong>{meta.preferredUnits}</strong>
+              )}
+            </>
+          )}
         </span>
       )}
     </>
   )
+}
+
+const displayValue = (value, meta) => {
+  let conversion = getConversion(meta)
+  return conversion ? conversion(value) : value
+}
+
+const getConversion = (meta) => {
+  const conversions = getConversions(meta.units) || {}
+  return conversions[meta?.preferredUnits]?.convert
 }

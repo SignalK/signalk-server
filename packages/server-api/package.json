@@ -28,12 +28,16 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./history": "./dist/history.js"
+    "./history": "./dist/history.js",
+    "./units": "./dist/units.js"
   },
   "typesVersions": {
     "*": {
       "history": [
         "dist/history.d.ts"
+      ],
+      "units": [
+        "dist/units.d.ts"
       ]
     }
   }
