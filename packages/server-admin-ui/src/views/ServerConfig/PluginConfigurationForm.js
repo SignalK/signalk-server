@@ -37,74 +37,20 @@ const CSS_CLASSES = {
 }
 
 // Helper functions
-
-/**
- * Safely deep clones a schema object using JSON serialization
- * @param {Object} obj - The object to clone
- * @param {string} objectName - Name of the object for error messages
- * @returns {Object|null} Cloned object or null if cloning fails
- */
-function safeDeepClone(obj, objectName = 'object') {
-  if (!obj) return null
-  try {
-    return JSON.parse(JSON.stringify(obj))
-  } catch (error) {
-    console.error(`Failed to clone ${objectName}:`, error)
-    return null
-  }
-}
-
-/**
- * Normalizes empty values to undefined for form consistency
- * @param {*} value - The value to normalize
- * @returns {*} Normalized value (undefined if empty string, original value otherwise)
- */
-function normalizeEmptyValue(value) {
-  return value === '' ? undefined : value
-}
-
-/**
- * Converts a string value to the appropriate number type
- * @param {string} value - The string value to convert
- * @param {string} type - The schema type ('integer' or 'number')
- * @returns {number|undefined} Converted number or undefined if empty
- */
-function convertToNumber(value, type) {
-  if (value === '') return undefined
-  return type === 'integer' ? parseInt(value, 10) : parseFloat(value)
-}
-
-/**
- * Extracts text content from a JSX element or returns the string as-is
- * @param {*} node - The node to extract text from
- * @returns {string} Extracted text content
- */
-function extractTextFromJSX(node) {
+const extractTextFromJSX = (node) => {
   if (typeof node === 'string') return node
   if (typeof node === 'number') return String(node)
   if (!node) return ''
   if (Array.isArray(node)) return node.map(extractTextFromJSX).join('')
-  if (node.props && node.props.children)
-    return extractTextFromJSX(node.props.children)
+  if (node.props?.children) return extractTextFromJSX(node.props.children)
   return ''
 }
 
-/**
- * Gets the description text from various possible sources
- * @param {*} rawDescription - Raw description from RJSF v5
- * @param {Object} schema - The schema object
- * @param {*} description - Fallback description prop
- * @returns {string} The description text or empty string
- */
-function getDescriptionText(rawDescription, schema, description) {
+const getDescriptionText = (rawDescription, schema, description) => {
   let descriptionText = rawDescription || schema.description || description
 
   // If description is JSX, extract text content
-  if (
-    descriptionText &&
-    typeof descriptionText === 'object' &&
-    descriptionText.props
-  ) {
+  if (descriptionText && typeof descriptionText === 'object' && descriptionText.props) {
     descriptionText = extractTextFromJSX(descriptionText).trim()
   }
 
@@ -113,50 +59,26 @@ function getDescriptionText(rawDescription, schema, description) {
     : ''
 }
 
-/**
- * Checks if an ID represents an array item in RJSF
- * Uses a more robust check by examining the ID structure
- * @param {string} id - The RJSF-generated ID
- * @returns {boolean} True if this is an array item
- */
-function isArrayItemId(id) {
-  // RJSF generates IDs like "root_configuration_arrayField_0" for array items
-  // We detect array items by checking for underscore-number at the end of a multi-segment path
-  // This is more specific than just checking /_\d+$/ which could match legitimate field names
+const isArrayItemId = (id) => {
   if (!id || typeof id !== 'string') return false
   const parts = id.split('_')
   return parts.length > 2 && /^\d+$/.test(parts[parts.length - 1])
 }
 
-/**
- * Creates a button component with consistent styling
- * @param {string} className - Additional CSS classes
- * @param {Function} onClick - Click handler
- * @param {boolean} disabled - Whether button is disabled
- * @param {Object} style - Additional inline styles
- * @param {React.ReactNode} icon - Icon element to display
- * @param {number} tabIndex - Tab index for accessibility
- * @returns {React.ReactElement} Button component
- */
-function createButton(className, onClick, disabled, style, icon, tabIndex = 0) {
-  return (
-    <button
-      type="button"
-      className={className}
-      onClick={onClick}
-      disabled={disabled}
-      tabIndex={tabIndex}
-      style={style}
-    >
-      {icon}
-    </button>
-  )
-}
+const createButton = (className, onClick, disabled, style, icon, tabIndex = 0) => (
+  <button
+    type="button"
+    className={className}
+    onClick={onClick}
+    disabled={disabled}
+    tabIndex={tabIndex}
+    style={style}
+  >
+    {icon}
+  </button>
+)
 
-/**
- * Custom ArrayFieldItemTemplate matching old react-jsonschema-form-bs4 layout
- * Renders individual items in an array field with move up/down/remove buttons
- */
+// Custom Templates
 const ArrayFieldItemTemplate = (props) => {
   const {
     children,
@@ -224,10 +146,6 @@ const ArrayFieldItemTemplate = (props) => {
   )
 }
 
-/**
- * Custom FieldTemplate matching old react-jsonschema-form-bs4 layout
- * Handles field rendering with labels, descriptions, and error messages
- */
 const FieldTemplate = (props) => {
   const {
     id,
@@ -246,13 +164,7 @@ const FieldTemplate = (props) => {
 
   const isCheckbox = schema.type === 'boolean'
   const isObject = schema.type === 'object'
-
-  // Get description text using helper function
-  const descriptionText = getDescriptionText(
-    rawDescription,
-    schema,
-    description
-  )
+  const descriptionText = getDescriptionText(rawDescription, schema, description)
 
   return (
     <div className={classNames} style={style}>
@@ -274,14 +186,8 @@ const FieldTemplate = (props) => {
   )
 }
 
-/**
- * Custom ObjectFieldTemplate matching old react-jsonschema-form-bs4 layout
- * Renders object fields with conditional title display based on context
- */
 const ObjectFieldTemplate = (props) => {
   const { title, description, properties, idSchema } = props
-
-  // Use helper function to check if this is an array item
   const isArrayItem = isArrayItemId(idSchema.$id)
 
   return (
@@ -302,10 +208,6 @@ const ObjectFieldTemplate = (props) => {
   )
 }
 
-/**
- * Custom ArrayFieldTemplate matching old react-jsonschema-form-bs4 layout
- * Renders array fields with add button and item list
- */
 const ArrayFieldTemplate = (props) => {
   const {
     canAdd,
@@ -326,9 +228,7 @@ const ArrayFieldTemplate = (props) => {
     registry,
     uiOptions
   )
-  const {
-    ButtonTemplates: { AddButton }
-  } = registry.templates
+  const { ButtonTemplates: { AddButton } } = registry.templates
 
   return (
     <fieldset
@@ -346,16 +246,13 @@ const ArrayFieldTemplate = (props) => {
         </div>
       )}
       <div className={CSS_CLASSES.ARRAY_ITEM_LIST}>
-        {items &&
-          items.map(({ key, ...itemProps }) => (
-            <ResolvedArrayFieldItemTemplate key={key} {...itemProps} />
-          ))}
+        {items?.map(({ key, ...itemProps }) => (
+          <ResolvedArrayFieldItemTemplate key={key} {...itemProps} />
+        ))}
       </div>
       {canAdd && (
         <div className={CSS_CLASSES.ARRAY_ITEM_ADD}>
-          <p
-            className={`${GRID_COLUMNS.ADD_BUTTON_CONTAINER} text-right array-item-add`}
-          >
+          <p className={`${GRID_COLUMNS.ADD_BUTTON_CONTAINER} text-right array-item-add`}>
             <AddButton
               className="btn-add col-12"
               onClick={onAddClick}
@@ -370,10 +267,7 @@ const ArrayFieldTemplate = (props) => {
   )
 }
 
-/**
- * Custom CheckboxWidget matching old react-jsonschema-form-bs4 output
- * Renders a checkbox input with label
- */
+// Custom Widgets
 const CheckboxWidget = (props) => {
   const { id, value, disabled, readonly, label, onChange } = props
   return (
@@ -383,7 +277,7 @@ const CheckboxWidget = (props) => {
           type="checkbox"
           id={id}
           className={CSS_CLASSES.FORM_CHECK_INPUT}
-          checked={typeof value === 'undefined' ? false : value}
+          checked={value || false}
           disabled={disabled || readonly}
           onChange={(event) => onChange(event.target.checked)}
         />
@@ -395,34 +289,12 @@ const CheckboxWidget = (props) => {
   )
 }
 
-/**
- * Custom TextWidget matching old react-jsonschema-form-bs4 output
- * Handles text and number inputs with proper type conversion
- */
 const TextWidget = (props) => {
-  const {
-    id,
-    placeholder,
-    value,
-    disabled,
-    readonly,
-    required,
-    onChange,
-    schema
-  } = props
+  const { id, placeholder, value, disabled, readonly, required, onChange, schema } = props
 
-  // Determine input type based on schema - RJSF v5 uses TextWidget for number fields too
-  const inputType =
-    schema.type === 'number' || schema.type === 'integer' ? 'number' : 'text'
-  const step =
-    schema.type === 'number'
-      ? 'any'
-      : schema.type === 'integer'
-        ? '1'
-        : undefined
-
-  // Standardize empty value handling
-  const displayValue = value === null || value === undefined ? '' : value
+  const inputType = schema.type === 'number' || schema.type === 'integer' ? 'number' : 'text'
+  const step = schema.type === 'number' ? 'any' : schema.type === 'integer' ? '1' : undefined
+  const displayValue = value ?? ''
 
   return (
     <input
@@ -438,34 +310,19 @@ const TextWidget = (props) => {
       onChange={(event) => {
         const newValue = event.target.value
         if (inputType === 'number') {
-          onChange(convertToNumber(newValue, schema.type))
+          onChange(newValue === '' ? undefined : (schema.type === 'integer' ? parseInt(newValue, 10) : parseFloat(newValue)))
         } else {
-          onChange(normalizeEmptyValue(newValue))
+          onChange(newValue === '' ? undefined : newValue)
         }
       }}
     />
   )
 }
 
-/**
- * Custom TextareaWidget matching old react-jsonschema-form-bs4 output
- * Renders a multi-line text input
- */
 const TextareaWidget = (props) => {
-  const {
-    id,
-    placeholder,
-    value,
-    disabled,
-    readonly,
-    required,
-    onChange,
-    options
-  } = props
+  const { id, placeholder, value, disabled, readonly, required, onChange, options } = props
   const { rows = 5 } = options || {}
-
-  // Standardize empty value handling
-  const displayValue = value === null || value === undefined ? '' : value
+  const displayValue = value ?? ''
 
   return (
     <textarea
@@ -477,30 +334,15 @@ const TextareaWidget = (props) => {
       required={required}
       aria-required={required}
       rows={rows}
-      onChange={(event) => onChange(normalizeEmptyValue(event.target.value))}
+      onChange={(event) => onChange(event.target.value === '' ? undefined : event.target.value)}
     />
   )
 }
 
-/**
- * Custom SelectWidget matching old react-jsonschema-form-bs4 output
- * Renders a dropdown select input
- */
 const SelectWidget = (props) => {
-  const {
-    id,
-    value,
-    disabled,
-    readonly,
-    required,
-    onChange,
-    options,
-    placeholder
-  } = props
+  const { id, value, disabled, readonly, required, onChange, options, placeholder } = props
   const { enumOptions } = options
-
-  // Standardize empty value handling
-  const displayValue = value === null || value === undefined ? '' : value
+  const displayValue = value ?? ''
 
   return (
     <select
@@ -510,24 +352,22 @@ const SelectWidget = (props) => {
       disabled={disabled || readonly}
       required={required}
       aria-required={required}
-      onChange={(event) => onChange(normalizeEmptyValue(event.target.value))}
+      onChange={(event) => onChange(event.target.value === '' ? undefined : event.target.value)}
     >
       {!value && (
         <option value="" disabled>
           {placeholder || 'Select...'}
         </option>
       )}
-      {enumOptions &&
-        enumOptions.map(({ value: optionValue, label }) => (
-          <option key={optionValue} value={optionValue}>
-            {label}
-          </option>
-        ))}
+      {enumOptions?.map(({ value: optionValue, label }) => (
+        <option key={optionValue} value={optionValue}>
+          {label}
+        </option>
+      ))}
     </select>
   )
 }
 
-// Custom widgets to match old react-jsonschema-form-bs4 output
 const customWidgets = {
   CheckboxWidget,
   TextWidget,
@@ -535,63 +375,46 @@ const customWidgets = {
   SelectWidget
 }
 
-/**
- * Button templates for RJSF forms
- * Using helper function to reduce code duplication
- */
 const customTemplates = {
   FieldTemplate,
   ObjectFieldTemplate,
   ArrayFieldTemplate,
   ArrayFieldItemTemplate,
   ButtonTemplates: {
-    AddButton: (props) => {
-      const { onClick, disabled, className } = props
-      return createButton(
-        `${CSS_CLASSES.BTN_INFO} ${className || ''}`,
-        onClick,
-        disabled,
-        undefined,
-        <i className="fas fa-plus" />,
-        0
-      )
-    },
-    MoveUpButton: (props) => {
-      const { onClick, disabled, className, style } = props
-      return createButton(
-        `${CSS_CLASSES.BTN_OUTLINE_DARK} ${className || ''}`,
-        onClick,
-        disabled,
-        style,
-        <i className="fas fa-arrow-up" />,
-        -1
-      )
-    },
-    MoveDownButton: (props) => {
-      const { onClick, disabled, className, style } = props
-      return createButton(
-        `${CSS_CLASSES.BTN_OUTLINE_DARK} ${className || ''}`,
-        onClick,
-        disabled,
-        style,
-        <i className="fas fa-arrow-down" />,
-        -1
-      )
-    },
-    RemoveButton: (props) => {
-      const { onClick, disabled, className, style } = props
-      return createButton(
-        `${CSS_CLASSES.BTN_DANGER} ${className || ''}`,
-        onClick,
-        disabled,
-        style,
-        <i className="fas fa-times" />,
-        -1
-      )
-    },
+    AddButton: (props) => createButton(
+      `${CSS_CLASSES.BTN_INFO} ${props.className || ''}`,
+      props.onClick,
+      props.disabled,
+      undefined,
+      <i className="fas fa-plus" />,
+      0
+    ),
+    MoveUpButton: (props) => createButton(
+      `${CSS_CLASSES.BTN_OUTLINE_DARK} ${props.className || ''}`,
+      props.onClick,
+      props.disabled,
+      props.style,
+      <i className="fas fa-arrow-up" />,
+      -1
+    ),
+    MoveDownButton: (props) => createButton(
+      `${CSS_CLASSES.BTN_OUTLINE_DARK} ${props.className || ''}`,
+      props.onClick,
+      props.disabled,
+      props.style,
+      <i className="fas fa-arrow-down" />,
+      -1
+    ),
+    RemoveButton: (props) => createButton(
+      `${CSS_CLASSES.BTN_DANGER} ${props.className || ''}`,
+      props.onClick,
+      props.disabled,
+      props.style,
+      <i className="fas fa-times" />,
+      -1
+    ),
     SubmitButton: (props) => {
-      const { uiSchema } = props
-      const { submitText } = uiSchema?.['ui:submitButtonOptions'] || {}
+      const { submitText } = props.uiSchema?.['ui:submitButtonOptions'] || {}
       return (
         <div>
           <button type="submit" className={CSS_CLASSES.BTN_INFO}>
@@ -603,62 +426,33 @@ const customTemplates = {
   }
 }
 
-/**
- * PluginConfigurationForm Component
- * Renders a JSON Schema form for plugin configuration using RJSF v5
- * @param {Object} props - Component props
- * @param {Object} props.plugin - Plugin data including schema, uiSchema, and current values
- * @param {Function} props.onSubmit - Callback function when form is submitted
- * @returns {React.ReactElement} RJSF form component
- */
+// Main component
 // eslint-disable-next-line react/display-name
 export default ({ plugin, onSubmit }) => {
-  // Safely clone the schema to avoid mutating the original
-  const schema = safeDeepClone(plugin.schema, 'plugin schema')
-
-  // Handle case where schema cloning failed
-  if (!schema) {
-    console.error('Failed to load plugin schema')
-    return <div>Error: Unable to load plugin configuration schema</div>
-  }
-
-  // Build uiSchema if provided by plugin
-  const uiSchema =
-    typeof plugin.uiSchema !== 'undefined'
-      ? { configuration: safeDeepClone(plugin.uiSchema, 'plugin uiSchema') }
-      : {}
-
-  // Create top-level schema wrapper for configuration
-  const topSchema = {
-    type: 'object',
-    properties: {
-      configuration: {
-        type: 'object',
-        title: ' ',
-        description: schema.description,
-        properties: schema.properties
-      }
-    }
-  }
-
-  // Add status message if available
-  if (plugin.statusMessage) {
-    topSchema.description = `Status: ${plugin.statusMessage}`
-  }
+  const { enabled, enableLogging, enableDebug } = plugin.data
 
   return (
     <Form
       validator={validator}
-      schema={topSchema}
-      uiSchema={uiSchema}
+      schema={{
+        type: 'object',
+        ...(plugin.statusMessage && { description: `Status: ${plugin.statusMessage}` }),
+        properties: {
+          configuration: {
+            type: 'object',
+            title: ' ',
+            description: plugin.schema.description,
+            properties: plugin.schema.properties
+          }
+        }
+      }}
+      uiSchema={plugin.uiSchema ? { configuration: plugin.uiSchema } : {}}
       formData={plugin.data || {}}
       templates={customTemplates}
       widgets={customWidgets}
-      onSubmit={(submitData) => {
-        // Preserve enabled, enableLogging, and enableDebug from original plugin data
-        const { enabled, enableLogging, enableDebug } = plugin.data
+      onSubmit={({ formData }) => {
         onSubmit({
-          ...submitData.formData,
+          ...formData,
           enabled,
           enableLogging,
           enableDebug
