@@ -15,6 +15,7 @@ export * from './streambundle'
 export * from './subscriptionmanager'
 /** @category History API */
 export * as history from './history'
+export * as units from './units'
 
 /** @category  Server API */
 export interface Position {

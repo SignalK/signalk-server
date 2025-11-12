@@ -659,6 +659,7 @@ class DataBrowser extends Component {
                                       <CustomRenderer
                                         value={data.value}
                                         units={units}
+                                        meta={meta}
                                       />
                                     )
                                   }
@@ -666,6 +667,7 @@ class DataBrowser extends Component {
                                     <DefaultValueRenderer
                                       value={data.value}
                                       units={units}
+                                      meta={meta}
                                     />
                                   )
                                 })()}

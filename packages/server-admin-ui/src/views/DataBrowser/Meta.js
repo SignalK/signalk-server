@@ -9,6 +9,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState } from 'react'
 import { connect } from 'react-redux'
 import { Col, Form, FormGroup, FormText, Input, Label, Row } from 'reactstrap'
+import { getConversions } from '@signalk/server-api/units'
 
 const UnitSelect = ({ disabled, value, setValue }) => (
   <Input
@@ -19,11 +20,34 @@ const UnitSelect = ({ disabled, value, setValue }) => (
   >
     {Object.entries(UNITS).map(([unit, description]) => (
       <option key={unit} value={unit}>
-        {unit}:{description}
+        {unit} - {description}
       </option>
     ))}
   </Input>
 )
+
+const PreferredUnitSelect = (props) => {
+  const { disabled, value, setValue, metaValues } = props
+  const units = metaValues.find(({ key }) => key === 'units')?.value
+  const conversions = getConversions(units)
+  if (!conversions) {
+    return <span className="text-danger">No conversions available</span>
+  }
+  return (
+    <Input
+      disabled={disabled}
+      type="select"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+    >
+      {Object.entries(conversions).map(([unit, { longName }]) => (
+        <option key={unit} value={unit}>
+          {unit} - {longName}
+        </option>
+      ))}
+    </Input>
+  )
+}
 
 const Text = ({ disabled, setValue, value }) => (
   <Input
@@ -167,6 +191,9 @@ const METAFIELDRENDERERS = {
   units: (props) => (
     <MetaFormRow {...props} renderValue={UnitSelect}></MetaFormRow>
   ),
+  preferredUnits: (props) => (
+    <MetaFormRow {...props} renderValue={PreferredUnitSelect}></MetaFormRow>
+  ),
   description: (props) => (
     <MetaFormRow {...props} renderValue={Text}></MetaFormRow>
   ),
@@ -219,7 +246,8 @@ const METAFIELDS = [
   'alertMethod',
   'warnMethod',
   'alarmMethod',
-  'emergencyMethod'
+  'emergencyMethod',
+  'preferredUnits'
 ]
 
 const UNITS = {
@@ -330,7 +358,7 @@ function Meta({ meta, path, loginStatus }) {
               }
             }
             const renderer = METAFIELDRENDERERS[key]
-            return renderer && renderer(props)
+            return renderer && renderer({ ...props, metaValues })
           })}
         {isEditing && (
           <FontAwesomeIcon
