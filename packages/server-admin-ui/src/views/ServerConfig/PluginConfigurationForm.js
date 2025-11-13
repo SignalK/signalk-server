@@ -34,7 +34,14 @@ const isArrayItemId = (id) => {
   return parts.length > 2 && /^\d+$/.test(parts[parts.length - 1])
 }
 
-const createButton = (className, onClick, disabled, style, icon, tabIndex = 0) => (
+const createButton = (
+  className,
+  onClick,
+  disabled,
+  style,
+  icon,
+  tabIndex = 0
+) => (
   <button
     type="button"
     className={className}
@@ -188,7 +195,9 @@ const ArrayFieldTemplate = (props) => {
     registry,
     uiOptions
   )
-  const { ButtonTemplates: { AddButton } } = registry.templates
+  const {
+    ButtonTemplates: { AddButton }
+  } = registry.templates
 
   return (
     <fieldset
@@ -212,7 +221,9 @@ const ArrayFieldTemplate = (props) => {
       </div>
       {canAdd && (
         <div className={CSS_CLASSES.ARRAY_ITEM_ADD}>
-          <p className={`${GRID_COLUMNS.ADD_BUTTON_CONTAINER} text-right array-item-add`}>
+          <p
+            className={`${GRID_COLUMNS.ADD_BUTTON_CONTAINER} text-right array-item-add`}
+          >
             <AddButton
               className="btn-add col-12"
               onClick={onAddClick}
@@ -233,38 +244,42 @@ const customTemplates = {
   ArrayFieldTemplate,
   ArrayFieldItemTemplate,
   ButtonTemplates: {
-    AddButton: (props) => createButton(
-      `${CSS_CLASSES.BTN_INFO} ${props.className || ''}`,
-      props.onClick,
-      props.disabled,
-      undefined,
-      <i className="fas fa-plus" />,
-      0
-    ),
-    MoveUpButton: (props) => createButton(
-      `${CSS_CLASSES.BTN_OUTLINE_DARK} ${props.className || ''}`,
-      props.onClick,
-      props.disabled,
-      undefined,
-      <i className="fas fa-arrow-up" />,
-      -1
-    ),
-    MoveDownButton: (props) => createButton(
-      `${CSS_CLASSES.BTN_OUTLINE_DARK} ${props.className || ''}`,
-      props.onClick,
-      props.disabled,
-      undefined,
-      <i className="fas fa-arrow-down" />,
-      -1
-    ),
-    RemoveButton: (props) => createButton(
-      `${CSS_CLASSES.BTN_DANGER} ${props.className || ''}`,
-      props.onClick,
-      props.disabled,
-      undefined,
-      <i className="fas fa-times" />,
-      -1
-    ),
+    AddButton: (props) =>
+      createButton(
+        `${CSS_CLASSES.BTN_INFO} ${props.className || ''}`,
+        props.onClick,
+        props.disabled,
+        undefined,
+        <i className="fas fa-plus" />,
+        0
+      ),
+    MoveUpButton: (props) =>
+      createButton(
+        `${CSS_CLASSES.BTN_OUTLINE_DARK} ${props.className || ''}`,
+        props.onClick,
+        props.disabled,
+        undefined,
+        <i className="fas fa-arrow-up" />,
+        -1
+      ),
+    MoveDownButton: (props) =>
+      createButton(
+        `${CSS_CLASSES.BTN_OUTLINE_DARK} ${props.className || ''}`,
+        props.onClick,
+        props.disabled,
+        undefined,
+        <i className="fas fa-arrow-down" />,
+        -1
+      ),
+    RemoveButton: (props) =>
+      createButton(
+        `${CSS_CLASSES.BTN_DANGER} ${props.className || ''}`,
+        props.onClick,
+        props.disabled,
+        undefined,
+        <i className="fas fa-times" />,
+        -1
+      ),
     SubmitButton: (props) => {
       const { submitText } = props.uiSchema?.['ui:submitButtonOptions'] || {}
       return (
@@ -287,7 +302,9 @@ export default ({ plugin, onSubmit }) => {
       validator={validator}
       schema={{
         type: 'object',
-        ...(plugin.statusMessage && { description: `Status: ${plugin.statusMessage}` }),
+        ...(plugin.statusMessage && {
+          description: `Status: ${plugin.statusMessage}`
+        }),
         properties: {
           configuration: {
             type: 'object',
