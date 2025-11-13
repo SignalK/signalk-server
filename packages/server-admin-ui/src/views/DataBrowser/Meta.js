@@ -332,6 +332,12 @@ function Meta({ meta, path, loginStatus }) {
             const renderer = METAFIELDRENDERERS[key]
             return renderer && renderer(props)
           })}
+        {metaValues
+          .filter(({ key }) => METAFIELDS.indexOf(key) === -1 )
+          .map(({ key, value }) => {
+            return ( <UnknownMetaFormRow thekey={key} value={value} /> )
+          })
+        }
         {isEditing && (
           <FontAwesomeIcon
             icon={faSquarePlus}
@@ -381,6 +387,21 @@ const MetaFormRow = (props) => {
       </Col>
       <Col>
         {!disabled && <FontAwesomeIcon icon={faTrashCan} onClick={deleteKey} />}
+      </Col>
+    </FormGroup>
+  )
+}
+
+const UnknownMetaFormRow = ({ thekey, value }) => {
+  return (
+    <FormGroup row>
+      <Col xs="3" md="2" className={'col-form-label'}>
+        {thekey}
+      </Col>
+      <Col xs="12" md="4">
+      <pre>
+        {JSON.stringify(value, null, 2)}
+        </pre>
       </Col>
     </FormGroup>
   )
