@@ -79,6 +79,20 @@ form.rjsf {
       rgba(248, 108, 107, 0.5) // focus shadow
     );
   }
+
+  // Array button styling
+  .array-button-style {
+    flex: 1 1 0%;
+    padding-left: 6px;
+    padding-right: 6px;
+    font-weight: bold;
+  }
+
+  // Button group flexbox layout
+  .btn-group-flex {
+    display: flex;
+    justify-content: space-around;
+  }
 }
 
 @media (max-width: 767px) {

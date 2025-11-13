@@ -6,14 +6,6 @@ import { getTemplate, getUiOptions } from '@rjsf/utils'
 
 const Form = withTheme(Bootstrap4Theme)
 
-// Constants
-const ARRAY_BUTTON_STYLE = {
-  flex: '1 1 0%',
-  paddingLeft: 6,
-  paddingRight: 6,
-  fontWeight: 'bold'
-}
-
 const GRID_COLUMNS = {
   CONTENT: 'col-9',
   TOOLBAR: 'col-3',
@@ -36,29 +28,6 @@ const CSS_CLASSES = {
   CHECKBOX: 'checkbox '
 }
 
-// Helper functions
-const extractTextFromJSX = (node) => {
-  if (typeof node === 'string') return node
-  if (typeof node === 'number') return String(node)
-  if (!node) return ''
-  if (Array.isArray(node)) return node.map(extractTextFromJSX).join('')
-  if (node.props?.children) return extractTextFromJSX(node.props.children)
-  return ''
-}
-
-const getDescriptionText = (rawDescription, schema, description) => {
-  let descriptionText = rawDescription || schema.description || description
-
-  // If description is JSX, extract text content
-  if (descriptionText && typeof descriptionText === 'object' && descriptionText.props) {
-    descriptionText = extractTextFromJSX(descriptionText).trim()
-  }
-
-  return descriptionText && String(descriptionText).trim().length > 0
-    ? descriptionText
-    : ''
-}
-
 const isArrayItemId = (id) => {
   if (!id || typeof id !== 'string') return false
   const parts = id.split('_')
@@ -78,7 +47,6 @@ const createButton = (className, onClick, disabled, style, icon, tabIndex = 0) =
   </button>
 )
 
-// Custom Templates
 const ArrayFieldItemTemplate = (props) => {
   const {
     children,
@@ -105,14 +73,10 @@ const ArrayFieldItemTemplate = (props) => {
         className={`${GRID_COLUMNS.TOOLBAR} ${CSS_CLASSES.ARRAY_ITEM_TOOLBOX}`}
       >
         {hasToolbar && (
-          <div
-            className="btn-group"
-            style={{ display: 'flex', justifyContent: 'space-around' }}
-          >
+          <div className="btn-group btn-group-flex">
             {(hasMoveUp || hasMoveDown) && (
               <MoveUpButton
-                className="array-item-move-up"
-                style={ARRAY_BUTTON_STYLE}
+                className="array-item-move-up array-button-style"
                 disabled={disabled || readonly || !hasMoveUp}
                 onClick={onReorderClick(index, index - 1)}
                 uiSchema={uiSchema}
@@ -121,8 +85,7 @@ const ArrayFieldItemTemplate = (props) => {
             )}
             {(hasMoveUp || hasMoveDown) && (
               <MoveDownButton
-                className="array-item-move-down"
-                style={ARRAY_BUTTON_STYLE}
+                className="array-item-move-down array-button-style"
                 disabled={disabled || readonly || !hasMoveDown}
                 onClick={onReorderClick(index, index + 1)}
                 uiSchema={uiSchema}
@@ -131,8 +94,7 @@ const ArrayFieldItemTemplate = (props) => {
             )}
             {hasRemove && (
               <RemoveButton
-                className="array-item-remove"
-                style={ARRAY_BUTTON_STYLE}
+                className="array-item-remove array-button-style"
                 disabled={disabled || readonly}
                 onClick={onDropIndexClick(index)}
                 uiSchema={uiSchema}
@@ -155,7 +117,6 @@ const FieldTemplate = (props) => {
     help,
     required,
     description,
-    rawDescription,
     errors,
     children,
     displayLabel,
@@ -164,7 +125,6 @@ const FieldTemplate = (props) => {
 
   const isCheckbox = schema.type === 'boolean'
   const isObject = schema.type === 'object'
-  const descriptionText = getDescriptionText(rawDescription, schema, description)
 
   return (
     <div className={classNames} style={style}>
@@ -174,9 +134,9 @@ const FieldTemplate = (props) => {
           {required && <span className="required">*</span>}
         </label>
       )}
-      {descriptionText && !isObject && (
+      {description && !isObject && (
         <p id={`${id}__description`} className={CSS_CLASSES.FIELD_DESCRIPTION}>
-          {descriptionText}
+          {description}
         </p>
       )}
       {children}
@@ -267,114 +227,6 @@ const ArrayFieldTemplate = (props) => {
   )
 }
 
-// Custom Widgets
-const CheckboxWidget = (props) => {
-  const { id, value, disabled, readonly, label, onChange } = props
-  return (
-    <div className={CSS_CLASSES.CHECKBOX}>
-      <div className={CSS_CLASSES.FORM_CHECK}>
-        <input
-          type="checkbox"
-          id={id}
-          className={CSS_CLASSES.FORM_CHECK_INPUT}
-          checked={value || false}
-          disabled={disabled || readonly}
-          onChange={(event) => onChange(event.target.checked)}
-        />
-        <label className={CSS_CLASSES.FORM_CHECK_LABEL} htmlFor={id}>
-          {label}
-        </label>
-      </div>
-    </div>
-  )
-}
-
-const TextWidget = (props) => {
-  const { id, placeholder, value, disabled, readonly, required, onChange, schema } = props
-
-  const inputType = schema.type === 'number' || schema.type === 'integer' ? 'number' : 'text'
-  const step = schema.type === 'number' ? 'any' : schema.type === 'integer' ? '1' : undefined
-  const displayValue = value ?? ''
-
-  return (
-    <input
-      className={CSS_CLASSES.FORM_CONTROL}
-      id={id}
-      placeholder={placeholder || ''}
-      type={inputType}
-      step={step}
-      value={displayValue}
-      disabled={disabled || readonly}
-      required={required}
-      aria-required={required}
-      onChange={(event) => {
-        const newValue = event.target.value
-        if (inputType === 'number') {
-          onChange(newValue === '' ? undefined : (schema.type === 'integer' ? parseInt(newValue, 10) : parseFloat(newValue)))
-        } else {
-          onChange(newValue === '' ? undefined : newValue)
-        }
-      }}
-    />
-  )
-}
-
-const TextareaWidget = (props) => {
-  const { id, placeholder, value, disabled, readonly, required, onChange, options } = props
-  const { rows = 5 } = options || {}
-  const displayValue = value ?? ''
-
-  return (
-    <textarea
-      className={CSS_CLASSES.FORM_CONTROL}
-      id={id}
-      placeholder={placeholder || ''}
-      value={displayValue}
-      disabled={disabled || readonly}
-      required={required}
-      aria-required={required}
-      rows={rows}
-      onChange={(event) => onChange(event.target.value === '' ? undefined : event.target.value)}
-    />
-  )
-}
-
-const SelectWidget = (props) => {
-  const { id, value, disabled, readonly, required, onChange, options, placeholder } = props
-  const { enumOptions } = options
-  const displayValue = value ?? ''
-
-  return (
-    <select
-      id={id}
-      className={CSS_CLASSES.FORM_CONTROL}
-      value={displayValue}
-      disabled={disabled || readonly}
-      required={required}
-      aria-required={required}
-      onChange={(event) => onChange(event.target.value === '' ? undefined : event.target.value)}
-    >
-      {!value && (
-        <option value="" disabled>
-          {placeholder || 'Select...'}
-        </option>
-      )}
-      {enumOptions?.map(({ value: optionValue, label }) => (
-        <option key={optionValue} value={optionValue}>
-          {label}
-        </option>
-      ))}
-    </select>
-  )
-}
-
-const customWidgets = {
-  CheckboxWidget,
-  TextWidget,
-  TextareaWidget,
-  SelectWidget
-}
-
 const customTemplates = {
   FieldTemplate,
   ObjectFieldTemplate,
@@ -393,7 +245,7 @@ const customTemplates = {
       `${CSS_CLASSES.BTN_OUTLINE_DARK} ${props.className || ''}`,
       props.onClick,
       props.disabled,
-      props.style,
+      undefined,
       <i className="fas fa-arrow-up" />,
       -1
     ),
@@ -401,7 +253,7 @@ const customTemplates = {
       `${CSS_CLASSES.BTN_OUTLINE_DARK} ${props.className || ''}`,
       props.onClick,
       props.disabled,
-      props.style,
+      undefined,
       <i className="fas fa-arrow-down" />,
       -1
     ),
@@ -409,7 +261,7 @@ const customTemplates = {
       `${CSS_CLASSES.BTN_DANGER} ${props.className || ''}`,
       props.onClick,
       props.disabled,
-      props.style,
+      undefined,
       <i className="fas fa-times" />,
       -1
     ),
@@ -426,7 +278,6 @@ const customTemplates = {
   }
 }
 
-// Main component
 // eslint-disable-next-line react/display-name
 export default ({ plugin, onSubmit }) => {
   const { enabled, enableLogging, enableDebug } = plugin.data
@@ -449,7 +300,6 @@ export default ({ plugin, onSubmit }) => {
       uiSchema={plugin.uiSchema ? { configuration: plugin.uiSchema } : {}}
       formData={plugin.data || {}}
       templates={customTemplates}
-      widgets={customWidgets}
       onSubmit={({ formData }) => {
         onSubmit({
           ...formData,
