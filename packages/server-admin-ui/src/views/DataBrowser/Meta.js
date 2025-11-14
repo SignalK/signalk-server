@@ -311,31 +311,33 @@ function Meta({ meta, path, loginStatus }) {
         {metaValues
           .filter(({ key }) => key !== 'zones')
           .map(({ key, value }) => {
-            const props = {
-              _key: key,
-              value,
-              disabled: !isEditing,
-              setValue: (metaFieldValue) =>
-                setLocalMeta({ ...localMeta, ...{ [key]: metaFieldValue } }),
-              setKey: (metaFieldKey) => {
-                const copy = { ...localMeta }
-                copy[metaFieldKey] = localMeta[key]
-                delete copy[key]
-                setLocalMeta(copy)
-              },
-              deleteKey: () => {
-                const copy = { ...localMeta }
-                delete copy[key]
-                setLocalMeta(copy)
-              }
-            }
             const renderer = METAFIELDRENDERERS[key]
-            return renderer && renderer(props)
-          })}
-        {metaValues
-          .filter(({ key }) => METAFIELDS.indexOf(key) === -1)
-          .map(({ key, value }) => {
-            return <UnknownMetaFormRow key={key} metaKey={key} value={value} />
+            if (renderer) {
+              const props = {
+                _key: key,
+                value,
+                disabled: !isEditing,
+                setValue: (metaFieldValue) =>
+                  setLocalMeta({ ...localMeta, ...{ [key]: metaFieldValue } }),
+                setKey: (metaFieldKey) => {
+                  const copy = { ...localMeta }
+                  copy[metaFieldKey] = localMeta[key]
+                  delete copy[key]
+                  setLocalMeta(copy)
+                },
+                deleteKey: () => {
+                  const copy = { ...localMeta }
+                  delete copy[key]
+                  setLocalMeta(copy)
+                }
+              }
+
+              return renderer(props)
+            } else {
+              return (
+                <UnknownMetaFormRow key={key} metaKey={key} value={value} />
+              )
+            }
           })}
         {isEditing && (
           <FontAwesomeIcon
