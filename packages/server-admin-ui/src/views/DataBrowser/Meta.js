@@ -311,26 +311,33 @@ function Meta({ meta, path, loginStatus }) {
         {metaValues
           .filter(({ key }) => key !== 'zones')
           .map(({ key, value }) => {
-            const props = {
-              _key: key,
-              value,
-              disabled: !isEditing,
-              setValue: (metaFieldValue) =>
-                setLocalMeta({ ...localMeta, ...{ [key]: metaFieldValue } }),
-              setKey: (metaFieldKey) => {
-                const copy = { ...localMeta }
-                copy[metaFieldKey] = localMeta[key]
-                delete copy[key]
-                setLocalMeta(copy)
-              },
-              deleteKey: () => {
-                const copy = { ...localMeta }
-                delete copy[key]
-                setLocalMeta(copy)
-              }
-            }
             const renderer = METAFIELDRENDERERS[key]
-            return renderer && renderer(props)
+            if (renderer) {
+              const props = {
+                _key: key,
+                value,
+                disabled: !isEditing,
+                setValue: (metaFieldValue) =>
+                  setLocalMeta({ ...localMeta, ...{ [key]: metaFieldValue } }),
+                setKey: (metaFieldKey) => {
+                  const copy = { ...localMeta }
+                  copy[metaFieldKey] = localMeta[key]
+                  delete copy[key]
+                  setLocalMeta(copy)
+                },
+                deleteKey: () => {
+                  const copy = { ...localMeta }
+                  delete copy[key]
+                  setLocalMeta(copy)
+                }
+              }
+
+              return renderer(props)
+            } else {
+              return (
+                <UnknownMetaFormRow key={key} metaKey={key} value={value} />
+              )
+            }
           })}
         {isEditing && (
           <FontAwesomeIcon
@@ -381,6 +388,19 @@ const MetaFormRow = (props) => {
       </Col>
       <Col>
         {!disabled && <FontAwesomeIcon icon={faTrashCan} onClick={deleteKey} />}
+      </Col>
+    </FormGroup>
+  )
+}
+
+const UnknownMetaFormRow = ({ metaKey, value }) => {
+  return (
+    <FormGroup row>
+      <Col xs="3" md="2" className={'col-form-label'}>
+        {metaKey}
+      </Col>
+      <Col xs="12" md="4">
+        <pre>{JSON.stringify(value, null, 2)}</pre>
       </Col>
     </FormGroup>
   )
