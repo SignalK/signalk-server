@@ -75,6 +75,7 @@
     "@signalk/resources-provider": "^1.4.0",
     "@signalk/server-admin-ui": "2.17.x",
     "@signalk/server-api": "2.9.x",
+    "@signalk/signalk-autopilot": "^2.4.0",
     "@signalk/signalk-schema": "^1.7.1",
     "@signalk/streams": "5.1.x",
     "api-schema-builder": "^2.0.11",
@@ -121,8 +122,8 @@
     "ws": "^7.0.0"
   },
   "optionalDependencies": {
-    "@mxtommy/kip": "^3.2.0",
-    "@signalk/freeboard-sk": "^2.0.0-beta.3",
+    "@mxtommy/kip": "^4.0.7",
+    "@signalk/freeboard-sk": "^2.19.1",
     "@signalk/instrumentpanel": "0.x",
     "@signalk/set-system-time": "^1.2.0",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
@@ -130,7 +131,7 @@
     "@signalk/vesselpositions": "^1.0.0",
     "mdns": "^2.5.1",
     "serialport": "^11.0.0",
-    "signalk-n2kais-to-nmea0183": "^1.3.1",
+    "signalk-n2kais-to-nmea0183": "^2.0.3",
     "signalk-to-nmea2000": "^2.16.0"
   },
   "devDependencies": {

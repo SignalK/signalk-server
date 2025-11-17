@@ -5,7 +5,6 @@
     "type": "22",
     "uuid": "urn:mrn:signalk:uuid:c0d79334-4e25-4245-8892-54e8ccc8021d"
   },
-
   "pipedProviders": [
     {
       "id": "nmeaFromFile",
@@ -39,5 +38,18 @@
         }
       ]
     }
-  ]
+  ],
+  "interfaces": {},
+  "resourcesApi": {
+    "defaultProviders": {
+      "routes": "resources-provider",
+      "waypoints": "resources-provider",
+      "notes": "resources-provider",
+      "regions": "resources-provider",
+      "charts": "resources-provider"
+    }
+  },
+  "courseApi": {
+    "apiOnly": false
+  }
 }
