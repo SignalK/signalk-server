@@ -1,84 +1,3 @@
-// Duration formatting helper functions
-function formatDurationDHMS(seconds: number): string {
-  const days = Math.floor(seconds / 86400)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${days.toString().padStart(2, '0')}:${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
-
-function formatDurationHMS(seconds: number): string {
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
-
-function formatDurationHMSMillis(seconds: number): string {
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
-  const millis = Math.floor((seconds % 1) * 1000)
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${millis.toString().padStart(3, '0')}`
-}
-
-function formatDurationMS(seconds: number): string {
-  const minutes = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
-
-function formatDurationMSMillis(seconds: number): string {
-  const minutes = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  const millis = Math.floor((seconds % 1) * 1000)
-  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${millis.toString().padStart(3, '0')}`
-}
-
-function formatDurationVerbose(seconds: number): string {
-  const parts: string[] = []
-  const days = Math.floor(seconds / 86400)
-  if (days > 0) parts.push(`${days} ${days === 1 ? 'day' : 'days'}`)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  if (hours > 0) parts.push(`${hours} ${hours === 1 ? 'hour' : 'hours'}`)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  if (minutes > 0)
-    parts.push(`${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`)
-  const secs = Math.floor(seconds % 60)
-  if (secs > 0 || parts.length === 0)
-    parts.push(`${secs} ${secs === 1 ? 'second' : 'seconds'}`)
-  return parts.join(' ')
-}
-
-function formatDurationCompact(seconds: number): string {
-  const parts: string[] = []
-  const days = Math.floor(seconds / 86400)
-  if (days > 0) parts.push(`${days}d`)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  if (hours > 0) parts.push(`${hours}h`)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  if (minutes > 0) parts.push(`${minutes}m`)
-  const secs = Math.floor(seconds % 60)
-  if (secs > 0 || parts.length === 0) parts.push(`${secs}s`)
-  return parts.join(' ')
-}
-
-function iso8601ToHMS(isoString: string): string {
-  const date = new Date(isoString)
-  const hours = date.getUTCHours()
-  const minutes = date.getUTCMinutes()
-  const seconds = date.getUTCSeconds()
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-}
-
-function iso8601ToHMSMillis(isoString: string): string {
-  const date = new Date(isoString)
-  const hours = date.getUTCHours()
-  const minutes = date.getUTCMinutes()
-  const seconds = date.getUTCSeconds()
-  const millis = date.getUTCMilliseconds()
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${millis.toString().padStart(3, '0')}`
-}
 
 export interface UnitConversion {
   formula: string
@@ -86,25 +5,25 @@ export interface UnitConversion {
   symbol: string
   longName?: string
   key?: string
-  convert:
+  convert:  
     | ((value: number) => number)
     | ((value: number) => string)
     | ((value: string) => string)
     | ((value: boolean) => boolean)
 }
 
-export interface UnitGroup {
+export interface UnitConversions {
   longName: string
   conversions: {
     [key: UnitId]: UnitConversion
   }
 }
 
-export interface Conversion {
-  [key: UnitId]: UnitGroup
+export interface Conversions {
+  [key: UnitId]: UnitConversions
 }
 
-const STANDARD_CONVERSIONS: Conversion = {
+const STANDARD_CONVERSIONS: Conversions = {
   'm/s': {
     longName: 'meters per second',
     conversions: {
@@ -344,10 +263,10 @@ const STANDARD_CONVERSIONS: Conversion = {
         symbol: 'mile',
         convert: (value: number) => value * 0.000621371192237334
       },
-      'naut-mile': {
+      'nm': {
         formula: 'value * 0.0005399568034557236',
         inverseFormula: 'value / 0.0005399568034557236',
-        symbol: 'nmi',
+        symbol: 'nm',
         convert: (value: number) => value * 0.0005399568034557236
       },
       parsec: {
@@ -585,83 +504,6 @@ const STANDARD_CONVERSIONS: Conversion = {
   s: {
     longName: 'second',
     conversions: {
-      'DD:HH:MM:SS': {
-        formula: 'formatDurationDHMS(value)',
-        inverseFormula: 'value',
-        symbol: '',
-        longName: 'Days:Hours:Minutes:Seconds',
-        key: 'DD:HH:MM:SS',
-        convert: formatDurationDHMS
-      },
-      'HH:MM:SS': {
-        formula: 'formatDurationHMS(value)',
-        inverseFormula: 'value',
-        symbol: '',
-        longName: 'Hours:Minutes:Seconds',
-        key: 'HH:MM:SS',
-        convert: formatDurationHMS
-      },
-      'HH:MM:SS.mmm': {
-        formula: 'formatDurationHMSMillis(value)',
-        inverseFormula: 'value',
-        symbol: '',
-        longName: 'Hours:Minutes:Seconds.Milliseconds',
-        key: 'HH:MM:SS.mmm',
-        convert: formatDurationHMSMillis
-      },
-      'MM:SS': {
-        formula: 'formatDurationMS(value)',
-        inverseFormula: 'value',
-        symbol: '',
-        longName: 'Minutes:Seconds',
-        key: 'MM:SS',
-        convert: formatDurationMS
-      },
-      'MM:SS.mmm': {
-        formula: 'formatDurationMSMillis(value)',
-        inverseFormula: 'value',
-        symbol: '',
-        longName: 'Minutes:Seconds.Milliseconds',
-        key: 'MM:SS.mmm',
-        convert: formatDurationMSMillis
-      },
-      'MM.xx': {
-        formula: 'value / 60',
-        inverseFormula: 'value * 60',
-        symbol: 'min',
-        longName: 'Decimal minutes',
-        convert: (value: number) => value / 60
-      },
-      'HH.xx': {
-        formula: 'value / 3600',
-        inverseFormula: 'value * 3600',
-        symbol: 'hr',
-        longName: 'Decimal hours',
-        convert: (value: number) => value / 3600
-      },
-      'DD.xx': {
-        formula: 'value / 86400',
-        inverseFormula: 'value * 86400',
-        symbol: 'days',
-        longName: 'Decimal days',
-        convert: (value: number) => value / 86400
-      },
-      'duration-verbose': {
-        formula: 'formatDurationVerbose(value)',
-        inverseFormula: 'value',
-        symbol: '',
-        longName: 'Verbose (2 hours 30 minutes 45 seconds)',
-        key: 'duration-verbose',
-        convert: formatDurationVerbose
-      },
-      'duration-compact': {
-        formula: 'formatDurationCompact(value)',
-        inverseFormula: 'value',
-        symbol: '',
-        longName: 'Compact (2h 30m)',
-        key: 'duration-compact',
-        convert: formatDurationCompact
-      },
       century: {
         formula: 'value * 3.168876461541279e-10',
         inverseFormula: 'value / 3.168876461541279e-10',
@@ -767,18 +609,6 @@ const STANDARD_CONVERSIONS: Conversion = {
         inverseFormula: 'value / 219.9692483',
         symbol: 'gal-imp/h',
         convert: (value: number) => value * 219.9692483
-      }
-    }
-  },
-  tr: {
-    longName: 'tabula rasa',
-    conversions: {
-      tr: {
-        formula: 'value * 1',
-        inverseFormula: 'value * 1',
-        symbol: 'tr',
-        longName: 'tabula rasa',
-        convert: (value: number) => value * 1
       }
     }
   },
@@ -944,68 +774,6 @@ const STANDARD_CONVERSIONS: Conversion = {
       }
     }
   },
-  deg: {
-    longName: 'Degree',
-    conversions: {
-      arcminute: {
-        formula: 'value * 60.00000000000001',
-        inverseFormula: 'value / 60.00000000000001',
-        symbol: 'arcminute',
-        convert: (value: number) => value * 60.00000000000001
-      },
-      arcsecond: {
-        formula: 'value * 3600.000000000001',
-        inverseFormula: 'value / 3600.000000000001',
-        symbol: 'arcsecond',
-        convert: (value: number) => value * 3600.000000000001
-      },
-      degree: {
-        formula: 'value * 1',
-        inverseFormula: 'value / 1',
-        symbol: '°',
-        convert: (value: number) => value * 1
-      },
-      gradian: {
-        formula: 'value * 1.111111111111111',
-        inverseFormula: 'value / 1.111111111111111',
-        symbol: 'gradian',
-        convert: (value: number) => value * 1.111111111111111
-      },
-      radian: {
-        formula: 'value * 0.0174532925199433',
-        inverseFormula: 'value / 0.0174532925199433',
-        symbol: 'radian',
-        convert: (value: number) => value * 0.0174532925199433
-      },
-      rotation: {
-        formula: 'value * 0.0027777777777777783',
-        inverseFormula: 'value / 0.0027777777777777783',
-        symbol: 'rotation',
-        convert: (value: number) => value * 0.0027777777777777783
-      }
-    }
-  },
-  'ISO-8601 (UTC)': {
-    longName: 'ISO-8601 (UTC) timestamp',
-    conversions: {
-      'HH:MM:SS': {
-        formula: 'iso8601ToHMS(value)',
-        inverseFormula: 'value',
-        symbol: '',
-        longName: 'Time of day (UTC)',
-        key: 'HH:MM:SS',
-        convert: iso8601ToHMS
-      },
-      'HH:MM:SS.mmm': {
-        formula: 'iso8601ToHMSMillis(value)',
-        inverseFormula: 'value',
-        symbol: '',
-        longName: 'Time of day with milliseconds (UTC)',
-        key: 'HH:MM:SS.mmm',
-        convert: iso8601ToHMSMillis
-      }
-    }
-  }
 }
 
 interface UnitInfo {
@@ -1013,11 +781,6 @@ interface UnitInfo {
 }
 
 const _UNITS: { [key: string]: UnitInfo } = {
-  '%': { longName: 'percent' },
-  '°': { longName: 'degree' },
-  '°/s': { longName: 'degrees per second' },
-  '°C': { longName: 'celsius' },
-  '°F': { longName: 'fahrenheit' },
   A: { longName: 'ampere' },
   Ah: { longName: 'ampere-hour' },
   AMU: { longName: 'AMU' },
@@ -1025,24 +788,13 @@ const _UNITS: { [key: string]: UnitInfo } = {
   Bf: { longName: 'Beaufort' },
   C: { longName: 'coulomb' },
   Calorie: { longName: 'food energy' },
-  'DD.xx': { longName: 'Decimal days' },
-  'DD:HH:MM:SS': { longName: 'Days:Hours:Minutes:Seconds' },
-  'Epoch Seconds': { longName: 'Unix epoch seconds' },
   F: { longName: 'fahrenheit' },
-  'HH.xx': { longName: 'Decimal hours' },
-  'HH:MM:SS': { longName: 'Hours:Minutes:Seconds' },
-  'HH:MM:SS.mmm': { longName: 'Hours:Minutes:Seconds.Milliseconds' },
   Hz: { longName: 'hertz' },
-  'ISO-8601 (UTC)': { longName: 'ISO-8601 (UTC) format' },
   J: { longName: 'Joule' },
   K: { longName: 'kelvin' },
   'L/h': { longName: 'liters per hour' },
   'L/min': { longName: 'liters per minute' },
-  'MM.xx': { longName: 'Decimal minutes' },
-  'MM:SS': { longName: 'Minutes:Seconds' },
-  'MM:SS.mmm': { longName: 'Minutes:Seconds.Milliseconds' },
   Pa: { longName: 'pascal' },
-  'RFC 3339 (UTC)': { longName: 'RFC 3339 UTC format' },
   V: { longName: 'volt' },
   W: { longName: 'watt' },
   Wh: { longName: 'Watt-hour' },
@@ -1070,8 +822,6 @@ const _UNITS: { [key: string]: UnitInfo } = {
   deg: { longName: 'Degree' },
   'deg/s': { longName: 'degrees per second' },
   dram: { longName: 'dram' },
-  'duration-compact': { longName: 'Compact (2h 30m)' },
-  'duration-verbose': { longName: 'Verbose (2 hours 30 minutes 45 seconds)' },
   electronvolt: { longName: 'electron volt' },
   erg: { longName: 'erg' },
   fathom: { longName: 'fathom' },
@@ -1125,7 +875,7 @@ const _UNITS: { [key: string]: UnitInfo } = {
   mm: { longName: 'millimeter' },
   mmHg: { longName: 'millimeters of mercury' },
   mph: { longName: 'miles per hour' },
-  'naut-mile': { longName: 'nautical mile' },
+  'nm': { longName: 'nautical mile' },
   nmi: { longName: 'nautical mile' },
   oilbarrel: { longName: 'oil barrel' },
   ounce: { longName: 'ounce' },
@@ -1155,7 +905,6 @@ const _UNITS: { [key: string]: UnitInfo } = {
   teaspoon: { longName: 'teaspoon' },
   'therm-US': { longName: 'US therm' },
   torr: { longName: 'torr' },
-  tr: { longName: 'tabula rasa' },
   watt: { longName: 'watt' },
   week: { longName: 'week' },
   yard: { longName: 'yard' },
