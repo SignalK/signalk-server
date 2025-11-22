@@ -74,7 +74,7 @@ export class WeatherApi {
       return
     }
 
-    debug(`** Un-registering autopilot provider....${pluginId}`)
+    debug(`** Un-registering weather provider....${pluginId}`)
     this.weatherProviders.delete(pluginId)
     if (pluginId === this.defaultProviderId) {
       this.defaultProviderId = undefined
