@@ -10,10 +10,16 @@ import {
   Input,
   Label,
   Form,
-  FormGroup
+  FormGroup,
+  Nav,
+  NavItem,
+  NavLink,
+  TabContent,
+  TabPane
 } from 'reactstrap'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
 import { Fragment } from 'react'
+import classnames from 'classnames'
 
 const searchStorageKey = 'admin.v1.plugins.search'
 const openPluginStorageKey = 'admin.v1.plugins.openPlugin'
@@ -55,13 +61,8 @@ export default class PluginConfigurationList extends Component {
   }
 
   toggleForm(clickedIndex, id) {
-    const openedPluginId = this.props.match.params.pluginid === id ? '-' : id
-    if (this.props.match.params.pluginid === id) {
-      localStorage.removeItem(openPluginStorageKey)
-    } else {
-      localStorage.setItem(openPluginStorageKey, openedPluginId)
-    }
-    this.props.history.replace(`/serverConfiguration/plugins/${openedPluginId}`)
+    localStorage.setItem(openPluginStorageKey, id)
+    this.props.history.replace(`/serverConfiguration/plugins/${id}`)
   }
 
   componentDidMount() {
@@ -94,53 +95,55 @@ export default class PluginConfigurationList extends Component {
         <CardHeader>
           <i className="fa fa-align-justify" />
           <strong>Plugin Configuration</strong>
-        </CardHeader>
-        <CardBody>
-          <Form
-            action=""
-            method="post"
-            encType="multipart/form-data"
-            className="form-horizontal"
-            onSubmit={(e) => {
-              e.preventDefault()
-            }}
-          >
-            <FormGroup row>
-              <Col xs="3" md="1" className={'col-form-label'}>
-                <Label htmlFor="select">Search</Label>
-              </Col>
-              <Col xs="12" md="4">
                 <Input
                   type="text"
                   name="search"
                   onChange={this.handleSearch}
                   value={this.state.search}
                 />
-              </Col>
-            </FormGroup>
-          </Form>
+        </CardHeader>
+        <CardBody>
 
-          {(this.state.searchResults || this.state.plugins).map((plugin, i) => {
-            const isOpen = this.props.match.params.pluginid === plugin.id
-            return (
-              <PluginCard
-                plugin={plugin}
-                isConfigurator={isConfigurator(plugin)}
-                key={i}
-                isOpen={isOpen}
-                toggleForm={this.toggleForm.bind(this, i, plugin.id)}
-                history={this.props.history}
-                saveData={(data) => {
-                  if (plugin.data.configuration === undefined) {
-                    data.enabled = true
-                  }
-                  this.saveData(plugin.id, data)
-                }}
-              />
-            )
-          })}
+          <Nav tabs>
+            {(this.state.searchResults || this.state.plugins).map((plugin, i) => {
+              return (
+                <NavItem key={plugin.id}>
+                  <NavLink
+                    className={classnames({ active: this.state.activeTab === this.props.match.params.pluginid === plugin.id })}
+                    onClick={this.toggleForm.bind(this, i, plugin.id)}
+                  >
+                    {plugin.id}
+                  </NavLink>
+                </NavItem>
+              )
+            })}
+          </Nav>
+
+
+          <TabContent activeTab={this.props.match.params.pluginid}>
+            {(this.state.searchResults || this.state.plugins).map((plugin, i) => {
+              const isConfigurator_ = isConfigurator(plugin)
+              return (
+                <TabPane key={plugin.id} tabId={plugin.id}>
+                  {!isConfigurator_ && (
+                    <PluginConfigurationForm
+                      plugin={plugin}
+                      onSubmit={(data) => {
+                        this.props.saveData(data)
+                        this.props.history.replace(`/serverConfiguration/plugins/-`)
+                      }}
+                    />
+                  )}
+                  {isConfigurator_ && (
+                    <EmbeddedPluginConfigurationForm {...this.props} />
+                  )}
+                </TabPane>
+              )
+            })}
+          </TabContent>
         </CardBody>
       </Card>
+
     )
   }
 
@@ -325,11 +328,5 @@ class PluginCard extends Component {
         </Card>
       </div>
     )
-  }
-
-  componentDidMount() {
-    if (this.props.isOpen) {
-      window.scrollTo({ top: this.card.offsetTop - 54, behavior: 'smooth' })
-    }
   }
 }
