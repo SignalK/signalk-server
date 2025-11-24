@@ -540,7 +540,8 @@ module.exports = (theApp: any) => {
       weatherApi.register(plugin.id, provider)
     }
 
-    const historyApiRegistry: HistoryApiHttpRegistry = app.historyApiHttpRegistry
+    const historyApiRegistry: HistoryApiHttpRegistry =
+      app.historyApiHttpRegistry
     delete (appCopy as any).historyApiHttpRegistry // expose only the plugin-specific proxy
     appCopy.registerHistoryApiProvider = (provider: HistoryApi) => {
       historyApiRegistry.registerHistoryApiProvider(plugin.id, provider)

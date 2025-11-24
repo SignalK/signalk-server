@@ -15,6 +15,9 @@ import {
 import { IRouter } from 'express'
 import { Temporal } from '@js-temporal/polyfill'
 import { Context, Path } from '@signalk/server-api'
+import { createDebug } from '../../debug'
+import { Request, Response } from 'express'
+const debug = createDebug('signalk-server:api:history')
 
 export class HistoryApiHttpRegistry {
   private provider?: HistoryApi
@@ -42,6 +45,7 @@ export class HistoryApiHttpRegistry {
     this.provider = provider
     this.app.historyApi = this.proxy
   }
+
   unregisterHistoryApiProvider(pluginId: string): void {
     if (this.providerPluginId !== pluginId) {
       throw new Error(
@@ -54,23 +58,51 @@ export class HistoryApiHttpRegistry {
   }
 
   start() {
-    this.app.get('/signalk/v2/history/values', async (req, res) => {
-      if (!this.provider) {
-        return res
-          .status(501)
-          .json({ error: 'No history api provider configured' })
-      }
-      try {
-        const query = parseValuesQuery(req.query)
-        const history = await this.provider.getValues(query)
-        res.json(history)
-      } catch (error) {
-        res
-          .status(400)
-          .json({
-            error: error instanceof Error ? error.message : 'Invalid request'
-          })
-      }
+    this.app.get('/signalk/v2/history/values', (req, res) =>
+      respondWith(this.provider, () => {
+        return this.provider?.getValues(parseValuesQuery(req.query))
+      }, req, res)
+    )
+
+    this.app.get('/signalk/v2/history/contexts', (req, res) =>
+      respondWith(this.provider, () => {
+        const { timeRangeParams, errors } = parseTimeRangeParams(req.query)
+        if (errors.length > 0) {
+          throw new Error(`Validation errors: ${errors.join(', ')}`)
+        }
+        debug(JSON.stringify(timeRangeParams, null, 2))
+        return this.provider?.getContexts(timeRangeParams)
+      }, req, res)
+    )
+
+    this.app.get('/signalk/v2/history/paths', (req, res) =>
+      respondWith(this.provider, () => {
+        const { timeRangeParams, errors } = parseTimeRangeParams(req.query)
+        if (errors.length > 0) {
+          throw new Error(`Validation errors: ${errors.join(', ')}`)
+        }
+        debug(JSON.stringify(timeRangeParams, null, 2))
+        return this.provider?.getPaths(timeRangeParams)
+      }, req, res)
+    )
+  }
+}
+
+
+async function respondWith<T>(
+  provider: HistoryApi | undefined,
+  handler: () => Promise<T> | undefined,
+  req: Request,
+  res: Response
+) {
+  if (!provider) {
+    return res.status(501).json({ error: 'No history api provider configured' })
+  }
+  try {
+    res.json(await handler())
+  } catch (error) {
+    res.status(400).json({
+      error: error instanceof Error ? error.message : 'Invalid request'
     })
   }
 }
@@ -95,12 +127,14 @@ const parseValuesQuery = (query: Record<string, unknown>): ValuesRequest => {
     .split(',')
   const pathSpecs: PathSpec[] = pathExpressions.map(splitPathExpression)
 
-  return {
+  const parsed = {
     ...timeRangeParams,
     context,
     resolution,
     pathSpecs
   }
+  debug(JSON.stringify(parsed, null, 2))
+  return parsed
 }
 
 const getMaybeNumber = (value: unknown): number | undefined => {
