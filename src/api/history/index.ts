@@ -36,14 +36,20 @@ export class HistoryApiHttpRegistry {
         return this.provider!.getPaths(query)
       }
     }
+    app.getHistoryApi = () => {
+      return this.provider
+        ? Promise.resolve(this.proxy)
+        : Promise.reject('No history api provider configured')
+    }
   }
 
   registerHistoryApiProvider(pluginId: string, provider: HistoryApi): void {
     if (!isHistoryApi(provider)) {
       throw new Error('Invalid history api provider')
     }
+    debug(`Registering history api provider ${pluginId}`)
+    this.providerPluginId = pluginId
     this.provider = provider
-    this.app.historyApi = this.proxy
   }
 
   unregisterHistoryApiProvider(pluginId: string): void {
@@ -52,42 +58,56 @@ export class HistoryApiHttpRegistry {
         'No history api provider registered for pluginId ' + pluginId
       )
     }
+    debug(`Unregistering history api provider ${pluginId}`)
     this.provider = undefined
     this.providerPluginId = undefined
-    this.app.historyApi = undefined
   }
 
   start() {
     this.app.get('/signalk/v2/history/values', (req, res) =>
-      respondWith(this.provider, () => {
-        return this.provider?.getValues(parseValuesQuery(req.query))
-      }, req, res)
+      respondWith(
+        this.provider,
+        () => {
+          return this.provider?.getValues(parseValuesQuery(req.query))
+        },
+        req,
+        res
+      )
     )
 
     this.app.get('/signalk/v2/history/contexts', (req, res) =>
-      respondWith(this.provider, () => {
-        const { timeRangeParams, errors } = parseTimeRangeParams(req.query)
-        if (errors.length > 0) {
-          throw new Error(`Validation errors: ${errors.join(', ')}`)
-        }
-        debug(JSON.stringify(timeRangeParams, null, 2))
-        return this.provider?.getContexts(timeRangeParams)
-      }, req, res)
+      respondWith(
+        this.provider,
+        () => {
+          const { timeRangeParams, errors } = parseTimeRangeParams(req.query)
+          if (errors.length > 0) {
+            throw new Error(`Validation errors: ${errors.join(', ')}`)
+          }
+          debug(JSON.stringify(timeRangeParams, null, 2))
+          return this.provider?.getContexts(timeRangeParams)
+        },
+        req,
+        res
+      )
     )
 
     this.app.get('/signalk/v2/history/paths', (req, res) =>
-      respondWith(this.provider, () => {
-        const { timeRangeParams, errors } = parseTimeRangeParams(req.query)
-        if (errors.length > 0) {
-          throw new Error(`Validation errors: ${errors.join(', ')}`)
-        }
-        debug(JSON.stringify(timeRangeParams, null, 2))
-        return this.provider?.getPaths(timeRangeParams)
-      }, req, res)
+      respondWith(
+        this.provider,
+        () => {
+          const { timeRangeParams, errors } = parseTimeRangeParams(req.query)
+          if (errors.length > 0) {
+            throw new Error(`Validation errors: ${errors.join(', ')}`)
+          }
+          debug(JSON.stringify(timeRangeParams, null, 2))
+          return this.provider?.getPaths(timeRangeParams)
+        },
+        req,
+        res
+      )
     )
   }
 }
-
 
 async function respondWith<T>(
   provider: HistoryApi | undefined,
