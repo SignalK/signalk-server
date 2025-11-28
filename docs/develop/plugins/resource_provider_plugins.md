@@ -176,3 +176,332 @@ module.exports = function (app) {
   }
 }
 ```
+
+---
+
+## Delta Notifications for Resource Changes
+
+Resource provider plugins should emit delta notifications when resources are modified through custom endpoints to keep clients synchronized in real-time. While the built-in Resources API automatically emits deltas for standard operations (`POST`, `PUT`, `DELETE`), custom provider endpoints must manually emit deltas.
+
+### Why Emit Deltas?
+
+Without delta notifications:
+
+- Clients must poll the REST API repeatedly to detect changes
+- Users must manually refresh applications after modifying resources
+- Server restarts may be required for changes to become visible
+- Mobile clients waste battery on unnecessary polling
+
+With delta notifications:
+
+- Changes appear instantly across all connected clients
+- No polling required - updates pushed via WebSocket
+- Better user experience with real-time synchronization
+- Lower bandwidth and battery consumption
+
+### When to Emit Deltas
+
+Emit delta notifications after:
+
+1. **Upload** - New resource added
+2. **Delete** - Resource removed
+3. **Modify** - Resource updated (rename, move, etc.)
+4. **Toggle** - Resource enabled/disabled
+
+> [!IMPORTANT]
+> Providers must also **refresh their in-memory resource list** after changes so that REST API endpoints (`listResources`, `getResource`) return current data.
+
+### Delta Message Format
+
+Resource deltas use the standard Signal K delta format with the resource path:
+
+```javascript
+app.handleMessage(
+  'my-provider-plugin-id',
+  {
+    updates: [{
+      values: [{
+        path: 'resources.<resourceType>.<resourceId>',
+        value: resourceData  // or null for deletions
+      }]
+    }]
+  },
+  skVersion  // 1 or 2
+)
+```
+
+### Implementation Pattern
+
+**1. Create Helper Function**
+
+```javascript
+const emitResourceDelta = (resourceType, resourceId, resourceValue) => {
+  try {
+    app.handleMessage(
+      plugin.id,
+      {
+        updates: [{
+          values: [{
+            path: `resources.${resourceType}.${resourceId}`,
+            value: resourceValue  // null for deletions
+          }]
+        }]
+      },
+      skVersion
+    )
+    app.debug(`Delta emitted for ${resourceType}: ${resourceId}`)
+  } catch (error) {
+    app.error(`Failed to emit delta: ${error.message}`)
+  }
+}
+```
+
+**2. Refresh In-Memory State**
+
+```javascript
+const refreshResources = async () => {
+  // Reload resources from storage
+  const resources = await loadResourcesFromStorage()
+
+  // Update in-memory cache
+  resourceCache = resources
+
+  app.debug(`Resources refreshed: ${Object.keys(resourceCache).length} items`)
+}
+```
+
+**3. Emit After Operations**
+
+**Upload:**
+```javascript
+app.post('/upload', async (req, res) => {
+  // Save resource to storage
+  await saveResource(id, data)
+
+  // Refresh in-memory cache
+  await refreshResources()
+
+  // Emit delta notification
+  if (resourceCache[id]) {
+    emitResourceDelta('charts', id, resourceCache[id])
+  }
+
+  res.json({ success: true })
+})
+```
+
+**Delete:**
+```javascript
+app.delete('/resources/:id', async (req, res) => {
+  // Delete from storage
+  await deleteResource(req.params.id)
+
+  // Refresh in-memory cache
+  await refreshResources()
+
+  // Emit null to signal deletion
+  emitResourceDelta('charts', req.params.id, null)
+
+  res.send('Resource deleted successfully')
+})
+```
+
+**Modify:**
+```javascript
+app.put('/resources/:id', async (req, res) => {
+  // Update in storage
+  await updateResource(req.params.id, req.body)
+
+  // Refresh in-memory cache
+  await refreshResources()
+
+  // Emit updated resource data
+  if (resourceCache[req.params.id]) {
+    emitResourceDelta('charts', req.params.id, resourceCache[req.params.id])
+  }
+
+  res.json({ success: true })
+})
+```
+
+### Example: Complete Implementation
+
+This example shows a chart provider plugin that emits deltas for all operations:
+
+```javascript
+module.exports = function (app) {
+  let chartCache = {}
+  const skVersion = app.config.version ?
+    parseInt(app.config.version.split('.')[0]) : 1
+
+  const plugin = {
+    id: 'my-charts-provider',
+    name: 'My Charts Provider',
+
+    start: (options) => {
+      // Register as resource provider
+      app.registerResourceProvider({
+        type: 'charts',
+        methods: {
+          listResources: () => Promise.resolve(chartCache),
+          getResource: (id) => {
+            if (chartCache[id]) {
+              return Promise.resolve(chartCache[id])
+            }
+            throw new Error('Chart not found')
+          },
+          setResource: (id, value) => {
+            throw new Error('Not implemented')
+          },
+          deleteResource: (id) => {
+            throw new Error('Not implemented')
+          }
+        }
+      })
+
+      // Register custom endpoints
+      registerCustomEndpoints()
+
+      // Initial load
+      refreshCharts()
+    }
+  }
+
+  const emitChartDelta = (chartId, chartValue) => {
+    try {
+      app.handleMessage(
+        plugin.id,
+        {
+          updates: [{
+            values: [{
+              path: `resources.charts.${chartId}`,
+              value: chartValue
+            }]
+          }]
+        },
+        skVersion
+      )
+      app.debug(`Delta emitted for chart: ${chartId}`)
+    } catch (error) {
+      app.error(`Failed to emit delta: ${error.message}`)
+    }
+  }
+
+  const refreshCharts = async () => {
+    try {
+      const charts = await loadChartsFromDisk()
+      chartCache = charts
+      app.debug(`Charts refreshed: ${Object.keys(chartCache).length} charts`)
+    } catch (error) {
+      app.error(`Failed to refresh charts: ${error.message}`)
+    }
+  }
+
+  const registerCustomEndpoints = () => {
+    // Upload endpoint
+    app.post('/charts/upload', async (req, res) => {
+      try {
+        const chartId = await saveUploadedChart(req)
+
+        await refreshCharts()
+
+        if (chartCache[chartId]) {
+          emitChartDelta(chartId, chartCache[chartId])
+        }
+
+        res.json({ success: true, id: chartId })
+      } catch (error) {
+        res.status(500).json({ error: error.message })
+      }
+    })
+
+    // Delete endpoint
+    app.delete('/charts/:id', async (req, res) => {
+      try {
+        await deleteChartFromDisk(req.params.id)
+
+        await refreshCharts()
+
+        emitChartDelta(req.params.id, null)
+
+        res.send('Chart deleted successfully')
+      } catch (error) {
+        res.status(500).send(error.message)
+      }
+    })
+  }
+
+  return plugin
+}
+```
+
+### Client Subscription
+
+Clients can subscribe to resource changes via WebSocket:
+
+```javascript
+{
+  "context": "resources.*",
+  "subscribe": [
+    {
+      "path": "charts.*",
+      "policy": "instant"
+    }
+  ]
+}
+```
+
+When resources change, clients receive delta messages:
+
+```json
+{
+  "context": "resources",
+  "updates": [{
+    "values": [{
+      "path": "charts.myChart",
+      "value": {
+        "name": "My Chart",
+        "description": "Chart description",
+        ...
+      }
+    }]
+  }]
+}
+```
+
+For deletions, `value` is `null`:
+
+```json
+{
+  "context": "resources",
+  "updates": [{
+    "values": [{
+      "path": "charts.myChart",
+      "value": null
+    }]
+  }]
+}
+```
+
+### Best Practices
+
+1. **Always refresh in-memory state** - Delta notifications work with WebSocket clients, but REST API clients still poll endpoints. Keep your cache current.
+
+2. **Use simple resource IDs** - Resource identifiers should be simple strings (e.g., filename without extension), not full paths.
+
+3. **Emit null for deletions** - Clients interpret `value: null` as resource removal.
+
+4. **Fire-and-forget deltas** - No need to wait for delta emission; it's asynchronous.
+
+5. **Handle errors gracefully** - Wrap delta emission in try-catch to prevent failures from affecting the main operation.
+
+### Reference Implementation
+
+The [signalk-charts-provider-simple](https://github.com/SignalK/signalk-charts-provider-simple) plugin provides a complete working example of this pattern, including:
+
+- Delta emission for upload, delete, move, rename, and toggle operations
+- In-memory cache refresh after all modifications
+- Event-based delta emission (download completion)
+- Real-time updates for Freeboard SK and other clients
+
+This implementation demonstrates best practices and has been verified to work in production.
