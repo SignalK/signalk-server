@@ -203,10 +203,9 @@ With delta notifications:
 
 Emit delta notifications after:
 
-1. **Upload** - New resource added
-2. **Delete** - Resource removed
-3. **Modify** - Resource updated (rename, move, etc.)
-4. **Toggle** - Resource enabled/disabled
+1. **Create** - New resource added (via upload, file copy, download, etc.)
+2. **Update** - Resource modified (rename, move, enable/disable, etc.)
+3. **Delete** - Resource removed
 
 > [!IMPORTANT]
 > Providers must also **refresh their in-memory resource list** after changes so that REST API endpoints (`listResources`, `getResource`) return current data.
@@ -226,7 +225,7 @@ app.handleMessage(
       }]
     }]
   },
-  skVersion  // 1 or 2
+  2  // Signal K v2 - resources should not be in full model cache
 )
 ```
 
@@ -247,7 +246,7 @@ const emitResourceDelta = (resourceType, resourceId, resourceValue) => {
           }]
         }]
       },
-      skVersion
+      2  // Signal K v2 - resources should not be in full model cache
     )
     app.debug(`Delta emitted for ${resourceType}: ${resourceId}`)
   } catch (error) {
@@ -272,7 +271,7 @@ const refreshResources = async () => {
 
 **3. Emit After Operations**
 
-**Upload:**
+**Create (e.g., upload, import):**
 ```javascript
 app.post('/upload', async (req, res) => {
   // Save resource to storage
@@ -284,6 +283,24 @@ app.post('/upload', async (req, res) => {
   // Emit delta notification
   if (resourceCache[id]) {
     emitResourceDelta('charts', id, resourceCache[id])
+  }
+
+  res.json({ success: true })
+})
+```
+
+**Update (e.g., rename, move, enable/disable):**
+```javascript
+app.put('/resources/:id', async (req, res) => {
+  // Update in storage
+  await updateResource(req.params.id, req.body)
+
+  // Refresh in-memory cache
+  await refreshResources()
+
+  // Emit updated resource data
+  if (resourceCache[req.params.id]) {
+    emitResourceDelta('charts', req.params.id, resourceCache[req.params.id])
   }
 
   res.json({ success: true })
@@ -306,24 +323,6 @@ app.delete('/resources/:id', async (req, res) => {
 })
 ```
 
-**Modify:**
-```javascript
-app.put('/resources/:id', async (req, res) => {
-  // Update in storage
-  await updateResource(req.params.id, req.body)
-
-  // Refresh in-memory cache
-  await refreshResources()
-
-  // Emit updated resource data
-  if (resourceCache[req.params.id]) {
-    emitResourceDelta('charts', req.params.id, resourceCache[req.params.id])
-  }
-
-  res.json({ success: true })
-})
-```
-
 ### Example: Complete Implementation
 
 This example shows a chart provider plugin that emits deltas for all operations:
@@ -331,8 +330,6 @@ This example shows a chart provider plugin that emits deltas for all operations:
 ```javascript
 module.exports = function (app) {
   let chartCache = {}
-  const skVersion = app.config.version ?
-    parseInt(app.config.version.split('.')[0]) : 1
 
   const plugin = {
     id: 'my-charts-provider',
@@ -379,7 +376,7 @@ module.exports = function (app) {
             }]
           }]
         },
-        skVersion
+        2  // Signal K v2 - resources should not be in full model cache
       )
       app.debug(`Delta emitted for chart: ${chartId}`)
     } catch (error) {
@@ -398,7 +395,7 @@ module.exports = function (app) {
   }
 
   const registerCustomEndpoints = () => {
-    // Upload endpoint
+    // Create endpoint (upload)
     app.post('/charts/upload', async (req, res) => {
       try {
         const chartId = await saveUploadedChart(req)
@@ -499,7 +496,7 @@ For deletions, `value` is `null`:
 
 The [signalk-charts-provider-simple](https://github.com/SignalK/signalk-charts-provider-simple) plugin provides a complete working example of this pattern, including:
 
-- Delta emission for upload, delete, move, rename, and toggle operations
+- Delta emission for create, update, and delete operations
 - In-memory cache refresh after all modifications
 - Event-based delta emission (download completion)
 - Real-time updates for Freeboard SK and other clients
