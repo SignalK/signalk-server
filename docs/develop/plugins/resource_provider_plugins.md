@@ -377,7 +377,7 @@ For deletions, `value` is `null`:
 
 ### Reference Implementation
 
-The [signalk-charts-provider-simple](https://github.com/SignalK/signalk-charts-provider-simple) plugin provides a complete working example of this pattern, including:
+The [signalk-charts-provider-simple](https://github.com/dirkwa/signalk-charts-provider-simple) plugin provides a complete working example of this pattern, including:
 
 - Delta emission for create, update, and delete operations
 - In-memory cache refresh after all modifications
