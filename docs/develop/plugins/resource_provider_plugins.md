@@ -186,9 +186,6 @@ Emit delta notifications after:
 2. **Update** - Resource modified (rename, move, enable/disable, etc.)
 3. **Delete** - Resource removed
 
-> [!IMPORTANT]
-> Providers must also **refresh their in-memory resource list** after changes so that REST API endpoints (`listResources`, `getResource`) return current data.
-
 ### Delta Message Format
 
 Resource deltas use the standard Signal K delta format with the resource path:
