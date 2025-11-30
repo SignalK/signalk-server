@@ -30,14 +30,14 @@ HTTP GET 'http://hostname:3000/signalk/v2/api/history/values?paths=navigation.sp
 
 ### Query Parameters
 
-| Parameter | Description | Required |
-| --- | --- | --- |
-| `paths` | Comma separated list of Signal K paths whose data should be retrieved. Optional aggregation methods for each path as postfix separated by a colon. Aggregation methods: 'average' \| 'min' \| 'max' \| 'first' \| 'last' \| 'mid' \| 'middle_index'. Example: `navigation.speedOverGround,navigation.speedThroughWater:max` | Yes |
-| `context` | Signal K context that the data is about, defaults to 'vessels.self'. Example: `vessels.urn:mrn:imo:mmsi:123456789` | No |
-| `resolution` | Length of data sample time window in milliseconds or as a time expression ('1s', '1m', '1h', '1d'). If resolution is not specified the server should provide data in a reasonable time resolution, depending on the time range in the request. | No |
-| `from` | Start of the time range | No |
-| `to` | End of the time range | No |
-| `duration` | Duration of the time range | No |
+| Parameter    | Description                                                                                                                                                                                                                                                                                                                 | Required |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `paths`      | Comma separated list of Signal K paths whose data should be retrieved. Optional aggregation methods for each path as postfix separated by a colon. Aggregation methods: 'average' \| 'min' \| 'max' \| 'first' \| 'last' \| 'mid' \| 'middle_index'. Example: `navigation.speedOverGround,navigation.speedThroughWater:max` | Yes      |
+| `context`    | Signal K context that the data is about, defaults to 'vessels.self'. Example: `vessels.urn:mrn:imo:mmsi:123456789`                                                                                                                                                                                                          | No       |
+| `resolution` | Length of data sample time window in milliseconds or as a time expression ('1s', '1m', '1h', '1d'). If resolution is not specified the server should provide data in a reasonable time resolution, depending on the time range in the request.                                                                              | No       |
+| `from`       | Start of the time range                                                                                                                                                                                                                                                                                                     | No       |
+| `to`         | End of the time range                                                                                                                                                                                                                                                                                                       | No       |
+| `duration`   | Duration of the time range                                                                                                                                                                                                                                                                                                  | No       |
 
 ### Response Format
 
