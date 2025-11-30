@@ -363,25 +363,6 @@ For deletions, `value` is `null`:
 }
 ```
 
-### Best Practices
-
-1. **Always refresh in-memory state** - Delta notifications work with WebSocket clients, but REST API clients still poll endpoints. Keep your cache current.
-
-2. **Use simple resource IDs** - Resource identifiers should be simple strings (e.g., filename without extension), not full paths.
-
-3. **Emit null for deletions** - Clients interpret `value: null` as resource removal.
-
-4. **Fire-and-forget deltas** - No need to wait for delta emission; it's asynchronous.
-
-5. **Handle errors gracefully** - Wrap delta emission in try-catch to prevent failures from affecting the main operation.
-
 ### Reference Implementation
 
-The [signalk-charts-provider-simple](https://github.com/dirkwa/signalk-charts-provider-simple) plugin provides a complete working example of this pattern, including:
-
-- Delta emission for create, update, and delete operations
-- In-memory cache refresh after all modifications
-- Event-based delta emission (download completion)
-- Real-time updates for Freeboard SK and other clients
-
-This implementation demonstrates best practices and has been verified to work in production.
+The [signalk-charts-provider-simple](https://github.com/dirkwa/signalk-charts-provider-simple) plugin provides a complete working example of this pattern.
