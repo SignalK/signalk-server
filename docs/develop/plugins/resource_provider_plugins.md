@@ -182,6 +182,7 @@ module.exports = function (app) {
 While the built-in Resources API automatically emits deltas for standard operations (`POST`, `PUT`, `DELETE`), custom provider endpoints must manually emit deltas when resources are modified through custom endpoints to keep clients synchronized in real-time.
 
 Emit delta notifications after:
+
 1. **Create** - New resource added (via upload, file copy, download, etc.)
 2. **Update** - Resource modified (rename, move, enable/disable, etc.)
 3. **Delete** - Resource removed
@@ -195,17 +196,20 @@ Resource deltas use the standard Signal K delta format with the resource path.
 app.handleMessage(
   'my-provider-plugin-id',
   {
-    updates: [{
-      values: [{
-        path: 'resources.<resourceType>.<resourceId>',
-        value: resourceData  // or null for deletions
-      }]
-    }]
+    updates: [
+      {
+        values: [
+          {
+            path: 'resources.<resourceType>.<resourceId>',
+            value: resourceData // or null for deletions
+          }
+        ]
+      }
+    ]
   },
-  2  // Signal K v2 - resources should not be in full model cache
+  2 // Signal K v2 - resources should not be in full model cache
 )
 ```
-
 
 ### Example: Complete Implementation
 
@@ -286,14 +290,18 @@ module.exports = function (app) {
       app.handleMessage(
         plugin.id,
         {
-          updates: [{
-            values: [{
-              path: `resources.charts.${chartId}`,
-              value: chartValue
-            }]
-          }]
+          updates: [
+            {
+              values: [
+                {
+                  path: `resources.charts.${chartId}`,
+                  value: chartValue
+                }
+              ]
+            }
+          ]
         },
-        2  // Signal K v2 - resources should not be in full model cache
+        2 // Signal K v2 - resources should not be in full model cache
       )
       app.debug(`Delta emitted for chart: ${chartId}`)
     } catch (error) {
@@ -354,12 +362,16 @@ For deletions, `value` is `null`:
 ```json
 {
   "context": "resources",
-  "updates": [{
-    "values": [{
-      "path": "charts.myChart",
-      "value": null
-    }]
-  }]
+  "updates": [
+    {
+      "values": [
+        {
+          "path": "charts.myChart",
+          "value": null
+        }
+      ]
+    }
+  ]
 }
 ```
 
