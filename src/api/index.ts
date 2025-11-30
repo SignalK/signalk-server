@@ -6,6 +6,7 @@ import { FeaturesApi } from './discovery'
 import { ResourcesApi } from './resources'
 import { WeatherApi } from './weather'
 import { AutopilotApi } from './autopilot'
+import { HistoryApiHttpRegistry } from './history'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
 
 export interface ApiResponse {
@@ -75,12 +76,18 @@ export const startApis = (
 
   const featuresApi = new FeaturesApi(app)
 
+  const historyApiHttpRegistry = new HistoryApiHttpRegistry(app)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).historyApiHttpRegistry = historyApiHttpRegistry
+  apiList.push('history')
+
   Promise.all([
     resourcesApi.start(),
     courseApi.start(),
     weatherApi.start(),
     featuresApi.start(),
-    autopilotApi.start()
+    autopilotApi.start(),
+    historyApiHttpRegistry.start()
   ])
   return apiList
 }

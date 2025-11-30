@@ -8,6 +8,7 @@ import {
   Delta
 } from '.'
 import { CourseApi } from './course'
+import { HistoryApiRegistry, WithHistoryApi } from './history'
 import { StreamBundle } from './streambundle'
 import { SubscriptionManager } from './subscriptionmanager'
 
@@ -32,6 +33,8 @@ export interface ServerAPI
     ResourceProviderRegistry,
     AutopilotProviderRegistry,
     WeatherProviderRegistry,
+    WithHistoryApi,
+    HistoryApiRegistry,
     WithFeatures,
     CourseApi,
     SelfIdentity {

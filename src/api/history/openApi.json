@@ -39,7 +39,8 @@
             {
               "type": "string",
               "format": "duration",
-              "description": "ISO8601 Duration string"
+              "description": "ISO8601 Duration string",
+              "example": "PT15M"
             }
           ]
         }
