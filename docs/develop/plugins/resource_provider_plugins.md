@@ -206,99 +206,6 @@ app.handleMessage(
 )
 ```
 
-### Implementation Pattern
-
-**1. Create Helper Function**
-
-```javascript
-const emitResourceDelta = (resourceType, resourceId, resourceValue) => {
-  try {
-    app.handleMessage(
-      plugin.id,
-      {
-        updates: [{
-          values: [{
-            path: `resources.${resourceType}.${resourceId}`,
-            value: resourceValue  // null for deletions
-          }]
-        }]
-      },
-      2  // Signal K v2 - resources should not be in full model cache
-    )
-    app.debug(`Delta emitted for ${resourceType}: ${resourceId}`)
-  } catch (error) {
-    app.error(`Failed to emit delta: ${error.message}`)
-  }
-}
-```
-
-**2. Refresh In-Memory State**
-
-```javascript
-const refreshResources = async () => {
-  // Reload resources from storage
-  const resources = await loadResourcesFromStorage()
-
-  // Update in-memory cache
-  resourceCache = resources
-
-  app.debug(`Resources refreshed: ${Object.keys(resourceCache).length} items`)
-}
-```
-
-**3. Emit After Operations**
-
-**Create (e.g., upload, import):**
-```javascript
-app.post('/upload', async (req, res) => {
-  // Save resource to storage
-  await saveResource(id, data)
-
-  // Refresh in-memory cache
-  await refreshResources()
-
-  // Emit delta notification
-  if (resourceCache[id]) {
-    emitResourceDelta('charts', id, resourceCache[id])
-  }
-
-  res.json({ success: true })
-})
-```
-
-**Update (e.g., rename, move, enable/disable):**
-```javascript
-app.put('/resources/:id', async (req, res) => {
-  // Update in storage
-  await updateResource(req.params.id, req.body)
-
-  // Refresh in-memory cache
-  await refreshResources()
-
-  // Emit updated resource data
-  if (resourceCache[req.params.id]) {
-    emitResourceDelta('charts', req.params.id, resourceCache[req.params.id])
-  }
-
-  res.json({ success: true })
-})
-```
-
-**Delete:**
-```javascript
-app.delete('/resources/:id', async (req, res) => {
-  // Delete from storage
-  await deleteResource(req.params.id)
-
-  // Refresh in-memory cache
-  await refreshResources()
-
-  // Emit null to signal deletion
-  emitResourceDelta('charts', req.params.id, null)
-
-  res.send('Resource deleted successfully')
-})
-```
 
 ### Example: Complete Implementation
 
@@ -338,6 +245,39 @@ module.exports = function (app) {
 
       // Initial load
       refreshCharts()
+    },
+
+    registerWithRouter: (router) => {
+      router.post('/charts/upload', async (req, res) => {
+        try {
+          const chartId = await saveUploadedChart(req)
+
+          await refreshCharts()
+
+          if (chartCache[chartId]) {
+            emitChartDelta(chartId, chartCache[chartId])
+          }
+
+          res.json({ success: true, id: chartId })
+        } catch (error) {
+          res.status(500).json({ error: error.message })
+        }
+      })
+
+      // Delete endpoint
+      router.delete('/charts/:id', async (req, res) => {
+        try {
+          await deleteChartFromDisk(req.params.id)
+
+          await refreshCharts()
+
+          emitChartDelta(req.params.id, null)
+
+          res.send('Chart deleted successfully')
+        } catch (error) {
+          res.status(500).send(error.message)
+        }
+      })
     }
   }
 
@@ -369,40 +309,6 @@ module.exports = function (app) {
     } catch (error) {
       app.error(`Failed to refresh charts: ${error.message}`)
     }
-  }
-
-  const registerCustomEndpoints = () => {
-    // Create endpoint (upload)
-    app.post('/charts/upload', async (req, res) => {
-      try {
-        const chartId = await saveUploadedChart(req)
-
-        await refreshCharts()
-
-        if (chartCache[chartId]) {
-          emitChartDelta(chartId, chartCache[chartId])
-        }
-
-        res.json({ success: true, id: chartId })
-      } catch (error) {
-        res.status(500).json({ error: error.message })
-      }
-    })
-
-    // Delete endpoint
-    app.delete('/charts/:id', async (req, res) => {
-      try {
-        await deleteChartFromDisk(req.params.id)
-
-        await refreshCharts()
-
-        emitChartDelta(req.params.id, null)
-
-        res.send('Chart deleted successfully')
-      } catch (error) {
-        res.status(500).send(error.message)
-      }
-    })
   }
 
   return plugin
