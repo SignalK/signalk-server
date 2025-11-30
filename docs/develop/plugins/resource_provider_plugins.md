@@ -181,22 +181,6 @@ module.exports = function (app) {
 
 While the built-in Resources API automatically emits deltas for standard operations (`POST`, `PUT`, `DELETE`), custom provider endpoints must manually emit deltas when resources are modified through custom endpoints to keep clients synchronized in real-time.
 
-### Why Emit Deltas?
-
-Without delta notifications:
-
-- Clients must poll the REST API repeatedly to detect changes
-- Users must manually refresh applications after modifying resources
-- Server restarts may be required for changes to become visible
-- Mobile clients waste battery on unnecessary polling
-
-With delta notifications:
-
-- Changes appear instantly across all connected clients
-- No polling required - updates pushed via WebSocket
-- Better user experience with real-time synchronization
-- Lower bandwidth and battery consumption
-
 ### When to Emit Deltas
 
 Emit delta notifications after:
