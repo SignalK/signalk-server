@@ -177,11 +177,9 @@ module.exports = function (app) {
 }
 ```
 
----
+## Delta Notifications for Internal Resource Changes
 
-## Delta Notifications for Resource Changes
-
-Resource provider plugins should emit delta notifications when resources are modified through custom endpoints to keep clients synchronized in real-time. While the built-in Resources API automatically emits deltas for standard operations (`POST`, `PUT`, `DELETE`), custom provider endpoints must manually emit deltas.
+While the built-in Resources API automatically emits deltas for standard operations (`POST`, `PUT`, `DELETE`), custom provider endpoints must manually emit deltas when resources are modified through custom endpoints to keep clients synchronized in real-time.
 
 ### Why Emit Deltas?
 
