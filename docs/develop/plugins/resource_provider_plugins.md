@@ -188,7 +188,8 @@ Emit delta notifications after:
 
 ### Delta Message Format
 
-Resource deltas use the standard Signal K delta format with the resource path:
+Resource deltas use the standard Signal K delta format with the resource path.
+**Target version 2 data structure**.
 
 ```javascript
 app.handleMessage(
