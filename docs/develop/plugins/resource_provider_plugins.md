@@ -176,3 +176,193 @@ module.exports = function (app) {
   }
 }
 ```
+
+## Delta Notifications for Internal Resource Changes
+
+While the built-in Resources API automatically emits deltas for standard operations (`POST`, `PUT`, `DELETE`), custom provider endpoints must manually emit deltas when resources are modified through custom endpoints to keep clients synchronized in real-time.
+
+Emit delta notifications after:
+1. **Create** - New resource added (via upload, file copy, download, etc.)
+2. **Update** - Resource modified (rename, move, enable/disable, etc.)
+3. **Delete** - Resource removed
+
+### Delta Message Format
+
+Resource deltas use the standard Signal K delta format with the resource path.
+**Target version 2 data structure**.
+
+```javascript
+app.handleMessage(
+  'my-provider-plugin-id',
+  {
+    updates: [{
+      values: [{
+        path: 'resources.<resourceType>.<resourceId>',
+        value: resourceData  // or null for deletions
+      }]
+    }]
+  },
+  2  // Signal K v2 - resources should not be in full model cache
+)
+```
+
+
+### Example: Complete Implementation
+
+This example shows a chart provider plugin that emits deltas for all operations:
+
+```javascript
+module.exports = function (app) {
+  let chartCache = {}
+
+  const plugin = {
+    id: 'my-charts-provider',
+    name: 'My Charts Provider',
+
+    start: (options) => {
+      // Register as resource provider
+      app.registerResourceProvider({
+        type: 'charts',
+        methods: {
+          listResources: () => Promise.resolve(chartCache),
+          getResource: (id) => {
+            if (chartCache[id]) {
+              return Promise.resolve(chartCache[id])
+            }
+            throw new Error('Chart not found')
+          },
+          setResource: (id, value) => {
+            throw new Error('Not implemented')
+          },
+          deleteResource: (id) => {
+            throw new Error('Not implemented')
+          }
+        }
+      })
+
+      // Register custom endpoints
+      registerCustomEndpoints()
+
+      // Initial load
+      refreshCharts()
+    },
+
+    registerWithRouter: (router) => {
+      router.post('/charts/upload', async (req, res) => {
+        try {
+          const chartId = await saveUploadedChart(req)
+
+          await refreshCharts()
+
+          if (chartCache[chartId]) {
+            emitChartDelta(chartId, chartCache[chartId])
+          }
+
+          res.json({ success: true, id: chartId })
+        } catch (error) {
+          res.status(500).json({ error: error.message })
+        }
+      })
+
+      // Delete endpoint
+      router.delete('/charts/:id', async (req, res) => {
+        try {
+          await deleteChartFromDisk(req.params.id)
+
+          await refreshCharts()
+
+          emitChartDelta(req.params.id, null)
+
+          res.send('Chart deleted successfully')
+        } catch (error) {
+          res.status(500).send(error.message)
+        }
+      })
+    }
+  }
+
+  const emitChartDelta = (chartId, chartValue) => {
+    try {
+      app.handleMessage(
+        plugin.id,
+        {
+          updates: [{
+            values: [{
+              path: `resources.charts.${chartId}`,
+              value: chartValue
+            }]
+          }]
+        },
+        2  // Signal K v2 - resources should not be in full model cache
+      )
+      app.debug(`Delta emitted for chart: ${chartId}`)
+    } catch (error) {
+      app.error(`Failed to emit delta: ${error.message}`)
+    }
+  }
+
+  const refreshCharts = async () => {
+    try {
+      const charts = await loadChartsFromDisk()
+      chartCache = charts
+      app.debug(`Charts refreshed: ${Object.keys(chartCache).length} charts`)
+    } catch (error) {
+      app.error(`Failed to refresh charts: ${error.message}`)
+    }
+  }
+
+  return plugin
+}
+```
+
+### Client Subscription
+
+Clients can subscribe to resource changes via WebSocket:
+
+```javascript
+{
+  "context": "resources.*",
+  "subscribe": [
+    {
+      "path": "charts.*",
+      "policy": "instant"
+    }
+  ]
+}
+```
+
+When resources change, clients receive delta messages:
+
+```json
+{
+  "context": "resources",
+  "updates": [{
+    "values": [{
+      "path": "charts.myChart",
+      "value": {
+        "name": "My Chart",
+        "description": "Chart description",
+        ...
+      }
+    }]
+  }]
+}
+```
+
+For deletions, `value` is `null`:
+
+```json
+{
+  "context": "resources",
+  "updates": [{
+    "values": [{
+      "path": "charts.myChart",
+      "value": null
+    }]
+  }]
+}
+```
+
+### Reference Implementation
+
+The [signalk-charts-provider-simple](https://github.com/dirkwa/signalk-charts-provider-simple) plugin provides a complete working example of this pattern.
