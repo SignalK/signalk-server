@@ -57,6 +57,11 @@
   "alwaysCreateEntryPointModule": true,
   "theme": "signalk",
   "plugin": ["@signalk/typedoc-signalk-theme", "typedoc-plugin-mdn-links"],
+  "externalSymbolLinkMappings": {
+    "@js-temporal/polyfill": {
+      "Temporal.Duration": "https://tc39.es/proposal-temporal/docs/duration.html"
+    }
+  },
   "lightHighlightTheme": "github-light-default",
   "darkHighlightTheme": "github-dark-dimmed",
   "highlightLanguages": [
