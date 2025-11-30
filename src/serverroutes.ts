@@ -68,7 +68,8 @@ interface ScriptsApp {
 }
 
 interface App
-  extends ScriptsApp,
+  extends
+    ScriptsApp,
     WithSecurityStrategy,
     ConfigApp,
     IRouter,

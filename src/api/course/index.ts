@@ -58,7 +58,8 @@ export const COURSE_API_INITIAL_DELTA_COUNT =
   COURSE_API_V1_DELTA_COUNT * 2 + COURSE_API_V2_DELTA_COUNT
 
 export interface CourseApplication
-  extends IRouter,
+  extends
+    IRouter,
     ConfigApp,
     WithConfig,
     WithSecurityStrategy,

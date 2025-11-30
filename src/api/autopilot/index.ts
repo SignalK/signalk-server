@@ -27,9 +27,7 @@ const AUTOPILOT_API_PATH = `/signalk/v2/api/vessels/self/autopilots`
 const DEFAULTIDPATH = '_default'
 
 interface AutopilotApplication
-  extends WithSecurityStrategy,
-    SignalKMessageHub,
-    IRouter {}
+  extends WithSecurityStrategy, SignalKMessageHub, IRouter {}
 
 interface AutopilotList {
   [id: string]: { provider: string; isDefault: boolean }
