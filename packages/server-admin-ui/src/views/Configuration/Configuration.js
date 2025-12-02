@@ -585,10 +585,10 @@ class PluginConfigCard extends Component {
                         formSubmitBtn.click()
                       }
                     }}
-                    style={{ minWidth: '100px' }}
+                    style={{ minWidth: '140px' }}
                   >
                     <i className="fa fa-save" style={{ marginRight: '8px' }}></i>
-                    Submit
+                    Save Configuration
                   </button>
                 </div>
               </div>
