@@ -32,6 +32,7 @@ export default class PluginConfigurationList extends Component {
     this.handleSearch = this.handleSearch.bind(this)
     this.handleStatusFilter = this.handleStatusFilter.bind(this)
     this.selectPlugin = this.selectPlugin.bind(this)
+    this.handlePluginClick = this.handlePluginClick.bind(this)
   }
 
   searchPlugins(plugins, searchString) {
@@ -73,6 +74,7 @@ export default class PluginConfigurationList extends Component {
   }
 
   getFilteredPlugins() {
+    // Temporarily disable caching to see if it's causing re-renders
     let filtered = this.state.plugins
 
     // Apply status filter
@@ -98,24 +100,53 @@ export default class PluginConfigurationList extends Component {
     localStorage.setItem(statusFilterStorageKey, statusFilter)
   }
 
+  handlePluginClick(event) {
+    const pluginId = event.currentTarget.getAttribute('data-plugin-id')
+    const plugin = this.state.plugins.find(p => p.id === pluginId)
+    
+    if (plugin) {
+      const currentlySelected = this.state.selectedPlugin && this.state.selectedPlugin.id === plugin.id
+      this.selectPlugin(currentlySelected ? null : plugin)
+    }
+  }
+
   selectPlugin(plugin) {
     const selectedPluginId = plugin ? plugin.id : null
-    const openedPluginId =
-      this.props.match.params.pluginid === selectedPluginId
-        ? '-'
-        : selectedPluginId || '-'
 
-    if (
-      selectedPluginId &&
-      this.props.match.params.pluginid !== selectedPluginId
-    ) {
+    // Update localStorage and state only - keep URL static for best performance
+    if (selectedPluginId) {
       localStorage.setItem(openPluginStorageKey, selectedPluginId)
       this.setState({ selectedPlugin: plugin })
     } else {
       localStorage.removeItem(openPluginStorageKey)
       this.setState({ selectedPlugin: null })
     }
-    this.props.history.replace(`/serverConfiguration/plugins/${openedPluginId}`)
+  }
+
+  scrollToSelectedPlugin(selectedPluginId) {
+    if (!this.tableContainer || !selectedPluginId) return
+    
+    // Use a more efficient approach that doesn't cause re-renders
+    const selectedRow = this.tableContainer.querySelector(`[data-plugin-id="${selectedPluginId}"]`)
+    if (!selectedRow) return
+    
+    const containerRect = this.tableContainer.getBoundingClientRect()
+    const rowRect = selectedRow.getBoundingClientRect()
+    
+    // Check if the row is outside the visible area
+    if (rowRect.bottom > containerRect.bottom || rowRect.top < containerRect.top) {
+      // Calculate the scroll position to center the selected row
+      const rowOffsetTop = selectedRow.offsetTop
+      const containerHeight = this.tableContainer.clientHeight
+      const rowHeight = selectedRow.clientHeight
+      
+      const targetScrollTop = rowOffsetTop - (containerHeight / 2) + (rowHeight / 2)
+      
+      this.tableContainer.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: 'smooth'
+      })
+    }
   }
 
   componentDidMount() {
@@ -140,6 +171,13 @@ export default class PluginConfigurationList extends Component {
         }
 
         this.setState({ plugins, selectedPlugin })
+        
+        // Scroll to the initially selected plugin if one exists (from URL/bookmark)
+        if (selectedPlugin) {
+          requestAnimationFrame(() => {
+            this.scrollToSelectedPlugin(selectedPlugin.id)
+          })
+        }
       })
       .catch((error) => {
         console.error(error)
@@ -149,7 +187,7 @@ export default class PluginConfigurationList extends Component {
 
   render() {
     const pluginList = this.getFilteredPlugins()
-    const selectedPluginId = this.props.match.params.pluginid
+    const selectedPluginId = this.state.selectedPlugin ? this.state.selectedPlugin.id : null
 
     return (
       <div>
@@ -203,6 +241,7 @@ export default class PluginConfigurationList extends Component {
             </Form>
 
             <div
+              ref={(container) => { this.tableContainer = container }}
               style={{
                 maxHeight: '400px',
                 overflowY: 'auto',
@@ -233,7 +272,7 @@ export default class PluginConfigurationList extends Component {
                   </tr>
                 </thead>
                 <tbody>
-                  {pluginList.map((plugin, i) => {
+                  {pluginList.map((plugin) => {
                     const isSelected = selectedPluginId === plugin.id
                     const configurationRequired =
                       plugin.schema &&
@@ -243,10 +282,9 @@ export default class PluginConfigurationList extends Component {
 
                     return (
                       <tr
-                        key={i}
-                        onClick={() =>
-                          this.selectPlugin(isSelected ? null : plugin)
-                        }
+                        key={plugin.id}
+                        data-plugin-id={plugin.id}
+                        onClick={this.handlePluginClick}
                         style={{ cursor: 'pointer' }}
                         className={isSelected ? 'table-active' : ''}
                       >
