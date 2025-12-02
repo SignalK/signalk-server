@@ -286,10 +286,9 @@ export default class PluginConfigurationList extends Component {
                   }}
                 >
                   <tr>
-                    <th style={{ width: '25%' }}>Plugin Name</th>
-                    <th style={{ width: '25%' }}>Package Name</th>
-                    <th style={{ width: '35%' }}>Description</th>
-                    <th style={{ width: '15%' }}>Status</th>
+                    <th style={{ width: '35%' }}>Plugin Name</th>
+                    <th style={{ width: '20%' }}>Status</th>
+                    <th style={{ width: '45%' }}>Description</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -313,16 +312,6 @@ export default class PluginConfigurationList extends Component {
                           <strong>{plugin.name}</strong>
                         </td>
                         <td>
-                          <small className="text-muted">
-                            {plugin.packageName}
-                          </small>
-                        </td>
-                        <td>
-                          <small>
-                            {plugin.description || 'No description available'}
-                          </small>
-                        </td>
-                        <td>
                           {configurationRequired ? (
                             <div className="badge badge-warning">
                               <i className="fa fa-exclamation-triangle"></i>{' '}
@@ -337,6 +326,11 @@ export default class PluginConfigurationList extends Component {
                               </div>
                             </div>
                           )}
+                        </td>
+                        <td>
+                          <small>
+                            {plugin.description || 'No description available'}
+                          </small>
                         </td>
                       </tr>
                     )
