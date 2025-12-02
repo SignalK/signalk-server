@@ -286,9 +286,10 @@ export default class PluginConfigurationList extends Component {
                   }}
                 >
                   <tr>
-                    <th style={{ width: '35%' }}>Plugin Name</th>
-                    <th style={{ width: '20%' }}>Status</th>
-                    <th style={{ width: '45%' }}>Description</th>
+                    <th style={{ width: '30%' }}>Plugin Name</th>
+                    <th style={{ width: '10%' }}>Status</th>
+                    <th style={{ width: '55%' }}>Description</th>
+                    <th style={{ width: '5%' }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -331,6 +332,13 @@ export default class PluginConfigurationList extends Component {
                           <small>
                             {plugin.description || 'No description available'}
                           </small>
+                        </td>
+                        <td className="text-center">
+                          <i 
+                            className="fa fa-cog text-muted" 
+                            style={{ fontSize: '16px' }}
+                            title="Click to configure"
+                          ></i>
                         </td>
                       </tr>
                     )
