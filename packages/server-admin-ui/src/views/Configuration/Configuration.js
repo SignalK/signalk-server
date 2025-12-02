@@ -16,6 +16,7 @@ import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
 
 const searchStorageKey = 'admin.v1.plugins.search'
 const openPluginStorageKey = 'admin.v1.plugins.openPlugin'
+const statusFilterStorageKey = 'admin.v1.plugins.statusFilter'
 
 export default class PluginConfigurationList extends Component {
   constructor(props) {
@@ -23,11 +24,13 @@ export default class PluginConfigurationList extends Component {
     this.state = {
       plugins: [],
       search: localStorage.getItem(searchStorageKey) || '',
+      statusFilter: localStorage.getItem(statusFilterStorageKey) || 'all',
       searchResults: null,
       selectedPlugin: null
     }
     this.lastOpenedPlugin = '--'
     this.handleSearch = this.handleSearch.bind(this)
+    this.handleStatusFilter = this.handleStatusFilter.bind(this)
     this.selectPlugin = this.selectPlugin.bind(this)
   }
 
@@ -44,15 +47,55 @@ export default class PluginConfigurationList extends Component {
     })
   }
 
-  handleSearch(event) {
-    let searchResults = null
-    const search = event.target.value
-    if (search.length !== 0) {
-      searchResults = this.searchPlugins(this.state.plugins, search)
+  filterPluginsByStatus(plugins, statusFilter) {
+    if (statusFilter === 'all') {
+      return plugins
     }
 
-    this.setState({ search, searchResults })
-    localStorage.setItem(searchStorageKey, event.target.value)
+    return plugins.filter((plugin) => {
+      const configurationRequired =
+        plugin.schema &&
+        plugin.schema.properties &&
+        Object.keys(plugin.schema?.properties).length != 0 &&
+        plugin.data.configuration == null
+
+      switch (statusFilter) {
+        case 'enabled':
+          return !configurationRequired && plugin.data.enabled
+        case 'disabled':
+          return !configurationRequired && !plugin.data.enabled
+        case 'config-required':
+          return configurationRequired
+        default:
+          return true
+      }
+    })
+  }
+
+  getFilteredPlugins() {
+    let filtered = this.state.plugins
+
+    // Apply status filter
+    filtered = this.filterPluginsByStatus(filtered, this.state.statusFilter)
+
+    // Apply search filter
+    if (this.state.search.length > 0) {
+      filtered = this.searchPlugins(filtered, this.state.search)
+    }
+
+    return filtered
+  }
+
+  handleSearch(event) {
+    const search = event.target.value
+    this.setState({ search })
+    localStorage.setItem(searchStorageKey, search)
+  }
+
+  handleStatusFilter(event) {
+    const statusFilter = event.target.value
+    this.setState({ statusFilter })
+    localStorage.setItem(statusFilterStorageKey, statusFilter)
   }
 
   selectPlugin(plugin) {
@@ -87,11 +130,6 @@ export default class PluginConfigurationList extends Component {
         }
       })
       .then((plugins) => {
-        let searchResults
-        if (this.state.search.length > 0) {
-          searchResults = this.searchPlugins(plugins, this.state.search)
-        }
-
         // Set initial selected plugin from URL
         const currentPluginId = this.props.match.params.pluginid
         let selectedPlugin = null
@@ -101,7 +139,7 @@ export default class PluginConfigurationList extends Component {
           )
         }
 
-        this.setState({ plugins, searchResults, selectedPlugin })
+        this.setState({ plugins, selectedPlugin })
       })
       .catch((error) => {
         console.error(error)
@@ -110,7 +148,7 @@ export default class PluginConfigurationList extends Component {
   }
 
   render() {
-    const pluginList = this.state.searchResults || this.state.plugins
+    const pluginList = this.getFilteredPlugins()
     const selectedPluginId = this.props.match.params.pluginid
 
     return (
@@ -132,15 +170,34 @@ export default class PluginConfigurationList extends Component {
             >
               <FormGroup row>
                 <Col xs="3" md="1" className={'col-form-label'}>
-                  <Label htmlFor="select">Search</Label>
+                  <Label htmlFor="search">Search</Label>
                 </Col>
                 <Col xs="12" md="4">
                   <Input
                     type="text"
                     name="search"
+                    id="search"
                     onChange={this.handleSearch}
                     value={this.state.search}
+                    placeholder="Search plugins..."
                   />
+                </Col>
+                <Col xs="3" md="2" className={'col-form-label'}>
+                  <Label htmlFor="statusFilter">Filter by Status</Label>
+                </Col>
+                <Col xs="12" md="3">
+                  <Input
+                    type="select"
+                    name="statusFilter"
+                    id="statusFilter"
+                    onChange={this.handleStatusFilter}
+                    value={this.state.statusFilter}
+                  >
+                    <option value="all">All Plugins</option>
+                    <option value="enabled">Enabled</option>
+                    <option value="disabled">Disabled</option>
+                    <option value="config-required">Config Required</option>
+                  </Input>
                 </Col>
               </FormGroup>
             </Form>
