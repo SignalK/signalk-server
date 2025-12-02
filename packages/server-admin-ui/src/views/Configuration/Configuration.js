@@ -547,19 +547,51 @@ class PluginConfigCard extends Component {
           </CardHeader>
           <CardBody>
             {!this.props.isConfigurator && (
-              <PluginConfigurationForm
-                plugin={this.props.plugin}
-                onSubmit={(data) => {
-                  this.props
-                    .saveData(data)
-                    .then(() => {
-                      this.showSuccessMessage()
-                    })
-                    .catch(() => {
-                      // Error is already handled in saveData with alert
-                    })
-                }}
-              />
+              <div>
+                <PluginConfigurationForm
+                  plugin={this.props.plugin}
+                  onSubmit={(data) => {
+                    this.props
+                      .saveData(data)
+                      .then(() => {
+                        this.showSuccessMessage()
+                      })
+                      .catch(() => {
+                        // Error is already handled in saveData with alert
+                      })
+                  }}
+                />
+                {/* Sticky submit button */}
+                <div
+                  style={{
+                    position: 'fixed',
+                    bottom: '20px',
+                    right: '20px',
+                    zIndex: 1000,
+                    backgroundColor: '#fff',
+                    padding: '10px',
+                    borderRadius: '5px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                    border: '1px solid #dee2e6'
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => {
+                      // Find and trigger the form's submit button
+                      const formSubmitBtn = document.querySelector('.plugin-config-card form button[type="submit"]')
+                      if (formSubmitBtn) {
+                        formSubmitBtn.click()
+                      }
+                    }}
+                    style={{ minWidth: '100px' }}
+                  >
+                    <i className="fa fa-save" style={{ marginRight: '8px' }}></i>
+                    Submit
+                  </button>
+                </div>
+              </div>
             )}
             {this.props.isConfigurator && (
               <EmbeddedPluginConfigurationForm {...this.props} />
