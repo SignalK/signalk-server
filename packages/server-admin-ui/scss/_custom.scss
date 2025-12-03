@@ -1,22 +1,98 @@
 // Here you can add other styles
 
-form.rjsf label {
-  margin-bottom: 0;
+// RJSF Form Styling
+
+// Mixin for button state variants to reduce duplication
+@mixin button-variant(
+  $bg-color,
+  $border-color,
+  $hover-bg,
+  $hover-border,
+  $shadow-color
+) {
+  background-color: $bg-color !important;
+  border-color: $border-color !important;
+  color: white !important;
+
+  &:hover {
+    background-color: $hover-bg !important;
+    border-color: $hover-border !important;
+  }
+
+  &:focus {
+    background-color: $hover-bg !important;
+    border-color: $hover-border !important;
+    box-shadow: 0 0 0 0.2rem $shadow-color !important;
+  }
 }
 
-form.rjsf div > p.field-description {
-  font-size: 0.7rem;
-  font-style: italic;
-  margin-bottom: 0px;
-}
+form.rjsf {
+  // General form element styling
+  label {
+    margin-bottom: 0;
+  }
 
-form.rjsf input {
-  width: auto;
-}
+  div > p.field-description {
+    font-size: 0.7rem;
+    font-style: italic;
+    margin-bottom: 0px;
+  }
 
-form.rjsf div.row.array-item {
-  background-color: aliceblue;
-  margin-bottom: 3px;
+  input {
+    width: auto;
+  }
+
+  div.row.array-item {
+    background-color: aliceblue;
+    margin-bottom: 3px;
+  }
+
+  // Custom button styling for RJSF buttons to match original appearance
+
+  // Add button styling - cyan color
+  button.btn-add,
+  button.array-item-add button {
+    @include button-variant(
+      #20a8d8,
+      // background
+      #20a8d8,
+      // border
+      #1985ac,
+      // hover background
+      #1985ac,
+      // hover border
+      rgba(32, 168, 216, 0.5) // focus shadow
+    );
+  }
+
+  // Remove button styling - red color
+  button.array-item-remove {
+    @include button-variant(
+      #f86c6b,
+      // background
+      #f86c6b,
+      // border
+      #f63c3a,
+      // hover background
+      #f63c3a,
+      // hover border
+      rgba(248, 108, 107, 0.5) // focus shadow
+    );
+  }
+
+  // Array button styling
+  .array-button-style {
+    flex: 1 1 0%;
+    padding-left: 6px;
+    padding-right: 6px;
+    font-weight: bold;
+  }
+
+  // Button group flexbox layout
+  .btn-group-flex {
+    display: flex;
+    justify-content: space-around;
+  }
 }
 
 @media (max-width: 767px) {

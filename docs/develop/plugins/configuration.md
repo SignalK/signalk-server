@@ -33,7 +33,7 @@ plugin.schema = {
 
 JSON Schema approach works reasonably well for simple to medium complex configuration data. The server supports also [custom plugin configuration components](../webapps.md), bypassing the automatic configuration format generation.
 
-It should ne noted that some JSON schema constructs are not supported. Refer ([details](https://github.com/peterkelly/react-jsonschema-form-bs4/blob/v1.7.1-bs4/docs/index.md#json-schema-supporting-status)) for details.
+It should be noted that some JSON schema constructs are not supported. Refer to the [RJSF documentation](https://rjsf-team.github.io/react-jsonschema-form/docs/) for details.
 
 The configuration data is stored by the server under the following path `$SIGNALK_NODE_CONFIG_DIR/plugin-config-data/<plugin-name>.json`. _(Default value of SIGNALK_NODE_CONFIG_DIR is $HOME/.signalk.)_
 
