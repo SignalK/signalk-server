@@ -102,10 +102,11 @@ export default class PluginConfigurationList extends Component {
 
   handlePluginClick(event) {
     const pluginId = event.currentTarget.getAttribute('data-plugin-id')
-    const plugin = this.state.plugins.find(p => p.id === pluginId)
-    
+    const plugin = this.state.plugins.find((p) => p.id === pluginId)
+
     if (plugin) {
-      const currentlySelected = this.state.selectedPlugin && this.state.selectedPlugin.id === plugin.id
+      const currentlySelected =
+        this.state.selectedPlugin && this.state.selectedPlugin.id === plugin.id
       this.selectPlugin(currentlySelected ? null : plugin)
     }
   }
@@ -136,7 +137,7 @@ export default class PluginConfigurationList extends Component {
       const headerRect = configHeader.getBoundingClientRect()
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop
       const targetPosition = headerRect.top + scrollTop - 60 // 60px offset from top of viewport
-      
+
       window.scrollTo({
         top: Math.max(0, targetPosition), // Don't scroll past the top of the page
         behavior: 'smooth'
@@ -146,23 +147,28 @@ export default class PluginConfigurationList extends Component {
 
   scrollToSelectedPlugin(selectedPluginId) {
     if (!this.tableContainer || !selectedPluginId) return
-    
+
     // Use a more efficient approach that doesn't cause re-renders
-    const selectedRow = this.tableContainer.querySelector(`[data-plugin-id="${selectedPluginId}"]`)
+    const selectedRow = this.tableContainer.querySelector(
+      `[data-plugin-id="${selectedPluginId}"]`
+    )
     if (!selectedRow) return
-    
+
     const containerRect = this.tableContainer.getBoundingClientRect()
     const rowRect = selectedRow.getBoundingClientRect()
-    
+
     // Check if the row is outside the visible area
-    if (rowRect.bottom > containerRect.bottom || rowRect.top < containerRect.top) {
+    if (
+      rowRect.bottom > containerRect.bottom ||
+      rowRect.top < containerRect.top
+    ) {
       // Calculate the scroll position to center the selected row
       const rowOffsetTop = selectedRow.offsetTop
       const containerHeight = this.tableContainer.clientHeight
       const rowHeight = selectedRow.clientHeight
-      
-      const targetScrollTop = rowOffsetTop - (containerHeight / 2) + (rowHeight / 2)
-      
+
+      const targetScrollTop = rowOffsetTop - containerHeight / 2 + rowHeight / 2
+
       this.tableContainer.scrollTo({
         top: Math.max(0, targetScrollTop),
         behavior: 'smooth'
@@ -192,7 +198,7 @@ export default class PluginConfigurationList extends Component {
         }
 
         this.setState({ plugins, selectedPlugin })
-        
+
         // Scroll to the initially selected plugin if one exists (from URL/bookmark)
         if (selectedPlugin) {
           requestAnimationFrame(() => {
@@ -208,7 +214,9 @@ export default class PluginConfigurationList extends Component {
 
   render() {
     const pluginList = this.getFilteredPlugins()
-    const selectedPluginId = this.state.selectedPlugin ? this.state.selectedPlugin.id : null
+    const selectedPluginId = this.state.selectedPlugin
+      ? this.state.selectedPlugin.id
+      : null
 
     return (
       <div>
@@ -262,7 +270,9 @@ export default class PluginConfigurationList extends Component {
             </Form>
 
             <div
-              ref={(container) => { this.tableContainer = container }}
+              ref={(container) => {
+                this.tableContainer = container
+              }}
               style={{
                 maxHeight: '400px',
                 overflowY: 'auto',
@@ -334,8 +344,8 @@ export default class PluginConfigurationList extends Component {
                           </small>
                         </td>
                         <td className="text-center">
-                          <i 
-                            className="fa fa-cog text-muted" 
+                          <i
+                            className="fa fa-cog text-muted"
                             style={{ fontSize: '16px' }}
                             title="Click to configure"
                           ></i>
@@ -582,14 +592,19 @@ class PluginConfigCard extends Component {
                     className="btn btn-primary"
                     onClick={() => {
                       // Find and trigger the form's submit button
-                      const formSubmitBtn = document.querySelector('.plugin-config-card form button[type="submit"]')
+                      const formSubmitBtn = document.querySelector(
+                        '.plugin-config-card form button[type="submit"]'
+                      )
                       if (formSubmitBtn) {
                         formSubmitBtn.click()
                       }
                     }}
                     style={{ minWidth: '140px' }}
                   >
-                    <i className="fa fa-save" style={{ marginRight: '8px' }}></i>
+                    <i
+                      className="fa fa-save"
+                      style={{ marginRight: '8px' }}
+                    ></i>
                     Save Configuration
                   </button>
                 </div>
