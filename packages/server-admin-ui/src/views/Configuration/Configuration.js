@@ -122,8 +122,6 @@ export default class PluginConfigurationList extends Component {
     }
   }
 
-
-
   scrollToSelectedPlugin(selectedPluginId) {
     if (!this.tableContainer || !selectedPluginId) return
 
