@@ -294,9 +294,8 @@ export default class PluginConfigurationList extends Component {
                 >
                   <tr>
                     <th style={{ width: '30%' }}>Plugin Name</th>
-                    <th style={{ width: '10%' }}>Status</th>
+                    <th style={{ width: '15%' }}>Status</th>
                     <th style={{ width: '55%' }}>Description</th>
-                    <th style={{ width: '5%' }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -320,25 +319,23 @@ export default class PluginConfigurationList extends Component {
                           <strong>{plugin.name}</strong>
                         </td>
                         <td>
-                          <div className="d-flex align-items-center">
+                          <div className="d-flex align-items-center justify-content-between">
                             <div
                               className={`badge ${plugin.data.enabled && !configurationRequired ? 'badge-success' : 'badge-secondary'}`}
                             >
                               {plugin.data.enabled && !configurationRequired ? 'Enabled' : 'Disabled'}
                             </div>
+                            <i
+                              className="fa fa-cog text-muted"
+                              style={{ fontSize: '16px' }}
+                              title="Click to configure"
+                            ></i>
                           </div>
                         </td>
                         <td>
                           <small>
                             {plugin.description || 'No description available'}
                           </small>
-                        </td>
-                        <td className="text-center">
-                          <i
-                            className="fa fa-cog text-muted"
-                            style={{ fontSize: '16px' }}
-                            title="Click to configure"
-                          ></i>
                         </td>
                       </tr>
                     )
