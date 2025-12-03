@@ -64,9 +64,7 @@ export default class PluginConfigurationList extends Component {
         case 'enabled':
           return !configurationRequired && plugin.data.enabled
         case 'disabled':
-          return !configurationRequired && !plugin.data.enabled
-        case 'config-required':
-          return configurationRequired
+          return configurationRequired || !plugin.data.enabled
         default:
           return true
       }
@@ -263,7 +261,6 @@ export default class PluginConfigurationList extends Component {
                     <option value="all">All Plugins</option>
                     <option value="enabled">Enabled</option>
                     <option value="disabled">Disabled</option>
-                    <option value="config-required">Config Required</option>
                   </Input>
                 </Col>
               </FormGroup>
@@ -323,20 +320,13 @@ export default class PluginConfigurationList extends Component {
                           <strong>{plugin.name}</strong>
                         </td>
                         <td>
-                          {configurationRequired ? (
-                            <div className="badge badge-warning">
-                              <i className="fa fa-exclamation-triangle"></i>{' '}
-                              Config Required
+                          <div className="d-flex align-items-center">
+                            <div
+                              className={`badge ${plugin.data.enabled && !configurationRequired ? 'badge-success' : 'badge-secondary'}`}
+                            >
+                              {plugin.data.enabled && !configurationRequired ? 'Enabled' : 'Disabled'}
                             </div>
-                          ) : (
-                            <div className="d-flex align-items-center">
-                              <div
-                                className={`badge ${plugin.data.enabled ? 'badge-success' : 'badge-secondary'}`}
-                              >
-                                {plugin.data.enabled ? 'Enabled' : 'Disabled'}
-                              </div>
-                            </div>
-                          )}
+                          </div>
                         </td>
                         <td>
                           <small>
