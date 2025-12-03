@@ -323,7 +323,9 @@ export default class PluginConfigurationList extends Component {
                             <div
                               className={`badge ${plugin.data.enabled && !configurationRequired ? 'badge-success' : 'badge-secondary'}`}
                             >
-                              {plugin.data.enabled && !configurationRequired ? 'Enabled' : 'Disabled'}
+                              {plugin.data.enabled && !configurationRequired
+                                ? 'Enabled'
+                                : 'Disabled'}
                             </div>
                             <i
                               className="fa fa-cog text-muted"
