@@ -115,33 +115,14 @@ export default class PluginConfigurationList extends Component {
     // Update localStorage and state only - keep URL static for best performance
     if (selectedPluginId) {
       localStorage.setItem(openPluginStorageKey, selectedPluginId)
-      this.setState({ selectedPlugin: plugin }, () => {
-        // Scroll to the configuration card after it's rendered
-        requestAnimationFrame(() => {
-          this.scrollToConfiguration()
-        })
-      })
+      this.setState({ selectedPlugin: plugin })
     } else {
       localStorage.removeItem(openPluginStorageKey)
       this.setState({ selectedPlugin: null })
     }
   }
 
-  scrollToConfiguration() {
-    // Find the configuration card header and scroll to show it at the top
-    const configHeader = document.querySelector('#plugin-config-header')
-    if (configHeader) {
-      // Get the header's position and scroll with offset to show it clearly
-      const headerRect = configHeader.getBoundingClientRect()
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-      const targetPosition = headerRect.top + scrollTop - 60 // 60px offset from top of viewport
 
-      window.scrollTo({
-        top: Math.max(0, targetPosition), // Don't scroll past the top of the page
-        behavior: 'smooth'
-      })
-    }
-  }
 
   scrollToSelectedPlugin(selectedPluginId) {
     if (!this.tableContainer || !selectedPluginId) return
