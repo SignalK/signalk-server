@@ -10,10 +10,12 @@ export type AggregateMethod =
   | 'mid'
   | 'middle_index'
 
-export type ValueList = {
+  export interface PathSpec {
   path: Path
-  method: AggregateMethod
-}[]
+  aggregate: AggregateMethod
+}
+
+export type ValueList = PathSpec[]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DataRow = [Timestamp, ...any[]]
@@ -189,10 +191,6 @@ export type TimeRangeParams =
       to: Temporal.Instant
     }
 
-export interface PathSpec {
-  path: Path
-  aggregate: AggregateMethod
-}
 
 export type ValuesRequest = TimeRangeParams & {
   context?: Context
