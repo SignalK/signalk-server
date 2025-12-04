@@ -1,4 +1,48 @@
 import React from 'react'
+import ReactHtmlParser from 'react-html-parser'
+
+const SimpleHTMLRenderer = ({ value, html }) => {
+  const h = html.replaceAll('{{value}}', value)
+  return <div>{ReactHtmlParser(h)}</div>
+}
+
+const LargeArrayRenderer = ({ value }) => {
+  if (!Array.isArray(value) || value.length <= 1) {
+    return <span className="text-primary">{JSON.stringify(value)}</span>
+  }
+  return (
+    <details>
+      <summary>
+        {JSON.stringify(value[0])} 1 of {value.length}
+      </summary>
+        {JSON.stringify(value)}
+    </details>
+  )
+
+}
+
+const MeterRenderer = ({ value, min=0, max=1, low=.5, high=1.01, optimum=1, pct=true, precision=2  }) => {
+  let txt= (value.toFixed(precision)).toString()
+
+  if (pct)
+      txt=(value*100).toFixed(precision)+"%"
+
+    return (
+      <div>
+        <meter
+          value={value}
+          min={min}
+          max={max}
+          low={low}
+          high={high}
+          optimum={optimum}
+        >
+          {value}%
+        </meter>
+        <span className="text-primary"> {txt}</span>
+      </div>
+    )
+}
 
 const PositionRenderer = ({ value }) => {
   if (!value || typeof value !== 'object') {
@@ -244,12 +288,18 @@ const SatellitesInViewRenderer = ({ value }) => {
   )
 }
 
-const VALUE_RENDERERS = {
-  'navigation.position': PositionRenderer,
-  'navigation.gnss.satellitesInView': SatellitesInViewRenderer
-}
 
-export const getValueRenderer = (path) => {
+
+export const getValueRenderer = (path, meta) => {
+  if (meta){
+  if (meta && meta.renderer) {
+    return Renderers[meta.renderer.name]
+  }
+  if (meta && meta.units === "ratio")
+  {
+    return MeterRenderer
+  }
+  }
   if (VALUE_RENDERERS[path]) {
     return VALUE_RENDERERS[path]
   }
@@ -280,4 +330,18 @@ export const DefaultValueRenderer = ({ value, units }) => {
       )}
     </>
   )
+}
+
+const Renderers = {
+  Position: PositionRenderer,
+  SatellitesInView: SatellitesInViewRenderer,
+  Meter: MeterRenderer,
+  SimpleHTML: SimpleHTMLRenderer,
+  LargeArray: LargeArrayRenderer
+}
+
+
+const VALUE_RENDERERS = {
+  'navigation.position': Renderers.Position,
+  'navigation.gnss.satellitesInView': Renderers.SatellitesInView
 }
