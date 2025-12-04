@@ -165,12 +165,18 @@ export default class PluginConfigurationList extends Component {
         }
       })
       .then((plugins) => {
-        // Set initial selected plugin from URL
+        // Set initial selected plugin from URL or localStorage
         const currentPluginId = this.props.match.params.pluginid
+        const lastOpenPluginId = localStorage.getItem(openPluginStorageKey)
         let selectedPlugin = null
+
         if (currentPluginId && currentPluginId !== '-') {
           selectedPlugin = plugins.find(
             (plugin) => plugin.id === currentPluginId
+          )
+        } else if (lastOpenPluginId) {
+          selectedPlugin = plugins.find(
+            (plugin) => plugin.id === lastOpenPluginId
           )
         }
 
@@ -331,7 +337,6 @@ export default class PluginConfigurationList extends Component {
           <PluginConfigCard
             plugin={this.state.selectedPlugin}
             isConfigurator={isConfigurator(this.state.selectedPlugin)}
-            history={this.props.history}
             onClose={() => this.selectPlugin(null)}
             saveData={(data) => {
               if (this.state.selectedPlugin.data.configuration === undefined) {
