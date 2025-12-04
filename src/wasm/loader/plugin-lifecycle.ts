@@ -20,6 +20,9 @@ const debug = Debug('signalk:wasm:loader')
 // Track poll timers for plugins that request periodic polling
 const pollTimers: Map<string, NodeJS.Timeout> = new Map()
 
+// Track delta subscription unsubscribe functions for plugins
+const deltaUnsubscribers: Map<string, () => void> = new Map()
+
 /**
  * Add WASM plugin webapp to the app.webapps array
  */
@@ -171,6 +174,39 @@ export async function startWasmPlugin(app: any, pluginId: string): Promise<void>
       pollTimers.set(pluginId, pollTimer)
     }
 
+    // Set up delta subscription if plugin exports delta_handler
+    if (plugin.instance?.exports?.delta_handler) {
+      debug(`Setting up delta subscription for ${pluginId}`)
+
+      // Subscribe to deltas from the server
+      if (app.signalk && typeof app.signalk.on === 'function') {
+        const deltaHandler = (delta: any) => {
+          try {
+            if (plugin.status === 'running' && plugin.instance?.exports?.delta_handler) {
+              const deltaJson = JSON.stringify(delta)
+              plugin.instance.exports.delta_handler(deltaJson)
+            }
+          } catch (deltaError) {
+            debug(`[${pluginId}] delta_handler error: ${deltaError}`)
+          }
+        }
+
+        // Subscribe to delta events
+        app.signalk.on('delta', deltaHandler)
+
+        // Store unsubscribe function
+        deltaUnsubscribers.set(pluginId, () => {
+          if (app.signalk && typeof app.signalk.removeListener === 'function') {
+            app.signalk.removeListener('delta', deltaHandler)
+          }
+        })
+
+        debug(`Delta subscription active for ${pluginId}`)
+      } else {
+        debug(`Warning: app.signalk not available for delta subscription`)
+      }
+    }
+
     debug(`Successfully started WASM plugin: ${pluginId}`)
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
@@ -206,6 +242,14 @@ export async function stopWasmPlugin(pluginId: string): Promise<void> {
       clearInterval(pollTimer)
       pollTimers.delete(pluginId)
       debug(`Stopped poll timer for ${pluginId}`)
+    }
+
+    // Unsubscribe from delta events
+    const deltaUnsubscriber = deltaUnsubscribers.get(pluginId)
+    if (deltaUnsubscriber) {
+      deltaUnsubscriber()
+      deltaUnsubscribers.delete(pluginId)
+      debug(`Stopped delta subscription for ${pluginId}`)
     }
 
     if (plugin.instance) {

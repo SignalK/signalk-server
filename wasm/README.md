@@ -2,6 +2,8 @@
 
 This directory contains the infrastructure for running WebAssembly (WASM/WASIX) plugins in Signal K Server 3.0.
 
+> For detailed implementation history and development timeline, see [IMPLEMENTATION_HISTORY.md](IMPLEMENTATION_HISTORY.md).
+
 ## Architecture
 
 The WASM plugin system runs alongside the existing Node.js plugin system in a hybrid mode:
@@ -10,7 +12,9 @@ The WASM plugin system runs alongside the existing Node.js plugin system in a hy
 
 ## Files
 
-### Core Infrastructure
+> Source files are located in `src/wasm/`. This README is in `wasm/` with other documentation.
+
+### Core Infrastructure (src/wasm/)
 
 - **`wasm-runtime.ts`** - WASM runtime management using Wasmer
   - Module loading and compilation
@@ -36,7 +40,12 @@ The WASM plugin system runs alongside the existing Node.js plugin system in a hy
   - Buffering during reload
   - Subscription state tracking
 
-### Plugin Loader (Modular Architecture)
+- **`loader/plugin-lifecycle.ts`** - Delta subscription for WASM plugins
+  - Automatic subscription when plugin exports `delta_handler`
+  - Routes all Signal K deltas to subscribed plugins
+  - Cleanup on plugin stop
+
+### Plugin Loader (src/wasm/loader/)
 
 The plugin loader has been refactored into logical modules under `loader/`:
 
@@ -155,15 +164,37 @@ await runtime.reloadPlugin('my-wasm-plugin')
 - ✅ Delta subscription manager (wasm-subscriptions.ts)
 - ✅ Integration with existing plugin system (src/interfaces/plugins.ts)
 - ✅ Server initialization (src/index.ts)
-- ✅ Network API support (fetch integration)
+- ✅ Network API support (fetch integration via as-fetch/Asyncify)
 - ✅ AssemblyScript SDK published (`signalk-assemblyscript-plugin-sdk`)
 - ✅ Example plugins (hello-assemblyscript, weather-plugin, signalk-logviewer)
 
-**Phase 2 (Code Quality) - ✅ COMPLETE**
+**Phase 2 (Extended Features) - ✅ COMPLETE**
 - ✅ Refactored loader into modular architecture (6 focused modules)
 - ✅ Fixed Plugin Config UI for disabled plugins
 - ✅ Implemented full runtime enable/disable with unload/reload
 - ✅ Added special handling for large data streams (logviewer)
+- ✅ Custom HTTP endpoints for WASM plugins
+- ✅ PUT handler registration
+- ✅ Raw UDP sockets for hardware communication (rawSockets capability)
+- ✅ Poll export for periodic plugin execution
+
+**Phase 3 (Provider APIs) - ✅ COMPLETE**
+- ✅ Resource Providers - WASM plugins can serve Signal K resources
+- ✅ Weather Providers - Integration with Weather API
+- ✅ Delta Subscriptions - WASM plugins receive real-time deltas via `delta_handler`
+- ✅ MBTiles chart serving (better-sqlite3)
+
+**Phase 4 (Language Support) - ✅ PARTIAL**
+- ✅ AssemblyScript - Full support with SDK
+- ✅ Rust - Library plugins working (anchor-watch-rust example)
+- ⏳ Go/TinyGo - Documented, not extensively tested
+- ❌ C#/.NET - Not compatible (componentize-dotnet requires Wasmtime, not V8)
+
+**Phase 5 (Testing & Documentation) - ✅ COMPLETE**
+- ✅ Regression test suite (test/wasm-plugin-regression.ts)
+- ✅ Comprehensive developer guide (wasm/WASM_PLUGIN_DEV_GUIDE.md)
+- ✅ Changelog with all changes since fork (wasm/CHANGELOG.md)
+- ✅ Example plugins for each major feature
 
 ## Architecture Benefits
 
@@ -201,17 +232,18 @@ initializeLifecycleFunctions(startWasmPlugin, stopWasmPlugin)
 
 This pattern allows `plugin-registry` to call lifecycle functions without directly importing them, breaking the circular dependency while maintaining type safety.
 
-## Next Steps
+## Future Enhancements
 
-**Phase 3 - Production Hardening:**
-1. Add comprehensive unit tests for each loader module
-2. Implement plugin dependency resolution
-3. Add plugin versioning and compatibility checks
-4. Performance profiling and optimization
-5. Security audit of capability enforcement
-6. Documentation for plugin developers
+**Post-Merge Improvements:**
+- Plugin dependency resolution
+- Plugin versioning and compatibility checks
+- Performance profiling and optimization
+- Security audit of capability enforcement
+- Complete Rust SDK with WIT bindings
+- Serial port access for NMEA devices
+- Autopilot API integration
 
-**Phase 4 - Rust Support:**
-1. Complete Rust SDK with WIT bindings
-2. Rust example plugins
-3. Cross-language testing (AS ↔ Rust)
+**Known Limitations:**
+- C#/.NET not supported (V8/jco incompatibility with componentize-dotnet)
+- Serial ports not yet implemented
+- Autopilot API not yet integrated

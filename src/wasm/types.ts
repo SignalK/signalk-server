@@ -62,6 +62,9 @@ export interface WasmPluginExports {
   // Useful for plugins that need to poll hardware, sockets, or external systems
   // Returns 0 on success, non-zero on error
   poll?: () => number
+  // Optional: Delta handler - receives Signal K deltas as JSON strings
+  // Enables plugins to react to navigation data changes, course updates, etc.
+  delta_handler?: (deltaJson: string) => void
 }
 
 /**

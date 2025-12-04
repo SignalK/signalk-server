@@ -97,6 +97,45 @@ export function createEnvImports(options: EnvImportsOptions): Record<string, any
       }
     },
 
+    // Get value from vessels.self path
+    sk_get_self_path: (pathPtr: number, pathLen: number, bufPtr: number, bufMaxLen: number): number => {
+      try {
+        const path = readUtf8String(pathPtr, pathLen)
+        debug(`[${pluginId}] getSelfPath: ${path}`)
+
+        if (!app || !app.getSelfPath) {
+          debug(`[${pluginId}] app.getSelfPath not available`)
+          return 0
+        }
+
+        const value = app.getSelfPath(path)
+        if (value === undefined || value === null) {
+          return 0
+        }
+
+        // Serialize value to JSON
+        const jsonStr = JSON.stringify(value)
+        const jsonBytes = Buffer.from(jsonStr, 'utf8')
+
+        if (jsonBytes.length > bufMaxLen) {
+          debug(`[${pluginId}] getSelfPath buffer too small: need ${jsonBytes.length}, have ${bufMaxLen}`)
+          return 0
+        }
+
+        // Write to WASM memory
+        if (memoryRef.current) {
+          const memView = new Uint8Array(memoryRef.current.buffer)
+          memView.set(jsonBytes, bufPtr)
+          return jsonBytes.length
+        }
+
+        return 0
+      } catch (error) {
+        debug(`[${pluginId}] getSelfPath error: ${error}`)
+        return 0
+      }
+    },
+
     sk_handle_message: (ptr: number, len: number) => {
       try {
         const deltaJson = readUtf8String(ptr, len)

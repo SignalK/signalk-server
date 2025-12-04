@@ -2,6 +2,64 @@
 
 All notable changes to the SignalK WASM runtime since forking from v2.18.0.
 
+## [2.19.0+beta1wasm10] - 2025-12-05
+
+### Added - Delta Subscription for WASM Plugins
+
+WASM plugins can now receive Signal K deltas in real-time by exporting a `delta_handler()` function.
+
+**Features:**
+- Automatic subscription when plugin exports `delta_handler`
+- All Signal K deltas delivered as JSON strings
+- Automatic cleanup on plugin stop
+- Support for both AssemblyScript and Rust plugins
+
+**Usage (AssemblyScript):**
+```typescript
+export function delta_handler(deltaJson: string): void {
+  // React to navigation.position updates
+  if (deltaJson.indexOf('"path":"navigation.position"') >= 0) {
+    const lat = parseFloat64FromJson(deltaJson, 'latitude')
+    const lon = parseFloat64FromJson(deltaJson, 'longitude')
+    // Process position...
+  }
+
+  // React to course destination changes
+  if (deltaJson.indexOf('"path":"navigation.course.nextPoint"') >= 0) {
+    // Handle destination or detect null for route clearing
+  }
+}
+```
+
+**Files Modified:**
+- `src/wasm/types.ts` - Added `delta_handler` to `WasmPluginExports` interface
+- `src/wasm/loaders/standard-loader.ts` - Added delta_handler wrapper for AS and Rust plugins
+- `src/wasm/loader/plugin-lifecycle.ts` - Added delta subscription on plugin start, cleanup on stop
+
+**Documentation:**
+- `wasm/WASM_PLUGIN_DEV_GUIDE.md` - New "Receiving Signal K Deltas" section with examples
+
+### Added - Course Provider WASM Plugin Example
+
+New showcase plugin demonstrating delta subscriptions, geodesy calculations, HTTP endpoints, and delta emission.
+
+**Features:**
+- Subscribes to `navigation.position`, `navigation.course.nextPoint`, `navigation.course.previousPoint`
+- Great Circle and Rhumb Line calculations (ported geodesy library)
+- Emits calculated course values to `navigation.course.calcValues.*`
+- HTTP endpoint: `GET /plugins/course-provider-wasm/api/calcValues`
+- Detects destination clearing (null values) and stops calculations
+
+**Repository:** https://github.com/SignalK/course-provider-plugin
+
+### Changed - Documentation Reorganization
+
+- Moved `src/wasm/README.md` to `wasm/README.md` (consolidates all WASM docs)
+- Renamed `IMPLEMENTATION_STATUS.md` to `IMPLEMENTATION_HISTORY.md` (clarifies historical record)
+- Updated status to "Ready for merge"
+
+---
+
 ## [2.19.0+beta1wasm9] - 2025-12-05
 
 ### Added - Routes & Waypoints Resource Provider Example

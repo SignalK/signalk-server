@@ -554,6 +554,136 @@ curl -X POST http://localhost:3000/plugins/my-plugin/api/update \
 
 ---
 
+## Receiving Signal K Deltas
+
+WASM plugins can subscribe to receive Signal K deltas, enabling them to react to navigation data changes, course updates, sensor readings, and other vessel data in real-time.
+
+### Implementing a Delta Handler
+
+Export a `delta_handler()` function to receive deltas:
+
+```typescript
+// assembly/index.ts
+
+// Plugin state
+let vesselLat: f64 = 0.0
+let vesselLon: f64 = 0.0
+let hasPosition: bool = false
+
+export function delta_handler(deltaJson: string): void {
+  // Check for position updates
+  if (deltaJson.indexOf('"path":"navigation.position"') >= 0) {
+    const lat = parseFloat64FromJson(deltaJson, 'latitude')
+    const lon = parseFloat64FromJson(deltaJson, 'longitude')
+
+    if (lat !== 0.0 || lon !== 0.0) {
+      vesselLat = lat
+      vesselLon = lon
+      hasPosition = true
+      debug('Position updated: ' + lat.toString() + ', ' + lon.toString())
+    }
+  }
+
+  // Check for course nextPoint
+  if (deltaJson.indexOf('"path":"navigation.course.nextPoint"') >= 0) {
+    // Extract destination coordinates and perform calculations
+    // ...
+  }
+
+  // Check for speedOverGround
+  if (deltaJson.indexOf('"navigation.speedOverGround"') >= 0) {
+    const speed = parseFloat64FromJson(deltaJson, 'value')
+    // Process speed data
+  }
+}
+
+// Helper function to parse float from JSON
+function parseFloat64FromJson(json: string, key: string): f64 {
+  const searchKey = '"' + key + '":'
+  const match = json.indexOf(searchKey)
+  if (match < 0) return 0.0
+
+  let start = match + searchKey.length
+  while (start < json.length && (json.charCodeAt(start) == 32 || json.charCodeAt(start) == 9)) {
+    start++
+  }
+
+  let end = start
+  while (end < json.length) {
+    const c = json.charCodeAt(end)
+    if (c == 44 || c == 125 || c == 93) break // comma, }, ]
+    end++
+  }
+
+  const numStr = json.substring(start, end).trim()
+  return parseFloat(numStr)
+}
+```
+
+### Delta JSON Format
+
+Deltas are delivered as JSON strings with this structure:
+
+```json
+{
+  "context": "vessels.self",
+  "updates": [{
+    "source": {"label": "gps", "type": "NMEA2000"},
+    "timestamp": "2024-01-15T12:30:00.000Z",
+    "values": [
+      {"path": "navigation.position", "value": {"latitude": -17.68, "longitude": 177.39}},
+      {"path": "navigation.speedOverGround", "value": 5.2}
+    ]
+  }]
+}
+```
+
+### Common Use Cases
+
+1. **Course Calculations** - React to `navigation.course.nextPoint` and `navigation.position` to calculate bearing, distance, XTE
+2. **Anchor Watch** - Monitor `navigation.position` and compare to anchor position
+3. **Speed Alerts** - Watch `navigation.speedOverGround` for threshold breaches
+4. **Environment Monitoring** - Track `environment.wind.*`, `environment.water.temperature`, etc.
+
+### Detecting Cleared Values
+
+When values are cleared (e.g., destination removed), the server sends `null` values:
+
+```typescript
+export function delta_handler(deltaJson: string): void {
+  if (deltaJson.indexOf('"path":"navigation.course.nextPoint"') >= 0) {
+    // Try to extract position first
+    const lat = parseFloat64FromJson(deltaJson, 'latitude')
+    const lon = parseFloat64FromJson(deltaJson, 'longitude')
+
+    if (lat !== 0.0 || lon !== 0.0) {
+      // Valid position - update state
+      nextPointLat = lat
+      nextPointLon = lon
+      hasDestination = true
+    } else {
+      // Check if this is a null/clear operation
+      const pathIdx = deltaJson.indexOf('"path":"navigation.course.nextPoint"')
+      const checkRange = deltaJson.substring(pathIdx, Math.min(pathIdx + 100, deltaJson.length) as i32)
+      if (checkRange.indexOf('"value":null') >= 0) {
+        hasDestination = false
+        debug('Destination cleared')
+      }
+    }
+  }
+}
+```
+
+### Performance Considerations
+
+- **Filter Early** - Check for relevant paths before parsing to minimize processing
+- **State Caching** - Store parsed values in global variables rather than re-parsing
+- **Debouncing** - High-frequency data (GPS at 10Hz) may benefit from debouncing calculations
+
+📁 **See [course-provider-wasm](https://github.com/SignalK/course-provider-plugin) for a complete example using delta subscriptions**
+
+---
+
 ## WASM Memory Limitations and Hybrid Architecture
 
 ### Understanding WASM Memory Constraints
@@ -994,6 +1124,7 @@ Your plugin MAY export (optional):
 |--------|-----------|-------------|
 | `poll` | `() -> status` | Called every 1 second while plugin is running. Useful for polling hardware, sockets, or external systems. Return 0 for success, non-zero for errors. |
 | `http_endpoints` | `() -> json` | Return JSON array of HTTP endpoint definitions |
+| `delta_handler` | `(delta_ptr, delta_len)` | Receives Signal K deltas as JSON strings. Called for every delta emitted by the server. |
 
 📁 **See [anchor-watch-rust example](../examples/wasm-plugins/anchor-watch-rust/) for a complete working plugin with PUT handlers**
 
@@ -1205,6 +1336,7 @@ Your plugin MAY export (optional):
 |--------|-----------|-------------|
 | `poll` | `() -> status` | Called every 1 second while plugin is running. Useful for polling hardware, sockets, or external systems. Return 0 for success, non-zero for errors. |
 | `http_endpoints` | `() -> json` | Return JSON array of HTTP endpoint definitions |
+| `delta_handler` | `(delta_ptr, delta_len)` | Receives Signal K deltas as JSON strings. Called for every delta emitted by the server. |
 
 ### TinyGo Limitations
 

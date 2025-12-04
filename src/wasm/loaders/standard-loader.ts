@@ -412,6 +412,47 @@ function createPluginExports(
         : rawExports.poll)
     : undefined
 
+  // Wrap delta_handler if it exists (for plugins that subscribe to deltas)
+  let deltaHandlerFunc: ((deltaJson: string) => void) | undefined = undefined
+  if (rawExports.delta_handler) {
+    if (isAssemblyScriptPlugin && asLoaderInstance) {
+      deltaHandlerFunc = (deltaJson: string) => {
+        // Pass delta JSON string to the WASM delta_handler
+        const ptr = asLoaderInstance.exports.__newString(deltaJson)
+        asLoaderInstance.exports.delta_handler(ptr)
+      }
+    } else if (isRustLibraryPlugin) {
+      // Rust library plugin: buffer-based string passing
+      deltaHandlerFunc = (deltaJson: string) => {
+        const encoder = new TextEncoder()
+        const deltaBytes = encoder.encode(deltaJson)
+        const deltaLen = deltaBytes.length
+
+        const allocate = rawExports.allocate
+        if (typeof allocate !== 'function') {
+          debug('Rust plugin missing allocate export for delta_handler')
+          return
+        }
+
+        const deltaPtr = allocate(deltaLen)
+        const memory = rawExports.memory as WebAssembly.Memory
+        const memoryView = new Uint8Array(memory.buffer)
+        memoryView.set(deltaBytes, deltaPtr)
+
+        try {
+          rawExports.delta_handler(deltaPtr, deltaLen)
+        } finally {
+          const deallocate = rawExports.deallocate
+          if (typeof deallocate === 'function') {
+            deallocate(deltaPtr, deltaLen)
+          }
+        }
+      }
+    } else {
+      deltaHandlerFunc = rawExports.delta_handler
+    }
+  }
+
   return {
     id: idFunc,
     name: nameFunc,
@@ -420,6 +461,7 @@ function createPluginExports(
     stop: stopFunc,
     memory: rawExports.memory,
     ...(httpEndpointsFunc && { http_endpoints: httpEndpointsFunc }),
-    ...(pollFunc && { poll: pollFunc })
+    ...(pollFunc && { poll: pollFunc }),
+    ...(deltaHandlerFunc && { delta_handler: deltaHandlerFunc })
   }
 }
