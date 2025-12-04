@@ -2,6 +2,111 @@
 
 All notable changes to the SignalK WASM runtime since forking from v2.18.0.
 
+## [2.19.0+beta1wasm8] - 2025-12-05
+
+### Added - Weather Provider API for WASM Plugins
+
+WASM plugins can now register as **weather providers** to integrate with Signal K's specialized Weather API.
+
+**Features:**
+- `weatherProvider` capability in plugin manifest
+- `sk_register_weather_provider` FFI function for registration
+- Handler exports: `weather_get_observations`, `weather_get_forecasts`, `weather_get_warnings`
+- Full Asyncify support for handlers that use `fetchSync()`
+- Integration with `/signalk/v2/api/weather/*` endpoints
+
+**Weather Provider vs Resource Provider:**
+
+| Feature | Weather Provider | Resource Provider |
+|---------|-----------------|-------------------|
+| API Path | `/signalk/v2/api/weather/*` | `/signalk/v2/api/resources/{type}` |
+| Methods | getObservations, getForecasts, getWarnings | list, get, set, delete |
+| Use Case | Standardized weather data | Generic data storage |
+| Capability | `weatherProvider: true` | `resourceProvider: true` |
+
+**API Endpoints:**
+```bash
+GET /signalk/v2/api/weather/_providers
+GET /signalk/v2/api/weather/observations?lat=...&lon=...
+GET /signalk/v2/api/weather/forecasts/daily?lat=...&lon=...
+GET /signalk/v2/api/weather/forecasts/point?lat=...&lon=...
+GET /signalk/v2/api/weather/warnings?lat=...&lon=...
+```
+
+**Files Created:**
+- `src/wasm/bindings/weather-provider.ts` - Weather provider FFI bindings
+- `examples/wasm-plugins/weather-provider-plugin/` - Complete OpenWeatherMap example
+
+**Files Modified:**
+- `src/wasm/types.ts` - Added `weatherProvider` capability and `setAsyncifyResume` to WasmPluginInstance
+- `src/wasm/bindings/env-imports.ts` - Added `sk_register_weather_provider` binding
+- `src/wasm/bindings/index.ts` - Exported weather-provider module
+- `src/wasm/loader/plugin-registry.ts` - Added `weatherProvider` capability parsing
+- `src/wasm/loaders/standard-loader.ts` - Exposed `setAsyncifyResume` for external callers
+- `wasm/WASM_PLUGIN_DEV_GUIDE.md` - Full documentation for Weather Providers
+
+### Fixed - Asyncify Support for Weather Handler Exports
+
+Weather handler functions that call `fetchSync()` now work correctly with Asyncify.
+
+**Root Cause:** Handler exports were called synchronously but `fetchSync()` triggers Asyncify unwind. The handlers weren't wrapped for async operations.
+
+**Solution:**
+- Made `callWasmWeatherHandler()` async with proper Asyncify handling
+- Added `setAsyncifyResume` to `WasmPluginInstance` type
+- Standard loader now exposes the resume function for external callers
+- Handler checks `asyncify_get_state()` and awaits completion if state is 1 (unwound)
+
+**Key Code Pattern:**
+```typescript
+// Set up resume callback before calling handler
+pluginInstance.setAsyncifyResume(() => {
+  const resumeResultPtr = asLoader.exports[handlerName](requestPtr)
+  const result = asLoader.exports.__getString(resumeResultPtr)
+  resumePromiseResolve(result)
+})
+
+// Call handler
+handlerResultPtr = asLoader.exports[handlerName](requestPtr)
+
+// Check Asyncify state
+if (asLoader.exports.asyncify_get_state() === 1) {
+  // Wait for async operation
+  const result = await resumePromise
+}
+```
+
+### Example - OpenWeatherMap Weather Provider
+
+New example plugin demonstrating Weather Provider capability:
+
+- Fetches real weather data from OpenWeatherMap API
+- Implements all three Weather Provider methods
+- Uses Asyncify for async HTTP requests
+- Emits weather data as Signal K deltas
+- Configurable API key and default coordinates
+
+**Usage:**
+```typescript
+// package.json
+"wasmCapabilities": {
+  "network": true,
+  "dataWrite": true,
+  "weatherProvider": true
+}
+
+// Register as weather provider
+@external("env", "sk_register_weather_provider")
+declare function sk_register_weather_provider(namePtr: usize, nameLen: usize): i32
+
+// Export handlers
+export function weather_get_observations(requestJson: string): string
+export function weather_get_forecasts(requestJson: string): string
+export function weather_get_warnings(requestJson: string): string
+```
+
+---
+
 ## [2.19.0+beta.1+wasm7] - 2025-12-05
 
 ### Added - Zero Node.js Plugin Regressions Test Suite

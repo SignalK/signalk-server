@@ -71,8 +71,9 @@ tinygo version
 ### Upcoming Features
 
 ⏳ **Direct Serial Ports**: Serial device access (Phase 3)
-⏳ **Network Access**: HTTP client for external APIs (Phase 3)
-⏳ **Resource Providers**: Serve SignalK resources (Phase 3)
+✅ **Network Access**: HTTP client for external APIs (Phase 3) - DONE
+✅ **Resource Providers**: Serve SignalK resources (Phase 3) - DONE
+✅ **Weather Providers**: Integrate with Signal K Weather API (Phase 3) - DONE
 
 ## Choose Your Language
 
@@ -3150,6 +3151,204 @@ Signal K defines standard resource types with validation:
 - `charts` - Chart metadata
 
 Custom types (like `weather-forecasts`) have no schema validation and can contain any JSON structure.
+
+## Weather Providers (Phase 3)
+
+WASM plugins can act as **weather providers** for Signal K's specialized Weather API. Unlike Resource Providers which serve generic key-value data, Weather Providers integrate with Signal K's standardized weather endpoints.
+
+### Weather Provider vs Resource Provider
+
+| Feature | Weather Provider | Resource Provider |
+|---------|-----------------|-------------------|
+| API Path | `/signalk/v2/api/weather/*` | `/signalk/v2/api/resources/{type}` |
+| Methods | getObservations, getForecasts, getWarnings | list, get, set, delete |
+| Use Case | Standardized weather data | Generic data storage |
+| Capability | `weatherProvider: true` | `resourceProvider: true` |
+| FFI | `sk_register_weather_provider` | `sk_register_resource_provider` |
+
+### Enabling Weather Provider Capability
+
+Add `weatherProvider: true` to your package.json:
+
+```json
+{
+  "wasmCapabilities": {
+    "network": true,
+    "dataWrite": true,
+    "weatherProvider": true
+  }
+}
+```
+
+### Registering as a Weather Provider
+
+#### AssemblyScript
+
+```typescript
+// Declare the FFI binding
+@external("env", "sk_register_weather_provider")
+declare function sk_register_weather_provider(namePtr: usize, nameLen: usize): i32
+
+function registerWeatherProvider(providerName: string): bool {
+  const nameBytes = String.UTF8.encode(providerName)
+  const result = sk_register_weather_provider(
+    changetype<usize>(nameBytes),
+    nameBytes.byteLength
+  )
+  return result === 1
+}
+
+// In plugin start():
+if (!registerWeatherProvider('My Weather Service')) {
+  setError("Failed to register as weather provider")
+  return 1
+}
+```
+
+#### Rust
+
+```rust
+#[link(wasm_import_module = "env")]
+extern "C" {
+    fn sk_register_weather_provider(name_ptr: *const u8, name_len: usize) -> i32;
+}
+
+pub fn register_weather_provider(name: &str) -> bool {
+    let bytes = name.as_bytes();
+    unsafe { sk_register_weather_provider(bytes.as_ptr(), bytes.len()) == 1 }
+}
+
+// In plugin_start():
+if !register_weather_provider("My Weather Service") {
+    return 1;
+}
+```
+
+### Implementing Weather Handler Exports
+
+After registering, your plugin must export these handler functions:
+
+#### `weather_get_observations` - Get current weather observations
+
+**AssemblyScript:**
+```typescript
+export function weather_get_observations(requestJson: string): string {
+  // requestJson: {"position": {"latitude": 60.17, "longitude": 24.94}, "options": {...}}
+  // Return JSON array of observation objects
+  return '[{"date":"2025-01-01T00:00:00Z","type":"observation","description":"Clear sky",' +
+    '"outside":{"temperature":280.15,"relativeHumidity":0.65,"pressure":101300,"cloudCover":0.1},' +
+    '"wind":{"speedTrue":5.0,"directionTrue":1.57}}]'
+}
+```
+
+**Rust:**
+```rust
+#[no_mangle]
+pub extern "C" fn weather_get_observations(
+    request_ptr: *const u8, request_len: usize,
+    response_ptr: *mut u8, response_max_len: usize,
+) -> i32 {
+    // Parse request, fetch weather data, build response
+    let response = r#"[{"date":"...","type":"observation",...}]"#;
+    write_string(response, response_ptr, response_max_len)
+}
+```
+
+#### `weather_get_forecasts` - Get weather forecasts
+
+**AssemblyScript:**
+```typescript
+export function weather_get_forecasts(requestJson: string): string {
+  // requestJson: {"position": {...}, "type": "daily"|"point", "options": {"maxCount": 7}}
+  // Return JSON array of forecast objects
+  return '[{"date":"...","type":"daily","outside":{...},"wind":{...}}]'
+}
+```
+
+#### `weather_get_warnings` - Get weather warnings/alerts
+
+**AssemblyScript:**
+```typescript
+export function weather_get_warnings(requestJson: string): string {
+  // requestJson: {"position": {...}}
+  // Return JSON array of warning objects (empty if none)
+  return '[]'
+}
+```
+
+### Weather Data Format
+
+#### Observation/Forecast Object
+
+```json
+{
+  "date": "2025-12-05T10:00:00.000Z",
+  "type": "observation",
+  "description": "light rain",
+  "outside": {
+    "temperature": 275.15,
+    "minTemperature": 273.0,
+    "maxTemperature": 278.0,
+    "feelsLikeTemperature": 272.0,
+    "relativeHumidity": 0.85,
+    "pressure": 101300,
+    "cloudCover": 0.75
+  },
+  "wind": {
+    "speedTrue": 5.2,
+    "directionTrue": 3.14,
+    "gust": 8.0
+  }
+}
+```
+
+Units:
+- Temperature: Kelvin
+- Humidity: Ratio (0-1)
+- Pressure: Pascals
+- Wind speed: m/s
+- Wind direction: Radians
+
+#### Warning Object
+
+```json
+{
+  "startTime": "2025-12-05T10:00:00.000Z",
+  "endTime": "2025-12-05T18:00:00.000Z",
+  "details": "Strong wind warning",
+  "source": "Weather Service",
+  "type": "Warning"
+}
+```
+
+### Accessing Weather Data via HTTP
+
+Once registered, weather data is available at:
+
+```bash
+# List providers
+curl http://localhost:3000/signalk/v2/api/weather/_providers
+
+# Get observations for a location
+curl "http://localhost:3000/signalk/v2/api/weather/observations?lat=60.17&lon=24.94"
+
+# Get daily forecasts
+curl "http://localhost:3000/signalk/v2/api/weather/forecasts/daily?lat=60.17&lon=24.94"
+
+# Get point-in-time forecasts
+curl "http://localhost:3000/signalk/v2/api/weather/forecasts/point?lat=60.17&lon=24.94"
+
+# Get weather warnings
+curl "http://localhost:3000/signalk/v2/api/weather/warnings?lat=60.17&lon=24.94"
+```
+
+### Example: OpenWeatherMap Provider
+
+See `examples/wasm-plugins/weather-provider-plugin/` for a complete working example that:
+- Fetches real weather data from OpenWeatherMap API
+- Implements all three Weather Provider methods
+- Uses Asyncify for async HTTP requests
+- Also emits weather data as Signal K deltas
 
 ## Resources
 

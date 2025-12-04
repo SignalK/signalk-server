@@ -16,6 +16,7 @@ export interface WasmCapabilities {
   putHandlers: boolean
   httpEndpoints?: boolean
   resourceProvider?: boolean  // Can register as a resource provider
+  weatherProvider?: boolean   // Can register as a weather provider
   rawSockets?: boolean        // Can open UDP/TCP sockets for radar, NMEA, etc.
 }
 
@@ -41,6 +42,8 @@ export interface WasmPluginInstance {
   asLoader?: any
   // Component Model transpiled module (if Component Model plugin)
   componentModule?: any
+  // Asyncify support: function to set the resume callback for async operations
+  setAsyncifyResume?: (fn: (() => any) | null) => void
 }
 
 /**
@@ -67,6 +70,16 @@ export interface WasmPluginExports {
 export interface WasmResourceProvider {
   pluginId: string
   resourceType: string
+  // Reference to the plugin instance for calling handlers
+  pluginInstance: WasmPluginInstance | null
+}
+
+/**
+ * Weather provider registration from a WASM plugin
+ */
+export interface WasmWeatherProvider {
+  pluginId: string
+  providerName: string
   // Reference to the plugin instance for calling handlers
   pluginInstance: WasmPluginInstance | null
 }

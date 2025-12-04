@@ -30,6 +30,7 @@ import { loadComponentModelPlugin } from './loaders/component-loader'
 
 // Import bindings
 import { cleanupResourceProviders, wasmResourceProviders } from './bindings/resource-provider'
+import { cleanupWeatherProviders, wasmWeatherProviders } from './bindings/weather-provider'
 
 // Import utilities
 import { detectWasmFormat } from './utils/format-detection'
@@ -39,8 +40,8 @@ import { WasmPluginInstance, WasmCapabilities } from './types'
 
 const debug = Debug('signalk:wasm:runtime')
 
-// Re-export wasmResourceProviders for external access
-export { wasmResourceProviders }
+// Re-export provider maps for external access
+export { wasmResourceProviders, wasmWeatherProviders }
 
 export class WasmRuntime {
   private instances: Map<string, WasmPluginInstance> = new Map()
@@ -125,8 +126,10 @@ export class WasmRuntime {
 
   /**
    * Unload a WASM plugin instance
+   * @param pluginId The plugin ID to unload
+   * @param app Optional Signal K app reference for proper API cleanup
    */
-  async unloadPlugin(pluginId: string): Promise<void> {
+  async unloadPlugin(pluginId: string, app?: any): Promise<void> {
     const instance = this.instances.get(pluginId)
     if (!instance) {
       debug(`Plugin ${pluginId} not found in loaded instances`)
@@ -142,7 +145,12 @@ export class WasmRuntime {
       }
 
       // Clean up resource provider registrations for this plugin
-      cleanupResourceProviders(pluginId)
+      // Pass app to also unregister from ResourcesApi
+      cleanupResourceProviders(pluginId, app)
+
+      // Clean up weather provider registrations for this plugin
+      // Pass app to also unregister from WeatherApi
+      cleanupWeatherProviders(pluginId, app)
 
       // Remove from instances
       this.instances.delete(pluginId)

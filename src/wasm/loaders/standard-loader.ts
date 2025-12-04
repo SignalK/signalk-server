@@ -11,6 +11,7 @@ import { FetchHandler } from 'as-fetch/bindings.raw.esm.js'
 import { WasmPluginInstance, WasmCapabilities } from '../types'
 import { createEnvImports } from '../bindings/env-imports'
 import { updateResourceProviderInstance } from '../bindings/resource-provider'
+import { updateWeatherProviderInstance } from '../bindings/weather-provider'
 import { getNodeFetch } from '../utils/fetch-wrapper'
 
 const debug = Debug('signalk:wasm:loader:standard')
@@ -204,6 +205,9 @@ export async function loadStandardPlugin(
     (fn) => { asyncifyResumeFunction = fn }
   )
 
+  // Create setter for asyncify resume that can be used by external callers
+  const setAsyncifyResume = (fn: (() => any) | null) => { asyncifyResumeFunction = fn }
+
   const pluginInstance: WasmPluginInstance = {
     pluginId,
     wasmPath,
@@ -214,11 +218,13 @@ export async function loadStandardPlugin(
     module,
     instance,
     exports,
-    asLoader: asLoaderInstance
+    asLoader: asLoaderInstance,
+    setAsyncifyResume
   }
 
-  // Update resource provider references
+  // Update provider references
   updateResourceProviderInstance(pluginId, pluginInstance)
+  updateWeatherProviderInstance(pluginId, pluginInstance)
 
   debug(`Successfully loaded WASM plugin: ${pluginId}`)
   return pluginInstance

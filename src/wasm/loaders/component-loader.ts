@@ -10,6 +10,7 @@ import Debug from 'debug'
 import { WasmPluginInstance, WasmCapabilities } from '../types'
 import { createComponentSignalkApi } from '../bindings/signalk-api'
 import { updateResourceProviderInstance } from '../bindings/resource-provider'
+import { updateWeatherProviderInstance } from '../bindings/weather-provider'
 
 const debug = Debug('signalk:wasm:loader:component')
 
@@ -170,8 +171,9 @@ export async function loadComponentModelPlugin(
       componentModule: componentInstance
     }
 
-    // Update resource provider references
+    // Update provider references
     updateResourceProviderInstance(pluginId, pluginInstance)
+    updateWeatherProviderInstance(pluginId, pluginInstance)
 
     debug(`Successfully loaded Component Model plugin: ${pluginId}`)
     return pluginInstance

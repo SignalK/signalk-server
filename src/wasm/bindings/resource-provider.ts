@@ -107,8 +107,10 @@ export function migrateResourceProviderPluginId(oldPluginId: string, newPluginId
 
 /**
  * Clean up resource provider registrations for a plugin
+ * @param pluginId The plugin ID
+ * @param app The Signal K app (optional, if provided will also unregister from ResourcesApi)
  */
-export function cleanupResourceProviders(pluginId: string): void {
+export function cleanupResourceProviders(pluginId: string, app?: any): void {
   const keysToDelete: string[] = []
   wasmResourceProviders.forEach((provider, key) => {
     if (provider.pluginId === pluginId) {
@@ -119,6 +121,16 @@ export function cleanupResourceProviders(pluginId: string): void {
     debug(`Removing resource provider registration: ${key}`)
     wasmResourceProviders.delete(key)
   })
+
+  // Also unregister from Signal K ResourcesApi
+  if (app && app.resourcesApi && typeof app.resourcesApi.unRegister === 'function') {
+    try {
+      app.resourcesApi.unRegister(pluginId)
+      debug(`Unregistered ${pluginId} from ResourcesApi`)
+    } catch (error) {
+      debug(`Error unregistering from ResourcesApi: ${error}`)
+    }
+  }
 }
 
 /**

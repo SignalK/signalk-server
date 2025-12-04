@@ -4,6 +4,7 @@
 
 export * from './env-imports'
 export * from './resource-provider'
+export * from './weather-provider'
 export * from './signalk-api'
 export * from './mbtiles-handler'
 export * from './socket-manager'

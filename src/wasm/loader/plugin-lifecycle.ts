@@ -11,6 +11,7 @@ import { wasmPlugins, restartTimers, setPluginStatus } from './plugin-registry'
 import { getWasmRuntime } from '../wasm-runtime'
 import { backwardsCompat } from './plugin-routes'
 import { updateResourceProviderInstance } from '../bindings/resource-provider'
+import { updateWeatherProviderInstance } from '../bindings/weather-provider'
 import { initializeChartsFromDisk } from '../bindings/mbtiles-handler'
 import { socketManager } from '../bindings/socket-manager'
 
@@ -115,13 +116,15 @@ export async function startWasmPlugin(app: any, pluginId: string): Promise<void>
       throw new Error(`Plugin start() returned error code: ${result}`)
     }
 
-    // Update resource provider instance references after plugin_start() completes
-    // Resource providers are registered during start(), so we need to update
+    // Update provider instance references after plugin_start() completes
+    // Providers are registered during start(), so we need to update
     // references using BOTH the packageName (used in env bindings) and real pluginId
     if (plugin.packageName) {
       updateResourceProviderInstance(plugin.packageName, plugin.instance)
+      updateWeatherProviderInstance(plugin.packageName, plugin.instance)
     }
     updateResourceProviderInstance(pluginId, plugin.instance)
+    updateWeatherProviderInstance(pluginId, plugin.instance)
 
     // For charts-provider plugins, initialize charts from disk into WASM memory
     // This restores charts that were uploaded in previous sessions
