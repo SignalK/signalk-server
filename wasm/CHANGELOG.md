@@ -2,6 +2,94 @@
 
 All notable changes to the SignalK WASM runtime since forking from v2.18.0.
 
+## [2.19.0+beta.1+wasm7] - 2025-12-05
+
+### Added - Zero Node.js Plugin Regressions Test Suite
+
+Comprehensive automated test suite proving WASM and Node.js plugins coexist without issues.
+
+**16 Tests Passing:**
+- Node.js plugin loads and starts
+- Node.js plugin appears in pluginsMap
+- Node.js plugin can emit deltas
+- Node.js plugin HTTP endpoint accessible
+- WASM plugin loads
+- WASM plugin starts
+- WASM plugin appears in pluginsMap
+- WASM plugin status via /skServer/plugins API
+- Both plugin types appear in plugins list
+- Both plugins are started
+- Plugin map contains both types
+- Node.js plugin delta does not interfere with WASM plugin
+- /skServer/plugins returns both plugin types
+- WASM plugin can be stopped
+- Node.js plugin can be stopped independently
+- Server stops cleanly with both plugin types
+
+**Files Created:**
+- `test/wasm-plugin-regression.ts` - Main test file (~430 lines)
+- `test/wasm-regression-config/` - Test configuration directory
+- `test/wasm-regression-config/node_modules/testplugin/` - Node.js test plugin
+- `test/wasm-regression-config/node_modules/@signalk/anchor-watch-rust/` - WASM test plugin
+
+### Fixed - WASM Plugin `started` Property Compatibility
+
+Added Node.js plugin API compatibility to WASM plugins via `Object.defineProperty` getter.
+
+**Root Cause:** Tests and other code expected `plugin.started` property, but WASM plugins only had `plugin.status`.
+
+**Solution:** Added `addNodejsPluginCompat()` function that defines a `started` getter returning `this.status === 'running'`.
+
+**Files Modified:**
+- `src/wasm/loader/plugin-registry.ts`
+  - Added `addNodejsPluginCompat()` function (lines 66-80)
+  - Called for both enabled and disabled plugin registration paths
+
+### Fixed - Server Shutdown WASM Plugin Cleanup
+
+Server `stop()` method now properly shuts down WASM plugins.
+
+**Root Cause:** `server.stop()` didn't call `shutdownAllWasmPlugins()`, leaving WASM plugins running.
+
+**Solution:** Added `shutdownAllWasmPlugins()` call to `Server.stop()` method.
+
+**Files Modified:**
+- `src/index.ts`
+  - Added import: `import { shutdownAllWasmPlugins } from './wasm'`
+  - Added `await shutdownAllWasmPlugins()` in `stop()` method (lines 560-565)
+
+### Fixed - Module Instance Duplication in Tests
+
+Test imports now use compiled `dist/` modules to share singleton state with Server.
+
+**Root Cause:** Test file importing from `../src/wasm` created separate module instance from Server importing from `./wasm` (compiled to `dist/wasm`). Two separate `wasmPlugins` Map singletons existed.
+
+**Solution:** Changed test import to `import { shutdownAllWasmPlugins } from '../dist/wasm'`.
+
+**Files Modified:**
+- `test/wasm-plugin-regression.ts` - Changed import path (line 9)
+
+### Added - Async Plugin Loading Helper
+
+Added `waitForPlugin()` helper with polling for async WASM plugin loading.
+
+**Root Cause:** WASM plugins load asynchronously after `server.start()` returns, causing race conditions in tests.
+
+**Solution:** Added polling helper that waits up to 10 seconds for plugin to appear in `app.plugins`.
+
+**Files Modified:**
+- `test/wasm-plugin-regression.ts` - Added `waitForPlugin()` function (lines 88-102)
+- Called in `startWasmTestServer()` after `server.start()` (line 118)
+
+### Added - Debug Logging for Plugin Shutdown
+
+Enhanced `shutdownAllWasmPlugins()` with detailed debug logging.
+
+**Files Modified:**
+- `src/wasm/loader/plugin-lifecycle.ts` - Added debug statements showing plugin count, status, and shutdown progress (lines 434-465)
+
+---
+
 ## [2.18.0+wasm6] - 2025-12-04
 
 ### Added - Raw Sockets Capability for UDP Network Access

@@ -28,6 +28,45 @@
 
 ## Recent Achievements (Latest First)
 
+### 🎉 Zero Node.js Plugin Regressions - Automated Tests! (December 5, 2025)
+
+**Major Milestone**: Comprehensive regression test suite proving WASM and Node.js plugins coexist without issues!
+
+**16 automated tests passing:**
+- ✅ Node.js plugin loads and starts
+- ✅ Node.js plugin appears in pluginsMap
+- ✅ Node.js plugin can emit deltas
+- ✅ Node.js plugin HTTP endpoint accessible
+- ✅ WASM plugin loads
+- ✅ WASM plugin starts
+- ✅ WASM plugin appears in pluginsMap
+- ✅ WASM plugin status via /skServer/plugins API
+- ✅ Both plugin types appear in plugins list
+- ✅ Both plugins are started
+- ✅ Plugin map contains both types
+- ✅ Node.js plugin delta does not interfere with WASM plugin
+- ✅ /skServer/plugins returns both plugin types
+- ✅ WASM plugin can be stopped
+- ✅ Node.js plugin can be stopped independently
+- ✅ Server stops cleanly with both plugin types
+
+**Key Fixes Applied:**
+- ✅ **`started` Property Compatibility**: Added `Object.defineProperty` getter to WASM plugins for Node.js API compatibility
+- ✅ **Plugin ID Resolution**: Config files now use WASM binary's plugin ID, not npm package name
+- ✅ **Server Shutdown**: `server.stop()` now properly calls `shutdownAllWasmPlugins()`
+- ✅ **Singleton Registry Cleanup**: `beforeEach` hooks properly clear WASM plugin registry between tests
+- ✅ **Async Plugin Loading**: Added `waitForPlugin()` helper with polling for async WASM loading
+
+**Test File**: `test/wasm-plugin-regression.ts` (~430 lines)
+**Test Config**: `test/wasm-regression-config/` with both Node.js and WASM plugins
+
+**Run Tests:**
+```bash
+npm run build && npx mocha test/wasm-plugin-regression.ts
+```
+
+---
+
 ### 🎉 Resource Provider Working End-to-End! (December 3, 2025)
 
 **First WASM Resource Provider in Production!**
@@ -818,8 +857,8 @@ tinygo build -o plugin.wasm -target=wasip1 -gc=leaking -no-debug main.go
 ### Phase 3 Goals (In Progress 🔄)
 
 - [x] ✅ Custom REST API endpoints (AssemblyScript + Rust)
-- [ ] 🔄 Resource providers
-- [ ] 🔄 Zero Node.js plugin regressions
+- [x] ✅ Resource providers (weather plugin example)
+- [x] ✅ Zero Node.js plugin regressions (16 automated tests passing)
 - [ ] 🔄 Performance benchmarks
 - [ ] 🔄 10+ developers testing
 - [ ] 🔄 Migration guide for existing plugins
@@ -907,7 +946,7 @@ Apache License 2.0 (same as Signal K Server)
 
 ---
 
-**Status**: Phase 3 Resource Providers Complete ✅, Runtime Refactored ✅, Go WASM Plugin Added ✅
-**Version**: 2.18.0+wasm5
-**Date**: December 4, 2025
-**Next**: Phase 4 - Weather Providers (OpenMeteo integration), Serial Port support
+**Status**: Phase 3 Resource Providers Complete ✅, Zero Node.js Regressions ✅ (16 tests passing)
+**Version**: 2.19.0+beta.1+wasm7
+**Date**: December 5, 2025
+**Next**: Performance benchmarks, 10+ developer testing, Migration guide

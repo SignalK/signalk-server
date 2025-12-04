@@ -1,0 +1,20 @@
+{
+  "interfaces": {},
+  "ssl": false,
+  "pipedProviders": [],
+  "security": {
+    "strategy": "./tokensecurity"
+  },
+  "plugins": {
+    "testplugin": {
+      "enabled": true,
+      "configuration": {}
+    },
+    "@signalk/anchor-watch-rust": {
+      "enabled": true,
+      "configuration": {
+        "maxRadius": 100
+      }
+    }
+  }
+}

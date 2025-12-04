@@ -1,0 +1,5 @@
+{
+  "name": "wasm-regression-test-config",
+  "version": "1.0.0",
+  "description": "Test configuration for WASM plugin regression testing"
+}

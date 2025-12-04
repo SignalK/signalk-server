@@ -1,0 +1,12 @@
+{
+  "configuration": {
+    "standard": {
+      "routes": true,
+      "waypoints": true,
+      "notes": true,
+      "regions": true,
+      "charts": true
+    },
+    "custom": []
+  }
+}

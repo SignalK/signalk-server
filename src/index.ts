@@ -71,6 +71,7 @@ import checkNodeVersion from './version'
 const debug = createDebug('signalk-server')
 
 import { StreamBundle } from './streambundle'
+import { shutdownAllWasmPlugins } from './wasm'
 
 class Server {
   app: ServerApp &
@@ -532,58 +533,65 @@ class Server {
     return this
   }
 
-  stop(cb?: () => void) {
-    return new Promise((resolve, reject) => {
-      if (!this.app.started) {
-        resolve(this)
-      } else {
-        try {
-          _.each(this.app.interfaces, (intf: any) => {
-            if (
-              intf !== null &&
-              typeof intf === 'object' &&
-              typeof intf.stop === 'function'
-            ) {
-              intf.stop()
-            }
-          })
+  async stop(cb?: () => void) {
+    if (!this.app.started) {
+      return this
+    }
 
-          this.app.intervals.forEach((interval) => {
-            clearInterval(interval)
-          })
-
-          this.app.providers.forEach((providerHolder) => {
-            providerHolder.pipeElements[0].end()
-          })
-
-          debug('Closing server...')
-
-          const that = this
-          this.app.server.close(() => {
-            debug('Server closed')
-            if (that.app.redirectServer) {
-              try {
-                that.app.redirectServer.close(() => {
-                  debug('Redirect server closed')
-                  delete that.app.redirectServer
-                  that.app.started = false
-                  cb && cb()
-                  resolve(that)
-                })
-              } catch (err) {
-                reject(err)
-              }
-            } else {
-              that.app.started = false
-              cb && cb()
-              resolve(that)
-            }
-          })
-        } catch (err) {
-          reject(err)
+    try {
+      _.each(this.app.interfaces, (intf: any) => {
+        if (
+          intf !== null &&
+          typeof intf === 'object' &&
+          typeof intf.stop === 'function'
+        ) {
+          intf.stop()
         }
+      })
+
+      this.app.intervals.forEach((interval) => {
+        clearInterval(interval)
+      })
+
+      this.app.providers.forEach((providerHolder) => {
+        providerHolder.pipeElements[0].end()
+      })
+
+      // Shutdown WASM plugins
+      try {
+        await shutdownAllWasmPlugins()
+      } catch (err) {
+        debug('Error shutting down WASM plugins:', err)
       }
-    })
+
+      debug('Closing server...')
+
+      const that = this
+      return new Promise((resolve, reject) => {
+        this.app.server.close(() => {
+          debug('Server closed')
+          if (that.app.redirectServer) {
+            try {
+              that.app.redirectServer.close(() => {
+                debug('Redirect server closed')
+                delete that.app.redirectServer
+                that.app.started = false
+                cb && cb()
+                resolve(that)
+              })
+            } catch (err) {
+              reject(err)
+            }
+          } else {
+            that.app.started = false
+            cb && cb()
+            resolve(that)
+          }
+        })
+      })
+    } catch (err) {
+      throw err
+    }
   }
 }
 

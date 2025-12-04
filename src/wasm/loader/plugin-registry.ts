@@ -60,6 +60,26 @@ export function setPluginStatus(plugin: WasmPlugin, status: WasmPlugin['status']
 }
 
 /**
+ * Add Node.js plugin compatibility properties to WASM plugin
+ * This allows WASM plugins to be used interchangeably with Node.js plugins
+ */
+function addNodejsPluginCompat(plugin: WasmPlugin, pluginId: string): void {
+  // Add 'started' getter for Node.js plugin compatibility
+  Object.defineProperty(plugin, 'started', {
+    get() { return this.status === 'running' },
+    enumerable: true,
+    configurable: true
+  })
+
+  // Add 'stop' method for Node.js plugin compatibility
+  ;(plugin as any).stop = async function() {
+    if (_stopWasmPlugin) {
+      await _stopWasmPlugin(pluginId)
+    }
+  }
+}
+
+/**
  * Register a WASM plugin from package metadata
  */
 export async function registerWasmPlugin(
@@ -167,6 +187,9 @@ export async function registerWasmPlugin(
         format: tempInstance.format // Preserve format from temp instance
       }
 
+      // Add Node.js plugin compatibility properties
+      addNodejsPluginCompat(plugin, pluginId)
+
       // Register minimal plugin in global map
       wasmPlugins.set(pluginId, plugin)
 
@@ -239,6 +262,9 @@ export async function registerWasmPlugin(
       state: 'stopped',
       format: instance.format // WASM binary format (wasi-p1 or component-model)
     }
+
+    // Add Node.js plugin compatibility properties
+    addNodejsPluginCompat(plugin, pluginId)
 
     // Register in global map
     wasmPlugins.set(pluginId, plugin)

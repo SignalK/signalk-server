@@ -432,6 +432,7 @@ export function filterDisabledWasmWebapps(app: any): void {
  */
 export async function shutdownAllWasmPlugins(): Promise<void> {
   debug('Shutting down all WASM plugins')
+  debug(`Number of plugins in registry: ${wasmPlugins.size}`)
 
   // Clear all restart timers
   for (const timer of restartTimers.values()) {
@@ -441,10 +442,15 @@ export async function shutdownAllWasmPlugins(): Promise<void> {
 
   // Stop all plugins
   const plugins = Array.from(wasmPlugins.values())
+  debug(`Plugins to shutdown: ${plugins.map(p => `${p.id}(${p.status})`).join(', ')}`)
   for (const plugin of plugins) {
     try {
       if (plugin.status === 'running') {
+        debug(`Stopping plugin ${plugin.id}...`)
         await stopWasmPlugin(plugin.id)
+        debug(`Plugin ${plugin.id} stopped, status now: ${plugin.status}`)
+      } else {
+        debug(`Plugin ${plugin.id} not running (status=${plugin.status}), skipping stop`)
       }
     } catch (error) {
       debug(`Error stopping plugin ${plugin.id}:`, error)
