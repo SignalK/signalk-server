@@ -1,7 +1,6 @@
 import React, { Component } from 'react'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
 import {
-  Button,
   Card,
   CardBody,
   CardHeader,
@@ -10,13 +9,14 @@ import {
   Input,
   Label,
   Form,
-  FormGroup
+  FormGroup,
+  Table
 } from 'reactstrap'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
-import { Fragment } from 'react'
 
 const searchStorageKey = 'admin.v1.plugins.search'
 const openPluginStorageKey = 'admin.v1.plugins.openPlugin'
+const statusFilterStorageKey = 'admin.v1.plugins.statusFilter'
 
 export default class PluginConfigurationList extends Component {
   constructor(props) {
@@ -24,10 +24,15 @@ export default class PluginConfigurationList extends Component {
     this.state = {
       plugins: [],
       search: localStorage.getItem(searchStorageKey) || '',
-      searchResults: null
+      statusFilter: localStorage.getItem(statusFilterStorageKey) || 'all',
+      searchResults: null,
+      selectedPlugin: null
     }
     this.lastOpenedPlugin = '--'
     this.handleSearch = this.handleSearch.bind(this)
+    this.handleStatusFilter = this.handleStatusFilter.bind(this)
+    this.selectPlugin = this.selectPlugin.bind(this)
+    this.handlePluginClick = this.handlePluginClick.bind(this)
   }
 
   searchPlugins(plugins, searchString) {
@@ -43,25 +48,109 @@ export default class PluginConfigurationList extends Component {
     })
   }
 
-  handleSearch(event) {
-    let searchResults = null
-    const search = event.target.value
-    if (search.length !== 0) {
-      searchResults = this.searchPlugins(this.state.plugins, search)
+  filterPluginsByStatus(plugins, statusFilter) {
+    if (statusFilter === 'all') {
+      return plugins
     }
 
-    this.setState({ search, searchResults })
-    localStorage.setItem(searchStorageKey, event.target.value)
+    return plugins.filter((plugin) => {
+      const configurationRequired =
+        plugin.schema &&
+        plugin.schema.properties &&
+        Object.keys(plugin.schema?.properties).length != 0 &&
+        plugin.data.configuration == null
+
+      switch (statusFilter) {
+        case 'enabled':
+          return !configurationRequired && plugin.data.enabled
+        case 'disabled':
+          return configurationRequired || !plugin.data.enabled
+        default:
+          return true
+      }
+    })
   }
 
-  toggleForm(clickedIndex, id) {
-    const openedPluginId = this.props.match.params.pluginid === id ? '-' : id
-    if (this.props.match.params.pluginid === id) {
-      localStorage.removeItem(openPluginStorageKey)
-    } else {
-      localStorage.setItem(openPluginStorageKey, openedPluginId)
+  getFilteredPlugins() {
+    // Temporarily disable caching to see if it's causing re-renders
+    let filtered = this.state.plugins
+
+    // Apply status filter
+    filtered = this.filterPluginsByStatus(filtered, this.state.statusFilter)
+
+    // Apply search filter
+    if (this.state.search.length > 0) {
+      filtered = this.searchPlugins(filtered, this.state.search)
     }
-    this.props.history.replace(`/serverConfiguration/plugins/${openedPluginId}`)
+
+    return filtered
+  }
+
+  handleSearch(event) {
+    const search = event.target.value
+    this.setState({ search })
+    localStorage.setItem(searchStorageKey, search)
+  }
+
+  handleStatusFilter(event) {
+    const statusFilter = event.target.value
+    this.setState({ statusFilter })
+    localStorage.setItem(statusFilterStorageKey, statusFilter)
+  }
+
+  handlePluginClick(event) {
+    const pluginId = event.currentTarget.getAttribute('data-plugin-id')
+    const plugin = this.state.plugins.find((p) => p.id === pluginId)
+
+    if (plugin) {
+      const currentlySelected =
+        this.state.selectedPlugin && this.state.selectedPlugin.id === plugin.id
+      this.selectPlugin(currentlySelected ? null : plugin)
+    }
+  }
+
+  selectPlugin(plugin) {
+    const selectedPluginId = plugin ? plugin.id : null
+
+    // Update localStorage and state only - keep URL static for best performance
+    if (selectedPluginId) {
+      localStorage.setItem(openPluginStorageKey, selectedPluginId)
+      this.setState({ selectedPlugin: plugin })
+    } else {
+      localStorage.removeItem(openPluginStorageKey)
+      this.setState({ selectedPlugin: null })
+    }
+  }
+
+  scrollToSelectedPlugin(selectedPluginId) {
+    if (!this.tableContainer || !selectedPluginId) return
+
+    // Use a more efficient approach that doesn't cause re-renders
+    const selectedRow = this.tableContainer.querySelector(
+      `[data-plugin-id="${selectedPluginId}"]`
+    )
+    if (!selectedRow) return
+
+    const containerRect = this.tableContainer.getBoundingClientRect()
+    const rowRect = selectedRow.getBoundingClientRect()
+
+    // Check if the row is outside the visible area
+    if (
+      rowRect.bottom > containerRect.bottom ||
+      rowRect.top < containerRect.top
+    ) {
+      // Calculate the scroll position to center the selected row
+      const rowOffsetTop = selectedRow.offsetTop
+      const containerHeight = this.tableContainer.clientHeight
+      const rowHeight = selectedRow.clientHeight
+
+      const targetScrollTop = rowOffsetTop - containerHeight / 2 + rowHeight / 2
+
+      this.tableContainer.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: 'smooth'
+      })
+    }
   }
 
   componentDidMount() {
@@ -76,11 +165,23 @@ export default class PluginConfigurationList extends Component {
         }
       })
       .then((plugins) => {
-        let searchResults
-        if (this.state.search.length > 0) {
-          searchResults = this.searchPlugins(plugins, this.state.search)
+        // Set initial selected plugin from URL
+        const currentPluginId = this.props.match.params.pluginid
+        let selectedPlugin = null
+        if (currentPluginId && currentPluginId !== '-') {
+          selectedPlugin = plugins.find(
+            (plugin) => plugin.id === currentPluginId
+          )
         }
-        this.setState({ plugins, searchResults })
+
+        this.setState({ plugins, selectedPlugin })
+
+        // Scroll to the initially selected plugin if one exists (from URL/bookmark)
+        if (selectedPlugin) {
+          requestAnimationFrame(() => {
+            this.scrollToSelectedPlugin(selectedPlugin.id)
+          })
+        }
       })
       .catch((error) => {
         console.error(error)
@@ -89,63 +190,163 @@ export default class PluginConfigurationList extends Component {
   }
 
   render() {
-    return (
-      <Card>
-        <CardHeader>
-          <i className="fa fa-align-justify" />
-          <strong>Plugin Configuration</strong>
-        </CardHeader>
-        <CardBody>
-          <Form
-            action=""
-            method="post"
-            encType="multipart/form-data"
-            className="form-horizontal"
-            onSubmit={(e) => {
-              e.preventDefault()
-            }}
-          >
-            <FormGroup row>
-              <Col xs="3" md="1" className={'col-form-label'}>
-                <Label htmlFor="select">Search</Label>
-              </Col>
-              <Col xs="12" md="4">
-                <Input
-                  type="text"
-                  name="search"
-                  onChange={this.handleSearch}
-                  value={this.state.search}
-                />
-              </Col>
-            </FormGroup>
-          </Form>
+    const pluginList = this.getFilteredPlugins()
+    const selectedPluginId = this.state.selectedPlugin
+      ? this.state.selectedPlugin.id
+      : null
 
-          {(this.state.searchResults || this.state.plugins).map((plugin, i) => {
-            const isOpen = this.props.match.params.pluginid === plugin.id
-            return (
-              <PluginCard
-                plugin={plugin}
-                isConfigurator={isConfigurator(plugin)}
-                key={i}
-                isOpen={isOpen}
-                toggleForm={this.toggleForm.bind(this, i, plugin.id)}
-                history={this.props.history}
-                saveData={(data) => {
-                  if (plugin.data.configuration === undefined) {
-                    data.enabled = true
-                  }
-                  this.saveData(plugin.id, data)
-                }}
-              />
-            )
-          })}
-        </CardBody>
-      </Card>
+    return (
+      <div>
+        <Card>
+          <CardHeader>
+            <i className="fa fa-align-justify" />
+            <strong>Plugin Configuration</strong>
+          </CardHeader>
+          <CardBody>
+            <Form
+              action=""
+              method="post"
+              encType="multipart/form-data"
+              className="form-horizontal"
+              onSubmit={(e) => {
+                e.preventDefault()
+              }}
+            >
+              <FormGroup row>
+                <Col xs="3" md="1" className={'col-form-label'}>
+                  <Label htmlFor="search">Search</Label>
+                </Col>
+                <Col xs="12" md="4">
+                  <Input
+                    type="text"
+                    name="search"
+                    id="search"
+                    onChange={this.handleSearch}
+                    value={this.state.search}
+                    placeholder="Search plugins..."
+                  />
+                </Col>
+                <Col xs="3" md="2" className={'col-form-label'}>
+                  <Label htmlFor="statusFilter">Filter by Status</Label>
+                </Col>
+                <Col xs="12" md="3">
+                  <Input
+                    type="select"
+                    name="statusFilter"
+                    id="statusFilter"
+                    onChange={this.handleStatusFilter}
+                    value={this.state.statusFilter}
+                  >
+                    <option value="all">All Plugins</option>
+                    <option value="enabled">Enabled</option>
+                    <option value="disabled">Disabled</option>
+                  </Input>
+                </Col>
+              </FormGroup>
+            </Form>
+
+            <div
+              ref={(container) => {
+                this.tableContainer = container
+              }}
+              style={{
+                maxHeight: '400px',
+                overflowY: 'auto',
+                border: '1px solid #dee2e6'
+              }}
+            >
+              <Table
+                responsive
+                bordered
+                striped
+                size="sm"
+                hover
+                className="mb-0"
+              >
+                <thead
+                  style={{
+                    position: 'sticky',
+                    top: 0,
+                    backgroundColor: '#f8f9fa',
+                    zIndex: 1
+                  }}
+                >
+                  <tr>
+                    <th style={{ width: '30%' }}>Plugin Name</th>
+                    <th style={{ width: '15%' }}>Status</th>
+                    <th style={{ width: '55%' }}>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pluginList.map((plugin) => {
+                    const isSelected = selectedPluginId === plugin.id
+                    const configurationRequired =
+                      plugin.schema &&
+                      plugin.schema.properties &&
+                      Object.keys(plugin.schema?.properties).length != 0 &&
+                      plugin.data.configuration == null
+
+                    return (
+                      <tr
+                        key={plugin.id}
+                        data-plugin-id={plugin.id}
+                        onClick={this.handlePluginClick}
+                        style={{ cursor: 'pointer' }}
+                        className={isSelected ? 'table-active' : ''}
+                      >
+                        <td>
+                          <strong>{plugin.name}</strong>
+                        </td>
+                        <td>
+                          <div className="d-flex align-items-center justify-content-between">
+                            <div
+                              className={`badge ${plugin.data.enabled && !configurationRequired ? 'badge-success' : 'badge-secondary'}`}
+                            >
+                              {plugin.data.enabled && !configurationRequired
+                                ? 'Enabled'
+                                : 'Disabled'}
+                            </div>
+                            <i
+                              className="fa fa-cog text-muted"
+                              style={{ fontSize: '16px' }}
+                              title="Click to configure"
+                            ></i>
+                          </div>
+                        </td>
+                        <td>
+                          <small>
+                            {plugin.description || 'No description available'}
+                          </small>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </Table>
+            </div>
+          </CardBody>
+        </Card>
+
+        {this.state.selectedPlugin && (
+          <PluginConfigCard
+            plugin={this.state.selectedPlugin}
+            isConfigurator={isConfigurator(this.state.selectedPlugin)}
+            history={this.props.history}
+            onClose={() => this.selectPlugin(null)}
+            saveData={(data) => {
+              if (this.state.selectedPlugin.data.configuration === undefined) {
+                data.enabled = true
+              }
+              return this.saveData(this.state.selectedPlugin.id, data)
+            }}
+          />
+        )}
+      </div>
     )
   }
 
   saveData(id, data) {
-    fetch(`${window.serverRoutesPrefix}/plugins/${id}/config`, {
+    return fetch(`${window.serverRoutesPrefix}/plugins/${id}/config`, {
       method: 'POST',
       body: JSON.stringify(data),
       headers: new Headers({ 'Content-Type': 'application/json' }),
@@ -154,10 +355,22 @@ export default class PluginConfigurationList extends Component {
       if (response.status != 200) {
         console.error(response)
         alert('Saving plugin settings failed')
+        throw new Error('Save failed')
       } else {
         const plugins = [...this.state.plugins]
-        plugins.find((plugin) => plugin.id === id).data = data
-        this.setState({ plugins })
+        const pluginIndex = plugins.findIndex((plugin) => plugin.id === id)
+        if (pluginIndex !== -1) {
+          plugins[pluginIndex].data = data
+
+          // Update selected plugin if it's the one being saved
+          const selectedPlugin =
+            this.state.selectedPlugin && this.state.selectedPlugin.id === id
+              ? { ...this.state.selectedPlugin, data }
+              : this.state.selectedPlugin
+
+          this.setState({ plugins, selectedPlugin })
+        }
+        return true // Success
       }
     })
   }
@@ -166,7 +379,21 @@ export default class PluginConfigurationList extends Component {
 const isConfigurator = (pluginData) =>
   pluginData.keywords.includes('signalk-plugin-configurator')
 
-class PluginCard extends Component {
+class PluginConfigCard extends Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      showSaveSuccess: false
+    }
+  }
+
+  showSuccessMessage = () => {
+    this.setState({ showSaveSuccess: true })
+    setTimeout(() => {
+      this.setState({ showSaveSuccess: false })
+    }, 3000) // Hide after 3 seconds
+  }
+
   render() {
     const labelStyle = { marginLeft: '10px', marginBottom: '0px' }
     const { schema } = this.props.plugin
@@ -177,159 +404,186 @@ class PluginCard extends Component {
       this.props.plugin.data.configuration == null
 
     return (
-      <div
-        ref={(card) => {
-          this.card = card
-        }}
-      >
-        <Card>
-          <CardHeader>
-            <Row>
-              <Col
-                sm={4}
-                onClick={this.props.toggleForm}
-                className={'align-self-center'}
-              >
-                <i
-                  style={{ marginRight: '10px' }}
-                  className={
-                    'fa fa-chevron-' + (this.props.isOpen ? 'down' : 'right')
-                  }
-                />
-                {this.props.plugin.name}
+      <div>
+        {this.state.showSaveSuccess && (
+          <div
+            style={{
+              position: 'fixed',
+              top: '20px',
+              right: '20px',
+              zIndex: 9999,
+              maxWidth: '300px'
+            }}
+          >
+            <div
+              className="alert alert-success mb-0"
+              role="alert"
+              style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}
+            >
+              <i className="fa fa-check"></i> Configuration saved successfully!
+            </div>
+          </div>
+        )}
+        <Card
+          className="mt-3 plugin-config-card"
+          ref={(card) => {
+            this.configCard = card
+          }}
+        >
+          <CardHeader id="plugin-config-header">
+            <Row className="mb-2">
+              <Col className={'align-self-center'}>
+                <h5 className="mb-0">
+                  <i className="fa fa-cog" style={{ marginRight: '10px' }} />
+                  Configure: {this.props.plugin.name}
+                </h5>
+                <small className="text-muted">
+                  {this.props.plugin.packageName}
+                </small>
               </Col>
-              {configurationRequired && !this.props.isOpen && (
-                <Fragment>
-                  <Col sm={6} lg={3}>
-                    <div
-                      className="alert alert-warning mb-0 mt-2 mt-sm-0 pb-1 pt-1 btn-sm"
-                      role="alert"
-                    >
-                      <i className="fa fa-exclamation-triangle"></i> Plugin is
-                      disabled, configuration missing
-                    </div>
-                  </Col>
-                  <Col sm={2} className={'d-none d-sm-block'}>
-                    <Button
-                      size="sm"
-                      color="primary"
-                      className="mt-0"
-                      style={{ width: '100%' }}
-                      onClick={this.props.toggleForm}
-                    >
-                      Configure
-                    </Button>
-                  </Col>
-                </Fragment>
-              )}
-              {!configurationRequired && (
-                <Fragment>
-                  <Col lg={2} className={'mt-2 mt-lg-0'}>
-                    <Label
-                      style={labelStyle}
-                      className="switch switch-text switch-primary"
-                    >
-                      <Input
-                        type="checkbox"
-                        name="enabled"
-                        className="switch-input"
-                        onChange={() => {
-                          this.props.saveData({
-                            ...this.props.plugin.data,
-                            enabled: !this.props.plugin.data.enabled
-                          })
-                        }}
-                        checked={this.props.plugin.data.enabled}
-                      />
-                      <span
-                        className="switch-label"
-                        data-on="Yes"
-                        data-off="No"
-                      />
-                      <span className="switch-handle" />
-                    </Label>
-                    <span className="ml-1">Enabled</span>
-                  </Col>
-                  <Col lg={2} className={'mt-2 mt-lg-0'}>
-                    <Label
-                      style={labelStyle}
-                      className="switch switch-text switch-primary"
-                    >
-                      <Input
-                        type="checkbox"
-                        name="enableLogging"
-                        className="switch-input"
-                        onChange={() => {
-                          this.props.saveData({
-                            ...this.props.plugin.data,
-                            enableLogging: !this.props.plugin.data.enableLogging
-                          })
-                        }}
-                        checked={this.props.plugin.data.enableLogging}
-                      />
-                      <span
-                        className="switch-label"
-                        data-on="Yes"
-                        data-off="No"
-                      />
-                      <span className="switch-handle" />
-                    </Label>
-                    <span className="ml-1">Data logging</span>
-                  </Col>
-                  <Col lg={2} className={'mt-2 mt-lg-0'}>
-                    <Label
-                      style={labelStyle}
-                      className="switch switch-text switch-primary"
-                    >
-                      <Input
-                        type="checkbox"
-                        name="enableDebug"
-                        className="switch-input "
-                        onChange={() => {
-                          this.props.saveData({
-                            ...this.props.plugin.data,
-                            enableDebug: !this.props.plugin.data.enableDebug
-                          })
-                        }}
-                        checked={this.props.plugin.data.enableDebug}
-                      />
-                      <span
-                        className="switch-label"
-                        data-on="Yes"
-                        data-off="No"
-                      />
-                      <span className="switch-handle" />
-                    </Label>
-                    <span className="ml-1">Enable debug log</span>
-                  </Col>
-                </Fragment>
-              )}
             </Row>
+            {!configurationRequired && (
+              <Row>
+                <Col lg={4} className={'mt-2 mt-lg-0'}>
+                  <Label
+                    style={labelStyle}
+                    className="switch switch-text switch-primary"
+                  >
+                    <Input
+                      type="checkbox"
+                      name="enabled"
+                      className="switch-input"
+                      onChange={() => {
+                        this.props.saveData({
+                          ...this.props.plugin.data,
+                          enabled: !this.props.plugin.data.enabled
+                        })
+                      }}
+                      checked={this.props.plugin.data.enabled}
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
+                    />
+                    <span className="switch-handle" />
+                  </Label>
+                  <span className="ml-1">Enabled</span>
+                </Col>
+                <Col lg={4} className={'mt-2 mt-lg-0'}>
+                  <Label
+                    style={labelStyle}
+                    className="switch switch-text switch-primary"
+                  >
+                    <Input
+                      type="checkbox"
+                      name="enableLogging"
+                      className="switch-input"
+                      onChange={() => {
+                        this.props.saveData({
+                          ...this.props.plugin.data,
+                          enableLogging: !this.props.plugin.data.enableLogging
+                        })
+                      }}
+                      checked={this.props.plugin.data.enableLogging}
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
+                    />
+                    <span className="switch-handle" />
+                  </Label>
+                  <span className="ml-1">Data logging</span>
+                </Col>
+                <Col lg={4} className={'mt-2 mt-lg-0'}>
+                  <Label
+                    style={labelStyle}
+                    className="switch switch-text switch-primary"
+                  >
+                    <Input
+                      type="checkbox"
+                      name="enableDebug"
+                      className="switch-input "
+                      onChange={() => {
+                        this.props.saveData({
+                          ...this.props.plugin.data,
+                          enableDebug: !this.props.plugin.data.enableDebug
+                        })
+                      }}
+                      checked={this.props.plugin.data.enableDebug}
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
+                    />
+                    <span className="switch-handle" />
+                  </Label>
+                  <span className="ml-1">Enable debug log</span>
+                </Col>
+              </Row>
+            )}
           </CardHeader>
-          {this.props.isOpen && (
-            <CardBody>
-              {!this.props.isConfigurator && (
+          <CardBody>
+            {!this.props.isConfigurator && (
+              <div>
                 <PluginConfigurationForm
                   plugin={this.props.plugin}
                   onSubmit={(data) => {
-                    this.props.saveData(data)
-                    this.props.history.replace(`/serverConfiguration/plugins/-`)
+                    this.props
+                      .saveData(data)
+                      .then(() => {
+                        this.showSuccessMessage()
+                      })
+                      .catch(() => {
+                        // Error is already handled in saveData with alert
+                      })
                   }}
                 />
-              )}
-              {this.props.isConfigurator && (
-                <EmbeddedPluginConfigurationForm {...this.props} />
-              )}
-            </CardBody>
-          )}
+                {/* Sticky submit button */}
+                <div
+                  style={{
+                    position: 'fixed',
+                    bottom: '20px',
+                    right: '20px',
+                    zIndex: 1000,
+                    backgroundColor: '#fff',
+                    padding: '10px',
+                    borderRadius: '5px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                    border: '1px solid #dee2e6'
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => {
+                      // Find and trigger the form's submit button
+                      const formSubmitBtn = document.querySelector(
+                        '.plugin-config-card form button[type="submit"]'
+                      )
+                      if (formSubmitBtn) {
+                        formSubmitBtn.click()
+                      }
+                    }}
+                    style={{ minWidth: '140px' }}
+                  >
+                    <i
+                      className="fa fa-save"
+                      style={{ marginRight: '8px' }}
+                    ></i>
+                    Save Configuration
+                  </button>
+                </div>
+              </div>
+            )}
+            {this.props.isConfigurator && (
+              <EmbeddedPluginConfigurationForm {...this.props} />
+            )}
+          </CardBody>
         </Card>
       </div>
     )
-  }
-
-  componentDidMount() {
-    if (this.props.isOpen) {
-      window.scrollTo({ top: this.card.offsetTop - 54, behavior: 'smooth' })
-    }
   }
 }

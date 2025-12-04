@@ -325,6 +325,11 @@ export default ({ plugin, onSubmit }) => {
           enableDebug
         })
       }}
-    />
+    >
+      <button type="submit" className="btn btn-primary">
+        <i className="fa fa-save" style={{ marginRight: '8px' }}></i>
+        Save Configuration
+      </button>
+    </Form>
   )
 }
