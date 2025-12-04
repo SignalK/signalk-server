@@ -800,9 +800,10 @@ tinygo build -o plugin.wasm -target=wasip1 -gc=leaking -no-debug main.go
 | Capability | Status | Description |
 |------------|--------|-------------|
 | `httpEndpoints` | ✅ | Custom HTTP endpoints (GET/POST/PUT/DELETE) - Tested for AssemblyScript & Rust |
-| Resource providers | 🔄 | Routes, waypoints, etc. |
+| `resourceProvider` | ✅ | Generic resource API (`/signalk/v2/api/resources/{type}`) |
+| `weatherProvider` | ✅ | Weather API (`/signalk/v2/api/weather/*`) - Tested with OpenWeatherMap |
 | Autopilot providers | 🔄 | Autopilot control |
-| Weather providers | 🔄 | Weather data providers |
+| Routes/Waypoints | 🔄 | Standard resource types with validation |
 
 ### Phase 3A (Complete ✅)
 
@@ -857,8 +858,11 @@ tinygo build -o plugin.wasm -target=wasip1 -gc=leaking -no-debug main.go
 ### Phase 3 Goals (In Progress 🔄)
 
 - [x] ✅ Custom REST API endpoints (AssemblyScript + Rust)
-- [x] ✅ Resource providers (weather plugin example)
+- [x] ✅ Resource providers (generic `/signalk/v2/api/resources/{type}`)
+- [x] ✅ Weather providers (`/signalk/v2/api/weather/*` with Asyncify support)
 - [x] ✅ Zero Node.js plugin regressions (16 automated tests passing)
+- [ ] 🔄 Autopilot providers
+- [ ] 🔄 Routes/Waypoints (standard resource types)
 - [ ] 🔄 Performance benchmarks
 - [ ] 🔄 10+ developers testing
 - [ ] 🔄 Migration guide for existing plugins
