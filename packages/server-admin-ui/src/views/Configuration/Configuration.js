@@ -169,7 +169,7 @@ export default class PluginConfigurationList extends Component {
         const currentPluginId = this.props.match.params.pluginid
         const lastOpenPluginId = localStorage.getItem(openPluginStorageKey)
         let selectedPlugin = null
-        
+
         if (currentPluginId && currentPluginId !== '-') {
           selectedPlugin = plugins.find(
             (plugin) => plugin.id === currentPluginId
