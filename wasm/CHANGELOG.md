@@ -2,6 +2,52 @@
 
 All notable changes to the SignalK WASM runtime since forking from v2.18.0.
 
+## [2.19.0+beta1wasm9] - 2025-12-05
+
+### Added - Routes & Waypoints Resource Provider Example
+
+New example plugin demonstrating standard Signal K resource types (routes and waypoints) with proper GeoJSON schema compliance.
+
+**Features:**
+- Registers as resource provider for BOTH `routes` AND `waypoints` types
+- Full CRUD operations (list, get, create/update, delete)
+- GeoJSON-compliant data structures (Point for waypoints, LineString for routes)
+- Pre-populated Helsinki-area sample navigation data
+- Demonstrates multiple resource type registration from single plugin
+
+**Sample Data Included:**
+- 3 waypoints: Helsinki Marina, Suomenlinna Anchorage, Fuel Dock
+- 1 route: "Marina to Suomenlinna" with 3 waypoints and coordinatesMeta
+
+**Files Created:**
+- `examples/wasm-plugins/routes-waypoints-plugin/` - Complete example plugin
+
+**API Endpoints:**
+```bash
+GET    /signalk/v2/api/resources/waypoints
+GET    /signalk/v2/api/resources/waypoints/{id}
+POST   /signalk/v2/api/resources/waypoints
+DELETE /signalk/v2/api/resources/waypoints/{id}
+
+GET    /signalk/v2/api/resources/routes
+GET    /signalk/v2/api/resources/routes/{id}
+POST   /signalk/v2/api/resources/routes
+DELETE /signalk/v2/api/resources/routes/{id}
+```
+
+### Fixed - Resource Provider Handler Missing resourceType
+
+Fixed bug where WASM resource handlers weren't receiving the `resourceType` parameter, causing "Unknown resource type" errors on GET by ID operations.
+
+**Root Cause:** The binding closures captured `resourceType` but didn't include it in the JSON request sent to WASM handlers.
+
+**Solution:** All four handler methods (listResources, getResource, setResource, deleteResource) now include `resourceType` in the request JSON.
+
+**File Modified:**
+- `src/wasm/bindings/resource-provider.ts` - Added resourceType to all handler requests
+
+---
+
 ## [2.19.0+beta1wasm8] - 2025-12-05
 
 ### Added - Weather Provider API for WASM Plugins

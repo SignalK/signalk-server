@@ -28,6 +28,38 @@
 
 ## Recent Achievements (Latest First)
 
+### 🎉 Routes & Waypoints Resource Provider Example! (December 5, 2025)
+
+**Standard Signal K Resource Types Working!**
+
+New example plugin demonstrating routes and waypoints with proper GeoJSON schema compliance:
+
+```bash
+# List waypoints (returns both built-in AND WASM plugin data)
+curl http://localhost:3000/signalk/v2/api/resources/waypoints
+
+# Get specific waypoint from WASM plugin
+curl http://localhost:3000/signalk/v2/api/resources/waypoints/a1b2c3d4-0001-4000-8000-000000000001
+# Returns: {"name":"Helsinki Marina","type":"Marina","feature":{"type":"Feature","geometry":{"type":"Point","coordinates":[24.956,60.1695]},...}}
+
+# List routes
+curl http://localhost:3000/signalk/v2/api/resources/routes
+```
+
+**Key Features:**
+- ✅ Multiple resource type registration (routes AND waypoints from same plugin)
+- ✅ GeoJSON Point geometry for waypoints
+- ✅ GeoJSON LineString geometry for routes with coordinatesMeta
+- ✅ Full CRUD operations (list, get, create, update, delete)
+- ✅ Coexists with built-in resources-provider
+
+**Bug Fix:** Resource handlers now receive `resourceType` parameter correctly.
+
+**Files Created:**
+- `examples/wasm-plugins/routes-waypoints-plugin/` - Complete example
+
+---
+
 ### 🎉 Zero Node.js Plugin Regressions - Automated Tests! (December 5, 2025)
 
 **Major Milestone**: Comprehensive regression test suite proving WASM and Node.js plugins coexist without issues!
@@ -695,6 +727,36 @@ cargo build --release --target wasm32-wasip1
 tinygo build -o plugin.wasm -target=wasip1 -gc=leaking -no-debug main.go
 ```
 
+#### Routes & Waypoints Plugin (Standard Resource Types Example) ✅
+
+**Location**: [examples/wasm-plugins/routes-waypoints-plugin](../examples/wasm-plugins/routes-waypoints-plugin)
+**Version**: 0.1.0
+**Status**: Deployed and tested
+
+**Demonstrates:**
+- ✅ Resource provider for standard Signal K types (routes, waypoints)
+- ✅ Multiple resource type registration from single plugin
+- ✅ GeoJSON Point geometry (waypoints)
+- ✅ GeoJSON LineString geometry with coordinatesMeta (routes)
+- ✅ Full CRUD operations
+- ✅ Pre-populated sample navigation data
+
+**Sample Data:**
+- 3 waypoints: Helsinki Marina, Suomenlinna Anchorage, Fuel Dock
+- 1 route: "Marina to Suomenlinna" (3.5km, 3 waypoints)
+
+**Files:**
+- `assembly/index.ts` - AssemblyScript implementation (~540 lines)
+- `package.json` - npm package with `resourceProvider` capability
+- `README.md` - Comprehensive documentation with API examples
+
+**Binary Size**: ~23 KB (optimized)
+
+**Build Command:**
+```bash
+npm run build
+```
+
 ---
 
 ## Documentation Created
@@ -802,8 +864,8 @@ tinygo build -o plugin.wasm -target=wasip1 -gc=leaking -no-debug main.go
 | `httpEndpoints` | ✅ | Custom HTTP endpoints (GET/POST/PUT/DELETE) - Tested for AssemblyScript & Rust |
 | `resourceProvider` | ✅ | Generic resource API (`/signalk/v2/api/resources/{type}`) |
 | `weatherProvider` | ✅ | Weather API (`/signalk/v2/api/weather/*`) - Tested with OpenWeatherMap |
+| Routes/Waypoints | ✅ | Standard resource types with GeoJSON compliance (routes-waypoints-plugin example) |
 | Autopilot providers | 🔄 | Autopilot control |
-| Routes/Waypoints | 🔄 | Standard resource types with validation |
 
 ### Phase 3A (Complete ✅)
 
@@ -861,8 +923,8 @@ tinygo build -o plugin.wasm -target=wasip1 -gc=leaking -no-debug main.go
 - [x] ✅ Resource providers (generic `/signalk/v2/api/resources/{type}`)
 - [x] ✅ Weather providers (`/signalk/v2/api/weather/*` with Asyncify support)
 - [x] ✅ Zero Node.js plugin regressions (16 automated tests passing)
+- [x] ✅ Routes/Waypoints (standard resource types with GeoJSON compliance)
 - [ ] 🔄 Autopilot providers
-- [ ] 🔄 Routes/Waypoints (standard resource types)
 - [ ] 🔄 Performance benchmarks
 - [ ] 🔄 10+ developers testing
 - [ ] 🔄 Migration guide for existing plugins
@@ -950,7 +1012,7 @@ Apache License 2.0 (same as Signal K Server)
 
 ---
 
-**Status**: Phase 3 Resource Providers Complete ✅, Zero Node.js Regressions ✅ (16 tests passing)
-**Version**: 2.19.0+beta.1+wasm7
+**Status**: Phase 3 Resource Providers Complete ✅, Routes/Waypoints ✅, Zero Node.js Regressions ✅ (16 tests passing)
+**Version**: 2.19.0+beta1wasm9
 **Date**: December 5, 2025
-**Next**: Performance benchmarks, 10+ developer testing, Migration guide
+**Next**: Autopilot providers, Performance benchmarks, 10+ developer testing

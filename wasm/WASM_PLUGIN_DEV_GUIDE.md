@@ -3000,6 +3000,10 @@ npm run asbuild
 
 WASM plugins can act as **resource providers** for Signal K resources like weather data, routes, waypoints, or custom resource types.
 
+**Example Plugins:**
+- [weather-plugin](../examples/wasm-plugins/weather-plugin/) - Custom resource type (`weather`)
+- [routes-waypoints-plugin](../examples/wasm-plugins/routes-waypoints-plugin/) - Standard types (`routes`, `waypoints`)
+
 ### Enabling Resource Provider Capability
 
 Add `resourceProvider: true` to your package.json:

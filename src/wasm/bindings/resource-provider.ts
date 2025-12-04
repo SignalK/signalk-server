@@ -168,6 +168,7 @@ export function createResourceProviderBinding(
       })
 
       // Create wrapper methods that call into WASM
+      // Note: resourceType is captured from closure scope
       const providerMethods = {
         listResources: async (query: { [key: string]: any }): Promise<{ [id: string]: any }> => {
           const provider = wasmResourceProviders.get(key)
@@ -176,7 +177,8 @@ export function createResourceProviderBinding(
             return {}
           }
 
-          const queryJson = JSON.stringify(query)
+          // Include resourceType so WASM knows which type to list
+          const queryJson = JSON.stringify({ ...query, resourceType })
           const result = callWasmResourceHandler(provider.pluginInstance, 'resource_list', queryJson)
           return result ? JSON.parse(result) : {}
         },
@@ -187,7 +189,8 @@ export function createResourceProviderBinding(
             return {}
           }
 
-          const requestJson = JSON.stringify({ id, property })
+          // Include resourceType so WASM knows which storage to search
+          const requestJson = JSON.stringify({ id, property, resourceType })
           const result = callWasmResourceHandler(provider.pluginInstance, 'resource_get', requestJson)
           return result ? JSON.parse(result) : {}
         },
@@ -198,7 +201,8 @@ export function createResourceProviderBinding(
             return
           }
 
-          const requestJson = JSON.stringify({ id, value })
+          // Include resourceType so WASM knows which storage to update
+          const requestJson = JSON.stringify({ id, value, resourceType })
           callWasmResourceHandler(provider.pluginInstance, 'resource_set', requestJson)
         },
         deleteResource: async (id: string): Promise<void> => {
@@ -208,7 +212,8 @@ export function createResourceProviderBinding(
             return
           }
 
-          const requestJson = JSON.stringify({ id })
+          // Include resourceType so WASM knows which storage to delete from
+          const requestJson = JSON.stringify({ id, resourceType })
           callWasmResourceHandler(provider.pluginInstance, 'resource_delete', requestJson)
         }
       }
