@@ -71,7 +71,7 @@ function findModulesInDir(dir: string, keyword: string): ModuleData[] {
   debug('findModulesInDir: ' + dir)
   return fs
     .readdirSync(dir)
-    .filter((name) => name !== '.bin')
+    .filter((name) => !name.startsWith('.'))
     .reduce<ModuleData[]>((result, filename) => {
       if (filename.indexOf('@') === 0) {
         return result.concat(
@@ -268,6 +268,10 @@ async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
         fetchedCount > 0 ? fetchedCount : 0
       }&text=keywords:${keyword}`
     )
+    if (!res.ok) {
+      npmDebug(`npm search failed with status ${res.status}: ${res.statusText}`)
+      break
+    }
     const parsed = (await res.json()) as NpmSearchResponse
 
     moduleData = moduleData.concat(parsed.objects)
@@ -286,7 +290,11 @@ async function getLatestServerVersion(
   currentVersion: string,
   distTags = doFetchDistTags
 ): Promise<string> {
-  const versions = (await (await distTags()).json()) as NpmDistTags
+  const res = await distTags()
+  if (!res.ok) {
+    throw new Error(`Failed to fetch dist-tags: ${res.status} ${res.statusText}`)
+  }
+  const versions = (await res.json()) as NpmDistTags
 
   const prereleaseData = semver.prerelease(currentVersion)
   if (prereleaseData) {
