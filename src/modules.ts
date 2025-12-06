@@ -292,7 +292,9 @@ async function getLatestServerVersion(
 ): Promise<string> {
   const res = await distTags()
   if (!res.ok) {
-    throw new Error(`Failed to fetch dist-tags: ${res.status} ${res.statusText}`)
+    throw new Error(
+      `Failed to fetch dist-tags: ${res.status} ${res.statusText}`
+    )
   }
   const versions = (await res.json()) as NpmDistTags
 
