@@ -516,6 +516,13 @@ module.exports = function (
       '/security/access/requests/:identifier/:status' // for backwards compatibly with existing clients
     ],
     (req: Request, res: Response) => {
+      if (!app.securityStrategy.setAccessRequestStatus) {
+        res.status(404).json({
+          message:
+            'Access requests not available. Server security may not be enabled.'
+        })
+        return
+      }
       if (checkAllowConfigure(req, res)) {
         const config = getSecurityConfig(app)
         app.securityStrategy.setAccessRequestStatus(
@@ -536,6 +543,13 @@ module.exports = function (
   app.get(
     `${SERVERROUTESPREFIX}/security/access/requests`,
     (req: Request, res: Response) => {
+      if (!app.securityStrategy.getAccessRequestsResponse) {
+        res.status(404).json({
+          message:
+            'Access requests not available. Server security may not be enabled.'
+        })
+        return
+      }
       if (checkAllowConfigure(req, res)) {
         res.json(app.securityStrategy.getAccessRequestsResponse())
       }
