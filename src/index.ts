@@ -199,7 +199,7 @@ class Server {
       status.type = type
       status.id = providerId
       status.statusType = statusType
-      status.timeStamp = new Date().toLocaleString()
+      status.timeStamp = new Date().toISOString()
 
       status.message = statusMessage
 
