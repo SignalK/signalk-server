@@ -5,7 +5,7 @@
   height: 1em;
   border-radius: 50%;
   background-color: red;
-  animation: pulse .65s infinite ease-in-out;
+  animation: pulse 0.65s infinite ease-in-out;
 }
 
 /* The Animation */

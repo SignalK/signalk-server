@@ -652,14 +652,14 @@ class DataBrowser extends Component {
                               <td className="value-cell">
                                 {(() => {
                                   const CustomRenderer = getValueRenderer(
-                                    data.path, meta
+                                    data.path,
+                                    meta
                                   )
                                   if (CustomRenderer) {
                                     return (
                                       <CustomRenderer
                                         value={data.value}
                                         units={units}
-                                        zones={meta?.zones}
                                         {...meta?.renderer?.options}
                                       />
                                     )
