@@ -659,7 +659,8 @@ class DataBrowser extends Component {
                                       <CustomRenderer
                                         value={data.value}
                                         units={units}
-                                        {...meta?.renderer?.params}
+                                        zones={meta?.zones}
+                                        {...meta?.renderer?.options}
                                       />
                                     )
                                   }
