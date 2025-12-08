@@ -53,9 +53,7 @@ Start the server with sample data by running:
 - NMEA0183 sample data: `bin/nmea-from-file`
 - NMEA2000 sample data: `bin/n2k-from-file`
 
-This will start the server with a sample configuration file and the server will start playing back data from a sample file under `samples/`. The data is available immediately via the REST interface at https://localhost:3000/signalk/v1/api/.
-
-This small demo shows how to connect the Signal K Server WebSocket interface from the command line:
+This will start the server with a sample configuration file and the server will start playing back data from a sample file under `samples/`. The data is available immediately via the REST interface at https://localhost:3000/signalk/v1/api/ and via WebSocket, for example with
 
 ```
 npm install -g wscat2
@@ -68,12 +66,8 @@ Before you submit your Pull Request (PR) consider the following guidelines:
 
 1. [Fork](https://help.github.com/articles/fork-a-repo/) the repository.
 1. Make your changes in a new git branch:
-
-   ```shell
-   git checkout -b my-fix-branch master
-   ```
-
-1. Create your patch.
+   - `git checkout -b my-fix-branch master`
+   - do not change the server or package version numbers. They will be changed by the maintainers after the PR is merged, when a new version is published
 1. Commit your changes using a descriptive commit message that follows the
    [conventions outlined here](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#commits). Whilst we are not 100% strict about this, it really helps when reviewing the PR and in making the commit history readable. The TL;DR of it is below.
    - The subject line should be in the format `<type>: <subject>`, where `<type>` should be one of:
@@ -87,56 +81,34 @@ Before you submit your Pull Request (PR) consider the following guidelines:
    - `<subject>` should use imperative, present tense: "change" not "changed" or "changes"
    - Examples of good Subject Lines:
      - `doc: clarify meta.units behaviour`
-     - `chore: update keyswithmetadat.json`
-     - `style: whitespace`
+     - `chore: update keyswithmetadata.json`
+     - `style: prettier`
      - `fix: allow nextPoint to be an intermediate leaf`
      - `feature: push design object fields under value/values`
-   - Message body should also be in imperative, present tense and **include motivation for the change** and **differences to previous behaviour**.
-   - Footer should reference any issues. If the PR should close issue(s) (assuming it is committed), use closes/fixes or resolves and the issue number. eg. "closes #18", "fixes #21 and resolves #23".
+   - Message body should also be **in imperative, present tense** and **include motivation for the change** and **differences to previous behaviour**.
+   - Footer should reference any issues. If the PR should close issue(s) (assuming it is committed), **use closes,fixes or resolves** and the issue number. eg. "closes #18", "fixes #21 and resolves #23".
    - Subject, Body and Footer are separated by a blank line.
 
-1. Push your branch to GitHub:
+1. Format and lint your code
+   - run `npm run format` to format and [lint](<https://en.wikipedia.org/wiki/Lint_(software)>) your code.
 
-   ```shell
-   git push origin my-fix-branch
-   ```
+1. Push your branch to GitHub:
+   - `git push origin my-fix-branch`
 
 1. In GitHub, create a pull request.
+   - Use the same guidelines as commit messages to write the PR title and description.
+   - The server's release notes are automatically generated from PR titles, so think about how you can make them **descriptive, informative and easy to understand**. Ask yourself: "If I only knew the title would I understand what the PR does?".
+   - The description should tell how the change affects the server's behavior and motivation for doing the change.
+   - If you are using AI **PLEASE TAKE THE TIME to make the PR description succinct and straight to the point**. AIs are really good at creating text, filling in lots of details and adding smug comments how great the PR is. HELP the maintainers so that we don't need to wade through AI fluff. We will ask for more details if too little are included.
+   - Don't include too much detail, like the exact changed lines or a version you tested the change with unless there is specific reason to do so. If the change is not directly related to a version adding a version is misleading. Git shows what's changed and extra content in PR description is just double work for maintainers to read, unless there is something that rquires attention.
 
-- Use the same guidelines as commit messages to write the PR title and description. The server's release notes are automatically generated from PR titles, so think about how you can make them informative and easy to understand. The description should tell how the change affects the server's behavior and motivation for doing the change.
-- If we suggest changes to your PR we expect you to:
-  - Implement the agreed changes.
-  - Rebase your branch and force push to your GitHub repository (this will update your Pull Request):
+1. Wait for labeling and review
+   - The maintainers will apply a label to the PR. The label is used to group PRs, mainly to distinguish fixes and new features.
+   - If we require changes to your PR we expect you to:
+   - Implement the agreed changes.
+   - Rebase your branch and force push to your GitHub repository (this will update your Pull Request):
 
-    ```shell
-    git rebase master -i
-    git push -f
-    ```
-
-#### After your pull request is merged
-
-After your pull request is merged, you can safely delete your branch and pull the changes from the main (upstream) repository:
-
-- Delete the remote branch on GitHub either through the GitHub web UI or your local shell as follows:
-
-  ```shell
-  git push origin --delete my-fix-branch
-  ```
-
-- Check out the master branch:
-
-  ```shell
-  git checkout master -f
-  ```
-
-- Delete the local branch:
-
-  ```shell
-  git branch -D my-fix-branch
-  ```
-
-- Update your master with the latest upstream version:
-
-  ```shell
-  git pull --ff upstream master
-  ```
+     ```shell
+     git rebase master -i
+     git push -f
+     ```
