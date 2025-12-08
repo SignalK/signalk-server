@@ -152,6 +152,7 @@ describe('getLatestServerVersion', () => {
   it('latest for normal is normal', () => {
     return getLatestServerVersion('1.17.0', () =>
       Promise.resolve({
+        ok: true,
         json: () => ({
           latest: '1.18.3',
           beta: '1.19.0-beta.1'
@@ -165,6 +166,7 @@ describe('getLatestServerVersion', () => {
   it('latest for beta is newer same series beta', (done) => {
     getLatestServerVersion('1.18.0-beta.2', () =>
       Promise.resolve({
+        ok: true,
         json: () => ({
           latest: '1.17.3',
           beta: '1.18.0-beta.3'
@@ -179,6 +181,7 @@ describe('getLatestServerVersion', () => {
   it('latest for beta is newer real release', () => {
     return getLatestServerVersion('1.18.0-beta.2', () =>
       Promise.resolve({
+        ok: true,
         json: () => ({
           latest: '1.18.0',
           beta: '1.18.0-beta.3'
