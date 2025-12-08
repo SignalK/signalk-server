@@ -5,7 +5,6 @@ children:
   - ../breaking_changes.md
   - plugins/README.md
   - rest-api/README.md
-  - contributing.md
 ---
 
 # Developing with Signal K
@@ -14,6 +13,8 @@ Signal K Server has an extensible architecture that enables developers to add fu
 
 The information in this section aims to provide guidance, not only on how to develop plugins and applications to extend capability, but also how to do so in alignment with the Signal K specification, protocol and server architecture.
 By understanding the underlying architecture, the plugins and apps you create will ensure that the additional functionality and data will be discoverable and work in harmony with other solutions.
+
+See also the [contributing document](https://github.com/SignalK/signalk-server/blob/master/contributing.md) for instructions on contributing to the server's code.
 
 ## Looking Ahead
 
