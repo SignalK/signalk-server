@@ -67,7 +67,8 @@ Before you submit your Pull Request (PR) consider the following guidelines:
 1. [Fork](https://help.github.com/articles/fork-a-repo/) the repository.
 1. Make your changes in a new git branch:
    - `git checkout -b my-fix-branch master`
-   - do not change the server or package version numbers. They will be changed by the maintainers after the PR is merged, when a new version is published
+   - Do not change the server or package version numbers. They will be changed by the maintainers after the PR is merged, when a new version is published
+   - Create separate PRs for separate things - don't cram unrelated things to one PR, even if you have done them together. If you put multiple changes in one PR and one gets stalled or rejected we could still possibly merge the other one. If changes in one depend on the other one state that in PR description. You can think in terms of release notes: if the changes would be two entries in the changelog they should be separate PRs.
 1. Commit your changes using a descriptive commit message that follows the
    [conventions outlined here](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#commits). Whilst we are not 100% strict about this, it really helps when reviewing the PR and in making the commit history readable. The TL;DR of it is below.
    - The subject line should be in the format `<type>: <subject>`, where `<type>` should be one of:
@@ -99,6 +100,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
    - Use the same guidelines as commit messages to write the PR title and description.
    - The server's release notes are automatically generated from PR titles, so think about how you can make them **descriptive, informative and easy to understand**. Ask yourself: "If I only knew the title would I understand what the PR does?".
    - The description should tell how the change affects the server's behavior and motivation for doing the change.
+   - If you change the Admin UI include screenshots in the description to help others get a quick idea what changes and how it will look. Before & after pictures are great for this.
    - If you are using AI **PLEASE TAKE THE TIME to make the PR description succinct and straight to the point**. AIs are really good at creating text, filling in lots of details and adding smug comments how great the PR is. HELP the maintainers so that we don't need to wade through AI fluff. We will ask for more details if too little are included.
    - Don't include too much detail, like the exact changed lines or a version you tested the change with unless there is specific reason to do so. If the change is not directly related to a version adding a version is misleading. Git shows what's changed and extra content in PR description is just double work for maintainers to read, unless there is something that rquires attention.
 
