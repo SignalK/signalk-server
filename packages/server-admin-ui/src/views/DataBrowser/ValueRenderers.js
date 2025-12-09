@@ -6,12 +6,6 @@ import {
   faBell,
   faBellSlash
 } from '@fortawesome/free-solid-svg-icons'
-/*import {
-  BsEyeFill,
-  BsEyeSlashFill,
-  BsBellFill,
-  BsBellSlashFill
-} from 'react-icons/bs' //for notification renderer*/
 
 import '../../blinking-circle.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -163,8 +157,7 @@ const NotificationRenderer = ({ value }) => {
     borderRadius: '50%',
     backgroundColor: severityColor,
     display: 'inline-block',
-    marginLeft: '.5em',
-    verticalAlign: 'middle'
+    marginLeft: '.5em'
   }
   return (
     <div className="d-flex justify-content-between">
@@ -174,10 +167,7 @@ const NotificationRenderer = ({ value }) => {
         ) : (
           <span style={circleStyle}></span>
         )}
-        <span
-          className="d-flex"
-          style={{ verticalAlign: 'middle', marginLeft: '.5em' }}
-        >
+        <span className="d-flex" style={{ marginLeft: '.5em' }}>
           {state.toUpperCase() + ': ' + message}
         </span>
       </div>
