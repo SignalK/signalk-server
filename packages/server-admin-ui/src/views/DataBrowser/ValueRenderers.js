@@ -1,13 +1,20 @@
 import React from 'react'
 import ReactHtmlParser from 'react-html-parser'
 import {
+  faEye,
+  faEyeSlash,
+  faBell,
+  faBellSlash
+} from '@fortawesome/free-solid-svg-icons'
+/*import {
   BsEyeFill,
   BsEyeSlashFill,
   BsBellFill,
   BsBellSlashFill
-} from 'react-icons/bs' //for notification renderer
+} from 'react-icons/bs' //for notification renderer*/
 
 import '../../blinking-circle.css'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 function radiansToDegrees(radians) {
   return radians * (180 / Math.PI)
 }
@@ -175,8 +182,12 @@ const NotificationRenderer = ({ value }) => {
         </span>
       </div>
       <div className="d-flex" style={{ gap: '.5em' }}>
-        {method.includes('visual') ? <BsEyeFill /> : <BsEyeSlashFill />}
-        {method.includes('audio') ? <BsBellFill /> : <BsBellSlashFill />}
+        <FontAwesomeIcon
+          icon={method.includes('visual') ? faEye : faEyeSlash}
+        />
+        <FontAwesomeIcon
+          icon={method.includes('visual') ? faBell : faBellSlash}
+        />
       </div>
     </div>
   )
