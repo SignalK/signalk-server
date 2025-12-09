@@ -46,6 +46,23 @@ As you work on your changes, you may need to re-build changes. To continuously w
 
 You may also need to restart the server to see some changes reflected.
 
+### Developing workspace packages
+
+When making changes to packages in the `packages/` directory (e.g., `server-admin-ui`, `streams`, `server-api`), use:
+
+```shell
+npm run build:all
+```
+
+This builds your local workspace packages and the server.
+
+| Script      | What it does            | Use case                           |
+| ----------- | ----------------------- | ---------------------------------- |
+| `build:all` | workspaces + tsc + docs | When working on workspace packages |
+| `build`     | tsc only                | Quick recompile (server code only) |
+
+**Important:** Avoid running `npm install` after making local changes to workspace packages, as it may overwrite your changes with registry versions. If you need to add new dependencies, install them individually with `npm install <package-name>`.
+
 ### Using sample data
 
 Start the server with sample data by running:
@@ -74,6 +91,15 @@ Before you submit your Pull Request (PR) consider the following guidelines:
    ```
 
 1. Create your patch.
+1. Format and lint your code before committing:
+
+   ```shell
+   npm run format
+   npm run lint
+   ```
+
+   Fix any lint errors before proceeding.
+
 1. Commit your changes using a descriptive commit message that follows the
    [conventions outlined here](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#commits). Whilst we are not 100% strict about this, it really helps when reviewing the PR and in making the commit history readable. The TL;DR of it is below.
    - The subject line should be in the format `<type>: <subject>`, where `<type>` should be one of:
