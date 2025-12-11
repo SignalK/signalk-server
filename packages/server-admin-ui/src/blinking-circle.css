@@ -1,0 +1,24 @@
+/* The Circle */
+.blinking-circle {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  background-color: red;
+  animation: pulse 0.65s infinite ease-in-out;
+}
+
+/* The Animation */
+@keyframes pulse {
+  0% {
+    opacity: 0.15;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.15;
+  }
+}

@@ -1,4 +1,237 @@
 import React from 'react'
+import ReactHtmlParser from 'react-html-parser'
+import {
+  faEye,
+  faEyeSlash,
+  faBell,
+  faBellSlash
+} from '@fortawesome/free-solid-svg-icons'
+
+import '../../blinking-circle.css'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+function radiansToDegrees(radians) {
+  return radians * (180 / Math.PI)
+}
+const SimpleHTMLRenderer = ({ value, html }) => {
+  const h = html.replaceAll('{{value}}', value)
+  return <div>{ReactHtmlParser(h)}</div>
+}
+
+const DirectionRenderer = ({ value, size = '1em' }) => {
+  const traditionalCompassPoints = [
+    'N',
+    'N by E',
+    'NNE',
+    'NE by N',
+    'NE',
+    'NE by E',
+    'ENE',
+    'E by N',
+    'E',
+    'E by S',
+    'ESE',
+    'SE by E',
+    'SE',
+    'SE by S',
+    'SSE',
+    'S by E',
+    'S',
+    'S by W',
+    'SSW',
+    'SW by S',
+    'SW',
+    'SW by W',
+    'WSW',
+    'W by S',
+    'W',
+    'W by N',
+    'WNW',
+    'NW by W',
+    'NW',
+    'NW by N',
+    'NNW',
+    'N by W'
+  ]
+
+  const directionDegrees = radiansToDegrees(value)
+  const compassPoint =
+    traditionalCompassPoints[
+      Math.round((((directionDegrees % 360) + 360) % 360) / 11.25) % 32
+    ]
+  const arrowStyle = {
+    fontSize: size,
+    fontWeight: 'bold',
+    transition: 'transform 0.3s ease-out',
+
+    transform: `rotate(${directionDegrees}deg) translateY(-2px)`,
+    display: 'inline-block' // Required for rotation to work reliably
+  }
+
+  return (
+    <div
+      className="text-primary"
+      style={{
+        display: 'inline-flex'
+      }}
+    >
+      <span
+        style={arrowStyle}
+        aria-label={`Wind direction: ${directionDegrees} degrees`}
+      >
+        &#x2191;
+      </span>
+
+      <span style={{ marginLeft: '.5em' }}>
+        {directionDegrees.toFixed(2)}° {compassPoint}
+      </span>
+    </div>
+  )
+}
+const AttitudeRenderer = ({ value, size = '2em' }) => {
+  const pitch = radiansToDegrees(value.pitch || 0)
+  const roll = radiansToDegrees(value.roll || 0)
+  const horizonHeight = ((pitch + 90) / 180) * 100 + '%'
+  const attitudeText = `pitch: ${pitch.toFixed(1)}° roll: ${roll.toFixed(1)}°`
+  return (
+    <div
+      className="text-primary"
+      style={{
+        display: 'inline-flex'
+      }}
+    >
+      <div
+        style={{
+          width: size,
+          height: size,
+          border: '2px solid black',
+          borderRadius: '50%',
+          overflow: 'hidden',
+          position: 'relative'
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'skyblue',
+            position: 'absolute',
+            transformOrigin: 'center',
+            transform: `rotateZ(${roll}deg)`
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              height: horizonHeight,
+              backgroundColor: 'brown',
+              position: 'absolute',
+              bottom: 0
+            }}
+          ></div>
+        </div>
+      </div>
+      <span className="text-primary" style={{ marginLeft: '.5em' }}>
+        {attitudeText}
+      </span>
+    </div>
+  )
+}
+
+const NotificationRenderer = ({ value }) => {
+  const { message, state, method = [] } = value
+
+  const severityColor =
+    {
+      info: 'green',
+      normal: 'green',
+      nominal: 'green',
+      warn: 'yellow',
+      alert: 'orange',
+      alarm: 'red',
+      emergency: 'darkred'
+    }[state] || 'gray'
+
+  const circleStyle = {
+    width: '1em',
+    height: '1em',
+    borderRadius: '50%',
+    backgroundColor: severityColor,
+    display: 'inline-block',
+    marginLeft: '.5em'
+  }
+  return (
+    <div className="d-flex justify-content-between">
+      <div className="d-flex" style={{ verticalAlign: 'middle' }}>
+        {state === 'emergency' ? (
+          <span className="blinking-circle"></span>
+        ) : (
+          <span style={circleStyle}></span>
+        )}
+        <span className="d-flex" style={{ marginLeft: '.5em' }}>
+          {state.toUpperCase() + ': ' + message}
+        </span>
+      </div>
+      <div className="d-flex" style={{ gap: '.5em' }}>
+        <FontAwesomeIcon
+          icon={method.includes('visual') ? faEye : faEyeSlash}
+        />
+        <FontAwesomeIcon
+          icon={method.includes('visual') ? faBell : faBellSlash}
+        />
+      </div>
+    </div>
+  )
+}
+const LargeArrayRenderer = ({ value }) => {
+  if (!Array.isArray(value) || value.length <= 1) {
+    return <span className="text-primary">{JSON.stringify(value)}</span>
+  }
+  return (
+    <div className="text-primary">
+      <details>
+        <summary>
+          {JSON.stringify(value[0])} 1 of {value.length}
+        </summary>
+        {JSON.stringify(value)}
+      </details>
+    </div>
+  )
+}
+
+const MeterRenderer = ({
+  value,
+  min = 0,
+  max = 1,
+  low = 0.5,
+  high = 1.01,
+  optimum = 1,
+  pct = true,
+  precision = 2
+}) => {
+  const txt = (value * (pct ? 100 : 1)).toFixed(precision) + (pct ? '%' : '')
+
+  return (
+    <div className="text-primary">
+      <meter
+        value={value}
+        min={min}
+        max={max}
+        low={low}
+        high={high}
+        optimum={optimum}
+      >
+        {value}%
+      </meter>
+      <span
+        className="text-primary"
+        style={{ verticalAlign: 'middle', marginLeft: '.5em' }}
+      >
+        {' '}
+        {txt}
+      </span>
+    </div>
+  )
+}
 
 const PositionRenderer = ({ value }) => {
   if (!value || typeof value !== 'object') {
@@ -244,12 +477,18 @@ const SatellitesInViewRenderer = ({ value }) => {
   )
 }
 
-const VALUE_RENDERERS = {
-  'navigation.position': PositionRenderer,
-  'navigation.gnss.satellitesInView': SatellitesInViewRenderer
-}
-
-export const getValueRenderer = (path) => {
+export const getValueRenderer = (path, meta) => {
+  if (meta) {
+    if (meta && meta.renderer) {
+      return Renderers[meta.renderer.name]
+    }
+    if (meta && meta.units === 'ratio') {
+      return MeterRenderer
+    }
+  }
+  if (path.startsWith('notifications.')) {
+    return NotificationRenderer
+  }
   if (VALUE_RENDERERS[path]) {
     return VALUE_RENDERERS[path]
   }
@@ -280,4 +519,20 @@ export const DefaultValueRenderer = ({ value, units }) => {
       )}
     </>
   )
+}
+
+const Renderers = {
+  Position: PositionRenderer,
+  SatellitesInView: SatellitesInViewRenderer,
+  Meter: MeterRenderer,
+  SimpleHTML: SimpleHTMLRenderer,
+  LargeArray: LargeArrayRenderer,
+  Notification: NotificationRenderer,
+  Attitude: AttitudeRenderer,
+  Direction: DirectionRenderer
+}
+
+const VALUE_RENDERERS = {
+  'navigation.position': Renderers.Position,
+  'navigation.gnss.satellitesInView': Renderers.SatellitesInView
 }

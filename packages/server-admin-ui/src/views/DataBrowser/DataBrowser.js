@@ -416,11 +416,11 @@ class DataBrowser extends Component {
               .responsive-table {
                 font-size: 0.8rem;
               }
-              
+
               .responsive-table td {
                 padding: 0.4rem 0.2rem;
               }
-              
+
               .responsive-table th {
                 padding: 0.4rem 0.2rem;
                 font-size: 0.75rem;
@@ -431,11 +431,11 @@ class DataBrowser extends Component {
               .responsive-table .path-cell {
                 max-width: 150px;
               }
-              
+
               .responsive-table .value-cell {
                 max-width: 200px;
               }
-              
+
               .responsive-table .source-cell {
                 max-width: 140px;
               }
@@ -445,28 +445,28 @@ class DataBrowser extends Component {
               .responsive-table {
                 font-size: 0.75rem;
               }
-              
+
               .responsive-table td {
                 padding: 0.3rem 0.15rem;
               }
-              
+
               .responsive-table th {
                 padding: 0.3rem 0.15rem;
                 font-size: 0.7rem;
               }
-              
+
               .responsive-table .path-cell {
                 max-width: 120px;
               }
-              
+
               .responsive-table .value-cell {
                 max-width: 150px;
               }
-              
+
               .responsive-table .source-cell {
                 max-width: 120px;
               }
-              
+
               .responsive-table pre {
                 font-size: 0.7rem;
               }
@@ -476,16 +476,16 @@ class DataBrowser extends Component {
               .responsive-table {
                 font-size: 0.7rem;
               }
-              
+
               .responsive-table td {
                 padding: 0.25rem 0.1rem;
               }
-              
+
               .responsive-table th {
                 padding: 0.25rem 0.1rem;
                 font-size: 0.65rem;
               }
-              
+
               .responsive-table .timestamp-cell {
                 min-width: 70px;
                 max-width: 80px;
@@ -652,13 +652,15 @@ class DataBrowser extends Component {
                               <td className="value-cell">
                                 {(() => {
                                   const CustomRenderer = getValueRenderer(
-                                    data.path
+                                    data.path,
+                                    meta
                                   )
                                   if (CustomRenderer) {
                                     return (
                                       <CustomRenderer
                                         value={data.value}
                                         units={units}
+                                        {...meta?.renderer?.options}
                                       />
                                     )
                                   }
