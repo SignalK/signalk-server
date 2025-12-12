@@ -23,6 +23,7 @@ const TIME_ONLY_FORMAT = 'HH:mm:ss'
 
 const metaStorageKey = 'admin.v1.dataBrowser.meta'
 const pauseStorageKey = 'admin.v1.dataBrowser.v1.pause'
+const rawStorageKey = 'admin.v1.dataBrowser.v1.raw'
 const contextStorageKey = 'admin.v1.dataBrowser.context'
 const searchStorageKey = 'admin.v1.dataBrowser.search'
 const selectedSourcesStorageKey = 'admin.v1.dataBrowser.selectedSources'
@@ -62,6 +63,7 @@ class DataBrowser extends Component {
       didSubscribe: false,
       pause: localStorage.getItem(pauseStorageKey) === 'true',
       includeMeta: localStorage.getItem(metaStorageKey) === 'true',
+      raw: localStorage.getItem(rawStorageKey) === 'true',
       data: {},
       meta: {},
       context: localStorage.getItem(contextStorageKey) || 'self',
@@ -79,6 +81,7 @@ class DataBrowser extends Component {
     this.handleContextChange = this.handleContextChange.bind(this)
     this.handleSearch = this.handleSearch.bind(this)
     this.toggleMeta = this.toggleMeta.bind(this)
+    this.toggleRaw = this.toggleRaw.bind(this)
     this.toggleSourceSelection = this.toggleSourceSelection.bind(this)
     this.toggleSourceFilter = this.toggleSourceFilter.bind(this)
   }
@@ -270,6 +273,10 @@ class DataBrowser extends Component {
     localStorage.setItem(metaStorageKey, event.target.checked)
   }
 
+  toggleRaw(event) {
+    this.setState({ ...this.state, raw: event.target.checked })
+    localStorage.setItem(rawStorageKey, event.target.checked)
+  }
   resetAllTimestampAnimations() {
     const cells = document.querySelectorAll('.timestamp-updated')
     cells.forEach((cell) => {
@@ -554,6 +561,27 @@ class DataBrowser extends Component {
                   </Label>{' '}
                   Pause
                 </Col>
+                <Col xs="6" md="2">
+                  <Label className="switch switch-text switch-primary">
+                    <Input
+                      type="checkbox"
+                      id="Raw"
+                      name="raw"
+                      className="switch-input"
+                      onChange={this.toggleRaw}
+                      checked={this.state.raw}
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
+                    />
+                    <span className="switch-handle" />
+                  </Label>{' '}
+                  <span style={{ whiteSpace: 'nowrap' }}>
+                    Raw Values
+                  </span>
+                </Col>
               </FormGroup>
               {this.state.context && this.state.context !== 'none' && (
                 <FormGroup row>
@@ -651,6 +679,18 @@ class DataBrowser extends Component {
                               </td>
                               <td className="value-cell">
                                 {(() => {
+                                  if (this.state.raw){
+                                    return (
+                                      <div>
+                                        <div className="text-primary">
+                                          value: {JSON.stringify(data.value, null, 2)}
+                                        </div>
+                                        <div className="text-primary">
+                                          meta: {JSON.stringify(meta?meta:{}, null, 2)}
+                                        </div>
+                                      </div>
+                                    )
+                                  }
                                   const CustomRenderer = getValueRenderer(
                                     data.path,
                                     meta
