@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import ReactHtmlParser from 'react-html-parser'
 import {
   faEye,
@@ -9,6 +9,10 @@ import {
 
 import '../../blinking-circle.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+
+import { toLazyDynamicComponent } from '../Webapps/dynamicutilities'
+
+
 function radiansToDegrees(radians) {
   return radians * (180 / Math.PI)
 }
@@ -479,6 +483,20 @@ const SatellitesInViewRenderer = ({ value }) => {
 
 export const getValueRenderer = (path, meta) => {
   if (meta) {
+    if (meta && meta.renderer && meta.renderer.module) {
+      return (
+        <div>
+          <Suspense fallback="Loading...">
+            {React.createElement(
+              toLazyDynamicComponent(
+                meta.renderer.module,
+                meta.renderer.name
+              )
+            )}
+          </Suspense>
+        </div>
+      )
+    }
     if (meta && meta.renderer) {
       return Renderers[meta.renderer.name]
     }
