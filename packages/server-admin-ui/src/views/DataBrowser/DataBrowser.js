@@ -578,9 +578,7 @@ class DataBrowser extends Component {
                     />
                     <span className="switch-handle" />
                   </Label>{' '}
-                  <span style={{ whiteSpace: 'nowrap' }}>
-                    Raw Values
-                  </span>
+                  <span style={{ whiteSpace: 'nowrap' }}>Raw Values</span>
                 </Col>
               </FormGroup>
               {this.state.context && this.state.context !== 'none' && (
@@ -679,14 +677,20 @@ class DataBrowser extends Component {
                               </td>
                               <td className="value-cell">
                                 {(() => {
-                                  if (this.state.raw){
+                                  if (this.state.raw) {
                                     return (
                                       <div>
                                         <div className="text-primary">
-                                          value: {JSON.stringify(data.value, null, 2)}
+                                          value:{' '}
+                                          {JSON.stringify(data.value, null, 2)}
                                         </div>
                                         <div className="text-primary">
-                                          meta: {JSON.stringify(meta?meta:{}, null, 2)}
+                                          meta:{' '}
+                                          {JSON.stringify(
+                                            meta ? meta : {},
+                                            null,
+                                            2
+                                          )}
                                         </div>
                                       </div>
                                     )
