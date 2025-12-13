@@ -10,6 +10,7 @@ import {
   Table
 } from 'reactstrap'
 import '../../fa-pulse.css'
+import { getWsDeviceDisplayName } from '../../utils/wsDeviceUtils'
 
 const Dashboard = (props) => {
   const {
@@ -17,13 +18,15 @@ const Dashboard = (props) => {
     numberOfAvailablePaths,
     wsClients,
     providerStatistics,
-    uptime
+    uptime,
+    devices
   } = props.serverStatistics || {
     deltaRate: 0,
     numberOfAvailablePaths: 0,
     wsClients: 0,
     providerStatistics: {},
-    uptime: ''
+    uptime: '',
+    devices: []
   }
   const providerStatus = props.providerStatus || []
   const errorCount = providerStatus.filter((s) => s.type === 'error').length
@@ -66,6 +69,7 @@ const Dashboard = (props) => {
   }
 
   const renderActivity = (providerId, providerStats, linkType) => {
+    const displayName = getWsDeviceDisplayName(providerId, devices)
     return (
       <li key={providerId} onClick={() => props.history.push(`/dashboard`)}>
         <i
@@ -84,7 +88,7 @@ const Dashboard = (props) => {
         <span className="title">
           {linkType === 'plugin'
             ? pluginNameLink(providerId)
-            : providerIdLink(providerId)}
+            : providerIdLink(providerId, displayName)}
         </span>
         {providerStats.writeRate > 0 && (
           <span className="value">
@@ -122,6 +126,7 @@ const Dashboard = (props) => {
   }
 
   const renderStatus = (status, statusClass, lastError) => {
+    const displayName = getWsDeviceDisplayName(status.id, devices)
     return (
       <tr
         key={status.id}
@@ -136,7 +141,7 @@ const Dashboard = (props) => {
         <td>
           {status.statusType === 'plugin'
             ? pluginNameLink(status.id)
-            : providerIdLink(status.id)}
+            : providerIdLink(status.id, displayName)}
         </td>
         <td>
           <p className="text-danger">{lastError}</p>
@@ -144,7 +149,7 @@ const Dashboard = (props) => {
         <td>
           <p className={statusClass}>
             {(status.message || '').substring(0, 80)}
-            {status.message.length > 80 ? '...' : ''}
+            {(status.message || '').length > 80 ? '...' : ''}
           </p>
         </td>
       </tr>
@@ -285,11 +290,11 @@ function pluginNameLink(id) {
   return <a href={'#/serverConfiguration/plugins/' + id}>{id}</a>
 }
 
-function providerIdLink(id) {
+function providerIdLink(id, name) {
   if (id === 'defaults') {
     return <a href={'#/serverConfiguration/settings'}>{id}</a>
   } else if (id.startsWith('ws.')) {
-    return <a href={'#/security/devices'}>{id}</a>
+    return <a href={'#/security/devices'}>{name}</a>
   } else {
     return <a href={'#/serverConfiguration/connections/' + id}>{id}</a>
   }
