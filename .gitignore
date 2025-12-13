@@ -30,3 +30,21 @@ test/server-test-config/ssl-key.pem
 test/server-test-config/plugin-config-data/
 
 docs/built
+
+# WASM build artifacts
+*.wasm  
+
+# .net builds
+jco-output/
+obj/
+bin/
+Debug/
+Release/
+*.ps1
+nul
+
+# wasmtime build artifacts
+*.wasm
+
+# debug artefacts
+*.sln

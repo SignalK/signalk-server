@@ -1,0 +1,313 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Signal K Radar API",
+    "version": "2.0.0",
+    "description": "API for managing marine radar devices"
+  },
+  "paths": {
+    "/signalk/v2/api/vessels/self/radars": {
+      "get": {
+        "tags": ["radar"],
+        "summary": "List all radars",
+        "description": "Returns a list of all radars from all registered providers",
+        "responses": {
+          "200": {
+            "description": "List of radars",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RadarInfo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/signalk/v2/api/vessels/self/radars/_providers": {
+      "get": {
+        "tags": ["radar"],
+        "summary": "List radar providers",
+        "description": "Returns a list of registered radar provider plugins",
+        "responses": {
+          "200": {
+            "description": "List of providers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "name": { "type": "string" },
+                      "isDefault": { "type": "boolean" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/signalk/v2/api/vessels/self/radars/_providers/_default": {
+      "get": {
+        "tags": ["radar"],
+        "summary": "Get default provider",
+        "responses": {
+          "200": {
+            "description": "Default provider ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/signalk/v2/api/vessels/self/radars/_providers/_default/{id}": {
+      "post": {
+        "tags": ["radar"],
+        "summary": "Set default provider",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Default provider updated" },
+          "403": { "description": "Unauthorized" },
+          "400": { "description": "Provider not found" }
+        }
+      }
+    },
+    "/signalk/v2/api/vessels/self/radars/{id}": {
+      "get": {
+        "tags": ["radar"],
+        "summary": "Get radar info",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Radar information",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RadarInfo" }
+              }
+            }
+          },
+          "404": { "description": "Radar not found" }
+        }
+      },
+      "put": {
+        "tags": ["radar"],
+        "summary": "Update radar controls",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RadarControls" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Controls updated" },
+          "403": { "description": "Unauthorized" },
+          "404": { "description": "Radar not found" }
+        }
+      }
+    },
+    "/signalk/v2/api/vessels/self/radars/{id}/power": {
+      "put": {
+        "tags": ["radar"],
+        "summary": "Set radar power state",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string",
+                    "enum": ["off", "standby", "transmit", "warming"]
+                  }
+                },
+                "required": ["value"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Power state updated" },
+          "403": { "description": "Unauthorized" },
+          "404": { "description": "Radar not found" }
+        }
+      }
+    },
+    "/signalk/v2/api/vessels/self/radars/{id}/range": {
+      "put": {
+        "tags": ["radar"],
+        "summary": "Set radar range",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "number",
+                    "description": "Range in meters"
+                  }
+                },
+                "required": ["value"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Range updated" },
+          "403": { "description": "Unauthorized" },
+          "404": { "description": "Radar not found" }
+        }
+      }
+    },
+    "/signalk/v2/api/vessels/self/radars/{id}/gain": {
+      "put": {
+        "tags": ["radar"],
+        "summary": "Set radar gain",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "auto": { "type": "boolean" },
+                  "value": { "type": "number" }
+                },
+                "required": ["auto"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Gain updated" },
+          "403": { "description": "Unauthorized" },
+          "404": { "description": "Radar not found" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RadarInfo": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Unique radar identifier" },
+          "name": { "type": "string", "description": "Display name" },
+          "brand": { "type": "string", "description": "Manufacturer/brand" },
+          "status": {
+            "type": "string",
+            "enum": ["off", "standby", "transmit", "warming"],
+            "description": "Current operational status"
+          },
+          "spokesPerRevolution": {
+            "type": "integer",
+            "description": "Number of spokes per full rotation"
+          },
+          "maxSpokeLen": {
+            "type": "integer",
+            "description": "Maximum spoke length in samples"
+          },
+          "range": {
+            "type": "number",
+            "description": "Current range in meters"
+          },
+          "controls": { "$ref": "#/components/schemas/RadarControls" },
+          "streamUrl": {
+            "type": "string",
+            "description": "WebSocket URL for spoke stream. If absent, use /radars/{id}/stream"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "spokesPerRevolution",
+          "maxSpokeLen",
+          "range",
+          "controls"
+        ]
+      },
+      "RadarControls": {
+        "type": "object",
+        "properties": {
+          "gain": { "$ref": "#/components/schemas/ControlValue" },
+          "sea": { "$ref": "#/components/schemas/ControlValue" },
+          "rain": {
+            "type": "object",
+            "properties": { "value": { "type": "number" } }
+          }
+        },
+        "required": ["gain"]
+      },
+      "ControlValue": {
+        "type": "object",
+        "properties": {
+          "auto": { "type": "boolean" },
+          "value": { "type": "number" }
+        },
+        "required": ["auto", "value"]
+      }
+    }
+  }
+}

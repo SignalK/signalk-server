@@ -79,6 +79,8 @@ interface App
   logging: {
     rememberDebug: (r: boolean) => void
     enableDebug: (r: string) => boolean
+    addDebug: (name: string) => void
+    removeDebug: (name: string) => void
   }
   activateSourcePriorities: () => void
   streambundle: StreamBundle
@@ -88,6 +90,21 @@ interface ModuleInfo {
   name: string
 }
 
+// Helper function to update WASM debug logging
+function updateWasmDebugLogging(enabled: boolean, app: App) {
+  const wasmDebugPattern = 'signalk:wasm:*'
+
+  if (enabled) {
+    // Add WASM debug using the logging module's API
+    debug('Enabling WASM debug logging')
+    app.logging.addDebug(wasmDebugPattern)
+  } else {
+    // Remove WASM debug using the logging module's API
+    debug('Disabling WASM debug logging')
+    app.logging.removeDebug(wasmDebugPattern)
+  }
+}
+
 module.exports = function (
   app: App,
   saveSecurityConfig: SecurityConfigSaver,
@@ -95,6 +112,12 @@ module.exports = function (
 ) {
   let securityWasEnabled = false
   let restoreFilePath: string
+
+  // Initialize WASM logging on startup based on config
+  if (app.config.settings.enableWasmLogging !== false) {
+    // Default to enabled if not explicitly disabled
+    updateWasmDebugLogging(true, app)
+  }
 
   const logopath = path.resolve(app.config.configPath, 'logo.svg')
   if (fs.existsSync(logopath)) {
@@ -509,7 +532,10 @@ module.exports = function (
           app.config.settings.accessLogging,
         enablePluginLogging:
           isUndefined(app.config.settings.enablePluginLogging) ||
-          app.config.settings.enablePluginLogging
+          app.config.settings.enablePluginLogging,
+        enableWasmLogging:
+          isUndefined(app.config.settings.enableWasmLogging) ||
+          app.config.settings.enableWasmLogging
       },
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
@@ -613,7 +639,53 @@ module.exports = function (
     forIn(settings.interfaces, (enabled, name) => {
       const interfaces =
         app.config.settings.interfaces || (app.config.settings.interfaces = {})
+      const wasEnabled = interfaces[name] !== false
       interfaces[name] = enabled
+
+      // Hot-plug support for WASM interface
+
+      if (name === 'wasm' && wasEnabled !== enabled) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const wasmInterface = (app as any).interfaces?.wasm
+        if (enabled && !wasmInterface) {
+          // Start WASM interface and re-discover WASM plugins
+          debug('Hot-starting WASM interface and discovering plugins')
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const wasmModule = require('./interfaces/wasm')
+            const _interface = wasmModule(app)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(app as any).interfaces = (app as any).interfaces || {}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ;(app as any).interfaces.wasm = _interface
+            // Don't call interface.start() - discoverAndRegisterWasmPlugins handles runtime init
+            // Discover and register all WASM plugins
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const { discoverAndRegisterWasmPlugins } = require('./wasm')
+            discoverAndRegisterWasmPlugins(app)
+              .then(() => {
+                debug('WASM plugins discovered and registered successfully')
+              })
+              .catch((error: Error) => {
+                debug('Failed to discover WASM plugins:', error)
+              })
+          } catch (error) {
+            debug('Failed to hot-start WASM interface:', error)
+          }
+        } else if (!enabled && wasmInterface) {
+          // Stop WASM interface
+          debug('Hot-stopping WASM interface')
+          try {
+            if (wasmInterface.stop) {
+              wasmInterface.stop()
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            delete (app as any).interfaces.wasm
+          } catch (error) {
+            debug('Failed to hot-stop WASM interface:', error)
+          }
+        }
+      }
     })
 
     if (!isUndefined(settings.options.mdns)) {
@@ -635,6 +707,12 @@ module.exports = function (
     if (!isUndefined(settings.options.enablePluginLogging)) {
       app.config.settings.enablePluginLogging =
         settings.options.enablePluginLogging
+    }
+
+    if (!isUndefined(settings.options.enableWasmLogging)) {
+      app.config.settings.enableWasmLogging = settings.options.enableWasmLogging
+      // Update WASM debug logging dynamically
+      updateWasmDebugLogging(settings.options.enableWasmLogging ?? true, app)
     }
 
     if (!isUndefined(settings.port)) {

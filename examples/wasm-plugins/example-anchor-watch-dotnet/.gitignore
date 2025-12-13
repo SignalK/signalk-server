@@ -1,0 +1,24 @@
+# Build outputs
+bin/
+obj/
+*.wasm
+*.dll
+*.pdb
+
+# .NET
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+
+# macOS
+.DS_Store

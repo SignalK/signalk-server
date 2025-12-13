@@ -35,7 +35,7 @@ import {
   Delta
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
-import express, { Request, Response } from 'express'
+import express, { NextFunction, Request, Response } from 'express'
 import fs from 'fs'
 import { deprecate } from 'util'
 import _ from 'lodash'
@@ -63,6 +63,7 @@ const queryRequest = require('../requestResponse').queryRequest
 import { getMetadata } from '@signalk/signalk-schema'
 import { HistoryApi } from '@signalk/server-api/history'
 import { HistoryApiHttpRegistry } from '../api/history'
+import { derivePluginId } from '../pluginid'
 
 // #521 Returns path to load plugin-config assets.
 const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')
@@ -86,10 +87,155 @@ interface PluginInfo extends Plugin {
   packageLocation: string
   version: string
   state: string
+  type?: string // 'wasm' for WASM plugins, undefined for Node.js plugins
+  isWebapp?: boolean
+  isEmbeddableWebapp?: boolean
+  webappMounted?: boolean
 }
 
 function backwardsCompat(url: string) {
   return [`${SERVERROUTESPREFIX}${url}`, url]
+}
+
+/**
+ * Add a plugin's webapp to the app.webapps array (for hotplug support)
+ */
+function addPluginWebapp(app: any, plugin: PluginInfo): void {
+  if (!plugin.keywords) {
+    return
+  }
+
+  const isWebapp = plugin.keywords.includes('signalk-webapp')
+  const isEmbeddableWebapp = plugin.keywords.includes(
+    'signalk-embeddable-webapp'
+  )
+
+  if (!isWebapp && !isEmbeddableWebapp) {
+    return
+  }
+
+  // Get package.json metadata
+  const packageJsonPath = path.join(
+    plugin.packageLocation,
+    plugin.packageName,
+    'package.json'
+  )
+  if (!fs.existsSync(packageJsonPath)) {
+    debug(`Package.json not found for ${plugin.id} at ${packageJsonPath}`)
+    return
+  }
+
+  const packageJson = require(packageJsonPath)
+
+  if (isWebapp) {
+    const existing = app.webapps?.find((w: any) => w.name === packageJson.name)
+    if (!existing) {
+      debug(`Adding ${plugin.id} to app.webapps (hotplug)`)
+      app.webapps = app.webapps || []
+      app.webapps.push(packageJson)
+    }
+    plugin.isWebapp = true
+  }
+
+  if (isEmbeddableWebapp) {
+    const existing = app.embeddablewebapps?.find(
+      (w: any) => w.name === packageJson.name
+    )
+    if (!existing) {
+      debug(`Adding ${plugin.id} to app.embeddablewebapps (hotplug)`)
+      app.embeddablewebapps = app.embeddablewebapps || []
+      app.embeddablewebapps.push(packageJson)
+    }
+    plugin.isEmbeddableWebapp = true
+  }
+}
+
+/**
+ * Remove a plugin's webapp from the app.webapps array (for hotplug support)
+ */
+function removePluginWebapp(app: any, plugin: PluginInfo): void {
+  if (!plugin.packageName) {
+    return
+  }
+
+  // Check keywords to determine webapp type (isWebapp may not be set for plugins started at boot)
+  const isWebapp =
+    plugin.isWebapp || plugin.keywords?.includes('signalk-webapp')
+  const isEmbeddableWebapp =
+    plugin.isEmbeddableWebapp ||
+    plugin.keywords?.includes('signalk-embeddable-webapp')
+
+  if (!isWebapp && !isEmbeddableWebapp) {
+    return
+  }
+
+  debug(`Removing ${plugin.packageName} from webapp lists (hotplug)`)
+
+  // Remove from webapps
+  if (app.webapps && isWebapp) {
+    app.webapps = app.webapps.filter((w: any) => w.name !== plugin.packageName)
+  }
+
+  // Remove from embeddablewebapps
+  if (app.embeddablewebapps && isEmbeddableWebapp) {
+    app.embeddablewebapps = app.embeddablewebapps.filter(
+      (w: any) => w.name !== plugin.packageName
+    )
+  }
+}
+
+/**
+ * Filter webapps to only include enabled plugin webapps
+ */
+function filterEnabledWebapps(app: any, webapps: any[]): any[] {
+  if (!app.plugins || !app.getPluginOptions) {
+    return webapps
+  }
+
+  const enabledPluginNames = new Set<string>()
+  const allPluginNames = new Set<string>()
+
+  for (const plugin of app.plugins) {
+    if (plugin.packageName) {
+      allPluginNames.add(plugin.packageName)
+
+      let isEnabled = false
+      if (plugin.type === 'wasm') {
+        isEnabled = plugin.enabled === true
+      } else {
+        const pluginOptions = app.getPluginOptions(plugin.id)
+        isEnabled = pluginOptions?.enabled === true
+      }
+
+      if (isEnabled) {
+        enabledPluginNames.add(plugin.packageName)
+      }
+    }
+  }
+
+  return webapps.filter((w: any) => {
+    const isPluginWebapp = allPluginNames.has(w.name)
+    if (!isPluginWebapp) return true // Keep standalone webapps
+    return enabledPluginNames.has(w.name)
+  })
+}
+
+/**
+ * Emit server event to update admin UI webapps list (for hotplug support)
+ */
+function emitWebappsUpdate(app: any): void {
+  let allWebapps: any[] = []
+    .concat(app.webapps || [])
+    .concat(app.embeddablewebapps || [])
+
+  // Filter to only include enabled plugin webapps
+  allWebapps = filterEnabledWebapps(app, allWebapps)
+
+  app.emit('serverevent', {
+    type: 'RECEIVE_WEBAPPS_LIST',
+    from: 'signalk-server',
+    data: _.uniqBy(allWebapps, 'name')
+  })
 }
 
 module.exports = (theApp: any) => {
@@ -218,7 +364,8 @@ module.exports = (theApp: any) => {
             statusMessage,
             uiSchema,
             state: plugin.state,
-            data
+            data,
+            type: plugin.type // Include type to identify WASM plugins in Admin UI
           })
         })
         .catch((err) => {
@@ -298,6 +445,8 @@ module.exports = (theApp: any) => {
   async function startPlugins(app: any) {
     app.plugins = []
     app.pluginsMap = {}
+    // Expose getPluginOptions for use by other modules (e.g., webapps.js)
+    app.getPluginOptions = getPluginOptions
     const modules = modulesWithKeyword(app.config, 'signalk-node-server-plugin')
     await Promise.all(
       modules.map((moduleData: any) => {
@@ -401,6 +550,61 @@ module.exports = (theApp: any) => {
   ) {
     debug('Registering plugin ' + pluginName)
     try {
+      // Check if this is a WASM plugin (wasmManifest is now part of NpmPackageData)
+      if (metadata.wasmManifest) {
+        // This is a WASM plugin - check if WASM interface is enabled
+        const wasmEnabled = app.config.settings.interfaces?.wasm !== false
+        if (!wasmEnabled) {
+          debug(
+            `WASM plugin ${pluginName} discovered but WASM interface disabled - registering minimal entry`
+          )
+          // Create minimal plugin entry so it appears in Plugin Config with "No WASM" badge
+          // Derive plugin ID from npm package name (@ → _, / → _)
+          const pluginId = derivePluginId(pluginName)
+          // Use signalk.displayName (standard SignalK convention) or fall back to package name
+          const pluginDisplayName = metadata.signalk?.displayName || pluginName
+
+          const minimalPlugin: any = {
+            id: pluginId,
+            name: pluginDisplayName,
+            type: 'wasm',
+            packageName: pluginName,
+            version: metadata.version,
+            description: metadata.description || '',
+            keywords: metadata.keywords || [],
+            packageLocation: location,
+            enabled: false,
+            state: 'disabled',
+            statusMessage: () => 'WASM interface disabled',
+            schema: () => ({}),
+            uiSchema: () => ({}),
+            start: () => {},
+            stop: () => Promise.resolve(),
+            enableLogging: false,
+            enableDebug: false
+          }
+
+          app.plugins.push(minimalPlugin)
+          app.pluginsMap[pluginId] = minimalPlugin
+          debug(
+            `Registered minimal WASM plugin entry: ${pluginId} (WASM disabled)`
+          )
+          return
+        }
+        // Route to WASM loader
+        debug(`Detected WASM plugin: ${pluginName}`)
+        const { registerWasmPlugin } = require('../wasm')
+        await registerWasmPlugin(
+          app,
+          pluginName,
+          metadata,
+          location,
+          theApp.config.configPath
+        )
+        return
+      }
+
+      // Standard Node.js plugin
       await doRegisterPlugin(app, pluginName, metadata, location)
     } catch (e) {
       console.error(e)
@@ -419,6 +623,9 @@ module.exports = (theApp: any) => {
     onStopHandlers[plugin.id] = []
     const result = Promise.resolve(plugin.stop())
     result.then(() => {
+      // Remove webapp from app.webapps for hotplug support
+      removePluginWebapp(theApp, plugin)
+      emitWebappsUpdate(theApp)
       theApp.setPluginStatus(plugin.id, 'Stopped')
       debug('Stopped plugin ' + plugin.name)
     })
@@ -469,6 +676,9 @@ module.exports = (theApp: any) => {
       plugin.start(safeConfiguration, restart)
       debug('Started plugin ' + plugin.name)
       setPluginStartedMessage(plugin)
+      // Add webapp to app.webapps for hotplug support
+      addPluginWebapp(app, plugin)
+      emitWebappsUpdate(app)
     } catch (e: any) {
       console.error('error starting plugin: ' + e)
       console.error(e.stack)
@@ -683,6 +893,15 @@ module.exports = (theApp: any) => {
       startupOptions.enabled = true
       startupOptions.configuration = {}
       plugin.enabledByDefault = true
+      // Persist the default-enabled state to disk so the plugin can be disabled later
+      savePluginOptions(plugin.id, startupOptions, (err) => {
+        if (err) {
+          console.error(
+            `Error saving default-enabled options for ${plugin.id}:`,
+            err
+          )
+        }
+      })
     }
 
     plugin.enableDebug = startupOptions.enableDebug
@@ -750,7 +969,30 @@ module.exports = (theApp: any) => {
         app.setPluginOpenApi(plugin.id, plugin.getOpenApi())
       }
     }
-    app.use(backwardsCompat('/plugins/' + plugin.id), router)
+    // Middleware to block requests when plugin is disabled (except config endpoints)
+    const pluginEnabledMiddleware = (
+      req: Request,
+      res: Response,
+      next: NextFunction
+    ) => {
+      // Always allow access to config endpoints for admin UI
+      if (req.path === '/config' || req.path === '/') {
+        return next()
+      }
+      const options = getPluginOptions(plugin.id)
+      if (!options.enabled) {
+        res.status(503).json({
+          error: `Plugin ${plugin.id} is disabled`
+        })
+        return
+      }
+      next()
+    }
+    app.use(
+      backwardsCompat('/plugins/' + plugin.id),
+      pluginEnabledMiddleware,
+      router
+    )
 
     if (typeof plugin.signalKApiRoutes === 'function') {
       app.use('/signalk/v1/api', plugin.signalKApiRoutes(express.Router()))

@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- Required by componentize-dotnet -->
+    <RuntimeIdentifier>wasi-wasm</RuntimeIdentifier>
+    <UseAppHost>false</UseAppHost>
+    <PublishTrimmed>true</PublishTrimmed>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SelfContained>true</SelfContained>
+    <!-- Library mode for WASM component with custom exports -->
+    <OutputType>Library</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <!-- Export unmanaged entry points for WIT bindings -->
+    <IlcExportUnmanagedEntrypoints>true</IlcExportUnmanagedEntrypoints>
+    <!-- Suppress trim/AOT warnings for JSON serialization -->
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <!-- Enable threading types even in single-threaded WASI -->
+    <WasmEnableThreads>false</WasmEnableThreads>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- BytecodeAlliance componentize-dotnet for WIT-based WASM components -->
+    <PackageReference Include="BytecodeAlliance.Componentize.DotNet.Wasm.SDK" Version="0.7.0-preview00010" />
+    <!-- Platform-specific LLVM compiler (Windows x64) -->
+    <PackageReference Include="runtime.win-x64.Microsoft.DotNet.ILCompiler.LLVM" Version="10.0.0-*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference the WIT file and specify the world to use -->
+    <Wit Update="wit/signalk-plugin.wit" World="signalk-plugin" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Exclude old Program.cs - now using WIT-based PluginImpl.cs -->
+    <Compile Remove="Program.cs" />
+  </ItemGroup>
+
+  <!-- Patch generated SignalkPlugin.cs to add ThreadStatic stub for WASI -->
+  <Target Name="PatchWitBindgen" AfterTargets="GenerateWitBindings" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <WitBindgenFile>$(IntermediateOutputPath)wit_bindgen\SignalkPlugin.cs</WitBindgenFile>
+    </PropertyGroup>
+    <!-- Use external PowerShell script to avoid escaping issues -->
+    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\patch-threadstatic.ps1&quot; -FilePath &quot;$(WitBindgenFile)&quot;"
+          Condition="Exists('$(WitBindgenFile)')" />
+  </Target>
+
+</Project>
