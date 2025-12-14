@@ -1,4 +1,6 @@
-import React, { Suspense } from 'react'
+import React from 'react'
+import { lazy, Suspense } from 'react'
+//import { toLazyDynamicComponent } from '../Webapps/dynamicutilities'
 import ReactHtmlParser from 'react-html-parser'
 import {
   faEye,
@@ -10,7 +12,7 @@ import {
 import '../../blinking-circle.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
-import { toLazyDynamicComponent } from '../Webapps/dynamicutilities'
+//import { toLazyDynamicComponent } from '../Webapps/dynamicutilities'
 
 
 function radiansToDegrees(radians) {
@@ -484,18 +486,23 @@ const SatellitesInViewRenderer = ({ value }) => {
 export const getValueRenderer = (path, meta) => {
   if (meta) {
     if (meta && meta.renderer && meta.renderer.module) {
-      return (
-        <div>
-          <Suspense fallback="Loading...">
-            {React.createElement(
-              toLazyDynamicComponent(
-                meta.renderer.module,
-                meta.renderer.name
-              )
-            )}
-          </Suspense>
-        </div>
+      //import (`./${meta.renderer.module}/${meta.renderer.name}`).then( Component => {
+      const Renderer = lazy(() =>
+        import(meta.renderer.module).then((module) => ({
+          default: module[meta.renderer.name]
+        }))
       )
+
+      return function component() {
+         return (
+              <div>
+                <Suspense fallback="Loading...">
+                  <Renderer />
+                </Suspense>
+              </div>
+            )
+      }
+
     }
     if (meta && meta.renderer) {
       return Renderers[meta.renderer.name]
