@@ -484,9 +484,15 @@ const SatellitesInViewRenderer = ({ value }) => {
 }
 
 export const getValueRenderer = (path, meta) => {
+  if (path.startsWith('notifications.')) {
+      return NotificationRenderer // notification paths should always use NotificationRenderer
+                                  // better implementation would set up regex path -> renderer mapping in settings file
+                                  // even better implementation would be to have first class object types like Notification,
+                                  // Battery, Sensor, Engine, GPS etc. that encapsulate their paths as well as other data/behavior.
+  }
   if (meta) {
-    if (meta && meta.renderer && meta.renderer.module) {
-      //import (`./${meta.renderer.module}/${meta.renderer.name}`).then( Component => {
+
+    if (meta && meta.renderer && meta.renderer.module) { //NOT WORKING YET: getting module not found errors.
       const Renderer = lazy(() =>
         import(meta.renderer.module).then((module) => ({
           default: module[meta.renderer.name]
@@ -511,9 +517,7 @@ export const getValueRenderer = (path, meta) => {
       return MeterRenderer
     }
   }
-  if (path.startsWith('notifications.')) {
-    return NotificationRenderer
-  }
+
   if (VALUE_RENDERERS[path]) {
     return VALUE_RENDERERS[path]
   }
