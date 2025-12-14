@@ -14,7 +14,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 //import { toLazyDynamicComponent } from '../Webapps/dynamicutilities'
 
-
 function radiansToDegrees(radians) {
   return radians * (180 / Math.PI)
 }
@@ -485,14 +484,14 @@ const SatellitesInViewRenderer = ({ value }) => {
 
 export const getValueRenderer = (path, meta) => {
   if (path.startsWith('notifications.')) {
-      return NotificationRenderer // notification paths should always use NotificationRenderer
-                                  // better implementation would set up regex path -> renderer mapping in settings file
-                                  // even better implementation would be to have first class object types like Notification,
-                                  // Battery, Sensor, Engine, GPS etc. that encapsulate their paths as well as other data/behavior.
+    return NotificationRenderer // notification paths should always use NotificationRenderer
+    // better implementation would set up regex path -> renderer mapping in settings file
+    // even better implementation would be to have first class object types like Notification,
+    // Battery, Sensor, Engine, GPS etc. that encapsulate their paths as well as other data/behavior.
   }
   if (meta) {
-
-    if (meta && meta.renderer && meta.renderer.module) { //NOT WORKING YET: getting module not found errors.
+    if (meta && meta.renderer && meta.renderer.module) {
+      //NOT WORKING YET: getting module not found errors.
       const Renderer = lazy(() =>
         import(meta.renderer.module).then((module) => ({
           default: module[meta.renderer.name]
@@ -500,15 +499,14 @@ export const getValueRenderer = (path, meta) => {
       )
 
       return function component() {
-         return (
-              <div>
-                <Suspense fallback="Loading...">
-                  <Renderer />
-                </Suspense>
-              </div>
-            )
+        return (
+          <div>
+            <Suspense fallback="Loading...">
+              <Renderer />
+            </Suspense>
+          </div>
+        )
       }
-
     }
     if (meta && meta.renderer) {
       return Renderers[meta.renderer.name]
