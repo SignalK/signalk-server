@@ -12,8 +12,6 @@ import {
 import '../../blinking-circle.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
-//import { toLazyDynamicComponent } from '../Webapps/dynamicutilities'
-
 function radiansToDegrees(radians) {
   return radians * (180 / Math.PI)
 }
@@ -173,7 +171,7 @@ const NotificationRenderer = ({ value }) => {
           <span style={circleStyle}></span>
         )}
         <span className="d-flex" style={{ marginLeft: '.5em' }}>
-          {state ? state.toUpperCase() : state + ': ' + message}
+          {state ? state.toUpperCase() : 'undefined' + ': ' + message}
         </span>
       </div>
       <div className="d-flex" style={{ gap: '.5em' }}>
@@ -490,30 +488,28 @@ export const getValueRenderer = (path, meta) => {
     // Battery, Sensor, Engine, GPS etc. that encapsulate their paths and their renderer
     // as well as other useful data/behavior.
   }
-  if (meta) {
-    if (meta && meta.renderer && meta.renderer.module) {
-      const Renderer = toLazyDynamicComponent(
-        meta.renderer.module,
-        meta.renderer.name
+  if (meta && meta.renderer && meta.renderer.module) {
+    const Renderer = toLazyDynamicComponent(
+      meta.renderer.module,
+      meta.renderer.name
+    )
+
+    return function component(props) {
+      return (
+        <div>
+          <Suspense fallback=<DefaultValueRenderer {...props} />>
+            <Renderer {...props} />
+          </Suspense>
+        </div>
       )
+    }
+  }
 
-      return function component(props) {
-        return (
-          <div>
-            <Suspense fallback=<DefaultValueRenderer {...props} />>
-              <Renderer {...props} />
-            </Suspense>
-          </div>
-        )
-      }
-    }
-
-    if (meta && meta.renderer) {
-      return Renderers[meta.renderer.name]
-    }
-    if (meta && meta.units === 'ratio') {
-      return MeterRenderer
-    }
+  if (meta && meta.renderer) {
+    return Renderers[meta.renderer.name]
+  }
+  if (meta && meta.units === 'ratio') {
+    return MeterRenderer
   }
 
   if (VALUE_RENDERERS[path]) {
