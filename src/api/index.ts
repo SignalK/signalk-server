@@ -9,6 +9,7 @@ import { AutopilotApi } from './autopilot'
 import { RadarApi } from './radar'
 import { HistoryApiHttpRegistry } from './history'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
+import { NotificationApi, NotificationApplication } from './notifications'
 import { binaryStreamManager, initializeBinaryStreams } from './streams'
 import { NotificationApi, NotificationApplication } from './notifications'
 
