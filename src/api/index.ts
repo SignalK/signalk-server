@@ -8,6 +8,7 @@ import { WeatherApi } from './weather'
 import { AutopilotApi } from './autopilot'
 import { HistoryApiHttpRegistry } from './history'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
+import { NotificationApi, NotificationApplication } from './notifications'
 
 export interface ApiResponse {
   state: 'FAILED' | 'COMPLETED' | 'PENDING'
@@ -80,6 +81,11 @@ export const startApis = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).historyApiHttpRegistry = historyApiHttpRegistry
   apiList.push('history')
+
+  const notificationApi = new NotificationApi(app as NotificationApplication)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).notificationApi = notificationApi
+  apiList.push('notification')
 
   Promise.all([
     resourcesApi.start(),
