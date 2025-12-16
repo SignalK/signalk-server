@@ -1,6 +1,7 @@
 ---
 title: Custom Renderers for the DataBrowser
 ---
+
 # Custom Renderers
 
 Signalk's Data Browser provides an easily navigated snapshot of the state of your Signalk system. Some paths like `navigation.gnss.satellitesInView` however are data intensive and difficult to make much sense out of in raw JSON form.
@@ -52,6 +53,7 @@ There are more interesting examples in the ValueRenderer.js file.
     }),
 ...
 ```
+
 - Build your plugin (`npm run build`)
 
 ## Use Your Renderer
@@ -77,5 +79,3 @@ Example (for a renderer in a federated module):
               },
 ...
 ```
-
-
