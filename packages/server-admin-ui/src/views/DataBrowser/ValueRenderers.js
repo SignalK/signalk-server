@@ -1,6 +1,6 @@
 import React from 'react'
-import { lazy, Suspense } from 'react'
-//import { toLazyDynamicComponent } from '../Webapps/dynamicutilities'
+import { Suspense } from 'react'
+import { toLazyDynamicComponent } from '../Webapps/dynamicutilities'
 import ReactHtmlParser from 'react-html-parser'
 import {
   faEye,
@@ -11,8 +11,6 @@ import {
 
 import '../../blinking-circle.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-
-//import { toLazyDynamicComponent } from '../Webapps/dynamicutilities'
 
 function radiansToDegrees(radians) {
   return radians * (180 / Math.PI)
@@ -173,7 +171,7 @@ const NotificationRenderer = ({ value }) => {
           <span style={circleStyle}></span>
         )}
         <span className="d-flex" style={{ marginLeft: '.5em' }}>
-          {state.toUpperCase() + ': ' + message}
+          {state ? state.toUpperCase() : 'undefined' + ': ' + message}
         </span>
       </div>
       <div className="d-flex" style={{ gap: '.5em' }}>
@@ -487,33 +485,31 @@ export const getValueRenderer = (path, meta) => {
     return NotificationRenderer // notification paths should always use NotificationRenderer
     // better implementation would set up regex path -> renderer mapping in settings file
     // even better implementation would be to have first class object types like Notification,
-    // Battery, Sensor, Engine, GPS etc. that encapsulate their paths as well as other data/behavior.
+    // Battery, Sensor, Engine, GPS etc. that encapsulate their paths and their renderer
+    // as well as other useful data/behavior.
   }
-  if (meta) {
-    if (meta && meta.renderer && meta.renderer.module) {
-      //NOT WORKING YET: getting module not found errors.
-      const Renderer = lazy(() =>
-        import(meta.renderer.module).then((module) => ({
-          default: module[meta.renderer.name]
-        }))
-      )
+  if (meta && meta.renderer && meta.renderer.module) {
+    const Renderer = toLazyDynamicComponent(
+      meta.renderer.module,
+      meta.renderer.name
+    )
 
-      return function component() {
-        return (
-          <div>
-            <Suspense fallback="Loading...">
-              <Renderer />
-            </Suspense>
-          </div>
-        )
-      }
+    return function component(props) {
+      return (
+        <div>
+          <Suspense fallback=<DefaultValueRenderer {...props} />>
+            <Renderer {...props} />
+          </Suspense>
+        </div>
+      )
     }
-    if (meta && meta.renderer) {
-      return Renderers[meta.renderer.name]
-    }
-    if (meta && meta.units === 'ratio') {
-      return MeterRenderer
-    }
+  }
+
+  if (meta && meta.renderer) {
+    return Renderers[meta.renderer.name]
+  }
+  if (meta && meta.units === 'ratio') {
+    return MeterRenderer
   }
 
   if (VALUE_RENDERERS[path]) {
