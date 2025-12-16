@@ -8,6 +8,7 @@ children:
   - course_calculations.md
   - resource_provider_plugins.md
   - weather_provider_plugins.md
+  - custom_renderers.md
   - publishing.md
 ---
 
