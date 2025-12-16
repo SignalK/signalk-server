@@ -10,8 +10,8 @@ jobs:
   build_and_publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '22.x'
           registry-url: 'https://registry.npmjs.org'
@@ -146,7 +146,7 @@ jobs:
     runs-on: ${{ matrix.vm }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to ghcr.io
@@ -191,7 +191,7 @@ jobs:
             tag: latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Docker meta
@@ -211,7 +211,7 @@ jobs:
       - name: Save docker tags to artifact
         run: echo "${{ steps.docker_meta.outputs.tags }}" > docker_tags_${{ matrix.os }}_${{ matrix.node }}.txt
       - name: Upload tags
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           retention-days: 1
           name: docker_tags_${{ matrix.os }}_${{ matrix.node }}
@@ -244,7 +244,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y skopeo
       - name: Download Docker tag artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: docker_tags_${{ matrix.os }}_${{ matrix.node }}
       - name: Normalize and filter GHCR tags
@@ -287,7 +287,7 @@ jobs:
     needs: create-and-push-manifest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Set TAG for build-arg
