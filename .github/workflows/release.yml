@@ -185,10 +185,10 @@ jobs:
           - os: 24.04
             node: 22.x
             tag: latest
+            suffix: -22.x
           - os: 24.04
             node: 24.x
             tag: latest
-            suffix: -24.x
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -208,11 +208,14 @@ jobs:
             type=raw,value=${{ matrix.tag }},enable=${{ !contains(github.ref, 'beta') }}
           flavor: |
             suffix=${{ matrix.suffix }}
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Save docker tags to artifact
+        run: echo "${{ steps.docker_meta.outputs.tags }}" > docker_tags_${{ matrix.os }}_${{ matrix.node }}.txt
+      - name: Upload tags
+        uses: actions/upload-artifact@v4
         with:
-          username: signalkci
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          retention-days: 1
+          name: docker_tags_${{ matrix.os }}_${{ matrix.node }}
+          path: docker_tags_${{ matrix.os }}_${{ matrix.node }}.txt
       - name: Login to ghcr.io
         uses: docker/login-action@v3
         with:
@@ -228,18 +231,55 @@ jobs:
             ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
             ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
 
+  copy-to-dockerhub:
+    needs: create-and-push-manifest
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [24.04]
+        node: [22.x, 24.x]
+    steps:
+      - name: Install skopeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+      - name: Download Docker tag artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: docker_tags_${{ matrix.os }}_${{ matrix.node }}
+      - name: Normalize and filter GHCR tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed 's/,/\n/g' docker_tags_${{ matrix.os }}_${{ matrix.node }}.txt \
+            | grep '^ghcr\.io/' \
+            > tags.txt
+      - name: Copy images from GHCR to Docker Hub
+        run: |
+          set -euo pipefail
+          while IFS= read -r ghcr_image; do
+            [ -z "$ghcr_image" ] && continue
+            hub_image="${ghcr_image/ghcr.io\/signalk/docker.io\/signalkci}"
+            skopeo copy --all \
+              --src-creds "${{ github.actor }}:${{ secrets.GHCR_PAT }}" \
+              --dest-creds "signalkci:${{ secrets.DOCKERHUB_TOKEN }}" \
+              "docker://${ghcr_image}" \
+              "docker://${hub_image}"
+          done < tags.txt
+
   housekeeping:
     needs: create-and-push-manifest
     runs-on: ubuntu-latest
     permissions:
       packages: write
     steps:
-      - name: Remove Docker Image from GHCR
+      - name: Remove Temporary & Untagged Docker Images from GHCR
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
           packages: signalk-server
           delete-untagged: true
-          delete-tags: amd-24.04-24.x-${{ github.run_id }},amd-24.04-22.x-${{ github.run_id }},arm-24.04-24.x-${{ github.run_id }},arm-24.04-22.x-${{ github.run_id }}
+          delete-tags: |
+            *-${{ github.run_id }}
           token: ${{ secrets.GHCR_PAT }}
 
   deploy_fly:
