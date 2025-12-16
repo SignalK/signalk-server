@@ -1,5 +1,5 @@
 ---
-title: Custom Renderers for the DataBrowser
+title: Custom Renderers for the Data Browser
 ---
 
 # Custom Renderers
