@@ -93,7 +93,8 @@ export const startApis = (
     weatherApi.start(),
     featuresApi.start(),
     autopilotApi.start(),
-    historyApiHttpRegistry.start()
+    historyApiHttpRegistry.start(),
+    notificationApi.start()
   ])
   return apiList
 }
