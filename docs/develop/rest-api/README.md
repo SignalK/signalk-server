@@ -5,6 +5,7 @@ children:
   - autopilot_api.md
   - course_api.md
   - history_api.md
+  - notifications_api.md
   - radar_api.md
   - notifications_api.md
   - resources_api.md
