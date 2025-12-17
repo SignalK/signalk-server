@@ -67,7 +67,7 @@ export type Update = {
   timestamp?: Timestamp
   source?: Source
   $source?: SourceRef
-  $nmi?: string
+  notificationId?: string
 } & ({ values: PathValue[] } | { meta: Meta[] }) // require either values or meta or both
 
 /** @category Server API */

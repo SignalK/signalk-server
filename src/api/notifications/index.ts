@@ -1,6 +1,7 @@
 import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:api:notification')
 
+import { Subject } from 'rxjs'
 import * as uuid from 'uuid'
 import { ServerApp, SignalKMessageHub, WithConfig } from '../../app'
 import {
@@ -8,6 +9,7 @@ import {
   Delta,
   hasValues,
   Path,
+  SKVersion,
   SourceRef,
   Update
 } from '@signalk/server-api'
@@ -24,35 +26,45 @@ export interface NotificationApplication
     SignalKMessageHub {}
 
 export class NotificationApi {
-  readonly updateManager: NotificationUpdateManager
+  private app: NotificationApplication
+  private updateManager: NotificationUpdateHandler
+  private notiId: Map<string, string> = new Map()
 
-  constructor(private app: NotificationApplication) {
-    this.updateManager = new NotificationUpdateManager(app)
+  constructor(private server: NotificationApplication) {
+    this.app = server
+    this.updateManager = new NotificationUpdateHandler(server)
+    this.updateManager.$notiUpdate.subscribe((d: Delta) =>
+      this.handleNotiUpdate(d)
+    )
   }
 
   async start() {
     return Promise.resolve()
   }
-}
 
-/**
- * Class to manage updates containing notifications.* paths
- * It ensures:
- * 1. notifications paths are contained in their own update message
- * 2. updates containing a notification path has an identifier applied
- * 3. identifier is applied for each $source.context.path combination.
- */
-export class NotificationUpdateManager {
-  private idMap: Map<string, string> = new Map()
-
-  constructor(private server: ServerApp) {
-    // Register delta input processing method
-    server.registerDeltaInputHandler(
-      (delta: Delta, next: (delta: Delta) => void) => {
-        const noti = this.processDeltaInput(delta)
-        next(noti)
+  /**
+   * Handle incoming notification deltas and assign a notification identintier
+   * @param delta Incoming notification delta
+   */
+  private handleNotiUpdate(delta: Delta) {
+    delta.updates?.forEach((u: Update) => {
+      if (hasValues(u) && u.values.length) {
+        const path = u.values[0].path
+        const src = u['$source'] as SourceRef
+        const key = this.buildKey(src, delta.context as Context, path)
+        if (this.notiId.has(key)) {
+          u.notificationId = this.notiId.get(key)
+          //debug('**existing**:', key, this.notiId.get(key))
+        } else {
+          const id = uuid.v4()
+          this.notiId.set(key, id)
+          u.notificationId = id
+          //debug('**new**:', key, id)
+        }
       }
-    )
+    })
+    debug(delta)
+    this.app.handleMessage('notificationApi', delta, SKVersion.v2)
   }
 
   /**
@@ -61,31 +73,55 @@ export class NotificationUpdateManager {
    * @param source
    * @param context
    * @param path
-   * @returns notification id ($nmi)
+   * @returns notification identifier (notificationId)
    */
   assign(source: SourceRef, context: Context, path: Path) {
     const key = this.buildKey(source, context, path)
-    if (!this.idMap.has(key)) {
-      this.idMap.set(key, uuid.v4())
+    if (!this.notiId.has(key)) {
+      this.notiId.set(key, uuid.v4())
     }
-    return this.idMap.get(key)
+    return this.notiId.get(key)
   }
 
   /**
-   * Process delta input and assign identifier to notifications
-   * @param delta Incoming Delta
-   * @returns Delta containing individual notification updates with identifier
+   * Return key for supplied $source, context, path combination
+   * @param source
+   * @param context
+   * @param path
+   * @returns formatted key value
    */
-  private processDeltaInput(delta: Delta): Delta {
+  private buildKey(source: SourceRef, context: Context, path: Path): string {
+    return `${source}/${context}/${path}`
+  }
+}
+
+/**
+ * Class to handle Notification Updates (path = notifications.*).
+ * It filters out notifications from the delta and places them into
+ * individual update messages which are placed onto the notiUpdates Subject
+ * for processing and emitting.
+ */
+export class NotificationUpdateHandler {
+  private notiUpdate: Subject<Delta> = new Subject()
+  public readonly $notiUpdate = this.notiUpdate.asObservable()
+
+  constructor(private server: ServerApp) {
+    server.registerDeltaInputHandler(
+      (delta: Delta, next: (delta: Delta) => void) => {
+        next(this.filterNotifications(delta))
+      }
+    )
+  }
+
+  /** Filter out notifications.* paths and push onto notiUpdate */
+  private filterNotifications(delta: Delta): Delta {
     const notiUpdates: Update[] = [] // notification updates
 
-    // process updates
     const dUpdates = delta.updates?.filter((update) => {
       if (hasValues(update)) {
         // ignore messages from NotificationManager
-        if ('$nmi' in update) {
-          //server.debug( `Ignored: update has ${this.idLabel}`, update.values[0].path)
-          return false
+        if ('notificationId' in update) {
+          return true
         }
         // filter out values containing notification paths
         const filteredValues = update.values.filter((u) => {
@@ -109,52 +145,12 @@ export class NotificationUpdateManager {
 
     delta.updates = []
     if (dUpdates?.length) {
-      // apply filtered updates
+      // return filtered update array
       delta.updates = ([] as Update[]).concat(dUpdates)
     }
     if (notiUpdates.length) {
-      // apply notification updates
-      delta.updates = delta.updates.concat(
-        this.parseNotifications(notiUpdates, delta.context as Context)
-      )
+      this.notiUpdate.next({ context: delta.context, updates: notiUpdates })
     }
     return delta
-  }
-
-  /**
-   * Assign identifier and add to idMap
-   * @param updates Array of updates containing notifications.* path
-   * @param context Signal K context e.g. 'vessels.self'
-   */
-  private parseNotifications(updates: Update[], context: Context) {
-    updates.forEach((u: Update) => {
-      if (hasValues(u) && u.values.length) {
-        const path = u.values[0].path
-        const src = u['$source'] as SourceRef
-        const key = this.buildKey(src, context, path)
-        if (this.idMap.has(key)) {
-          u.$nmi = this.idMap.get(key)
-          debug('**existing**:', key, this.idMap.get(key))
-        } else {
-          const id = uuid.v4()
-          this.idMap.set(key, id)
-          u.$nmi = id
-          debug('**new**:', key, id)
-        }
-      }
-    })
-    debug(JSON.stringify(updates))
-    return updates
-  }
-
-  /**
-   * Return key for supplied $source, context, path combination
-   * @param source
-   * @param context
-   * @param path
-   * @returns idMap key
-   */
-  private buildKey(source: SourceRef, context: Context, path: Path): string {
-    return `${source}/${context}/${path}`
   }
 }
