@@ -5,7 +5,6 @@ import { Subject } from 'rxjs'
 import * as uuid from 'uuid'
 import { ServerApp, SignalKMessageHub, WithConfig } from '../../app'
 import {
-  ALARM_METHOD,
   Context,
   Delta,
   hasValues,
@@ -19,12 +18,7 @@ import { IRouter, Request, Response } from 'express'
 import { ConfigApp } from '../../config/config'
 import { WithSecurityStrategy } from '../../security'
 import { Responses } from '..'
-
-interface NotiAction {
-  silence: boolean
-  acknowledge: boolean
-  delta: Delta
-}
+import { AlertManager } from './alertManager'
 
 export interface NotificationApplication
   extends
@@ -37,16 +31,17 @@ export interface NotificationApplication
 const SIGNALK_API_PATH = `/signalk/v2/api`
 const NOTI_API_PATH = `${SIGNALK_API_PATH}/notifications`
 
-const deltaVersion: SKVersion = SKVersion.v1
+export const deltaVersion: SKVersion = SKVersion.v1
 
 export class NotificationApi {
   private app: NotificationApplication
   private updateManager: NotificationUpdateHandler
   private notiKeys: Map<string, string> = new Map()
-  private notifications: Map<string, NotiAction> = new Map()
+  private alertManager: AlertManager
 
   constructor(private server: NotificationApplication) {
     this.app = server
+    this.alertManager = new AlertManager(server)
     this.updateManager = new NotificationUpdateHandler(server)
     this.updateManager.$notiUpdate.subscribe((d: Delta) =>
       this.handleNotiUpdate(d)
@@ -63,15 +58,16 @@ export class NotificationApi {
   private initNotificationRoutes() {
     this.app.get(`${NOTI_API_PATH}`, async (req: Request, res: Response) => {
       debug(`** ${req.method} ${req.path}`)
-      res.status(200).json(Array.from(this.notifications))
+      res.status(200).json(this.alertManager.list())
     })
 
     this.app.get(
       `${NOTI_API_PATH}/:id`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
-        if (this.notifications.has(req.params.id)) {
-          res.status(200).json(this.notifications.get(req.params.id))
+        const n = this.alertManager.get(req.params.id)
+        if (n) {
+          res.status(200).json(n)
         } else {
           res.status(200).json(Responses.notFound)
         }
@@ -83,22 +79,7 @@ export class NotificationApi {
       `${NOTI_API_PATH}/:id/silence`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
-        if (this.notifications.has(req.params.id)) {
-          this.silenceNotification(req.params.id)
-          res.status(200).json(Responses.ok)
-        } else {
-          res.status(200).json(Responses.notFound)
-        }
-      }
-    )
-
-    // Acknowledge
-    this.app.post(
-      `${NOTI_API_PATH}/:id/ack`,
-      async (req: Request, res: Response) => {
-        debug(`** ${req.method} ${req.path}`)
-        if (this.notifications.has(req.params.id)) {
-          this.silenceNotification(req.params.id, true)
+        if (this.alertManager.silence(req.params.id)) {
           res.status(200).json(Responses.ok)
         } else {
           res.status(200).json(Responses.notFound)
@@ -108,35 +89,24 @@ export class NotificationApi {
   }
 
   /**
-   * Remove 'sound' method from notification and emit delta
-   * @param id Notification identifier
-   * @param ack true = acknowledge, false = silence
-   */
-  silenceNotification(id: string, ack?: boolean) {
-    const a = this.notifications.get(id) as NotiAction
-    if (ack) a.acknowledge = true
-    else a.silence = true
-
-    if ('values' in a.delta.updates[0]) {
-      const value: Notification = a.delta.updates[0].values[0]
-        .value as Notification
-      value.method = this.alignAlarmMethod(id, value.method)
-      this.notifications.set(id, a)
-      this.app.handleMessage('notificationApi', a.delta, deltaVersion)
-    }
-  }
-
-  /**
-   * Handle incoming notification deltas and assign a notification identintier
+   * Handle incoming notification deltas and assign a notification identitier
    * @param delta Incoming notification delta
    */
   private handleNotiUpdate(delta: Delta) {
+    const buildKey = (
+      source: SourceRef,
+      context: Context,
+      path: Path
+    ): string => {
+      return `${source}/${context}/${path}`
+    }
+
     delta.updates?.forEach((u: Update) => {
       if (hasValues(u) && u.values.length) {
         const value = u.values[0].value as Notification
         const path = u.values[0].path
         const src = u['$source'] as SourceRef
-        const key = this.buildKey(src, delta.context as Context, path)
+        const key = buildKey(src, delta.context as Context, path)
         if (this.notiKeys.has(key)) {
           u.notificationId = this.notiKeys.get(key)
         } else {
@@ -144,72 +114,18 @@ export class NotificationApi {
           this.notiKeys.set(key, id)
           u.notificationId = id
         }
-        // manage ALARMS and ALARM_METHOD
-        const id = u.notificationId as string
-        if (['emergency', 'alarm'].includes(value.state)) {
-          if (this.notifications.has(id)) {
-            value.method = this.alignAlarmMethod(id, value.method)
-            const n = this.notifications.get(id) as NotiAction
-            n.delta = delta
-            this.notifications.set(id, n)
-          } else {
-            this.notifications.set(id, {
-              silence: false,
-              acknowledge: false,
-              delta: delta
-            })
+        // manage ALARMS
+        if (value.state) {
+          const id = u.notificationId as string
+          if (!['normal', 'nominal'].includes(value.state)) {
+            this.alertManager.external(u, delta.context as Context)
+          } else if (value.state === 'normal') {
+            this.alertManager.remove(id)
           }
-        } else if (value.state === 'normal') {
-          this.notifications.delete(id as string)
         }
       }
     })
     this.app.handleMessage('notificationApi', delta, deltaVersion)
-  }
-
-  /**
-   * Align notification alarm method with recorded user action
-   * @param id
-   * @param method
-   * @returns alarm method
-   */
-  private alignAlarmMethod(
-    id: string,
-    method: Array<ALARM_METHOD>
-  ): Array<ALARM_METHOD> {
-    const a = this.notifications.get(id)
-    if (a?.silence || a?.acknowledge) {
-      return method.filter((i) => i !== 'sound')
-    } else {
-      return method
-    }
-  }
-
-  /**
-   * Generates and returns the unique id for the supplied $source, context, path combination.
-   * If the combination has been previously assigned an id, it is returned.
-   * @param source
-   * @param context
-   * @param path
-   * @returns notification identifier (notificationId)
-   */
-  assign(source: SourceRef, context: Context, path: Path) {
-    const key = this.buildKey(source, context, path)
-    if (!this.notiKeys.has(key)) {
-      this.notiKeys.set(key, uuid.v4())
-    }
-    return this.notiKeys.get(key)
-  }
-
-  /**
-   * Return key for supplied $source, context, path combination
-   * @param source
-   * @param context
-   * @param path
-   * @returns formatted key value
-   */
-  private buildKey(source: SourceRef, context: Context, path: Path): string {
-    return `${source}/${context}/${path}`
   }
 }
 
