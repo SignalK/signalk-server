@@ -297,9 +297,6 @@ function nameCollator(left, right) {
 
 window.serverRoutesPrefix = '/skServer'
 
-// eslint-disable-next-line no-undef
-__webpack_init_sharing__('default')
-
 ReactDOM.render(
   <HashRouter>
     <Switch>

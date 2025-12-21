@@ -99,8 +99,13 @@ module.exports = function (
   const logopath = path.resolve(app.config.configPath, 'logo.svg')
   if (fs.existsSync(logopath)) {
     debug(`Found custom logo at ${logopath}, adding route for it`)
+    // Intercept both Webpack (fonts/) and Vite (assets/) paths for the main logo
     app.use(
       '/admin/fonts/signal-k-logo-image-text.*',
+      (req: Request, res: Response) => res.sendFile(logopath)
+    )
+    app.use(
+      '/admin/assets/signal-k-logo-image-text*.svg',
       (req: Request, res: Response) => res.sendFile(logopath)
     )
 
@@ -112,8 +117,13 @@ module.exports = function (
     const minimizedLogo = fs.existsSync(minimizedLogoPath)
       ? minimizedLogoPath
       : logopath
+    // Intercept both Webpack (fonts/) and Vite (assets/) paths for the minimized logo
     app.use(
       '/admin/fonts/signal-k-logo-image.*',
+      (req: Request, res: Response) => res.sendFile(minimizedLogo)
+    )
+    app.use(
+      '/admin/assets/signal-k-logo-image*.svg',
       (req: Request, res: Response) => res.sendFile(minimizedLogo)
     )
   }
