@@ -7,7 +7,7 @@ const react = require('eslint-plugin-react')
 const chai = require('eslint-plugin-chai-friendly')
 
 module.exports = defineConfig([
-  globalIgnores(['**/public', '**/dist']),
+  globalIgnores(['**/public', '**/dist', '**/.__mf__temp']),
 
   // TypeScript options
   {

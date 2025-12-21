@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { federation } from '@module-federation/vite'
-import path from 'path'
 
 // Validate peer dependencies for Module Federation compatibility
 import '@signalk/server-admin-ui-dependencies'
