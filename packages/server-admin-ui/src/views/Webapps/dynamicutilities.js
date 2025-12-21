@@ -15,9 +15,12 @@ export const toLazyDynamicComponent = (moduleName, component) =>
         // For Vite Module Federation, the container may already be initialized
         // or we need to use the shared scope from window
         /* eslint-disable no-undef */
-        const shareScope = typeof __webpack_share_scopes__ !== 'undefined'
-          ? __webpack_share_scopes__.default
-          : (typeof __federation_shared__ !== 'undefined' ? __federation_shared__ : {})
+        const shareScope =
+          typeof __webpack_share_scopes__ !== 'undefined'
+            ? __webpack_share_scopes__.default
+            : typeof __federation_shared__ !== 'undefined'
+              ? __federation_shared__
+              : {}
         /* eslint-enable no-undef */
 
         container.init(shareScope)
