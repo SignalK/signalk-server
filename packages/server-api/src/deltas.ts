@@ -93,6 +93,8 @@ export interface Notification {
   state: ALARM_STATE
   method: ALARM_METHOD[]
   message: string
+  temporarySilenceStatus?: 'Yes' | 'No'
+  acknowledgeStatus?: 'Yes' | 'No'
 }
 
 // MetaMessage

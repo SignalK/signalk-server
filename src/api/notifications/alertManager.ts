@@ -1,44 +1,42 @@
 import {
-  ALARM_METHOD,
   Context,
   Delta,
   hasValues,
-  Notification,
-  Timestamp,
+  SKVersion,
   Update
 } from '@signalk/server-api'
 
-import { NotificationApplication, deltaVersion } from './index'
-
-interface AlertStatus {
-  external: boolean // true = alert was ceated from notification (not via API)
-  silence: boolean
-  acknowledge: boolean
-  delta: Delta // external alert content
-}
+import { NotificationApplication } from './index'
+import { Alert, AlertProperties } from './alert'
 
 /**
  * Class to manage the lifecycle of alerts / alarms
  */
 export class AlertManager {
   private app: NotificationApplication
-  private alerts: Map<string, AlertStatus> = new Map()
+  private alerts: Map<string, Alert> = new Map()
+  private readonly deltaVersion = SKVersion.v1
 
   constructor(private server: NotificationApplication) {
     this.app = server
   }
 
   /** List Alerts */
-  list() {
-    return Array.from(this.alerts)
+  get list(): { [key: string]: AlertProperties } {
+    const l: { [key: string]: AlertProperties } = {}
+    this.alerts.forEach((v: Alert, k: string) => {
+      l[k] = v.properties
+    })
+    return l
   }
 
   /**
    * Return Alert with specified identifier
    * @param id Alert identifier
+   * @returns Alert properties
    */
-  get(id: string) {
-    return this.alerts.get(id)
+  get(id: string): AlertProperties {
+    return this.alerts.get(id)?.properties as AlertProperties
   }
 
   /**
@@ -52,68 +50,48 @@ export class AlertManager {
   /**
    * Silence alert by removing the 'sound' method from the notification
    * @param id Notification identifier
-   * @param ack true = acknowledge, false = silence
    */
-  silence(id: string, ack?: boolean) {
-    if (!this.alerts.has(id)) return false
-
-    const a = this.alerts.get(id) as AlertStatus
-
-    if (ack) a.acknowledge = true
-    else a.silence = true
-
-    if (a.external) {
-      if ('values' in a.delta.updates[0]) {
-        const value: Notification = a.delta.updates[0].values[0]
-          .value as Notification
-        value.method = this.alignAlarmMethod(id, value.method)
-        a.delta.updates[0].timestamp = new Date().toISOString() as Timestamp
-        this.alerts.set(id, a)
-        this.app.handleMessage('notificationApi', a.delta, deltaVersion)
-        return true
-      } else {
-        return false
-      }
-    } else {
-      // notify()
+  silence(id: string) {
+    if (!this.alerts.has(id)) {
+      throw new Error('Alert not found!')
     }
+    const alert = this.alerts.get(id)
+    alert?.silence()
+    this.app.handleMessage(
+      'notificationApi',
+      alert?.delta as Delta,
+      this.deltaVersion
+    )
   }
 
   /**
-   * Align notification alarm method with recorded user action
-   * @param id
-   * @param method
-   * @returns alarm method
+   * Acknowledge alert by removing the 'sound' method from the notification
+   * @param id Notification identifier
    */
-  private alignAlarmMethod(
-    id: string,
-    method: Array<ALARM_METHOD>
-  ): Array<ALARM_METHOD> {
-    const a = this.alerts.get(id)
-    if (a?.silence || a?.acknowledge) {
-      return method.filter((i) => i !== 'sound')
-    } else {
-      return method
+  acknowledge(id: string) {
+    if (!this.alerts.has(id)) {
+      throw new Error('Alert not found!')
     }
+    const alert = this.alerts.get(id)
+    alert?.acknowledge()
+    this.app.handleMessage(
+      'notificationApi',
+      alert?.delta as Delta,
+      this.deltaVersion
+    )
   }
 
-  external(u: Update, context: Context) {
+  /** Process alert from notification delta */
+  fromDelta(u: Update, context: Context) {
     if (hasValues(u) && u.values.length) {
-      const value = u.values[0].value as Notification
       const id = u.notificationId as string
-
       if (this.alerts.has(id)) {
-        value.method = this.alignAlarmMethod(id, value.method)
-        const n = this.alerts.get(id) as AlertStatus
-        n.delta = { context: context, updates: [u] }
-        this.alerts.set(id, n)
+        const alert = this.alerts.get(id) as Alert
+        alert.fromDelta({ context: context, updates: [u] })
+        this.alerts.set(id, alert)
       } else {
-        this.alerts.set(id, {
-          external: true,
-          silence: false,
-          acknowledge: false,
-          delta: { context: context, updates: [u] }
-        })
+        const alert = new Alert({ context: context, updates: [u] })
+        this.alerts.set(id, alert)
       }
     }
   }

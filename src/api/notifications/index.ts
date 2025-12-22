@@ -58,7 +58,7 @@ export class NotificationApi {
   private initNotificationRoutes() {
     this.app.get(`${NOTI_API_PATH}`, async (req: Request, res: Response) => {
       debug(`** ${req.method} ${req.path}`)
-      res.status(200).json(this.alertManager.list())
+      res.status(200).json(this.alertManager.list)
     })
 
     this.app.get(
@@ -79,10 +79,33 @@ export class NotificationApi {
       `${NOTI_API_PATH}/:id/silence`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
-        if (this.alertManager.silence(req.params.id)) {
+        try {
+          this.alertManager.silence(req.params.id)
           res.status(200).json(Responses.ok)
-        } else {
-          res.status(200).json(Responses.notFound)
+        } catch (err) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (err as Error).message
+          })
+        }
+      }
+    )
+
+    // Acknowledge
+    this.app.post(
+      `${NOTI_API_PATH}/:id/acknowledge`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        try {
+          this.alertManager.acknowledge(req.params.id)
+          res.status(200).json(Responses.ok)
+        } catch (err) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (err as Error).message
+          })
         }
       }
     )
@@ -117,10 +140,10 @@ export class NotificationApi {
         // manage ALARMS
         if (value.state) {
           const id = u.notificationId as string
-          if (!['normal', 'nominal'].includes(value.state)) {
-            this.alertManager.external(u, delta.context as Context)
-          } else if (value.state === 'normal') {
+          if (['normal', 'nominal'].includes(value.state)) {
             this.alertManager.remove(id)
+          } else {
+            this.alertManager.fromDelta(u, delta.context as Context)
           }
         }
       }
