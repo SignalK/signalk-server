@@ -94,10 +94,7 @@ const initializeContainer = async (container, moduleName) => {
     initializedContainers.add(containerId)
   } catch (error) {
     // Some containers throw "already initialized" errors - that's OK
-    if (
-      error.message &&
-      error.message.includes('already been initialized')
-    ) {
+    if (error.message && error.message.includes('already been initialized')) {
       initializedContainers.add(containerId)
     } else {
       throw error
