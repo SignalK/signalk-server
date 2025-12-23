@@ -12,7 +12,7 @@ describe('Providers', (_) => {
 
   before(async function () {
     port = await freeport()
-    url = `http://0.0.0.0:${port}`
+    url = `http://127.0.0.1:${port}`
     const serverApp = new Server({
       config: {
         settings: {

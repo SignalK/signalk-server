@@ -51,7 +51,7 @@ describe('History', (_) => {
 
   before(async function () {
     port = await freeport()
-    url = `http://0.0.0.0:${port}`
+    url = `http://127.0.0.1:${port}`
     const serverApp = new Server({
       config: {
         settings: {
@@ -72,7 +72,7 @@ describe('History', (_) => {
 
   it('startTime subscription works', async function () {
     const wsPromiser = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/playback?subscribe=self&startTime=2018-08-09T14:07:29.695Z&metaDeltas=none`
+      `ws://127.0.0.1:${port}/signalk/v1/playback?subscribe=self&startTime=2018-08-09T14:07:29.695Z&metaDeltas=none`
     )
     let msg = await wsPromiser.nextMsg()
     msg.should.not.equal('timeout')

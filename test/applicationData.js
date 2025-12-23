@@ -57,7 +57,7 @@ describe('Application Data', () => {
   before(async function () {
     this.timeout(5000)
     port = await freeport()
-    url = `http://0.0.0.0:${port}`
+    url = `http://127.0.0.1:${port}`
   })
 
   async function start() {

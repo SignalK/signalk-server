@@ -210,7 +210,7 @@ module.exports = {
 
 function login(server, username, password) {
   return new Promise((resolve, reject) => {
-    fetch(`http://0.0.0.0:${server.app.config.settings.port}/login`, {
+    fetch(`http://127.0.0.1:${server.app.config.settings.port}/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

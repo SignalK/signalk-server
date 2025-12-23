@@ -47,7 +47,7 @@ describe('Server', function () {
   })
 
   it('handles two deltas with signalk path', function () {
-    const host = 'http://localhost:' + port
+    const host = 'http://127.0.0.1:' + port
     const deltaUrl = host + '/signalk/v1/api/_test/delta'
     const restUrl = host + '/signalk/v1/api/'
 

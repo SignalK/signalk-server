@@ -16,7 +16,7 @@ describe('Put Requests', () => {
 
   before(async function () {
     port = await freeport()
-    url = `http://0.0.0.0:${port}`
+    url = `http://127.0.0.1:${port}`
     const serverApp = new Server({
       config: {
         settings: {
@@ -251,7 +251,7 @@ describe('Put Requests', () => {
 
   it('WS put to unhandled path fails', async function () {
     const ws = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
+      `ws://127.0.0.1:${port}/signalk/v1/stream?subscribe=none`
     )
     let msg = await ws.nextMsg()
 
@@ -275,7 +275,7 @@ describe('Put Requests', () => {
 
   it('WS successfull put', async function () {
     const ws = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
+      `ws://127.0.0.1:${port}/signalk/v1/stream?subscribe=none`
     )
     let msg = await ws.nextMsg()
 
@@ -306,7 +306,7 @@ describe('Put Requests', () => {
 
   it('WS failing put', async function () {
     const ws = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`
+      `ws://127.0.0.1:${port}/signalk/v1/stream?subscribe=none`
     )
     let msg = await ws.nextMsg()
 

@@ -22,7 +22,7 @@ const emptyConfigDirectory = () =>
 
 export const startServer = async () => {
   const port = await freeport()
-  const host = 'http://localhost:' + port
+  const host = 'http://127.0.0.1:' + port
   const sendDeltaUrl = host + '/signalk/v1/api/_test/delta'
   const api = host + '/signalk/v2/api'
   const v1Api = host + '/signalk/v1/api'
@@ -39,7 +39,7 @@ export const startServer = async () => {
     server,
     createWsPromiser: () =>
       new WsPromiser(
-        'ws://localhost:' +
+        'ws://127.0.0.1:' +
           port +
           '/signalk/v1/stream?subscribe=self&metaDeltas=none&sendCachedValues=false'
       ),

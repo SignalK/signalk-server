@@ -26,7 +26,7 @@ describe('Demo plugin ', () => {
       config: { settings: { port } }
     })
     await server.start()
-    const plugins = await fetch(`http://0.0.0.0:${port}/skServer/plugins`).then(
+    const plugins = await fetch(`http://127.0.0.1:${port}/skServer/plugins`).then(
       (res) => res.json()
     )
     assert(plugins.find((plugin) => plugin.id === 'testplugin'))
@@ -135,7 +135,7 @@ function writePluginConfig(config) {
 }
 
 async function postPluginConfig(port, config) {
-  await fetch(`http://0.0.0.0:${port}/skServer/plugins/testplugin/config`, {
+  await fetch(`http://127.0.0.1:${port}/skServer/plugins/testplugin/config`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

@@ -106,7 +106,7 @@ describe('Security', () => {
       ]
     }
     port = await freeport()
-    url = `http://0.0.0.0:${port}`
+    url = `http://127.0.0.1:${port}`
 
     server = await startServerP(
       port,
@@ -265,14 +265,14 @@ describe('Security', () => {
     //send some data semisynchronously, so that there is data in the cache that
     //should not appear
     const writePromiser = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none&metaDeltas=none&token=${writeToken}`
+      `ws://127.0.0.1:${port}/signalk/v1/stream?subsribe=none&metaDeltas=none&token=${writeToken}`
     )
     const msg = await writePromiser.nextMsg()
     JSON.parse(msg)
     await writePromiser.send(openNavigationDelta)
 
     const result = new Promise((resolve, reject) => {
-      const ws = new WebSocket(`ws://0.0.0.0:${port}/signalk/v1/stream`)
+      const ws = new WebSocket(`ws://127.0.0.1:${port}/signalk/v1/stream`)
       let msgCount = 0
       ws.on('message', (msg) => {
         msgCount++
@@ -318,13 +318,13 @@ describe('Security', () => {
 
   it('websockets acls work', async function () {
     const readPromiser = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=all&metaDeltas=none&token=${readToken}`
+      `ws://127.0.0.1:${port}/signalk/v1/stream?subsribe=all&metaDeltas=none&token=${readToken}`
     )
     let msg = await readPromiser.nextMsg()
     JSON.parse(msg)
 
     const writePromiser = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none&metaDeltas=none&token=${writeToken}`
+      `ws://127.0.0.1:${port}/signalk/v1/stream?subsribe=none&metaDeltas=none&token=${writeToken}`
     )
     msg = await writePromiser.nextMsg()
     JSON.parse(msg)
@@ -349,13 +349,13 @@ describe('Security', () => {
 
   it('sending meta works', async function () {
     const readPromiser = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=all&metaDeltas=none&token=${readToken}`
+      `ws://127.0.0.1:${port}/signalk/v1/stream?subsribe=all&metaDeltas=none&token=${readToken}`
     )
     let msg = await readPromiser.nextMsg()
     JSON.parse(msg)
 
     const writePromiser = new WsPromiser(
-      `ws://0.0.0.0:${port}/signalk/v1/stream?subsribe=none&metaDeltas=none&token=${writeToken}`
+      `ws://127.0.0.1:${port}/signalk/v1/stream?subsribe=none&metaDeltas=none&token=${writeToken}`
     )
     msg = await writePromiser.nextMsg()
     JSON.parse(msg)

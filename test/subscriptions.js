@@ -186,7 +186,7 @@ describe('Subscriptions', (_) => {
   beforeEach(() => {
     serverP = freeport().then((p) => {
       port = p
-      deltaUrl = 'http://localhost:' + port + '/signalk/v1/api/_test/delta'
+      deltaUrl = 'http://127.0.0.1:' + port + '/signalk/v1/api/_test/delta'
       return startServerP(p, false, {
         settings: { disableSchemaMetaDeltas: true }
       })
@@ -227,7 +227,7 @@ describe('Subscriptions', (_) => {
   it('?subscribe=self subscription serves self data', async function () {
     await serverP
     await testSelfData(
-      'ws://localhost:' +
+      'ws://127.0.0.1:' +
         port +
         '/signalk/v1/stream?subscribe=self&metaDeltas=none'
     )
@@ -236,14 +236,14 @@ describe('Subscriptions', (_) => {
   it('default subscription serves self data', async function () {
     await serverP
     await testSelfData(
-      'ws://localhost:' + port + '/signalk/v1/stream?metaDeltas=none'
+      'ws://127.0.0.1:' + port + '/signalk/v1/stream?metaDeltas=none'
     )
   })
 
   it('?subscribe=all subscription serves all data', async function () {
     await serverP
     const wsPromiser = new WsPromiser(
-      'ws://localhost:' +
+      'ws://127.0.0.1:' +
         port +
         '/signalk/v1/stream?subscribe=all&metaDeltas=none'
     )
@@ -271,7 +271,7 @@ describe('Subscriptions', (_) => {
   it('?subscribe=none subscription serves no data', async function () {
     await serverP
     const wsPromiser = new WsPromiser(
-      'ws://localhost:' +
+      'ws://127.0.0.1:' +
         port +
         '/signalk/v1/stream?subscribe=none&metaDeltas=none'
     )
@@ -294,7 +294,7 @@ describe('Subscriptions', (_) => {
     return serverP
       .then((_) => {
         wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream'
+          'ws://127.0.0.1:' + port + '/signalk/v1/stream'
         )
         return wsPromiser.nextMsg()
       })
@@ -358,7 +358,7 @@ describe('Subscriptions', (_) => {
     return serverP
       .then((_) => {
         wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?subsribe=none'
+          'ws://127.0.0.1:' + port + '/signalk/v1/stream?subsribe=none'
         )
         return wsPromiser.nextMsg()
       })
@@ -454,7 +454,7 @@ describe('Subscriptions', (_) => {
     return serverP
       .then((_) => {
         wsPromiser = new WsPromiser(
-          'ws://localhost:' +
+          'ws://127.0.0.1:' +
             port +
             '/signalk/v1/stream?subsribe=none&metaDeltas=none'
         )
@@ -515,7 +515,7 @@ describe('Subscriptions', (_) => {
     return serverP
       .then((_) => {
         wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?subsribe=none'
+          'ws://127.0.0.1:' + port + '/signalk/v1/stream?subsribe=none'
         )
         return wsPromiser.nextMsg()
       })
@@ -558,7 +558,7 @@ describe('Subscriptions', (_) => {
     return serverP
       .then((_) => {
         wsPromiser = new WsPromiser(
-          'ws://localhost:' + port + '/signalk/v1/stream?subscribe=none'
+          'ws://127.0.0.1:' + port + '/signalk/v1/stream?subscribe=none'
         )
         return wsPromiser.nextMsg()
       })

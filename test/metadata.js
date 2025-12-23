@@ -47,7 +47,7 @@ describe('Metadata retrieval', () => {
 
   it('valid .../meta works', () => {
     return getUrl(
-      `http://localhost:${port}/signalk/v1/api/vessels/foo/navigation/headingTrue/meta`
+      `http://127.0.0.1:${port}/signalk/v1/api/vessels/foo/navigation/headingTrue/meta`
     )
       .then((r) => r.json())
       .then((result) => {
@@ -57,7 +57,7 @@ describe('Metadata retrieval', () => {
 
   it('invalid .../meta returns error', (done) => {
     getUrl(
-      `http://localhost:${port}/signalk/v1/api/vessels/foo/navigation/headingTrueTRUE/meta`
+      `http://127.0.0.1:${port}/signalk/v1/api/vessels/foo/navigation/headingTrueTRUE/meta`
     ).then((response) => {
       assert.equal(response.status, 404)
       done()
@@ -66,7 +66,7 @@ describe('Metadata retrieval', () => {
 
   it('valid .../units works', () => {
     return getUrl(
-      `http://localhost:${port}/signalk/v1/api/vessels/foo/navigation/headingTrue/meta/units`
+      `http://127.0.0.1:${port}/signalk/v1/api/vessels/foo/navigation/headingTrue/meta/units`
     )
       .then((r) => r.json())
       .then((result) => {
@@ -76,7 +76,7 @@ describe('Metadata retrieval', () => {
 
   it('invalid .../units returns error', (done) => {
     getUrl(
-      `http://localhost:${port}/signalk/v1/api/vessels/foo/navigation/headingTrueTRUE/meta/units`
+      `http://127.0.0.1:${port}/signalk/v1/api/vessels/foo/navigation/headingTrueTRUE/meta/units`
     ).then((response) => {
       assert.equal(response.status, 404)
       done()
@@ -85,7 +85,7 @@ describe('Metadata retrieval', () => {
 
   it('valid .../from defaults works', () => {
     return getUrl(
-      `http://localhost:${port}/signalk/v1/api/vessels/self/electrical/batteries/1/voltage/meta/testKey`
+      `http://127.0.0.1:${port}/signalk/v1/api/vessels/self/electrical/batteries/1/voltage/meta/testKey`
     ) //then(r => r.json()).then(result => {
       .then((r) => r.text())
       .then((result) => {
@@ -96,7 +96,7 @@ describe('Metadata retrieval', () => {
 
   it('valid .../units with defaults works', () => {
     return getUrl(
-      `http://localhost:${port}/signalk/v1/api/vessels/self/electrical/batteries/1/voltage/meta/units`
+      `http://127.0.0.1:${port}/signalk/v1/api/vessels/self/electrical/batteries/1/voltage/meta/units`
     )
       .then((r) => r.json())
       .then((result) => {
