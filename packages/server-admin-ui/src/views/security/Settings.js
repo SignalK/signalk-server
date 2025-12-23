@@ -15,6 +15,15 @@ import {
 } from 'reactstrap'
 import EnableSecurity from './EnableSecurity'
 
+const DEFAULT_ALLOWED_IPS = `127.0.0.0/8
+10.0.0.0/8
+172.16.0.0/12
+192.168.0.0/16
+169.254.0.0/16
+::1/128
+fc00::/7
+fe80::/10`
+
 export function fetchSecurityConfig() {
   fetch(`${window.serverRoutesPrefix}/security/config`, {
     credentials: 'include'
@@ -25,7 +34,7 @@ export function fetchSecurityConfig() {
         ...data,
         allowedSourceIPs: data.allowedSourceIPs
           ? data.allowedSourceIPs.join('\n')
-          : '',
+          : DEFAULT_ALLOWED_IPS,
         hasData: true
       })
     })
@@ -259,15 +268,14 @@ class Settings extends Component {
                         <Input
                           type="textarea"
                           name="allowedSourceIPs"
-                          rows="5"
+                          rows="8"
                           onChange={this.handleChange}
                           value={this.state.allowedSourceIPs || ''}
-                          placeholder="Leave empty for default (private networks only)"
                         />
                         <FormText color="muted">
                           IP addresses or CIDR ranges allowed to access login
-                          and registration endpoints. One per line. Leave empty
-                          to allow only private/local networks (recommended).
+                          and registration endpoints. One per line. The defaults
+                          shown allow only private/local networks.
                         </FormText>
                       </Col>
                     </FormGroup>

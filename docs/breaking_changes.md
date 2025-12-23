@@ -17,6 +17,7 @@ Unauthenticated endpoints (login, device registration, access requests) are now 
 **Impact**: If you have legitimate use cases requiring access to these endpoints from public IP addresses, you will need to configure `allowedSourceIPs` in Security Settings or `security.json`.
 
 **To restore previous behavior** (allow all IPs - not recommended):
+
 ```JSON
 {
   "allowedSourceIPs": ["0.0.0.0/0", "::/0"]

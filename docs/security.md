@@ -122,7 +122,11 @@ NMEA0183 connections over TCP and UDP are inherently unsafe. There are no option
 
 ## Allowed Source IPs
 
-Signal K Server restricts which IP addresses can access unauthenticated endpoints such as login, device registration, and access requests. By default, only requests from private/local network ranges are allowed:
+Signal K Server restricts which IP addresses can access specific unauthenticated endpoints such as login, device registration, and access requests. By default, only requests from private/local network ranges are allowed.
+
+**Note:** This is not a firewall. It only protects the specific endpoints listed below - other server functionality (browsing the Admin UI, authenticated API requests, WebSocket connections) remains accessible from any IP address.
+
+By default, only requests from private/local network ranges are allowed:
 
 - `127.0.0.0/8` - IPv4 loopback (localhost)
 - `10.0.0.0/8` - RFC1918 Class A private networks
@@ -172,14 +176,32 @@ If you need to allow access from any IP address (not recommended for internet-ex
 
 The following endpoints are protected by IP filtering:
 
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /login` | User authentication |
-| `POST /signalk/v1/auth/login` | User authentication (alternative path) |
-| `POST /signalk/v1/access/requests` | Device/user access requests |
-| `GET /signalk/v1/requests/:id` | Access request status polling |
-| `POST /skServer/enableSecurity` | Initial security setup |
+| Endpoint                           | Purpose                                |
+| ---------------------------------- | -------------------------------------- |
+| `POST /login`                      | User authentication                    |
+| `POST /signalk/v1/auth/login`      | User authentication (alternative path) |
+| `POST /signalk/v1/access/requests` | Device/user access requests            |
+| `GET /signalk/v1/requests/:id`     | Access request status polling          |
+| `POST /skServer/enableSecurity`    | Initial security setup                 |
+
+### How IP Filtering Works
+
+IP filtering is applied at the application level to specific endpoints, not at the network socket level. The server still accepts connections from any IP address, but protected endpoints will reject requests from disallowed IPs with a 403 Forbidden response.
 
 ### X-Forwarded-For Header
 
 When Signal K Server runs behind a reverse proxy, the client IP is extracted from the `X-Forwarded-For` header. Ensure your proxy is configured to set this header correctly, and be aware that this header can be spoofed by malicious clients if your proxy doesn't sanitize it.
+
+### Troubleshooting: "Request not allowed from this IP address"
+
+If you see this error when trying to log in or register a device:
+
+1. **Check your IP address** - Determine your client's IP address. If accessing remotely, your public IP may not be in the allowed ranges.
+
+2. **Add your IP to allowed ranges** - Either:
+   - Access the Admin UI from an allowed IP (e.g., localhost) and add your IP to _Security -> Settings -> Allowed Source IPs_
+   - Edit `security.json` directly and add your IP or CIDR range to the `allowedSourceIPs` array
+
+3. **Behind a reverse proxy?** - Ensure the proxy sets the `X-Forwarded-For` header correctly. The server uses the first IP in this header.
+
+4. **Temporarily allow all IPs** - For debugging, you can set `allowedSourceIPs` to `["0.0.0.0/0", "::/0"]` in `security.json`, then restart and reconfigure properly.
