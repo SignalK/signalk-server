@@ -383,25 +383,19 @@ module.exports = function (app) {
         message: 'A request has already beem submitted'
       })
     } else {
-      requestAccess(
-        app,
-        msg,
-        spark.request.headers['x-forwarded-for'] ||
-          spark.request.connection.remoteAddress,
-        (res) => {
-          if (res.state === 'COMPLETED') {
-            spark.skPendingAccessRequest = false
+      requestAccess(app, msg, spark.request.ip, (res) => {
+        if (res.state === 'COMPLETED') {
+          spark.skPendingAccessRequest = false
 
-            if (res.accessRequest && res.accessRequest.token) {
-              spark.request.token = res.accessRequest.token
-              app.securityStrategy.authorizeWS(spark.request)
-              spark.request.source =
-                'ws.' + spark.request.skPrincipal.identifier.replace(/\./g, '_')
-            }
+          if (res.accessRequest && res.accessRequest.token) {
+            spark.request.token = res.accessRequest.token
+            app.securityStrategy.authorizeWS(spark.request)
+            spark.request.source =
+              'ws.' + spark.request.skPrincipal.identifier.replace(/\./g, '_')
           }
-          spark.write(res)
         }
-      )
+        spark.write(res)
+      })
         .then((res) => {
           if (res.state === 'PENDING') {
             spark.skPendingAccessRequest = true

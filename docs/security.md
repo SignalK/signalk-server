@@ -119,3 +119,46 @@ Many wifi networks allow communication between all connected computers, so your 
 So in the case that your server has a manually configured connection for _NMEA0183 over UDP_, NMEA0183 data broadcast by other devices will be received and written into your SIgnal K data.
 
 NMEA0183 connections over TCP and UDP are inherently unsafe. There are no options for authentication and / or secure communication. In comparison Signal K over TLS and HTTP / WebSockets can provide secure, authenticated read and write access to your data.
+
+## Running Behind a Reverse Proxy
+
+When running Signal K Server behind a reverse proxy (nginx, Apache, Caddy, etc.), you should configure the server to properly handle forwarded headers and optionally restrict direct access.
+
+### Configuration
+
+These settings can be configured via the Admin UI under _Server -> Settings_ or by adding them to your `settings.json`:
+
+| Setting       | Description                                                   |
+| ------------- | ------------------------------------------------------------- |
+| `trustProxy`  | Controls which proxies are trusted for X-Forwarded-\* headers |
+| `bindAddress` | IP address the server binds to (default: 0.0.0.0)             |
+
+### trustProxy Values
+
+| Value              | Use Case                                                       |
+| ------------------ | -------------------------------------------------------------- |
+| `false`            | Default. Don't trust proxy headers (use when directly exposed) |
+| `"loopback"`       | Trust localhost proxies (127.0.0.1, ::1)                       |
+| `1`                | Trust first proxy hop only (cloud load balancers)              |
+| `"192.168.1.0/24"` | Trust proxies in specific subnet                               |
+
+### Example: Local nginx reverse proxy
+
+```JSON
+{
+  "trustProxy": "loopback",
+  "bindAddress": "127.0.0.1"
+}
+```
+
+This configuration:
+
+- Binds the server to localhost only (not accessible from network directly)
+- Trusts X-Forwarded-For/Proto headers from localhost nginx
+- Properly reports client IPs in access logs
+
+### Security Note
+
+Without `trustProxy` configured, the server ignores X-Forwarded-\* headers, preventing IP spoofing attacks. Only enable proxy trust when actually running behind a trusted proxy.
+
+See [Express trust proxy documentation](https://expressjs.com/en/guide/behind-proxies.html) for advanced options.

@@ -461,7 +461,7 @@ module.exports = function (
 
   app.post(`${skPrefix}/access/requests`, (req: Request, res: Response) => {
     const config = getSecurityConfig(app)
-    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+    const ip = req.ip
     if (!app.securityStrategy.requestAccess) {
       res.status(404).json({
         message:
@@ -520,7 +520,12 @@ module.exports = function (
       runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true',
       courseApi: {
         apiOnly: app.config.settings.courseApi?.apiOnly || false
-      }
+      },
+      bindAddress: app.config.settings.bindAddress || '0.0.0.0',
+      trustProxy:
+        app.config.settings.trustProxy !== undefined
+          ? String(app.config.settings.trustProxy)
+          : ''
     }
 
     if (!settings.runFromSystemd) {
@@ -669,6 +674,27 @@ module.exports = function (
         app.config.settings.courseApi || (app.config.settings.courseApi = {})
       courseApi[name] = enabled
     })
+
+    if (!isUndefined(settings.bindAddress)) {
+      app.config.settings.bindAddress = settings.bindAddress
+    }
+
+    if (!isUndefined(settings.trustProxy)) {
+      // Parse the trustProxy value: empty string means unset, 'false'/'true' are booleans,
+      // numeric strings become numbers, otherwise keep as string
+      const value = settings.trustProxy
+      if (value === '') {
+        delete app.config.settings.trustProxy
+      } else if (value === 'false') {
+        app.config.settings.trustProxy = false
+      } else if (value === 'true') {
+        app.config.settings.trustProxy = true
+      } else if (!isNaN(Number(value)) && value.trim() !== '') {
+        app.config.settings.trustProxy = Number(value)
+      } else {
+        app.config.settings.trustProxy = value
+      }
+    }
 
     writeSettingsFile(app, app.config.settings, (err: Error) => {
       if (err) {

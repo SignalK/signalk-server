@@ -98,6 +98,12 @@ class Server {
     _.merge(app, opts)
 
     load(app)
+
+    // Apply trust proxy setting if configured
+    if (app.config.settings.trustProxy !== undefined) {
+      app.set('trust proxy', app.config.settings.trustProxy)
+    }
+
     app.logging = require('./logging')(app)
     app.version = '0.0.1'
 
@@ -465,10 +471,15 @@ class Server {
         app.providers = pipedProviders(app as any).start()
 
         const primaryPort = getPrimaryPort(app)
+        const bindAddress = app.config.settings.bindAddress || '0.0.0.0'
         debug(`primary port:${primaryPort}`)
-        server.listen(primaryPort, () => {
+        server.listen(primaryPort, bindAddress, () => {
           console.log(
-            'signalk-server running at 0.0.0.0:' + primaryPort.toString() + '\n'
+            'signalk-server running at ' +
+              bindAddress +
+              ':' +
+              primaryPort.toString() +
+              '\n'
           )
           app.started = true
           resolve(self)

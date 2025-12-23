@@ -166,6 +166,44 @@ class ServerSettings extends Component {
                     </Col>
                   </FormGroup>
                 )}
+                {!this.state.runFromSystemd && (
+                  <FormGroup row>
+                    <Col md="2">
+                      <Label htmlFor="bindAddress">Bind Address</Label>
+                    </Col>
+                    <Col xs="12" md={fieldColWidthMd}>
+                      <Input
+                        type="text"
+                        name="bindAddress"
+                        onChange={this.handleChange}
+                        value={this.state.bindAddress}
+                      />
+                      <FormText color="muted">
+                        IP address to bind the server to. Use 127.0.0.1 when
+                        behind a local reverse proxy. Default: 0.0.0.0 (all
+                        interfaces)
+                      </FormText>
+                    </Col>
+                  </FormGroup>
+                )}
+                <FormGroup row>
+                  <Col md="2">
+                    <Label htmlFor="trustProxy">Trust Proxy</Label>
+                  </Col>
+                  <Col xs="12" md={fieldColWidthMd}>
+                    <Input
+                      type="text"
+                      name="trustProxy"
+                      onChange={this.handleChange}
+                      value={this.state.trustProxy}
+                    />
+                    <FormText color="muted">
+                      Configure trusted proxies for X-Forwarded headers. Values:
+                      false (default), loopback, 1, or IP/subnet. Leave empty to
+                      disable.
+                    </FormText>
+                  </Col>
+                </FormGroup>
                 <FormGroup row>
                   <Col md="2">
                     <Label>Options</Label>

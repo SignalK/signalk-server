@@ -138,11 +138,7 @@ module.exports = function (app) {
 
         let httpProtocol = 'http://'
         let wsProtocol = 'ws://'
-        if (
-          app.config.settings.ssl ||
-          (req.headers['x-forwarded-proto'] &&
-            req.headers['x-forwarded-proto'] === 'https')
-        ) {
+        if (req.protocol === 'https') {
           httpProtocol = 'https://'
           wsProtocol = 'wss://'
         }

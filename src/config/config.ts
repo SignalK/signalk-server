@@ -80,6 +80,8 @@ export interface Config {
     courseApi?: {
       apiOnly?: boolean
     }
+    trustProxy?: boolean | string | number
+    bindAddress?: string
   }
   defaults: object
 }
