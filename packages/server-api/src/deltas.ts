@@ -87,14 +87,21 @@ export interface PathValue {
   value: Value
 }
 
+export interface AlarmStatus {
+  silenced: boolean
+  acknowledged: boolean
+  canSilence: boolean
+  canAcknowledge: boolean
+  canClear: boolean
+}
+
 // Notification payload
 /** @category Server API */
 export interface Notification {
   state: ALARM_STATE
   method: ALARM_METHOD[]
   message: string
-  temporarySilenceStatus?: 'Yes' | 'No'
-  acknowledgeStatus?: 'Yes' | 'No'
+  status?: AlarmStatus
 }
 
 // MetaMessage

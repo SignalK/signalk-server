@@ -1,33 +1,28 @@
 import {
   ALARM_METHOD,
+  ALARM_STATE,
+  AlarmStatus,
   Context,
   Delta,
   hasValues,
   Notification,
   Path,
+  SourceRef,
   Timestamp,
   Update,
   Value
 } from '@signalk/server-api'
 
-export interface AlertStatus {
-  silenced: boolean
-  acknowledged: boolean
-  canSilence: boolean
-  canAcknowledge: boolean
-  canClear: boolean
-}
-
 export interface AlertProperties {
-  status: AlertStatus
+  status: AlarmStatus
   context: Context
   path: Path
   value: Value
 }
 
 export class Alert {
-  private external = false // true = alert was ceated from notification (not via API)
-  readonly status: AlertStatus = {
+  private external = false // true = alert was created from delta
+  readonly status: AlarmStatus = {
     silenced: false,
     acknowledged: false,
     canSilence: true,
@@ -36,13 +31,27 @@ export class Alert {
   }
 
   private context: Context = '' as Context
-  private update: Update = {} as Update
+  private update: Update = {
+    values: [],
+    $source: 'notificationsApi' as SourceRef,
+    timestamp: undefined,
+    notificationId: undefined
+  }
   private path: Path = '' as Path
-  private value: Notification = {} as Notification
+  private value: Notification = {
+    state: ALARM_STATE.normal,
+    method: [],
+    message: '',
+    status: this.status
+  }
 
-  constructor(delta?: Delta) {
-    if (delta) {
-      this.fromDelta(delta)
+  constructor(value: string | Delta) {
+    if (typeof value === 'string') {
+      this.timeStamp()
+      this.update.notificationId = value
+      this.path = `notifications.${value}` as Path
+    } else {
+      this.fromDelta(value)
     }
   }
 
@@ -87,14 +96,16 @@ export class Alert {
     this.status.canClear = false
 
     this.parseDelta(delta)
-    if ('temporarySilenceStatus' in this.value) {
-      this.status.silenced =
-        this.value.temporarySilenceStatus === 'Yes' ? true : false
-    }
-    if ('acknowledgeStatus' in this.value) {
+
+    if (!this.status.acknowledged && 'acknowledgeStatus' in this.value) {
       this.status.acknowledged =
         this.value.acknowledgeStatus === 'Yes' ? true : false
     }
+    if (!this.status.silenced && 'temporarySilenceStatus' in this.value) {
+      this.status.silenced =
+        this.value.temporarySilenceStatus === 'Yes' ? true : false
+    }
+
     if ('temporarySilenceSupport' in this.value) {
       this.status.canSilence =
         this.value.temporarySilenceSupport === 'Yes' ? true : false
@@ -131,6 +142,11 @@ export class Alert {
       path: this.path,
       value: this.value
     }
+  }
+
+  /** Sets the path associated with the alert */
+  public setPath(path: Path) {
+    this.path = path
   }
 
   /** Silence Alert */
