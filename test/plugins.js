@@ -26,9 +26,9 @@ describe('Demo plugin ', () => {
       config: { settings: { port } }
     })
     await server.start()
-    const plugins = await fetch(`http://127.0.0.1:${port}/skServer/plugins`).then(
-      (res) => res.json()
-    )
+    const plugins = await fetch(
+      `http://127.0.0.1:${port}/skServer/plugins`
+    ).then((res) => res.json())
     assert(plugins.find((plugin) => plugin.id === 'testplugin'))
 
     const plugin = server.app.plugins.find(
