@@ -156,7 +156,7 @@
     }
   },
   "paths": {
-    "/silence/{id}": {
+    "/{id}/silence": {
       "parameters": [
         {
           "$ref": "#/components/parameters/id"
@@ -164,8 +164,28 @@
       ],
       "post": {
         "tags": ["Alerts"],
-        "summary": "Silence alarm notification.",
-        "description": "Removes `sound` from the ALARM METHOD of the notification with the supplied identifier.",
+        "summary": "Silence alert notification.",
+        "description": "Removes `sound` from the ALARM METHOD of the notification and sets `status.silenced = true`.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/200Ok"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/{id}/acknowledge": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/id"
+        }
+      ],
+      "post": {
+        "tags": ["Alerts"],
+        "summary": "Acknowledge alert notification.",
+        "description": "Removes both `visual` and `sound` from the ALARM METHOD of the notification and sets `status.acknowledged = true`.",
         "responses": {
           "200": {
             "$ref": "#/components/responses/200Ok"
