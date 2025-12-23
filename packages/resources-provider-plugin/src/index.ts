@@ -158,7 +158,20 @@ module.exports = (server: ResourceProviderApp): Plugin => {
         `** Enabled resource types: ${JSON.stringify(apiProviderFor)}`
       )
 
-      // initialise resource storage
+      // Register providers synchronously so they're available immediately.
+      // The actual file operations will wait for init to complete internally.
+      const result = registerProviders(apiProviderFor)
+
+      if (result.length !== 0) {
+        server.setPluginError(
+          `Error registering providers: ${result.toString()}`
+        )
+      } else {
+        server.setPluginStatus(`Providing: ${apiProviderFor.toString()}`)
+      }
+
+      // Initialise resource storage asynchronously.
+      // File operations will wait for this to complete via waitForInit().
       db.init({ settings: config, basePath: server.getDataDirPath() })
         .then((res: { error: boolean; message: string }) => {
           if (res.error) {
@@ -170,17 +183,6 @@ module.exports = (server: ResourceProviderApp): Plugin => {
           server.debug(
             `** ${plugin.name} started... ${!res.error ? 'OK' : 'with errors!'}`
           )
-
-          // register as provider for enabled resource types
-          const result = registerProviders(apiProviderFor)
-
-          if (result.length !== 0) {
-            server.setPluginError(
-              `Error registering providers: ${result.toString()}`
-            )
-          } else {
-            server.setPluginStatus(`Providing: ${apiProviderFor.toString()}`)
-          }
         })
         .catch((e: Error) => {
           server.debug(e.message)
