@@ -198,9 +198,17 @@ function runNpm(
     opts.cwd = config.configPath
 
     if (process.platform === 'win32') {
-      npm = spawn('cmd', ['/c', `npm --save ${command} ${packageString}`], opts)
+      npm = spawn(
+        'cmd',
+        ['/c', `npm --save --ignore-scripts ${command} ${packageString}`],
+        opts
+      )
     } else {
-      npm = spawn('npm', ['--save', command, packageString], opts)
+      npm = spawn(
+        'npm',
+        ['--save', '--ignore-scripts', command, packageString],
+        opts
+      )
     }
   }
 
