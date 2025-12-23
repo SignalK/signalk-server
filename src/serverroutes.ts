@@ -48,6 +48,7 @@ import {
   SecurityStrategy,
   WithSecurityStrategy
 } from './security'
+import { createIPFilterMiddleware } from './ip-validation'
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
@@ -95,6 +96,8 @@ module.exports = function (
 ) {
   let securityWasEnabled = false
   let restoreFilePath: string
+
+  const ipFilter = createIPFilterMiddleware(() => getSecurityConfig(app))
 
   const logopath = path.resolve(app.config.configPath, 'logo.svg')
   if (fs.existsSync(logopath)) {
@@ -459,43 +462,51 @@ module.exports = function (
     }
   )
 
-  app.post(`${skPrefix}/access/requests`, (req: Request, res: Response) => {
-    const config = getSecurityConfig(app)
-    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
-    if (!app.securityStrategy.requestAccess) {
-      res.status(404).json({
-        message:
-          'Access requests not available. Server security may not be enabled.'
-      })
-      return
+  app.post(
+    `${skPrefix}/access/requests`,
+    ipFilter,
+    (req: Request, res: Response) => {
+      const config = getSecurityConfig(app)
+      const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+      if (!app.securityStrategy.requestAccess) {
+        res.status(404).json({
+          message:
+            'Access requests not available. Server security may not be enabled.'
+        })
+        return
+      }
+      app.securityStrategy
+        .requestAccess(config, { accessRequest: req.body }, ip)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then((reply: any) => {
+          res.status(reply.state === 'PENDING' ? 202 : reply.statusCode)
+          res.json(reply)
+        })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .catch((err: any) => {
+          console.log(err.stack)
+          res.status(500).send(err.message)
+        })
     }
-    app.securityStrategy
-      .requestAccess(config, { accessRequest: req.body }, ip)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then((reply: any) => {
-        res.status(reply.state === 'PENDING' ? 202 : reply.statusCode)
-        res.json(reply)
-      })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .catch((err: any) => {
-        console.log(err.stack)
-        res.status(500).send(err.message)
-      })
-  })
+  )
 
-  app.get(`${skPrefix}/requests/:id`, (req: Request, res: Response) => {
-    queryRequest(req.params.id)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then((reply: any) => {
-        res.json(reply)
-      })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .catch((err: any) => {
-        console.log(err)
-        res.status(500)
-        res.type('text/plain').send(`Unable to check request: ${err.message}`)
-      })
-  })
+  app.get(
+    `${skPrefix}/requests/:id`,
+    ipFilter,
+    (req: Request, res: Response) => {
+      queryRequest(req.params.id)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then((reply: any) => {
+          res.json(reply)
+        })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .catch((err: any) => {
+          console.log(err)
+          res.status(500)
+          res.type('text/plain').send(`Unable to check request: ${err.message}`)
+        })
+    }
+  )
 
   app.get(`${SERVERROUTESPREFIX}/settings`, (req: Request, res: Response) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -542,6 +553,7 @@ module.exports = function (
   if (app.securityStrategy.getUsers(getSecurityConfig(app)).length === 0) {
     app.post(
       `${SERVERROUTESPREFIX}/enableSecurity`,
+      ipFilter,
       (req: Request, res: Response) => {
         if (app.securityStrategy.isDummy()) {
           app.config.settings.security = { strategy: defaultSecurityStrategy }

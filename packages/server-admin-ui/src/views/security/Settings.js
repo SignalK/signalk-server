@@ -21,7 +21,13 @@ export function fetchSecurityConfig() {
   })
     .then((response) => response.json())
     .then((data) => {
-      this.setState({ ...data, hasData: true })
+      this.setState({
+        ...data,
+        allowedSourceIPs: data.allowedSourceIPs
+          ? data.allowedSourceIPs.join('\n')
+          : '',
+        hasData: true
+      })
     })
 }
 
@@ -69,6 +75,12 @@ class Settings extends Component {
       allowNewUserRegistration: this.state.allowNewUserRegistration,
       allowDeviceAccessRequests: this.state.allowDeviceAccessRequests,
       allowedCorsOrigins: this.state.allowedCorsOrigins,
+      allowedSourceIPs: this.state.allowedSourceIPs
+        ? this.state.allowedSourceIPs
+            .split('\n')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : undefined,
       adminUIOrigin
     }
     fetch(`${window.serverRoutesPrefix}/security/config`, {
@@ -236,6 +248,26 @@ class Settings extends Component {
                           Use either * or a comma delimited list of origins,
                           example:
                           http://host1.name.com:3000,http://host2.name.com:3000
+                        </FormText>
+                      </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                      <Col md="3">
+                        <Label htmlFor="text-input">Allowed Source IPs</Label>
+                      </Col>
+                      <Col xs="12" md="9">
+                        <Input
+                          type="textarea"
+                          name="allowedSourceIPs"
+                          rows="5"
+                          onChange={this.handleChange}
+                          value={this.state.allowedSourceIPs || ''}
+                          placeholder="Leave empty for default (private networks only)"
+                        />
+                        <FormText color="muted">
+                          IP addresses or CIDR ranges allowed to access login
+                          and registration endpoints. One per line. Leave empty
+                          to allow only private/local networks (recommended).
                         </FormText>
                       </Col>
                     </FormGroup>

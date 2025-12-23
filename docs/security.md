@@ -119,3 +119,67 @@ Many wifi networks allow communication between all connected computers, so your 
 So in the case that your server has a manually configured connection for _NMEA0183 over UDP_, NMEA0183 data broadcast by other devices will be received and written into your SIgnal K data.
 
 NMEA0183 connections over TCP and UDP are inherently unsafe. There are no options for authentication and / or secure communication. In comparison Signal K over TLS and HTTP / WebSockets can provide secure, authenticated read and write access to your data.
+
+## Allowed Source IPs
+
+Signal K Server restricts which IP addresses can access unauthenticated endpoints such as login, device registration, and access requests. By default, only requests from private/local network ranges are allowed:
+
+- `127.0.0.0/8` - IPv4 loopback (localhost)
+- `10.0.0.0/8` - RFC1918 Class A private networks
+- `172.16.0.0/12` - RFC1918 Class B private networks
+- `192.168.0.0/16` - RFC1918 Class C private networks
+- `169.254.0.0/16` - Link-local addresses
+- `::1/128` - IPv6 loopback
+- `fc00::/7` - IPv6 unique local addresses (ULA)
+- `fe80::/10` - IPv6 link-local addresses
+
+This prevents external attackers from brute-forcing login credentials or flooding the server with fake device registration requests when the server is exposed to the internet.
+
+### Configuring Allowed Source IPs
+
+To modify the allowed IP ranges:
+
+1. Navigate to _Security -> Settings_ in the Admin UI
+2. In the **Allowed Source IPs** field, enter IP addresses or CIDR ranges (one per line)
+3. Click **Save**
+
+Alternatively, add the `allowedSourceIPs` array to your `security.json` file:
+
+```JSON
+{
+  "allowedSourceIPs": [
+    "192.168.0.0/16",
+    "10.0.0.0/8",
+    "203.0.113.50/32"
+  ]
+}
+```
+
+### Allowing All IP Addresses
+
+If you need to allow access from any IP address (not recommended for internet-exposed servers), configure:
+
+```JSON
+{
+  "allowedSourceIPs": [
+    "0.0.0.0/0",
+    "::/0"
+  ]
+}
+```
+
+### Protected Endpoints
+
+The following endpoints are protected by IP filtering:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /login` | User authentication |
+| `POST /signalk/v1/auth/login` | User authentication (alternative path) |
+| `POST /signalk/v1/access/requests` | Device/user access requests |
+| `GET /signalk/v1/requests/:id` | Access request status polling |
+| `POST /skServer/enableSecurity` | Initial security setup |
+
+### X-Forwarded-For Header
+
+When Signal K Server runs behind a reverse proxy, the client IP is extracted from the `X-Forwarded-For` header. Ensure your proxy is configured to set this header correctly, and be aware that this header can be spoofed by malicious clients if your proxy doesn't sanitize it.

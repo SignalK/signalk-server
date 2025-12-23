@@ -10,6 +10,23 @@ It is recommended that applications and plugins referencing these deprecated pat
 
 ## Changes
 
+### IP-based Access Restrictions for Unauthenticated Endpoints
+
+Unauthenticated endpoints (login, device registration, access requests) are now restricted to private/local IP ranges by default. This is a security improvement that prevents brute-force attacks and fake registration requests from the public internet.
+
+**Impact**: If you have legitimate use cases requiring access to these endpoints from public IP addresses, you will need to configure `allowedSourceIPs` in Security Settings or `security.json`.
+
+**To restore previous behavior** (allow all IPs - not recommended):
+```JSON
+{
+  "allowedSourceIPs": ["0.0.0.0/0", "::/0"]
+}
+```
+
+See [Security - Allowed Source IPs](security.md#allowed-source-ips) for details.
+
+---
+
 The following changes have been implemented with the introduction of **Resources API** and apply to applications using the `./signalk/v2/resources` endpoint.
 
 _Note: These changes DO NOT impact applications using the `./signalk/v1/resources` endpoint._

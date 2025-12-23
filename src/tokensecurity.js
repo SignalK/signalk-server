@@ -28,6 +28,7 @@ const {
   filterRequests
 } = require('./requestResponse')
 const ms = require('ms')
+const { createIPFilterMiddleware } = require('./ip-validation')
 
 const CONFIG_PLUGINID = 'sk-simple-token-security-config'
 const passwordSaltRounds = 10
@@ -182,7 +183,9 @@ module.exports = function (app, config) {
 
     app.use(require('cookie-parser')())
 
-    app.post(['/login', `${skAuthPrefix}/login`], (req, res) => {
+    const ipFilter = createIPFilterMiddleware(() => getConfiguration())
+
+    app.post(['/login', `${skAuthPrefix}/login`], ipFilter, (req, res) => {
       const name = req.body.username
       const password = req.body.password
       const remember = req.body.rememberMe
