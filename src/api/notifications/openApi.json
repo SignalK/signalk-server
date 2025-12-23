@@ -49,6 +49,31 @@
           "enum": ["visual", "sound"]
         }
       },
+      "AlarmStatus": {
+        "type": "object",
+        "properties": {
+          "silenced": {
+            "type": "boolean",
+            "description": "Alarm is silenced"
+          },
+          "acknowledged": {
+            "type": "boolean",
+            "description": "Alarm is silenced"
+          },
+          "canSilence": {
+            "type": "boolean",
+            "description": "Alarm can be silenced"
+          },
+          "canAcknowledge": {
+            "type": "boolean",
+            "description": "Alarm can be acknowledged"
+          },
+          "canClear": {
+            "type": "boolean",
+            "description": "Alarm can be cleared"
+          }
+        }
+      },
       "Alarm": {
         "type": "object",
         "required": ["state", "method", "message"],
@@ -61,6 +86,9 @@
           },
           "message": {
             "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AlarmStatus"
           }
         }
       },
