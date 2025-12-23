@@ -53,7 +53,8 @@ module.exports = function (app, config) {
     users = [],
     immutableConfig = false,
     allowDeviceAccessRequests = true,
-    allowNewUserRegistration = true
+    allowNewUserRegistration = true,
+    allowedSourceIPs
   } = config
 
   const {
@@ -104,7 +105,8 @@ module.exports = function (app, config) {
     immutableConfig,
     acls,
     allowDeviceAccessRequests,
-    allowNewUserRegistration
+    allowNewUserRegistration,
+    allowedSourceIPs
   }
 
   // so that enableSecurity gets the defaults to save
