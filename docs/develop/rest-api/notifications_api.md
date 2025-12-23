@@ -8,16 +8,22 @@ title: Notifications API
 
 The initial release of the Notifications API implements functionality to enable the centralised management of alarms and notfications on the Signal K Server for raising and actioning notifications.
 
-It does this by routing all deltas containing `notifications.` in the path to the Notifications API, where each `PathValue` is placed into a separate `Update` and assigned a unique `notificationId`.
+It does this by routing all deltas with a path starting with `notifications.` to the Notifications API, where each path is placed into a separate `Update` and assigned a unique `notificationId`.
 
-The`notificationId` can then be used to perform actions using the HTTP endpoints made available by the API at `/signalk/v2/api/notifications`.
+This`notificationId` can then be used to perform actions using the HTTP endpoints made available by the API at `/signalk/v2/api/notifications`.
 
 Actions include:
 
 - Silencing a notification
 - Acknowledging a notification
 
-> **Note:** Actions can only be performed on Notifications that contain a `state` and `method`.
+> **Note:** Actions are only available for Notifications with a `state` and `method` defined in their value.
+
+Subsequent releases of Signal K server will contain updates to the Notification API which will include additional functionality including:
+
+- Raising and clearing notifications
+- MOB alarm
+- Plugin interface
 
 ### Alert Status
 
@@ -47,7 +53,10 @@ The Notification API adds a `status` object to the Notification value which iden
 
 Silencing a notification is achieved by sending an HTTP POST request to `/signalk/v2/api/notifications/{notificationId}/silence`.
 
-The result of the request is that the `sound` value is removed from the `method` array.
+The result of the request is that the:
+
+- `sound` value is removed from the `method` array
+- `status.silenced` is set to `true`
 
 The ability to silence a notification is determined by the `canSilence` status. If this value is `false` then the notifcation will not be silenced and an error response is sent to the requestor.
 
@@ -95,9 +104,12 @@ _Notification: post `silence` request_
 
 Acknowledging a notification is achieved by sending an HTTP POST request to `/signalk/v2/api/notifications/{notificationId}/acknowledge`.
 
-The result of the request is that both the `sound` and `visual` values are removed from the `method` array.
+The result of the request is that:
 
-> **Note:** Notifications with `state = emergency` will only have the `sound` value removed.
+- Both the `sound` and `visual` values are removed from the `method` array
+- `status.acknowledged` is set to `true`
+
+> **Note:** Notifications with `state = emergency` will only have the `sound` value removed from `method`.
 
 The ability to acknowledge a notification is determined by the `canAcknowledge` status. If this value is `false` then the notifcation will not be acknowledged and an error response is sent to the requestor.
 
