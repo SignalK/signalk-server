@@ -38,9 +38,9 @@ export class Alert {
     notificationId: undefined
   }
   private path: Path = '' as Path
-  private value: Notification = {
+  public value: Notification = {
     state: ALARM_STATE.normal,
-    method: [],
+    method: [ALARM_METHOD.visual, ALARM_METHOD.sound],
     message: '',
     status: this.status
   }
@@ -48,6 +48,7 @@ export class Alert {
   constructor(value: string | Delta) {
     if (typeof value === 'string') {
       this.timeStamp()
+      this.status.canClear = true
       this.update.notificationId = value
       this.path = `notifications.${value}` as Path
     } else {
@@ -86,8 +87,7 @@ export class Alert {
 
   /** Update the timestamp to now() */
   private timeStamp() {
-    const d = new Date()
-    this.update.timestamp = d.toISOString() as Timestamp
+    this.update.timestamp = new Date().toISOString() as Timestamp
   }
 
   /** create / update alert from delta */
@@ -146,7 +146,10 @@ export class Alert {
 
   /** Sets the path associated with the alert */
   public setPath(path: Path) {
-    this.path = path
+    if (!path) return
+    this.path = path.startsWith('notifications.')
+      ? path
+      : (`notifications.${path}` as Path)
   }
 
   /** Silence Alert */

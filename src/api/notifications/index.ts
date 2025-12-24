@@ -109,6 +109,24 @@ export class NotificationApi {
         }
       }
     )
+
+    // raise
+    this.app.post(
+      `${NOTI_API_PATH}/raise`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path} ${req.body}`)
+        try {
+          this.alertManager.raise(req.body)
+          res.status(200).json(Responses.ok)
+        } catch (err) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (err as Error).message
+          })
+        }
+      }
+    )
   }
 
   /**

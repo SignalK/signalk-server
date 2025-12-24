@@ -1,3 +1,4 @@
+import { Position } from '.'
 import { Brand } from './brand'
 
 /** @hidden */
@@ -102,6 +103,8 @@ export interface Notification {
   method: ALARM_METHOD[]
   message: string
   status?: AlarmStatus
+  position?: Position
+  createdAt?: Timestamp
 }
 
 // MetaMessage

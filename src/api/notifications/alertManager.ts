@@ -1,13 +1,18 @@
 import {
-  Context,
+  ALARM_STATE,
   Delta,
   hasValues,
   SKVersion,
-  Update
+  Timestamp,
+  Update,
+  Context,
+  Path
 } from '@signalk/server-api'
 
 import { NotificationApplication } from './index'
 import { Alert, AlertProperties } from './alert'
+import * as uuid from 'uuid'
+import * as _ from 'lodash'
 
 /**
  * Class to manage the lifecycle of alerts / alarms
@@ -37,6 +42,49 @@ export class AlertManager {
    */
   get(id: string): AlertProperties {
     return this.alerts.get(id)?.properties as AlertProperties
+  }
+
+  /**
+   * Raise alert and return identifier
+   * @param options Object to initialise the Alert
+   * @returns alert id
+   */
+  raise(options: {
+    state: ALARM_STATE
+    message: string
+    path?: Path
+    meta?: { [key: string]: object | number | string | null | boolean }
+    position?: boolean
+    createdAt?: boolean
+  }): string {
+    const id = uuid.v4()
+    const alert = new Alert(id)
+    alert.value.state = options.state
+    if (options.path) {
+      alert.setPath(options.path)
+    }
+    if (options.message) {
+      alert.value.message = options.message
+    }
+    if (options.position || options.state === ALARM_STATE.emergency) {
+      alert.value.position =
+        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+        _.get((this.app.signalk as any).self, 'navigation.position')?.value ??
+        null
+    }
+    if (options.createdAt || options.state === ALARM_STATE.emergency) {
+      alert.value.createdAt = new Date().toISOString() as Timestamp
+    }
+    /*if (options.meta) {
+      (alert.value as any).meta = options.meta
+    }*/
+    this.alerts.set(id, alert)
+    this.app.handleMessage(
+      'notificationApi',
+      alert?.delta as Delta,
+      this.deltaVersion
+    )
+    return id
   }
 
   /**
