@@ -119,3 +119,25 @@ Many wifi networks allow communication between all connected computers, so your 
 So in the case that your server has a manually configured connection for _NMEA0183 over UDP_, NMEA0183 data broadcast by other devices will be received and written into your SIgnal K data.
 
 NMEA0183 connections over TCP and UDP are inherently unsafe. There are no options for authentication and / or secure communication. In comparison Signal K over TLS and HTTP / WebSockets can provide secure, authenticated read and write access to your data.
+
+## Security Headers
+
+Signal K Server uses the `helmet` middleware to set security-related HTTP headers:
+
+| Header                            | Value            | Purpose                                            |
+| --------------------------------- | ---------------- | -------------------------------------------------- |
+| X-Content-Type-Options            | nosniff          | Prevents MIME type sniffing attacks                |
+| X-Frame-Options                   | SAMEORIGIN       | Prevents clickjacking (allows same-origin iframes) |
+| X-DNS-Prefetch-Control            | off              | Privacy protection                                 |
+| X-Download-Options                | noopen           | Prevents IE from executing downloads               |
+| X-Permitted-Cross-Domain-Policies | none             | Blocks Flash/PDF cross-domain access               |
+| Referrer-Policy                   | no-referrer      | Privacy protection                                 |
+| Strict-Transport-Security         | max-age=15552000 | Forces HTTPS (only sent on HTTPS connections)      |
+
+### Intentionally Disabled
+
+The following helmet features are disabled to maintain compatibility with the SignalK ecosystem:
+
+- **Content-Security-Policy**: Would prevent webapps (Freeboard, Instrumentpanel) from loading external resources like map tiles and CDN scripts
+- **Cross-Origin-Embedder-Policy**: Would prevent chart plotters from embedding SignalK data
+- **Cross-Origin-Resource-Policy**: Would prevent legitimate cross-origin API access from instruments and apps
