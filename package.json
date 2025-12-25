@@ -15,7 +15,7 @@
     "ci-lint": "eslint && prettier --check .",
     "update-latest-release": "git checkout master && git branch -D latest-release || git checkout -b latest-release && git push -f origin/latest-release",
     "start": "node bin/signalk-server",
-    "test-only": "mocha 'test/**/*.[jt]s' 'dist/**/*.test.js'",
+    "test-only": "NODE_ENV=test mocha 'test/**/*.[jt]s' 'dist/**/*.test.js'",
     "test": "npm run build && npm run test-only && npm run ci-lint",
     "heroku-postbuild": "npm run build:all",
     "master-changed-files": "git diff --name-status $(git tag | tail -1)..master"
@@ -101,6 +101,7 @@
     "figlet": "^1.2.0",
     "file-timestamp-stream": "^2.1.2",
     "geolib": "3.2.2",
+    "helmet": "^8.1.0",
     "inquirer": "^7.0.0",
     "json-patch": "^0.7.0",
     "jsonwebtoken": "^9.0.0",
