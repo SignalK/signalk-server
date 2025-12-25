@@ -22,6 +22,8 @@ export class FileStore implements IResourceStore {
   savePath: string
   resources: any
   pkg: { id: string }
+  private initPromise: Promise<{ error: boolean; message: string }> | null =
+    null
 
   constructor(
     pluginId: string,
@@ -32,8 +34,21 @@ export class FileStore implements IResourceStore {
     this.pkg = { id: pluginId }
   }
 
+  // Wait for initialization to complete before performing operations
+  private async waitForInit(): Promise<void> {
+    if (this.initPromise) {
+      await this.initPromise
+    }
+  }
+
   // check / create path to persist resources
-  async init(config: any): Promise<{ error: boolean; message: string }> {
+  init(config: any): Promise<{ error: boolean; message: string }> {
+    // Store the init promise so operations can wait for it
+    this.initPromise = this.doInit(config)
+    return this.initPromise
+  }
+
+  private async doInit(config: any): Promise<{ error: boolean; message: string }> {
     if (typeof config.settings.path === 'undefined') {
       this.savePath = config.basePath + '/resources'
     } else if (config.settings.path[0] == '/') {
@@ -73,7 +88,7 @@ export class FileStore implements IResourceStore {
   ): Promise<{ error: boolean; message: string }> {
     this.debug('** Initialising resource storage **')
     const result = { error: false, message: `` }
-    Object.keys(this.resources).forEach(async (t: string) => {
+    for (const t of Object.keys(this.resources)) {
       if (resTypes[t]) {
         try {
           await access(this.resources[t].path, constants.W_OK | constants.R_OK)
@@ -90,7 +105,7 @@ export class FileStore implements IResourceStore {
           }
         }
       }
-    })
+    }
     return result
   }
 
@@ -100,6 +115,7 @@ export class FileStore implements IResourceStore {
     itemUuid: string,
     property?: string
   ): Promise<Resource<object>> {
+    await this.waitForInit()
     try {
       let result = JSON.parse(
         await readFile(path.join(this.resources[type].path, itemUuid), 'utf8')
@@ -134,6 +150,7 @@ export class FileStore implements IResourceStore {
     type: string,
     params: any
   ): Promise<{ [key: string]: Resource<any> }> {
+    await this.waitForInit()
     const result: any = {}
     // ** parse supplied params
     params = processParameters(params)
@@ -185,6 +202,7 @@ export class FileStore implements IResourceStore {
 
   // save / delete (r.value==null) resource file
   async setResource(r: StoreRequestParams): Promise<void> {
+    await this.waitForInit()
     const fname = getUuid(r.id)
     const p = path.join(this.resources[r.type].path, fname)
 
