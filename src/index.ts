@@ -68,6 +68,7 @@ import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { Zones } from './zones'
 import checkNodeVersion from './version'
+import helmet from 'helmet'
 const debug = createDebug('signalk-server')
 
 import { StreamBundle } from './streambundle'
@@ -91,6 +92,24 @@ class Server {
     const bodyParser = require('body-parser')
     const app = express() as any
     app.use(require('compression')())
+    app.use(
+      helmet({
+        // ENABLED (safe, no compatibility impact):
+        xContentTypeOptions: true,
+        xDnsPrefetchControl: true,
+        xDownloadOptions: true,
+        xPermittedCrossDomainPolicies: true,
+        referrerPolicy: true,
+        hsts: true,
+        frameguard: { action: 'sameorigin' },
+
+        // DISABLED (would break chart plotters, plugins, webapps):
+        contentSecurityPolicy: false,
+        crossOriginEmbedderPolicy: false,
+        crossOriginOpenerPolicy: false,
+        crossOriginResourcePolicy: false
+      })
+    )
     app.use(bodyParser.json({ limit: FILEUPLOADSIZELIMIT }))
 
     this.app = app
