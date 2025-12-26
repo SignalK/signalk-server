@@ -6,15 +6,17 @@
 import { expect } from 'chai'
 import { freeport } from '../ts-servertestutilities'
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+/* eslint-disable @typescript-eslint/no-require-imports */
 const {
   startServerP,
   getAdminToken,
   getReadOnlyToken,
   getWriteToken
 } = require('../servertestutilities')
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 describe('OIDC Settings API', function () {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let server: any
   let url: string
   let port: number
@@ -275,7 +277,10 @@ describe('OIDC Settings API', function () {
     })
 
     it('should reject invalid defaultPermission value', async () => {
-      const invalidConfig = { ...validOIDCConfig, defaultPermission: 'superadmin' }
+      const invalidConfig = {
+        ...validOIDCConfig,
+        defaultPermission: 'superadmin'
+      }
       const result = await fetch(`${url}/skServer/security/oidc`, {
         method: 'PUT',
         headers: {
@@ -347,7 +352,9 @@ describe('OIDC Settings API', function () {
           'Content-Type': 'application/json',
           Cookie: `JAUTHENTICATION=${adminToken}`
         },
-        body: JSON.stringify({ issuer: 'https://nonexistent.invalid.example.com' })
+        body: JSON.stringify({
+          issuer: 'https://nonexistent.invalid.example.com'
+        })
       })
 
       // Should return an error status indicating the connection failed
@@ -378,7 +385,9 @@ describe('OIDC Settings API', function () {
         expect(json).to.have.property('token_endpoint')
       } else {
         // If network is unavailable, test should not fail
-        console.log('Note: OIDC test endpoint returned non-200, possibly due to network')
+        console.log(
+          'Note: OIDC test endpoint returned non-200, possibly due to network'
+        )
       }
     })
   })

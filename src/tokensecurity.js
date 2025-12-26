@@ -782,10 +782,16 @@ module.exports = function (app, config) {
   strategy.getUsers = (aConfig) => {
     if (aConfig && aConfig.users) {
       return aConfig.users.map((user) => {
-        return {
+        const userData = {
           userId: user.username,
-          type: user.type
+          type: user.type,
+          isOIDC: !!user.oidc
         }
+        // Include OIDC email if available
+        if (user.oidc?.email) {
+          userData.email = user.oidc.email
+        }
+        return userData
       })
     } else {
       return []
