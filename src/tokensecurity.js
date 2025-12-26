@@ -41,6 +41,7 @@ import {
   buildAuthorizationUrl,
   exchangeAuthorizationCode,
   validateIdToken,
+  mapGroupsToPermission,
   STATE_COOKIE_NAME,
   STATE_MAX_AGE_MS,
   OIDCError
@@ -169,6 +170,18 @@ module.exports = function (app, config) {
     const configuration = getConfiguration()
     const issuer = oidcConfig.issuer
 
+    // Calculate permission based on user's groups
+    const mappedPermission = mapGroupsToPermission(userInfo.groups, oidcConfig)
+
+    // Build OIDC metadata to store with user
+    const oidcMetadata = {
+      sub: userInfo.sub,
+      issuer: issuer,
+      email: userInfo.email,
+      name: userInfo.name,
+      groups: userInfo.groups
+    }
+
     // Look for existing user by OIDC sub + issuer
     let user = configuration.users.find(
       (u) => u.oidc && u.oidc.sub === userInfo.sub && u.oidc.issuer === issuer
@@ -176,6 +189,27 @@ module.exports = function (app, config) {
 
     if (user) {
       debug(`OIDC: found existing user ${user.username}`)
+
+      // Update user's permission based on current groups (groups may change)
+      const previousPermission = user.type
+      if (previousPermission !== mappedPermission) {
+        debug(
+          `OIDC: updating user ${user.username} permission from ${previousPermission} to ${mappedPermission}`
+        )
+        user.type = mappedPermission
+      }
+
+      // Update OIDC metadata (email, name, groups may change)
+      user.oidc = oidcMetadata
+
+      // Save configuration if anything changed
+      const { saveSecurityConfig } = require('./security')
+      saveSecurityConfig(app, configuration, (err) => {
+        if (err) {
+          console.error('Failed to update OIDC user:', err)
+        }
+      })
+
       return user
     }
 
@@ -199,11 +233,8 @@ module.exports = function (app, config) {
 
     user = {
       username: finalUsername,
-      type: oidcConfig.defaultPermission,
-      oidc: {
-        sub: userInfo.sub,
-        issuer: issuer
-      }
+      type: mappedPermission,
+      oidc: oidcMetadata
     }
 
     debug(

@@ -68,7 +68,11 @@ describe('OIDC Configuration', () => {
     it('should parse admin groups from comma-separated string', () => {
       process.env.SIGNALK_OIDC_ADMIN_GROUPS = 'admins,sk-admin,superusers'
       const config = parseEnvConfig()
-      expect(config.adminGroups).to.deep.equal(['admins', 'sk-admin', 'superusers'])
+      expect(config.adminGroups).to.deep.equal([
+        'admins',
+        'sk-admin',
+        'superusers'
+      ])
     })
 
     it('should parse readwrite groups from comma-separated string', () => {

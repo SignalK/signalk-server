@@ -15,6 +15,11 @@
  */
 
 /**
+ * Signal K permission type
+ */
+export type SignalKPermission = 'readonly' | 'readwrite' | 'admin'
+
+/**
  * OIDC Configuration - merged from environment variables and security.json
  */
 export interface OIDCConfig {
@@ -24,8 +29,14 @@ export interface OIDCConfig {
   clientSecret: string
   redirectUri?: string
   scope: string
-  defaultPermission: 'readonly' | 'readwrite' | 'admin'
+  defaultPermission: SignalKPermission
   autoCreateUsers: boolean
+  /** Groups that grant admin permission */
+  adminGroups?: string[]
+  /** Groups that grant readwrite permission */
+  readwriteGroups?: string[]
+  /** ID token claim key for groups (default: 'groups') */
+  groupsAttribute?: string
 }
 
 /**
@@ -38,8 +49,11 @@ export interface PartialOIDCConfig {
   clientSecret?: string
   redirectUri?: string
   scope?: string
-  defaultPermission?: 'readonly' | 'readwrite' | 'admin'
+  defaultPermission?: SignalKPermission
   autoCreateUsers?: boolean
+  adminGroups?: string[]
+  readwriteGroups?: string[]
+  groupsAttribute?: string
 }
 
 /**
