@@ -63,6 +63,12 @@ export interface ACL {
 export interface OIDCUserIdentifier {
   sub: string
   issuer: string
+  /** User's email from OIDC claims */
+  email?: string
+  /** User's display name from OIDC claims */
+  name?: string
+  /** User's groups from OIDC claims (used for permission mapping) */
+  groups?: string[]
 }
 
 export interface User {

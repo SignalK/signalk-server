@@ -63,6 +63,31 @@ export function parseEnvConfig(): PartialOIDCConfig {
       process.env.SIGNALK_OIDC_AUTO_CREATE_USERS.toLowerCase() === 'true'
   }
 
+  // Parse admin groups from comma-separated string
+  if (process.env.SIGNALK_OIDC_ADMIN_GROUPS) {
+    const groups = process.env.SIGNALK_OIDC_ADMIN_GROUPS.split(',')
+      .map((g) => g.trim())
+      .filter((g) => g.length > 0)
+    if (groups.length > 0) {
+      config.adminGroups = groups
+    }
+  }
+
+  // Parse readwrite groups from comma-separated string
+  if (process.env.SIGNALK_OIDC_READWRITE_GROUPS) {
+    const groups = process.env.SIGNALK_OIDC_READWRITE_GROUPS.split(',')
+      .map((g) => g.trim())
+      .filter((g) => g.length > 0)
+    if (groups.length > 0) {
+      config.readwriteGroups = groups
+    }
+  }
+
+  // Parse groups attribute (ID token claim key for groups)
+  if (process.env.SIGNALK_OIDC_GROUPS_ATTRIBUTE) {
+    config.groupsAttribute = process.env.SIGNALK_OIDC_GROUPS_ATTRIBUTE
+  }
+
   return config
 }
 
@@ -90,7 +115,12 @@ export function mergeConfigs(
     autoCreateUsers:
       envConfig.autoCreateUsers ??
       securityJsonConfig.autoCreateUsers ??
-      OIDC_DEFAULTS.autoCreateUsers
+      OIDC_DEFAULTS.autoCreateUsers,
+    adminGroups: envConfig.adminGroups ?? securityJsonConfig.adminGroups,
+    readwriteGroups:
+      envConfig.readwriteGroups ?? securityJsonConfig.readwriteGroups,
+    groupsAttribute:
+      envConfig.groupsAttribute ?? securityJsonConfig.groupsAttribute
   }
 }
 

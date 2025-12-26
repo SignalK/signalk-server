@@ -32,3 +32,4 @@ export {
   type ValidatedIdTokenClaims
 } from './id-token-validation'
 export * from './user-info'
+export * from './permission-mapping'

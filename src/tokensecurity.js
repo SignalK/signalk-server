@@ -41,6 +41,7 @@ import {
   buildAuthorizationUrl,
   exchangeAuthorizationCode,
   validateIdToken,
+  mapGroupsToPermission,
   STATE_COOKIE_NAME,
   STATE_MAX_AGE_MS,
   OIDCError
@@ -164,10 +165,32 @@ module.exports = function (app, config) {
     return cachedOIDCConfig
   }
 
+  // Compare two arrays for equality, ignoring order
+  function arraysEqualIgnoringOrder(arr1, arr2) {
+    if (arr1 === arr2) return true
+    if (!arr1 || !arr2) return arr1 === arr2
+    if (arr1.length !== arr2.length) return false
+    const sorted1 = [...arr1].sort()
+    const sorted2 = [...arr2].sort()
+    return sorted1.every((val, idx) => val === sorted2[idx])
+  }
+
   // Find or create an OIDC user in the configuration
   async function findOrCreateOIDCUser(userInfo, oidcConfig) {
     const configuration = getConfiguration()
     const issuer = oidcConfig.issuer
+
+    // Calculate permission based on user's groups
+    const mappedPermission = mapGroupsToPermission(userInfo.groups, oidcConfig)
+
+    // Build OIDC metadata to store with user
+    const oidcMetadata = {
+      sub: userInfo.sub,
+      issuer: issuer,
+      email: userInfo.email,
+      name: userInfo.name,
+      groups: userInfo.groups
+    }
 
     // Look for existing user by OIDC sub + issuer
     let user = configuration.users.find(
@@ -176,6 +199,34 @@ module.exports = function (app, config) {
 
     if (user) {
       debug(`OIDC: found existing user ${user.username}`)
+
+      // Check if anything changed
+      const previousPermission = user.type
+      const permissionChanged = previousPermission !== mappedPermission
+      const metadataChanged =
+        user.oidc?.email !== oidcMetadata.email ||
+        user.oidc?.name !== oidcMetadata.name ||
+        !arraysEqualIgnoringOrder(user.oidc?.groups, oidcMetadata.groups)
+
+      if (permissionChanged) {
+        debug(
+          `OIDC: updating user ${user.username} permission from ${previousPermission} to ${mappedPermission}`
+        )
+        user.type = mappedPermission
+      }
+
+      // Only save if something changed
+      if (permissionChanged || metadataChanged) {
+        user.oidc = oidcMetadata
+
+        const { saveSecurityConfig } = require('./security')
+        saveSecurityConfig(app, configuration, (err) => {
+          if (err) {
+            console.error('Failed to update OIDC user:', err)
+          }
+        })
+      }
+
       return user
     }
 
@@ -199,11 +250,8 @@ module.exports = function (app, config) {
 
     user = {
       username: finalUsername,
-      type: oidcConfig.defaultPermission,
-      oidc: {
-        sub: userInfo.sub,
-        issuer: issuer
-      }
+      type: mappedPermission,
+      oidc: oidcMetadata
     }
 
     debug(
@@ -480,12 +528,22 @@ module.exports = function (app, config) {
         res.clearCookie(STATE_COOKIE_NAME)
 
         // Extract user info from validated claims
+        // Use configured groupsAttribute or default to 'groups'
+        const groupsAttr = oidcConfig.groupsAttribute || 'groups'
+        const rawGroups = claims[groupsAttr]
+        // Normalize groups: handle array, single string, or undefined
+        let groups
+        if (Array.isArray(rawGroups)) {
+          groups = rawGroups
+        } else if (typeof rawGroups === 'string' && rawGroups.length > 0) {
+          groups = [rawGroups]
+        }
         const userInfo = {
           sub: claims.sub,
           email: claims.email,
           name: claims.name,
           preferredUsername: claims.preferred_username,
-          groups: claims.groups
+          groups
         }
         debug(`OIDC: user authenticated: ${userInfo.sub}`)
 
