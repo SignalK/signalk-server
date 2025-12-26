@@ -750,6 +750,20 @@ module.exports = function (app, config) {
     if (configuration.users.length === 0) {
       result.noUsers = true
     }
+
+    // Add OIDC info if configured
+    try {
+      const oidcConfig = getOIDCConfig()
+      if (isOIDCEnabled(oidcConfig)) {
+        result.oidcEnabled = true
+        result.oidcProviderName = oidcConfig.providerName
+        result.oidcLoginUrl = `${skAuthPrefix}/oidc/login`
+        result.oidcAutoLogin = oidcConfig.autoLogin
+      }
+    } catch (_err) {
+      // OIDC not configured, don't add fields
+    }
+
     return result
   }
 

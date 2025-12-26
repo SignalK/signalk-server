@@ -31,6 +31,20 @@ class Login extends Component {
     this.handleClick = this.handleClick.bind(this)
   }
 
+  componentDidUpdate(prevProps) {
+    // Auto-redirect to OIDC login if enabled
+    const { loginStatus } = this.props
+    if (
+      loginStatus.status === 'notLoggedIn' &&
+      loginStatus.oidcEnabled &&
+      loginStatus.oidcAutoLogin &&
+      !loginStatus.noUsers &&
+      prevProps.loginStatus.status !== loginStatus.status
+    ) {
+      window.location.href = loginStatus.oidcLoginUrl
+    }
+  }
+
   handleClick() {
     this.setState({ loggingIn: true })
     const { dispatch } = this.props
@@ -165,6 +179,33 @@ class Login extends Component {
                               )}
                           </Col>
                         </Row>
+                        {this.props.loginStatus.oidcEnabled && (
+                          <>
+                            <Row className="mt-4 mb-3">
+                              <Col className="text-center">
+                                <span className="text-muted">
+                                  &#8212; or &#8212;
+                                </span>
+                              </Col>
+                            </Row>
+                            <Row>
+                              <Col className="text-center">
+                                <Button
+                                  onClick={() => {
+                                    window.location.href =
+                                      this.props.loginStatus.oidcLoginUrl
+                                  }}
+                                  color="secondary"
+                                  className="px-4"
+                                >
+                                  <i className="fa fa-sign-in" />{' '}
+                                  {this.props.loginStatus.oidcProviderName ||
+                                    'SSO Login'}
+                                </Button>
+                              </Col>
+                            </Row>
+                          </>
+                        )}
                       </CardBody>
                     </Card>
                   </CardGroup>
