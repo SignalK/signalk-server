@@ -61,6 +61,30 @@ import { SERVERROUTESPREFIX } from './constants'
 
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
 
+/**
+ * Validate that a URL is a safe relative path (prevents open redirect attacks)
+ * @param {string} url - The URL to validate
+ * @returns {boolean} - True if the URL is a safe relative path
+ */
+function isSafeRelativeUrl(url) {
+  if (typeof url !== 'string' || !url) {
+    return false
+  }
+  // Must start with / but not // (which would be protocol-relative URL)
+  // Also reject URLs with backslashes or control characters
+  // Check for control characters (ASCII 0-31) that could be used for URL manipulation
+  const hasControlChars = url.split('').some((char) => {
+    const code = char.charCodeAt(0)
+    return code >= 0 && code <= 31
+  })
+  return (
+    url.startsWith('/') &&
+    !url.startsWith('//') &&
+    !url.includes('\\') &&
+    !hasControlChars
+  )
+}
+
 module.exports = function (app, config) {
   const strategy = {}
 
@@ -352,8 +376,11 @@ module.exports = function (app, config) {
           oidcConfig.redirectUri ||
           `${protocol}://${host}${skAuthPrefix}/oidc/callback`
 
-        // Store original destination
-        const originalUrl = req.query.redirect || '/'
+        // Store original destination (validated to prevent open redirect attacks)
+        const requestedRedirect = req.query.redirect
+        const originalUrl = isSafeRelativeUrl(requestedRedirect)
+          ? requestedRedirect
+          : '/'
 
         // Create auth state
         const authState = createAuthState(redirectUri, originalUrl)
