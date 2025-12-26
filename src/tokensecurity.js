@@ -165,6 +165,16 @@ module.exports = function (app, config) {
     return cachedOIDCConfig
   }
 
+  // Compare two arrays for equality, ignoring order
+  function arraysEqualIgnoringOrder(arr1, arr2) {
+    if (arr1 === arr2) return true
+    if (!arr1 || !arr2) return arr1 === arr2
+    if (arr1.length !== arr2.length) return false
+    const sorted1 = [...arr1].sort()
+    const sorted2 = [...arr2].sort()
+    return sorted1.every((val, idx) => val === sorted2[idx])
+  }
+
   // Find or create an OIDC user in the configuration
   async function findOrCreateOIDCUser(userInfo, oidcConfig) {
     const configuration = getConfiguration()
@@ -196,8 +206,7 @@ module.exports = function (app, config) {
       const metadataChanged =
         user.oidc?.email !== oidcMetadata.email ||
         user.oidc?.name !== oidcMetadata.name ||
-        JSON.stringify(user.oidc?.groups) !==
-          JSON.stringify(oidcMetadata.groups)
+        !arraysEqualIgnoringOrder(user.oidc?.groups, oidcMetadata.groups)
 
       if (permissionChanged) {
         debug(
@@ -522,12 +531,19 @@ module.exports = function (app, config) {
         // Use configured groupsAttribute or default to 'groups'
         const groupsAttr = oidcConfig.groupsAttribute || 'groups'
         const rawGroups = claims[groupsAttr]
+        // Normalize groups: handle array, single string, or undefined
+        let groups
+        if (Array.isArray(rawGroups)) {
+          groups = rawGroups
+        } else if (typeof rawGroups === 'string' && rawGroups.length > 0) {
+          groups = [rawGroups]
+        }
         const userInfo = {
           sub: claims.sub,
           email: claims.email,
           name: claims.name,
           preferredUsername: claims.preferred_username,
-          groups: Array.isArray(rawGroups) ? rawGroups : undefined
+          groups
         }
         debug(`OIDC: user authenticated: ${userInfo.sub}`)
 

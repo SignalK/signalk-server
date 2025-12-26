@@ -39,6 +39,7 @@ export interface OIDCConfig {
    * ID token claim key for groups (default: 'groups').
    * Common alternatives: 'roles', 'memberOf', 'cognito:groups'
    * Note: Groups must be present in the ID token, not the userinfo endpoint.
+   * Both array and single string values are supported.
    */
   groupsAttribute?: string
 }
