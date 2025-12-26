@@ -22,13 +22,32 @@ import EnableSecurity from './EnableSecurity'
 class Login extends Component {
   constructor(props) {
     super(props)
+    // Check for OIDC error message in URL (from failed callback)
+    const urlParams = new URLSearchParams(window.location.search)
+    const oidcErrorMessage = urlParams.has('oidcError')
+      ? urlParams.get('message') || 'SSO login failed'
+      : null
     this.state = {
       loggingIn: false,
-      loginErrorMessage: null
+      loginErrorMessage: oidcErrorMessage
     }
     this.handleInputChange = this.handleInputChange.bind(this)
     this.handleInputKeyUp = this.handleInputKeyUp.bind(this)
     this.handleClick = this.handleClick.bind(this)
+  }
+
+  shouldSkipAutoLogin() {
+    // Check URL params to prevent redirect loops and provide escape hatch
+    const urlParams = new URLSearchParams(window.location.search)
+    // Skip if OIDC callback returned an error
+    if (urlParams.has('oidcError')) {
+      return true
+    }
+    // Skip if user explicitly requested no auto-login (escape hatch)
+    if (urlParams.get('noAutoLogin') === 'true') {
+      return true
+    }
+    return false
   }
 
   componentDidUpdate(prevProps) {
@@ -39,7 +58,8 @@ class Login extends Component {
       loginStatus.oidcEnabled &&
       loginStatus.oidcAutoLogin &&
       !loginStatus.noUsers &&
-      prevProps.loginStatus.status !== loginStatus.status
+      prevProps.loginStatus.status !== loginStatus.status &&
+      !this.shouldSkipAutoLogin()
     ) {
       window.location.href = loginStatus.oidcLoginUrl
     }
