@@ -42,6 +42,16 @@ export interface OIDCConfig {
    * Both array and single string values are supported.
    */
   groupsAttribute?: string
+  /**
+   * Display name for the OIDC provider shown on the login button.
+   * Default: 'SSO Login'
+   */
+  providerName: string
+  /**
+   * If true, automatically redirect to OIDC login when not authenticated.
+   * Default: false
+   */
+  autoLogin: boolean
 }
 
 /**
@@ -59,6 +69,8 @@ export interface PartialOIDCConfig {
   adminGroups?: string[]
   readwriteGroups?: string[]
   groupsAttribute?: string
+  providerName?: string
+  autoLogin?: boolean
 }
 
 /**
@@ -165,7 +177,9 @@ export const OIDC_DEFAULTS: Omit<
   enabled: false,
   scope: 'openid email profile',
   defaultPermission: 'readonly',
-  autoCreateUsers: true
+  autoCreateUsers: true,
+  providerName: 'SSO Login',
+  autoLogin: false
 }
 
 /**

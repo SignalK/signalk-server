@@ -459,31 +459,34 @@ module.exports = function (app, config) {
 
     // OIDC callback route - handles the response from the OIDC provider
     app.get(`${skAuthPrefix}/oidc/callback`, async (req, res) => {
+      // Helper to redirect to login page with error
+      const redirectWithError = (message) => {
+        const errorParam = encodeURIComponent(message)
+        res.redirect(`/admin/#/login?oidcError=true&message=${errorParam}`)
+      }
+
       try {
         const { code, state, error, error_description } = req.query
 
-        // Check for OIDC error
+        // Check for OIDC error from provider
         if (error) {
           res.clearCookie(STATE_COOKIE_NAME)
           console.error(`OIDC error: ${error} - ${error_description}`)
-          res.status(400).json({
-            error: 'OIDC authentication failed',
-            message: error_description || error
-          })
+          redirectWithError(error_description || error)
           return
         }
 
         // Validate required parameters
         if (!code || !state) {
           res.clearCookie(STATE_COOKIE_NAME)
-          res.status(400).json({ error: 'Missing code or state parameter' })
+          redirectWithError('Missing code or state parameter')
           return
         }
 
         // Get and validate stored state
         const stateCookie = req.cookies[STATE_COOKIE_NAME]
         if (!stateCookie) {
-          res.status(400).json({ error: 'Missing state cookie' })
+          redirectWithError('Session expired. Please try again.')
           return
         }
 
@@ -495,13 +498,11 @@ module.exports = function (app, config) {
         } catch (err) {
           res.clearCookie(STATE_COOKIE_NAME)
           console.error('OIDC state validation failed:', err)
-          res.status(400).json({
-            error: 'State validation failed',
-            message:
-              err instanceof OIDCError
-                ? err.message
-                : 'Invalid or expired state'
-          })
+          redirectWithError(
+            err instanceof OIDCError
+              ? err.message
+              : 'Session expired or invalid'
+          )
           return
         }
 
@@ -550,10 +551,7 @@ module.exports = function (app, config) {
         // Find or create user
         const user = await findOrCreateOIDCUser(userInfo, oidcConfig)
         if (!user) {
-          res.status(403).json({
-            error: 'User creation denied',
-            message: 'OIDC user auto-creation is disabled'
-          })
+          redirectWithError('User auto-creation is disabled')
           return
         }
 
@@ -585,10 +583,9 @@ module.exports = function (app, config) {
         res.redirect(authState.originalUrl)
       } catch (err) {
         console.error('OIDC callback error:', err)
-        res.status(500).json({
-          error: 'OIDC authentication failed',
-          message: err instanceof Error ? err.message : String(err)
-        })
+        redirectWithError(
+          err instanceof Error ? err.message : 'Authentication failed'
+        )
       }
     })
 
@@ -750,6 +747,20 @@ module.exports = function (app, config) {
     if (configuration.users.length === 0) {
       result.noUsers = true
     }
+
+    // Add OIDC info if configured
+    try {
+      const oidcConfig = getOIDCConfig()
+      if (isOIDCEnabled(oidcConfig)) {
+        result.oidcEnabled = true
+        result.oidcProviderName = oidcConfig.providerName
+        result.oidcLoginUrl = `${skAuthPrefix}/oidc/login`
+        result.oidcAutoLogin = oidcConfig.autoLogin
+      }
+    } catch (_err) {
+      // OIDC not configured, don't add fields
+    }
+
     return result
   }
 
