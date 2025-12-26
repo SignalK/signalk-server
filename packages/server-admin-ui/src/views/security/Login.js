@@ -23,7 +23,8 @@ class Login extends Component {
   constructor(props) {
     super(props)
     // Check for OIDC error message in URL (from failed callback)
-    const urlParams = new URLSearchParams(window.location.search)
+    // Note: App uses HashRouter, so params are in hash fragment, not query string
+    const urlParams = Login.getHashParams()
     const oidcErrorMessage = urlParams.has('oidcError')
       ? urlParams.get('message') || 'SSO login failed'
       : null
@@ -36,9 +37,20 @@ class Login extends Component {
     this.handleClick = this.handleClick.bind(this)
   }
 
+  // Parse URL parameters from hash fragment (for HashRouter)
+  // e.g., "#/login?oidcError=true" → URLSearchParams with oidcError=true
+  static getHashParams() {
+    const hash = window.location.hash
+    const queryIndex = hash.indexOf('?')
+    if (queryIndex === -1) {
+      return new URLSearchParams()
+    }
+    return new URLSearchParams(hash.substring(queryIndex + 1))
+  }
+
   shouldSkipAutoLogin() {
     // Check URL params to prevent redirect loops and provide escape hatch
-    const urlParams = new URLSearchParams(window.location.search)
+    const urlParams = Login.getHashParams()
     // Skip if OIDC callback returned an error
     if (urlParams.has('oidcError')) {
       return true
