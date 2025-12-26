@@ -190,25 +190,33 @@ module.exports = function (app, config) {
     if (user) {
       debug(`OIDC: found existing user ${user.username}`)
 
-      // Update user's permission based on current groups (groups may change)
+      // Check if anything changed
       const previousPermission = user.type
-      if (previousPermission !== mappedPermission) {
+      const permissionChanged = previousPermission !== mappedPermission
+      const metadataChanged =
+        user.oidc?.email !== oidcMetadata.email ||
+        user.oidc?.name !== oidcMetadata.name ||
+        JSON.stringify(user.oidc?.groups) !==
+          JSON.stringify(oidcMetadata.groups)
+
+      if (permissionChanged) {
         debug(
           `OIDC: updating user ${user.username} permission from ${previousPermission} to ${mappedPermission}`
         )
         user.type = mappedPermission
       }
 
-      // Update OIDC metadata (email, name, groups may change)
-      user.oidc = oidcMetadata
+      // Only save if something changed
+      if (permissionChanged || metadataChanged) {
+        user.oidc = oidcMetadata
 
-      // Save configuration if anything changed
-      const { saveSecurityConfig } = require('./security')
-      saveSecurityConfig(app, configuration, (err) => {
-        if (err) {
-          console.error('Failed to update OIDC user:', err)
-        }
-      })
+        const { saveSecurityConfig } = require('./security')
+        saveSecurityConfig(app, configuration, (err) => {
+          if (err) {
+            console.error('Failed to update OIDC user:', err)
+          }
+        })
+      }
 
       return user
     }
@@ -511,12 +519,15 @@ module.exports = function (app, config) {
         res.clearCookie(STATE_COOKIE_NAME)
 
         // Extract user info from validated claims
+        // Use configured groupsAttribute or default to 'groups'
+        const groupsAttr = oidcConfig.groupsAttribute || 'groups'
+        const rawGroups = claims[groupsAttr]
         const userInfo = {
           sub: claims.sub,
           email: claims.email,
           name: claims.name,
           preferredUsername: claims.preferred_username,
-          groups: claims.groups
+          groups: Array.isArray(rawGroups) ? rawGroups : undefined
         }
         debug(`OIDC: user authenticated: ${userInfo.sub}`)
 

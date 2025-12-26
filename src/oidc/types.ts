@@ -35,7 +35,11 @@ export interface OIDCConfig {
   adminGroups?: string[]
   /** Groups that grant readwrite permission */
   readwriteGroups?: string[]
-  /** ID token claim key for groups (default: 'groups') */
+  /**
+   * ID token claim key for groups (default: 'groups').
+   * Common alternatives: 'roles', 'memberOf', 'cognito:groups'
+   * Note: Groups must be present in the ID token, not the userinfo endpoint.
+   */
   groupsAttribute?: string
 }
 
