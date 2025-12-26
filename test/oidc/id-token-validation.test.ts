@@ -1,4 +1,5 @@
 import { expect } from 'chai'
+import { webcrypto } from 'crypto'
 import {
   validateIdToken,
   fetchJwks,
@@ -12,6 +13,12 @@ import {
   OIDCProviderMetadata,
   OIDCError
 } from '../../src/oidc/types'
+
+// Polyfill for Node 18 which doesn't have crypto as a global
+if (typeof globalThis.crypto === 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(globalThis as any).crypto = webcrypto
+}
 
 // Dynamic import for jose (ESM-only module)
 
