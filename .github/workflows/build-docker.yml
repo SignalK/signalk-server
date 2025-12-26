@@ -12,6 +12,8 @@ on:
 
 jobs:
   signalk-server_npm_files:
+    # Only run in the upstream repository (not in forks)
+    if: github.repository == 'SignalK/signalk-server'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
