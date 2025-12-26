@@ -14,8 +14,35 @@
  * limitations under the License.
  */
 
-import * as jose from 'jose'
 import { OIDCConfig, OIDCError, OIDCProviderMetadata } from './types'
+
+// Type imports for jose (for TypeScript)
+import type { JSONWebKeySet as JoseJSONWebKeySet, JWTPayload } from 'jose'
+
+// Dynamic import for jose (ESM-only module)
+
+type JoseModule = typeof import('jose')
+let joseModule: JoseModule | null = null
+
+async function getJose(): Promise<JoseModule> {
+  if (!joseModule) {
+    joseModule = await import('jose')
+  }
+  return joseModule
+}
+
+/**
+ * JSON Web Key Set structure
+ */
+export interface JSONWebKeySet {
+  keys: Array<{
+    kty: string
+    kid?: string
+    use?: string
+    alg?: string
+    [key: string]: unknown
+  }>
+}
 
 /**
  * ID Token claims after validation
@@ -54,7 +81,7 @@ export function resetFetchFunction(): void {
 
 // JWKS cache
 interface JwksCache {
-  jwks: jose.JSONWebKeySet
+  jwks: JSONWebKeySet
   fetchedAt: number
 }
 
@@ -75,7 +102,7 @@ export function clearJwksCache(): void {
  */
 export async function fetchJwks(
   metadata: OIDCProviderMetadata
-): Promise<jose.JSONWebKeySet> {
+): Promise<JSONWebKeySet> {
   const cached = jwksCache.get(metadata.jwks_uri)
   if (cached && Date.now() - cached.fetchedAt < JWKS_CACHE_TTL_MS) {
     return cached.jwks
@@ -99,9 +126,9 @@ export async function fetchJwks(
     )
   }
 
-  let jwks: jose.JSONWebKeySet
+  let jwks: JSONWebKeySet
   try {
-    jwks = (await response.json()) as jose.JSONWebKeySet
+    jwks = (await response.json()) as JSONWebKeySet
   } catch (err) {
     throw new OIDCError(
       'Failed to parse JWKS as JSON',
@@ -142,14 +169,17 @@ export async function validateIdToken(
   metadata: OIDCProviderMetadata,
   expectedNonce: string
 ): Promise<ValidatedIdTokenClaims> {
+  // Dynamically import jose (ESM-only module)
+  const jose = await getJose()
+
   // Fetch JWKS
   const jwks = await fetchJwks(metadata)
 
   // Create JWKS from the fetched keys
-  const keySet = jose.createLocalJWKSet(jwks)
+  const keySet = jose.createLocalJWKSet(jwks as JoseJSONWebKeySet)
 
   // Verify the token signature and decode claims
-  let payload: jose.JWTPayload
+  let payload: JWTPayload
   try {
     const result = await jose.jwtVerify(idToken, keySet, {
       issuer: config.issuer,
@@ -158,27 +188,30 @@ export async function validateIdToken(
     })
     payload = result.payload
   } catch (err) {
-    if (err instanceof jose.errors.JWTExpired) {
+    // Check error types by name since we can't use instanceof with dynamically imported classes
+    const errorName = err instanceof Error ? err.constructor.name : ''
+    const errorMessage = err instanceof Error ? err.message.toLowerCase() : ''
+
+    if (errorName === 'JWTExpired') {
       throw new OIDCError(
         'ID token has expired',
         'INVALID_TOKEN',
         err instanceof Error ? err : undefined
       )
     }
-    if (err instanceof jose.errors.JWTClaimValidationFailed) {
-      const message = err.message.toLowerCase()
-      if (message.includes('iss') || message.includes('issuer')) {
+    if (errorName === 'JWTClaimValidationFailed') {
+      if (errorMessage.includes('iss') || errorMessage.includes('issuer')) {
         throw new OIDCError(
           `ID token issuer mismatch: expected ${config.issuer}`,
           'INVALID_TOKEN',
-          err
+          err instanceof Error ? err : undefined
         )
       }
-      if (message.includes('aud') || message.includes('audience')) {
+      if (errorMessage.includes('aud') || errorMessage.includes('audience')) {
         throw new OIDCError(
           `ID token audience mismatch: expected ${config.clientId}`,
           'INVALID_TOKEN',
-          err
+          err instanceof Error ? err : undefined
         )
       }
     }

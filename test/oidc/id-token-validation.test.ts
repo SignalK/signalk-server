@@ -1,11 +1,11 @@
 import { expect } from 'chai'
-import * as jose from 'jose'
 import {
   validateIdToken,
   fetchJwks,
   clearJwksCache,
   setFetchFunction as setJwksFetch,
-  resetFetchFunction as resetJwksFetch
+  resetFetchFunction as resetJwksFetch,
+  JSONWebKeySet
 } from '../../src/oidc/id-token-validation'
 import {
   OIDCConfig,
@@ -13,11 +13,16 @@ import {
   OIDCError
 } from '../../src/oidc/types'
 
+// Dynamic import for jose (ESM-only module)
+
+type JoseModule = typeof import('jose')
+let jose: JoseModule
+
 describe('ID Token Validation', () => {
   // Test key pair for signing tokens
   let privateKey: CryptoKey
   let publicKey: CryptoKey
-  let jwks: { keys: jose.JWK[] }
+  let jwks: JSONWebKeySet
 
   const config: OIDCConfig = {
     enabled: true,
@@ -39,6 +44,9 @@ describe('ID Token Validation', () => {
   }
 
   before(async () => {
+    // Dynamically import jose
+    jose = await import('jose')
+
     // Generate a test key pair
     const keyPair = await jose.generateKeyPair('RS256')
     privateKey = keyPair.privateKey
@@ -49,7 +57,8 @@ describe('ID Token Validation', () => {
     publicJwk.kid = 'test-key-1'
     publicJwk.alg = 'RS256'
     publicJwk.use = 'sig'
-    jwks = { keys: [publicJwk] }
+    // Cast to our JSONWebKeySet type - kty is guaranteed to exist for exported RSA keys
+    jwks = { keys: [publicJwk as JSONWebKeySet['keys'][0]] }
   })
 
   beforeEach(() => {
