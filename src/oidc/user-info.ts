@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Matti Airas
+ * Copyright 2025 Matti Airas
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@ import { OIDCError, OIDCUserInfo } from './types'
 
 /**
  * Decode the payload of a JWT token (without verification)
- * This is used to extract claims from an ID token that has already been
- * verified by the OIDC provider during the token exchange
+ * NOTE: This should only be used for debugging or after the token has been
+ * properly validated using validateIdToken(). For production use, always
+ * validate the token first using the id-token-validation module.
  */
 export function decodeIdToken(idToken: string): Record<string, unknown> {
   const parts = idToken.split('.')

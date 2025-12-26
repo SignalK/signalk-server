@@ -40,7 +40,7 @@ import {
   getDiscoveryDocument,
   buildAuthorizationUrl,
   exchangeAuthorizationCode,
-  extractUserInfo,
+  validateIdToken,
   STATE_COOKIE_NAME,
   STATE_MAX_AGE_MS,
   OIDCError
@@ -387,11 +387,9 @@ module.exports = function (app, config) {
       try {
         const { code, state, error, error_description } = req.query
 
-        // Clear state cookie regardless of outcome
-        res.clearCookie(STATE_COOKIE_NAME)
-
         // Check for OIDC error
         if (error) {
+          res.clearCookie(STATE_COOKIE_NAME)
           console.error(`OIDC error: ${error} - ${error_description}`)
           res.status(400).json({
             error: 'OIDC authentication failed',
@@ -402,6 +400,7 @@ module.exports = function (app, config) {
 
         // Validate required parameters
         if (!code || !state) {
+          res.clearCookie(STATE_COOKIE_NAME)
           res.status(400).json({ error: 'Missing code or state parameter' })
           return
         }
@@ -419,6 +418,7 @@ module.exports = function (app, config) {
           authState = decryptState(stateCookie, configuration.secretKey)
           validateState(state, authState)
         } catch (err) {
+          res.clearCookie(STATE_COOKIE_NAME)
           console.error('OIDC state validation failed:', err)
           res.status(400).json({
             error: 'State validation failed',
@@ -441,8 +441,25 @@ module.exports = function (app, config) {
           authState
         )
 
-        // Extract user info from ID token
-        const userInfo = extractUserInfo(tokens.idToken)
+        // Validate ID token signature and claims (including nonce)
+        const claims = await validateIdToken(
+          tokens.idToken,
+          oidcConfig,
+          metadata,
+          authState.nonce
+        )
+
+        // Clear state cookie after successful validation
+        res.clearCookie(STATE_COOKIE_NAME)
+
+        // Extract user info from validated claims
+        const userInfo = {
+          sub: claims.sub,
+          email: claims.email,
+          name: claims.name,
+          preferredUsername: claims.preferred_username,
+          groups: claims.groups
+        }
         debug(`OIDC: user authenticated: ${userInfo.sub}`)
 
         // Find or create user

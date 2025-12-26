@@ -120,6 +120,7 @@
     "unzipper": "^0.10.10",
     "uuid": "^8.1.0",
     "ws": "^7.0.0",
+    "jose": "^6.1.0",
     "openid-client": "^6.1.0"
   },
   "optionalDependencies": {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Matti Airas
+ * Copyright 2025 Matti Airas
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,4 +25,10 @@ export {
 } from './discovery'
 export * from './authorization'
 export { exchangeAuthorizationCode } from './token-exchange'
+export {
+  validateIdToken,
+  fetchJwks,
+  clearJwksCache,
+  type ValidatedIdTokenClaims
+} from './id-token-validation'
 export * from './user-info'
