@@ -24,7 +24,7 @@ export {
   clearDiscoveryCache
 } from './discovery'
 export * from './authorization'
-export { exchangeAuthorizationCode } from './token-exchange'
+export { exchangeAuthorizationCode, fetchUserinfo } from './token-exchange'
 export {
   validateIdToken,
   fetchJwks,

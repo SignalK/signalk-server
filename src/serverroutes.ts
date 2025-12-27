@@ -49,6 +49,12 @@ import {
   SecurityStrategy,
   WithSecurityStrategy
 } from './security'
+import {
+  parseEnvConfig,
+  validateOIDCConfig,
+  getDiscoveryDocument
+} from './oidc'
+import { OIDCError, PartialOIDCConfig } from './oidc/types'
 import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
@@ -506,6 +512,193 @@ module.exports = function (
           req.params.username,
           getConfigSavingCallback('User deleted', 'Unable to delete user', res)
         )
+      }
+    }
+  )
+
+  // OIDC Configuration Endpoints
+
+  /**
+   * Get current OIDC configuration
+   * Returns config with secrets redacted and env override indicators
+   */
+  app.get(
+    `${SERVERROUTESPREFIX}/security/oidc`,
+    (req: Request, res: Response) => {
+      if (!checkAllowConfigure(req, res)) {
+        return
+      }
+
+      const config = getSecurityConfig(app)
+      const oidcConfig = config.oidc || {}
+      const envConfig = parseEnvConfig()
+
+      // Build response with redacted secrets and env override indicators
+      const envOverrides: Record<string, boolean> = {}
+      const envFields = [
+        'enabled',
+        'issuer',
+        'clientId',
+        'clientSecret',
+        'redirectUri',
+        'scope',
+        'defaultPermission',
+        'autoCreateUsers',
+        'adminGroups',
+        'readwriteGroups',
+        'groupsAttribute',
+        'providerName',
+        'autoLogin'
+      ]
+
+      envFields.forEach((field) => {
+        if (envConfig[field as keyof PartialOIDCConfig] !== undefined) {
+          envOverrides[field] = true
+        }
+      })
+
+      // Merge config (env takes priority)
+      const response = {
+        enabled: envConfig.enabled ?? oidcConfig.enabled ?? false,
+        issuer: envConfig.issuer ?? oidcConfig.issuer ?? '',
+        clientId: envConfig.clientId ?? oidcConfig.clientId ?? '',
+        // Don't send the actual secret
+        clientSecret: '',
+        clientSecretSet: !!(
+          envConfig.clientSecret ||
+          oidcConfig.clientSecret ||
+          ''
+        ),
+        redirectUri: envConfig.redirectUri ?? oidcConfig.redirectUri ?? '',
+        scope: envConfig.scope ?? oidcConfig.scope ?? 'openid email profile',
+        defaultPermission:
+          envConfig.defaultPermission ??
+          oidcConfig.defaultPermission ??
+          'readonly',
+        autoCreateUsers:
+          envConfig.autoCreateUsers ?? oidcConfig.autoCreateUsers ?? true,
+        adminGroups: envConfig.adminGroups ?? oidcConfig.adminGroups ?? [],
+        readwriteGroups:
+          envConfig.readwriteGroups ?? oidcConfig.readwriteGroups ?? [],
+        groupsAttribute:
+          envConfig.groupsAttribute ?? oidcConfig.groupsAttribute ?? 'groups',
+        providerName:
+          envConfig.providerName ?? oidcConfig.providerName ?? 'SSO Login',
+        autoLogin: envConfig.autoLogin ?? oidcConfig.autoLogin ?? false,
+        envOverrides
+      }
+
+      res.json(response)
+    }
+  )
+
+  /**
+   * Update OIDC configuration
+   * Validates config and saves to security.json
+   */
+  app.put(
+    `${SERVERROUTESPREFIX}/security/oidc`,
+    (req: Request, res: Response) => {
+      if (!checkAllowConfigure(req, res)) {
+        return
+      }
+
+      const config = getSecurityConfig(app)
+      const newOidcConfig = req.body
+
+      // Parse groups from comma-separated string if provided that way
+      if (
+        typeof newOidcConfig.adminGroups === 'string' &&
+        newOidcConfig.adminGroups
+      ) {
+        newOidcConfig.adminGroups = newOidcConfig.adminGroups
+          .split(',')
+          .map((g: string) => g.trim())
+          .filter((g: string) => g.length > 0)
+      }
+      if (
+        typeof newOidcConfig.readwriteGroups === 'string' &&
+        newOidcConfig.readwriteGroups
+      ) {
+        newOidcConfig.readwriteGroups = newOidcConfig.readwriteGroups
+          .split(',')
+          .map((g: string) => g.trim())
+          .filter((g: string) => g.length > 0)
+      }
+
+      // Preserve existing client secret if new one is empty
+      if (!newOidcConfig.clientSecret && config.oidc?.clientSecret) {
+        newOidcConfig.clientSecret = config.oidc.clientSecret
+      }
+
+      // Validate the configuration
+      try {
+        validateOIDCConfig(newOidcConfig)
+      } catch (err) {
+        if (err instanceof OIDCError) {
+          res.status(400).json({ error: err.message })
+          return
+        }
+        throw err
+      }
+
+      // Update the config
+      config.oidc = newOidcConfig
+
+      saveSecurityConfig(app, config, (err) => {
+        if (err) {
+          console.log(err)
+          res.status(500).json({ error: 'Unable to save OIDC configuration' })
+          return
+        }
+        res.json({ message: 'OIDC configuration saved' })
+      })
+    }
+  )
+
+  /**
+   * Test OIDC connection by fetching the discovery document
+   */
+  app.post(
+    `${SERVERROUTESPREFIX}/security/oidc/test`,
+    async (req: Request, res: Response) => {
+      if (!checkAllowConfigure(req, res)) {
+        return
+      }
+
+      const { issuer } = req.body
+
+      if (!issuer) {
+        res.status(400).json({ error: 'Issuer URL is required' })
+        return
+      }
+
+      // Validate issuer is a valid URL
+      try {
+        new URL(issuer)
+      } catch {
+        res.status(400).json({ error: 'Invalid issuer URL format' })
+        return
+      }
+
+      try {
+        const metadata = await getDiscoveryDocument(issuer)
+        res.json({
+          success: true,
+          issuer: metadata.issuer,
+          authorization_endpoint: metadata.authorization_endpoint,
+          token_endpoint: metadata.token_endpoint,
+          userinfo_endpoint: metadata.userinfo_endpoint,
+          jwks_uri: metadata.jwks_uri
+        })
+      } catch (err) {
+        console.error('OIDC connection test failed:', err)
+        res.status(502).json({
+          error:
+            err instanceof Error
+              ? err.message
+              : 'Failed to fetch OIDC discovery document'
+        })
       }
     }
   )

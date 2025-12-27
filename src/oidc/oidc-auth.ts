@@ -26,6 +26,7 @@ import {
   buildAuthorizationUrl,
   exchangeAuthorizationCode,
   validateIdToken,
+  fetchUserinfo,
   mapGroupsToPermission,
   STATE_COOKIE_NAME,
   STATE_MAX_AGE_MS,
@@ -338,6 +339,14 @@ export function registerOIDCRoutes(
           metadata,
           authState.nonce
         )
+
+        // Fetch additional claims from userinfo endpoint
+        // ID token typically only contains minimal claims; userinfo has groups, email, etc.
+        const userinfoClaims = await fetchUserinfo(tokens.accessToken, metadata)
+        if (userinfoClaims) {
+          // Merge userinfo claims into ID token claims (userinfo takes precedence)
+          Object.assign(claims, userinfoClaims)
+        }
 
         // Clear state cookie after successful validation
         res.clearCookie(STATE_COOKIE_NAME)

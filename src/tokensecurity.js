@@ -574,10 +574,20 @@ module.exports = function (app, config) {
   strategy.getUsers = (aConfig) => {
     if (aConfig && aConfig.users) {
       return aConfig.users.map((user) => {
-        return {
+        const userData = {
           userId: user.username,
-          type: user.type
+          type: user.type,
+          isOIDC: !!user.oidc
         }
+        // Include OIDC metadata for OIDC users
+        if (user.oidc) {
+          userData.oidc = {
+            issuer: user.oidc.issuer,
+            email: user.oidc.email,
+            name: user.oidc.name
+          }
+        }
+        return userData
       })
     } else {
       return []
