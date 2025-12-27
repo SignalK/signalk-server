@@ -6,7 +6,8 @@ const {
   modulesWithKeyword,
   checkForNewServerVersion,
   getLatestServerVersion,
-  importOrRequire
+  importOrRequire,
+  runNpm
 } = require('../dist/modules')
 
 describe('modulesWithKeyword', () => {
@@ -210,5 +211,100 @@ describe('importOrRequire', () => {
     )
     const mod = await importOrRequire(dir)
     chai.expect(mod).to.be.a('function')
+  })
+})
+
+describe('runNpm version validation', () => {
+  const config = {
+    configPath: '/tmp',
+    name: 'signalk-server'
+  }
+
+  const testVersion = (version, shouldPass) => {
+    return new Promise((resolve, reject) => {
+      let errCalled = false
+      const onErr = (err) => {
+        errCalled = true
+        if (shouldPass) {
+          reject(
+            new Error(`Should have passed but failed with: ${err.message}`)
+          )
+        } else {
+          chai.expect(err.message).to.contain('Invalid version')
+          resolve()
+        }
+      }
+
+      const onClose = (code) => {
+        if (shouldPass && !errCalled) {
+          resolve()
+        } else if (!shouldPass && !errCalled) {
+          reject(new Error(`Should have failed but passed (code ${code})`))
+        }
+      }
+
+      // We mock spawn to do nothing if validation passes
+      const originalSpawn = require('child_process').spawn
+      require('child_process').spawn = () => ({
+        stdout: { on: () => {} },
+        stderr: { on: () => {} },
+        on: (event, cb) => {
+          if (event === 'close') cb(0)
+        }
+      })
+
+      try {
+        runNpm(
+          config,
+          'some-package',
+          version,
+          'install',
+          () => {},
+          onErr,
+          onClose
+        )
+      } finally {
+        require('child_process').spawn = originalSpawn
+      }
+    })
+  }
+
+  it('should accept valid semantic versions', () => {
+    return testVersion('1.0.0', true)
+  })
+
+  it('should accept valid prerelease versions', () => {
+    return testVersion('1.0.0-alpha.1', true)
+  })
+
+  it('should accept empty version', () => {
+    return testVersion('', true)
+  })
+
+  it('should reject URL encoded http URL', () => {
+    return testVersion('http:%2F%2Fattacker.com%2Fpkg.tgz', false)
+  })
+
+  it('should reject URL encoded git URL', () => {
+    return testVersion(
+      'git%2Bhttps:%2F%2Fattacker.com%2Fmalicious-plugin.git',
+      false
+    )
+  })
+
+  it('should reject scoped package path', () => {
+    return testVersion('attacker%2Fmalicious-plugin', false)
+  })
+
+  it('should reject npm alias', () => {
+    return testVersion('npm:malicious-package@1.0.0', false)
+  })
+
+  it('should reject plain http URL', () => {
+    return testVersion('http://attacker.com/pkg.tgz', false)
+  })
+
+  it('should reject plain git URL', () => {
+    return testVersion('git+https://attacker.com/malicious-plugin.git', false)
   })
 })
