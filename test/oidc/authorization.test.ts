@@ -15,7 +15,9 @@ describe('Authorization URL', () => {
     clientSecret: 'test-secret',
     scope: 'openid email profile',
     defaultPermission: 'readonly',
-    autoCreateUsers: true
+    autoCreateUsers: true,
+    providerName: 'SSO Login',
+    autoLogin: false
   }
 
   const metadata: OIDCProviderMetadata = {
