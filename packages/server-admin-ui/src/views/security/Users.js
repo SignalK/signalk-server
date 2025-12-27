@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import {
+  Badge,
   Button,
   Card,
   CardHeader,
@@ -10,6 +11,7 @@ import {
   Col,
   Label,
   FormGroup,
+  FormText,
   Table,
   Row
 } from 'reactstrap'
@@ -186,6 +188,7 @@ class Users extends Component {
                     <tr>
                       <th>User ID</th>
                       <th>Type</th>
+                      <th>Auth</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -195,8 +198,24 @@ class Users extends Component {
                           key={user.userId}
                           onClick={this.userClicked.bind(this, user, index)}
                         >
-                          <td>{user.userId}</td>
+                          <td>
+                            {user.userId}
+                            {user.email && (
+                              <small className="text-muted ml-2">
+                                ({user.email})
+                              </small>
+                            )}
+                          </td>
                           <td>{convertType(user.type)}</td>
+                          <td>
+                            {user.isOIDC ? (
+                              <Badge color="info" title="Authenticated via SSO">
+                                SSO
+                              </Badge>
+                            ) : (
+                              <Badge color="secondary">Local</Badge>
+                            )}
+                          </td>
                         </tr>
                       )
                     })}
@@ -216,6 +235,11 @@ class Users extends Component {
                   <CardHeader>
                     <i className="fa fa-align-justify" />
                     User
+                    {this.state.selectedUser.isOIDC && (
+                      <Badge color="info" className="ml-2">
+                        SSO User
+                      </Badge>
+                    )}
                   </CardHeader>
                   <CardBody>
                     <FormGroup row>
@@ -236,32 +260,56 @@ class Users extends Component {
                         )}
                       </Col>
                     </FormGroup>
-                    <FormGroup row>
-                      <Col md="2">
-                        <Label htmlFor="password">Password</Label>
-                      </Col>
-                      <Col xs="12" md="9">
-                        <Input
-                          type="password"
-                          name="password"
-                          value={this.state.selectedUser.password}
-                          onChange={this.handleUserChange}
-                        />
-                      </Col>
-                    </FormGroup>
-                    <FormGroup row>
-                      <Col md="2">
-                        <Label htmlFor="text-input">Confirm Password</Label>
-                      </Col>
-                      <Col xs="12" md="9">
-                        <Input
-                          type="password"
-                          name="confirmPassword"
-                          value={this.state.selectedUser.confirmPassword}
-                          onChange={this.handleUserChange}
-                        />
-                      </Col>
-                    </FormGroup>
+                    {this.state.selectedUser.email && (
+                      <FormGroup row>
+                        <Col md="2">
+                          <Label>Email</Label>
+                        </Col>
+                        <Col xs="12" md="9">
+                          <Label>{this.state.selectedUser.email}</Label>
+                        </Col>
+                      </FormGroup>
+                    )}
+                    {this.state.selectedUser.isOIDC ? (
+                      <FormGroup row>
+                        <Col md="12">
+                          <FormText color="muted">
+                            <i className="fa fa-info-circle" /> This user
+                            authenticates via Single Sign-On. Password cannot be
+                            set for SSO users.
+                          </FormText>
+                        </Col>
+                      </FormGroup>
+                    ) : (
+                      <>
+                        <FormGroup row>
+                          <Col md="2">
+                            <Label htmlFor="password">Password</Label>
+                          </Col>
+                          <Col xs="12" md="9">
+                            <Input
+                              type="password"
+                              name="password"
+                              value={this.state.selectedUser.password}
+                              onChange={this.handleUserChange}
+                            />
+                          </Col>
+                        </FormGroup>
+                        <FormGroup row>
+                          <Col md="2">
+                            <Label htmlFor="text-input">Confirm Password</Label>
+                          </Col>
+                          <Col xs="12" md="9">
+                            <Input
+                              type="password"
+                              name="confirmPassword"
+                              value={this.state.selectedUser.confirmPassword}
+                              onChange={this.handleUserChange}
+                            />
+                          </Col>
+                        </FormGroup>
+                      </>
+                    )}
                     <FormGroup row>
                       <Col md="2">
                         <Label htmlFor="select">Permissions</Label>
