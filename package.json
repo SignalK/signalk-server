@@ -97,6 +97,7 @@
     "express": "^4.10.4",
     "express-easy-zip": "^1.1.5",
     "express-namespace": "^0.1.1",
+    "express-rate-limit": "^8.2.1",
     "figlet": "^1.2.0",
     "file-timestamp-stream": "^2.1.2",
     "geolib": "3.2.2",

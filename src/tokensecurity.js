@@ -178,6 +178,16 @@ module.exports = function (app, config) {
   }
 
   function setupApp() {
+    const rateLimit = require('express-rate-limit')
+    const loginLimiter = rateLimit({
+      windowMs: 10 * 60 * 1000, // 10 minutes
+      max: 10, // Limit each IP to 10 login requests per windowMs
+      message: {
+        message:
+          'Too many login attempts from this IP, please try again after 10 minutes'
+      }
+    })
+
     app.use(require('body-parser').urlencoded({ extended: true }))
 
     app.use(require('cookie-parser')())
@@ -194,7 +204,7 @@ module.exports = function (app, config) {
       return dest
     }
 
-    app.post(['/login', `${skAuthPrefix}/login`], (req, res) => {
+    app.post(['/login', `${skAuthPrefix}/login`], loginLimiter, (req, res) => {
       const name = req.body.username
       const password = req.body.password
       const remember = req.body.rememberMe
@@ -1083,6 +1093,12 @@ module.exports = function (app, config) {
 
   strategy.requestAccess = (theConfig, clientRequest, sourceIp, updateCb) => {
     return new Promise((resolve, reject) => {
+      if (filterRequests('accessRequest', 'PENDING').length >= 100) {
+        const err = new Error('Too many pending access requests')
+        err.statusCode = 503
+        reject(err)
+        return
+      }
       createRequest(
         app,
         'accessRequest',
