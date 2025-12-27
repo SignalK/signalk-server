@@ -62,7 +62,8 @@ describe('OIDC Auth Routes', () => {
   const defaultMockUserService: ExternalUserService = {
     findUserByProvider: async () => null,
     findUserByUsername: async () => null,
-    createUser: async () => {}
+    createUser: async () => {},
+    updateUser: async () => {}
   }
 
   const mockDeps: OIDCAuthDependencies = {

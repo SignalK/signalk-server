@@ -37,6 +37,22 @@ describe('ExternalUserService', () => {
 
       async createUser(user: ExternalUser): Promise<void> {
         users.push(user)
+      },
+
+      async updateUser(
+        username: string,
+        updates: { type?: string; providerData?: Record<string, unknown> }
+      ): Promise<void> {
+        const user = users.find((u) => u.username === username)
+        if (!user) {
+          throw new Error(`User not found: ${username}`)
+        }
+        if (updates.type) {
+          user.type = updates.type
+        }
+        if (updates.providerData) {
+          user.providerData = updates.providerData
+        }
       }
     }
   }
@@ -173,6 +189,76 @@ describe('ExternalUserService', () => {
 
       expect(service.users).to.have.length(1)
       expect(service.users[0].providerData).to.equal(undefined)
+    })
+  })
+
+  describe('updateUser', () => {
+    it('should update user type', async () => {
+      const service = createInMemoryUserService()
+      service.users.push({
+        username: 'testuser',
+        type: 'readonly',
+        providerData: { sub: 'user-123', issuer: 'https://auth.example.com' }
+      })
+
+      await service.updateUser('testuser', { type: 'admin' })
+
+      expect(service.users[0].type).to.equal('admin')
+    })
+
+    it('should update providerData', async () => {
+      const service = createInMemoryUserService()
+      service.users.push({
+        username: 'testuser',
+        type: 'readonly',
+        providerData: { sub: 'user-123', issuer: 'https://auth.example.com' }
+      })
+
+      await service.updateUser('testuser', {
+        providerData: {
+          sub: 'user-123',
+          issuer: 'https://auth.example.com',
+          email: 'test@example.com',
+          groups: ['admins']
+        }
+      })
+
+      expect(service.users[0].providerData).to.deep.equal({
+        sub: 'user-123',
+        issuer: 'https://auth.example.com',
+        email: 'test@example.com',
+        groups: ['admins']
+      })
+    })
+
+    it('should update both type and providerData', async () => {
+      const service = createInMemoryUserService()
+      service.users.push({
+        username: 'testuser',
+        type: 'readonly'
+      })
+
+      await service.updateUser('testuser', {
+        type: 'readwrite',
+        providerData: { sub: 'user-123', issuer: 'https://auth.example.com' }
+      })
+
+      expect(service.users[0].type).to.equal('readwrite')
+      expect(service.users[0].providerData).to.deep.equal({
+        sub: 'user-123',
+        issuer: 'https://auth.example.com'
+      })
+    })
+
+    it('should throw if user not found', async () => {
+      const service = createInMemoryUserService()
+
+      try {
+        await service.updateUser('nonexistent', { type: 'admin' })
+        expect.fail('Should have thrown')
+      } catch (err) {
+        expect((err as Error).message).to.include('User not found')
+      }
     })
   })
 

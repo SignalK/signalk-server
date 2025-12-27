@@ -26,6 +26,7 @@ import {
   buildAuthorizationUrl,
   exchangeAuthorizationCode,
   validateIdToken,
+  mapGroupsToPermission,
   STATE_COOKIE_NAME,
   STATE_MAX_AGE_MS,
   OIDCError,
@@ -38,6 +39,21 @@ import {
 
 const debug = createDebug('signalk-server:oidc-auth')
 const skAuthPrefix = '/signalk/v1/auth'
+
+/**
+ * Compare two arrays for equality, ignoring order
+ */
+function arraysEqualIgnoringOrder(
+  arr1: string[] | undefined,
+  arr2: string[] | undefined
+): boolean {
+  if (arr1 === arr2) return true
+  if (!arr1 || !arr2) return arr1 === arr2
+  if (arr1.length !== arr2.length) return false
+  const sorted1 = [...arr1].sort()
+  const sorted2 = [...arr2].sort()
+  return sorted1.every((val, idx) => val === sorted2[idx])
+}
 
 /**
  * Dependencies injected by tokensecurity.
@@ -96,6 +112,10 @@ function isSafeRelativeUrl(url: unknown): url is string {
  * Find or create a user from OIDC authentication.
  * This function looks up existing users by OIDC subject+issuer, or creates
  * a new user if auto-creation is enabled.
+ *
+ * For existing users, permissions are recalculated on each login based on
+ * current group memberships. This allows permission changes to take effect
+ * when group assignments change in the identity provider.
  */
 export async function findOrCreateOIDCUser(
   userInfo: OIDCUserInfo,
@@ -103,6 +123,18 @@ export async function findOrCreateOIDCUser(
   deps: Pick<OIDCAuthDependencies, 'userService'>
 ): Promise<ExternalUser | null> {
   const issuer = oidcConfig.issuer
+
+  // Calculate permission based on user's groups
+  const mappedPermission = mapGroupsToPermission(userInfo.groups, oidcConfig)
+
+  // Build OIDC metadata to store with user
+  const oidcMetadata = {
+    sub: userInfo.sub,
+    issuer,
+    email: userInfo.email,
+    name: userInfo.name,
+    groups: userInfo.groups
+  }
 
   // Look for existing user by OIDC sub + issuer
   const user = await deps.userService.findUserByProvider({
@@ -112,6 +144,37 @@ export async function findOrCreateOIDCUser(
 
   if (user) {
     debug(`OIDC: found existing user ${user.username}`)
+
+    // Check if anything changed
+    const existingOidc = user.providerData as typeof oidcMetadata | undefined
+    const previousPermission = user.type
+    const permissionChanged = previousPermission !== mappedPermission
+    const metadataChanged =
+      existingOidc?.email !== oidcMetadata.email ||
+      existingOidc?.name !== oidcMetadata.name ||
+      !arraysEqualIgnoringOrder(existingOidc?.groups, oidcMetadata.groups)
+
+    if (permissionChanged) {
+      debug(
+        `OIDC: updating user ${user.username} permission from ${previousPermission} to ${mappedPermission}`
+      )
+    }
+
+    // Only save if something changed
+    if (permissionChanged || metadataChanged) {
+      try {
+        await deps.userService.updateUser(user.username, {
+          type: mappedPermission,
+          providerData: oidcMetadata
+        })
+        // Update local reference for return
+        user.type = mappedPermission
+        user.providerData = oidcMetadata
+      } catch (err) {
+        console.error('Failed to update OIDC user:', err)
+      }
+    }
+
     return user
   }
 
@@ -135,11 +198,8 @@ export async function findOrCreateOIDCUser(
 
   const newUser: ExternalUser = {
     username: finalUsername,
-    type: oidcConfig.defaultPermission,
-    providerData: {
-      sub: userInfo.sub,
-      issuer
-    }
+    type: mappedPermission,
+    providerData: oidcMetadata
   }
 
   debug(

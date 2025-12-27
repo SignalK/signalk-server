@@ -131,15 +131,38 @@ module.exports = function (app, config) {
         type: externalUser.type
       }
 
-      // Convert providerData to oidc field if present
+      // Store full providerData in oidc field
       if (externalUser.providerData) {
-        newUser.oidc = {
-          sub: externalUser.providerData.sub,
-          issuer: externalUser.providerData.issuer
-        }
+        newUser.oidc = externalUser.providerData
       }
 
       options.users.push(newUser)
+
+      // Save configuration
+      return new Promise((resolve, reject) => {
+        saveSecurityConfig(app, options, (err) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        })
+      })
+    },
+
+    async updateUser(username, updates) {
+      const user = options.users.find((u) => u.username === username)
+      if (!user) {
+        throw new Error(`User not found: ${username}`)
+      }
+
+      if (updates.type) {
+        user.type = updates.type
+      }
+
+      if (updates.providerData) {
+        user.oidc = updates.providerData
+      }
 
       // Save configuration
       return new Promise((resolve, reject) => {
