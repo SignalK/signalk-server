@@ -2,6 +2,7 @@
 title: Security
 children:
   - setup/generating_tokens.md
+  - oidc.md
 ---
 
 # Security
@@ -215,123 +216,41 @@ And set `trustProxy` to trust only the nginx server:
 
 ## OpenID Connect (OIDC) Authentication
 
-Signal K Server supports Single Sign-On (SSO) authentication via OpenID Connect. This allows users to authenticate using an external identity provider such as Keycloak, Authelia, Auth0, or any OIDC-compliant service.
+Signal K Server supports OpenID Connect (OIDC) for Single Sign-On (SSO) with enterprise identity providers such as Keycloak, Authentik, Auth0, and others.
 
-### Configuration
+### Quick Configuration
 
-OIDC can be configured via environment variables or in `security.json`. Environment variables take precedence and are recommended for secrets.
-
-#### Environment Variables
-
-| Variable                          | Required | Description                                                   |
-| --------------------------------- | -------- | ------------------------------------------------------------- |
-| `SIGNALK_OIDC_ENABLED`            | Yes      | Set to `true` to enable OIDC                                  |
-| `SIGNALK_OIDC_ISSUER`             | Yes      | OIDC provider's issuer URL                                    |
-| `SIGNALK_OIDC_CLIENT_ID`          | Yes      | Client ID registered with the provider                        |
-| `SIGNALK_OIDC_CLIENT_SECRET`      | Yes      | Client secret (keep this secure!)                             |
-| `SIGNALK_OIDC_REDIRECT_URI`       | No       | Override the callback URL                                     |
-| `SIGNALK_OIDC_SCOPE`              | No       | Scopes to request (default: `openid email profile`)           |
-| `SIGNALK_OIDC_DEFAULT_PERMISSION` | No       | Permission for new users: `readonly`, `readwrite`, or `admin` |
-| `SIGNALK_OIDC_AUTO_CREATE_USERS`  | No       | Auto-create users on first login (default: `true`)            |
-
-#### security.json Configuration
-
-```json
-{
-  "oidc": {
-    "enabled": true,
-    "issuer": "https://auth.example.com",
-    "clientId": "signalk",
-    "clientSecret": "your-secret-here",
-    "scope": "openid email profile",
-    "defaultPermission": "readonly",
-    "autoCreateUsers": true
-  }
-}
-```
-
-### OIDC Endpoints
-
-| Endpoint                         | Description                            |
-| -------------------------------- | -------------------------------------- |
-| `/signalk/v1/auth/oidc/login`    | Initiates OIDC login flow              |
-| `/signalk/v1/auth/oidc/callback` | Handles OIDC provider callback         |
-| `/signalk/v1/auth/oidc/logout`   | Logs out of Signal K and OIDC provider |
-| `/signalk/v1/auth/oidc/status`   | Returns OIDC configuration status      |
-
-### Example: Authelia Configuration
-
-[Authelia](https://www.authelia.com/) is a popular open-source authentication server that provides OIDC. Here's how to configure it with Signal K Server.
-
-#### Authelia Configuration
-
-Add a client configuration to your Authelia `configuration.yml`:
-
-```yaml
-identity_providers:
-  oidc:
-    clients:
-      - client_id: signalk
-        client_name: Signal K Server
-        client_secret: '$pbkdf2-sha512$310000$...' # Use authelia hash-password
-        public: false
-        authorization_policy: two_factor # or 'one_factor'
-        redirect_uris:
-          - https://your-signalk-server.local/signalk/v1/auth/oidc/callback
-        scopes:
-          - openid
-          - email
-          - profile
-          - groups
-        userinfo_signed_response_alg: none
-        token_endpoint_auth_method: client_secret_post
-```
-
-Generate the client secret hash using:
+OIDC can be enabled via environment variables:
 
 ```bash
-authelia crypto hash generate pbkdf2 --variant sha512
+export SIGNALK_OIDC_ENABLED=true
+export SIGNALK_OIDC_ISSUER=https://auth.example.com
+export SIGNALK_OIDC_CLIENT_ID=signalk-server
+export SIGNALK_OIDC_CLIENT_SECRET=your-client-secret
 ```
 
-#### Signal K Configuration
+Or through the Admin UI under **Security > OIDC Configuration**.
 
-Set these environment variables for Signal K Server:
+### Key Features
+
+- **Single Sign-On**: Authenticate once with your identity provider
+- **Group-Based Permissions**: Map identity provider groups to Signal K permissions (admin, readwrite, readonly)
+- **Auto-Provisioning**: Automatically create Signal K users on first OIDC login
+- **PKCE Security**: Protection against authorization code interception attacks
+
+### Permission Mapping
+
+Configure group-to-permission mapping:
 
 ```bash
-SIGNALK_OIDC_ENABLED=true
-SIGNALK_OIDC_ISSUER=https://auth.your-domain.com
-SIGNALK_OIDC_CLIENT_ID=signalk
-SIGNALK_OIDC_CLIENT_SECRET=your-unhashed-secret
-SIGNALK_OIDC_DEFAULT_PERMISSION=readonly
+# Users in these groups get admin access
+export SIGNALK_OIDC_ADMIN_GROUPS=admins,sk-admin
+
+# Users in these groups get read/write access
+export SIGNALK_OIDC_READWRITE_GROUPS=crew,operators
+
+# Default permission for users not in any configured group
+export SIGNALK_OIDC_DEFAULT_PERMISSION=readonly
 ```
 
-Or in `docker-compose.yml`:
-
-```yaml
-services:
-  signalk:
-    environment:
-      - SIGNALK_OIDC_ENABLED=true
-      - SIGNALK_OIDC_ISSUER=https://auth.your-domain.com
-      - SIGNALK_OIDC_CLIENT_ID=signalk
-      - SIGNALK_OIDC_CLIENT_SECRET=your-unhashed-secret
-      - SIGNALK_OIDC_DEFAULT_PERMISSION=readonly
-```
-
-#### Post-Logout Redirect
-
-If using Authelia's RP-initiated logout, add Signal K's post-logout URL to Authelia's allowed origins in `configuration.yml`:
-
-```yaml
-identity_providers:
-  oidc:
-    cors:
-      allowed_origins_from_client_redirect_uris: true
-```
-
-### OIDC Security Considerations
-
-1. **Use HTTPS**: OIDC requires secure connections. Always use HTTPS in production.
-2. **Protect secrets**: Store `SIGNALK_OIDC_CLIENT_SECRET` securely, never in version control.
-3. **Restrict permissions**: Set `SIGNALK_OIDC_DEFAULT_PERMISSION=readonly` unless users need write access.
-4. **Disable auto-creation**: In restricted environments, set `SIGNALK_OIDC_AUTO_CREATE_USERS=false` and manually create OIDC users.
+For complete setup instructions, provider-specific guides, and troubleshooting, see the [OIDC Authentication Guide](oidc.md).
