@@ -15,6 +15,7 @@
  */
 
 import { createDebug } from './debug'
+import { createHash } from 'crypto'
 const debug = createDebug('signalk-server:tokensecurity')
 const jwt = require('jsonwebtoken')
 const _ = require('lodash')
@@ -31,6 +32,10 @@ const {
   filterRequests
 } = require('./requestResponse')
 const ms = require('ms')
+
+// OIDC imports
+import { parseOIDCConfig, registerOIDCRoutes } from './oidc'
+import { saveSecurityConfig } from './security'
 
 const CONFIG_PLUGINID = 'sk-simple-token-security-config'
 const passwordSaltRounds = 10
@@ -65,6 +70,89 @@ module.exports = function (app, config) {
     devices = [],
     acls = []
   } = config
+
+  /**
+   * Derive a domain-specific secret from the master key.
+   * Used to provide isolated secrets for different subsystems
+   * without exposing the JWT signing key.
+   */
+  function deriveSecret(domain) {
+    return createHash('sha256').update(secretKey).update(domain).digest('hex')
+  }
+
+  /**
+   * Crypto service for OIDC state encryption.
+   * Provides derived secret - tokensecurity knows nothing about OIDC internals.
+   */
+  const oidcCryptoService = {
+    getStateEncryptionSecret: () => deriveSecret('signalk-oidc')
+  }
+
+  /**
+   * User service for external authentication providers (OIDC, etc.).
+   * Abstracts user storage so auth providers don't need to know about
+   * the underlying storage mechanism (currently array, could be SQLite etc).
+   */
+  const externalUserService = {
+    async findUserByProvider(lookup) {
+      // Currently only OIDC is supported
+      if (lookup.provider === 'oidc') {
+        const { sub, issuer } = lookup.criteria
+        const user = options.users.find(
+          (u) => u.oidc?.sub === sub && u.oidc?.issuer === issuer
+        )
+        if (user) {
+          return {
+            username: user.username,
+            type: user.type,
+            providerData: user.oidc
+          }
+        }
+      }
+      return null
+    },
+
+    async findUserByUsername(username) {
+      const user = options.users.find((u) => u.username === username)
+      if (user) {
+        return {
+          username: user.username,
+          type: user.type,
+          providerData: user.oidc
+        }
+      }
+      return null
+    },
+
+    async createUser(externalUser) {
+      // Convert ExternalUser to internal User format
+      const newUser = {
+        username: externalUser.username,
+        type: externalUser.type
+      }
+
+      // Convert providerData to oidc field if present
+      if (externalUser.providerData) {
+        newUser.oidc = {
+          sub: externalUser.providerData.sub,
+          issuer: externalUser.providerData.issuer
+        }
+      }
+
+      options.users.push(newUser)
+
+      // Save configuration
+      return new Promise((resolve, reject) => {
+        saveSecurityConfig(app, options, (err) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        })
+      })
+    }
+  }
 
   if (process.env.ADMINUSER) {
     const adminUserParts = process.env.ADMINUSER.split(':')
@@ -116,6 +204,84 @@ module.exports = function (app, config) {
     return options
   }
   strategy.getConfiguration = getConfiguration
+
+  // Parse and cache OIDC configuration
+  let cachedOIDCConfig = null
+  function getOIDCConfig() {
+    if (!cachedOIDCConfig) {
+      cachedOIDCConfig = parseOIDCConfig(options)
+    }
+    return cachedOIDCConfig
+  }
+
+  /**
+   * Get base cookie options with proper security settings
+   * @param {Request} req - Express request object
+   * @param {boolean} rememberMe - Whether to set persistent cookie
+   * @returns {object} Cookie options (without httpOnly - add that separately for auth cookies)
+   */
+  function getSessionCookieOptions(req, rememberMe = false) {
+    const configuration = getConfiguration()
+    const cookieOptions = {
+      sameSite: 'strict',
+      secure: req.secure || req.headers['x-forwarded-proto'] === 'https'
+    }
+    if (rememberMe) {
+      cookieOptions.maxAge = ms(
+        configuration.expiration === 'NEVER'
+          ? '10y'
+          : configuration.expiration || '1h'
+      )
+    }
+    return cookieOptions
+  }
+
+  /**
+   * Set session cookies for authenticated user
+   * @param {Response} res - Express response object
+   * @param {Request} req - Express request object
+   * @param {string} token - JWT token
+   * @param {string} username - Username
+   * @param {object} options - Options (rememberMe)
+   */
+  function setSessionCookie(res, req, token, username, options = {}) {
+    const cookieOptions = getSessionCookieOptions(req, options.rememberMe)
+    // Auth cookie must be httpOnly for security
+    const authCookieOptions = { ...cookieOptions, httpOnly: true }
+    res.cookie('JAUTHENTICATION', token, authCookieOptions)
+    // Login info cookie must NOT be httpOnly so JS can access it
+    res.cookie(
+      BROWSER_LOGININFO_COOKIE_NAME,
+      JSON.stringify({ status: 'loggedIn', user: username }),
+      cookieOptions
+    )
+  }
+
+  /**
+   * Clear session cookies
+   * @param {Response} res - Express response object
+   */
+  function clearSessionCookie(res) {
+    res.clearCookie('JAUTHENTICATION')
+    res.clearCookie(BROWSER_LOGININFO_COOKIE_NAME)
+  }
+
+  /**
+   * Generate a JWT for a user
+   * @param {string} userId - User identifier
+   * @param {string} expiration - Optional expiration override
+   * @returns {string} JWT token
+   */
+  function generateJWT(userId, expiration) {
+    const configuration = getConfiguration()
+    const theExpiration = expiration || configuration.expiration || '1h'
+    const payload = { id: userId }
+    const jwtOptions = {}
+    if (theExpiration !== 'NEVER') {
+      jwtOptions.expiresIn = theExpiration
+    }
+    return jwt.sign(payload, configuration.secretKey, jwtOptions)
+  }
 
   function getIsEnabled() {
     // var options = getOptions();
@@ -254,32 +420,15 @@ module.exports = function (app, config) {
       const name = req.body.username
       const password = req.body.password
       const remember = req.body.rememberMe
-      const configuration = getConfiguration()
 
       login(name, password)
         .then((reply) => {
           const requestType = req.get('Content-Type')
 
           if (reply.statusCode === 200) {
-            let cookieOptions = {
-              sameSite: 'strict',
-              secure: req.secure || req.headers['x-forwarded-proto'] === 'https'
-            }
-            if (remember) {
-              cookieOptions.maxAge = ms(
-                configuration.expiration === 'NEVER'
-                  ? '10y'
-                  : configuration.expiration || '1h'
-              )
-            }
-            const authCookieOptions = { ...cookieOptions, httpOnly: true }
-            res.cookie('JAUTHENTICATION', reply.token, authCookieOptions)
-
-            res.cookie(
-              BROWSER_LOGININFO_COOKIE_NAME,
-              JSON.stringify({ status: 'loggedIn', user: reply.user }),
-              cookieOptions
-            )
+            setSessionCookie(res, req, reply.token, reply.user, {
+              rememberMe: remember
+            })
 
             if (requestType === 'application/json') {
               res.json({ token: reply.token })
@@ -320,9 +469,18 @@ module.exports = function (app, config) {
     )
 
     app.put(['/logout', `${skAuthPrefix}/logout`], function (req, res) {
-      res.clearCookie('JAUTHENTICATION')
-      res.clearCookie(BROWSER_LOGININFO_COOKIE_NAME)
+      clearSessionCookie(res)
       res.json('Logout OK')
+    })
+
+    // Register OIDC authentication routes
+    registerOIDCRoutes(app, {
+      getOIDCConfig,
+      setSessionCookie,
+      clearSessionCookie,
+      generateJWT,
+      cryptoService: oidcCryptoService,
+      userService: externalUserService
     })
     ;[
       '/restart',
