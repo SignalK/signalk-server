@@ -62,6 +62,25 @@ class Login extends Component {
     return false
   }
 
+  tryAutoLogin() {
+    const { loginStatus } = this.props
+    if (
+      loginStatus.status === 'notLoggedIn' &&
+      loginStatus.oidcEnabled &&
+      loginStatus.oidcAutoLogin &&
+      !loginStatus.noUsers &&
+      !this.shouldSkipAutoLogin()
+    ) {
+      window.location.href = loginStatus.oidcLoginUrl
+    }
+  }
+
+  componentDidMount() {
+    // Auto-redirect to OIDC login if enabled and user is not logged in
+    // This handles the case when Login is rendered fresh with loginStatus already populated
+    this.tryAutoLogin()
+  }
+
   componentDidUpdate(prevProps) {
     // Auto-redirect to OIDC login if enabled
     const { loginStatus } = this.props
