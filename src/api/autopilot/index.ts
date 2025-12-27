@@ -173,7 +173,7 @@ export class AutopilotApi {
           if (Array.isArray(actions)) {
             const av = actions.filter((i) => i?.available).map((i) => i?.id)
             values.push({
-              path: `notifications.steering.autopilot.availableActions` as Path,
+              path: `steering.autopilot.availableActions` as Path,
               value: av
             })
           }
