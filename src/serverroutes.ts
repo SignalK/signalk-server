@@ -54,12 +54,29 @@ import { WithWrappedEmitter } from './events'
 import { getAISShipTypeName } from '@signalk/signalk-schema'
 import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
+import rateLimit from 'express-rate-limit'
 
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
 const ncp = ncpI.ncp
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
+
+const apiLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 100,
+  message: {
+    message: 'Too many requests from this IP, please try again after 10 minutes'
+  }
+})
+
+const loginStatusLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 10,
+  message: {
+    message: 'Too many requests from this IP, please try again after 10 minutes'
+  }
+})
 
 interface ScriptsApp {
   addons: ModuleInfo[]
@@ -224,9 +241,9 @@ module.exports = function (
     res.json(result)
   }
 
-  app.get(`${SERVERROUTESPREFIX}/loginStatus`, getLoginStatus)
+  app.get(`${SERVERROUTESPREFIX}/loginStatus`, loginStatusLimiter, getLoginStatus)
   //TODO remove after a grace period
-  app.get(`/loginStatus`, (req: Request, res: Response) => {
+  app.get(`/loginStatus`, loginStatusLimiter, (req: Request, res: Response) => {
     console.log(
       `/loginStatus is deprecated, try updating webapps to the latest version`
     )
@@ -459,7 +476,14 @@ module.exports = function (
     }
   )
 
-  app.post(`${skPrefix}/access/requests`, (req: Request, res: Response) => {
+  app.post(`${skPrefix}/access/requests`, apiLimiter, (req: Request, res: Response) => {
+    if (
+      req.headers['content-length'] &&
+      parseInt(req.headers['content-length']) > 10 * 1024
+    ) {
+      res.status(413).send('Payload too large')
+      return
+    }
     const config = getSecurityConfig(app)
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
     if (!app.securityStrategy.requestAccess) {
@@ -478,12 +502,12 @@ module.exports = function (
       })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .catch((err: any) => {
-        console.log(err.stack)
-        res.status(500).send(err.message)
+        console.error(err.message)
+        res.status(err.statusCode || 500).send(err.message)
       })
   })
 
-  app.get(`${skPrefix}/requests/:id`, (req: Request, res: Response) => {
+  app.get(`${skPrefix}/requests/:id`, apiLimiter, (req: Request, res: Response) => {
     queryRequest(req.params.id)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .then((reply: any) => {

@@ -565,4 +565,67 @@ describe('Security', () => {
     json = await result.json()
     json.length.should.equal(1)
   })
+
+  it('should reject access requests > 10kb', async function () {
+    const largeDescription = 'a'.repeat(10 * 1024)
+    const res = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId: 'device-large',
+        description: largeDescription
+      })
+    })
+    res.status.should.equal(413)
+  })
 })
+
+describe('Access Request Limit', () => {
+  let server, url, port
+
+  before(async function () {
+    this.timeout(20000)
+    port = await freeport()
+    url = `http://0.0.0.0:${port}`
+    const securityConfig = {
+      allowNewUserRegistration: true,
+      allowDeviceAccessRequests: true
+    }
+    server = await startServerP(port, true, {}, securityConfig)
+  })
+
+  after(async function () {
+    await server.stop()
+  })
+
+  it('should limit pending access requests to 100', async function () {
+    this.timeout(20000)
+    const requests = []
+    for (let i = 0; i < 100; i++) {
+      requests.push(
+        fetch(`${url}/signalk/v1/access/requests`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: `device-${i}`,
+            description: `Device ${i}`
+          })
+        })
+      )
+    }
+
+    await Promise.all(requests)
+
+    const res = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId: 'device-101',
+        description: 'Device 101'
+      })
+    })
+
+    res.status.should.equal(503)
+  })
+})
+
