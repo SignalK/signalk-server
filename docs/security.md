@@ -2,6 +2,7 @@
 title: Security
 children:
   - setup/generating_tokens.md
+  - oidc.md
 ---
 
 # Security
@@ -119,3 +120,44 @@ Many wifi networks allow communication between all connected computers, so your 
 So in the case that your server has a manually configured connection for _NMEA0183 over UDP_, NMEA0183 data broadcast by other devices will be received and written into your SIgnal K data.
 
 NMEA0183 connections over TCP and UDP are inherently unsafe. There are no options for authentication and / or secure communication. In comparison Signal K over TLS and HTTP / WebSockets can provide secure, authenticated read and write access to your data.
+
+## OpenID Connect (OIDC) Authentication
+
+Signal K Server supports OpenID Connect (OIDC) for Single Sign-On (SSO) with enterprise identity providers such as Keycloak, Authentik, Auth0, and others.
+
+### Quick Configuration
+
+OIDC can be enabled via environment variables:
+
+```bash
+export SIGNALK_OIDC_ENABLED=true
+export SIGNALK_OIDC_ISSUER=https://auth.example.com
+export SIGNALK_OIDC_CLIENT_ID=signalk-server
+export SIGNALK_OIDC_CLIENT_SECRET=your-client-secret
+```
+
+Or through the Admin UI under **Security > OIDC Configuration**.
+
+### Key Features
+
+- **Single Sign-On**: Authenticate once with your identity provider
+- **Group-Based Permissions**: Map identity provider groups to Signal K permissions (admin, readwrite, readonly)
+- **Auto-Provisioning**: Automatically create Signal K users on first OIDC login
+- **PKCE Security**: Protection against authorization code interception attacks
+
+### Permission Mapping
+
+Configure group-to-permission mapping:
+
+```bash
+# Users in these groups get admin access
+export SIGNALK_OIDC_ADMIN_GROUPS=admins,sk-admin
+
+# Users in these groups get read/write access
+export SIGNALK_OIDC_READWRITE_GROUPS=crew,operators
+
+# Default permission for users not in any configured group
+export SIGNALK_OIDC_DEFAULT_PERMISSION=readonly
+```
+
+For complete setup instructions, provider-specific guides, and troubleshooting, see the [OIDC Authentication Guide](oidc.md).
