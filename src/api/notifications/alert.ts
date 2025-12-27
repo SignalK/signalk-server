@@ -144,12 +144,16 @@ export class Alert {
     }
   }
 
-  /** Sets the path associated with the alert */
-  public setPath(path: Path) {
-    if (!path) return
-    this.path = path.startsWith('notifications.')
-      ? path
-      : (`notifications.${path}` as Path)
+  /** Sets the path associated with the alert
+   * @param id If supplied the id will be appended to the notification path
+   */
+  public setPath(path: Path, id?: string) {
+    if (path) {
+      path = path.startsWith('notifications.')
+        ? path
+        : (`notifications.${path}` as Path)
+      this.path = id ? (`${path}.${id}` as Path) : path
+    }
   }
 
   /** Silence Alert */
@@ -178,6 +182,19 @@ export class Alert {
     }
     this.status.acknowledged = true
     this.alignAlarmMethod()
+    this.timeStamp()
+  }
+
+  /**
+   * Clears the Alert by setting state = normal and resetting status.
+   */
+  public clear() {
+    if (!this.status.canClear) {
+      throw new Error('Alert cannot be cleared!')
+    }
+    this.value.state = ALARM_STATE.normal
+    this.status.silenced = false
+    this.status.acknowledged = false
     this.timeStamp()
   }
 }

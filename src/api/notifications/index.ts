@@ -110,6 +110,24 @@ export class NotificationApi {
       }
     )
 
+    // Clear
+    this.app.delete(
+      `${NOTI_API_PATH}/:id`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        try {
+          this.alertManager.clear(req.params.id)
+          res.status(200).json(Responses.ok)
+        } catch (err) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (err as Error).message
+          })
+        }
+      }
+    )
+
     // raise
     this.app.post(
       `${NOTI_API_PATH}/raise`,
@@ -117,6 +135,24 @@ export class NotificationApi {
         debug(`** ${req.method} ${req.path} ${req.body}`)
         try {
           this.alertManager.raise(req.body)
+          res.status(200).json(Responses.ok)
+        } catch (err) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: (err as Error).message
+          })
+        }
+      }
+    )
+
+    // MOB
+    this.app.post(
+      `${NOTI_API_PATH}/mob`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path} ${req.body}`)
+        try {
+          this.alertManager.mob(req.body)
           res.status(200).json(Responses.ok)
         } catch (err) {
           res.status(400).json({

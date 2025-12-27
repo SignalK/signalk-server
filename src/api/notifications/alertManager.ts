@@ -53,15 +53,20 @@ export class AlertManager {
     state: ALARM_STATE
     message: string
     path?: Path
-    meta?: { [key: string]: object | number | string | null | boolean }
     position?: boolean
     createdAt?: boolean
+    appendId?: boolean
+    meta?: { [key: string]: object | number | string | null | boolean }
   }): string {
     const id = uuid.v4()
     const alert = new Alert(id)
+
     alert.value.state = options.state
+    alert.status.canSilence =
+      options.state === ALARM_STATE.emergency ? false : true
+
     if (options.path) {
-      alert.setPath(options.path)
+      alert.setPath(options.path, options.appendId ? id : undefined)
     }
     if (options.message) {
       alert.value.message = options.message
@@ -88,11 +93,19 @@ export class AlertManager {
   }
 
   /**
-   * Remove Alert with specified identifier - does not emit delta
-   * @param id Alert identifier
+   * Raise MOB alert and return identifier
+   * @param options  Object to initialise the alert. default= 'Person Overboard!'
+   * @returns alert id
    */
-  remove(id: string) {
-    this.alerts.delete(id)
+  mob(options?: { message: string }): string {
+    return this.raise({
+      state: ALARM_STATE.emergency,
+      message: options?.message ?? 'Person Overboard!',
+      path: 'mob' as Path,
+      appendId: true,
+      position: true,
+      createdAt: true
+    })
   }
 
   /**
@@ -127,6 +140,31 @@ export class AlertManager {
       alert?.delta as Delta,
       this.deltaVersion
     )
+  }
+
+  /**
+   * Clear alert by setting notification state to `normal`
+   * @param id Notification identifier
+   */
+  clear(id: string) {
+    if (!this.alerts.has(id)) {
+      throw new Error('Alert not found!')
+    }
+    const alert = this.alerts.get(id)
+    alert?.clear()
+    this.app.handleMessage(
+      'notificationApi',
+      alert?.delta as Delta,
+      this.deltaVersion
+    )
+  }
+
+  /**
+   * Remove Alert with specified identifier - does not emit delta
+   * @param id Alert identifier
+   */
+  remove(id: string) {
+    this.alerts.delete(id)
   }
 
   /** Process alert from notification delta */
