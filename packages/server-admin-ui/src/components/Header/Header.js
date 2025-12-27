@@ -76,7 +76,7 @@ class Header extends Component {
         <Nav className="ml-auto" navbar>
           <NavItem className="d-md-down-none px-3">
             {this.props.loginStatus.status === 'loggedIn' &&
-              this.props.loginStatus.userLevel == 'admin' && (
+              this.props.loginStatus.userLevel === 'admin' && (
                 <NavLink href="#/" onClick={this.props.restart}>
                   {this.props.restarting ? (
                     <i className="fa fa-circle-o-notch text-danger fa-spin" />
@@ -113,7 +113,7 @@ class Header extends Component {
               </DropdownToggle>
               <DropdownMenu right>
                 {this.props.loginStatus.status === 'loggedIn' &&
-                  this.props.loginStatus.userLevel == 'admin' && (
+                  this.props.loginStatus.userLevel === 'admin' && (
                     <DropdownItem onClick={this.props.restart}>
                       {this.props.restarting ? (
                         <i className="fa fa-circle-o-notch text-danger fa-spin" />

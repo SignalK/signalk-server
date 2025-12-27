@@ -68,9 +68,13 @@ const metaDelta = {
 
 describe('Security', () => {
   let server, url, port, readToken, writeToken, adminToken, noPasswordToken
+  let previousHttpRateLimits
 
   before(async function () {
     this.timeout(5000)
+    previousHttpRateLimits = process.env.HTTP_RATE_LIMITS
+    process.env.HTTP_RATE_LIMITS = 'api=1000,loginStatus=1000,login=1000'
+
     const securityConfig = {
       allowNewUserRegistration: true,
       allowDeviceAccessRequests: true,
@@ -125,6 +129,12 @@ describe('Security', () => {
 
   after(async function () {
     await server.stop()
+
+    if (previousHttpRateLimits === undefined) {
+      delete process.env.HTTP_RATE_LIMITS
+    } else {
+      process.env.HTTP_RATE_LIMITS = previousHttpRateLimits
+    }
   })
 
   async function login(username, password) {
@@ -200,6 +210,53 @@ describe('Security', () => {
       LIMITED_USER_PASSWORD
     )
     limitedUserToken.length.should.equal(149)
+  })
+
+  async function formLoginWithDestination(username, password, destination) {
+    const body = new URLSearchParams({
+      username,
+      password,
+      destination
+    })
+
+    return fetch(`${url}/signalk/v1/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      redirect: 'manual',
+      body
+    })
+  }
+
+  it('login redirect allows only relative destinations (blocks https://)', async function () {
+    const result = await formLoginWithDestination(
+      WRITE_USER_NAME,
+      WRITE_USER_PASSWORD,
+      'https://evil.example/phish'
+    )
+    result.status.should.equal(302)
+    result.headers.get('location').should.equal('/')
+  })
+
+  it('login redirect allows only relative destinations (blocks //)', async function () {
+    const result = await formLoginWithDestination(
+      WRITE_USER_NAME,
+      WRITE_USER_PASSWORD,
+      '//evil.example/phish'
+    )
+    result.status.should.equal(302)
+    result.headers.get('location').should.equal('/')
+  })
+
+  it('login redirect allows relative destinations', async function () {
+    const result = await formLoginWithDestination(
+      WRITE_USER_NAME,
+      WRITE_USER_PASSWORD,
+      '  /admin/  '
+    )
+    result.status.should.equal(302)
+    result.headers.get('location').should.equal('/admin/')
   })
 
   it('authorized read works', async function () {
@@ -517,5 +574,77 @@ describe('Security', () => {
     })
     json = await result.json()
     json.length.should.equal(1)
+  })
+
+  it('should reject access requests > 10kb', async function () {
+    const largeDescription = 'a'.repeat(10 * 1024)
+    const res = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId: 'device-large',
+        description: largeDescription
+      })
+    })
+    res.status.should.equal(413)
+  })
+})
+
+describe('Access Request Limit', () => {
+  let server, url, port
+  let previousHttpRateLimits
+
+  before(async function () {
+    this.timeout(20000)
+    previousHttpRateLimits = process.env.HTTP_RATE_LIMITS
+    process.env.HTTP_RATE_LIMITS = 'api=1000,loginStatus=1000'
+
+    port = await freeport()
+    url = `http://0.0.0.0:${port}`
+    const securityConfig = {
+      allowNewUserRegistration: true,
+      allowDeviceAccessRequests: true
+    }
+    server = await startServerP(port, true, {}, securityConfig)
+  })
+
+  after(async function () {
+    await server.stop()
+
+    if (previousHttpRateLimits === undefined) {
+      delete process.env.HTTP_RATE_LIMITS
+    } else {
+      process.env.HTTP_RATE_LIMITS = previousHttpRateLimits
+    }
+  })
+
+  it('should limit pending access requests to 100', async function () {
+    this.timeout(20000)
+    const requests = []
+    for (let i = 0; i < 100; i++) {
+      requests.push(
+        fetch(`${url}/signalk/v1/access/requests`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: `device-${i}`,
+            description: `Device ${i}`
+          })
+        })
+      )
+    }
+
+    await Promise.all(requests)
+
+    const res = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId: 'device-101',
+        description: 'Device 101'
+      })
+    })
+
+    res.status.should.equal(503)
   })
 })

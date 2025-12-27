@@ -1,3 +1,6 @@
 *.guard.ts
 public
+
+**/*.mbtiles
+**/*.pmtiles
 **/.__mf__temp

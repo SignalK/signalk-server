@@ -114,8 +114,11 @@ Splitter.prototype._transform = function (msg, encoding, _done) {
         try {
           const parsed = JSON.parse(msg.data)
           const timestamp = new Date(Number(msg.timestamp))
-          parsed.updates &&
-            parsed.updates.forEach((update) => (update.timestamp = timestamp))
+          if (parsed.updates) {
+            parsed.updates.forEach((update) => {
+              update.timestamp = timestamp
+            })
+          }
           this.push(parsed)
           this.demuxEmitData(parsed)
         } catch (e) {

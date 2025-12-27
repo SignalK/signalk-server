@@ -69,7 +69,7 @@ class EnableSecurity extends Component {
                   <Card className="p-4">
                     <CardBody>
                       {this.props.loginStatus.securityWasEnabled &&
-                        this.props.loginStatus.authenticationRequired ==
+                        this.props.loginStatus.authenticationRequired ===
                           false && (
                           <p className="text-danger">
                             Security has been enabled, please restart the server

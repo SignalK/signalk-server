@@ -5,6 +5,12 @@ const _ = require('lodash')
 
 const requests = {}
 
+function resetRequests() {
+  Object.keys(requests).forEach((id) => {
+    delete requests[id]
+  })
+}
+
 const pruneRequestTimeout = 60 * 60 * 1000
 const pruneIntervalRate = 15 * 60 * 1000
 let pruneInterval
@@ -66,13 +72,13 @@ function updateRequest(
       if (state) {
         request.state = state
       }
-      if (statusCode != null) {
+      if (statusCode !== null) {
         request.statusCode = statusCode
       }
       if (message) {
         request.message = message
       }
-      if (percentComplete != null) {
+      if (percentComplete !== null) {
         request.percentComplete = percentComplete
       }
 
@@ -130,5 +136,6 @@ module.exports = {
   updateRequest,
   findRequest,
   filterRequests,
-  queryRequest
+  queryRequest,
+  resetRequests
 }

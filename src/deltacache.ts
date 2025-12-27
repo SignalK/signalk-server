@@ -51,7 +51,12 @@ export default class DeltaCache {
     // sample data and the memory hit is negligible. The cache
     // must be pruned, or AIS vessel data will stick forever.
     // No fancy pruning, just clear & let it recreate.
-    setInterval(() => (this.cachedContextPaths = {}), 5 * 60 * 1000)
+    setInterval(
+      () => {
+        this.cachedContextPaths = {}
+      },
+      5 * 60 * 1000
+    )
   }
 
   getContextAndPathParts(msg: NormalizedDelta): string[] {

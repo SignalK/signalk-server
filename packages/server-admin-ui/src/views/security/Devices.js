@@ -268,11 +268,11 @@ const mapStateToProps = ({ securityDevices }) => ({ securityDevices })
 export default connect(mapStateToProps)(Devices)
 
 function convertPermissions(type) {
-  if (type == 'readonly') {
+  if (type === 'readonly') {
     return 'Read Only'
-  } else if (type == 'readwrite') {
+  } else if (type === 'readwrite') {
     return 'Read/Write'
-  } else if (type == 'admin') {
+  } else if (type === 'admin') {
     return 'Admin'
   }
 }

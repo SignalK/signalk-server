@@ -195,7 +195,7 @@ describe('Deltacache', () => {
   it('deltas ordered properly', function () {
     var deltas = theServer.app.deltaCache
       .getCachedDeltas(() => true, null)
-      .filter((delta) => delta.updates[0].$source != 'courseApi')
+      .filter((delta) => delta.updates[0].$source !== 'courseApi')
     // console.log(JSON.stringify(deltas, null, 2))
     deltas.length.should.equal(expectedOrder.length)
     for (var i = 0; i < expectedOrder.length; i++) {

@@ -744,9 +744,9 @@ module.exports = (theApp: any) => {
       res.json(getPluginOptions(plugin.id))
     })
 
-    if (typeof plugin.registerWithRouter == 'function') {
+    if (typeof plugin.registerWithRouter === 'function') {
       plugin.registerWithRouter(router)
-      if (typeof plugin.getOpenApi == 'function') {
+      if (typeof plugin.getOpenApi === 'function') {
         app.setPluginOpenApi(plugin.id, plugin.getOpenApi())
       }
     }

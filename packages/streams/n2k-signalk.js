@@ -71,7 +71,7 @@ function ToSignalK(options) {
   })
 
   this.n2kMapper.on('n2kSourceMetadataTimeout', (pgn, src) => {
-    if (pgn == 60928) {
+    if (Number(pgn) === 60928) {
       console.warn(`n2k-signalk: unable to detect can name for src ${src}`)
       this.sourceMeta[src].unknowCanName = true
     }
@@ -101,8 +101,10 @@ ToSignalK.prototype.isFiltered = function (source) {
       return (
         (!filter.source ||
           filter.source.length === 0 ||
-          filter.source == sFilter) &&
-        (!filter.pgn || filter.pgn.length === 0 || filter.pgn == source.pgn)
+          filter.source === sFilter) &&
+        (!filter.pgn ||
+          filter.pgn.length === 0 ||
+          String(filter.pgn) === String(source.pgn))
       )
     })
   )

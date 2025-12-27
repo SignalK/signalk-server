@@ -136,6 +136,15 @@ module.exports = function (app, config) {
     }
   }
 
+  function hasAdminAccess(req) {
+    return (
+      req.skIsAuthenticated &&
+      req.skPrincipal &&
+      req.skPrincipal.permissions === 'admin'
+    )
+  }
+  strategy.hasAdminAccess = hasAdminAccess
+
   function writeAuthenticationMiddleware() {
     return function (req, res, next) {
       if (!getIsEnabled()) {
@@ -161,10 +170,12 @@ module.exports = function (app, config) {
         return next()
       }
 
+      if (hasAdminAccess(req)) {
+        return next()
+      }
+
       if (req.skIsAuthenticated && req.skPrincipal) {
-        if (req.skPrincipal.permissions === 'admin') {
-          return next()
-        } else if (req.skPrincipal.identifier === 'AUTO' && redirect) {
+        if (req.skPrincipal.identifier === 'AUTO' && redirect) {
           res.redirect('/@signalk/server-admin-ui/#/login')
         } else {
           handlePermissionDenied(req, res, next)
@@ -178,11 +189,64 @@ module.exports = function (app, config) {
   }
 
   function setupApp() {
+    const rateLimit = require('express-rate-limit')
+    const rawHttpRateLimits = process.env.HTTP_RATE_LIMITS
+    const parsedParts =
+      typeof rawHttpRateLimits === 'string'
+        ? rawHttpRateLimits
+            .split(/[\s,]+/)
+            .map((p) => p.trim())
+            .filter(Boolean)
+        : []
+
+    let loginWindowMs = 10 * 60 * 1000
+    let loginMax = 10
+    for (const part of parsedParts) {
+      const eqIndex = part.indexOf('=')
+      if (eqIndex === -1) {
+        continue
+      }
+
+      const key = part.slice(0, eqIndex).trim().toLowerCase()
+      const value = part.slice(eqIndex + 1).trim()
+      const parsed = Number.parseInt(value, 10)
+
+      if ((key === 'windowms' || key === 'window') && Number.isFinite(parsed)) {
+        loginWindowMs = parsed
+      } else if (
+        (key === 'login' || key === 'loginmax') &&
+        Number.isFinite(parsed)
+      ) {
+        loginMax = parsed
+      }
+    }
+
+    const loginLimiter = rateLimit({
+      windowMs: loginWindowMs,
+      max: loginMax,
+      message: {
+        message:
+          'Too many login attempts from this IP, please try again after 10 minutes'
+      }
+    })
+
     app.use(require('body-parser').urlencoded({ extended: true }))
 
     app.use(require('cookie-parser')())
 
-    app.post(['/login', `${skAuthPrefix}/login`], (req, res) => {
+    function getSafeDestination(destination) {
+      if (typeof destination !== 'string') {
+        return '/'
+      }
+      const dest = destination.trim()
+      // Allow only relative redirects. Reject protocol-relative URLs (//evil.com).
+      if (!dest.startsWith('/') || dest.startsWith('//')) {
+        return '/'
+      }
+      return dest
+    }
+
+    app.post(['/login', `${skAuthPrefix}/login`], loginLimiter, (req, res) => {
       const name = req.body.username
       const password = req.body.password
       const remember = req.body.rememberMe
@@ -193,7 +257,11 @@ module.exports = function (app, config) {
           const requestType = req.get('Content-Type')
 
           if (reply.statusCode === 200) {
-            let cookieOptions = { httpOnly: true }
+            let cookieOptions = {
+              httpOnly: true,
+              sameSite: 'strict',
+              secure: req.secure || req.headers['x-forwarded-proto'] === 'https'
+            }
             if (remember) {
               cookieOptions.maxAge = ms(
                 configuration.expiration === 'NEVER'
@@ -205,13 +273,14 @@ module.exports = function (app, config) {
 
             res.cookie(
               BROWSER_LOGININFO_COOKIE_NAME,
-              JSON.stringify({ status: 'loggedIn', user: reply.user })
+              JSON.stringify({ status: 'loggedIn', user: reply.user }),
+              cookieOptions
             )
 
             if (requestType === 'application/json') {
               res.json({ token: reply.token })
             } else {
-              res.redirect(req.body.destination ? req.body.destination : '/')
+              res.redirect(getSafeDestination(req.body.destination))
             }
           } else {
             if (requestType === 'application/json') {
@@ -239,6 +308,8 @@ module.exports = function (app, config) {
       '/providers',
       '/settings',
       '/webapps',
+      '/availablePaths',
+      '/hasAnalyzer',
       '/skServer/inputTest'
     ].forEach((p) =>
       app.use(`${SERVERROUTESPREFIX}${p}`, http_authorize(false))
@@ -259,7 +330,8 @@ module.exports = function (app, config) {
       '/backup',
       '/restore',
       '/providers',
-      '/vessel'
+      '/vessel',
+      '/serialports'
     ].forEach((p) =>
       app.use(`${SERVERROUTESPREFIX}${p}`, adminAuthenticationMiddleware(false))
     )
@@ -277,25 +349,35 @@ module.exports = function (app, config) {
     app.put('/signalk/v1/*', writeAuthenticationMiddleware(false))
   }
 
+  // Dummy hash for timing attack prevention - pre-generated bcrypt hash
+  const DUMMY_HASH =
+    '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
+
   function login(name, password) {
     return new Promise((resolve, reject) => {
-      debug('logging in user: ' + name)
+      debug('handing login for user: ' + name)
+
+      // Validate input to prevent crashes on malformed requests
+      if (typeof name !== 'string' || typeof password !== 'string') {
+        // Still run bcrypt to prevent timing attacks on input validation
+        bcrypt.compare('dummy', DUMMY_HASH, () => {
+          resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
+        })
+        return
+      }
+
       const configuration = getConfiguration()
-
       const user = configuration.users.find((aUser) => aUser.username === name)
-      if (!user) {
-        resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
-        return
-      }
-      if (!user.password) {
-        resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
-        return
-      }
 
-      bcrypt.compare(password, user.password, (err, matches) => {
+      // Always run bcrypt.compare to prevent timing attacks that reveal
+      // whether a username exists. Use a dummy hash if user not found.
+      const hashToCompare = user && user.password ? user.password : DUMMY_HASH
+
+      bcrypt.compare(password, hashToCompare, (err, matches) => {
         if (err) {
           reject(err)
-        } else if (matches === true) {
+        } else if (matches === true && user && user.password) {
+          // Only succeed if user exists AND password matched real hash
           const payload = { id: user.username }
           const theExpiration = configuration.expiration || '1h'
           const jwtOptions = {}
@@ -319,7 +401,6 @@ module.exports = function (app, config) {
       })
     })
   }
-
   strategy.validateConfiguration = (newConfiguration) => {
     const configuration = getConfiguration()
     const theExpiration = newConfiguration.expiration || '1h'
@@ -369,11 +450,11 @@ module.exports = function (app, config) {
   }
 
   strategy.allowRestart = function (req) {
-    return req.skIsAuthenticated && req.skPrincipal.permissions === 'admin'
+    return hasAdminAccess(req)
   }
 
   strategy.allowConfigure = function (req) {
-    return req.skIsAuthenticated && req.skPrincipal.permissions === 'admin'
+    return hasAdminAccess(req)
   }
 
   strategy.getLoginStatus = function (req) {
@@ -648,7 +729,7 @@ module.exports = function (app, config) {
                 ? valuePath
                 : null
             })
-            .filter((vp) => vp != null)
+            .filter((vp) => vp !== null)
           if (update.values) {
             update.values = res
             return update.values.length > 0 ? update : null
@@ -657,7 +738,7 @@ module.exports = function (app, config) {
             return update.meta.length > 0 ? update : null
           }
         })
-        .filter((update) => update != null)
+        .filter((update) => update !== null)
       return filtered.updates.length > 0 ? filtered : null
     } else if (!principal) {
       return null
@@ -830,7 +911,7 @@ module.exports = function (app, config) {
             } else {
               return false
             }
-          }) != null
+          }) !== undefined
         )
       }
     }
@@ -948,7 +1029,7 @@ module.exports = function (app, config) {
   }
 
   function sendAccessRequestsUpdate() {
-    app.emit('serverevent', {
+    app.emit('serverAdminEvent', {
       type: 'ACCESS_REQUEST',
       from: CONFIG_PLUGINID,
       data: strategy.getAccessRequestsResponse()
@@ -1068,6 +1149,12 @@ module.exports = function (app, config) {
 
   strategy.requestAccess = (theConfig, clientRequest, sourceIp, updateCb) => {
     return new Promise((resolve, reject) => {
+      if (filterRequests('accessRequest', 'PENDING').length >= 100) {
+        const err = new Error('Too many pending access requests')
+        err.statusCode = 503
+        reject(err)
+        return
+      }
       createRequest(
         app,
         'accessRequest',

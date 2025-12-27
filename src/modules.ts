@@ -166,15 +166,20 @@ export function restoreModules(
   runNpm(config, null, null, 'remove', onData, onErr, onClose)
 }
 
-function runNpm(
+export function runNpm(
   config: Config,
   name: any,
-  version: any,
+  version: string | null,
   command: string,
   onData: (output: any) => any,
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {
+  if (version && version !== '' && !semver.valid(version)) {
+    onErr(new Error('Invalid version: ' + version))
+    onClose(-1)
+    return
+  }
   let npm
 
   const opts: { cwd?: string } = {}
@@ -188,19 +193,27 @@ function runNpm(
 
   debug(`${command}: ${packageString}`)
 
+  const npmArgs = isTheServerModule(name, config)
+    ? [command, '-g']
+    : ['--save', command]
+
+  if (packageString) {
+    npmArgs.push(packageString)
+  }
+
   if (isTheServerModule(name, config)) {
     if (process.platform === 'win32') {
-      npm = spawn('cmd', ['/c', `npm ${command} -g ${packageString} `], opts)
+      npm = spawn('npm.cmd', npmArgs, opts)
     } else {
-      npm = spawn('sudo', ['npm', command, '-g', packageString], opts)
+      npm = spawn('sudo', ['npm', ...npmArgs], opts)
     }
   } else {
     opts.cwd = config.configPath
 
     if (process.platform === 'win32') {
-      npm = spawn('cmd', ['/c', `npm --save ${command} ${packageString}`], opts)
+      npm = spawn('npm.cmd', npmArgs, opts)
     } else {
-      npm = spawn('npm', ['--save', command, packageString], opts)
+      npm = spawn('npm', npmArgs, opts)
     }
   }
 
@@ -391,5 +404,6 @@ module.exports = {
   getAuthor,
   getKeywords,
   restoreModules,
-  importOrRequire
+  importOrRequire,
+  runNpm
 }

@@ -68,6 +68,7 @@ import { pipedProviders } from './pipedproviders'
 import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { Zones } from './zones'
 import checkNodeVersion from './version'
+import helmet from 'helmet'
 const debug = createDebug('signalk-server')
 
 import { StreamBundle } from './streambundle'
@@ -91,6 +92,24 @@ class Server {
     const bodyParser = require('body-parser')
     const app = express() as any
     app.use(require('compression')())
+    app.use(
+      helmet({
+        // ENABLED (safe, no compatibility impact):
+        xContentTypeOptions: true,
+        xDnsPrefetchControl: true,
+        xDownloadOptions: true,
+        xPermittedCrossDomainPolicies: true,
+        referrerPolicy: true,
+        hsts: true,
+        frameguard: { action: 'sameorigin' },
+
+        // DISABLED (would break chart plotters, plugins, webapps):
+        contentSecurityPolicy: false,
+        crossOriginEmbedderPolicy: false,
+        crossOriginOpenerPolicy: false,
+        crossOriginResourcePolicy: false
+      })
+    )
     app.use(bodyParser.json({ limit: FILEUPLOADSIZELIMIT }))
 
     this.app = app
@@ -321,7 +340,7 @@ class Server {
           let delta = filterStaticSelfData(data, app.selfContext)
           delta = toPreferredDelta(delta, now, app.selfContext)
 
-          if (skVersion == SKVersion.v1) {
+          if (skVersion === SKVersion.v1) {
             deltachainV1.process(delta)
           } else {
             deltachainV2.process(delta)
@@ -693,7 +712,7 @@ function filterStaticSelfData(delta: any, selfContext: string) {
             }
             return acc
           }, [])
-          if (update.values.length == 0) {
+          if (update.values.length === 0) {
             delete update.values
           }
         }
@@ -741,7 +760,7 @@ function filterSelfDataKP(pathValue: any) {
         delete pathValue.value.communication
       }
     }
-    if (Object.keys(pathValue.value).length == 0) {
+    if (Object.keys(pathValue.value).length === 0) {
       return null
     }
   } else if (filteredPaths.includes(pathValue.path)) {
