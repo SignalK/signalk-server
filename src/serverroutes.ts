@@ -94,7 +94,7 @@ module.exports = function (
   getSecurityConfig: SecurityConfigGetter
 ) {
   let securityWasEnabled = false
-  let restoreFilePath: string
+  const restoreSessions = new Map<string, string>()
 
   const logopath = path.resolve(app.config.configPath, 'logo.svg')
   if (fs.existsSync(logopath)) {
@@ -1008,16 +1008,28 @@ module.exports = function (
     })
   }
 
-  app.post(`${SERVERROUTESPREFIX}/restore`, (req: Request, res: Response) => {
-    if (!restoreFilePath) {
-      res.status(400).send('not exting restore file')
-    } else if (!fs.existsSync(restoreFilePath)) {
-      res.status(400).send('restore file does not exist')
-    } else {
-      res.status(202).send()
-    }
+  app.post(
+    `${SERVERROUTESPREFIX}/restore`,
+    (req: Request, res: Response) => {
+      if (
+        !app.securityStrategy.isDummy() &&
+        !app.securityStrategy.allowConfigure(req)
+      ) {
+        res.status(401).send('Restore not allowed')
+        return
+      }
+      const sessionId = getCookie(req, 'restoreSession')
+      const restoreFilePath = sessionId ? restoreSessions.get(sessionId) : undefined
 
-    listSafeRestoreFiles(restoreFilePath)
+      if (!restoreFilePath) {
+        res.status(400).send('not exting restore file')
+      } else if (!fs.existsSync(restoreFilePath)) {
+        res.status(400).send('restore file does not exist')
+      } else {
+        res.status(202).send()
+      }
+
+      listSafeRestoreFiles(restoreFilePath!)
       .then((files) => {
         const wanted = files.filter((name) => {
           return req.body[name]
@@ -1032,7 +1044,7 @@ module.exports = function (
             i / wanted.length
           )
           ncp(
-            path.join(restoreFilePath, name),
+            path.join(restoreFilePath!, name),
             path.join(app.config.configPath, name),
             { stopOnErr: true },
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1072,6 +1084,13 @@ module.exports = function (
   app.post(
     `${SERVERROUTESPREFIX}/validateBackup`,
     (req: Request, res: Response) => {
+      if (
+        !app.securityStrategy.isDummy() &&
+        !app.securityStrategy.allowConfigure(req)
+      ) {
+        res.status(401).send('Validate backup not allowed')
+        return
+      }
       const bb = busboy({ headers: req.headers })
       bb.on(
         'file',
@@ -1095,7 +1114,12 @@ module.exports = function (
               return
             }
             const tmpDir = os.tmpdir()
-            restoreFilePath = fs.mkdtempSync(`${tmpDir}${path.sep}`)
+            const restoreFilePath = fs.mkdtempSync(`${tmpDir}${path.sep}`)
+            const sessionId = Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+            restoreSessions.set(sessionId, restoreFilePath)
+            setTimeout(() => restoreSessions.delete(sessionId), 15 * 60 * 1000)
+            res.cookie('restoreSession', sessionId, { httpOnly: true, sameSite: 'strict' })
+
             const zipFileDir = fs.mkdtempSync(`${tmpDir}${path.sep}`)
             const zipFile = path.join(zipFileDir, 'backup.zip')
             const unzipStream = unzipper.Extract({ path: restoreFilePath })
@@ -1184,4 +1208,15 @@ const setNoCache = (res: Response) => {
   res.header('Cache-Control', 'no-cache, no-store, must-revalidate')
   res.header('Pragma', 'no-cache')
   res.header('Expires', '0')
+}
+
+function getCookie(req: Request, name: string): string | undefined {
+  if (req.headers.cookie) {
+    const value = '; ' + req.headers.cookie
+    const parts = value.split('; ' + name + '=')
+    if (parts.length === 2) {
+      return parts.pop()?.split(';').shift()
+    }
+  }
+  return undefined
 }

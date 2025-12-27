@@ -193,19 +193,27 @@ export function runNpm(
 
   debug(`${command}: ${packageString}`)
 
+  const npmArgs = isTheServerModule(name, config)
+    ? [command, '-g']
+    : ['--save', command]
+
+  if (packageString) {
+    npmArgs.push(packageString)
+  }
+
   if (isTheServerModule(name, config)) {
     if (process.platform === 'win32') {
-      npm = spawn('cmd', ['/c', `npm ${command} -g ${packageString} `], opts)
+      npm = spawn('npm.cmd', npmArgs, opts)
     } else {
-      npm = spawn('sudo', ['npm', command, '-g', packageString], opts)
+      npm = spawn('sudo', ['npm', ...npmArgs], opts)
     }
   } else {
     opts.cwd = config.configPath
 
     if (process.platform === 'win32') {
-      npm = spawn('cmd', ['/c', `npm --save ${command} ${packageString}`], opts)
+      npm = spawn('npm.cmd', npmArgs, opts)
     } else {
-      npm = spawn('npm', ['--save', command, packageString], opts)
+      npm = spawn('npm', npmArgs, opts)
     }
   }
 
