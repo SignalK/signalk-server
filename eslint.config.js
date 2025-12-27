@@ -93,7 +93,8 @@ function common(prefix = '') {
           allowShortCircuit: true,
           allowTernary: true
         }
-      ]
+      ],
+      'no-return-assign': ['error', 'always']
     }
   }
 }

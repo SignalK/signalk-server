@@ -25,17 +25,18 @@ const Apps = function (props) {
       acc[app.name] = app
       return acc
     }, {})
-    props.appStore.installed.forEach(
-      (app) =>
-        (allApps[app.name] = {
-          ...app,
-          installed: true,
-          newVersion: updateAvailable(app, props.appStore) ? app.version : null
-        })
-    )
-    props.appStore.installing.forEach(
-      (app) => ((allApps[app.name] || {}).installing = true)
-    )
+    props.appStore.installed.forEach((app) => {
+      allApps[app.name] = {
+        ...app,
+        installed: true,
+        newVersion: updateAvailable(app, props.appStore) ? app.version : null
+      }
+    })
+    props.appStore.installing.forEach((app) => {
+      if (allApps[app.name]) {
+        allApps[app.name].installing = true
+      }
+    })
     return Object.values(allApps).sort(
       (a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()
     )

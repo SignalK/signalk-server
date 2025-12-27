@@ -120,7 +120,9 @@ function Simple(options) {
         transform(delta, encoding, callback) {
           if (delta.updates) {
             const now = new Date().toISOString()
-            delta.updates.forEach((update) => (update.timestamp = now))
+            delta.updates.forEach((update) => {
+              update.timestamp = now
+            })
           }
           callback(null, delta)
         }
