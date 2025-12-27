@@ -40,6 +40,7 @@ import {
   getDiscoveryDocument,
   buildAuthorizationUrl,
   exchangeAuthorizationCode,
+  fetchUserinfo,
   validateIdToken,
   mapGroupsToPermission,
   STATE_COOKIE_NAME,
@@ -524,6 +525,14 @@ module.exports = function (app, config) {
           metadata,
           authState.nonce
         )
+
+        // Fetch additional claims from userinfo endpoint
+        // ID token typically only contains minimal claims; userinfo has groups, email, etc.
+        const userinfoClaims = await fetchUserinfo(tokens.accessToken, metadata)
+        if (userinfoClaims) {
+          // Merge userinfo claims into ID token claims (userinfo takes precedence)
+          Object.assign(claims, userinfoClaims)
+        }
 
         // Clear state cookie after successful validation
         res.clearCookie(STATE_COOKIE_NAME)
