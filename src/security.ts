@@ -60,10 +60,16 @@ export interface ACL {
     }>
   }>
 }
+export interface OIDCUserIdentifier {
+  sub: string
+  issuer: string
+}
+
 export interface User {
   username: string
   type: string
   password?: string
+  oidc?: OIDCUserIdentifier
 }
 export interface UserData {
   userId: string
@@ -93,6 +99,17 @@ export interface DeviceDataUpdate {
   description?: string
 }
 
+export interface OIDCSecurityConfig {
+  enabled: boolean
+  issuer: string
+  clientId: string
+  clientSecret: string
+  redirectUri?: string
+  scope?: string
+  defaultPermission?: 'readonly' | 'readwrite' | 'admin'
+  autoCreateUsers?: boolean
+}
+
 export interface SecurityConfig {
   immutableConfig: boolean
   allow_readonly: boolean
@@ -104,6 +121,7 @@ export interface SecurityConfig {
   secretKey: string
   users: User[]
   acls?: ACL[]
+  oidc?: OIDCSecurityConfig
 }
 
 export interface RequestStatusData {
