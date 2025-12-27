@@ -4,7 +4,7 @@ import { toLazyDynamicComponent, APP_PANEL } from './dynamicutilities'
 import Login from '../../views/security/Login'
 import ReconnectingWebSocket from 'reconnecting-websocket'
 
-const wsProto = window.location.protocol == 'https:' ? 'wss' : 'ws'
+const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws'
 
 class Embedded extends Component {
   constructor(props) {
@@ -27,7 +27,7 @@ class Embedded extends Component {
           { credentials: 'include' }
         )
           .then((r) => {
-            if (r.status != 200) {
+            if (r.status !== 200) {
               throw new Error(r)
             }
             return r
@@ -45,7 +45,7 @@ class Embedded extends Component {
             credentials: 'include'
           }
         ).then((r) => {
-          if (r.status != 200) {
+          if (r.status !== 200) {
             throw new Error(r)
           }
           return r

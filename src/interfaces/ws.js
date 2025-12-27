@@ -99,7 +99,7 @@ module.exports = function (app) {
         }
         spark.on('data', listener)
         setTimeout(() => {
-          const request = findRequest((r) => (r.requestId = requestId))
+          const request = findRequest((r) => r.requestId === requestId)
           if (request && request.state === 'PENDING') {
             spark.removeListener('data', listener)
             updateRequest(requestId, 'COMPLETED', { statusCode: 504 })

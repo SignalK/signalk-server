@@ -72,13 +72,13 @@ function updateRequest(
       if (state) {
         request.state = state
       }
-      if (statusCode != null) {
+      if (statusCode !== null) {
         request.statusCode = statusCode
       }
       if (message) {
         request.message = message
       }
-      if (percentComplete != null) {
+      if (percentComplete !== null) {
         request.percentComplete = percentComplete
       }
 

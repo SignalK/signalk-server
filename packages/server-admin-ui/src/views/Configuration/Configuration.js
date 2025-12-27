@@ -57,8 +57,9 @@ export default class PluginConfigurationList extends Component {
       const configurationRequired =
         plugin.schema &&
         plugin.schema.properties &&
-        Object.keys(plugin.schema?.properties).length != 0 &&
-        plugin.data.configuration == null
+        Object.keys(plugin.schema?.properties).length !== 0 &&
+        (plugin.data.configuration === null ||
+          plugin.data.configuration === undefined)
 
       switch (statusFilter) {
         case 'enabled':
@@ -158,7 +159,7 @@ export default class PluginConfigurationList extends Component {
       credentials: 'same-origin'
     })
       .then((response) => {
-        if (response.status == 200) {
+        if (response.status === 200) {
           return response.json()
         } else {
           throw new Error('/plugins request failed:' + response.status)
@@ -289,8 +290,9 @@ export default class PluginConfigurationList extends Component {
                     const configurationRequired =
                       plugin.schema &&
                       plugin.schema.properties &&
-                      Object.keys(plugin.schema?.properties).length != 0 &&
-                      plugin.data.configuration == null
+                      Object.keys(plugin.schema?.properties).length !== 0 &&
+                      (plugin.data.configuration === null ||
+                        plugin.data.configuration === undefined)
 
                     return (
                       <tr
@@ -357,7 +359,7 @@ export default class PluginConfigurationList extends Component {
       headers: new Headers({ 'Content-Type': 'application/json' }),
       credentials: 'same-origin'
     }).then((response) => {
-      if (response.status != 200) {
+      if (response.status !== 200) {
         console.error(response)
         alert('Saving plugin settings failed')
         throw new Error('Save failed')
@@ -405,8 +407,9 @@ class PluginConfigCard extends Component {
     const configurationRequired =
       schema &&
       schema.properties &&
-      Object.keys(schema?.properties).length != 0 &&
-      this.props.plugin.data.configuration == null
+      Object.keys(schema?.properties).length !== 0 &&
+      (this.props.plugin.data.configuration === null ||
+        this.props.plugin.data.configuration === undefined)
 
     return (
       <div>

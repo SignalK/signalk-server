@@ -128,7 +128,7 @@ export function freeport(): Promise<number> {
     server.on('listening', () => {
       const address = server.address()
 
-      if (address == null) {
+      if (address === null) {
         return reject(new Error('Server was not listening'))
       }
 

@@ -54,7 +54,7 @@ class ServerUpdate extends Component {
     let isInstalling = false
     let isInstalled = false
     let info = this.props.appStore.installing.find(
-      (p) => p.name == 'signalk-server'
+      (p) => p.name === 'signalk-server'
     )
     if (info) {
       if (info.isWaiting || info.isInstalling) {

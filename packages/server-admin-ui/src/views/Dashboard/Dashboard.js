@@ -256,7 +256,8 @@ const Dashboard = (props) => {
                         }
                         const statusClass = statusClasses[status.type]
                         const lastError =
-                          status.lastError && status.lastError != status.message
+                          status.lastError &&
+                          status.lastError !== status.message
                             ? status.lastErrorTimeStamp +
                               ': ' +
                               status.lastError

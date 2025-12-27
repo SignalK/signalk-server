@@ -146,7 +146,7 @@ const Apps = function (props) {
           </div>
 
           <div className="action__container">
-            {view == 'Updates' && props.appStore.updates.length > 0 ? (
+            {view === 'Updates' && props.appStore.updates.length > 0 ? (
               <Button color="success" onClick={handleUpdateAll}>
                 Update all
               </Button>

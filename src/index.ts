@@ -321,7 +321,7 @@ class Server {
           let delta = filterStaticSelfData(data, app.selfContext)
           delta = toPreferredDelta(delta, now, app.selfContext)
 
-          if (skVersion == SKVersion.v1) {
+          if (skVersion === SKVersion.v1) {
             deltachainV1.process(delta)
           } else {
             deltachainV2.process(delta)
@@ -693,7 +693,7 @@ function filterStaticSelfData(delta: any, selfContext: string) {
             }
             return acc
           }, [])
-          if (update.values.length == 0) {
+          if (update.values.length === 0) {
             delete update.values
           }
         }
@@ -741,7 +741,7 @@ function filterSelfDataKP(pathValue: any) {
         delete pathValue.value.communication
       }
     }
-    if (Object.keys(pathValue.value).length == 0) {
+    if (Object.keys(pathValue.value).length === 0) {
       return null
     }
   } else if (filteredPaths.includes(pathValue.path)) {

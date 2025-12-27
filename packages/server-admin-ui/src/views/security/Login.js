@@ -172,7 +172,7 @@ class Login extends Component {
               </Row>
             </Container>
           )}
-          {this.props.loginStatus.status == 'loggedIn' && <Dashboard />}
+          {this.props.loginStatus.status === 'loggedIn' && <Dashboard />}
         </div>
       )
     }

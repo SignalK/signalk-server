@@ -47,7 +47,7 @@ class Settings extends Component {
 
   componentDidUpdate(prevProps) {
     if (
-      this.props.loginStatus.authenticationRequired !=
+      this.props.loginStatus.authenticationRequired !==
       prevProps.loginStatus.authenticationRequired
     ) {
       this.fetchSecurityConfig()

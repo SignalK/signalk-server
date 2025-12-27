@@ -26,7 +26,7 @@ class Webapps extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    if (this.props.addons != prevProps.addons) {
+    if (this.props.addons !== prevProps.addons) {
       this.setAddonComponents()
     }
   }

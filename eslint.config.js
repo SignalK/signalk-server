@@ -94,7 +94,8 @@ function common(prefix = '') {
           allowTernary: true
         }
       ],
-      'no-return-assign': ['error', 'always']
+      'no-return-assign': ['error', 'always'],
+      eqeqeq: ['error', 'always']
     }
   }
 }

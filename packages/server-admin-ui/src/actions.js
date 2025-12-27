@@ -87,7 +87,7 @@ export function enableSecurity(dispatch, userId, password, callback) {
     },
     body: JSON.stringify(payload)
   }).then((response) => {
-    if (response.status != 200) {
+    if (response.status !== 200) {
       response.text().then((text) => {
         callback(text)
       })
@@ -157,7 +157,7 @@ export function fetchAllData(dispatch) {
 }
 
 export function openServerEventsConnection(dispatch, isReconnect) {
-  const proto = window.location.protocol == 'https:' ? 'wss' : 'ws'
+  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
   const ws = new WebSocket(
     proto +
       '://' +
