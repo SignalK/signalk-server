@@ -42,11 +42,35 @@ function mountApi(app) {
     })
   })
   app.get(`${SERVERROUTESPREFIX}/logfiles/:filename`, function (req, res) {
-    const sanitizedFilename = req.params.filename.replaceAll(/\.\.(\\|\/)/g, '')
-    const sanitizedLogfile = path
-      .join(getFullLogDir(app), sanitizedFilename)
-      .replace(/\.\./g, '')
-    res.sendFile(sanitizedLogfile)
+    // Decode URL-encoded characters first, then sanitize
+    let filename = req.params.filename
+    try {
+      filename = decodeURIComponent(filename)
+    } catch (_e) {
+      // Invalid encoding
+      res.status(400).send('Invalid filename')
+      return
+    }
+
+    // Only allow simple filenames: alphanumeric, dots, hyphens, underscores
+    // This prevents all path traversal attempts including encoded ones
+    if (!/^[a-zA-Z0-9._-]+$/.test(filename)) {
+      res.status(400).send('Invalid filename')
+      return
+    }
+
+    const logDir = getFullLogDir(app)
+    const requestedPath = path.join(logDir, filename)
+
+    // Verify the resolved path is still within the log directory
+    const resolvedPath = path.resolve(requestedPath)
+    const resolvedLogDir = path.resolve(logDir)
+    if (!resolvedPath.startsWith(resolvedLogDir + path.sep)) {
+      res.status(400).send('Invalid filename')
+      return
+    }
+
+    res.sendFile(resolvedPath)
   })
   app.get(`${SERVERROUTESPREFIX}/ziplogs`, function (req, res) {
     const boatName = app.config.vesselName
