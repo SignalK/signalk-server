@@ -10,6 +10,12 @@ export function startEvents(
   onEvent: (data: any) => void,
   eventsFromQuery = ''
 ) {
+  if (
+    !app.securityStrategy.isDummy() &&
+    !app.securityStrategy.hasAdminAccess?.(spark.request)
+  ) {
+    return
+  }
   const events = eventsFromQuery.split(',')
   events.forEach((event) => {
     app.on(event, (data: any) => onEvent({ event, data }))
@@ -22,6 +28,13 @@ export function startServerEvents(app: any, spark: any, onServerEvent: any) {
   spark.onDisconnects.push(() => {
     app.removeListener('serverevent', onServerEvent)
   })
+
+  if (app.securityStrategy.hasAdminAccess?.(spark.request)) {
+    app.on('serverAdminEvent', onServerEvent)
+    spark.onDisconnects.push(() => {
+      app.removeListener('serverAdminEvent', onServerEvent)
+    })
+  }
   try {
     spark.write({
       type: 'VESSEL_INFO',
