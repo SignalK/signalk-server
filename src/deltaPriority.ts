@@ -66,6 +66,7 @@ export const getToPreferredDelta = (
     return (delta: any, _now: Date, _selfContext: string) => delta
   }
   const precedences = toPrecedences(sourcePrioritiesData)
+  let filterStartTime: number | null = null
 
   const contextPathTimestamps = new Map<Context, PathLatestTimestamps>()
 
@@ -121,6 +122,21 @@ export const getToPreferredDelta = (
 
     if (!pathPrecedences) {
       return true
+    }
+
+    if (latest.sourceRef === '') {
+      if (filterStartTime === null) {
+        filterStartTime = millis
+      }
+      const incomingPrecedence = pathPrecedences.get(sourceRef)
+      const timeSinceBoot = millis - filterStartTime
+      const cumulativeTimeout = incomingPrecedence
+        ? Array.from(pathPrecedences.values())
+            .filter((p) => p.precedence < incomingPrecedence.precedence)
+            .reduce((sum, p) => sum + p.timeout, 0)
+        : unknownSourceTimeout
+      const isPreferred = timeSinceBoot >= cumulativeTimeout
+      return isPreferred
     }
 
     const latestPrecedence =
