@@ -62,21 +62,58 @@ const ncp = ncpI.ncp
 const defaultSecurityStrategy = './tokensecurity'
 const skPrefix = '/signalk/v1'
 
-const apiLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 100,
-  message: {
-    message: 'Too many requests from this IP, please try again after 10 minutes'
-  }
-})
+type HttpRateLimitOverrides = {
+  windowMs: number
+  apiMax: number
+  loginStatusMax: number
+}
 
-const loginStatusLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 10,
-  message: {
-    message: 'Too many requests from this IP, please try again after 10 minutes'
+const DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
+const DEFAULT_HTTP_RATE_LIMIT_API_MAX = 100
+const DEFAULT_HTTP_RATE_LIMIT_LOGIN_STATUS_MAX = 10
+
+function getHttpRateLimitOverridesFromEnv(): HttpRateLimitOverrides {
+  const raw = process.env.HTTP_RATE_LIMITS
+  const defaults: HttpRateLimitOverrides = {
+    windowMs: DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS,
+    apiMax: DEFAULT_HTTP_RATE_LIMIT_API_MAX,
+    loginStatusMax: DEFAULT_HTTP_RATE_LIMIT_LOGIN_STATUS_MAX
   }
-})
+
+  if (!raw || typeof raw !== 'string') {
+    return defaults
+  }
+
+  const parts = raw
+    .split(/[\s,]+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  let overrides = { ...defaults }
+  for (const part of parts) {
+    const eqIndex = part.indexOf('=')
+    if (eqIndex === -1) {
+      continue
+    }
+
+    const key = part.slice(0, eqIndex).trim().toLowerCase()
+    const value = part.slice(eqIndex + 1).trim()
+    const parsed = Number.parseInt(value, 10)
+
+    if ((key === 'windowms' || key === 'window') && Number.isFinite(parsed)) {
+      overrides = { ...overrides, windowMs: parsed }
+    } else if ((key === 'api' || key === 'apimax') && Number.isFinite(parsed)) {
+      overrides = { ...overrides, apiMax: parsed }
+    } else if (
+      (key === 'loginstatus' || key === 'loginstatusmax') &&
+      Number.isFinite(parsed)
+    ) {
+      overrides = { ...overrides, loginStatusMax: parsed }
+    }
+  }
+
+  return overrides
+}
 
 interface ScriptsApp {
   addons: ModuleInfo[]
@@ -110,6 +147,25 @@ module.exports = function (
   saveSecurityConfig: SecurityConfigSaver,
   getSecurityConfig: SecurityConfigGetter
 ) {
+  const httpRateLimitOverrides = getHttpRateLimitOverridesFromEnv()
+  const apiLimiter = rateLimit({
+    windowMs: httpRateLimitOverrides.windowMs,
+    max: httpRateLimitOverrides.apiMax,
+    message: {
+      message:
+        'Too many requests from this IP, please try again after 10 minutes'
+    }
+  })
+
+  const loginStatusLimiter = rateLimit({
+    windowMs: httpRateLimitOverrides.windowMs,
+    max: httpRateLimitOverrides.loginStatusMax,
+    message: {
+      message:
+        'Too many requests from this IP, please try again after 10 minutes'
+    }
+  })
+
   let securityWasEnabled = false
   const restoreSessions = new Map<string, string>()
 
@@ -241,7 +297,11 @@ module.exports = function (
     res.json(result)
   }
 
-  app.get(`${SERVERROUTESPREFIX}/loginStatus`, loginStatusLimiter, getLoginStatus)
+  app.get(
+    `${SERVERROUTESPREFIX}/loginStatus`,
+    loginStatusLimiter,
+    getLoginStatus
+  )
   //TODO remove after a grace period
   app.get(`/loginStatus`, loginStatusLimiter, (req: Request, res: Response) => {
     console.log(
@@ -476,50 +536,58 @@ module.exports = function (
     }
   )
 
-  app.post(`${skPrefix}/access/requests`, apiLimiter, (req: Request, res: Response) => {
-    if (
-      req.headers['content-length'] &&
-      parseInt(req.headers['content-length']) > 10 * 1024
-    ) {
-      res.status(413).send('Payload too large')
-      return
+  app.post(
+    `${skPrefix}/access/requests`,
+    apiLimiter,
+    (req: Request, res: Response) => {
+      if (
+        req.headers['content-length'] &&
+        parseInt(req.headers['content-length']) > 10 * 1024
+      ) {
+        res.status(413).send('Payload too large')
+        return
+      }
+      const config = getSecurityConfig(app)
+      const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+      if (!app.securityStrategy.requestAccess) {
+        res.status(404).json({
+          message:
+            'Access requests not available. Server security may not be enabled.'
+        })
+        return
+      }
+      app.securityStrategy
+        .requestAccess(config, { accessRequest: req.body }, ip)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then((reply: any) => {
+          res.status(reply.state === 'PENDING' ? 202 : reply.statusCode)
+          res.json(reply)
+        })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .catch((err: any) => {
+          console.error(err.message)
+          res.status(err.statusCode || 500).send(err.message)
+        })
     }
-    const config = getSecurityConfig(app)
-    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
-    if (!app.securityStrategy.requestAccess) {
-      res.status(404).json({
-        message:
-          'Access requests not available. Server security may not be enabled.'
-      })
-      return
-    }
-    app.securityStrategy
-      .requestAccess(config, { accessRequest: req.body }, ip)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then((reply: any) => {
-        res.status(reply.state === 'PENDING' ? 202 : reply.statusCode)
-        res.json(reply)
-      })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .catch((err: any) => {
-        console.error(err.message)
-        res.status(err.statusCode || 500).send(err.message)
-      })
-  })
+  )
 
-  app.get(`${skPrefix}/requests/:id`, apiLimiter, (req: Request, res: Response) => {
-    queryRequest(req.params.id)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then((reply: any) => {
-        res.json(reply)
-      })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .catch((err: any) => {
-        console.log(err)
-        res.status(500)
-        res.type('text/plain').send(`Unable to check request: ${err.message}`)
-      })
-  })
+  app.get(
+    `${skPrefix}/requests/:id`,
+    apiLimiter,
+    (req: Request, res: Response) => {
+      queryRequest(req.params.id)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then((reply: any) => {
+          res.json(reply)
+        })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .catch((err: any) => {
+          console.log(err)
+          res.status(500)
+          res.type('text/plain').send(`Unable to check request: ${err.message}`)
+        })
+    }
+  )
 
   app.get(`${SERVERROUTESPREFIX}/settings`, (req: Request, res: Response) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1032,28 +1100,28 @@ module.exports = function (
     })
   }
 
-  app.post(
-    `${SERVERROUTESPREFIX}/restore`,
-    (req: Request, res: Response) => {
-      if (
-        !app.securityStrategy.isDummy() &&
-        !app.securityStrategy.allowConfigure(req)
-      ) {
-        res.status(401).send('Restore not allowed')
-        return
-      }
-      const sessionId = getCookie(req, 'restoreSession')
-      const restoreFilePath = sessionId ? restoreSessions.get(sessionId) : undefined
+  app.post(`${SERVERROUTESPREFIX}/restore`, (req: Request, res: Response) => {
+    if (
+      !app.securityStrategy.isDummy() &&
+      !app.securityStrategy.allowConfigure(req)
+    ) {
+      res.status(401).send('Restore not allowed')
+      return
+    }
+    const sessionId = getCookie(req, 'restoreSession')
+    const restoreFilePath = sessionId
+      ? restoreSessions.get(sessionId)
+      : undefined
 
-      if (!restoreFilePath) {
-        res.status(400).send('not exting restore file')
-      } else if (!fs.existsSync(restoreFilePath)) {
-        res.status(400).send('restore file does not exist')
-      } else {
-        res.status(202).send()
-      }
+    if (!restoreFilePath) {
+      res.status(400).send('not exting restore file')
+    } else if (!fs.existsSync(restoreFilePath)) {
+      res.status(400).send('restore file does not exist')
+    } else {
+      res.status(202).send()
+    }
 
-      listSafeRestoreFiles(restoreFilePath!)
+    listSafeRestoreFiles(restoreFilePath!)
       .then((files) => {
         const wanted = files.filter((name) => {
           return req.body[name]
@@ -1139,10 +1207,14 @@ module.exports = function (
             }
             const tmpDir = os.tmpdir()
             const restoreFilePath = fs.mkdtempSync(`${tmpDir}${path.sep}`)
-            const sessionId = Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+            const sessionId =
+              Date.now() + '_' + Math.random().toString(36).substr(2, 9)
             restoreSessions.set(sessionId, restoreFilePath)
             setTimeout(() => restoreSessions.delete(sessionId), 15 * 60 * 1000)
-            res.cookie('restoreSession', sessionId, { httpOnly: true, sameSite: 'strict' })
+            res.cookie('restoreSession', sessionId, {
+              httpOnly: true,
+              sameSite: 'strict'
+            })
 
             const zipFileDir = fs.mkdtempSync(`${tmpDir}${path.sep}`)
             const zipFile = path.join(zipFileDir, 'backup.zip')

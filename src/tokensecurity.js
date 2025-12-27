@@ -190,9 +190,40 @@ module.exports = function (app, config) {
 
   function setupApp() {
     const rateLimit = require('express-rate-limit')
+    const rawHttpRateLimits = process.env.HTTP_RATE_LIMITS
+    const parsedParts =
+      typeof rawHttpRateLimits === 'string'
+        ? rawHttpRateLimits
+            .split(/[\s,]+/)
+            .map((p) => p.trim())
+            .filter(Boolean)
+        : []
+
+    let loginWindowMs = 10 * 60 * 1000
+    let loginMax = 10
+    for (const part of parsedParts) {
+      const eqIndex = part.indexOf('=')
+      if (eqIndex === -1) {
+        continue
+      }
+
+      const key = part.slice(0, eqIndex).trim().toLowerCase()
+      const value = part.slice(eqIndex + 1).trim()
+      const parsed = Number.parseInt(value, 10)
+
+      if ((key === 'windowms' || key === 'window') && Number.isFinite(parsed)) {
+        loginWindowMs = parsed
+      } else if (
+        (key === 'login' || key === 'loginmax') &&
+        Number.isFinite(parsed)
+      ) {
+        loginMax = parsed
+      }
+    }
+
     const loginLimiter = rateLimit({
-      windowMs: 10 * 60 * 1000, // 10 minutes
-      max: 10, // Limit each IP to 10 login requests per windowMs
+      windowMs: loginWindowMs,
+      max: loginMax,
       message: {
         message:
           'Too many login attempts from this IP, please try again after 10 minutes'

@@ -127,6 +127,13 @@ module.exports = {
     securityConfig
   ) {
     const Server = require('../dist')
+    // The requestResponse module stores requests in-memory at module scope.
+    // Reset between test servers so different suites don't interfere.
+    try {
+      require('../dist/requestResponse').resetRequests()
+    } catch (_e) {
+      // ignore - not critical for non-test usage
+    }
     const props = {
       config: JSON.parse(JSON.stringify(defaultConfig))
     }
