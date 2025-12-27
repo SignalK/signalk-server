@@ -136,6 +136,15 @@ module.exports = function (app, config) {
     }
   }
 
+  function hasAdminAccess(req) {
+    return (
+      req.skIsAuthenticated &&
+      req.skPrincipal &&
+      req.skPrincipal.permissions === 'admin'
+    )
+  }
+  strategy.hasAdminAccess = hasAdminAccess
+
   function writeAuthenticationMiddleware() {
     return function (req, res, next) {
       if (!getIsEnabled()) {
@@ -161,10 +170,12 @@ module.exports = function (app, config) {
         return next()
       }
 
+      if (hasAdminAccess(req)) {
+        return next()
+      }
+
       if (req.skIsAuthenticated && req.skPrincipal) {
-        if (req.skPrincipal.permissions === 'admin') {
-          return next()
-        } else if (req.skPrincipal.identifier === 'AUTO' && redirect) {
+        if (req.skPrincipal.identifier === 'AUTO' && redirect) {
           res.redirect('/@signalk/server-admin-ui/#/login')
         } else {
           handlePermissionDenied(req, res, next)
@@ -394,11 +405,11 @@ module.exports = function (app, config) {
   }
 
   strategy.allowRestart = function (req) {
-    return req.skIsAuthenticated && req.skPrincipal.permissions === 'admin'
+    return hasAdminAccess(req)
   }
 
   strategy.allowConfigure = function (req) {
-    return req.skIsAuthenticated && req.skPrincipal.permissions === 'admin'
+    return hasAdminAccess(req)
   }
 
   strategy.getLoginStatus = function (req) {
@@ -973,7 +984,7 @@ module.exports = function (app, config) {
   }
 
   function sendAccessRequestsUpdate() {
-    app.emit('serverevent', {
+    app.emit('serverAdminEvent', {
       type: 'ACCESS_REQUEST',
       from: CONFIG_PLUGINID,
       data: strategy.getAccessRequestsResponse()
