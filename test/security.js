@@ -202,6 +202,53 @@ describe('Security', () => {
     limitedUserToken.length.should.equal(149)
   })
 
+  async function formLoginWithDestination(username, password, destination) {
+    const body = new URLSearchParams({
+      username,
+      password,
+      destination
+    })
+
+    return fetch(`${url}/signalk/v1/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      redirect: 'manual',
+      body
+    })
+  }
+
+  it('login redirect allows only relative destinations (blocks https://)', async function () {
+    const result = await formLoginWithDestination(
+      WRITE_USER_NAME,
+      WRITE_USER_PASSWORD,
+      'https://evil.example/phish'
+    )
+    result.status.should.equal(302)
+    result.headers.get('location').should.equal('/')
+  })
+
+  it('login redirect allows only relative destinations (blocks //)', async function () {
+    const result = await formLoginWithDestination(
+      WRITE_USER_NAME,
+      WRITE_USER_PASSWORD,
+      '//evil.example/phish'
+    )
+    result.status.should.equal(302)
+    result.headers.get('location').should.equal('/')
+  })
+
+  it('login redirect allows relative destinations', async function () {
+    const result = await formLoginWithDestination(
+      WRITE_USER_NAME,
+      WRITE_USER_PASSWORD,
+      '  /admin/  '
+    )
+    result.status.should.equal(302)
+    result.headers.get('location').should.equal('/admin/')
+  })
+
   it('authorized read works', async function () {
     const result = await fetch(`${url}/signalk/v1/api/vessels/self`, {
       headers: {
