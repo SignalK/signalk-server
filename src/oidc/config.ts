@@ -88,6 +88,17 @@ export function parseEnvConfig(): PartialOIDCConfig {
     config.groupsAttribute = process.env.SIGNALK_OIDC_GROUPS_ATTRIBUTE
   }
 
+  // Parse provider name (display name for login button)
+  if (process.env.SIGNALK_OIDC_PROVIDER_NAME) {
+    config.providerName = process.env.SIGNALK_OIDC_PROVIDER_NAME
+  }
+
+  // Parse auto login (auto-redirect to OIDC when not authenticated)
+  if (process.env.SIGNALK_OIDC_AUTO_LOGIN !== undefined) {
+    config.autoLogin =
+      process.env.SIGNALK_OIDC_AUTO_LOGIN.toLowerCase() === 'true'
+  }
+
   return config
 }
 
@@ -120,7 +131,15 @@ export function mergeConfigs(
     readwriteGroups:
       envConfig.readwriteGroups ?? securityJsonConfig.readwriteGroups,
     groupsAttribute:
-      envConfig.groupsAttribute ?? securityJsonConfig.groupsAttribute
+      envConfig.groupsAttribute ?? securityJsonConfig.groupsAttribute,
+    providerName:
+      envConfig.providerName ??
+      securityJsonConfig.providerName ??
+      OIDC_DEFAULTS.providerName,
+    autoLogin:
+      envConfig.autoLogin ??
+      securityJsonConfig.autoLogin ??
+      OIDC_DEFAULTS.autoLogin
   }
 }
 

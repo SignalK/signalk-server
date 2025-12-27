@@ -104,6 +104,24 @@ describe('OIDC Configuration', () => {
       const config = parseEnvConfig()
       expect(config.groupsAttribute).to.equal('roles')
     })
+
+    it('should parse provider name', () => {
+      process.env.SIGNALK_OIDC_PROVIDER_NAME = 'Corporate SSO'
+      const config = parseEnvConfig()
+      expect(config.providerName).to.equal('Corporate SSO')
+    })
+
+    it('should parse auto login as true', () => {
+      process.env.SIGNALK_OIDC_AUTO_LOGIN = 'true'
+      const config = parseEnvConfig()
+      expect(config.autoLogin).to.equal(true)
+    })
+
+    it('should parse auto login as false', () => {
+      process.env.SIGNALK_OIDC_AUTO_LOGIN = 'false'
+      const config = parseEnvConfig()
+      expect(config.autoLogin).to.equal(false)
+    })
   })
 
   describe('mergeConfigs', () => {
@@ -217,6 +235,78 @@ describe('OIDC Configuration', () => {
       const result = mergeConfigs(securityJsonConfig, {})
 
       expect(result.groupsAttribute).to.equal('roles')
+    })
+
+    it('should merge provider name from security.json', () => {
+      const securityJsonConfig = {
+        enabled: true,
+        issuer: 'https://auth.example.com',
+        clientId: 'signalk',
+        clientSecret: 'secret',
+        providerName: 'Company SSO'
+      }
+
+      const result = mergeConfigs(securityJsonConfig, {})
+
+      expect(result.providerName).to.equal('Company SSO')
+    })
+
+    it('should override provider name from env over security.json', () => {
+      const securityJsonConfig = {
+        enabled: true,
+        issuer: 'https://auth.example.com',
+        clientId: 'signalk',
+        clientSecret: 'secret',
+        providerName: 'JSON Provider'
+      }
+
+      const envConfig = {
+        providerName: 'Env Provider'
+      }
+
+      const result = mergeConfigs(securityJsonConfig, envConfig)
+
+      expect(result.providerName).to.equal('Env Provider')
+    })
+
+    it('should use default provider name when not specified', () => {
+      const securityJsonConfig = {
+        enabled: true,
+        issuer: 'https://auth.example.com',
+        clientId: 'signalk',
+        clientSecret: 'secret'
+      }
+
+      const result = mergeConfigs(securityJsonConfig, {})
+
+      expect(result.providerName).to.equal('SSO Login')
+    })
+
+    it('should merge auto login from security.json', () => {
+      const securityJsonConfig = {
+        enabled: true,
+        issuer: 'https://auth.example.com',
+        clientId: 'signalk',
+        clientSecret: 'secret',
+        autoLogin: true
+      }
+
+      const result = mergeConfigs(securityJsonConfig, {})
+
+      expect(result.autoLogin).to.equal(true)
+    })
+
+    it('should default auto login to false', () => {
+      const securityJsonConfig = {
+        enabled: true,
+        issuer: 'https://auth.example.com',
+        clientId: 'signalk',
+        clientSecret: 'secret'
+      }
+
+      const result = mergeConfigs(securityJsonConfig, {})
+
+      expect(result.autoLogin).to.equal(false)
     })
   })
 

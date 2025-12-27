@@ -11,7 +11,9 @@ describe('OIDC Permission Mapping', () => {
     clientSecret: 'test-secret',
     scope: 'openid email profile groups',
     defaultPermission: 'readonly',
-    autoCreateUsers: true
+    autoCreateUsers: true,
+    providerName: 'SSO Login',
+    autoLogin: false
   }
 
   describe('mapGroupsToPermission', () => {
