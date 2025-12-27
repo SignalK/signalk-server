@@ -182,6 +182,18 @@ module.exports = function (app, config) {
 
     app.use(require('cookie-parser')())
 
+    function getSafeDestination(destination) {
+      if (typeof destination !== 'string') {
+        return '/'
+      }
+      const dest = destination.trim()
+      // Allow only relative redirects. Reject protocol-relative URLs (//evil.com).
+      if (!dest.startsWith('/') || dest.startsWith('//')) {
+        return '/'
+      }
+      return dest
+    }
+
     app.post(['/login', `${skAuthPrefix}/login`], (req, res) => {
       const name = req.body.username
       const password = req.body.password
@@ -211,7 +223,7 @@ module.exports = function (app, config) {
             if (requestType === 'application/json') {
               res.json({ token: reply.token })
             } else {
-              res.redirect(req.body.destination ? req.body.destination : '/')
+              res.redirect(getSafeDestination(req.body.destination))
             }
           } else {
             if (requestType === 'application/json') {
