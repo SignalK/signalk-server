@@ -57,7 +57,7 @@ class AccessRequests extends Component {
       .then((response) => response.text())
       .then(() => {
         this.state[stateKey] = this.state[stateKey].filter(
-          (id) => id != identifier
+          (id) => id !== identifier
         )
         this.setState({
           stateKey: this.state[stateKey],
@@ -259,7 +259,7 @@ class AccessRequests extends Component {
                             className={
                               this.state.accessRequestsApproving.indexOf(
                                 this.state.selectedRequest.accessIdentifier
-                              ) != -1
+                              ) !== -1
                                 ? 'fa fa-spinner fa-spin'
                                 : 'fa fa-check'
                             }
@@ -287,7 +287,7 @@ class AccessRequests extends Component {
                             className={
                               this.state.accessRequestsDenying.indexOf(
                                 this.state.selectedRequest.accessIdentifier
-                              ) != -1
+                              ) !== -1
                                 ? 'fa fa-spinner fa-spin'
                                 : 'fa fa-ban'
                             }

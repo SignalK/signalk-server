@@ -51,7 +51,7 @@ export class FileStore implements IResourceStore {
   private async doInit(config: any): Promise<{ error: boolean; message: string }> {
     if (typeof config.settings.path === 'undefined') {
       this.savePath = config.basePath + '/resources'
-    } else if (config.settings.path[0] == '/') {
+    } else if (config.settings.path[0] === '/') {
       this.savePath = config.settings.path
     } else {
       this.savePath = path.join(config.basePath, config.settings.path)

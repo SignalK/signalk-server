@@ -121,7 +121,7 @@ module.exports = function (app) {
       return
     }
 
-    if (sendToN2K && type != 'n2k-json' && type != 'n2k') {
+    if (sendToN2K && type !== 'n2k-json' && type !== 'n2k') {
       res.status(400).json({
         error: 'Please enter NMEA 2000 json format or Actisense format'
       })
@@ -186,7 +186,7 @@ module.exports = function (app) {
         res.json({ deltas: msgs })
       }
     } else if (sendToN2K) {
-      const event = type == 'n2k' ? 'nmea2000out' : 'nmea2000JsonOut'
+      const event = type === 'n2k' ? 'nmea2000out' : 'nmea2000JsonOut'
       msgs.forEach((msg) => {
         app.emit(event, msg)
       })
@@ -199,7 +199,7 @@ module.exports = function (app) {
           data.deltas = data.deltas.filter(
             (m) =>
               typeof m !== 'undefined' &&
-              m != null &&
+              m !== null &&
               m.updates.length > 0 &&
               m.updates[0].values &&
               m.updates[0].values.length > 0

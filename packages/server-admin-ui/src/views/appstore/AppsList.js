@@ -54,7 +54,7 @@ export default function AppList(props) {
       <InfiniteScroll
         dataLength={apps.length}
         next={loadMore}
-        hasMore={apps.length != props.apps.length}
+        hasMore={apps.length !== props.apps.length}
       >
         {apps.map((app) => (
           <AppListItem key={app.name} {...app} />

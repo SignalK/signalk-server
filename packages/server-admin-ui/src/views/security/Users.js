@@ -46,7 +46,7 @@ class Users extends Component {
 
   componentDidUpdate(prevProps) {
     if (
-      this.props.loginStatus.authenticationRequired !=
+      this.props.loginStatus.authenticationRequired !==
       prevProps.loginStatus.authenticationRequired
     ) {
       this.fetchSecurityUsers()
@@ -85,7 +85,7 @@ class Users extends Component {
 
     if (
       !this.state.selectedUser.userId ||
-      this.state.selectedUser.userId.length == 0
+      this.state.selectedUser.userId.length === 0
     ) {
       alert('Please specify a User Id')
       return
@@ -93,7 +93,7 @@ class Users extends Component {
 
     if (this.state.selectedUser.password) {
       if (
-        this.state.selectedUser.password !=
+        this.state.selectedUser.password !==
         this.state.selectedUser.confirmPassword
       ) {
         alert('Passwords do not match')
@@ -326,11 +326,11 @@ const mapStateToProps = ({ loginStatus }) => ({ loginStatus })
 export default connect(mapStateToProps)(Users)
 
 function convertType(type) {
-  if (type == 'readonly') {
+  if (type === 'readonly') {
     return 'Read Only'
-  } else if (type == 'readwrite') {
+  } else if (type === 'readwrite') {
     return 'Read/Write'
-  } else if (type == 'admin') {
+  } else if (type === 'admin') {
     return 'Admin'
   }
 }
