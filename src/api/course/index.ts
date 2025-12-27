@@ -172,7 +172,7 @@ export class CourseApi {
    * 2. active route
    * are reflected in course deltas.
    */
-  private processResourceDeltas(delta: Delta) {
+  private async processResourceDeltas(delta: Delta) {
     let h: string[]
     if (this.courseInfo.activeRoute?.href) {
       h = this.courseInfo.activeRoute?.href.split('/').slice(-3)
@@ -184,9 +184,9 @@ export class CourseApi {
     const ref = h ? h.join('.') : undefined
     const refType = h ? h[1] : undefined
 
-    delta.updates.forEach((update: Update) => {
+    for (const update of delta.updates) {
       if (hasValues(update)) {
-        update.values.forEach(async (pathValue: PathValue) => {
+        for (const pathValue of update.values) {
           if (ref === pathValue.path) {
             if (refType === 'routes') {
               if (this.courseInfo.activeRoute) {
@@ -227,9 +227,9 @@ export class CourseApi {
               }
             }
           }
-        })
+        }
       }
-    })
+    }
   }
 
   // parse server settings
