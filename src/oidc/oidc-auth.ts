@@ -270,6 +270,12 @@ export function registerOIDCRoutes(
   app.get(
     `${skAuthPrefix}/oidc/callback`,
     async (req: Request, res: Response) => {
+      // Helper to redirect to login page with error (better UX for browser-based login)
+      const redirectWithError = (message: string) => {
+        const errorParam = encodeURIComponent(message)
+        res.redirect(`/admin/#/login?oidcError=true&message=${errorParam}`)
+      }
+
       try {
         const { code, state, error, error_description } = req.query as Record<
           string,
@@ -280,24 +286,21 @@ export function registerOIDCRoutes(
         if (error) {
           res.clearCookie(STATE_COOKIE_NAME)
           console.error(`OIDC error: ${error} - ${error_description}`)
-          res.status(400).json({
-            error: 'OIDC authentication failed',
-            message: error_description || error
-          })
+          redirectWithError(error_description || error)
           return
         }
 
         // Validate required parameters
         if (!code || !state) {
           res.clearCookie(STATE_COOKIE_NAME)
-          res.status(400).json({ error: 'Missing code or state parameter' })
+          redirectWithError('Missing code or state parameter')
           return
         }
 
         // Get and validate stored state
         const stateCookie = req.cookies[STATE_COOKIE_NAME]
         if (!stateCookie) {
-          res.status(400).json({ error: 'Missing state cookie' })
+          redirectWithError('Session expired. Please try again.')
           return
         }
 
@@ -309,13 +312,11 @@ export function registerOIDCRoutes(
         } catch (err) {
           res.clearCookie(STATE_COOKIE_NAME)
           console.error('OIDC state validation failed:', err)
-          res.status(400).json({
-            error: 'State validation failed',
-            message:
-              err instanceof OIDCError
-                ? err.message
-                : 'Invalid or expired state'
-          })
+          redirectWithError(
+            err instanceof OIDCError
+              ? err.message
+              : 'Session expired or invalid'
+          )
           return
         }
 
@@ -342,22 +343,30 @@ export function registerOIDCRoutes(
         res.clearCookie(STATE_COOKIE_NAME)
 
         // Extract user info from validated claims
+        // Use configured groupsAttribute or default to 'groups'
+        const groupsAttr = oidcConfig.groupsAttribute || 'groups'
+        const rawGroups = claims[groupsAttr]
+        // Normalize groups: handle array, single string, or undefined
+        let groups: string[] | undefined
+        if (Array.isArray(rawGroups)) {
+          groups = rawGroups as string[]
+        } else if (typeof rawGroups === 'string' && rawGroups.length > 0) {
+          groups = [rawGroups]
+        }
+
         const userInfo: OIDCUserInfo = {
           sub: claims.sub as string,
           email: claims.email as string | undefined,
           name: claims.name as string | undefined,
           preferredUsername: claims.preferred_username as string | undefined,
-          groups: claims.groups as string[] | undefined
+          groups
         }
         debug(`OIDC: user authenticated: ${userInfo.sub}`)
 
         // Find or create user
         const user = await findOrCreateOIDCUser(userInfo, oidcConfig, deps)
         if (!user) {
-          res.status(403).json({
-            error: 'User creation denied',
-            message: 'OIDC user auto-creation is disabled'
-          })
+          redirectWithError('User auto-creation is disabled')
           return
         }
 
@@ -373,22 +382,23 @@ export function registerOIDCRoutes(
         res.redirect(authState.originalUrl)
       } catch (err) {
         console.error('OIDC callback error:', err)
-        res.status(500).json({
-          error: 'OIDC authentication failed',
-          message: err instanceof Error ? err.message : String(err)
-        })
+        redirectWithError(
+          err instanceof Error ? err.message : 'Authentication failed'
+        )
       }
     }
   )
 
-  // OIDC status endpoint - returns OIDC configuration status
+  // OIDC status endpoint - returns OIDC configuration status (used by login page)
   app.get(`${skAuthPrefix}/oidc/status`, (_req: Request, res: Response) => {
     try {
       const oidcConfig = deps.getOIDCConfig()
       res.json({
         enabled: isOIDCEnabled(oidcConfig),
         issuer: oidcConfig.enabled ? oidcConfig.issuer : undefined,
-        loginUrl: oidcConfig.enabled ? `${skAuthPrefix}/oidc/login` : undefined
+        loginUrl: oidcConfig.enabled ? `${skAuthPrefix}/oidc/login` : undefined,
+        providerName: oidcConfig.enabled ? oidcConfig.providerName : undefined,
+        autoLogin: oidcConfig.enabled ? oidcConfig.autoLogin : false
       })
     } catch (_err) {
       res.json({ enabled: false })
