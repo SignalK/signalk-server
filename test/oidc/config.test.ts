@@ -64,6 +64,46 @@ describe('OIDC Configuration', () => {
       const config = parseEnvConfig()
       expect(config.autoCreateUsers).to.equal(false)
     })
+
+    it('should parse admin groups from comma-separated string', () => {
+      process.env.SIGNALK_OIDC_ADMIN_GROUPS = 'admins,sk-admin,superusers'
+      const config = parseEnvConfig()
+      expect(config.adminGroups).to.deep.equal([
+        'admins',
+        'sk-admin',
+        'superusers'
+      ])
+    })
+
+    it('should parse readwrite groups from comma-separated string', () => {
+      process.env.SIGNALK_OIDC_READWRITE_GROUPS = 'users,operators'
+      const config = parseEnvConfig()
+      expect(config.readwriteGroups).to.deep.equal(['users', 'operators'])
+    })
+
+    it('should handle single admin group', () => {
+      process.env.SIGNALK_OIDC_ADMIN_GROUPS = 'admins'
+      const config = parseEnvConfig()
+      expect(config.adminGroups).to.deep.equal(['admins'])
+    })
+
+    it('should handle empty admin groups string', () => {
+      process.env.SIGNALK_OIDC_ADMIN_GROUPS = ''
+      const config = parseEnvConfig()
+      expect(config.adminGroups).to.equal(undefined)
+    })
+
+    it('should trim whitespace from group names', () => {
+      process.env.SIGNALK_OIDC_ADMIN_GROUPS = ' admins , sk-admin '
+      const config = parseEnvConfig()
+      expect(config.adminGroups).to.deep.equal(['admins', 'sk-admin'])
+    })
+
+    it('should parse groups attribute', () => {
+      process.env.SIGNALK_OIDC_GROUPS_ATTRIBUTE = 'roles'
+      const config = parseEnvConfig()
+      expect(config.groupsAttribute).to.equal('roles')
+    })
   })
 
   describe('mergeConfigs', () => {
@@ -117,6 +157,66 @@ describe('OIDC Configuration', () => {
       expect(result.scope).to.equal('openid email profile')
       expect(result.defaultPermission).to.equal('readonly')
       expect(result.autoCreateUsers).to.equal(true)
+    })
+
+    it('should merge admin groups from security.json', () => {
+      const securityJsonConfig = {
+        enabled: true,
+        issuer: 'https://auth.example.com',
+        clientId: 'signalk',
+        clientSecret: 'secret',
+        adminGroups: ['admins', 'sk-admin']
+      }
+
+      const result = mergeConfigs(securityJsonConfig, {})
+
+      expect(result.adminGroups).to.deep.equal(['admins', 'sk-admin'])
+    })
+
+    it('should merge readwrite groups from security.json', () => {
+      const securityJsonConfig = {
+        enabled: true,
+        issuer: 'https://auth.example.com',
+        clientId: 'signalk',
+        clientSecret: 'secret',
+        readwriteGroups: ['users', 'operators']
+      }
+
+      const result = mergeConfigs(securityJsonConfig, {})
+
+      expect(result.readwriteGroups).to.deep.equal(['users', 'operators'])
+    })
+
+    it('should override admin groups from env over security.json', () => {
+      const securityJsonConfig = {
+        enabled: true,
+        issuer: 'https://auth.example.com',
+        clientId: 'signalk',
+        clientSecret: 'secret',
+        adminGroups: ['json-admins']
+      }
+
+      const envConfig = {
+        adminGroups: ['env-admins', 'env-superusers']
+      }
+
+      const result = mergeConfigs(securityJsonConfig, envConfig)
+
+      expect(result.adminGroups).to.deep.equal(['env-admins', 'env-superusers'])
+    })
+
+    it('should merge groups attribute', () => {
+      const securityJsonConfig = {
+        enabled: true,
+        issuer: 'https://auth.example.com',
+        clientId: 'signalk',
+        clientSecret: 'secret',
+        groupsAttribute: 'roles'
+      }
+
+      const result = mergeConfigs(securityJsonConfig, {})
+
+      expect(result.groupsAttribute).to.equal('roles')
     })
   })
 

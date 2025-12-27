@@ -37,3 +37,4 @@ export {
   findOrCreateOIDCUser,
   type OIDCAuthDependencies
 } from './oidc-auth'
+export * from './permission-mapping'
