@@ -251,6 +251,8 @@ module.exports = function (app, config) {
       '/providers',
       '/settings',
       '/webapps',
+      '/availablePaths',
+      '/hasAnalyzer',
       '/skServer/inputTest'
     ].forEach((p) =>
       app.use(`${SERVERROUTESPREFIX}${p}`, http_authorize(false))
@@ -271,7 +273,8 @@ module.exports = function (app, config) {
       '/backup',
       '/restore',
       '/providers',
-      '/vessel'
+      '/vessel',
+      '/serialports'
     ].forEach((p) =>
       app.use(`${SERVERROUTESPREFIX}${p}`, adminAuthenticationMiddleware(false))
     )
