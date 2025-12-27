@@ -34,7 +34,11 @@ const {
 const ms = require('ms')
 
 // OIDC imports
-import { parseOIDCConfig, registerOIDCRoutes } from './oidc'
+import {
+  parseOIDCConfig,
+  registerOIDCRoutes,
+  registerOIDCAdminRoutes
+} from './oidc'
 import { saveSecurityConfig } from './security'
 
 const CONFIG_PLUGINID = 'sk-simple-token-security-config'
@@ -217,7 +221,8 @@ module.exports = function (app, config) {
     immutableConfig,
     acls,
     allowDeviceAccessRequests,
-    allowNewUserRegistration
+    allowNewUserRegistration,
+    oidc: config.oidc // Include OIDC config from security.json
   }
 
   // so that enableSecurity gets the defaults to save
@@ -236,6 +241,13 @@ module.exports = function (app, config) {
     }
     return cachedOIDCConfig
   }
+
+  // Update OIDC configuration in memory and clear cache
+  function updateOIDCConfig(newOidcConfig) {
+    options.oidc = newOidcConfig
+    cachedOIDCConfig = null // Clear cache so it gets re-parsed
+  }
+  strategy.updateOIDCConfig = updateOIDCConfig
 
   /**
    * Get base cookie options with proper security settings
@@ -505,6 +517,15 @@ module.exports = function (app, config) {
       cryptoService: oidcCryptoService,
       userService: externalUserService
     })
+
+    // Register OIDC admin routes (GET/PUT /security/oidc, POST /security/oidc/test)
+    registerOIDCAdminRoutes(app, {
+      allowConfigure: (req) => strategy.allowConfigure(req),
+      getSecurityConfig: () => options,
+      saveSecurityConfig: (config, callback) =>
+        saveSecurityConfig(app, config, callback),
+      updateOIDCConfig
+    })
     ;[
       '/restart',
       '/runDiscovery',
@@ -689,10 +710,20 @@ module.exports = function (app, config) {
   strategy.getUsers = (aConfig) => {
     if (aConfig && aConfig.users) {
       return aConfig.users.map((user) => {
-        return {
+        const userData = {
           userId: user.username,
-          type: user.type
+          type: user.type,
+          isOIDC: !!user.oidc
         }
+        // Include OIDC metadata for OIDC users
+        if (user.oidc) {
+          userData.oidc = {
+            issuer: user.oidc.issuer,
+            email: user.oidc.email,
+            name: user.oidc.name
+          }
+        }
+        return userData
       })
     } else {
       return []

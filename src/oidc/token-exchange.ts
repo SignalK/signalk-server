@@ -123,3 +123,53 @@ export async function exchangeAuthorizationCode(
     tokenType: body.token_type || 'Bearer'
   }
 }
+
+/**
+ * Fetch additional claims from the userinfo endpoint
+ *
+ * The ID token typically only contains minimal claims (sub, iss, aud, etc.).
+ * Claims like groups, email, name are returned via the userinfo endpoint.
+ *
+ * @param accessToken The access token from the token response
+ * @param metadata Discovery document metadata containing userinfo_endpoint
+ * @returns Additional claims from the userinfo endpoint, or undefined if unavailable
+ */
+export async function fetchUserinfo(
+  accessToken: string,
+  metadata: OIDCProviderMetadata
+): Promise<Record<string, unknown> | undefined> {
+  // Not all providers have a userinfo endpoint
+  if (!metadata.userinfo_endpoint) {
+    return undefined
+  }
+
+  let response: Response
+  try {
+    response = await fetchFn(metadata.userinfo_endpoint, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    })
+  } catch (err) {
+    // Non-fatal: continue with ID token claims only
+    console.warn(
+      `OIDC: Failed to fetch userinfo: ${err instanceof Error ? err.message : err}`
+    )
+    return undefined
+  }
+
+  if (!response.ok) {
+    console.warn(`OIDC: Userinfo request failed with status ${response.status}`)
+    return undefined
+  }
+
+  try {
+    return (await response.json()) as Record<string, unknown>
+  } catch (err) {
+    console.warn(
+      `OIDC: Failed to parse userinfo response: ${err instanceof Error ? err.message : err}`
+    )
+    return undefined
+  }
+}

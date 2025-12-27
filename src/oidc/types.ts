@@ -135,6 +135,8 @@ export interface OIDCProviderMetadata {
   jwks_uri: string
   response_types_supported: string[]
   code_challenge_methods_supported?: string[]
+  /** Endpoint for RP-initiated logout (optional, not all providers support) */
+  end_session_endpoint?: string
 }
 
 /**
