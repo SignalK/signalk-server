@@ -221,7 +221,7 @@ const mapStateToProps = (state) => {
 
   if (
     !state.loginStatus.authenticationRequired ||
-    state.loginStatus.userLevel == 'admin'
+    state.loginStatus.userLevel === 'admin'
   ) {
     result.items.push.apply(result.items, [
       {
@@ -271,7 +271,7 @@ const mapStateToProps = (state) => {
 
   if (
     state.loginStatus.authenticationRequired === false ||
-    state.loginStatus.userLevel == 'admin'
+    state.loginStatus.userLevel === 'admin'
   ) {
     var security = {
       name: 'Security',

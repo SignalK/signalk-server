@@ -183,7 +183,7 @@ module.exports = {
 
         app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)
 
-        if (Object.keys(metaValue).length == 0) {
+        if (Object.keys(metaValue).length === 0) {
           app.config.baseDeltaEditor.removeMeta(context, metaPath)
         }
       } else {

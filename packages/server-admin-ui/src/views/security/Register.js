@@ -34,7 +34,7 @@ class Register extends Component {
       if (
         targetName === 'password' ||
         (targetName === 'confirmPassword' &&
-          this.state.password != this.state.confirmPassword)
+          this.state.password !== this.state.confirmPassword)
       ) {
         this.setState({ errorMessage: 'Passwords do not match' })
       } else {
@@ -44,14 +44,14 @@ class Register extends Component {
   }
 
   handleCreate() {
-    if (this.state.email.length == 0) {
+    if (this.state.email.length === 0) {
       this.setState({ errorMessage: 'Please enter an email address' })
     } else if (
-      this.state.password.length == 0 &&
-      this.state.confirmPassword.length == 0
+      this.state.password.length === 0 &&
+      this.state.confirmPassword.length === 0
     ) {
       this.setState({ errorMessage: 'Please enter and conform your password' })
-    } else if (this.state.password != this.state.confirmPassword) {
+    } else if (this.state.password !== this.state.confirmPassword) {
       //error message is already thwre
       return
     } else {
@@ -67,7 +67,7 @@ class Register extends Component {
         body: JSON.stringify(payload),
         credentials: 'include'
       }).then((response) => {
-        if (response.status != 202) {
+        if (response.status !== 202) {
           response.json().then((json) => {
             this.setState({
               errorMessage: json.message ? json.message : json.result

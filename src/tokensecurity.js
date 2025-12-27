@@ -729,7 +729,7 @@ module.exports = function (app, config) {
                 ? valuePath
                 : null
             })
-            .filter((vp) => vp != null)
+            .filter((vp) => vp !== null)
           if (update.values) {
             update.values = res
             return update.values.length > 0 ? update : null
@@ -738,7 +738,7 @@ module.exports = function (app, config) {
             return update.meta.length > 0 ? update : null
           }
         })
-        .filter((update) => update != null)
+        .filter((update) => update !== null)
       return filtered.updates.length > 0 ? filtered : null
     } else if (!principal) {
       return null
@@ -911,7 +911,7 @@ module.exports = function (app, config) {
             } else {
               return false
             }
-          }) != null
+          }) !== undefined
         )
       }
     }

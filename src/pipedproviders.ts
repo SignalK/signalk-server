@@ -168,7 +168,7 @@ export function pipedProviders(
       }, [])
 
       return piped.filter(function (n) {
-        return n != null
+        return n !== null && n !== undefined
       })
     } else {
       console.error('No pipedProviders in the settings file')

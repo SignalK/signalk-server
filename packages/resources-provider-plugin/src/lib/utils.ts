@@ -44,13 +44,13 @@ export const inBounds = (
         val.feature.geometry.coordinates &&
         val.feature.geometry.coordinates.length > 0
       ) {
-        if (val.feature.geometry.type == 'Polygon') {
+        if (val.feature.geometry.type === 'Polygon') {
           val.feature.geometry.coordinates.forEach((ls: any) => {
             ls.forEach((pt: any) => {
               ok = ok || isPointInPolygon(pt, polygon)
             })
           })
-        } else if (val.feature.geometry.type == 'MultiPolygon') {
+        } else if (val.feature.geometry.type === 'MultiPolygon') {
           val.feature.geometry.coordinates.forEach((polygon: any) => {
             polygon.forEach((ls: any) => {
               ls.forEach((pt: any) => {
@@ -102,7 +102,7 @@ export const passFilter = (res: any, type: string, params: any) => {
     if (typeof res.group === 'undefined') {
       ok = ok && false
     } else {
-      ok = ok && res.group == params.group
+      ok = ok && res.group === params.group
     }
   }
   if (params.geobounds) {

@@ -418,7 +418,7 @@ describe('Subscriptions', (_) => {
           `Context is vessels.${self}, got ${delta.context}`
         )
         assert(
-          delta.updates[0].timestamp == '2014-05-03T09:14:11.000Z',
+          delta.updates[0].timestamp === '2014-05-03T09:14:11.000Z',
           'Timestamp is correct'
         )
 
@@ -489,7 +489,7 @@ describe('Subscriptions', (_) => {
         ])
       })
       .then((results) => {
-        assert(results[0] != 'timeout', 'Got timeout')
+        assert(results[0] !== 'timeout', 'Got timeout')
         const delta = JSON.parse(results[0])
 
         assert(delta.updates.length === 1, 'Receives just one update')

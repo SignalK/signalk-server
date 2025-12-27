@@ -168,7 +168,7 @@ class DataBrowser extends Component {
     if (
       !this.state.pause &&
       this.props.webSocket &&
-      (this.props.webSocket != this.state.webSocket ||
+      (this.props.webSocket !== this.state.webSocket ||
         this.state.didSubscribe === false)
     ) {
       const sub = {

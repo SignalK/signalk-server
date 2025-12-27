@@ -228,7 +228,7 @@ function login(server, username, password) {
       })
     })
       .then((result) => {
-        if (result.status != 200) {
+        if (result.status !== 200) {
           result.text().then((t) => {
             reject(new Error(`Login returned ${result.status}: ${t}`))
           })
