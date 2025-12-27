@@ -349,25 +349,35 @@ module.exports = function (app, config) {
     app.put('/signalk/v1/*', writeAuthenticationMiddleware(false))
   }
 
+  // Dummy hash for timing attack prevention - pre-generated bcrypt hash
+  const DUMMY_HASH =
+    '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
+
   function login(name, password) {
     return new Promise((resolve, reject) => {
-      debug('logging in user: ' + name)
+      debug('handing login for user: ' + name)
+
+      // Validate input to prevent crashes on malformed requests
+      if (typeof name !== 'string' || typeof password !== 'string') {
+        // Still run bcrypt to prevent timing attacks on input validation
+        bcrypt.compare('dummy', DUMMY_HASH, () => {
+          resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
+        })
+        return
+      }
+
       const configuration = getConfiguration()
-
       const user = configuration.users.find((aUser) => aUser.username === name)
-      if (!user) {
-        resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
-        return
-      }
-      if (!user.password) {
-        resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
-        return
-      }
 
-      bcrypt.compare(password, user.password, (err, matches) => {
+      // Always run bcrypt.compare to prevent timing attacks that reveal
+      // whether a username exists. Use a dummy hash if user not found.
+      const hashToCompare = user && user.password ? user.password : DUMMY_HASH
+
+      bcrypt.compare(password, hashToCompare, (err, matches) => {
         if (err) {
           reject(err)
-        } else if (matches === true) {
+        } else if (matches === true && user && user.password) {
+          // Only succeed if user exists AND password matched real hash
           const payload = { id: user.username }
           const theExpiration = configuration.expiration || '1h'
           const jwtOptions = {}
@@ -391,7 +401,6 @@ module.exports = function (app, config) {
       })
     })
   }
-
   strategy.validateConfiguration = (newConfiguration) => {
     const configuration = getConfiguration()
     const theExpiration = newConfiguration.expiration || '1h'
