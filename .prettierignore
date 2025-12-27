@@ -1,2 +1,5 @@
 *.guard.ts
 public
+
+**/*.mbtiles
+**/*.pmtiles

@@ -81,9 +81,7 @@ describe('Rate Limiting', () => {
   it('should limit request status checks', async function () {
     const requests = []
     for (let i = 0; i < 100; i++) {
-      requests.push(
-        fetch(`${url}/signalk/v1/requests/123`)
-      )
+      requests.push(fetch(`${url}/signalk/v1/requests/123`))
     }
 
     await Promise.all(requests)
@@ -95,9 +93,7 @@ describe('Rate Limiting', () => {
   it('should limit login status checks', async function () {
     const requests = []
     for (let i = 0; i < 10; i++) {
-      requests.push(
-        fetch(`${url}/loginStatus`)
-      )
+      requests.push(fetch(`${url}/loginStatus`))
     }
 
     await Promise.all(requests)

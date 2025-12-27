@@ -68,9 +68,13 @@ const metaDelta = {
 
 describe('Security', () => {
   let server, url, port, readToken, writeToken, adminToken, noPasswordToken
+  let previousHttpRateLimits
 
   before(async function () {
     this.timeout(5000)
+    previousHttpRateLimits = process.env.HTTP_RATE_LIMITS
+    process.env.HTTP_RATE_LIMITS = 'api=1000,loginStatus=1000,login=1000'
+
     const securityConfig = {
       allowNewUserRegistration: true,
       allowDeviceAccessRequests: true,
@@ -125,6 +129,12 @@ describe('Security', () => {
 
   after(async function () {
     await server.stop()
+
+    if (previousHttpRateLimits === undefined) {
+      delete process.env.HTTP_RATE_LIMITS
+    } else {
+      process.env.HTTP_RATE_LIMITS = previousHttpRateLimits
+    }
   })
 
   async function login(username, password) {
@@ -582,9 +592,13 @@ describe('Security', () => {
 
 describe('Access Request Limit', () => {
   let server, url, port
+  let previousHttpRateLimits
 
   before(async function () {
     this.timeout(20000)
+    previousHttpRateLimits = process.env.HTTP_RATE_LIMITS
+    process.env.HTTP_RATE_LIMITS = 'api=1000,loginStatus=1000'
+
     port = await freeport()
     url = `http://0.0.0.0:${port}`
     const securityConfig = {
@@ -596,6 +610,12 @@ describe('Access Request Limit', () => {
 
   after(async function () {
     await server.stop()
+
+    if (previousHttpRateLimits === undefined) {
+      delete process.env.HTTP_RATE_LIMITS
+    } else {
+      process.env.HTTP_RATE_LIMITS = previousHttpRateLimits
+    }
   })
 
   it('should limit pending access requests to 100', async function () {
@@ -628,4 +648,3 @@ describe('Access Request Limit', () => {
     res.status.should.equal(503)
   })
 })
-
