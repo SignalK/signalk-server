@@ -12,7 +12,8 @@ import {
   FormGroup,
   FormText,
   Table,
-  Row
+  Row,
+  Badge
 } from 'reactstrap'
 import EnableSecurity from './EnableSecurity'
 
@@ -107,6 +108,7 @@ class AccessRequests extends Component {
                 <Table hover responsive bordered striped size="sm">
                   <thead>
                     <tr>
+                      <th>Permissions</th>
                       <th>Identifier</th>
                       <th>Description</th>
                       <th>Source IP</th>
@@ -124,6 +126,15 @@ class AccessRequests extends Component {
                             index
                           )}
                         >
+                          <td>
+                            {req.permissions === 'admin' ? (
+                              <Badge color="danger">Admin</Badge>
+                            ) : req.permissions === 'readwrite' ? (
+                              <Badge color="warning">Read/Write</Badge>
+                            ) : (
+                              <Badge color="secondary">Read Only</Badge>
+                            )}
+                          </td>
                           <td>{req.accessIdentifier}</td>
                           <td>{req.accessDescription}</td>
                           <td>{req.ip}</td>
@@ -199,8 +210,29 @@ class AccessRequests extends Component {
                         )}
                         {this.state.selectedRequest.requestedPermissions && (
                           <Label>
-                            {convertPermissions(
-                              this.state.selectedRequest.permissions
+                            {this.state.selectedRequest.permissions ===
+                            'admin' ? (
+                              <Badge
+                                color="danger"
+                                style={{ fontSize: 'large' }}
+                              >
+                                Admin
+                              </Badge>
+                            ) : this.state.selectedRequest.permissions ===
+                              'readwrite' ? (
+                              <Badge
+                                color="warning"
+                                style={{ fontSize: 'large' }}
+                              >
+                                Read/Write
+                              </Badge>
+                            ) : (
+                              <Badge
+                                color="secondary"
+                                style={{ fontSize: 'large' }}
+                              >
+                                Read Only
+                              </Badge>
                             )}
                           </Label>
                         )}
@@ -281,15 +313,3 @@ const mapStateToProps = ({ accessRequests, loginStatus }) => ({
 })
 
 export default connect(mapStateToProps)(AccessRequests)
-
-function convertPermissions(type) {
-  if (type == 'readonly') {
-    return 'Read Only'
-  } else if (type == 'readwrite') {
-    return 'Read/Write'
-  } else if (type == 'admin') {
-    return 'Admin'
-  } else {
-    return `Unknown ${type}`
-  }
-}
