@@ -257,7 +257,11 @@ module.exports = function (app, config) {
           const requestType = req.get('Content-Type')
 
           if (reply.statusCode === 200) {
-            let cookieOptions = { httpOnly: true }
+            let cookieOptions = {
+              httpOnly: true,
+              sameSite: 'strict',
+              secure: req.secure || req.headers['x-forwarded-proto'] === 'https'
+            }
             if (remember) {
               cookieOptions.maxAge = ms(
                 configuration.expiration === 'NEVER'
@@ -269,7 +273,8 @@ module.exports = function (app, config) {
 
             res.cookie(
               BROWSER_LOGININFO_COOKIE_NAME,
-              JSON.stringify({ status: 'loggedIn', user: reply.user })
+              JSON.stringify({ status: 'loggedIn', user: reply.user }),
+              cookieOptions
             )
 
             if (requestType === 'application/json') {
