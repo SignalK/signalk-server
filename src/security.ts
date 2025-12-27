@@ -16,6 +16,7 @@
 */
 
 import { Request, Response } from 'express'
+import { PartialOIDCConfig } from './oidc/types'
 import {
   chmodSync,
   existsSync,
@@ -217,6 +218,9 @@ export interface SecurityStrategy {
   ) => boolean
 
   addAdminMiddleware: (path: string) => void
+
+  /** Update OIDC config in memory (optional - only available when token security is active) */
+  updateOIDCConfig?: (newOidcConfig: PartialOIDCConfig) => void
 }
 
 export class InvalidTokenError extends Error {

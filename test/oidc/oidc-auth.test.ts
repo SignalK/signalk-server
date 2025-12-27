@@ -47,7 +47,9 @@ describe('OIDC Auth Routes', () => {
     clientSecret: 'test-secret',
     scope: 'openid email profile',
     defaultPermission: 'readonly',
-    autoCreateUsers: true
+    autoCreateUsers: true,
+    providerName: 'Test SSO',
+    autoLogin: false
   }
 
   // Track calls to dependency functions

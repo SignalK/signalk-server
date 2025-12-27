@@ -24,7 +24,7 @@ export {
   clearDiscoveryCache
 } from './discovery'
 export * from './authorization'
-export { exchangeAuthorizationCode } from './token-exchange'
+export { exchangeAuthorizationCode, fetchUserinfo } from './token-exchange'
 export {
   validateIdToken,
   fetchJwks,
@@ -37,4 +37,9 @@ export {
   findOrCreateOIDCUser,
   type OIDCAuthDependencies
 } from './oidc-auth'
+export {
+  registerOIDCAdminRoutes,
+  type OIDCAdminDependencies,
+  type SecurityConfigForOIDC
+} from './oidc-admin'
 export * from './permission-mapping'
