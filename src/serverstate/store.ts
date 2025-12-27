@@ -8,6 +8,7 @@ export const SERVERSTATEDIRNAME = 'serverState'
 export class Store {
   private filePath = ''
   private fileName = ''
+  private initPromise: Promise<void> | null = null
 
   constructor(
     server: WithConfig,
@@ -20,7 +21,7 @@ export class Store {
       storePath
     )
     this.fileName = fileName
-    this.init().catch((error) => {
+    this.initPromise = this.init().catch((error) => {
       console.log(
         `Could not initialise ${path.join(this.filePath, this.fileName)}`
       )
@@ -28,14 +29,23 @@ export class Store {
     })
   }
 
+  // Wait for initialization to complete before performing operations
+  private async waitForInit(): Promise<void> {
+    if (this.initPromise) {
+      await this.initPromise
+    }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async read(): Promise<any> {
+    await this.waitForInit()
     const data = await readFile(path.join(this.filePath, this.fileName), 'utf8')
     return JSON.parse(data)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  write(data: any) {
+  async write(data: any) {
+    await this.waitForInit()
     return writeFile(
       path.join(this.filePath, this.fileName),
       JSON.stringify(data)
