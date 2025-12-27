@@ -160,9 +160,7 @@ export async function fetchUserinfo(
   }
 
   if (!response.ok) {
-    console.warn(
-      `OIDC: Userinfo request failed with status ${response.status}`
-    )
+    console.warn(`OIDC: Userinfo request failed with status ${response.status}`)
     return undefined
   }
 
