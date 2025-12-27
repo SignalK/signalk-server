@@ -658,6 +658,16 @@ module.exports = function (app, config) {
     if (configuration.users.length === 0) {
       result.noUsers = true
     }
+    // Add OIDC status
+    const oidcConfig = getOIDCConfig()
+    if (oidcConfig.enabled) {
+      result.oidcEnabled = true
+      result.oidcAutoLogin = oidcConfig.autoLogin || false
+      result.oidcLoginUrl = '/signalk/v1/auth/oidc/login'
+      if (oidcConfig.providerName) {
+        result.oidcProviderName = oidcConfig.providerName
+      }
+    }
     return result
   }
 

@@ -61,7 +61,9 @@ describe('OIDC Integration', () => {
         clientSecret: 'test-secret',
         scope: 'openid email profile',
         defaultPermission: 'readonly' as const,
-        autoCreateUsers: true
+        autoCreateUsers: true,
+        providerName: 'SSO Login',
+        autoLogin: false
       }
 
       const metadata = {
