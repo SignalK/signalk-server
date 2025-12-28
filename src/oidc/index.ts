@@ -32,3 +32,8 @@ export {
   type ValidatedIdTokenClaims
 } from './id-token-validation'
 export * from './user-info'
+export {
+  registerOIDCRoutes,
+  findOrCreateOIDCUser,
+  type OIDCAuthDependencies
+} from './oidc-auth'

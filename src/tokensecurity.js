@@ -33,21 +33,8 @@ const {
 const ms = require('ms')
 
 // OIDC imports
-import {
-  parseOIDCConfig,
-  isOIDCEnabled,
-  createAuthState,
-  validateState,
-  encryptState,
-  decryptState,
-  getDiscoveryDocument,
-  buildAuthorizationUrl,
-  exchangeAuthorizationCode,
-  validateIdToken,
-  STATE_COOKIE_NAME,
-  STATE_MAX_AGE_MS,
-  OIDCError
-} from './oidc'
+import { parseOIDCConfig, registerOIDCRoutes } from './oidc'
+import { saveSecurityConfig } from './security'
 
 const CONFIG_PLUGINID = 'sk-simple-token-security-config'
 const passwordSaltRounds = 10
@@ -63,30 +50,6 @@ const BROWSER_LOGININFO_COOKIE_NAME = 'skLoginInfo'
 import { SERVERROUTESPREFIX } from './constants'
 
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
-
-/**
- * Validate that a URL is a safe relative path (prevents open redirect attacks)
- * @param {string} url - The URL to validate
- * @returns {boolean} - True if the URL is a safe relative path
- */
-function isSafeRelativeUrl(url) {
-  if (typeof url !== 'string' || !url) {
-    return false
-  }
-  // Must start with / but not // (which would be protocol-relative URL)
-  // Also reject URLs with backslashes or control characters
-  // Check for control characters (ASCII 0-31) that could be used for URL manipulation
-  const hasControlChars = url.split('').some((char) => {
-    const code = char.charCodeAt(0)
-    return code >= 0 && code <= 31
-  })
-  return (
-    url.startsWith('/') &&
-    !url.startsWith('//') &&
-    !url.includes('\\') &&
-    !hasControlChars
-  )
-}
 
 module.exports = function (app, config) {
   const strategy = {}
@@ -167,62 +130,73 @@ module.exports = function (app, config) {
     return cachedOIDCConfig
   }
 
-  // Find or create an OIDC user in the configuration
-  async function findOrCreateOIDCUser(userInfo, oidcConfig) {
+  /**
+   * Get base cookie options with proper security settings
+   * @param {Request} req - Express request object
+   * @param {boolean} rememberMe - Whether to set persistent cookie
+   * @returns {object} Cookie options (without httpOnly - add that separately for auth cookies)
+   */
+  function getSessionCookieOptions(req, rememberMe = false) {
     const configuration = getConfiguration()
-    const issuer = oidcConfig.issuer
-
-    // Look for existing user by OIDC sub + issuer
-    let user = configuration.users.find(
-      (u) => u.oidc && u.oidc.sub === userInfo.sub && u.oidc.issuer === issuer
-    )
-
-    if (user) {
-      debug(`OIDC: found existing user ${user.username}`)
-      return user
+    const cookieOptions = {
+      sameSite: 'strict',
+      secure: req.secure || req.headers['x-forwarded-proto'] === 'https'
     }
-
-    // User not found - check if auto-creation is enabled
-    if (!oidcConfig.autoCreateUsers) {
-      debug(`OIDC: user not found and auto-creation disabled`)
-      return null
+    if (rememberMe) {
+      cookieOptions.maxAge = ms(
+        configuration.expiration === 'NEVER'
+          ? '10y'
+          : configuration.expiration || '1h'
+      )
     }
+    return cookieOptions
+  }
 
-    // Create new user
-    const username =
-      userInfo.preferredUsername || userInfo.email || `oidc-${userInfo.sub}`
-
-    // Check for username collision with non-OIDC user
-    const existingUser = configuration.users.find(
-      (u) => u.username === username && !u.oidc
+  /**
+   * Set session cookies for authenticated user
+   * @param {Response} res - Express response object
+   * @param {Request} req - Express request object
+   * @param {string} token - JWT token
+   * @param {string} username - Username
+   * @param {object} options - Options (rememberMe)
+   */
+  function setSessionCookie(res, req, token, username, options = {}) {
+    const cookieOptions = getSessionCookieOptions(req, options.rememberMe)
+    // Auth cookie must be httpOnly for security
+    const authCookieOptions = { ...cookieOptions, httpOnly: true }
+    res.cookie('JAUTHENTICATION', token, authCookieOptions)
+    // Login info cookie must NOT be httpOnly so JS can access it
+    res.cookie(
+      BROWSER_LOGININFO_COOKIE_NAME,
+      JSON.stringify({ status: 'loggedIn', user: username }),
+      cookieOptions
     )
-    const finalUsername = existingUser
-      ? `${username}-${userInfo.sub.substring(0, 8)}`
-      : username
+  }
 
-    user = {
-      username: finalUsername,
-      type: oidcConfig.defaultPermission,
-      oidc: {
-        sub: userInfo.sub,
-        issuer: issuer
-      }
+  /**
+   * Clear session cookies
+   * @param {Response} res - Express response object
+   */
+  function clearSessionCookie(res) {
+    res.clearCookie('JAUTHENTICATION')
+    res.clearCookie(BROWSER_LOGININFO_COOKIE_NAME)
+  }
+
+  /**
+   * Generate a JWT for a user
+   * @param {string} userId - User identifier
+   * @param {string} expiration - Optional expiration override
+   * @returns {string} JWT token
+   */
+  function generateJWT(userId, expiration) {
+    const configuration = getConfiguration()
+    const theExpiration = expiration || configuration.expiration || '1h'
+    const payload = { id: userId }
+    const jwtOptions = {}
+    if (theExpiration !== 'NEVER') {
+      jwtOptions.expiresIn = theExpiration
     }
-
-    debug(
-      `OIDC: creating new user ${user.username} with permission ${user.type}`
-    )
-    configuration.users.push(user)
-
-    // Save configuration (async, but don't block)
-    const { saveSecurityConfig } = require('./security')
-    saveSecurityConfig(app, configuration, (err) => {
-      if (err) {
-        console.error('Failed to save OIDC user:', err)
-      }
-    })
-
-    return user
+    return jwt.sign(payload, configuration.secretKey, jwtOptions)
   }
 
   function getIsEnabled() {
@@ -362,32 +336,15 @@ module.exports = function (app, config) {
       const name = req.body.username
       const password = req.body.password
       const remember = req.body.rememberMe
-      const configuration = getConfiguration()
 
       login(name, password)
         .then((reply) => {
           const requestType = req.get('Content-Type')
 
           if (reply.statusCode === 200) {
-            let cookieOptions = {
-              sameSite: 'strict',
-              secure: req.secure || req.headers['x-forwarded-proto'] === 'https'
-            }
-            if (remember) {
-              cookieOptions.maxAge = ms(
-                configuration.expiration === 'NEVER'
-                  ? '10y'
-                  : configuration.expiration || '1h'
-              )
-            }
-            const authCookieOptions = { ...cookieOptions, httpOnly: true }
-            res.cookie('JAUTHENTICATION', reply.token, authCookieOptions)
-
-            res.cookie(
-              BROWSER_LOGININFO_COOKIE_NAME,
-              JSON.stringify({ status: 'loggedIn', user: reply.user }),
-              cookieOptions
-            )
+            setSessionCookie(res, req, reply.token, reply.user, {
+              rememberMe: remember
+            })
 
             if (requestType === 'application/json') {
               res.json({ token: reply.token })
@@ -428,200 +385,19 @@ module.exports = function (app, config) {
     )
 
     app.put(['/logout', `${skAuthPrefix}/logout`], function (req, res) {
-      res.clearCookie('JAUTHENTICATION')
-      res.clearCookie(BROWSER_LOGININFO_COOKIE_NAME)
+      clearSessionCookie(res)
       res.json('Logout OK')
     })
 
-    // OIDC login route - initiates the OIDC flow
-    app.get(`${skAuthPrefix}/oidc/login`, async (req, res) => {
-      try {
-        const oidcConfig = getOIDCConfig()
-        if (!isOIDCEnabled(oidcConfig)) {
-          res.status(500).json({ error: 'OIDC is not configured' })
-          return
-        }
-
-        const metadata = await getDiscoveryDocument(oidcConfig.issuer)
-
-        // Build redirect URI
-        const protocol = req.secure ? 'https' : 'http'
-        const host = req.get('host')
-        const redirectUri =
-          oidcConfig.redirectUri ||
-          `${protocol}://${host}${skAuthPrefix}/oidc/callback`
-
-        // Store original destination (validated to prevent open redirect attacks)
-        const requestedRedirect = req.query.redirect
-        const originalUrl = isSafeRelativeUrl(requestedRedirect)
-          ? requestedRedirect
-          : '/'
-
-        // Create auth state
-        const authState = createAuthState(redirectUri, originalUrl)
-
-        // Encrypt and store state in cookie
-        const configuration = getConfiguration()
-        const encryptedState = encryptState(authState, configuration.secretKey)
-
-        res.cookie(STATE_COOKIE_NAME, encryptedState, {
-          httpOnly: true,
-          secure: req.secure,
-          sameSite: 'lax',
-          maxAge: STATE_MAX_AGE_MS
-        })
-
-        // Build and redirect to authorization URL
-        const authUrl = buildAuthorizationUrl(oidcConfig, metadata, authState)
-        debug(`OIDC: redirecting to ${authUrl}`)
-        res.redirect(authUrl)
-      } catch (err) {
-        console.error('OIDC login error:', err)
-        res.status(500).json({
-          error: 'OIDC login failed',
-          message: err instanceof Error ? err.message : String(err)
-        })
-      }
-    })
-
-    // OIDC callback route - handles the response from the OIDC provider
-    app.get(`${skAuthPrefix}/oidc/callback`, async (req, res) => {
-      try {
-        const { code, state, error, error_description } = req.query
-
-        // Check for OIDC error
-        if (error) {
-          res.clearCookie(STATE_COOKIE_NAME)
-          console.error(`OIDC error: ${error} - ${error_description}`)
-          res.status(400).json({
-            error: 'OIDC authentication failed',
-            message: error_description || error
-          })
-          return
-        }
-
-        // Validate required parameters
-        if (!code || !state) {
-          res.clearCookie(STATE_COOKIE_NAME)
-          res.status(400).json({ error: 'Missing code or state parameter' })
-          return
-        }
-
-        // Get and validate stored state
-        const stateCookie = req.cookies[STATE_COOKIE_NAME]
-        if (!stateCookie) {
-          res.status(400).json({ error: 'Missing state cookie' })
-          return
-        }
-
-        const configuration = getConfiguration()
-        let authState
-        try {
-          authState = decryptState(stateCookie, configuration.secretKey)
-          validateState(state, authState)
-        } catch (err) {
-          res.clearCookie(STATE_COOKIE_NAME)
-          console.error('OIDC state validation failed:', err)
-          res.status(400).json({
-            error: 'State validation failed',
-            message:
-              err instanceof OIDCError
-                ? err.message
-                : 'Invalid or expired state'
-          })
-          return
-        }
-
-        const oidcConfig = getOIDCConfig()
-        const metadata = await getDiscoveryDocument(oidcConfig.issuer)
-
-        // Exchange code for tokens
-        const tokens = await exchangeAuthorizationCode(
-          code,
-          oidcConfig,
-          metadata,
-          authState
-        )
-
-        // Validate ID token signature and claims (including nonce)
-        const claims = await validateIdToken(
-          tokens.idToken,
-          oidcConfig,
-          metadata,
-          authState.nonce
-        )
-
-        // Clear state cookie after successful validation
-        res.clearCookie(STATE_COOKIE_NAME)
-
-        // Extract user info from validated claims
-        const userInfo = {
-          sub: claims.sub,
-          email: claims.email,
-          name: claims.name,
-          preferredUsername: claims.preferred_username,
-          groups: claims.groups
-        }
-        debug(`OIDC: user authenticated: ${userInfo.sub}`)
-
-        // Find or create user
-        const user = await findOrCreateOIDCUser(userInfo, oidcConfig)
-        if (!user) {
-          res.status(403).json({
-            error: 'User creation denied',
-            message: 'OIDC user auto-creation is disabled'
-          })
-          return
-        }
-
-        // Issue local JWT token (same as regular login)
-        const payload = { id: user.username }
-        const theExpiration = configuration.expiration || '1h'
-        const jwtOptions = {}
-        if (theExpiration !== 'NEVER') {
-          jwtOptions.expiresIn = theExpiration
-        }
-        const token = jwt.sign(payload, configuration.secretKey, jwtOptions)
-
-        // Set cookies (same as regular login)
-        const cookieOptions = {
-          httpOnly: true,
-          maxAge: ms(
-            configuration.expiration === 'NEVER'
-              ? '10y'
-              : configuration.expiration || '1h'
-          )
-        }
-        res.cookie('JAUTHENTICATION', token, cookieOptions)
-        res.cookie(
-          BROWSER_LOGININFO_COOKIE_NAME,
-          JSON.stringify({ status: 'loggedIn', user: user.username })
-        )
-
-        // Redirect to original destination
-        res.redirect(authState.originalUrl)
-      } catch (err) {
-        console.error('OIDC callback error:', err)
-        res.status(500).json({
-          error: 'OIDC authentication failed',
-          message: err instanceof Error ? err.message : String(err)
-        })
-      }
-    })
-
-    // OIDC status endpoint - returns OIDC configuration status
-    app.get(`${skAuthPrefix}/oidc/status`, (req, res) => {
-      try {
-        const oidcConfig = getOIDCConfig()
-        res.json({
-          enabled: isOIDCEnabled(oidcConfig),
-          issuer: oidcConfig.enabled ? oidcConfig.issuer : undefined,
-          loginUrl: oidcConfig.enabled
-            ? `${skAuthPrefix}/oidc/login`
-            : undefined
-        })
-      } catch (_err) {
-        res.json({ enabled: false })
+    // Register OIDC authentication routes
+    registerOIDCRoutes(app, {
+      getConfiguration,
+      getOIDCConfig,
+      setSessionCookie,
+      clearSessionCookie,
+      generateJWT,
+      saveConfig: (config, callback) => {
+        saveSecurityConfig(app, config, callback)
       }
     })
     ;[
