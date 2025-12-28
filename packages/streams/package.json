@@ -23,6 +23,7 @@
   "homepage": "https://github.com/SignalK/signalk-server-node#readme",
   "dependencies": {
     "@canboat/canboatjs": "^3.3.0",
+    "ipaddr.js": "^2.2.0",
     "@signalk/client": "^2.3.0",
     "@signalk/n2k-signalk": "^4.1.0",
     "@signalk/nmea0183-signalk": "^3.0.0",

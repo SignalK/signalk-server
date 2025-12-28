@@ -34,7 +34,7 @@
  */
 
 const Transform = require('stream').Transform
-const { isIPAllowed } = require('../../dist/ip-validation')
+const { isIPAllowed } = require('./ip-validation')
 
 function Udp(options) {
   Transform.call(this, {
