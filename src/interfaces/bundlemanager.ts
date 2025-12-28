@@ -248,7 +248,7 @@ function processInstallQueue(app: BundleManagerApp) {
   installModule(
     app.config,
     item.name,
-    item.version || 'latest',
+    item.version || '',
     // onData
     (data: Buffer) => {
       debug(`npm output: ${data.toString()}`)
