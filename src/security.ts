@@ -99,6 +99,7 @@ export interface SecurityConfig {
   allowNewUserRegistration: boolean
   allowDeviceAccessRequests: boolean
   allowedCorsOrigins?: string
+  allowedSourceIPs?: string[]
   expiration: string
   devices: Device[]
   secretKey: string

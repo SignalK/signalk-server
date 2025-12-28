@@ -16,6 +16,7 @@
 
 import { createDebug } from './debug'
 const debug = createDebug('signalk-server:tokensecurity')
+import { createIPFilterMiddleware } from './ip-validation'
 const jwt = require('jsonwebtoken')
 const _ = require('lodash')
 const bcrypt = require('bcryptjs')
@@ -103,7 +104,8 @@ module.exports = function (app, config) {
     immutableConfig,
     acls,
     allowDeviceAccessRequests,
-    allowNewUserRegistration
+    allowNewUserRegistration,
+    allowedSourceIPs: config.allowedSourceIPs
   }
 
   // so that enableSecurity gets the defaults to save
@@ -230,6 +232,9 @@ module.exports = function (app, config) {
       }
     })
 
+    // IP filter middleware - restricts access based on allowedSourceIPs config
+    const ipFilter = createIPFilterMiddleware(() => getConfiguration())
+
     app.use(require('body-parser').urlencoded({ extended: true }))
 
     app.use(require('cookie-parser')())
@@ -246,55 +251,61 @@ module.exports = function (app, config) {
       return dest
     }
 
-    app.post(['/login', `${skAuthPrefix}/login`], loginLimiter, (req, res) => {
-      const name = req.body.username
-      const password = req.body.password
-      const remember = req.body.rememberMe
-      const configuration = getConfiguration()
+    app.post(
+      ['/login', `${skAuthPrefix}/login`],
+      ipFilter,
+      loginLimiter,
+      (req, res) => {
+        const name = req.body.username
+        const password = req.body.password
+        const remember = req.body.rememberMe
+        const configuration = getConfiguration()
 
-      login(name, password)
-        .then((reply) => {
-          const requestType = req.get('Content-Type')
+        login(name, password)
+          .then((reply) => {
+            const requestType = req.get('Content-Type')
 
-          if (reply.statusCode === 200) {
-            let cookieOptions = {
-              httpOnly: true,
-              sameSite: 'strict',
-              secure: req.secure || req.headers['x-forwarded-proto'] === 'https'
-            }
-            if (remember) {
-              cookieOptions.maxAge = ms(
-                configuration.expiration === 'NEVER'
-                  ? '10y'
-                  : configuration.expiration || '1h'
+            if (reply.statusCode === 200) {
+              let cookieOptions = {
+                httpOnly: true,
+                sameSite: 'strict',
+                secure:
+                  req.secure || req.headers['x-forwarded-proto'] === 'https'
+              }
+              if (remember) {
+                cookieOptions.maxAge = ms(
+                  configuration.expiration === 'NEVER'
+                    ? '10y'
+                    : configuration.expiration || '1h'
+                )
+              }
+              res.cookie('JAUTHENTICATION', reply.token, cookieOptions)
+
+              res.cookie(
+                BROWSER_LOGININFO_COOKIE_NAME,
+                JSON.stringify({ status: 'loggedIn', user: reply.user }),
+                cookieOptions
               )
-            }
-            res.cookie('JAUTHENTICATION', reply.token, cookieOptions)
 
-            res.cookie(
-              BROWSER_LOGININFO_COOKIE_NAME,
-              JSON.stringify({ status: 'loggedIn', user: reply.user }),
-              cookieOptions
-            )
-
-            if (requestType === 'application/json') {
-              res.json({ token: reply.token })
+              if (requestType === 'application/json') {
+                res.json({ token: reply.token })
+              } else {
+                res.redirect(getSafeDestination(req.body.destination))
+              }
             } else {
-              res.redirect(getSafeDestination(req.body.destination))
+              if (requestType === 'application/json') {
+                res.status(reply.statusCode).send(reply)
+              } else {
+                res.status(reply.statusCode).send(reply.message)
+              }
             }
-          } else {
-            if (requestType === 'application/json') {
-              res.status(reply.statusCode).send(reply)
-            } else {
-              res.status(reply.statusCode).send(reply.message)
-            }
-          }
-        })
-        .catch((err) => {
-          console.log(err)
-          res.status(502).send('Login Failure')
-        })
-    })
+          })
+          .catch((err) => {
+            console.log(err)
+            res.status(502).send('Login Failure')
+          })
+      }
+    )
 
     app.use('/', http_authorize(false, true)) //semicolon required
     ;[

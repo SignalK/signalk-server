@@ -141,3 +141,111 @@ The following helmet features are disabled to maintain compatibility with the Si
 - **Content-Security-Policy**: Would prevent webapps (Freeboard, Instrumentpanel) from loading external resources like map tiles and CDN scripts
 - **Cross-Origin-Embedder-Policy**: Would prevent chart plotters from embedding SignalK data
 - **Cross-Origin-Resource-Policy**: Would prevent legitimate cross-origin API access from instruments and apps
+
+## IP Address Restrictions
+
+Signal K Server supports restricting access to specific endpoints based on the client's IP address. This provides an additional layer of security by limiting which network addresses can access sensitive endpoints.
+
+### Affected Endpoints and Services
+
+The following are protected by IP address restrictions:
+
+- **HTTP Endpoints**:
+  - `POST /signalk/v1/access/requests` - Device access requests
+  - `GET /signalk/v1/requests/:id` - Request status queries
+
+- **TCP Services**:
+  - NMEA 0183 TCP (port 10110)
+  - Signal K TCP (port 8375)
+
+### Configuration
+
+IP restrictions are configured in **Security → Settings** in the Admin UI using the "Allowed Source IPs" field.
+
+The default configuration allows only private/local network addresses:
+
+```
+127.0.0.0/8      # IPv4 loopback
+10.0.0.0/8       # RFC1918 Class A private
+172.16.0.0/12    # RFC1918 Class B private
+192.168.0.0/16   # RFC1918 Class C private
+169.254.0.0/16   # Link-local
+::1/128          # IPv6 loopback
+fc00::/7         # IPv6 unique local (ULA)
+fe80::/10        # IPv6 link-local
+```
+
+To allow all IP addresses (not recommended for internet-exposed servers):
+
+```
+0.0.0.0/0
+::/0
+```
+
+### Configuration in security.json
+
+IP restrictions can also be configured directly in `security.json`:
+
+```json
+{
+  "strategy": "./tokensecurity",
+  "allowedSourceIPs": ["127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8"]
+}
+```
+
+## Reverse Proxy Configuration (Trust Proxy)
+
+When running Signal K Server behind a reverse proxy (e.g., nginx, Apache, Traefik), the server needs to be configured to trust the `X-Forwarded-For` header to correctly identify client IP addresses.
+
+### Configuration
+
+Add the `trustProxy` setting to your `settings.json`:
+
+```json
+{
+  "settings": {
+    "trustProxy": true
+  }
+}
+```
+
+The `trustProxy` setting accepts the following values:
+
+| Value           | Description                                                              |
+| --------------- | ------------------------------------------------------------------------ |
+| `true`          | Trust all proxies (use with caution)                                     |
+| `false`         | Don't trust any proxy (default)                                          |
+| `"loopback"`    | Trust loopback addresses (127.0.0.1, ::1)                                |
+| `"linklocal"`   | Trust link-local addresses                                               |
+| `"uniquelocal"` | Trust unique local addresses                                             |
+| Number          | Trust the first N proxies                                                |
+| IP/CIDR         | Trust specific proxy addresses (e.g., `"192.168.1.1"` or `"10.0.0.0/8"`) |
+
+### Example: nginx Reverse Proxy
+
+When using nginx as a reverse proxy, configure it to pass the client IP:
+
+```nginx
+location / {
+    proxy_pass http://localhost:3000;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Host $host;
+}
+```
+
+And set `trustProxy` to trust only the nginx server:
+
+```json
+{
+  "settings": {
+    "trustProxy": "127.0.0.1"
+  }
+}
+```
+
+### Security Considerations
+
+- Only enable `trustProxy` if you are actually running behind a reverse proxy
+- Configure the value to trust only your specific proxy IP address when possible
+- Using `trustProxy: true` trusts all proxies, which could allow IP spoofing if your server is directly accessible

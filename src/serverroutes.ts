@@ -55,6 +55,12 @@ import { getAISShipTypeName } from '@signalk/signalk-schema'
 import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
+import {
+  createIPFilterMiddleware,
+  isIPAllowed,
+  normalizeIP,
+  validateIPList
+} from './ip-validation'
 
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
@@ -165,6 +171,8 @@ module.exports = function (
         'Too many requests from this IP, please try again after 10 minutes'
     }
   })
+
+  const ipFilter = createIPFilterMiddleware(() => getSecurityConfig(app))
 
   let securityWasEnabled = false
   const restoreSessions = new Map<string, string>()
@@ -332,6 +340,32 @@ module.exports = function (
         } catch (err: any) {
           res.status(400).send(err.message)
           return
+        }
+
+        // Validate allowedSourceIPs if provided
+        if (
+          req.body.allowedSourceIPs &&
+          Array.isArray(req.body.allowedSourceIPs)
+        ) {
+          const ipErrors = validateIPList(req.body.allowedSourceIPs)
+          if (ipErrors.length > 0) {
+            res
+              .status(400)
+              .send(`Invalid IP configuration: ${ipErrors.join(', ')}`)
+            return
+          }
+
+          // Check if user would lock themselves out
+          const clientIP = req.ip ? normalizeIP(req.ip) : undefined
+          if (clientIP && !isIPAllowed(clientIP, req.body.allowedSourceIPs)) {
+            res
+              .status(400)
+              .send(
+                `Warning: This configuration would block your current IP address (${clientIP}). ` +
+                  `Please ensure your IP is included in the allowed list.`
+              )
+            return
+          }
         }
 
         let config = getSecurityConfig(app)
@@ -538,6 +572,7 @@ module.exports = function (
 
   app.post(
     `${skPrefix}/access/requests`,
+    ipFilter,
     apiLimiter,
     (req: Request, res: Response) => {
       if (
@@ -548,7 +583,7 @@ module.exports = function (
         return
       }
       const config = getSecurityConfig(app)
-      const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+      const ip = req.ip
       if (!app.securityStrategy.requestAccess) {
         res.status(404).json({
           message:
@@ -573,6 +608,7 @@ module.exports = function (
 
   app.get(
     `${skPrefix}/requests/:id`,
+    ipFilter,
     apiLimiter,
     (req: Request, res: Response) => {
       queryRequest(req.params.id)
