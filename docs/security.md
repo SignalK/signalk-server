@@ -144,7 +144,7 @@ The following helmet features are disabled to maintain compatibility with the Si
 
 ## IP Address Restrictions
 
-Signal K Server supports restricting access to specific endpoints based on the client's IP address. This provides an additional layer of security by limiting which network addresses can access sensitive endpoints.
+Signal K Server supports restricting access to sensitive endpoints based on the client's IP address. This provides an additional layer of security by limiting which network addresses can access them. This includes the TCP services, that have no authentication & access control mechanism.
 
 ### Affected Endpoints and Services
 

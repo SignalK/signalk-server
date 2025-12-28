@@ -7,9 +7,8 @@ const debug = createDebug('signalk-server:ip-validation')
 /**
  * Default allowed IP ranges - private/local networks only.
  * Used when allowedSourceIPs is not configured.
- * Exported for use in Admin UI prefill and setup wizard.
  */
-export const DEFAULT_ALLOWED_IPS = [
+const DEFAULT_ALLOWED_IPS = [
   '127.0.0.0/8', // IPv4 loopback
   '10.0.0.0/8', // RFC1918 Class A private
   '172.16.0.0/12', // RFC1918 Class B private
