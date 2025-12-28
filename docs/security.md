@@ -2,6 +2,7 @@
 title: Security
 children:
   - setup/generating_tokens.md
+  - oidc.md
 ---
 
 # Security
@@ -212,3 +213,9 @@ And set `trustProxy` to trust only the nginx server:
 - Only enable `trustProxy` if you are actually running behind a reverse proxy
 - Configure the value to trust only your specific proxy IP address when possible
 - Using `trustProxy: true` trusts all proxies, which could allow IP spoofing if your server is directly accessible
+
+## OpenID Connect (OIDC) Authentication
+
+If you run multiple services alongside Signal K (such as Grafana, Node-RED, or others), managing separate user accounts and passwords for each becomes tedious and error-prone. OpenID Connect (OIDC) solves this by letting users authenticate once with a central identity provider and access all connected services.
+
+For configuration and setup, see the [OIDC Authentication Guide](oidc.md).

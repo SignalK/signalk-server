@@ -67,43 +67,6 @@ consists of:
 The `SecurityStrategy` interface (`src/security.ts`) defines the methods that
 a security implementation must provide:
 
-### Core Methods
-
-- `isDummy()`: Returns true for dummy implementation
-- `allowReadOnly()`: Whether anonymous read access is allowed
-- `getConfiguration()`: Returns the security configuration
-
-### Authentication Methods
-
-- `getLoginStatus()`: Current authentication status
-- `generateToken()`: Create a JWT for authenticated access
-
-### Authorization Methods
-
-- `allowRestart()`: Can the user restart the server?
-- `allowConfigure()`: Can the user modify configuration?
-- `shouldAllowWrite()`: Check write permission for deltas
-- `shouldAllowPut()`: Check PUT permission
-
-### User Management
-
-- `getUsers()`: List all users
-- `addUser()`: Create a new user
-- `updateUser()`: Modify user properties
-- `deleteUser()`: Remove a user
-- `setPassword()`: Change user password
-
-### Device Management
-
-- `getDevices()`: List registered devices
-- `updateDevice()`: Modify device properties
-- `deleteDevice()`: Remove a device
-
-### Access Control
-
-- `filterReadDelta()`: Filter delta data based on ACLs
-- `shouldFilterDeltas()`: Whether ACL filtering is active
-
 ## Token Security Implementation
 
 `tokensecurity.js` is the production security implementation. It provides:
@@ -127,29 +90,9 @@ Session cookie helpers ensure consistent security settings:
 - `sameSite: 'strict'`
 - `secure: true` (when over HTTPS)
 
-### Token Format
-
-JWTs contain:
-
-```json
-{
-  "id": "username",
-  "exp": 1234567890
-}
-```
-
 ## OIDC Integration
 
 The OIDC module provides OpenID Connect authentication for Single Sign-On.
-
-### Architecture
-
-```
-┌──────────────┐     ┌───────────────────┐     ┌──────────────────┐
-│   Browser    │────▶│  Signal K Server  │────▶│  OIDC Provider   │
-│              │◀────│                   │◀────│  (Keycloak, etc) │
-└──────────────┘     └───────────────────┘     └──────────────────┘
-```
 
 ### Authentication Flow
 
@@ -163,10 +106,10 @@ The OIDC module provides OpenID Connect authentication for Single Sign-On.
 8. Server creates/updates local user record
 9. Server issues local JWT session
 
-### Logout Flow (RP-Initiated)
+### Logout Flow
 
-The `/signalk/v1/auth/oidc/logout` endpoint supports OpenID Connect RP-Initiated
-Logout:
+The `/signalk/v1/auth/oidc/logout` endpoint supports logging out from both
+Signal K and the identity provider:
 
 1. User clicks "Logout"
 2. Server clears local session cookies
@@ -176,29 +119,6 @@ Logout:
 4. If provider doesn't support logout, redirects locally
 
 This ensures users are logged out of both Signal K and the identity provider.
-
-### Dependency Injection
-
-`oidc-auth.ts` receives dependencies from tokensecurity via the
-`OIDCAuthDependencies` interface:
-
-```typescript
-interface OIDCAuthDependencies {
-  getConfiguration: () => SecurityConfig
-  getOIDCConfig: () => OIDCConfig
-  setSessionCookie: (res, req, token, username, options?) => void
-  clearSessionCookie: (res) => void
-  generateJWT: (userId, expiration?) => string
-  saveConfig: (config, callback) => void
-}
-```
-
-This design:
-
-- Avoids circular dependencies
-- Allows tokensecurity to own session management
-- Keeps OIDC code focused on OIDC-specific logic
-- Makes testing easier through dependency injection
 
 ### Helper Modules
 
