@@ -161,8 +161,8 @@ module.exports = function (
       message:
         'Too many requests from this IP, please try again after 10 minutes'
     },
-    // Disable X-Forwarded-For validation - we handle trust proxy configuration
-    // ourselves and this avoids error log output when trust proxy isn't configured
+    // We use Express' trust proxy that sets the actual client's ip in req.ip
+    // so rateLimit need not complain about the presence of x-forwarded-for
     validate: { xForwardedForHeader: false }
   })
 
