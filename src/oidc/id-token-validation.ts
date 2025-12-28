@@ -96,6 +96,13 @@ export function clearJwksCache(): void {
 }
 
 /**
+ * Clear cached JWKS for a specific URI
+ */
+function clearJwksCacheForUri(jwksUri: string): void {
+  jwksCache.delete(jwksUri)
+}
+
+/**
  * Fetch JWKS from the provider
  * @param metadata Provider metadata containing jwks_uri
  * @returns The JWKS
@@ -147,6 +154,28 @@ export async function fetchJwks(
 }
 
 /**
+ * Check if an error is a signature verification failure that might be fixed
+ * by refreshing the JWKS (e.g., key rotation occurred)
+ */
+function isSignatureError(err: unknown): boolean {
+  if (!(err instanceof Error)) {
+    return false
+  }
+  const errorName = err.constructor.name
+  const errorMessage = err.message.toLowerCase()
+
+  // jose throws JWSSignatureVerificationFailed for signature issues
+  // Also check for "signature" in message for other cases
+  return (
+    errorName === 'JWSSignatureVerificationFailed' ||
+    errorName === 'JWSInvalid' ||
+    errorMessage.includes('signature') ||
+    errorMessage.includes('no applicable key') ||
+    errorMessage.includes('key not found')
+  )
+}
+
+/**
  * Validate an ID token according to OIDC spec
  *
  * Validates:
@@ -155,6 +184,10 @@ export async function fetchJwks(
  * - Audience contains client_id
  * - Token is not expired (with 5 min clock skew tolerance)
  * - Nonce matches expected nonce
+ *
+ * If signature verification fails, the JWKS cache is cleared and validation
+ * is retried once. This handles the case where the OIDC provider has rotated
+ * keys since the JWKS was cached.
  *
  * @param idToken The ID token string
  * @param config OIDC configuration
@@ -172,53 +205,76 @@ export async function validateIdToken(
   // Dynamically import jose (ESM-only module)
   const jose = await getJose()
 
-  // Fetch JWKS
-  const jwks = await fetchJwks(metadata)
-
-  // Create JWKS from the fetched keys
-  const keySet = jose.createLocalJWKSet(jwks as JoseJSONWebKeySet)
-
-  // Verify the token signature and decode claims
+  // Try to verify, with one retry on signature failure (handles key rotation)
   let payload: JWTPayload
-  try {
-    const result = await jose.jwtVerify(idToken, keySet, {
-      issuer: config.issuer,
-      audience: config.clientId,
-      clockTolerance: 300 // 5 minutes clock skew tolerance
-    })
-    payload = result.payload
-  } catch (err) {
-    // Check error types by name since we can't use instanceof with dynamically imported classes
-    const errorName = err instanceof Error ? err.constructor.name : ''
-    const errorMessage = err instanceof Error ? err.message.toLowerCase() : ''
+  let lastError: unknown
 
-    if (errorName === 'JWTExpired') {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    // Fetch JWKS (will use cache unless cleared)
+    const jwks = await fetchJwks(metadata)
+
+    // Create JWKS from the fetched keys
+    const keySet = jose.createLocalJWKSet(jwks as JoseJSONWebKeySet)
+
+    // Verify the token signature and decode claims
+    try {
+      const result = await jose.jwtVerify(idToken, keySet, {
+        issuer: config.issuer,
+        audience: config.clientId,
+        clockTolerance: 300 // 5 minutes clock skew tolerance
+      })
+      payload = result.payload
+      break // Success, exit retry loop
+    } catch (err) {
+      lastError = err
+
+      // On first attempt, if it's a signature error, clear cache and retry
+      if (attempt === 0 && isSignatureError(err)) {
+        clearJwksCacheForUri(metadata.jwks_uri)
+        continue // Retry with fresh JWKS
+      }
+
+      // Not a signature error or second attempt - process the error
+      const errorName = err instanceof Error ? err.constructor.name : ''
+      const errorMessage = err instanceof Error ? err.message.toLowerCase() : ''
+
+      if (errorName === 'JWTExpired') {
+        throw new OIDCError(
+          'ID token has expired',
+          'INVALID_TOKEN',
+          err instanceof Error ? err : undefined
+        )
+      }
+      if (errorName === 'JWTClaimValidationFailed') {
+        if (errorMessage.includes('iss') || errorMessage.includes('issuer')) {
+          throw new OIDCError(
+            `ID token issuer mismatch: expected ${config.issuer}`,
+            'INVALID_TOKEN',
+            err instanceof Error ? err : undefined
+          )
+        }
+        if (errorMessage.includes('aud') || errorMessage.includes('audience')) {
+          throw new OIDCError(
+            `ID token audience mismatch: expected ${config.clientId}`,
+            'INVALID_TOKEN',
+            err instanceof Error ? err : undefined
+          )
+        }
+      }
       throw new OIDCError(
-        'ID token has expired',
+        `ID token validation failed: ${err}`,
         'INVALID_TOKEN',
         err instanceof Error ? err : undefined
       )
     }
-    if (errorName === 'JWTClaimValidationFailed') {
-      if (errorMessage.includes('iss') || errorMessage.includes('issuer')) {
-        throw new OIDCError(
-          `ID token issuer mismatch: expected ${config.issuer}`,
-          'INVALID_TOKEN',
-          err instanceof Error ? err : undefined
-        )
-      }
-      if (errorMessage.includes('aud') || errorMessage.includes('audience')) {
-        throw new OIDCError(
-          `ID token audience mismatch: expected ${config.clientId}`,
-          'INVALID_TOKEN',
-          err instanceof Error ? err : undefined
-        )
-      }
-    }
+  }
+
+  // If we exit the loop without payload, something went wrong
+  if (!payload!) {
     throw new OIDCError(
-      `ID token validation failed: ${err}`,
+      `ID token validation failed after retry: ${lastError}`,
       'INVALID_TOKEN',
-      err instanceof Error ? err : undefined
+      lastError instanceof Error ? lastError : undefined
     )
   }
 

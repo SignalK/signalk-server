@@ -332,4 +332,141 @@ describe('ID Token Validation', () => {
       expect(claims.groups).to.deep.equal(['admin', 'users'])
     })
   })
+
+  describe('JWKS key rotation handling', () => {
+    it('should retry with fresh JWKS when signature verification fails due to key rotation', async () => {
+      // Generate a new key pair (simulating key rotation)
+      const newKeyPair = await jose.generateKeyPair('RS256')
+      const newPublicJwk = await jose.exportJWK(newKeyPair.publicKey)
+      newPublicJwk.kid = 'new-key-1'
+      newPublicJwk.alg = 'RS256'
+      newPublicJwk.use = 'sig'
+      const newJwks = { keys: [newPublicJwk as JSONWebKeySet['keys'][0]] }
+
+      // Create token signed with the NEW key
+      const now = Math.floor(Date.now() / 1000)
+      const idToken = await new jose.SignJWT({
+        iss: 'https://auth.example.com',
+        sub: 'user-123',
+        aud: 'signalk-server',
+        exp: now + 3600,
+        iat: now,
+        nonce: 'test-nonce'
+      })
+        .setProtectedHeader({ alg: 'RS256', kid: 'new-key-1' })
+        .sign(newKeyPair.privateKey)
+
+      // First call returns old JWKS (wrong key), second call returns new JWKS
+      let fetchCount = 0
+      const mockFetch = async (): Promise<Response> => {
+        fetchCount++
+        if (fetchCount === 1) {
+          // First fetch: return old JWKS (will fail signature verification)
+          return new Response(JSON.stringify(jwks), { status: 200 })
+        }
+        // Second fetch: return new JWKS (will succeed)
+        return new Response(JSON.stringify(newJwks), { status: 200 })
+      }
+      setJwksFetch(mockFetch)
+
+      // Should succeed after retry
+      const claims = await validateIdToken(
+        idToken,
+        config,
+        metadata,
+        'test-nonce'
+      )
+
+      expect(claims.sub).to.equal('user-123')
+      expect(fetchCount).to.equal(2) // Confirms retry happened
+    })
+
+    it('should not retry for non-signature errors like expired token', async () => {
+      let fetchCount = 0
+      const mockFetch = async (): Promise<Response> => {
+        fetchCount++
+        return new Response(JSON.stringify(jwks), { status: 200 })
+      }
+      setJwksFetch(mockFetch)
+
+      // Create an expired token (signed with correct key)
+      const now = Math.floor(Date.now() / 1000)
+      const idToken = await createIdToken({
+        exp: now - 3600, // expired 1 hour ago (outside clock skew tolerance)
+        iat: now - 7200
+      })
+
+      try {
+        await validateIdToken(idToken, config, metadata, 'test-nonce')
+        expect.fail('Should have thrown')
+      } catch (err) {
+        expect(err).to.be.instanceOf(OIDCError)
+        expect((err as OIDCError).code).to.equal('INVALID_TOKEN')
+        expect((err as OIDCError).message).to.include('expired')
+      }
+
+      // Should only fetch once - no retry for expiration errors
+      expect(fetchCount).to.equal(1)
+    })
+
+    it('should not retry for issuer mismatch errors', async () => {
+      let fetchCount = 0
+      const mockFetch = async (): Promise<Response> => {
+        fetchCount++
+        return new Response(JSON.stringify(jwks), { status: 200 })
+      }
+      setJwksFetch(mockFetch)
+
+      const idToken = await createIdToken({ iss: 'https://wrong-issuer.com' })
+
+      try {
+        await validateIdToken(idToken, config, metadata, 'test-nonce')
+        expect.fail('Should have thrown')
+      } catch (err) {
+        expect(err).to.be.instanceOf(OIDCError)
+        expect((err as OIDCError).code).to.equal('INVALID_TOKEN')
+        expect((err as OIDCError).message).to.include('issuer')
+      }
+
+      // Should only fetch once - no retry for issuer errors
+      expect(fetchCount).to.equal(1)
+    })
+
+    it('should fail after retry if new JWKS also does not contain valid key', async () => {
+      // Generate a completely different key (not in any JWKS)
+      const unknownKeyPair = await jose.generateKeyPair('RS256')
+
+      // Create token signed with the unknown key
+      const now = Math.floor(Date.now() / 1000)
+      const idToken = await new jose.SignJWT({
+        iss: 'https://auth.example.com',
+        sub: 'user-123',
+        aud: 'signalk-server',
+        exp: now + 3600,
+        iat: now,
+        nonce: 'test-nonce'
+      })
+        .setProtectedHeader({ alg: 'RS256', kid: 'unknown-key' })
+        .sign(unknownKeyPair.privateKey)
+
+      // Always return the same JWKS (which doesn't have the signing key)
+      let fetchCount = 0
+      const mockFetch = async (): Promise<Response> => {
+        fetchCount++
+        return new Response(JSON.stringify(jwks), { status: 200 })
+      }
+      setJwksFetch(mockFetch)
+
+      try {
+        await validateIdToken(idToken, config, metadata, 'test-nonce')
+        expect.fail('Should have thrown')
+      } catch (err) {
+        expect(err).to.be.instanceOf(OIDCError)
+        expect((err as OIDCError).code).to.equal('INVALID_TOKEN')
+      }
+
+      // Should have retried once
+      expect(fetchCount).to.equal(2)
+    })
+  })
 })
