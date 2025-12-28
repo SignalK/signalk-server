@@ -344,4 +344,68 @@ export function registerOIDCRoutes(
       res.json({ enabled: false })
     }
   })
+
+  // OIDC logout endpoint - clears local session and optionally redirects to provider logout
+  app.get(
+    `${skAuthPrefix}/oidc/logout`,
+    async (req: Request, res: Response) => {
+      try {
+        // Clear local session cookies
+        deps.clearSessionCookie(res)
+
+        // Get post-logout redirect URI (validated to prevent open redirect attacks)
+        const requestedRedirect = req.query.redirect
+        const postLogoutRedirect = isSafeRelativeUrl(requestedRedirect)
+          ? requestedRedirect
+          : '/'
+
+        // Check if OIDC is enabled and provider supports RP-initiated logout
+        const oidcConfig = deps.getOIDCConfig()
+        if (!isOIDCEnabled(oidcConfig)) {
+          // OIDC not enabled, just redirect locally
+          res.redirect(postLogoutRedirect)
+          return
+        }
+
+        // Fetch discovery document to check for end_session_endpoint
+        let metadata
+        try {
+          metadata = await getDiscoveryDocument(oidcConfig.issuer)
+        } catch (err) {
+          debug('OIDC: failed to fetch discovery document for logout:', err)
+          // Fall back to local redirect
+          res.redirect(postLogoutRedirect)
+          return
+        }
+
+        if (!metadata.end_session_endpoint) {
+          // Provider doesn't support RP-initiated logout
+          debug('OIDC: provider does not support end_session_endpoint')
+          res.redirect(postLogoutRedirect)
+          return
+        }
+
+        // Build logout URL with post_logout_redirect_uri
+        const protocol = req.secure ? 'https' : 'http'
+        const host = req.get('host')
+        const fullPostLogoutUri = `${protocol}://${host}${postLogoutRedirect}`
+
+        const logoutUrl = new URL(metadata.end_session_endpoint)
+        logoutUrl.searchParams.set(
+          'post_logout_redirect_uri',
+          fullPostLogoutUri
+        )
+        // Note: We don't send id_token_hint as we don't persist the ID token
+        // The provider should still be able to identify the session via cookies
+
+        debug(`OIDC: redirecting to logout URL: ${logoutUrl.toString()}`)
+        res.redirect(logoutUrl.toString())
+      } catch (err) {
+        console.error('OIDC logout error:', err)
+        // On error, still clear cookies and redirect to home
+        deps.clearSessionCookie(res)
+        res.redirect('/')
+      }
+    }
+  )
 }
