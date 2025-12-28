@@ -14,27 +14,46 @@
  * limitations under the License.
  */
 
+import { Application, Request, Response, NextFunction } from 'express'
+import jwt, { SignOptions } from 'jsonwebtoken'
+import _ from 'lodash'
+import bcrypt from 'bcryptjs'
+import { getSourceId } from '@signalk/signalk-schema'
+import ms, { StringValue } from 'ms'
+import rateLimit from 'express-rate-limit'
+import bodyParser from 'body-parser'
+import cookieParser from 'cookie-parser'
+import crypto from 'crypto'
+
 import { createDebug } from './debug'
-const debug = createDebug('signalk-server:tokensecurity')
-const jwt = require('jsonwebtoken')
-const _ = require('lodash')
-const bcrypt = require('bcryptjs')
-const getSourceId = require('@signalk/signalk-schema').getSourceId
-const {
+import {
   InvalidTokenError,
+  SecurityConfig,
+  User,
+  Device,
+  UserData,
+  UserDataUpdate,
+  DeviceDataUpdate,
+  ACL,
+  LoginStatusResponse,
+  saveSecurityConfig,
+  RequestStatusData,
   getRateLimitValidationOptions
-} = require('./security')
+} from './security'
+// requestResponse is still CommonJS
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const {
   createRequest,
   updateRequest,
   findRequest,
   filterRequests
 } = require('./requestResponse')
-const ms = require('ms')
+import { parseOIDCConfig, registerOIDCRoutes, OIDCConfig } from './oidc'
+import { SERVERROUTESPREFIX } from './constants'
+import { ICallback } from './types'
+import { WithConfig } from './app'
 
-// OIDC imports
-import { parseOIDCConfig, registerOIDCRoutes } from './oidc'
-import { saveSecurityConfig } from './security'
+const debug = createDebug('signalk-server:tokensecurity')
 
 const CONFIG_PLUGINID = 'sk-simple-token-security-config'
 const passwordSaltRounds = 10
@@ -44,15 +63,262 @@ const permissionDeniedMessage =
 const skPrefix = '/signalk/v1'
 const skAuthPrefix = `${skPrefix}/auth`
 
-//cookie to hold login info for webapps to use
+// Cookie to hold login info for webapps to use
 const BROWSER_LOGININFO_COOKIE_NAME = 'skLoginInfo'
-
-import { SERVERROUTESPREFIX } from './constants'
 
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
 
-module.exports = function (app, config) {
-  const strategy = {}
+// Dummy hash for timing attack prevention - pre-generated bcrypt hash
+const DUMMY_HASH =
+  '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
+
+/**
+ * Express request with Signal K authentication properties
+ */
+interface SKRequest extends Request {
+  skIsAuthenticated?: boolean
+  skPrincipal?: Principal
+  userLoggedIn?: boolean
+  token?: string
+}
+
+/**
+ * Principal representing an authenticated user or device
+ */
+interface Principal {
+  identifier: string
+  permissions: string
+}
+
+/**
+ * JWT payload structure
+ */
+interface JWTPayload {
+  id?: string
+  device?: string
+  exp?: number
+  iat?: number
+}
+
+/**
+ * Login response
+ */
+interface LoginResponse {
+  statusCode: number
+  token?: string
+  user?: string
+  message?: string
+}
+
+/**
+ * Cookie options for session management
+ */
+interface CookieOptions {
+  httpOnly?: boolean
+  sameSite: 'strict' | 'lax' | 'none'
+  secure: boolean
+  maxAge?: number
+}
+
+/**
+ * Delta update structure
+ */
+interface Delta {
+  context: string
+  updates: DeltaUpdate[]
+}
+
+/**
+ * Delta update entry
+ */
+interface DeltaUpdate {
+  $source?: string
+  source?: unknown
+  values?: ValuePath[]
+  meta?: ValuePath[]
+}
+
+/**
+ * Value path in delta
+ */
+interface ValuePath {
+  path: string
+  value?: unknown
+}
+
+/**
+ * Access request from client
+ */
+interface AccessRequest {
+  clientId?: string
+  userId?: string
+  description?: string
+  password?: string
+  permissions?: string
+}
+
+/**
+ * Client request wrapper
+ */
+interface ClientRequest {
+  requestId?: string
+  accessRequest: AccessRequest
+  requestedPermissions?: boolean
+}
+
+/**
+ * Internal request object
+ */
+interface InternalRequest {
+  requestId: string
+  type: string
+  clientRequest: ClientRequest
+  ip?: string
+  date: Date
+  state: string
+  statusCode: number
+  updateCb?: (reply: unknown) => void
+  user?: string
+  accessIdentifier?: string
+  accessDescription?: string
+  accessPassword?: string
+  requestedPermissions?: boolean
+  permissions?: string
+  token?: string
+}
+
+/**
+ * WebSocket spark object
+ */
+interface Spark {
+  lastTokenVerify?: number
+  skPrincipal?: Principal
+  skIsAuthenticated?: boolean
+  token?: string
+  query?: { token?: string }
+  cookies?: { JAUTHENTICATION?: string }
+  headers?: {
+    authorization?: string
+    'x-authorization'?: string
+  }
+}
+
+/**
+ * Application with Signal K extensions
+ */
+interface SKApp extends Application, WithConfig {
+  selfContext: string
+  selfId: string
+  handleMessage: (pluginId: string, message: unknown) => void
+  intervals: NodeJS.Timeout[]
+}
+
+/**
+ * Token Security Strategy interface
+ */
+export interface TokenSecurityStrategy {
+  getConfiguration: () => SecurityConfig
+  hasAdminAccess: (req: SKRequest) => boolean
+  validateConfiguration: (newConfiguration: Partial<SecurityConfig>) => void
+  getAuthRequiredString: () => string
+  supportsLogin: () => boolean
+  login: (name: string, password: string) => Promise<LoginResponse>
+  addAdminMiddleware: (aPath: string) => void
+  addAdminWriteMiddleware: (aPath: string) => void
+  addWriteMiddleware: (aPath: string) => void
+  generateToken: (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+    id: string,
+    theExpiration: string
+  ) => void
+  allowReadOnly: () => boolean
+  allowRestart: (req: SKRequest) => boolean
+  allowConfigure: (req: SKRequest) => boolean
+  getLoginStatus: (req: SKRequest) => LoginStatusResponse
+  getConfig: (aConfig: SecurityConfig) => Partial<SecurityConfig>
+  setConfig: (
+    aConfig: SecurityConfig,
+    newConfig: SecurityConfig
+  ) => SecurityConfig
+  getUsers: (aConfig: SecurityConfig) => UserData[]
+  addUser: (
+    theConfig: SecurityConfig,
+    user: User,
+    callback: ICallback<SecurityConfig>
+  ) => void
+  updateUser: (
+    theConfig: SecurityConfig,
+    username: string,
+    updates: UserDataUpdate,
+    callback: ICallback<SecurityConfig>
+  ) => void
+  setPassword: (
+    theConfig: SecurityConfig,
+    username: string,
+    password: string,
+    callback: ICallback<SecurityConfig>
+  ) => void
+  deleteUser: (
+    theConfig: SecurityConfig,
+    username: string,
+    callback: ICallback<SecurityConfig>
+  ) => void
+  getDevices: (theConfig: SecurityConfig) => Device[]
+  deleteDevice: (
+    theConfig: SecurityConfig,
+    clientId: string,
+    callback: ICallback<SecurityConfig>
+  ) => void
+  updateDevice: (
+    theConfig: SecurityConfig,
+    clientId: string,
+    updates: DeviceDataUpdate,
+    callback: ICallback<SecurityConfig>
+  ) => void
+  shouldAllowWrite: (req: SKRequest, delta: Delta) => boolean
+  shouldAllowPut: (
+    req: SKRequest,
+    _context: string,
+    source: unknown,
+    thePath: string
+  ) => boolean
+  anyACLs: () => boolean
+  filterReadDelta: (principal: Principal | null, delta: Delta) => Delta | null
+  verifyWS: (spark: Spark) => void
+  authorizeWS: (req: Spark) => void
+  checkACL: (
+    id: string,
+    context: string,
+    thePath: string,
+    source: unknown,
+    operation: string
+  ) => boolean
+  isDummy: () => boolean
+  canAuthorizeWS: () => boolean
+  shouldFilterDeltas: () => boolean
+  getAccessRequestsResponse: () => InternalRequest[]
+  setAccessRequestStatus: (
+    theConfig: SecurityConfig,
+    identifier: string,
+    status: string,
+    body: RequestStatusData,
+    cb: ICallback<SecurityConfig>
+  ) => void
+  requestAccess: (
+    theConfig: SecurityConfig,
+    clientRequest: ClientRequest,
+    sourceIp: string,
+    updateCb?: (reply: unknown) => void
+  ) => Promise<unknown>
+}
+
+function tokenSecurity(
+  app: SKApp,
+  config: Partial<SecurityConfig>
+): TokenSecurityStrategy {
+  const strategy = {} as TokenSecurityStrategy
 
   let {
     expiration = 'NEVER',
@@ -64,8 +330,7 @@ module.exports = function (app, config) {
 
   const {
     allow_readonly = true,
-    secretKey = process.env.SECRETKEY ||
-      require('crypto').randomBytes(256).toString('hex'),
+    secretKey = process.env.SECRETKEY || crypto.randomBytes(256).toString('hex'),
     devices = [],
     acls = []
   } = config
@@ -101,7 +366,7 @@ module.exports = function (app, config) {
       process.env.ALLOW_NEW_USER_REGISTRATION === 'true'
   }
 
-  let options = {
+  let options: SecurityConfig = {
     allow_readonly,
     expiration,
     secretKey,
@@ -113,17 +378,17 @@ module.exports = function (app, config) {
     allowNewUserRegistration
   }
 
-  // so that enableSecurity gets the defaults to save
+  // So that enableSecurity gets the defaults to save
   _.merge(config, options)
 
-  function getConfiguration() {
+  function getConfiguration(): SecurityConfig {
     return options
   }
   strategy.getConfiguration = getConfiguration
 
   // Parse and cache OIDC configuration
-  let cachedOIDCConfig = null
-  function getOIDCConfig() {
+  let cachedOIDCConfig: OIDCConfig | null = null
+  function getOIDCConfig(): OIDCConfig {
     if (!cachedOIDCConfig) {
       cachedOIDCConfig = parseOIDCConfig(options)
     }
@@ -131,39 +396,42 @@ module.exports = function (app, config) {
   }
 
   /**
-   * Get base cookie options with proper security settings
-   * @param {Request} req - Express request object
-   * @param {boolean} rememberMe - Whether to set persistent cookie
-   * @returns {object} Cookie options (without httpOnly - add that separately for auth cookies)
+   * Get base cookie options with proper security settings.
+   * Note: httpOnly is NOT included here - it's added separately for auth cookies
+   * because the login info cookie needs to be accessible to JavaScript.
    */
-  function getSessionCookieOptions(req, rememberMe = false) {
+  function getSessionCookieOptions(
+    req: Request,
+    rememberMe = false
+  ): CookieOptions {
     const configuration = getConfiguration()
-    const cookieOptions = {
+    const cookieOptions: CookieOptions = {
       sameSite: 'strict',
       secure: req.secure || req.headers['x-forwarded-proto'] === 'https'
     }
     if (rememberMe) {
-      cookieOptions.maxAge = ms(
+      const expirationStr =
         configuration.expiration === 'NEVER'
           ? '10y'
           : configuration.expiration || '1h'
-      )
+      cookieOptions.maxAge = ms(expirationStr as ms.StringValue)
     }
     return cookieOptions
   }
 
   /**
    * Set session cookies for authenticated user
-   * @param {Response} res - Express response object
-   * @param {Request} req - Express request object
-   * @param {string} token - JWT token
-   * @param {string} username - Username
-   * @param {object} options - Options (rememberMe)
    */
-  function setSessionCookie(res, req, token, username, options = {}) {
-    const cookieOptions = getSessionCookieOptions(req, options.rememberMe)
+  function setSessionCookie(
+    res: Response,
+    req: Request,
+    token: string,
+    username: string,
+    sessionOptions: { rememberMe?: boolean } = {}
+  ): void {
+    const cookieOptions = getSessionCookieOptions(req, sessionOptions.rememberMe)
     // Auth cookie must be httpOnly for security
-    const authCookieOptions = { ...cookieOptions, httpOnly: true }
+    const authCookieOptions: CookieOptions = { ...cookieOptions, httpOnly: true }
     res.cookie('JAUTHENTICATION', token, authCookieOptions)
     // Login info cookie must NOT be httpOnly so JS can access it
     res.cookie(
@@ -175,43 +443,37 @@ module.exports = function (app, config) {
 
   /**
    * Clear session cookies
-   * @param {Response} res - Express response object
    */
-  function clearSessionCookie(res) {
+  function clearSessionCookie(res: Response): void {
     res.clearCookie('JAUTHENTICATION')
     res.clearCookie(BROWSER_LOGININFO_COOKIE_NAME)
   }
 
   /**
    * Generate a JWT for a user
-   * @param {string} userId - User identifier
-   * @param {string} expiration - Optional expiration override
-   * @returns {string} JWT token
    */
-  function generateJWT(userId, expiration) {
+  function generateJWT(userId: string, tokenExpiration?: string): string {
     const configuration = getConfiguration()
-    const theExpiration = expiration || configuration.expiration || '1h'
-    const payload = { id: userId }
-    const jwtOptions = {}
+    const theExpiration = tokenExpiration || configuration.expiration || '1h'
+    const payload: JWTPayload = { id: userId }
+    const jwtOptions: SignOptions = {}
     if (theExpiration !== 'NEVER') {
-      jwtOptions.expiresIn = theExpiration
+      jwtOptions.expiresIn = theExpiration as StringValue
     }
     return jwt.sign(payload, configuration.secretKey, jwtOptions)
   }
 
-  function getIsEnabled() {
-    // var options = getOptions();
-    // return typeof options.enabled !== 'undefined' && options.enabled;
+  function getIsEnabled(): boolean {
     return true
   }
 
-  function assertConfigImmutability() {
+  function assertConfigImmutability(): void {
     if (options.immutableConfig) {
       throw new Error('Configuration is immutable')
     }
   }
 
-  function handlePermissionDenied(req, res) {
+  function handlePermissionDenied(req: Request, res: Response): void {
     res.status(401)
     if (req.accepts('application/json') && !req.accepts('text/html')) {
       res.set('Content-Type', 'application/json')
@@ -221,60 +483,69 @@ module.exports = function (app, config) {
     }
   }
 
-  function hasAdminAccess(req) {
+  function hasAdminAccess(req: SKRequest): boolean {
     return (
-      req.skIsAuthenticated &&
-      req.skPrincipal &&
+      req.skIsAuthenticated === true &&
+      req.skPrincipal !== undefined &&
       req.skPrincipal.permissions === 'admin'
     )
   }
   strategy.hasAdminAccess = hasAdminAccess
 
-  function writeAuthenticationMiddleware() {
-    return function (req, res, next) {
+  function writeAuthenticationMiddleware(): (
+    req: SKRequest,
+    res: Response,
+    next: NextFunction
+  ) => void {
+    return function (req: SKRequest, res: Response, next: NextFunction): void {
       if (!getIsEnabled()) {
-        return next()
+        next()
+        return
       }
 
       debug('skIsAuthenticated: ' + req.skIsAuthenticated)
       if (req.skIsAuthenticated) {
         if (
-          req.skPrincipal.permissions === 'admin' ||
-          req.skPrincipal.permissions === 'readwrite'
+          req.skPrincipal?.permissions === 'admin' ||
+          req.skPrincipal?.permissions === 'readwrite'
         ) {
-          return next()
+          next()
+          return
         }
       }
-      handlePermissionDenied(req, res, next)
+      handlePermissionDenied(req, res)
     }
   }
 
-  function adminAuthenticationMiddleware(redirect) {
-    return function (req, res, next) {
+  function adminAuthenticationMiddleware(
+    redirect: boolean
+  ): (req: SKRequest, res: Response, next: NextFunction) => void {
+    return function (req: SKRequest, res: Response, next: NextFunction): void {
       if (!getIsEnabled()) {
-        return next()
+        next()
+        return
       }
 
       if (hasAdminAccess(req)) {
-        return next()
+        next()
+        return
       }
 
       if (req.skIsAuthenticated && req.skPrincipal) {
         if (req.skPrincipal.identifier === 'AUTO' && redirect) {
           res.redirect('/@signalk/server-admin-ui/#/login')
         } else {
-          handlePermissionDenied(req, res, next)
+          handlePermissionDenied(req, res)
         }
       } else if (redirect) {
         res.redirect('/@signalk/server-admin-ui/#/login')
       } else {
-        handlePermissionDenied(req, res, next)
+        handlePermissionDenied(req, res)
       }
     }
   }
 
-  function setupApp() {
-    const rateLimit = require('express-rate-limit')
+  function setupApp(): void {
     const rawHttpRateLimits = process.env.HTTP_RATE_LIMITS
     const parsedParts =
       typeof rawHttpRateLimits === 'string'
@@ -316,11 +587,11 @@ module.exports = function (app, config) {
       validate: getRateLimitValidationOptions(app)
     })
 
-    app.use(require('body-parser').urlencoded({ extended: true }))
+    app.use(bodyParser.urlencoded({ extended: true }))
 
-    app.use(require('cookie-parser')())
+    app.use(cookieParser())
 
-    function getSafeDestination(destination) {
+    function getSafeDestination(destination: unknown): string {
       if (typeof destination !== 'string') {
         return '/'
       }
@@ -332,41 +603,46 @@ module.exports = function (app, config) {
       return dest
     }
 
-    app.post(['/login', `${skAuthPrefix}/login`], loginLimiter, (req, res) => {
-      const name = req.body.username
-      const password = req.body.password
-      const remember = req.body.rememberMe
+    app.post(
+      ['/login', `${skAuthPrefix}/login`],
+      loginLimiter,
+      (req: Request, res: Response) => {
+        const name = req.body.username as string
+        const password = req.body.password as string
+        const remember = req.body.rememberMe as boolean | undefined
 
-      login(name, password)
-        .then((reply) => {
-          const requestType = req.get('Content-Type')
+        login(name, password)
+          .then((reply) => {
+            const requestType = req.get('Content-Type')
 
-          if (reply.statusCode === 200) {
-            setSessionCookie(res, req, reply.token, reply.user, {
-              rememberMe: remember
-            })
+            if (reply.statusCode === 200 && reply.token && reply.user) {
+              setSessionCookie(res, req, reply.token, reply.user, {
+                rememberMe: remember
+              })
 
-            if (requestType === 'application/json') {
-              res.json({ token: reply.token })
+              if (requestType === 'application/json') {
+                res.json({ token: reply.token })
+              } else {
+                res.redirect(getSafeDestination(req.body.destination))
+              }
             } else {
-              res.redirect(getSafeDestination(req.body.destination))
+              if (requestType === 'application/json') {
+                res.status(reply.statusCode).send(reply)
+              } else {
+                res.status(reply.statusCode).send(reply.message)
+              }
             }
-          } else {
-            if (requestType === 'application/json') {
-              res.status(reply.statusCode).send(reply)
-            } else {
-              res.status(reply.statusCode).send(reply.message)
-            }
-          }
-        })
-        .catch((err) => {
-          console.log(err)
-          res.status(502).send('Login Failure')
-        })
-    })
+          })
+          .catch((err) => {
+            console.log(err)
+            res.status(502).send('Login Failure')
+          })
+      }
+    )
 
-    app.use('/', http_authorize(false, true)) //semicolon required
-    ;[
+    app.use('/', http_authorize(false, true))
+
+    const serverRoutes = [
       '/apps',
       '/appstore',
       '/plugins',
@@ -380,14 +656,18 @@ module.exports = function (app, config) {
       '/availablePaths',
       '/hasAnalyzer',
       '/skServer/inputTest'
-    ].forEach((p) =>
+    ]
+    serverRoutes.forEach((p) =>
       app.use(`${SERVERROUTESPREFIX}${p}`, http_authorize(false))
     )
 
-    app.put(['/logout', `${skAuthPrefix}/logout`], function (req, res) {
-      clearSessionCookie(res)
-      res.json('Logout OK')
-    })
+    app.put(
+      ['/logout', `${skAuthPrefix}/logout`],
+      function (_req: Request, res: Response) {
+        clearSessionCookie(res)
+        res.json('Logout OK')
+      }
+    )
 
     // Register OIDC authentication routes
     registerOIDCRoutes(app, {
@@ -396,11 +676,12 @@ module.exports = function (app, config) {
       setSessionCookie,
       clearSessionCookie,
       generateJWT,
-      saveConfig: (config, callback) => {
-        saveSecurityConfig(app, config, callback)
+      saveConfig: (securityConfig: SecurityConfig, callback: (err: Error | null) => void) => {
+        saveSecurityConfig(app as unknown as Parameters<typeof saveSecurityConfig>[0], securityConfig, callback)
       }
     })
-    ;[
+
+    const adminRoutes = [
       '/restart',
       '/runDiscovery',
       '/plugins',
@@ -412,28 +693,29 @@ module.exports = function (app, config) {
       '/providers',
       '/vessel',
       '/serialports'
-    ].forEach((p) =>
+    ]
+    adminRoutes.forEach((p) =>
       app.use(`${SERVERROUTESPREFIX}${p}`, adminAuthenticationMiddleware(false))
     )
 
     app.use('/plugins', adminAuthenticationMiddleware(false))
 
-    //TODO remove after grace period
+    // TODO remove after grace period
     app.use('/loginStatus', http_authorize(false, true))
     app.use(`${SERVERROUTESPREFIX}/loginStatus`, http_authorize(false, true))
 
     const no_redir = http_authorize(false)
-    app.use('/signalk/v1/api/*', function (req, res, next) {
+    app.use('/signalk/v1/api/*', function (
+      req: SKRequest,
+      res: Response,
+      next: NextFunction
+    ) {
       no_redir(req, res, next)
     })
-    app.put('/signalk/v1/*', writeAuthenticationMiddleware(false))
+    app.put('/signalk/v1/*', writeAuthenticationMiddleware())
   }
 
-  // Dummy hash for timing attack prevention - pre-generated bcrypt hash
-  const DUMMY_HASH =
-    '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
-
-  function login(name, password) {
+  function login(name: string, password: string): Promise<LoginResponse> {
     return new Promise((resolve, reject) => {
       debug('handing login for user: ' + name)
 
@@ -451,27 +733,27 @@ module.exports = function (app, config) {
 
       // Always run bcrypt.compare to prevent timing attacks that reveal
       // whether a username exists. Use a dummy hash if user not found.
-      const hashToCompare = user && user.password ? user.password : DUMMY_HASH
+      const hashToCompare = user?.password ? user.password : DUMMY_HASH
 
-      bcrypt.compare(password, hashToCompare, (err, matches) => {
+      bcrypt.compare(password, hashToCompare, (err: Error | null, matches: boolean) => {
         if (err) {
           reject(err)
-        } else if (matches === true && user && user.password) {
+        } else if (matches === true && user?.password) {
           // Only succeed if user exists AND password matched real hash
-          const payload = { id: user.username }
+          const payload: JWTPayload = { id: user.username }
           const theExpiration = configuration.expiration || '1h'
-          const jwtOptions = {}
+          const jwtOptions: SignOptions = {}
           if (theExpiration !== 'NEVER') {
-            jwtOptions.expiresIn = theExpiration
+            jwtOptions.expiresIn = theExpiration as StringValue
           }
           debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
           try {
             const token = jwt.sign(payload, configuration.secretKey, jwtOptions)
             resolve({ statusCode: 200, token, user: user.username })
-          } catch (err) {
+          } catch (signErr) {
             resolve({
               statusCode: 500,
-              message: 'Unable to sign token: ' + err.message
+              message: 'Unable to sign token: ' + (signErr as Error).message
             })
           }
         } else {
@@ -481,88 +763,101 @@ module.exports = function (app, config) {
       })
     })
   }
-  strategy.validateConfiguration = (newConfiguration) => {
+
+  strategy.validateConfiguration = (
+    newConfiguration: Partial<SecurityConfig>
+  ): void => {
     const configuration = getConfiguration()
     const theExpiration = newConfiguration.expiration || '1h'
     if (theExpiration !== 'NEVER') {
       jwt.sign({ dummy: 'payload' }, configuration.secretKey, {
-        expiresIn: theExpiration
+        expiresIn: theExpiration as StringValue
       })
     }
   }
 
-  strategy.getAuthRequiredString = () => {
+  strategy.getAuthRequiredString = (): string => {
     return strategy.allowReadOnly() ? 'forwrite' : 'always'
   }
 
-  strategy.supportsLogin = () => true
+  strategy.supportsLogin = (): boolean => true
   strategy.login = login
 
-  strategy.addAdminMiddleware = function (aPath) {
+  strategy.addAdminMiddleware = function (aPath: string): void {
     app.use(aPath, http_authorize(false))
     app.use(aPath, adminAuthenticationMiddleware(false))
   }
 
-  strategy.addAdminWriteMiddleware = function (aPath) {
+  strategy.addAdminWriteMiddleware = function (aPath: string): void {
     app.use(aPath, http_authorize(false))
     app.put(aPath, adminAuthenticationMiddleware(false))
     app.post(aPath, adminAuthenticationMiddleware(false))
   }
 
-  strategy.addWriteMiddleware = function (aPath) {
+  strategy.addWriteMiddleware = function (aPath: string): void {
     app.use(aPath, http_authorize(false))
-    app.put(aPath, writeAuthenticationMiddleware(false))
-    app.post(aPath, writeAuthenticationMiddleware(false))
+    app.put(aPath, writeAuthenticationMiddleware())
+    app.post(aPath, writeAuthenticationMiddleware())
   }
 
-  strategy.generateToken = function (req, res, next, id, theExpiration) {
+  strategy.generateToken = function (
+    _req: Request,
+    res: Response,
+    _next: NextFunction,
+    id: string,
+    theExpiration: string
+  ): void {
     const configuration = getConfiguration()
-    const payload = { id: id }
+    const payload: JWTPayload = { id: id }
     const token = jwt.sign(payload, configuration.secretKey, {
-      expiresIn: theExpiration
+      expiresIn: theExpiration as StringValue
     })
     res.type('text/plain').send(token)
   }
 
-  strategy.allowReadOnly = function () {
+  strategy.allowReadOnly = function (): boolean {
     const configuration = getConfiguration()
     return configuration.allow_readonly
   }
 
-  strategy.allowRestart = function (req) {
+  strategy.allowRestart = function (req: SKRequest): boolean {
     return hasAdminAccess(req)
   }
 
-  strategy.allowConfigure = function (req) {
+  strategy.allowConfigure = function (req: SKRequest): boolean {
     return hasAdminAccess(req)
   }
 
-  strategy.getLoginStatus = function (req) {
+  strategy.getLoginStatus = function (req: SKRequest): LoginStatusResponse {
     const configuration = getConfiguration()
-    const result = {
+    const result: LoginStatusResponse = {
       status: req.skIsAuthenticated ? 'loggedIn' : 'notLoggedIn',
       readOnlyAccess: configuration.allow_readonly,
       authenticationRequired: true,
       allowNewUserRegistration: configuration.allowNewUserRegistration,
       allowDeviceAccessRequests: configuration.allowDeviceAccessRequests
     }
-    if (req.skIsAuthenticated) {
+    if (req.skIsAuthenticated && req.skPrincipal) {
       result.userLevel = req.skPrincipal.permissions
       result.username = req.skPrincipal.identifier
     }
     if (configuration.users.length === 0) {
-      result.noUsers = true
+      ;(result as LoginStatusResponse & { noUsers?: boolean }).noUsers = true
     }
     return result
   }
 
-  strategy.getConfig = (aConfig) => {
-    delete aConfig.users
-    delete aConfig.secretKey
-    return aConfig
+  strategy.getConfig = (aConfig: SecurityConfig): Partial<SecurityConfig> => {
+    const result = { ...aConfig }
+    delete (result as Partial<SecurityConfig> & { users?: User[] }).users
+    delete (result as Partial<SecurityConfig> & { secretKey?: string }).secretKey
+    return result
   }
 
-  strategy.setConfig = (aConfig, newConfig) => {
+  strategy.setConfig = (
+    aConfig: SecurityConfig,
+    newConfig: SecurityConfig
+  ): SecurityConfig => {
     assertConfigImmutability()
     newConfig.users = aConfig.users
     newConfig.devices = aConfig.devices
@@ -571,10 +866,10 @@ module.exports = function (app, config) {
     return newConfig
   }
 
-  strategy.getUsers = (aConfig) => {
-    if (aConfig && aConfig.users) {
+  strategy.getUsers = (aConfig: SecurityConfig): UserData[] => {
+    if (aConfig?.users) {
       return aConfig.users.map((user) => {
-        const userData = {
+        const userData: UserData & { isOIDC?: boolean; oidc?: unknown } = {
           userId: user.username,
           type: user.type,
           isOIDC: !!user.oidc
@@ -594,24 +889,28 @@ module.exports = function (app, config) {
     }
   }
 
-  function addUser(theConfig, user, callback) {
+  function addUser(
+    theConfig: SecurityConfig,
+    user: User,
+    callback: ICallback<SecurityConfig>
+  ): void {
     assertConfigImmutability()
-    const newUser = {
-      username: user.userId,
+    const newUser: User = {
+      username: user.username,
       type: user.type
     }
 
-    function finish(newUser, err) {
+    function finish(finishedUser: User, err?: Error | null): void {
       if (!theConfig.users) {
         theConfig.users = []
       }
-      theConfig.users.push(newUser)
+      theConfig.users.push(finishedUser)
       options = theConfig
       callback(err, theConfig)
     }
 
     if (user.password) {
-      bcrypt.hash(user.password, passwordSaltRounds, (err, hash) => {
+      bcrypt.hash(user.password, passwordSaltRounds, (err: Error | null, hash: string) => {
         if (err) {
           callback(err)
         } else {
@@ -624,7 +923,12 @@ module.exports = function (app, config) {
     }
   }
 
-  strategy.updateUser = (theConfig, username, updates, callback) => {
+  strategy.updateUser = (
+    theConfig: SecurityConfig,
+    username: string,
+    updates: UserDataUpdate,
+    callback: ICallback<SecurityConfig>
+  ): void => {
     assertConfigImmutability()
     const user = theConfig.users.find((aUser) => aUser.username === username)
 
@@ -638,7 +942,7 @@ module.exports = function (app, config) {
     }
 
     if (updates.password) {
-      bcrypt.hash(updates.password, passwordSaltRounds, (err, hash) => {
+      bcrypt.hash(updates.password, passwordSaltRounds, (err: Error | null, hash: string) => {
         if (err) {
           callback(err)
         } else {
@@ -654,21 +958,32 @@ module.exports = function (app, config) {
 
   strategy.addUser = addUser
 
-  strategy.setPassword = (theConfig, username, password, callback) => {
+  strategy.setPassword = (
+    theConfig: SecurityConfig,
+    username: string,
+    password: string,
+    callback: ICallback<SecurityConfig>
+  ): void => {
     assertConfigImmutability()
-    bcrypt.hash(password, passwordSaltRounds, (err, hash) => {
+    bcrypt.hash(password, passwordSaltRounds, (err: Error | null, hash: string) => {
       if (err) {
         callback(err)
       } else {
-        const user = theConfig.users[username]
-        user.password = hash
+        const user = theConfig.users.find((u) => u.username === username)
+        if (user) {
+          user.password = hash
+        }
         options = theConfig
         callback(err, theConfig)
       }
     })
   }
 
-  strategy.deleteUser = (theConfig, username, callback) => {
+  strategy.deleteUser = (
+    theConfig: SecurityConfig,
+    username: string,
+    callback: ICallback<SecurityConfig>
+  ): void => {
     assertConfigImmutability()
     for (let i = theConfig.users.length - 1; i >= 0; i--) {
       if (theConfig.users[i].username === username) {
@@ -680,15 +995,19 @@ module.exports = function (app, config) {
     callback(null, theConfig)
   }
 
-  strategy.getDevices = (theConfig) => {
-    if (theConfig && theConfig.devices) {
+  strategy.getDevices = (theConfig: SecurityConfig): Device[] => {
+    if (theConfig?.devices) {
       return theConfig.devices
     } else {
       return []
     }
   }
 
-  strategy.deleteDevice = (theConfig, clientId, callback) => {
+  strategy.deleteDevice = (
+    theConfig: SecurityConfig,
+    clientId: string,
+    callback: ICallback<SecurityConfig>
+  ): void => {
     assertConfigImmutability()
     for (let i = theConfig.devices.length - 1; i >= 0; i--) {
       if (theConfig.devices[i].clientId === clientId) {
@@ -700,7 +1019,12 @@ module.exports = function (app, config) {
     callback(null, theConfig)
   }
 
-  strategy.updateDevice = (theConfig, clientId, updates, callback) => {
+  strategy.updateDevice = (
+    theConfig: SecurityConfig,
+    clientId: string,
+    updates: DeviceDataUpdate,
+    callback: ICallback<SecurityConfig>
+  ): void => {
     assertConfigImmutability()
     const device = theConfig.devices.find((d) => d.clientId === clientId)
 
@@ -721,7 +1045,7 @@ module.exports = function (app, config) {
     options = theConfig
   }
 
-  strategy.shouldAllowWrite = function (req, delta) {
+  strategy.shouldAllowWrite = function (req: SKRequest, delta: Delta): boolean {
     if (
       req.skPrincipal &&
       (req.skPrincipal.permissions === 'admin' ||
@@ -740,7 +1064,7 @@ module.exports = function (app, config) {
             update.values.find((valuePath) => {
               return (
                 strategy.checkACL(
-                  req.skPrincipal.identifier,
+                  req.skPrincipal!.identifier,
                   context,
                   valuePath.path,
                   source,
@@ -752,7 +1076,7 @@ module.exports = function (app, config) {
             update.meta.find((valuePath) => {
               return (
                 strategy.checkACL(
-                  req.skPrincipal.identifier,
+                  req.skPrincipal!.identifier,
                   context,
                   valuePath.path,
                   source,
@@ -769,7 +1093,12 @@ module.exports = function (app, config) {
     return false
   }
 
-  strategy.shouldAllowPut = function (req, _context, source, thePath) {
+  strategy.shouldAllowPut = function (
+    req: SKRequest,
+    _context: string,
+    source: unknown,
+    thePath: string
+  ): boolean {
     if (
       req.skPrincipal &&
       (req.skPrincipal.permissions === 'admin' ||
@@ -788,12 +1117,15 @@ module.exports = function (app, config) {
     return false
   }
 
-  strategy.anyACLs = () => {
+  strategy.anyACLs = (): boolean => {
     const configuration = getConfiguration()
-    return configuration.acls && configuration.acls.length
+    return !!(configuration.acls && configuration.acls.length)
   }
 
-  strategy.filterReadDelta = (principal, delta) => {
+  strategy.filterReadDelta = (
+    principal: Principal | null,
+    delta: Delta
+  ): Delta | null => {
     const configuration = getConfiguration()
     if (
       delta.updates &&
@@ -801,13 +1133,13 @@ module.exports = function (app, config) {
       configuration.acls.length &&
       principal
     ) {
-      const filtered = { ...delta }
+      const filtered: Delta = { ...delta }
       const context =
         delta.context === app.selfContext ? 'vessels.self' : delta.context
 
       filtered.updates = delta.updates
         .map((update) => {
-          let res = (update.values || update.meta)
+          const res = (update.values || update.meta || [])
             .map((valuePath) => {
               return strategy.checkACL(
                 principal.identifier,
@@ -819,16 +1151,16 @@ module.exports = function (app, config) {
                 ? valuePath
                 : null
             })
-            .filter((vp) => vp !== null)
+            .filter((vp): vp is ValuePath => vp !== null)
           if (update.values) {
             update.values = res
             return update.values.length > 0 ? update : null
           } else {
             update.meta = res
-            return update.meta.length > 0 ? update : null
+            return (update.meta?.length ?? 0) > 0 ? update : null
           }
         })
-        .filter((update) => update !== null)
+        .filter((update): update is DeltaUpdate => update !== null)
       return filtered.updates.length > 0 ? filtered : null
     } else if (!principal) {
       return null
@@ -837,7 +1169,7 @@ module.exports = function (app, config) {
     }
   }
 
-  strategy.verifyWS = function (spark) {
+  strategy.verifyWS = function (spark: Spark): void {
     if (!spark.lastTokenVerify) {
       spark.lastTokenVerify = Date.now()
       return
@@ -855,7 +1187,7 @@ module.exports = function (app, config) {
     }
   }
 
-  function getAuthorizationFromHeaders(req) {
+  function getAuthorizationFromHeaders(req: Spark): string | undefined {
     if (req.headers) {
       let header = req.headers.authorization
       if (!header) {
@@ -871,10 +1203,10 @@ module.exports = function (app, config) {
     return undefined
   }
 
-  strategy.authorizeWS = function (req) {
+  strategy.authorizeWS = function (req: Spark): void {
     let token = req.token
-    let error
-    let payload
+    let error: Error | undefined
+    let payload: JWTPayload | undefined
 
     if (!getIsEnabled()) {
       return
@@ -883,7 +1215,7 @@ module.exports = function (app, config) {
     const configuration = getConfiguration()
 
     if (!token) {
-      if (req.query && req.query.token) {
+      if (req.query?.token) {
         token = req.query.token
       } else {
         token = getAuthorizationFromHeaders(req)
@@ -891,18 +1223,18 @@ module.exports = function (app, config) {
     }
 
     if (!token) {
-      token = req.cookies && req.cookies.JAUTHENTICATION
+      token = req.cookies?.JAUTHENTICATION
     }
 
     //
     // `jwt-simple` throws errors if something goes wrong when decoding the JWT.
     //
     if (token) {
-      payload = jwt.verify(token, configuration.secretKey)
+      payload = jwt.verify(token, configuration.secretKey) as JWTPayload
 
       if (!payload) {
         error = new InvalidTokenError('Invalid access token')
-      } else if (Date.now() / 1000 > payload.exp) {
+      } else if (payload.exp && Date.now() / 1000 > payload.exp) {
         //
         // At this point we have decoded and verified the token. Check if it is
         // expired.
@@ -930,7 +1262,7 @@ module.exports = function (app, config) {
     // this to invalidate a token.
     //
 
-    const principal = getPrincipal(payload)
+    const principal = getPrincipal(payload!)
     if (!principal) {
       error = new InvalidTokenError(
         `Invalid identity ${JSON.stringify(payload)}`
@@ -943,7 +1275,13 @@ module.exports = function (app, config) {
     req.skIsAuthenticated = true
   }
 
-  strategy.checkACL = (id, context, thePath, source, operation) => {
+  strategy.checkACL = (
+    id: string,
+    context: string,
+    thePath: string,
+    source: unknown,
+    operation: string
+  ): boolean => {
     const configuration = getConfiguration()
 
     if (!configuration.acls || configuration.acls.length === 0) {
@@ -959,7 +1297,7 @@ module.exports = function (app, config) {
 
     if (acl) {
       const pathPerms = acl.resources.find((p) => {
-        let perms
+        let perms: string | undefined
 
         if (p.paths) {
           perms = p.paths.find((aPath) => {
@@ -971,7 +1309,7 @@ module.exports = function (app, config) {
           perms = p.sources.find((s) => {
             const pattern = s.replace('.', '\\.').replace('*', '.*')
             const matcher = new RegExp('^' + pattern + '$')
-            return matcher.test(source)
+            return matcher.test(source as string)
           })
         }
 
@@ -1008,21 +1346,21 @@ module.exports = function (app, config) {
     return false
   }
 
-  strategy.isDummy = () => {
+  strategy.isDummy = (): boolean => {
     return false
   }
 
-  strategy.canAuthorizeWS = () => {
+  strategy.canAuthorizeWS = (): boolean => {
     return true
   }
 
-  strategy.shouldFilterDeltas = () => {
+  strategy.shouldFilterDeltas = (): boolean => {
     const configuration = getConfiguration()
-    return configuration.acls && configuration.acls.length > 0
+    return !!(configuration.acls && configuration.acls.length > 0)
   }
 
-  function getPrincipal(payload) {
-    let principal
+  function getPrincipal(payload: JWTPayload): Principal | undefined {
+    let principal: Principal | undefined
     if (payload.id) {
       const user = options.users.find(
         (theUser) => theUser.username === payload.id
@@ -1047,57 +1385,68 @@ module.exports = function (app, config) {
     return principal
   }
 
-  function http_authorize(redirect, forLoginStatus) {
-    // debug('http_authorize: ' + redirect)
-    return function (req, res, next) {
-      let token = req.cookies.JAUTHENTICATION
+  function http_authorize(
+    redirect: boolean,
+    forLoginStatus?: boolean
+  ): (req: SKRequest, res: Response, next: NextFunction) => void {
+    return function (req: SKRequest, res: Response, next: NextFunction): void {
+      let token = (req.cookies as { JAUTHENTICATION?: string })?.JAUTHENTICATION
 
       debug(`http_authorize: ${req.path} (forLogin: ${forLoginStatus})`)
 
       if (!getIsEnabled()) {
-        return next()
+        next()
+        return
       }
 
       const configuration = getConfiguration()
 
       if (!token) {
-        token = getAuthorizationFromHeaders(req)
+        token = getAuthorizationFromHeaders(req as unknown as Spark)
       }
 
       if (token) {
-        jwt.verify(token, configuration.secretKey, function (err, decoded) {
-          debug('verify')
-          if (!err) {
-            const principal = getPrincipal(decoded)
-            if (principal) {
-              debug('authorized')
-              req.skPrincipal = principal
-              req.skIsAuthenticated = true
-              req.userLoggedIn = true
-              next()
-              return
+        jwt.verify(
+          token,
+          configuration.secretKey,
+          function (err: jwt.VerifyErrors | null, decoded: jwt.JwtPayload | string | undefined) {
+            debug('verify')
+            if (!err) {
+              const principal = getPrincipal(decoded as JWTPayload)
+              if (principal) {
+                debug('authorized')
+                req.skPrincipal = principal
+                req.skIsAuthenticated = true
+                req.userLoggedIn = true
+                next()
+                return
+              } else {
+                const decodedPayload = decoded as JWTPayload
+                debug(
+                  'unknown user: ' + (decodedPayload.id || decodedPayload.device)
+                )
+              }
             } else {
-              debug('unknown user: ' + (decoded.id || decoded.device))
+              debug(`bad token: ${err.message} ${req.path}`)
+              res.clearCookie('JAUTHENTICATION')
             }
-          } else {
-            debug(`bad token: ${err.message} ${req.path}`)
-            res.clearCookie('JAUTHENTICATION')
-          }
 
-          if (configuration.allow_readonly) {
-            req.skIsAuthenticated = false
-            next()
-          } else {
-            res.status(401).send('bad auth token')
+            if (configuration.allow_readonly) {
+              req.skIsAuthenticated = false
+              next()
+            } else {
+              res.status(401).send('bad auth token')
+            }
           }
-        })
+        )
       } else {
         debug('no token')
 
         if (configuration.allow_readonly && !forLoginStatus) {
           req.skPrincipal = { identifier: 'AUTO', permissions: 'readonly' }
           req.skIsAuthenticated = true
-          return next()
+          next()
+          return
         } else {
           req.skIsAuthenticated = false
 
@@ -1114,11 +1463,11 @@ module.exports = function (app, config) {
     }
   }
 
-  strategy.getAccessRequestsResponse = () => {
-    return filterRequests('accessRequest', 'PENDING')
+  strategy.getAccessRequestsResponse = (): InternalRequest[] => {
+    return filterRequests('accessRequest', 'PENDING') as InternalRequest[]
   }
 
-  function sendAccessRequestsUpdate() {
+  function sendAccessRequestsUpdate(): void {
     app.emit('serverAdminEvent', {
       type: 'ACCESS_REQUEST',
       from: CONFIG_PLUGINID,
@@ -1127,21 +1476,23 @@ module.exports = function (app, config) {
   }
 
   strategy.setAccessRequestStatus = (
-    theConfig,
-    identifier,
-    status,
-    body,
-    cb
-  ) => {
+    theConfig: SecurityConfig,
+    identifier: string,
+    status: string,
+    body: RequestStatusData,
+    cb: ICallback<SecurityConfig>
+  ): void => {
     const request = findRequest(
-      (r) => r.state === 'PENDING' && r.accessIdentifier === identifier
-    )
+      (r: InternalRequest) =>
+        r.state === 'PENDING' && r.accessIdentifier === identifier
+    ) as InternalRequest | undefined
+
     if (!request) {
       cb(new Error('not found'))
       return
     }
 
-    const permissoinPart = request.requestedPermissions
+    const permissionPart = request.requestedPermissions
       ? request.permissions
       : 'any'
 
@@ -1151,7 +1502,7 @@ module.exports = function (app, config) {
         {
           values: [
             {
-              path: `notifications.security.accessRequest.${permissoinPart}.${identifier}`,
+              path: `notifications.security.accessRequest.${permissionPart}.${identifier}`,
               value: {
                 state: 'normal',
                 method: [],
@@ -1164,15 +1515,15 @@ module.exports = function (app, config) {
       ]
     })
 
-    let approved
+    let approved: boolean
     if (status === 'approved') {
       if (request.clientRequest.accessRequest.clientId) {
-        const payload = { device: identifier }
-        const jwtOptions = {}
+        const payload: JWTPayload = { device: identifier }
+        const jwtOptions: SignOptions = {}
 
         const expiresIn = body.expiration || theConfig.expiration
         if (expiresIn !== 'NEVER') {
-          jwtOptions.expiresIn = expiresIn
+          jwtOptions.expiresIn = expiresIn as StringValue
         }
         const token = jwt.sign(payload, theConfig.secretKey, jwtOptions)
 
@@ -1185,13 +1536,15 @@ module.exports = function (app, config) {
         )
 
         theConfig.devices.push({
-          clientId: request.accessIdentifier,
+          clientId: request.accessIdentifier!,
           permissions: !request.clientRequest.requestedPermissions
             ? body.permissions
-            : request.permissions,
+            : request.permissions!,
           config: body.config,
-          description: request.accessDescription,
+          description: request.accessDescription!,
           requestedPermissions: request.clientRequest.requestedPermissions
+            ? 'true'
+            : ''
         })
         request.token = token
       } else {
@@ -1205,7 +1558,7 @@ module.exports = function (app, config) {
     } else if (status === 'denied') {
       approved = false
     } else {
-      cb(new Error('Unkown status value'), theConfig)
+      cb(new Error('Unknown status value'), theConfig)
       return
     }
 
@@ -1222,12 +1575,12 @@ module.exports = function (app, config) {
         cb(null, theConfig)
         sendAccessRequestsUpdate()
       })
-      .catch((err) => {
+      .catch((err: Error) => {
         cb(err)
       })
   }
 
-  function validateAccessRequest(request) {
+  function validateAccessRequest(request: AccessRequest): boolean {
     if (request.userId) {
       return !_.isUndefined(request.password)
     } else if (request.clientId) {
@@ -1237,23 +1590,23 @@ module.exports = function (app, config) {
     }
   }
 
-  strategy.requestAccess = (theConfig, clientRequest, sourceIp, updateCb) => {
+  strategy.requestAccess = (
+    theConfig: SecurityConfig,
+    clientRequest: ClientRequest,
+    sourceIp: string,
+    updateCb?: (reply: unknown) => void
+  ): Promise<unknown> => {
     return new Promise((resolve, reject) => {
       if (filterRequests('accessRequest', 'PENDING').length >= 100) {
-        const err = new Error('Too many pending access requests')
+        const err = new Error('Too many pending access requests') as Error & {
+          statusCode?: number
+        }
         err.statusCode = 503
         reject(err)
         return
       }
-      createRequest(
-        app,
-        'accessRequest',
-        clientRequest,
-        null,
-        sourceIp,
-        updateCb
-      )
-        .then((request) => {
+      createRequest(app, 'accessRequest', clientRequest, null, sourceIp, updateCb)
+        .then((request: InternalRequest) => {
           const accessRequest = clientRequest.accessRequest
           if (!validateAccessRequest(accessRequest)) {
             updateRequest(request.requestId, 'COMPLETED', { statusCode: 400 })
@@ -1271,7 +1624,7 @@ module.exports = function (app, config) {
             request.permissions = accessRequest.permissions
           }
 
-          let alertMessage
+          let alertMessage: string
           if (accessRequest.clientId) {
             if (!options.allowDeviceAccessRequests) {
               updateRequest(request.requestId, 'COMPLETED', { statusCode: 403 })
@@ -1282,7 +1635,7 @@ module.exports = function (app, config) {
 
             if (
               findRequest(
-                (r) =>
+                (r: InternalRequest) =>
                   r.state === 'PENDING' &&
                   r.accessIdentifier === accessRequest.clientId
               )
@@ -1326,14 +1679,14 @@ module.exports = function (app, config) {
             request.accessDescription = 'New User Request'
             request.accessIdentifier = accessRequest.userId
             request.accessPassword = bcrypt.hashSync(
-              request.accessPassword,
+              accessRequest.password!,
               bcrypt.genSaltSync(passwordSaltRounds)
             )
             alertMessage = `${accessRequest.userId} has requested server access`
             debug(alertMessage)
           }
 
-          const permissoinPart = request.requestedPermissions
+          const permissionPart = request.requestedPermissions
             ? request.permissions
             : 'any'
           sendAccessRequestsUpdate()
@@ -1343,7 +1696,7 @@ module.exports = function (app, config) {
               {
                 values: [
                   {
-                    path: `notifications.security.accessRequest.${permissoinPart}.${request.accessIdentifier}`,
+                    path: `notifications.security.accessRequest.${permissionPart}.${request.accessIdentifier}`,
                     value: {
                       state: 'alert',
                       method: ['visual', 'sound'],
@@ -1356,8 +1709,8 @@ module.exports = function (app, config) {
             ]
           })
           updateRequest(request.requestId, 'PENDING', { statusCode: 202 })
-            .then((reply) => {
-              resolve(reply, theConfig)
+            .then((reply: unknown) => {
+              resolve(reply)
             })
             .catch(reject)
         })
@@ -1369,3 +1722,6 @@ module.exports = function (app, config) {
 
   return strategy
 }
+
+// CommonJS export for compatibility with require()(app, config) pattern
+module.exports = tokenSecurity
