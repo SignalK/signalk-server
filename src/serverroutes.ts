@@ -162,7 +162,7 @@ module.exports = function (
         'Too many requests from this IP, please try again after 10 minutes'
     },
     // Disable X-Forwarded-For validation - we handle trust proxy configuration
-    // ourselves and don't want the server to crash if users haven't configured it yet
+    // ourselves and this avoids error log output when trust proxy isn't configured
     validate: { xForwardedForHeader: false }
   })
 
@@ -176,7 +176,9 @@ module.exports = function (
     validate: { xForwardedForHeader: false }
   })
 
-  const ipFilter = createIPFilterMiddleware(() => getSecurityConfig(app))
+  const ipFilter = createIPFilterMiddleware(
+    () => getSecurityConfig(app).allowedSourceIPs
+  )
 
   let securityWasEnabled = false
   const restoreSessions = new Map<string, string>()

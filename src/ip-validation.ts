@@ -289,15 +289,14 @@ export function validateIPList(ips: string[]): string[] {
  * Uses req.ip which respects Express's trustProxy setting.
  */
 export function createIPFilterMiddleware(
-  getConfig: () => { allowedSourceIPs?: string[] }
+  getAllowedIPs: () => string[] | undefined
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
     // Use req.ip which respects Express's trustProxy setting
     // This ensures X-Forwarded-For is only trusted when trustProxy is configured
     const ip = req.ip ? normalizeIP(req.ip) : undefined
-    const config = getConfig()
 
-    if (!isIPAllowed(ip, config.allowedSourceIPs)) {
+    if (!isIPAllowed(ip, getAllowedIPs())) {
       debug('Blocked request from %s to %s %s', ip, req.method, req.path)
       res.status(403).json({
         state: 'DENIED',
