@@ -1,17 +1,13 @@
 import React from 'react'
-import { Progress, ListGroup, ListGroupItem, Spinner } from 'reactstrap'
+import { Progress, ListGroup, ListGroupItem } from 'reactstrap'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faCheck,
-  faTimes,
-  faSpinner
-} from '@fortawesome/free-solid-svg-icons'
+import { faCheck, faTimes, faSpinner } from '@fortawesome/free-solid-svg-icons'
 
 export default function InstallProgress({ status }) {
   if (!status) {
     return (
       <div className="text-center py-5">
-        <Spinner color="primary" />
+        <FontAwesomeIcon icon={faSpinner} spin size="2x" className="text-primary" />
         <p className="mt-3 text-muted">Preparing installation...</p>
       </div>
     )
@@ -40,7 +36,7 @@ export default function InstallProgress({ status }) {
 
       {status.currentItem && status.state === 'installing' && (
         <div className="mb-4 text-center">
-          <Spinner size="sm" color="primary" className="mr-2" />
+          <FontAwesomeIcon icon={faSpinner} spin className="text-primary mr-2" />
           <span className="text-muted">
             Installing <code>{status.currentItem}</code>...
           </span>

@@ -6,8 +6,7 @@ import {
   CardBody,
   CardTitle,
   CardText,
-  Button,
-  Spinner
+  Button
 } from 'reactstrap'
 import {
   faMap,
@@ -16,7 +15,8 @@ import {
   faAnchor,
   faStar,
   faMinimize,
-  faPlug
+  faPlug,
+  faSpinner
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
@@ -68,7 +68,7 @@ export default function BundleSelection({ bundles, loading, onSelect }) {
   if (loading) {
     return (
       <div className="text-center py-5">
-        <Spinner color="primary" />
+        <FontAwesomeIcon icon={faSpinner} spin size="2x" className="text-primary" />
         <p className="mt-3 text-muted">Loading bundles...</p>
       </div>
     )
