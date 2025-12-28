@@ -62,6 +62,13 @@ const state = {
   },
   restoreStatus: {},
   vesselInfo: {},
+  wizardStatus: {
+    state: 'idle',
+    currentStep: 0,
+    totalSteps: 0,
+    errors: [],
+    installed: []
+  },
   sourcePrioritiesData: {
     sourcePriorities: [],
     saveState: {
@@ -253,6 +260,12 @@ let store = createStore(
       return {
         ...state,
         restoreStatus: action.data
+      }
+    }
+    if (action.type === 'WIZARD_STATUS_CHANGED') {
+      return {
+        ...state,
+        wizardStatus: action.data
       }
     }
     if (action.type === 'SOURCEPRIORITIES') {

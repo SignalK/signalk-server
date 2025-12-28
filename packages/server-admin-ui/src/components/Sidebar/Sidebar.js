@@ -215,6 +215,11 @@ const mapStateToProps = (state) => {
         name: 'Data Browser',
         url: '/databrowser',
         icon: 'icon-folder'
+      },
+      {
+        name: 'Setup Wizard',
+        url: '/wizard',
+        icon: 'icon-magic-wand'
       }
     ]
   }

@@ -129,17 +129,8 @@
     "ws": "^7.0.0"
   },
   "optionalDependencies": {
-    "@mxtommy/kip": "^3.2.0",
-    "@signalk/freeboard-sk": "^2.0.0-beta.3",
-    "@signalk/instrumentpanel": "0.x",
-    "@signalk/set-system-time": "^1.2.0",
-    "@signalk/signalk-to-nmea0183": "^1.0.0",
-    "@signalk/udp-nmea-plugin": "^2.0.0",
-    "@signalk/vesselpositions": "^1.0.0",
     "mdns": "^2.5.1",
-    "serialport": "^11.0.0",
-    "signalk-n2kais-to-nmea0183": "^1.3.1",
-    "signalk-to-nmea2000": "^2.16.0"
+    "serialport": "^11.0.0"
   },
   "bundledDependencies": [
     "@signalk/server-api"

@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { connect } from 'react-redux'
+import { Link } from 'react-router-dom'
 import {
   Card,
   CardBody,
@@ -7,11 +8,19 @@ import {
   Progress,
   Row,
   Col,
-  Table
+  Table,
+  Button,
+  Alert
 } from 'reactstrap'
 import '../../fa-pulse.css'
 
+const WIZARD_DISMISSED_KEY = 'signalk-wizard-dismissed'
+
 const Dashboard = (props) => {
+  const [wizardDismissed, setWizardDismissed] = useState(
+    () => localStorage.getItem(WIZARD_DISMISSED_KEY) === 'true'
+  )
+
   const {
     deltaRate,
     numberOfAvailablePaths,
@@ -26,6 +35,15 @@ const Dashboard = (props) => {
     uptime: ''
   }
   const providerStatus = props.providerStatus || []
+
+  // Check if this is a fresh install (no plugins installed)
+  const hasNoPlugins = props.plugins && props.plugins.length === 0
+  const showWizardPrompt = hasNoPlugins && !wizardDismissed
+
+  const handleDismissWizard = () => {
+    localStorage.setItem(WIZARD_DISMISSED_KEY, 'true')
+    setWizardDismissed(true)
+  }
   const errorCount = providerStatus.filter((s) => s.type === 'error').length
   const uptimeD = Math.floor(uptime / (60 * 60 * 24))
   const uptimeH = Math.floor((uptime % (60 * 60 * 24)) / (60 * 60))
@@ -153,6 +171,25 @@ const Dashboard = (props) => {
 
   return (
     <div className="animated fadeIn">
+      {showWizardPrompt && (
+        <Alert color="info" className="mb-4">
+          <h4 className="alert-heading">Welcome to Signal K Server!</h4>
+          <p>
+            It looks like this is a fresh installation. Would you like to run
+            the Setup Wizard to install some recommended plugins and webapps?
+          </p>
+          <hr />
+          <div className="d-flex gap-2">
+            <Link to="/wizard">
+              <Button color="primary">Run Setup Wizard</Button>
+            </Link>
+            <Button color="secondary" outline onClick={handleDismissWizard}>
+              No thanks, I'll do it manually
+            </Button>
+          </div>
+        </Alert>
+      )}
+
       {props.websocketStatus === 'open' && (
         <div>
           <Card>
@@ -297,9 +334,10 @@ function providerIdLink(id) {
 }
 
 export default connect(
-  ({ serverStatistics, websocketStatus, providerStatus }) => ({
+  ({ serverStatistics, websocketStatus, providerStatus, plugins }) => ({
     serverStatistics,
     websocketStatus,
-    providerStatus
+    providerStatus,
+    plugins
   })
 )(Dashboard)
