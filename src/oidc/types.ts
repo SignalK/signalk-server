@@ -104,6 +104,7 @@ export interface OIDCProviderMetadata {
   jwks_uri: string
   response_types_supported: string[]
   code_challenge_methods_supported?: string[]
+  end_session_endpoint?: string
 }
 
 /**

@@ -163,6 +163,20 @@ The OIDC module provides OpenID Connect authentication for Single Sign-On.
 8. Server creates/updates local user record
 9. Server issues local JWT session
 
+### Logout Flow (RP-Initiated)
+
+The `/signalk/v1/auth/oidc/logout` endpoint supports OpenID Connect RP-Initiated
+Logout:
+
+1. User clicks "Logout"
+2. Server clears local session cookies
+3. If provider supports `end_session_endpoint`:
+   - Redirects to provider's logout endpoint with `post_logout_redirect_uri`
+   - Provider logs out the user and redirects back
+4. If provider doesn't support logout, redirects locally
+
+This ensures users are logged out of both Signal K and the identity provider.
+
 ### Dependency Injection
 
 `oidc-auth.ts` receives dependencies from tokensecurity via the
