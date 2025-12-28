@@ -381,7 +381,7 @@ module.exports = function (app) {
         requestId: msg.requestId,
         state: 'COMPLETED',
         statusCode: 400,
-        message: 'A request has already beem submitted'
+        message: 'A request has already been submitted'
       })
     } else {
       // Extract client IP respecting trustProxy setting (CVE fix)
