@@ -160,7 +160,10 @@ module.exports = function (
     message: {
       message:
         'Too many requests from this IP, please try again after 10 minutes'
-    }
+    },
+    // Disable X-Forwarded-For validation - we handle trust proxy configuration
+    // ourselves and don't want the server to crash if users haven't configured it yet
+    validate: { xForwardedForHeader: false }
   })
 
   const loginStatusLimiter = rateLimit({
@@ -169,7 +172,8 @@ module.exports = function (
     message: {
       message:
         'Too many requests from this IP, please try again after 10 minutes'
-    }
+    },
+    validate: { xForwardedForHeader: false }
   })
 
   const ipFilter = createIPFilterMiddleware(() => getSecurityConfig(app))
