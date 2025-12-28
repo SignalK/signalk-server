@@ -310,19 +310,6 @@ export function createIPFilterMiddleware(
 }
 
 /**
- * Check if an IP address is allowed for socket-level filtering.
- * Convenience wrapper for use with raw TCP sockets.
- */
-export function isSocketIPAllowed(
-  remoteAddress: string | undefined,
-  allowList?: string[]
-): boolean {
-  if (!remoteAddress) return false
-  const normalizedIP = normalizeIP(remoteAddress)
-  return isIPAllowed(normalizedIP, allowList)
-}
-
-/**
  * Check if an IP address is a public (non-private) IP.
  * Returns true if the IP is NOT in any of the default private ranges.
  */

@@ -16,7 +16,7 @@
 const _ = require('lodash')
 
 import { createDebug } from '../debug'
-const { isSocketIPAllowed } = require('../ip-validation')
+const { isIPAllowed } = require('../ip-validation')
 const debug = createDebug('signalk-server:interfaces:tcp:nmea0183')
 
 module.exports = function (app) {
@@ -35,7 +35,7 @@ module.exports = function (app) {
       // IP filtering - reject connections from non-allowed IPs
       const allowedIPs =
         app.securityStrategy?.getConfiguration?.()?.allowedSourceIPs
-      if (!isSocketIPAllowed(socket.remoteAddress, allowedIPs)) {
+      if (!isIPAllowed(socket.remoteAddress, allowedIPs)) {
         debug('Connection rejected from: ' + socket.remoteAddress)
         socket.destroy()
         return

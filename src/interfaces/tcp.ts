@@ -19,7 +19,7 @@ import split from 'split'
 import { createDebug } from '../debug'
 import { Interface, SignalKServer } from '../types'
 import { Unsubscribes } from '@signalk/server-api'
-import { isSocketIPAllowed } from '../ip-validation'
+import { isIPAllowed } from '../ip-validation'
 const debug = createDebug('signalk-server:interfaces:tcp:signalk')
 
 interface SocketWithId extends Socket {
@@ -45,7 +45,7 @@ module.exports = (app: SignalKServer) => {
       // IP filtering - reject connections from non-allowed IPs
       const allowedIPs = (app as any).securityStrategy?.getConfiguration?.()
         ?.allowedSourceIPs
-      if (!isSocketIPAllowed(socket.remoteAddress, allowedIPs)) {
+      if (!isIPAllowed(socket.remoteAddress, allowedIPs)) {
         debug('Connection rejected from: ' + socket.remoteAddress)
         socket.destroy()
         return
