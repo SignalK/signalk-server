@@ -19,7 +19,9 @@ import {
   faPlug,
   faSpinner,
   faCheck,
-  faRotateRight
+  faRotateRight,
+  faMobileAlt,
+  faCogs
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
@@ -30,7 +32,9 @@ const BUNDLE_ICONS = {
   datalogger: faDatabase,
   anchor: faAnchor,
   nmea: faPlug,
-  full: faStar
+  full: faStar,
+  wilhelmsk: faMobileAlt,
+  automation: faCogs
 }
 
 function BundleCard({ bundle, selected, installed, onToggle }) {

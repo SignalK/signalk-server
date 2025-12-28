@@ -184,7 +184,7 @@ const Dashboard = (props) => {
               <Button color="primary">Run Plugin Wizard</Button>
             </Link>
             <Button color="secondary" outline onClick={handleDismissWizard}>
-              No thanks, I'll do it manually
+              No thanks, I&apos;ll do it manually
             </Button>
           </div>
         </Alert>
