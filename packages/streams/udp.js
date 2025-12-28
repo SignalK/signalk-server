@@ -34,6 +34,7 @@
  */
 
 const Transform = require('stream').Transform
+const { isIPAllowed } = require('../../dist/ip-validation')
 
 function Udp(options) {
   Transform.call(this, {
@@ -68,7 +69,17 @@ Udp.prototype.pipe = function (pipeTo) {
     })
   }
 
-  socket.on('message', function (message) {
+  socket.on('message', function (message, rinfo) {
+    // Check IP filtering if explicitly enabled for this connection
+    if (self.options.applyIPFilter === true) {
+      const allowedIPs =
+        self.options.app.securityStrategy?.getConfiguration?.()
+          ?.allowedSourceIPs
+      if (!isIPAllowed(rinfo.address, allowedIPs)) {
+        self.debug('Rejected UDP message from: %s', rinfo.address)
+        return
+      }
+    }
     self.debug(message.toString())
     self.push(message)
   })

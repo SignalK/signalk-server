@@ -740,6 +740,36 @@ class CollectNetworkStatsInput extends Component {
   }
 }
 
+class ApplyIPFilterInput extends Component {
+  render() {
+    // Default to true for new connections, false for existing (no property = false in backend)
+    const isChecked =
+      this.props.value.applyIPFilter !== undefined
+        ? this.props.value.applyIPFilter
+        : this.props.isNew === true
+    return (
+      <FormGroup row>
+        <Col xs="3" md="3">
+          <Label>Apply IP address restrictions</Label>
+        </Col>
+        <Col xs="2" md="3">
+          <Label className="switch switch-text switch-primary">
+            <Input
+              type="checkbox"
+              name="options.applyIPFilter"
+              className="switch-input"
+              onChange={(event) => this.props.onChange(event)}
+              checked={isChecked}
+            />
+            <span className="switch-label" data-on="Yes" data-off="No" />
+            <span className="switch-handle" />
+          </Label>
+        </Col>
+      </FormGroup>
+    )
+  }
+}
+
 const NMEA2000 = (props) => {
   return (
     <div>
@@ -810,6 +840,11 @@ const NMEA2000 = (props) => {
         <div>
           <HostInput value={props.value.options} onChange={props.onChange} />
           <PortInput value={props.value.options} onChange={props.onChange} />
+          <ApplyIPFilterInput
+            value={props.value.options}
+            onChange={props.onChange}
+            isNew={props.value.isNew}
+          />
         </div>
       )}
       {props.value.options.type === 'navlink2-tcp-canboatjs' && (
@@ -935,7 +970,14 @@ const NMEA0183 = (props) => {
         />
       </div>
       {props.value.options.type === 'udp' && (
-        <PortInput value={props.value.options} onChange={props.onChange} />
+        <div>
+          <PortInput value={props.value.options} onChange={props.onChange} />
+          <ApplyIPFilterInput
+            value={props.value.options}
+            onChange={props.onChange}
+            isNew={props.value.isNew}
+          />
+        </div>
       )}
       <SentenceEventInput
         value={props.value.options}
@@ -1034,7 +1076,14 @@ const SignalK = (props) => {
           </div>
         )}
       {props.value.options.type === 'udp' && (
-        <PortInput value={props.value.options} onChange={props.onChange} />
+        <div>
+          <PortInput value={props.value.options} onChange={props.onChange} />
+          <ApplyIPFilterInput
+            value={props.value.options}
+            onChange={props.onChange}
+            isNew={props.value.isNew}
+          />
+        </div>
       )}
       {serialParams(props)}
       {!props.value.options.useDiscovery && (

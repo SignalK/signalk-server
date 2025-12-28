@@ -161,6 +161,27 @@ The following are protected by IP address restrictions:
 
 **Note**: Login (`/login`) is not IP restricted, allowing users to authenticate from any location. Login is protected by rate limiting instead.
 
+### User-Configurable UDP Connections
+
+UDP connections configured through the admin UI can optionally apply IP address restrictions. When enabled, incoming UDP messages from IP addresses not in the allowed list will be silently dropped.
+
+This applies to:
+
+- NMEA 0183 UDP connections
+- Signal K UDP connections
+- NMEA 2000 Yacht Devices RAW UDP connections
+
+To configure this option:
+
+1. Go to **Server → Connections**
+2. Edit the UDP connection
+3. Enable **Apply IP address restrictions**
+
+For backward compatibility:
+
+- **New connections**: IP filtering is enabled by default
+- **Existing connections**: IP filtering is disabled by default
+
 ### Configuration
 
 IP restrictions are configured in **Security → Settings** in the Admin UI using the "Allowed Source IPs" field.
