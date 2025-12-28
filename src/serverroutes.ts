@@ -643,7 +643,8 @@ module.exports = function (
           app.config.settings.accessLogging,
         enablePluginLogging:
           isUndefined(app.config.settings.enablePluginLogging) ||
-          app.config.settings.enablePluginLogging
+          app.config.settings.enablePluginLogging,
+        trustProxy: app.config.settings.trustProxy || false
       },
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
@@ -769,6 +770,10 @@ module.exports = function (
     if (!isUndefined(settings.options.enablePluginLogging)) {
       app.config.settings.enablePluginLogging =
         settings.options.enablePluginLogging
+    }
+
+    if (!isUndefined(settings.options.trustProxy)) {
+      app.config.settings.trustProxy = settings.options.trustProxy
     }
 
     if (!isUndefined(settings.port)) {

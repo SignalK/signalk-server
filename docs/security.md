@@ -150,13 +150,16 @@ Signal K Server supports restricting access to specific endpoints based on the c
 
 The following are protected by IP address restrictions:
 
-- **HTTP Endpoints**:
-  - `POST /signalk/v1/access/requests` - Device access requests
+- **Access Requests**:
+  - `POST /signalk/v1/access/requests` - HTTP device access requests
   - `GET /signalk/v1/requests/:id` - Request status queries
+  - WebSocket access requests
 
 - **TCP Services**:
   - NMEA 0183 TCP (port 10110)
   - Signal K TCP (port 8375)
+
+**Note**: Login (`/login`) is not IP restricted, allowing users to authenticate from any location. Login is protected by rate limiting instead.
 
 ### Configuration
 
@@ -199,12 +202,14 @@ When running Signal K Server behind a reverse proxy (e.g., nginx, Apache, Traefi
 
 ### Configuration
 
-Add the `trustProxy` setting to your `settings.json`:
+The `trustProxy` setting can be enabled in the Admin UI under **Server Settings > Options > trustProxy**.
+
+For advanced configurations (specific proxy IPs, hop counts), edit `settings.json` directly:
 
 ```json
 {
   "settings": {
-    "trustProxy": true
+    "trustProxy": "127.0.0.1"
   }
 }
 ```
