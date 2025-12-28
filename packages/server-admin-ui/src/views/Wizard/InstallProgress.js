@@ -7,7 +7,12 @@ export default function InstallProgress({ status }) {
   if (!status) {
     return (
       <div className="text-center py-5">
-        <FontAwesomeIcon icon={faSpinner} spin size="2x" className="text-primary" />
+        <FontAwesomeIcon
+          icon={faSpinner}
+          spin
+          size="2x"
+          className="text-primary"
+        />
         <p className="mt-3 text-muted">Preparing installation...</p>
       </div>
     )
@@ -36,7 +41,11 @@ export default function InstallProgress({ status }) {
 
       {status.currentItem && status.state === 'installing' && (
         <div className="mb-4 text-center">
-          <FontAwesomeIcon icon={faSpinner} spin className="text-primary mr-2" />
+          <FontAwesomeIcon
+            icon={faSpinner}
+            spin
+            className="text-primary mr-2"
+          />
           <span className="text-muted">
             Installing <code>{status.currentItem}</code>...
           </span>
@@ -68,7 +77,8 @@ export default function InstallProgress({ status }) {
 
       {status.state === 'installing' && (
         <p className="text-muted text-center small">
-          Please wait while the packages are being installed. This may take a few minutes.
+          Please wait while the packages are being installed. This may take a
+          few minutes.
         </p>
       )}
     </div>

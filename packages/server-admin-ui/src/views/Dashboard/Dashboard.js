@@ -176,12 +176,12 @@ const Dashboard = (props) => {
           <h4 className="alert-heading">Welcome to Signal K Server!</h4>
           <p>
             It looks like this is a fresh installation. Would you like to run
-            the Setup Wizard to install some recommended plugins and webapps?
+            the Plugin Wizard to install some recommended plugins and webapps?
           </p>
           <hr />
           <div className="d-flex gap-2">
             <Link to="/wizard">
-              <Button color="primary">Run Setup Wizard</Button>
+              <Button color="primary">Run Plugin Wizard</Button>
             </Link>
             <Button color="secondary" outline onClick={handleDismissWizard}>
               No thanks, I'll do it manually

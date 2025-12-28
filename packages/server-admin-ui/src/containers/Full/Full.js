@@ -124,7 +124,7 @@ class Full extends Component {
                 <Route path="/register" component={Register} />
                 <Route
                   path="/wizard"
-                  name="Setup Wizard"
+                  name="Plugin Wizard"
                   component={loginOrOriginal(Wizard)}
                 />
                 <Redirect from="/" to="/dashboard" />

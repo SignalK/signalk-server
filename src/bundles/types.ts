@@ -75,10 +75,13 @@ export interface BundleInstallStatus {
 }
 
 /**
- * Request to install a bundle
+ * Request to install one or more bundles
  */
 export interface BundleInstallRequest {
-  bundleId: string
+  /** Single bundle ID (for backwards compatibility) */
+  bundleId?: string
+  /** Multiple bundle IDs for multi-bundle installation */
+  bundleIds?: string[]
   /** Override: specific plugins to install (expert mode) */
   plugins?: string[]
   /** Override: specific webapps to install (expert mode) */

@@ -6,8 +6,13 @@ import {
   CardHeader,
   Progress,
   Button,
-  Alert
+  Alert,
+  ListGroup,
+  ListGroupItem,
+  Badge
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCheck } from '@fortawesome/free-solid-svg-icons'
 import BundleSelection from './BundleSelection'
 import InstallProgress from './InstallProgress'
 import WizardComplete from './WizardComplete'
@@ -21,10 +26,11 @@ const WIZARD_STEPS = {
   COMPLETE: 'complete'
 }
 
-function Wizard({ wizardStatus, dispatch }) {
+function Wizard({ wizardStatus, installedPlugins }) {
   const [step, setStep] = useState(WIZARD_STEPS.WELCOME)
   const [bundles, setBundles] = useState([])
-  const [selectedBundle, setSelectedBundle] = useState(null)
+  const [selectedBundleIds, setSelectedBundleIds] = useState([])
+  const [installedBundleIds, setInstalledBundleIds] = useState([])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -33,13 +39,31 @@ function Wizard({ wizardStatus, dispatch }) {
     fetchBundles()
   }, [])
 
+  // Detect installed bundles when bundles or installedPlugins change
+  useEffect(() => {
+    if (bundles.length > 0 && installedPlugins) {
+      const installedPluginNames = installedPlugins.map((p) => p.id)
+      const installed = bundles
+        .filter((bundle) => {
+          if (bundle.id === 'minimal') return false
+          // A bundle is considered installed if all its plugins are installed
+          return (
+            bundle.plugins.length > 0 &&
+            bundle.plugins.every((p) => installedPluginNames.includes(p.name))
+          )
+        })
+        .map((b) => b.id)
+      setInstalledBundleIds(installed)
+    }
+  }, [bundles, installedPlugins])
+
   // Watch for installation status changes
   useEffect(() => {
     if (wizardStatus) {
       if (wizardStatus.state === 'complete') {
         setStep(WIZARD_STEPS.COMPLETE)
       } else if (wizardStatus.state === 'error') {
-        setError(`Installation failed: ${wizardStatus.errors.join(', ')}`)
+        setStep(WIZARD_STEPS.COMPLETE)
       }
     }
   }, [wizardStatus])
@@ -47,9 +71,12 @@ function Wizard({ wizardStatus, dispatch }) {
   const fetchBundles = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${window.serverRoutesPrefix}/wizard/bundles`, {
-        credentials: 'include'
-      })
+      const response = await fetch(
+        `${window.serverRoutesPrefix}/wizard/bundles`,
+        {
+          credentials: 'include'
+        }
+      )
       if (!response.ok) {
         throw new Error('Failed to fetch bundles')
       }
@@ -63,24 +90,70 @@ function Wizard({ wizardStatus, dispatch }) {
     }
   }
 
-  const handleBundleSelect = (bundle) => {
-    setSelectedBundle(bundle)
-    setStep(WIZARD_STEPS.CONFIRM)
+  const handleToggleBundle = (bundle) => {
+    setSelectedBundleIds((prev) => {
+      if (prev.includes(bundle.id)) {
+        return prev.filter((id) => id !== bundle.id)
+      } else {
+        return [...prev, bundle.id]
+      }
+    })
+  }
+
+  const handleContinue = () => {
+    if (selectedBundleIds.length > 0) {
+      setStep(WIZARD_STEPS.CONFIRM)
+    }
+  }
+
+  const getSelectedBundles = () => {
+    return bundles.filter((b) => selectedBundleIds.includes(b.id))
+  }
+
+  const getMergedPackages = () => {
+    const selectedBundles = getSelectedBundles()
+    const plugins = new Map()
+    const webapps = new Map()
+
+    selectedBundles.forEach((bundle) => {
+      bundle.plugins.forEach((p) => {
+        if (!plugins.has(p.name)) {
+          plugins.set(p.name, { ...p, bundles: [bundle.name] })
+        } else {
+          plugins.get(p.name).bundles.push(bundle.name)
+        }
+      })
+      bundle.webapps.forEach((w) => {
+        if (!webapps.has(w.name)) {
+          webapps.set(w.name, { ...w, bundles: [bundle.name] })
+        } else {
+          webapps.get(w.name).bundles.push(bundle.name)
+        }
+      })
+    })
+
+    return {
+      plugins: Array.from(plugins.values()),
+      webapps: Array.from(webapps.values())
+    }
   }
 
   const handleInstall = async () => {
-    if (!selectedBundle) return
+    if (selectedBundleIds.length === 0) return
 
     try {
       setStep(WIZARD_STEPS.INSTALLING)
-      const response = await fetch(`${window.serverRoutesPrefix}/wizard/install`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({ bundleId: selectedBundle.id })
-      })
+      const response = await fetch(
+        `${window.serverRoutesPrefix}/wizard/install`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ bundleIds: selectedBundleIds })
+        }
+      )
 
       if (!response.ok) {
         const data = await response.json()
@@ -114,7 +187,7 @@ function Wizard({ wizardStatus, dispatch }) {
       case WIZARD_STEPS.WELCOME:
         return (
           <div className="wizard-welcome text-center py-5">
-            <h2>Welcome to Signal K Server Setup</h2>
+            <h2>Welcome to the Plugin Wizard</h2>
             <p className="lead text-muted mt-3">
               This wizard will help you get started by installing the right
               plugins and webapps for your use case.
@@ -138,58 +211,94 @@ function Wizard({ wizardStatus, dispatch }) {
           <BundleSelection
             bundles={bundles}
             loading={loading}
-            onSelect={handleBundleSelect}
+            selectedBundles={selectedBundleIds}
+            installedBundles={installedBundleIds}
+            onToggleBundle={handleToggleBundle}
+            onContinue={handleContinue}
           />
         )
 
-      case WIZARD_STEPS.CONFIRM:
+      case WIZARD_STEPS.CONFIRM: {
+        const selectedBundles = getSelectedBundles()
+        const { plugins, webapps } = getMergedPackages()
+        const totalPackages = plugins.length + webapps.length
+
         return (
           <div className="wizard-confirm">
             <h4>Confirm Installation</h4>
             <p className="text-muted">
-              You are about to install the <strong>{selectedBundle?.name}</strong> bundle.
+              You are about to install {selectedBundles.length} bundle
+              {selectedBundles.length > 1 ? 's' : ''}:{' '}
+              <strong>{selectedBundles.map((b) => b.name).join(', ')}</strong>
             </p>
+
             <Card className="mb-4">
               <CardHeader>
-                <strong>{selectedBundle?.name}</strong>
+                <strong>{totalPackages} packages to install</strong>
+                <span className="text-muted ml-2">
+                  ({plugins.length} plugins, {webapps.length} webapps)
+                </span>
               </CardHeader>
               <CardBody>
-                <p>{selectedBundle?.description}</p>
-
-                {selectedBundle?.plugins.length > 0 && (
+                {plugins.length > 0 && (
                   <>
-                    <h6>Plugins to install:</h6>
-                    <ul className="mb-3">
-                      {selectedBundle.plugins.map((p) => (
-                        <li key={p.name}>
-                          <code>{p.name}</code>
-                          {p.required && <span className="badge badge-info ml-2">Required</span>}
-                          {p.description && <span className="text-muted ml-2">- {p.description}</span>}
-                        </li>
+                    <h6>Plugins:</h6>
+                    <ListGroup className="mb-3">
+                      {plugins.map((p) => (
+                        <ListGroupItem
+                          key={p.name}
+                          className="d-flex justify-content-between align-items-center py-2"
+                        >
+                          <div>
+                            <code>{p.name}</code>
+                            {p.description && (
+                              <span className="text-muted ml-2">
+                                - {p.description}
+                              </span>
+                            )}
+                          </div>
+                          {p.bundles.length > 1 && (
+                            <Badge color="secondary" pill>
+                              {p.bundles.length} bundles
+                            </Badge>
+                          )}
+                        </ListGroupItem>
                       ))}
-                    </ul>
+                    </ListGroup>
                   </>
                 )}
 
-                {selectedBundle?.webapps.length > 0 && (
+                {webapps.length > 0 && (
                   <>
-                    <h6>Webapps to install:</h6>
-                    <ul>
-                      {selectedBundle.webapps.map((w) => (
-                        <li key={w.name}>
-                          <code>{w.name}</code>
-                          {w.setAsLandingPage && <span className="badge badge-success ml-2">Landing Page</span>}
-                          {w.description && <span className="text-muted ml-2">- {w.description}</span>}
-                        </li>
+                    <h6>Webapps:</h6>
+                    <ListGroup>
+                      {webapps.map((w) => (
+                        <ListGroupItem
+                          key={w.name}
+                          className="d-flex justify-content-between align-items-center py-2"
+                        >
+                          <div>
+                            <code>{w.name}</code>
+                            {w.setAsLandingPage && (
+                              <Badge color="success" className="ml-2">
+                                Landing Page
+                              </Badge>
+                            )}
+                            {w.description && (
+                              <span className="text-muted ml-2">
+                                - {w.description}
+                              </span>
+                            )}
+                          </div>
+                        </ListGroupItem>
                       ))}
-                    </ul>
+                    </ListGroup>
                   </>
                 )}
 
-                {selectedBundle?.plugins.length === 0 && selectedBundle?.webapps.length === 0 && (
+                {plugins.length === 0 && webapps.length === 0 && (
                   <p className="text-muted mb-0">
-                    This bundle installs no additional plugins or webapps.
-                    You can install them later from the App Store.
+                    No additional plugins or webapps to install.
                   </p>
                 )}
               </CardBody>
@@ -199,22 +308,26 @@ function Wizard({ wizardStatus, dispatch }) {
               <Button color="secondary" onClick={handleBack}>
                 Back
               </Button>
-              <Button color="primary" onClick={handleInstall}>
-                Install Bundle
+              <Button
+                color="primary"
+                onClick={handleInstall}
+                disabled={totalPackages === 0}
+              >
+                <FontAwesomeIcon icon={faCheck} className="mr-2" />
+                Install {totalPackages} Package{totalPackages !== 1 ? 's' : ''}
               </Button>
             </div>
           </div>
         )
+      }
 
       case WIZARD_STEPS.INSTALLING:
-        return (
-          <InstallProgress status={wizardStatus} />
-        )
+        return <InstallProgress status={wizardStatus} />
 
       case WIZARD_STEPS.COMPLETE:
         return (
           <WizardComplete
-            bundle={selectedBundle}
+            bundles={getSelectedBundles()}
             status={wizardStatus}
             onRestart={handleRestart}
           />
@@ -227,12 +340,18 @@ function Wizard({ wizardStatus, dispatch }) {
 
   const getStepNumber = () => {
     switch (step) {
-      case WIZARD_STEPS.WELCOME: return 1
-      case WIZARD_STEPS.SELECT_BUNDLE: return 2
-      case WIZARD_STEPS.CONFIRM: return 3
-      case WIZARD_STEPS.INSTALLING: return 4
-      case WIZARD_STEPS.COMPLETE: return 5
-      default: return 1
+      case WIZARD_STEPS.WELCOME:
+        return 1
+      case WIZARD_STEPS.SELECT_BUNDLE:
+        return 2
+      case WIZARD_STEPS.CONFIRM:
+        return 3
+      case WIZARD_STEPS.INSTALLING:
+        return 4
+      case WIZARD_STEPS.COMPLETE:
+        return 5
+      default:
+        return 1
     }
   }
 
@@ -240,16 +359,13 @@ function Wizard({ wizardStatus, dispatch }) {
     <div className="wizard animated fadeIn">
       <Card>
         <CardHeader>
-          <strong>Setup Wizard</strong>
+          <strong>Plugin Wizard</strong>
           <div className="float-right text-muted">
             Step {getStepNumber()} of 5
           </div>
         </CardHeader>
         <CardBody>
-          <Progress
-            value={(getStepNumber() / 5) * 100}
-            className="mb-4"
-          />
+          <Progress value={(getStepNumber() / 5) * 100} className="mb-4" />
 
           {error && (
             <Alert color="danger" className="mb-4">
@@ -266,7 +382,8 @@ function Wizard({ wizardStatus, dispatch }) {
 }
 
 const mapStateToProps = (state) => ({
-  wizardStatus: state.wizardStatus
+  wizardStatus: state.wizardStatus,
+  installedPlugins: state.plugins
 })
 
 export default connect(mapStateToProps)(Wizard)

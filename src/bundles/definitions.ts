@@ -313,7 +313,9 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
  * Get all available bundle definitions
  */
 export function getBundleDefinitions(): BundleDefinition[] {
-  return BUNDLE_DEFINITIONS.slice().sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
+  return BUNDLE_DEFINITIONS.slice().sort(
+    (a, b) => (a.order ?? 99) - (b.order ?? 99)
+  )
 }
 
 /**

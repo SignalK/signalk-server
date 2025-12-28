@@ -58,18 +58,21 @@ export default function (app: BundleManagerApp & Express) {
       debug('Starting bundle manager')
 
       // GET /signalk/v1/api/wizard/bundles - List available bundles
-      app.get(`${SERVERROUTESPREFIX}/wizard/bundles`, (_req: Request, res: Response) => {
-        try {
-          const bundles = getBundleDefinitions()
-          res.json({
-            bundles,
-            installedBundle: getInstalledBundleId(app)
-          })
-        } catch (error) {
-          debug('Error getting bundles:', error)
-          res.status(500).json({ error: 'Failed to get bundle definitions' })
+      app.get(
+        `${SERVERROUTESPREFIX}/wizard/bundles`,
+        (_req: Request, res: Response) => {
+          try {
+            const bundles = getBundleDefinitions()
+            res.json({
+              bundles,
+              installedBundle: getInstalledBundleId(app)
+            })
+          } catch (error) {
+            debug('Error getting bundles:', error)
+            res.status(500).json({ error: 'Failed to get bundle definitions' })
+          }
         }
-      })
+      )
 
       // GET /signalk/v1/api/wizard/bundles/:id - Get a specific bundle
       app.get(
@@ -89,22 +92,32 @@ export default function (app: BundleManagerApp & Express) {
         }
       )
 
-      // POST /signalk/v1/api/wizard/install - Install a bundle
+      // POST /signalk/v1/api/wizard/install - Install one or more bundles
       app.post(
         `${SERVERROUTESPREFIX}/wizard/install`,
         async (req: Request, res: Response) => {
           try {
             const request: BundleInstallRequest = req.body
 
-            if (!request.bundleId) {
-              res.status(400).json({ error: 'bundleId is required' })
+            // Support both single bundleId and array of bundleIds
+            const bundleIds =
+              request.bundleIds || (request.bundleId ? [request.bundleId] : [])
+
+            if (bundleIds.length === 0) {
+              res
+                .status(400)
+                .json({ error: 'bundleId or bundleIds is required' })
               return
             }
 
-            const bundle = getBundleById(request.bundleId)
-            if (!bundle) {
-              res.status(404).json({ error: 'Bundle not found' })
-              return
+            const bundles: BundleDefinition[] = []
+            for (const id of bundleIds) {
+              const bundle = getBundleById(id)
+              if (!bundle) {
+                res.status(404).json({ error: `Bundle not found: ${id}` })
+                return
+              }
+              bundles.push(bundle)
             }
 
             // Check if already installing
@@ -117,9 +130,9 @@ export default function (app: BundleManagerApp & Express) {
             }
 
             // Start installation
-            startBundleInstallation(app, bundle, request)
+            startMultiBundleInstallation(app, bundles, request)
             res.json({
-              message: `Starting installation of bundle: ${bundle.name}`,
+              message: `Starting installation of ${bundles.length} bundle(s): ${bundles.map((b) => b.name).join(', ')}`,
               status: installStatus
             })
           } catch (error) {
@@ -130,29 +143,41 @@ export default function (app: BundleManagerApp & Express) {
       )
 
       // GET /signalk/v1/api/wizard/status - Get installation status
-      app.get(`${SERVERROUTESPREFIX}/wizard/status`, (_req: Request, res: Response) => {
-        res.json(installStatus)
-      })
+      app.get(
+        `${SERVERROUTESPREFIX}/wizard/status`,
+        (_req: Request, res: Response) => {
+          res.json(installStatus)
+        }
+      )
 
       // POST /signalk/v1/api/wizard/cancel - Cancel installation
-      app.post(`${SERVERROUTESPREFIX}/wizard/cancel`, (_req: Request, res: Response) => {
-        if (installStatus.state === 'installing') {
-          // Clear the queue but can't stop current npm install
-          installQueue.length = 0
-          installStatus.state = 'error'
-          installStatus.errors.push('Installation cancelled by user')
-          emitStatusUpdate(app)
-          res.json({ message: 'Installation cancelled' })
-        } else {
-          res.status(400).json({ error: 'No installation in progress' })
+      app.post(
+        `${SERVERROUTESPREFIX}/wizard/cancel`,
+        (_req: Request, res: Response) => {
+          if (installStatus.state === 'installing') {
+            // Clear the queue but can't stop current npm install
+            installQueue.length = 0
+            installStatus.state = 'error'
+            installStatus.errors.push('Installation cancelled by user')
+            emitStatusUpdate(app)
+            res.json({ message: 'Installation cancelled' })
+          } else {
+            res.status(400).json({ error: 'No installation in progress' })
+          }
         }
-      })
+      )
 
       // POST /signalk/v1/api/wizard/reset - Reset installation status
-      app.post(`${SERVERROUTESPREFIX}/wizard/reset`, (_req: Request, res: Response) => {
-        resetInstallStatus()
-        res.json({ message: 'Installation status reset', status: installStatus })
-      })
+      app.post(
+        `${SERVERROUTESPREFIX}/wizard/reset`,
+        (_req: Request, res: Response) => {
+          resetInstallStatus()
+          res.json({
+            message: 'Installation status reset',
+            status: installStatus
+          })
+        }
+      )
     },
 
     stop: () => {
@@ -177,28 +202,38 @@ function resetInstallStatus() {
 }
 
 /**
- * Start installing a bundle
+ * Start installing multiple bundles (merges packages to avoid duplicates)
  */
-function startBundleInstallation(
+function startMultiBundleInstallation(
   app: BundleManagerApp,
-  bundle: BundleDefinition,
+  bundles: BundleDefinition[],
   request: BundleInstallRequest
 ) {
-  // Determine which plugins and webapps to install
-  const pluginsToInstall = request.plugins
-    ? bundle.plugins.filter((p) => request.plugins!.includes(p.name))
-    : bundle.plugins
+  // Merge plugins and webapps from all bundles, avoiding duplicates
+  const pluginsMap = new Map<string, { name: string }>()
+  const webappsMap = new Map<string, { name: string }>()
 
-  const webappsToInstall = request.webapps
-    ? bundle.webapps.filter((w) => request.webapps!.includes(w.name))
-    : bundle.webapps
+  bundles.forEach((bundle) => {
+    const pluginsToInstall = request.plugins
+      ? bundle.plugins.filter((p) => request.plugins!.includes(p.name))
+      : bundle.plugins
 
-  const totalItems = pluginsToInstall.length + webappsToInstall.length
+    const webappsToInstall = request.webapps
+      ? bundle.webapps.filter((w) => request.webapps!.includes(w.name))
+      : bundle.webapps
+
+    pluginsToInstall.forEach((p) => pluginsMap.set(p.name, { name: p.name }))
+    webappsToInstall.forEach((w) => webappsMap.set(w.name, { name: w.name }))
+  })
+
+  const plugins = Array.from(pluginsMap.values())
+  const webapps = Array.from(webappsMap.values())
+  const totalItems = plugins.length + webapps.length
 
   // Initialize status
   installStatus = {
     state: 'installing',
-    bundleId: bundle.id,
+    bundleId: bundles.map((b) => b.id).join(','),
     currentStep: 0,
     totalSteps: totalItems,
     errors: [],
@@ -207,10 +242,12 @@ function startBundleInstallation(
 
   // Queue all items
   installQueue.length = 0
-  pluginsToInstall.forEach((p) => installQueue.push({ name: p.name }))
-  webappsToInstall.forEach((w) => installQueue.push({ name: w.name }))
+  plugins.forEach((p) => installQueue.push({ name: p.name }))
+  webapps.forEach((w) => installQueue.push({ name: w.name }))
 
-  debug(`Starting bundle installation: ${bundle.name} with ${totalItems} items`)
+  debug(
+    `Starting multi-bundle installation: ${bundles.map((b) => b.name).join(', ')} with ${totalItems} items`
+  )
   emitStatusUpdate(app)
 
   // Start processing queue
@@ -243,7 +280,9 @@ function processInstallQueue(app: BundleManagerApp) {
   installStatus.currentStep++
   emitStatusUpdate(app)
 
-  debug(`Installing ${item.name} (${installStatus.currentStep}/${installStatus.totalSteps})`)
+  debug(
+    `Installing ${item.name} (${installStatus.currentStep}/${installStatus.totalSteps})`
+  )
 
   installModule(
     app.config,
@@ -265,7 +304,9 @@ function processInstallQueue(app: BundleManagerApp) {
         installStatus.installed.push(item.name)
         debug(`Successfully installed ${item.name}`)
       } else {
-        installStatus.errors.push(`Failed to install ${item.name} (exit code: ${code})`)
+        installStatus.errors.push(
+          `Failed to install ${item.name} (exit code: ${code})`
+        )
         debug(`Failed to install ${item.name} with exit code ${code}`)
       }
 

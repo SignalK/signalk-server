@@ -217,7 +217,7 @@ const mapStateToProps = (state) => {
         icon: 'icon-folder'
       },
       {
-        name: 'Setup Wizard',
+        name: 'Plugin Wizard',
         url: '/wizard',
         icon: 'icon-magic-wand'
       }
