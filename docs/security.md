@@ -221,9 +221,22 @@ IP restrictions can also be configured directly in `security.json`:
 
 When running Signal K Server behind a reverse proxy (e.g., nginx, Apache, Traefik), the server needs to be configured to trust the `X-Forwarded-For` header to correctly identify client IP addresses.
 
+### Why Enable Trust Proxy?
+
+Without this setting, when behind a reverse proxy:
+
+- All requests appear to come from the proxy's IP (e.g., `127.0.0.1`)
+- Rate limiting becomes ineffective (limits apply to proxy, not individual clients)
+- IP address filtering (`allowedSourceIPs`) cannot distinguish between clients
+- Access logs show proxy IP instead of real client IP
+
+When `trustProxy` is enabled, Signal K uses the `X-Forwarded-For` header (set by your proxy) to identify the real client IP address.
+
 ### Configuration
 
 The `trustProxy` setting can be enabled in the Admin UI under **Server Settings > Options > trustProxy**.
+
+For most setups behind a local reverse proxy, simply enabling `trustProxy: true` in the Admin UI is sufficient.
 
 For advanced configurations (specific proxy IPs, hop counts), edit `settings.json` directly:
 
