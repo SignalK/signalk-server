@@ -19,6 +19,7 @@ import jwt, { SignOptions } from 'jsonwebtoken'
 import _ from 'lodash'
 import bcrypt from 'bcryptjs'
 import { getSourceId } from '@signalk/signalk-schema'
+import { Delta, Update, hasValues, hasMeta } from '@signalk/server-api'
 import ms, { StringValue } from 'ms'
 import rateLimit from 'express-rate-limit'
 import bodyParser from 'body-parser'
@@ -118,32 +119,6 @@ interface CookieOptions {
   sameSite: 'strict' | 'lax' | 'none'
   secure: boolean
   maxAge?: number
-}
-
-/**
- * Delta update structure
- */
-interface Delta {
-  context: string
-  updates: DeltaUpdate[]
-}
-
-/**
- * Delta update entry
- */
-interface DeltaUpdate {
-  $source?: string
-  source?: unknown
-  values?: ValuePath[]
-  meta?: ValuePath[]
-}
-
-/**
- * Value path in delta
- */
-interface ValuePath {
-  path: string
-  value?: unknown
 }
 
 /**
@@ -1083,39 +1058,41 @@ function tokenSecurity(
         req.skPrincipal.permissions === 'readwrite')
     ) {
       const context =
-        delta.context === app.selfContext ? 'vessels.self' : delta.context
+        delta.context === app.selfContext
+          ? 'vessels.self'
+          : (delta.context ?? 'vessels.self')
 
       const notAllowed = delta.updates.find((update) => {
-        let source = update.$source
+        let source: string | undefined = update.$source
         if (!source) {
           source = getSourceId(update.source)
         }
-        return (
-          (update.values &&
-            update.values.find((valuePath) => {
-              return (
-                strategy.checkACL(
-                  req.skPrincipal!.identifier,
-                  context,
-                  valuePath.path,
-                  source,
-                  'write'
-                ) === false
-              )
-            })) ||
-          (update.meta &&
-            update.meta.find((valuePath) => {
-              return (
-                strategy.checkACL(
-                  req.skPrincipal!.identifier,
-                  context,
-                  valuePath.path,
-                  source,
-                  'write'
-                ) === false
-              )
-            }))
-        )
+        if (hasValues(update)) {
+          return update.values.find((pv) => {
+            return (
+              strategy.checkACL(
+                req.skPrincipal!.identifier,
+                context,
+                pv.path,
+                source,
+                'write'
+              ) === false
+            )
+          })
+        } else if (hasMeta(update)) {
+          return update.meta.find((m) => {
+            return (
+              strategy.checkACL(
+                req.skPrincipal!.identifier,
+                context,
+                m.path,
+                source,
+                'write'
+              ) === false
+            )
+          })
+        }
+        return undefined
       })
 
       // true if we did not find anything disallowing the write
@@ -1166,32 +1143,42 @@ function tokenSecurity(
     ) {
       const filtered: Delta = { ...delta }
       const context =
-        delta.context === app.selfContext ? 'vessels.self' : delta.context
+        delta.context === app.selfContext
+          ? 'vessels.self'
+          : (delta.context ?? 'vessels.self')
 
       filtered.updates = delta.updates
         .map((update) => {
-          const res = (update.values || update.meta || [])
-            .map((valuePath) => {
-              return strategy.checkACL(
+          if (hasValues(update)) {
+            const filteredValues = update.values.filter((pv) =>
+              strategy.checkACL(
                 principal.identifier,
                 context,
-                valuePath.path,
+                pv.path,
                 update.source,
                 'read'
               )
-                ? valuePath
-                : null
-            })
-            .filter((vp): vp is ValuePath => vp !== null)
-          if (update.values) {
-            update.values = res
-            return update.values.length > 0 ? update : null
-          } else {
-            update.meta = res
-            return (update.meta?.length ?? 0) > 0 ? update : null
+            )
+            return filteredValues.length > 0
+              ? { ...update, values: filteredValues }
+              : null
+          } else if (hasMeta(update)) {
+            const filteredMeta = update.meta.filter((m) =>
+              strategy.checkACL(
+                principal.identifier,
+                context,
+                m.path,
+                update.source,
+                'read'
+              )
+            )
+            return filteredMeta.length > 0
+              ? { ...update, meta: filteredMeta }
+              : null
           }
+          return null
         })
-        .filter((update): update is DeltaUpdate => update !== null)
+        .filter((update): update is Update => update !== null)
       return filtered.updates.length > 0 ? filtered : null
     } else if (!principal) {
       return null
