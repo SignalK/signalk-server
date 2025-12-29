@@ -27,7 +27,6 @@ const { putPath, deletePath } = require('../put')
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
-import { extractClientIP, isIPAllowed } from '../ip-validation'
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
 const Primus = require('primus')
@@ -384,40 +383,25 @@ module.exports = function (app) {
         message: 'A request has already been submitted'
       })
     } else {
-      // Extract client IP respecting trustProxy setting (CVE fix)
-      const clientIP = extractClientIP(
-        spark.request.headers,
-        spark.request.connection.remoteAddress,
-        app.get('trust proxy')
-      )
+      requestAccess(
+        app,
+        msg,
+        spark.request.headers['x-forwarded-for'] ||
+          spark.request.connection.remoteAddress,
+        (res) => {
+          if (res.state === 'COMPLETED') {
+            spark.skPendingAccessRequest = false
 
-      // Check IP filtering - same protection as HTTP endpoint
-      const allowedIPs =
-        app.securityStrategy?.getConfiguration?.()?.allowedSourceIPs
-      if (!isIPAllowed(clientIP, allowedIPs)) {
-        debug('Blocked WebSocket access request from %s', clientIP)
-        spark.write({
-          requestId: msg.requestId,
-          state: 'COMPLETED',
-          statusCode: 403,
-          message: 'Access request not allowed from this IP address'
-        })
-        return
-      }
-
-      requestAccess(app, msg, clientIP, (res) => {
-        if (res.state === 'COMPLETED') {
-          spark.skPendingAccessRequest = false
-
-          if (res.accessRequest && res.accessRequest.token) {
-            spark.request.token = res.accessRequest.token
-            app.securityStrategy.authorizeWS(spark.request)
-            spark.request.source =
-              'ws.' + spark.request.skPrincipal.identifier.replace(/\./g, '_')
+            if (res.accessRequest && res.accessRequest.token) {
+              spark.request.token = res.accessRequest.token
+              app.securityStrategy.authorizeWS(spark.request)
+              spark.request.source =
+                'ws.' + spark.request.skPrincipal.identifier.replace(/\./g, '_')
+            }
           }
+          spark.write(res)
         }
-        spark.write(res)
-      })
+      )
         .then((res) => {
           if (res.state === 'PENDING') {
             spark.skPendingAccessRequest = true

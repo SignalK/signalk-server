@@ -103,8 +103,7 @@ module.exports = function (app, config) {
     immutableConfig,
     acls,
     allowDeviceAccessRequests,
-    allowNewUserRegistration,
-    allowedSourceIPs: config.allowedSourceIPs
+    allowNewUserRegistration
   }
 
   // so that enableSecurity gets the defaults to save

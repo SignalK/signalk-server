@@ -142,81 +142,6 @@ The following helmet features are disabled to maintain compatibility with the Si
 - **Cross-Origin-Embedder-Policy**: Would prevent chart plotters from embedding SignalK data
 - **Cross-Origin-Resource-Policy**: Would prevent legitimate cross-origin API access from instruments and apps
 
-## IP Address Restrictions
-
-Signal K Server supports restricting access to sensitive endpoints based on the client's IP address. This provides an additional layer of security by limiting which network addresses can access them. This includes the TCP services, that have no authentication & access control mechanism.
-
-### Affected Endpoints and Services
-
-The following are protected by IP address restrictions:
-
-- **Access Requests**:
-  - `POST /signalk/v1/access/requests` - HTTP device access requests
-  - `GET /signalk/v1/requests/:id` - Request status queries
-  - WebSocket access requests
-
-- **TCP Services**:
-  - NMEA 0183 TCP (port 10110)
-  - Signal K TCP (port 8375)
-
-**Note**: Login (`/login`) is not IP restricted, allowing users to authenticate from any location. Login is protected by rate limiting instead.
-
-### User-Configurable UDP Connections
-
-UDP connections configured through the admin UI can optionally apply IP address restrictions. When enabled, incoming UDP messages from IP addresses not in the allowed list will be silently dropped.
-
-This applies to:
-
-- NMEA 0183 UDP connections
-- Signal K UDP connections
-- NMEA 2000 Yacht Devices RAW UDP connections
-
-To configure this option:
-
-1. Go to **Server → Connections**
-2. Edit the UDP connection
-3. Enable **Apply IP address restrictions**
-
-For backward compatibility:
-
-- **New connections**: IP filtering is enabled by default
-- **Existing connections**: IP filtering is disabled by default
-
-### Configuration
-
-IP restrictions are configured in **Security → Settings** in the Admin UI using the "Allowed Source IPs" field.
-
-The default configuration allows only private/local network addresses:
-
-```
-127.0.0.0/8      # IPv4 loopback
-10.0.0.0/8       # RFC1918 Class A private
-172.16.0.0/12    # RFC1918 Class B private
-192.168.0.0/16   # RFC1918 Class C private
-169.254.0.0/16   # Link-local
-::1/128          # IPv6 loopback
-fc00::/7         # IPv6 unique local (ULA)
-fe80::/10        # IPv6 link-local
-```
-
-To allow all IP addresses (not recommended for internet-exposed servers):
-
-```
-0.0.0.0/0
-::/0
-```
-
-### Configuration in security.json
-
-IP restrictions can also be configured directly in `security.json`:
-
-```json
-{
-  "strategy": "./tokensecurity",
-  "allowedSourceIPs": ["127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8"]
-}
-```
-
 ## Reverse Proxy Configuration (Trust Proxy)
 
 When running Signal K Server behind a reverse proxy (e.g., nginx, Apache, Traefik), the server needs to be configured to trust the `X-Forwarded-For` header to correctly identify client IP addresses.
@@ -227,7 +152,6 @@ Without this setting, when behind a reverse proxy:
 
 - All requests appear to come from the proxy's IP (e.g., `127.0.0.1`)
 - Rate limiting becomes ineffective (limits apply to proxy, not individual clients)
-- IP address filtering (`allowedSourceIPs`) cannot distinguish between clients
 - Access logs show proxy IP instead of real client IP
 
 When `trustProxy` is enabled, Signal K uses the `X-Forwarded-For` header (set by your proxy) to identify the real client IP address.

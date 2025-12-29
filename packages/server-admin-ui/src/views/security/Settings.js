@@ -15,32 +15,13 @@ import {
 } from 'reactstrap'
 import EnableSecurity from './EnableSecurity'
 
-const DEFAULT_ALLOWED_IPS = `127.0.0.0/8
-10.0.0.0/8
-172.16.0.0/12
-192.168.0.0/16
-169.254.0.0/16
-::1/128
-fc00::/7
-fe80::/10`
-
 export function fetchSecurityConfig() {
   fetch(`${window.serverRoutesPrefix}/security/config`, {
     credentials: 'include'
   })
     .then((response) => response.json())
     .then((data) => {
-      // Use server-provided defaults if available, fallback to local constant
-      const defaultIPs = data.defaultAllowedSourceIPs
-        ? data.defaultAllowedSourceIPs.join('\n')
-        : DEFAULT_ALLOWED_IPS
-      this.setState({
-        ...data,
-        allowedSourceIPs: data.allowedSourceIPs
-          ? data.allowedSourceIPs.join('\n')
-          : defaultIPs,
-        hasData: true
-      })
+      this.setState({ ...data, hasData: true })
     })
 }
 
@@ -88,12 +69,6 @@ class Settings extends Component {
       allowNewUserRegistration: this.state.allowNewUserRegistration,
       allowDeviceAccessRequests: this.state.allowDeviceAccessRequests,
       allowedCorsOrigins: this.state.allowedCorsOrigins,
-      allowedSourceIPs: this.state.allowedSourceIPs
-        ? this.state.allowedSourceIPs
-            .split('\n')
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : undefined,
       adminUIOrigin
     }
     fetch(`${window.serverRoutesPrefix}/security/config`, {
@@ -261,30 +236,6 @@ class Settings extends Component {
                           Use either * or a comma delimited list of origins,
                           example:
                           http://host1.name.com:3000,http://host2.name.com:3000
-                        </FormText>
-                      </Col>
-                    </FormGroup>
-                    <FormGroup row>
-                      <Col md="3">
-                        <Label htmlFor="text-input">Allowed Source IPs</Label>
-                      </Col>
-                      <Col xs="12" md="9">
-                        <Input
-                          type="textarea"
-                          name="allowedSourceIPs"
-                          rows="8"
-                          onChange={this.handleChange}
-                          value={this.state.allowedSourceIPs || ''}
-                        />
-                        <FormText color="muted">
-                          IP addresses or CIDR ranges allowed to access login,
-                          registration endpoints, NMEA 0183 TCP (port 10110),
-                          and Signal K TCP (port 8375). One per line.
-                          <br />
-                          <br />
-                          Default ranges shown allow only private/local networks
-                          (recommended for security). To allow all IPs, replace
-                          with: 0.0.0.0/0 and ::/0
                         </FormText>
                       </Col>
                     </FormGroup>
