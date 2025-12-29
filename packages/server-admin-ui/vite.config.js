@@ -36,7 +36,14 @@ export default defineConfig({
         // Silence deprecation warnings from Bootstrap 4 (legacy dependency)
         // These warnings are from Bootstrap's old Sass code and will be resolved when upgrading to Bootstrap 5
         quietDeps: true,
-        silenceDeprecations: ['import', 'global-builtin', 'color-functions', 'slash-div', 'if-function', 'abs-percent']
+        silenceDeprecations: [
+          'import',
+          'global-builtin',
+          'color-functions',
+          'slash-div',
+          'if-function',
+          'abs-percent'
+        ]
       }
     }
   },
