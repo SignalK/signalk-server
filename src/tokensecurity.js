@@ -231,7 +231,8 @@ module.exports = function (app, config) {
       },
       // Disable X-Forwarded-For validation - we handle trust proxy configuration
       // ourselves and this avoids error log output when trust proxy isn't configured
-      validate: { xForwardedForHeader: false }
+      // trustProxy: false prevents ERR_ERL_PERMISSIVE_TRUST_PROXY when trustProxy is true
+      validate: { xForwardedForHeader: false, trustProxy: false }
     })
 
     app.use(require('body-parser').urlencoded({ extended: true }))

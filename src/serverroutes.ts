@@ -163,7 +163,8 @@ module.exports = function (
     },
     // We use Express' trust proxy that sets the actual client's ip in req.ip
     // so rateLimit need not complain about the presence of x-forwarded-for
-    validate: { xForwardedForHeader: false }
+    // trustProxy: false prevents ERR_ERL_PERMISSIVE_TRUST_PROXY when trustProxy is true
+    validate: { xForwardedForHeader: false, trustProxy: false }
   })
 
   const loginStatusLimiter = rateLimit({
@@ -173,7 +174,7 @@ module.exports = function (
       message:
         'Too many requests from this IP, please try again after 10 minutes'
     },
-    validate: { xForwardedForHeader: false }
+    validate: { xForwardedForHeader: false, trustProxy: false }
   })
 
   const ipFilter = createIPFilterMiddleware(
