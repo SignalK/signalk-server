@@ -30,15 +30,29 @@ export default defineConfig({
       }
     })
   ],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        // Silence deprecation warnings from Bootstrap 4 (legacy dependency)
+        // These warnings are from Bootstrap's old Sass code and will be resolved when upgrading to Bootstrap 5
+        quietDeps: true,
+        silenceDeprecations: ['import', 'global-builtin', 'color-functions', 'slash-div', 'if-function', 'abs-percent']
+      }
+    }
+  },
   build: {
     outDir: 'public',
     sourcemap: true,
     target: 'es2022',
-    assetsInlineLimit: 0 // Prevent inlining assets to allow server-side logo override
+    assetsInlineLimit: 0, // Prevent inlining assets to allow server-side logo override
+    cssCodeSplit: false // Generate single CSS file to ensure it's always loaded
   },
   resolve: {
     alias: {
-      path: false
+      path: false,
+      // Polyfill Node.js modules for browser compatibility
+      events: 'events',
+      buffer: 'buffer'
     }
   }
 })

@@ -1,13 +1,16 @@
+@use 'sass:color';
+@use 'sass:math';
+
 .card {
   margin-bottom: 1.5 * $spacer;
 
   // Cards with color accent
   @each $color, $value in $theme-colors {
     &.bg-#{$color} {
-      border-color: darken($value, 12.5%);
+      border-color: color.adjust($value, $lightness: -12.5%);
       .card-header {
-        background-color: darken($value, 3%);
-        border-color: darken($value, 12.5%);
+        background-color: color.adjust($value, $lightness: -3%);
+        border-color: color.adjust($value, $lightness: -12.5%);
       }
     }
   }
@@ -42,7 +45,7 @@
     }
 
     .nav-link {
-      padding: $card-spacer-y $card-spacer-x / 2;
+      padding: $card-spacer-y math.div($card-spacer-x, 2);
       color: $text-muted;
       border-top: 0;
 
@@ -107,7 +110,7 @@
 // Card Actions
 .card-header {
   > i {
-    margin-right: $spacer / 2;
+    margin-right: math.div($spacer, 2);
   }
   .card-actions {
     position: absolute;
@@ -166,8 +169,8 @@
 
 .card-full {
   margin-top: -$spacer;
-  margin-right: -$grid-gutter-width / 2;
-  margin-left: -$grid-gutter-width / 2;
+  margin-right: math.div(-$grid-gutter-width, 2);
+  margin-left: math.div(-$grid-gutter-width, 2);
   border: 0;
   border-bottom: $card-border-width solid $border-color;
 }
