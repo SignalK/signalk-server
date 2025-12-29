@@ -101,9 +101,9 @@ class Server {
         xPermittedCrossDomainPolicies: true,
         referrerPolicy: true,
         hsts: true,
-        frameguard: { action: 'sameorigin' },
 
         // DISABLED (would break chart plotters, plugins, webapps):
+        frameguard: false, // Allow embedding in iframes (chart plotters, MFDs)
         contentSecurityPolicy: false,
         crossOriginEmbedderPolicy: false,
         crossOriginOpenerPolicy: false,
