@@ -89,7 +89,7 @@ export interface UserDataUpdate {
 export interface UserWithPassword {
   userId: string
   type: string
-  password: string
+  password?: string
 }
 
 export interface Device {

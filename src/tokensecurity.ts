@@ -30,24 +30,25 @@ import {
   InvalidTokenError,
   SecurityConfig,
   User,
+  UserWithPassword,
   Device,
   UserData,
   UserDataUpdate,
   DeviceDataUpdate,
-  ACL,
   LoginStatusResponse,
   saveSecurityConfig,
   RequestStatusData,
   getRateLimitValidationOptions
 } from './security'
 // requestResponse is still CommonJS
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+/* eslint-disable @typescript-eslint/no-require-imports */
 const {
   createRequest,
   updateRequest,
   findRequest,
   filterRequests
 } = require('./requestResponse')
+/* eslint-enable @typescript-eslint/no-require-imports */
 import { parseOIDCConfig, registerOIDCRoutes, OIDCConfig } from './oidc'
 import { SERVERROUTESPREFIX } from './constants'
 import { ICallback } from './types'
@@ -69,8 +70,7 @@ const BROWSER_LOGININFO_COOKIE_NAME = 'skLoginInfo'
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
 
 // Dummy hash for timing attack prevention - pre-generated bcrypt hash
-const DUMMY_HASH =
-  '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
+const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
 
 /**
  * Express request with Signal K authentication properties
@@ -245,7 +245,7 @@ export interface TokenSecurityStrategy {
   getUsers: (aConfig: SecurityConfig) => UserData[]
   addUser: (
     theConfig: SecurityConfig,
-    user: User,
+    user: UserWithPassword,
     callback: ICallback<SecurityConfig>
   ) => void
   updateUser: (
@@ -320,8 +320,8 @@ function tokenSecurity(
 ): TokenSecurityStrategy {
   const strategy = {} as TokenSecurityStrategy
 
+  const { expiration = 'NEVER' } = config
   let {
-    expiration = 'NEVER',
     users = [],
     immutableConfig = false,
     allowDeviceAccessRequests = true,
@@ -330,7 +330,8 @@ function tokenSecurity(
 
   const {
     allow_readonly = true,
-    secretKey = process.env.SECRETKEY || crypto.randomBytes(256).toString('hex'),
+    secretKey = process.env.SECRETKEY ||
+      crypto.randomBytes(256).toString('hex'),
     devices = [],
     acls = []
   } = config
@@ -429,7 +430,10 @@ function tokenSecurity(
     username: string,
     sessionOptions: { rememberMe?: boolean } = {}
   ): void {
-    const cookieOptions = getSessionCookieOptions(req, sessionOptions.rememberMe)
+    const cookieOptions = getSessionCookieOptions(
+      req,
+      sessionOptions.rememberMe
+    )
     // Auth cookie must be httpOnly for security
     const authCookieOptions: CookieOptions = { ...cookieOptions, httpOnly: true }
     res.cookie('JAUTHENTICATION', token, authCookieOptions)
@@ -676,8 +680,15 @@ function tokenSecurity(
       setSessionCookie,
       clearSessionCookie,
       generateJWT,
-      saveConfig: (securityConfig: SecurityConfig, callback: (err: Error | null) => void) => {
-        saveSecurityConfig(app as unknown as Parameters<typeof saveSecurityConfig>[0], securityConfig, callback)
+      saveConfig: (
+        securityConfig: SecurityConfig,
+        callback: (err: Error | null) => void
+      ) => {
+        saveSecurityConfig(
+          app as unknown as Parameters<typeof saveSecurityConfig>[0],
+          securityConfig,
+          callback
+        )
       }
     })
 
@@ -705,13 +716,12 @@ function tokenSecurity(
     app.use(`${SERVERROUTESPREFIX}/loginStatus`, http_authorize(false, true))
 
     const no_redir = http_authorize(false)
-    app.use('/signalk/v1/api/*', function (
-      req: SKRequest,
-      res: Response,
-      next: NextFunction
-    ) {
-      no_redir(req, res, next)
-    })
+    app.use(
+      '/signalk/v1/api/*',
+      function (req: SKRequest, res: Response, next: NextFunction) {
+        no_redir(req, res, next)
+      }
+    )
     app.put('/signalk/v1/*', writeAuthenticationMiddleware())
   }
 
@@ -735,32 +745,40 @@ function tokenSecurity(
       // whether a username exists. Use a dummy hash if user not found.
       const hashToCompare = user?.password ? user.password : DUMMY_HASH
 
-      bcrypt.compare(password, hashToCompare, (err: Error | null, matches: boolean) => {
-        if (err) {
-          reject(err)
-        } else if (matches === true && user?.password) {
-          // Only succeed if user exists AND password matched real hash
-          const payload: JWTPayload = { id: user.username }
-          const theExpiration = configuration.expiration || '1h'
-          const jwtOptions: SignOptions = {}
-          if (theExpiration !== 'NEVER') {
-            jwtOptions.expiresIn = theExpiration as StringValue
+      bcrypt.compare(
+        password,
+        hashToCompare,
+        (err: Error | null, matches: boolean) => {
+          if (err) {
+            reject(err)
+          } else if (matches === true && user?.password) {
+            // Only succeed if user exists AND password matched real hash
+            const payload: JWTPayload = { id: user.username }
+            const theExpiration = configuration.expiration || '1h'
+            const jwtOptions: SignOptions = {}
+            if (theExpiration !== 'NEVER') {
+              jwtOptions.expiresIn = theExpiration as StringValue
+            }
+            debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
+            try {
+              const token = jwt.sign(
+                payload,
+                configuration.secretKey,
+                jwtOptions
+              )
+              resolve({ statusCode: 200, token, user: user.username })
+            } catch (signErr) {
+              resolve({
+                statusCode: 500,
+                message: 'Unable to sign token: ' + (signErr as Error).message
+              })
+            }
+          } else {
+            debug('password did not match')
+            resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
           }
-          debug(`jwt expiration:${JSON.stringify(jwtOptions)}`)
-          try {
-            const token = jwt.sign(payload, configuration.secretKey, jwtOptions)
-            resolve({ statusCode: 200, token, user: user.username })
-          } catch (signErr) {
-            resolve({
-              statusCode: 500,
-              message: 'Unable to sign token: ' + (signErr as Error).message
-            })
-          }
-        } else {
-          debug('password did not match')
-          resolve({ statusCode: 401, message: LOGIN_FAILED_MESSAGE })
         }
-      })
+      )
     })
   }
 
@@ -850,7 +868,8 @@ function tokenSecurity(
   strategy.getConfig = (aConfig: SecurityConfig): Partial<SecurityConfig> => {
     const result = { ...aConfig }
     delete (result as Partial<SecurityConfig> & { users?: User[] }).users
-    delete (result as Partial<SecurityConfig> & { secretKey?: string }).secretKey
+    delete (result as Partial<SecurityConfig> & { secretKey?: string })
+      .secretKey
     return result
   }
 
@@ -891,12 +910,12 @@ function tokenSecurity(
 
   function addUser(
     theConfig: SecurityConfig,
-    user: User,
+    user: UserWithPassword,
     callback: ICallback<SecurityConfig>
   ): void {
     assertConfigImmutability()
     const newUser: User = {
-      username: user.username,
+      username: user.userId,
       type: user.type
     }
 
@@ -910,14 +929,18 @@ function tokenSecurity(
     }
 
     if (user.password) {
-      bcrypt.hash(user.password, passwordSaltRounds, (err: Error | null, hash: string) => {
-        if (err) {
-          callback(err)
-        } else {
-          newUser.password = hash
-          finish(newUser, err)
+      bcrypt.hash(
+        user.password,
+        passwordSaltRounds,
+        (err: Error | null, hash: string) => {
+          if (err) {
+            callback(err)
+          } else {
+            newUser.password = hash
+            finish(newUser, err)
+          }
         }
-      })
+      )
     } else {
       finish(newUser, undefined)
     }
@@ -942,14 +965,18 @@ function tokenSecurity(
     }
 
     if (updates.password) {
-      bcrypt.hash(updates.password, passwordSaltRounds, (err: Error | null, hash: string) => {
-        if (err) {
-          callback(err)
-        } else {
-          user.password = hash
-          callback(err, theConfig)
+      bcrypt.hash(
+        updates.password,
+        passwordSaltRounds,
+        (err: Error | null, hash: string) => {
+          if (err) {
+            callback(err)
+          } else {
+            user.password = hash
+            callback(err, theConfig)
+          }
         }
-      })
+      )
     } else {
       callback(null, theConfig)
     }
@@ -965,18 +992,22 @@ function tokenSecurity(
     callback: ICallback<SecurityConfig>
   ): void => {
     assertConfigImmutability()
-    bcrypt.hash(password, passwordSaltRounds, (err: Error | null, hash: string) => {
-      if (err) {
-        callback(err)
-      } else {
-        const user = theConfig.users.find((u) => u.username === username)
-        if (user) {
-          user.password = hash
+    bcrypt.hash(
+      password,
+      passwordSaltRounds,
+      (err: Error | null, hash: string) => {
+        if (err) {
+          callback(err)
+        } else {
+          const user = theConfig.users.find((u) => u.username === username)
+          if (user) {
+            user.password = hash
+          }
+          options = theConfig
+          callback(err, theConfig)
         }
-        options = theConfig
-        callback(err, theConfig)
       }
-    })
+    )
   }
 
   strategy.deleteUser = (
@@ -1409,7 +1440,10 @@ function tokenSecurity(
         jwt.verify(
           token,
           configuration.secretKey,
-          function (err: jwt.VerifyErrors | null, decoded: jwt.JwtPayload | string | undefined) {
+          function (
+            err: jwt.VerifyErrors | null,
+            decoded: jwt.JwtPayload | string | undefined
+          ) {
             debug('verify')
             if (!err) {
               const principal = getPrincipal(decoded as JWTPayload)
@@ -1423,7 +1457,8 @@ function tokenSecurity(
               } else {
                 const decodedPayload = decoded as JWTPayload
                 debug(
-                  'unknown user: ' + (decodedPayload.id || decodedPayload.device)
+                  'unknown user: ' +
+                    (decodedPayload.id || decodedPayload.device)
                 )
               }
             } else {
@@ -1605,7 +1640,14 @@ function tokenSecurity(
         reject(err)
         return
       }
-      createRequest(app, 'accessRequest', clientRequest, null, sourceIp, updateCb)
+      createRequest(
+        app,
+        'accessRequest',
+        clientRequest,
+        null,
+        sourceIp,
+        updateCb
+      )
         .then((request: InternalRequest) => {
           const accessRequest = clientRequest.accessRequest
           if (!validateAccessRequest(accessRequest)) {
