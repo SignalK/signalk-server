@@ -14,14 +14,14 @@ import {
   faTachometerAlt,
   faDatabase,
   faAnchor,
-  faStar,
   faMinimize,
   faPlug,
   faSpinner,
   faCheck,
   faRotateRight,
   faMobileAlt,
-  faCogs
+  faCogs,
+  faQuestionCircle
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
@@ -32,13 +32,12 @@ const BUNDLE_ICONS = {
   datalogger: faDatabase,
   anchor: faAnchor,
   nmea: faPlug,
-  full: faStar,
   wilhelmsk: faMobileAlt,
   automation: faCogs
 }
 
 function BundleCard({ bundle, selected, installed, onToggle }) {
-  const icon = BUNDLE_ICONS[bundle.id] || faStar
+  const icon = BUNDLE_ICONS[bundle.id] || faQuestionCircle
   const isSelected = selected
   const isInstalled = installed
 
@@ -77,7 +76,7 @@ function BundleCard({ bundle, selected, installed, onToggle }) {
           {bundle.description}
         </CardText>
         <div className="text-center text-muted small mb-3">
-          {bundle.plugins.length} plugins, {bundle.webapps.length} webapps
+          {bundle.plugins.length + bundle.webapps.length} packages
         </div>
         {bundle.id === 'minimal' ? (
           <Button color="secondary" block disabled>
