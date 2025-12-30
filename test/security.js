@@ -648,3 +648,79 @@ describe('Access Request Limit', () => {
     res.status.should.equal(503)
   })
 })
+
+describe('Access Request IP reporting', () => {
+  let server, url, port
+  let previousHttpRateLimits
+
+  beforeEach(async function () {
+    previousHttpRateLimits = process.env.HTTP_RATE_LIMITS
+    process.env.HTTP_RATE_LIMITS = 'api=1000,loginStatus=1000'
+    port = await freeport()
+    url = `http://0.0.0.0:${port}`
+  })
+
+  afterEach(async function () {
+    await server.stop()
+    if (previousHttpRateLimits === undefined) {
+      delete process.env.HTTP_RATE_LIMITS
+    } else {
+      process.env.HTTP_RATE_LIMITS = previousHttpRateLimits
+    }
+  })
+
+  it('without trustProxy setting the ip address reported is not from x-forwarded-for', async function () {
+    const securityConfig = {
+      allowDeviceAccessRequests: true
+    }
+    server = await startServerP(port, true, {}, securityConfig)
+
+    const res = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Forwarded-For': '1.2.3.4'
+      },
+      body: JSON.stringify({
+        clientId: 'device-no-trust',
+        description: 'Device No Trust'
+      })
+    })
+    res.status.should.equal(202)
+    const requestJson = await res.json()
+
+    const requestRes = await fetch(`${url}${requestJson.href}`)
+    const json = await requestRes.json()
+    json.ip.should.not.equal('1.2.3.4')
+  })
+
+  it('with trustProxy: true the ip address reported is from x-forwarded-for', async function () {
+    const securityConfig = {
+      allowDeviceAccessRequests: true
+    }
+    server = await startServerP(
+      port,
+      true,
+      { settings: { trustProxy: true } },
+      securityConfig
+    )
+
+    const res = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Forwarded-For': '1.2.3.4'
+      },
+      body: JSON.stringify({
+        clientId: 'device-trust',
+        description: 'Device Trust'
+      })
+    })
+    res.status.should.equal(202)
+    const requestJson = await res.json()
+
+    const requestRes = await fetch(`${url}${requestJson.href}`)
+    const json = await requestRes.json()
+    json.ip.should.equal('1.2.3.4')
+  })
+})
