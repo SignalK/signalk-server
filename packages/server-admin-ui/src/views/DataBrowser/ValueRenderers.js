@@ -489,19 +489,25 @@ export const getValueRenderer = (path, meta) => {
     // as well as other useful data/behavior.
   }
   if (meta && meta.renderer && meta.renderer.module) {
-    const Renderer = toLazyDynamicComponent(
-      meta.renderer.module,
-      meta.renderer.name
-    )
-
-    return function component(props) {
-      return (
-        <div>
-          <Suspense fallback=<DefaultValueRenderer {...props} />>
-            <Renderer {...props} />
-          </Suspense>
-        </div>
+    if (Renderers[`${meta.renderer.module}.${meta.renderer.name}`]) {
+      return Renderers[`${meta.renderer.module}.${meta.renderer.name}`]
+    } else {
+      const Renderer = toLazyDynamicComponent(
+        meta.renderer.module,
+        meta.renderer.name
       )
+
+      const comp = function component(props) {
+        return (
+          <div>
+            <Suspense fallback={<DefaultValueRenderer {...props} />}>
+              <Renderer {...props} />
+            </Suspense>
+          </div>
+        )
+      }
+      Renderers[`${meta.renderer.module}.${meta.renderer.name}`] = comp
+      return comp
     }
   }
 
