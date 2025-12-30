@@ -724,3 +724,99 @@ describe('Access Request IP reporting', () => {
     json.ip.should.equal('1.2.3.4')
   })
 })
+
+describe('WS Access Request IP reporting', () => {
+  let server, port
+  let previousHttpRateLimits
+
+  beforeEach(async function () {
+    this.timeout(20000)
+    previousHttpRateLimits = process.env.HTTP_RATE_LIMITS
+    process.env.HTTP_RATE_LIMITS = 'api=1000,loginStatus=1000'
+    port = await freeport()
+  })
+
+  afterEach(async function () {
+    await server.stop()
+    if (previousHttpRateLimits === undefined) {
+      delete process.env.HTTP_RATE_LIMITS
+    } else {
+      process.env.HTTP_RATE_LIMITS = previousHttpRateLimits
+    }
+  })
+
+  it('without trustProxy setting the ip address reported is not from x-forwarded-for', async function () {
+    const securityConfig = {
+      allowDeviceAccessRequests: true
+    }
+    server = await startServerP(port, true, {}, securityConfig)
+
+    const response = await new Promise((resolve, reject) => {
+      const ws = new WebSocket(
+        `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`,
+        {
+          headers: { 'X-Forwarded-For': '1.2.3.4' }
+        }
+      )
+      ws.on('message', (msg) => {
+        const data = JSON.parse(msg)
+        if (data.requestId) {
+          resolve(data)
+          ws.close()
+        } else if (data.name && data.version) {
+          ws.send(
+            JSON.stringify({
+              accessRequest: {
+                clientId: 'ws-device-no-trust',
+                description: 'WS Device No Trust'
+              }
+            })
+          )
+        }
+      })
+      ws.on('error', reject)
+    })
+
+    response.ip.should.not.equal('1.2.3.4')
+  })
+
+  it('with trustProxy: true the ip address reported is from x-forwarded-for', async function () {
+    const securityConfig = {
+      allowDeviceAccessRequests: true
+    }
+    server = await startServerP(
+      port,
+      true,
+      { settings: { trustProxy: true } },
+      securityConfig
+    )
+
+    const response = await new Promise((resolve, reject) => {
+      const ws = new WebSocket(
+        `ws://0.0.0.0:${port}/signalk/v1/stream?subscribe=none`,
+        {
+          headers: { 'X-Forwarded-For': '1.2.3.4' }
+        }
+      )
+      ws.on('message', (msg) => {
+        const data = JSON.parse(msg)
+        if (data.requestId) {
+          resolve(data)
+          ws.close()
+        } else if (data.name && data.version) {
+          ws.send(
+            JSON.stringify({
+              accessRequest: {
+                clientId: 'ws-device-trust',
+                description: 'WS Device Trust'
+              }
+            })
+          )
+        }
+      })
+      ws.on('error', reject)
+    })
+
+    response.ip.should.equal('1.2.3.4')
+  })
+})

@@ -386,7 +386,9 @@ module.exports = function (app) {
       requestAccess(
         app,
         msg,
-        spark.request.headers['x-forwarded-for'] ||
+        (app.config.settings.trustProxy &&
+          app.config.settings.trustProxy !== 'false' &&
+          spark.request.headers['x-forwarded-for']) ||
           spark.request.connection.remoteAddress,
         (res) => {
           if (res.state === 'COMPLETED') {
