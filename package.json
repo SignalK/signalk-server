@@ -119,7 +119,7 @@
     "split": "^1.0.0",
     "stat-mode": "^1.0.0",
     "swagger-ui-express": "^4.5.0",
-    "unzipper": "^0.10.10",
+    "unzipper": "^0.12.3",
     "uuid": "^8.1.0",
     "ws": "^7.0.0"
   },
