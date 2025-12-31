@@ -35,7 +35,6 @@
     "font-awesome": "^4.7.0",
     "html-webpack-plugin": "^5.0.0-alpha.6",
     "jsonlint-mod": "^1.7.6",
-    "lodash.get": "^4.4.2",
     "lodash.remove": "^4.7.0",
     "lodash.set": "^4.3.2",
     "lodash.uniq": "^4.5.0",
