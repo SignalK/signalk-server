@@ -20,8 +20,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_$NODE | bash - \
   && npm config set fetch-retry-mintimeout 60000 \
   && npm config set fetch-retry-maxtimeout 120000 \
   && npm cache clean -f \
-  && npm install npm@latest -g \
-  && sudo setcap cap_net_raw+eip $(eval readlink -f `which node`)
+  && npm install npm@latest -g
 
 COPY docker/avahi/avahi-dbus.conf /etc/dbus-1/system.d/avahi-dbus.conf
 COPY docker/bluez/bluezuser.conf /etc/dbus-1/system.d/bluezuser.conf
@@ -29,6 +28,6 @@ RUN mkdir -p /var/run/dbus/ \
   && chmod -R 777 /var/run/dbus/ \
   && mkdir -p /var/run/avahi-daemon/ \
   && chmod -R 777 /var/run/avahi-daemon/ \
-  && chown -R avahi:avahi /var/run/avahi-daemon/ 
+  && chown -R avahi:avahi /var/run/avahi-daemon/
 
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

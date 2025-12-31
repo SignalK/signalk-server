@@ -1,5 +1,11 @@
 FROM cr.signalk.io/signalk/signalk-server-base:latest
 
+USER node
+RUN mkdir -p /home/node/.signalk/ \
+  && mkdir -p /home/node/signalk/
+
+WORKDIR /home/node/signalk
+
 RUN npm config rm proxy \
   && npm config rm https-proxy \
   && npm config set fetch-retries 5 \
@@ -8,18 +14,14 @@ RUN npm config rm proxy \
   && npm cache clean -f
 
 ARG TAG
-  
-RUN npm i -g signalk-server@$TAG \
-  && ln -s /usr/lib/node_modules/signalk-server /home/node/signalk
 
-WORKDIR /home/node/signalk
-COPY docker/startup.sh startup.sh
+# Install locally (not globally) to avoid permission issues
+RUN npm install signalk-server@$TAG
+
+COPY --chown=node docker/startup.sh startup.sh
 RUN chmod +x startup.sh
 
-USER node
-RUN mkdir -p /home/node/.signalk
-
 EXPOSE 3000
-ENV IS_IN_DOCKER true
+ENV IS_IN_DOCKER=true
 WORKDIR /home/node/.signalk
-ENTRYPOINT /home/node/signalk/startup.sh
+ENTRYPOINT ["/home/node/signalk/startup.sh"]
