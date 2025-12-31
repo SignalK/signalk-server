@@ -24,9 +24,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends \
   git python3 python3-venv python3-pip build-essential \
   avahi-daemon avahi-discover avahi-utils libnss-mdns mdns-scan libavahi-compat-libdnssd-dev \
-  sysstat procps nano sudo dbus bluez \
+  sysstat procps nano sudo dbus bluez libcap2-bin \
   && groupadd -r docker -g 991 && groupadd -r i2c -g 990 && groupadd -r spi -g 989 \
-  && usermod -a -G dialout,i2c,spi,netdev,docker node
+  && usermod -a -G dialout,i2c,spi,netdev,docker node \
+  && setcap cap_net_raw+eip $(eval readlink -f `which node`)
 
 # Modification to set time without need to use sudo
 RUN chmod u+s /usr/bin/date
