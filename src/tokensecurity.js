@@ -231,9 +231,6 @@ module.exports = function (app, config) {
         message:
           'Too many login attempts from this IP, please try again after 10 minutes'
       },
-      // Disable X-Forwarded-For validation - we handle trust proxy configuration
-      // ourselves and this avoids error log output when trust proxy isn't configured
-      // trustProxy: false prevents ERR_ERL_PERMISSIVE_TRUST_PROXY when trustProxy is true
       validate: getRateLimitValidationOptions(app)
     })
 
