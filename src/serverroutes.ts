@@ -17,7 +17,7 @@
 import busboy from 'busboy'
 import commandExists from 'command-exists'
 import express, { IRouter, NextFunction, Request, Response } from 'express'
-import zip from 'express-easy-zip'
+import { sendZip } from './zip'
 import fs from 'fs'
 import { forIn, get, isNumber, isUndefined, set, uniq, unset } from 'lodash'
 import moment from 'moment'
@@ -1268,8 +1268,6 @@ module.exports = function (
     }
   )
 
-  app.use(zip())
-
   app.get(`${SERVERROUTESPREFIX}/backup`, (req: Request, res: Response) => {
     readdir(app.config.configPath).then((filenames) => {
       const files = filenames
@@ -1290,9 +1288,7 @@ module.exports = function (
             name
           }
         })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const anyRes = res as any
-      anyRes.zip({
+      sendZip(res, {
         files,
         filename: `signalk-${moment().format('MMM-DD-YYYY-HHTmm')}.backup`
       })
