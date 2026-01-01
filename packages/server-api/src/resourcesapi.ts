@@ -170,6 +170,11 @@ export interface ResourcesApi {
 }
 
 /** @category  Resources API */
+export interface WithResourcesApi {
+  resourcesApi: ResourcesApi
+}
+
+/** @category  Resources API */
 export interface ResourceProvider {
   /**
    * The resource type provided for by the plugin.These can be either __Standard__ _(Signal K defined)_ types defined in {@link SignalKResourceType},  or __Custom__ _(user defined)_ resource types _(e.g. `'fishingZones'`)_
