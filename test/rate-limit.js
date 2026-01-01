@@ -105,6 +105,7 @@ describe('Rate Limiting', () => {
 
 describe('Rate Limiting with trustProxy enabled', () => {
   let server, url, port
+  let consoleErrorSpy, consoleLogSpy, capturedLogs
 
   before(async function () {
     port = await freeport()
@@ -113,8 +114,21 @@ describe('Rate Limiting with trustProxy enabled', () => {
       allowNewUserRegistration: true,
       allowDeviceAccessRequests: true
     }
+
+    // Capture console output to check for ERR_ERL_PERMISSIVE_TRUST_PROXY errors
+    capturedLogs = []
+    const originalConsoleError = console.error
+    const originalConsoleLog = console.log
+    consoleErrorSpy = console.error = (...args) => {
+      capturedLogs.push(args.join(' '))
+      originalConsoleError.apply(console, args)
+    }
+    consoleLogSpy = console.log = (...args) => {
+      capturedLogs.push(args.join(' '))
+      originalConsoleLog.apply(console, args)
+    }
+
     // Enable trustProxy: true to verify no ERR_ERL_PERMISSIVE_TRUST_PROXY errors
-    // This would throw ValidationError if rate limiter validate.trustProxy is not false
     const extraConfig = {
       settings: {
         trustProxy: true
@@ -125,11 +139,13 @@ describe('Rate Limiting with trustProxy enabled', () => {
 
   after(async function () {
     await server.stop()
+    // Restore console methods
+    console.error = consoleErrorSpy
+    console.log = consoleLogSpy
   })
 
-  it('should start without ERR_ERL_PERMISSIVE_TRUST_PROXY error and handle requests', async function () {
-    // If we reach here, the server started without rate limiter validation errors
-    // Make a request to verify rate limiting still works with trustProxy enabled
+  it('should start without rate limiter errors logged and handle requests', async function () {
+    // Make a request to trigger rate limiting logic
     const res = await fetch(`${url}/signalk/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -138,8 +154,14 @@ describe('Rate Limiting with trustProxy enabled', () => {
         password: 'wrongpassword'
       })
     })
+
     // Should get 401 (unauthorized) not a server error
     res.status.should.equal(401)
+
+    // Verify no rate limiter validation errors were logged
+    const allLogs = capturedLogs.join('\n')
+    allLogs.should.not.include('ERR_ERL_PERMISSIVE_TRUST_PROXY')
+    allLogs.should.not.include('ERR_ERL_UNEXPECTED_X_FORWARDED_FOR')
   })
 
   it('should respect X-Forwarded-For header when trustProxy is enabled', async function () {
