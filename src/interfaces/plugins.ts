@@ -535,7 +535,6 @@ module.exports = (theApp: any) => {
     appCopy.putPath = putPath
 
     const weatherApi: WeatherApi = app.weatherApi
-    _.omit(appCopy, 'weatherApi') // don't expose the actual weather api manager
     appCopy.registerWeatherProvider = (provider: WeatherProvider) => {
       weatherApi.register(plugin.id, provider)
     }
@@ -551,13 +550,11 @@ module.exports = (theApp: any) => {
     }
 
     const resourcesApi: ResourcesApi = app.resourcesApi
-    _.omit(appCopy, 'resourcesApi') // don't expose the actual resource api manager
     appCopy.registerResourceProvider = (provider: ResourceProvider) => {
       resourcesApi.register(plugin.id, provider)
     }
 
     const autopilotApi: AutopilotApi = app.autopilotApi
-    _.omit(appCopy, 'autopilotApi') // don't expose the actual autopilot api manager
     appCopy.registerAutopilotProvider = (
       provider: AutopilotProvider,
       devices: string[]
@@ -571,10 +568,7 @@ module.exports = (theApp: any) => {
       autopilotApi.apUpdate(plugin.id, deviceId, apInfo)
     }
 
-    _.omit(appCopy, 'apiList') // don't expose the actual apiList
-
     const courseApi: CourseApi = app.courseApi
-    _.omit(appCopy, 'courseApi') // don't expose the actual course api manager
     appCopy.getCourse = () => {
       return courseApi.getCourse()
     }
