@@ -43,6 +43,7 @@ import { getAuthor, Package, restoreModules } from './modules'
 import { getHttpPort, getSslPort } from './ports'
 import { queryRequest } from './requestResponse'
 import {
+  getRateLimitValidationOptions,
   SecurityConfigGetter,
   SecurityConfigSaver,
   SecurityStrategy,
@@ -148,13 +149,17 @@ module.exports = function (
   getSecurityConfig: SecurityConfigGetter
 ) {
   const httpRateLimitOverrides = getHttpRateLimitOverridesFromEnv()
+
+  const rateLimitValidationOptions = getRateLimitValidationOptions(app)
+
   const apiLimiter = rateLimit({
     windowMs: httpRateLimitOverrides.windowMs,
     max: httpRateLimitOverrides.apiMax,
     message: {
       message:
         'Too many requests from this IP, please try again after 10 minutes'
-    }
+    },
+    validate: rateLimitValidationOptions
   })
 
   const loginStatusLimiter = rateLimit({
@@ -163,7 +168,8 @@ module.exports = function (
     message: {
       message:
         'Too many requests from this IP, please try again after 10 minutes'
-    }
+    },
+    validate: rateLimitValidationOptions
   })
 
   let securityWasEnabled = false
@@ -548,7 +554,7 @@ module.exports = function (
         return
       }
       const config = getSecurityConfig(app)
-      const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+      const ip = req.ip
       if (!app.securityStrategy.requestAccess) {
         res.status(404).json({
           message:
@@ -601,7 +607,8 @@ module.exports = function (
           app.config.settings.accessLogging,
         enablePluginLogging:
           isUndefined(app.config.settings.enablePluginLogging) ||
-          app.config.settings.enablePluginLogging
+          app.config.settings.enablePluginLogging,
+        trustProxy: app.config.settings.trustProxy || false
       },
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
@@ -727,6 +734,10 @@ module.exports = function (
     if (!isUndefined(settings.options.enablePluginLogging)) {
       app.config.settings.enablePluginLogging =
         settings.options.enablePluginLogging
+    }
+
+    if (!isUndefined(settings.options.trustProxy)) {
+      app.config.settings.trustProxy = settings.options.trustProxy
     }
 
     if (!isUndefined(settings.port)) {

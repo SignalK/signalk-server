@@ -20,7 +20,10 @@ const jwt = require('jsonwebtoken')
 const _ = require('lodash')
 const bcrypt = require('bcryptjs')
 const getSourceId = require('@signalk/signalk-schema').getSourceId
-const { InvalidTokenError } = require('./security')
+const {
+  InvalidTokenError,
+  getRateLimitValidationOptions
+} = require('./security')
 const {
   createRequest,
   updateRequest,
@@ -227,7 +230,8 @@ module.exports = function (app, config) {
       message: {
         message:
           'Too many login attempts from this IP, please try again after 10 minutes'
-      }
+      },
+      validate: getRateLimitValidationOptions(app)
     })
 
     app.use(require('body-parser').urlencoded({ extended: true }))

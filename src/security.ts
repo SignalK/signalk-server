@@ -390,3 +390,16 @@ export type SecurityConfigSaver = (
   cb: (err: any) => void
 ) => void
 export type SecurityConfigGetter = (app: any) => any
+
+/**
+ * When Express trust proxy is enabled:
+ * - req.ip will reflect the client IP and we don't want rateLimit to
+ *   validate the presence of x-forwarded-for.
+ * - trustProxy: false prevents ERR_ERL_PERMISSIVE_TRUST_PROXY warnings
+ */
+export function getRateLimitValidationOptions(app: WithConfig) {
+  return app.config?.settings?.trustProxy &&
+    app.config.settings.trustProxy !== 'false'
+    ? { xForwardedForHeader: false, trustProxy: false }
+    : undefined
+}
