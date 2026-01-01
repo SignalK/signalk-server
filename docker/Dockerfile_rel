@@ -16,7 +16,9 @@ RUN npm config rm proxy \
 ARG TAG
 
 # Install locally (not globally) to avoid permission issues
-RUN npm install signalk-server@$TAG
+RUN npm install signalk-server@$TAG \
+  && mkdir -p node_modules/signalk-server/node_modules \
+  && ln -s /home/node/signalk/node_modules/@signalk node_modules/signalk-server/node_modules/@signalk
 
 COPY --chown=node docker/startup.sh startup.sh
 RUN chmod +x startup.sh
