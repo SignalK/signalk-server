@@ -31,7 +31,7 @@ jobs:
           rm signalk-typedoc-signalk-theme*.tgz # This is only needed as a dev dependency
           npm pack
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           retention-days: 1
           name: packed-modules
