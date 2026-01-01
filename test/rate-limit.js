@@ -165,14 +165,45 @@ describe('Rate Limiting with trustProxy enabled', () => {
   })
 
   it('should respect X-Forwarded-For header when trustProxy is enabled', async function () {
-    // With trustProxy enabled, the server should use X-Forwarded-For for client IP
-    // This test verifies the request succeeds (doesn't throw validation errors)
-    const res = await fetch(`${url}/loginStatus`, {
+    // With trustProxy enabled, rate limiting should use X-Forwarded-For for client IP
+    // Make 2 requests from same actual client but with different X-Forwarded-For IPs
+    // Both should succeed (not rate limited) because they appear to come from different IPs
+
+    const res1 = await fetch(`${url}/loginStatus`, {
       headers: {
         'X-Forwarded-For': '192.168.1.100'
       }
     })
-    // Should get a valid response (not rate limited on first request)
-    res.status.should.be.oneOf([200, 401, 403])
+    res1.status.should.be.oneOf([200, 401, 403])
+
+    const res2 = await fetch(`${url}/loginStatus`, {
+      headers: {
+        'X-Forwarded-For': '192.168.1.101'
+      }
+    })
+    res2.status.should.be.oneOf([200, 401, 403])
+
+    // Now make 11 requests with the SAME X-Forwarded-For IP
+    // First 10 should succeed, but the 11th should be rate limited
+    const requests = []
+    for (let i = 0; i < 11; i++) {
+      requests.push(
+        fetch(`${url}/loginStatus`, {
+          headers: {
+            'X-Forwarded-For': '192.168.1.200'
+          }
+        })
+      )
+    }
+
+    const results = await Promise.all(requests)
+
+    // First 10 requests should succeed
+    for (let i = 0; i < 10; i++) {
+      results[i].status.should.be.oneOf([200, 401, 403])
+    }
+
+    // The 11th request (index 10) should be rate limited
+    results[10].status.should.equal(429)
   })
 })
