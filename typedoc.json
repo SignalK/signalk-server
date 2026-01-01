@@ -70,7 +70,8 @@
     "sh",
     "json",
     "javascript",
-    "typescript"
+    "typescript",
+    "nginx"
   ],
   "cacheBust": true
 }
