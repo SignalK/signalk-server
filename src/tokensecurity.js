@@ -20,7 +20,10 @@ const jwt = require('jsonwebtoken')
 const _ = require('lodash')
 const bcrypt = require('bcryptjs')
 const getSourceId = require('@signalk/signalk-schema').getSourceId
-const { InvalidTokenError } = require('./security')
+const {
+  InvalidTokenError,
+  getRateLimitValidationOptions
+} = require('./security')
 const {
   createRequest,
   updateRequest,
@@ -227,7 +230,8 @@ module.exports = function (app, config) {
       message: {
         message:
           'Too many login attempts from this IP, please try again after 10 minutes'
-      }
+      },
+      validate: getRateLimitValidationOptions(app)
     })
 
     app.use(require('body-parser').urlencoded({ extended: true }))
@@ -258,7 +262,6 @@ module.exports = function (app, config) {
 
           if (reply.statusCode === 200) {
             let cookieOptions = {
-              httpOnly: true,
               sameSite: 'strict',
               secure: req.secure || req.headers['x-forwarded-proto'] === 'https'
             }
@@ -269,7 +272,8 @@ module.exports = function (app, config) {
                   : configuration.expiration || '1h'
               )
             }
-            res.cookie('JAUTHENTICATION', reply.token, cookieOptions)
+            const authCookieOptions = { ...cookieOptions, httpOnly: true }
+            res.cookie('JAUTHENTICATION', reply.token, authCookieOptions)
 
             res.cookie(
               BROWSER_LOGININFO_COOKIE_NAME,

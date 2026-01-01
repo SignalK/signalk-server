@@ -380,13 +380,15 @@ module.exports = function (app) {
         requestId: msg.requestId,
         state: 'COMPLETED',
         statusCode: 400,
-        message: 'A request has already beem submitted'
+        message: 'A request has already been submitted'
       })
     } else {
       requestAccess(
         app,
         msg,
-        spark.request.headers['x-forwarded-for'] ||
+        (app.config.settings.trustProxy &&
+          app.config.settings.trustProxy !== 'false' &&
+          spark.request.headers['x-forwarded-for']) ||
           spark.request.connection.remoteAddress,
         (res) => {
           if (res.state === 'COMPLETED') {

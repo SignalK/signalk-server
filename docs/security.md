@@ -141,3 +141,74 @@ The following helmet features are disabled to maintain compatibility with the Si
 - **Content-Security-Policy**: Would prevent webapps (Freeboard, Instrumentpanel) from loading external resources like map tiles and CDN scripts
 - **Cross-Origin-Embedder-Policy**: Would prevent chart plotters from embedding SignalK data
 - **Cross-Origin-Resource-Policy**: Would prevent legitimate cross-origin API access from instruments and apps
+
+## Reverse Proxy Configuration (Trust Proxy)
+
+When running Signal K Server behind a reverse proxy (e.g., nginx, Apache, Traefik), the server needs to be configured to trust the `X-Forwarded-For` header to correctly identify client IP addresses.
+
+### Why Enable Trust Proxy?
+
+Without this setting, when behind a reverse proxy:
+
+- All requests appear to come from the proxy's IP (e.g., `127.0.0.1`)
+- Rate limiting becomes ineffective (limits apply to proxy, not individual clients)
+- Access logs show proxy IP instead of real client IP
+
+When `trustProxy` is enabled, Signal K uses the `X-Forwarded-For` header (set by your proxy) to identify the real client IP address.
+
+### Configuration
+
+The `trustProxy` setting can be enabled in the Admin UI under **Server Settings > Options > trustProxy**.
+
+For most setups behind a local reverse proxy, simply enabling `trustProxy: true` in the Admin UI is sufficient.
+
+For advanced configurations (specific proxy IPs, hop counts), edit `settings.json` directly:
+
+```json
+{
+  "settings": {
+    "trustProxy": "127.0.0.1"
+  }
+}
+```
+
+The `trustProxy` setting accepts the following values:
+
+| Value           | Description                                                              |
+| --------------- | ------------------------------------------------------------------------ |
+| `true`          | Trust all proxies (use with caution)                                     |
+| `false`         | Don't trust any proxy (default)                                          |
+| `"loopback"`    | Trust loopback addresses (127.0.0.1, ::1)                                |
+| `"linklocal"`   | Trust link-local addresses                                               |
+| `"uniquelocal"` | Trust unique local addresses                                             |
+| Number          | Trust the first N proxies                                                |
+| IP/CIDR         | Trust specific proxy addresses (e.g., `"192.168.1.1"` or `"10.0.0.0/8"`) |
+
+### Example: nginx Reverse Proxy
+
+When using nginx as a reverse proxy, configure it to pass the client IP:
+
+```nginx
+location / {
+    proxy_pass http://localhost:3000;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Host $host;
+}
+```
+
+And set `trustProxy` to trust only the nginx server:
+
+```json
+{
+  "settings": {
+    "trustProxy": "127.0.0.1"
+  }
+}
+```
+
+### Security Considerations
+
+- Only enable `trustProxy` if you are actually running behind a reverse proxy
+- Configure the value to trust only your specific proxy IP address when possible
+- Using `trustProxy: true` trusts all proxies, which could allow IP spoofing if your server is directly accessible

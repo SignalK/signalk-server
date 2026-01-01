@@ -117,6 +117,12 @@ class Server {
     _.merge(app, opts)
 
     load(app)
+
+    // Apply trust proxy setting if configured
+    if (app.config.settings.trustProxy !== undefined) {
+      app.set('trust proxy', app.config.settings.trustProxy)
+    }
+
     app.logging = require('./logging')(app)
     app.version = '0.0.1'
 
