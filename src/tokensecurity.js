@@ -258,7 +258,6 @@ module.exports = function (app, config) {
 
           if (reply.statusCode === 200) {
             let cookieOptions = {
-              httpOnly: true,
               sameSite: 'strict',
               secure: req.secure || req.headers['x-forwarded-proto'] === 'https'
             }
@@ -269,7 +268,8 @@ module.exports = function (app, config) {
                   : configuration.expiration || '1h'
               )
             }
-            res.cookie('JAUTHENTICATION', reply.token, cookieOptions)
+            const authCookieOptions = { ...cookieOptions, httpOnly: true }
+            res.cookie('JAUTHENTICATION', reply.token, authCookieOptions)
 
             res.cookie(
               BROWSER_LOGININFO_COOKIE_NAME,
