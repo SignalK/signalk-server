@@ -1,7 +1,4 @@
 .wizard {
-  max-width: 900px;
-  margin: 0 auto;
-
   .bundle-card {
     transition:
       transform 0.2s,
@@ -14,14 +11,11 @@
   }
 
   .wizard-welcome {
-    max-width: 600px;
+    max-width: 700px;
     margin: 0 auto;
   }
 
   .wizard-confirm {
-    max-width: 700px;
-    margin: 0 auto;
-
     ul {
       padding-left: 1.5rem;
 
@@ -37,12 +31,12 @@
   }
 
   .install-progress {
-    max-width: 600px;
+    max-width: 700px;
     margin: 0 auto;
   }
 
   .wizard-complete {
-    max-width: 600px;
+    max-width: 700px;
     margin: 0 auto;
   }
 

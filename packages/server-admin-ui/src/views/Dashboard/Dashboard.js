@@ -36,9 +36,14 @@ const Dashboard = (props) => {
   }
   const providerStatus = props.providerStatus || []
 
-  // Check if this is a fresh install (no plugins installed)
-  const hasNoPlugins = props.plugins && props.plugins.length === 0
-  const showWizardPrompt = hasNoPlugins && !wizardDismissed
+  // Check if this is a fresh install (only bundled plugins installed)
+  // These plugins come pre-installed with the server (plugin IDs, not npm package names)
+  const BUNDLED_PLUGINS = ['resources-provider', 'course-provider']
+  const userInstalledPlugins = props.plugins
+    ? props.plugins.filter((p) => !BUNDLED_PLUGINS.includes(p.id))
+    : []
+  const hasNoUserPlugins = userInstalledPlugins.length === 0
+  const showWizardPrompt = hasNoUserPlugins && !wizardDismissed
 
   const handleDismissWizard = () => {
     localStorage.setItem(WIZARD_DISMISSED_KEY, 'true')

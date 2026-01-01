@@ -11,13 +11,21 @@ const {
 } = require('../dist/modules')
 
 describe('modulesWithKeyword', () => {
-  it('returns a list of modules with one "installed" update in config dir', () => {
+  it('returns a list of modules with one "installed" update in config dir', function () {
+    const updateInstalledModule = '@signalk/instrumentpanel'
+
+    // Skip test if webapp packages are not installed (they are optional dev dependencies)
+    try {
+      require.resolve(updateInstalledModule)
+    } catch (_e) {
+      this.skip()
+    }
+
     const expectedModules = [
       '@signalk/instrumentpanel',
       '@signalk/freeboard-sk',
       '@mxtommy/kip'
     ]
-    const updateInstalledModule = '@signalk/instrumentpanel'
 
     const testTempDir = path.join(
       require('os').tmpdir(),
@@ -41,13 +49,12 @@ describe('modulesWithKeyword', () => {
     )
     fs.mkdirSync(installedModuleDirectory)
 
-    const fakeInstalledModulePackageJson = require(
-      path.join(
-        app.config.appPath,
-        `node_modules/${updateInstalledModule}/package.json`
-      )
-    )
-    fakeInstalledModulePackageJson.version = '1000.0.0'
+    // Create a mock package.json for the "updated" module
+    const fakeInstalledModulePackageJson = {
+      name: updateInstalledModule,
+      version: '1000.0.0',
+      keywords: ['signalk-webapp']
+    }
     fs.writeFileSync(
       path.join(installedModuleDirectory, 'package.json'),
       JSON.stringify(fakeInstalledModulePackageJson)

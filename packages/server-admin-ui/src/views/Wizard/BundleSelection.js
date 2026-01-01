@@ -14,24 +14,26 @@ import {
   faTachometerAlt,
   faDatabase,
   faAnchor,
-  faMinimize,
   faPlug,
   faSpinner,
   faCheck,
   faRotateRight,
   faMobileAlt,
   faCogs,
+  faCog,
+  faShip,
   faQuestionCircle
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 const BUNDLE_ICONS = {
-  minimal: faMinimize,
+  admin: faCog,
   plotter: faMap,
   dashboard: faTachometerAlt,
   datalogger: faDatabase,
   anchor: faAnchor,
   nmea: faPlug,
+  ais: faShip,
   wilhelmsk: faMobileAlt,
   automation: faCogs
 }
@@ -46,10 +48,9 @@ function BundleCard({ bundle, selected, installed, onToggle }) {
       className={`bundle-card h-100 ${isSelected ? 'border-primary' : ''}`}
       style={{
         cursor: 'pointer',
-        borderWidth: isSelected ? '2px' : '1px',
-        opacity: bundle.id === 'minimal' ? 0.7 : 1
+        borderWidth: isSelected ? '2px' : '1px'
       }}
-      onClick={() => bundle.id !== 'minimal' && onToggle(bundle)}
+      onClick={() => onToggle(bundle)}
     >
       <CardBody className="d-flex flex-column">
         {isInstalled && (
@@ -78,11 +79,7 @@ function BundleCard({ bundle, selected, installed, onToggle }) {
         <div className="text-center text-muted small mb-3">
           {bundle.plugins.length + bundle.webapps.length} packages
         </div>
-        {bundle.id === 'minimal' ? (
-          <Button color="secondary" block disabled>
-            Base Install
-          </Button>
-        ) : isInstalled ? (
+        {isInstalled ? (
           <Button
             color={isSelected ? 'primary' : 'outline-secondary'}
             block

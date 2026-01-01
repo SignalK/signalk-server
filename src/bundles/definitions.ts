@@ -22,12 +22,34 @@ import { BundleDefinition } from './types'
  */
 export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
   {
-    id: 'minimal',
-    name: 'Minimal',
+    id: 'admin',
+    name: 'Administration',
     description:
-      'Basic Signal K server with no additional plugins or webapps. Ideal for custom setups or resource-constrained devices.',
-    icon: 'minimize',
-    plugins: [],
+      'Essential server administration tools. Log viewer and system time synchronization from GPS.',
+    icon: 'cog',
+    plugins: [
+      {
+        name: 'signalk-logviewer',
+        required: true,
+        description: 'View Signal K server logs'
+      },
+      {
+        name: '@signalk/set-system-time',
+        required: true,
+        description: 'Sets system time from GPS data'
+      },
+      {
+        name: 'signalk-rpi-monitor',
+        required: false,
+        description:
+          'Raspberry Pi CPU, memory, storage and temperature monitoring'
+      },
+      {
+        name: 'signalk-starlink',
+        required: false,
+        description: 'Starlink Dishy statistics and auto-stow while in transit'
+      }
+    ],
     webapps: [],
     order: 1
   },
@@ -49,6 +71,11 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'Simple chart provider for local chart files'
       },
       {
+        name: 'signalk-pmtiles-plugin',
+        required: false,
+        description: 'ProtoMaps chart provider'
+      },
+      {
         name: '@signalk/resources-provider',
         required: true,
         description: 'Stores and serves routes, waypoints, regions, and notes'
@@ -57,6 +84,11 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         name: '@signalk/course-provider',
         required: true,
         description: 'Provides course calculations and destination tracking'
+      },
+      {
+        name: '@signalk/signalk-autopilot',
+        required: false,
+        description: 'Autopilot control interface'
       },
       {
         name: '@signalk/vesselpositions',
@@ -74,6 +106,11 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'Monitors anchor position and triggers alarms'
       },
       {
+        name: 'signalk-simple-notifications',
+        required: false,
+        description: 'Depth alarm notifications'
+      },
+      {
         name: 'signalk-flags',
         required: false,
         description: 'Displays country flags for vessels'
@@ -89,14 +126,9 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'Track and display buddy vessels'
       },
       {
-        name: '@marineyachtradar/signalk-plugin',
+        name: 'signalk-to-influxdb2',
         required: false,
-        description: 'Marine Yacht Radar integration'
-      },
-      {
-        name: 'signalk-logviewer',
-        required: false,
-        description: 'View Signal K server logs'
+        description: 'History API for playback and data logging'
       }
     ],
     webapps: [
@@ -131,9 +163,10 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'Provides smoothed speed and wind readings'
       },
       {
-        name: 'signalk-logviewer',
+        name: 'bt-sensors-plugin-sk',
         required: false,
-        description: 'View Signal K server logs'
+        description:
+          'Bluetooth sensor integration for Victron, Renogy, Xiaomi and others'
       }
     ],
     webapps: [
@@ -151,7 +184,7 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'Sailing-focused wind and performance gauges'
       }
     ],
-    order: 3
+    order: 5
   },
   {
     id: 'datalogger',
@@ -166,23 +199,33 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'Logs Signal K data to InfluxDB for analysis'
       },
       {
-        name: '@signalk/tracks-plugin',
+        name: 'signalk-engine-hours',
         required: false,
-        description: 'Records vessel track history'
+        description: 'Track engine running hours'
       },
       {
-        name: 'signalk-logviewer',
+        name: 'signalk-to-mongodb',
         required: false,
-        description: 'View Signal K server logs'
-      }
-    ],
-    webapps: [
+        description: 'Store Signal K data in MongoDB'
+      },
       {
-        name: '@signalk/instrumentpanel',
-        description: 'View current data while logging'
+        name: 'signalk-postgsail',
+        required: false,
+        description: 'Automatic voyage logging to PostgSail cloud'
+      },
+      {
+        name: 'signalk-to-batch-format',
+        required: false,
+        description: 'Compressed batch JSON files for cloud storage'
+      },
+      {
+        name: 'signalk-path-mapper',
+        required: false,
+        description: 'Remap data paths for logging compatibility'
       }
     ],
-    order: 4
+    webapps: [],
+    order: 9
   },
   {
     id: 'anchor',
@@ -207,14 +250,20 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'Provides UI to acknowledge and silence alarms'
       },
       {
-        name: '@signalk/tracks-plugin',
+        name: 'hoekens-anchor-alarm',
         required: false,
-        description: 'Records vessel movement for review'
+        description:
+          'Web app anchor alarm with scope calculator and engine override'
       },
       {
-        name: 'signalk-logviewer',
+        name: 'signalk-tides',
         required: false,
-        description: 'View Signal K server logs'
+        description: 'Provides tide data for scope calculations'
+      },
+      {
+        name: '@meri-imperiumi/signalk-autostate',
+        required: false,
+        description: 'Auto-detect anchored vs moored state'
       }
     ],
     webapps: [
@@ -224,7 +273,7 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'View anchor position on chart'
       }
     ],
-    order: 5
+    order: 6
   },
   {
     id: 'nmea',
@@ -249,23 +298,90 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'Outputs Signal K data to NMEA 2000 network'
       },
       {
-        name: 'signalk-n2kais-to-nmea0183',
+        name: '@canboat/visual-analyzer',
         required: false,
-        description: 'Converts NMEA 2000 AIS messages to NMEA 0183'
+        description: 'NMEA 2000 data visualization and analysis tool'
       },
       {
-        name: '@signalk/set-system-time',
+        name: 'signalk-n2k-switching',
         required: false,
-        description: 'Sets system time from GPS data'
+        description: 'Control NMEA 2000 switching devices'
       },
       {
-        name: 'signalk-logviewer',
+        name: 'signalk-maretron-proprietary',
         required: false,
-        description: 'View Signal K server logs'
+        description: 'Support for Maretron proprietary PGNs'
       }
     ],
     webapps: [],
-    order: 6
+    order: 3
+  },
+  {
+    id: 'ais',
+    name: 'AIS & Vessel Tracking',
+    description:
+      'AIS data processing, vessel tracking, collision avoidance, and reporting to services like MarineTraffic.',
+    icon: 'ship',
+    plugins: [
+      {
+        name: '@signalk/vesselpositions',
+        required: true,
+        description: 'Displays nearby vessels from AIS data'
+      },
+      {
+        name: 'ais-forwarder',
+        required: false,
+        description: 'Forward AIS data to MarineTraffic, AISHub and others'
+      },
+      {
+        name: '@signalk/aisreporter',
+        required: false,
+        description:
+          'Report vessel position to MarineTraffic without AIS hardware'
+      },
+      {
+        name: 'signalk-n2kais-to-nmea0183',
+        required: false,
+        description: 'Convert NMEA 2000 AIS to NMEA 0183 format'
+      },
+      {
+        name: 'signalk-vessels-to-ais',
+        required: false,
+        description: 'Convert vessel data to NMEA 0183 AIS format'
+      },
+      {
+        name: 'signalk-ais-target-prioritizer',
+        required: false,
+        description: 'CPA/TCPA collision risk warnings and alarms'
+      },
+      {
+        name: '@noforeignland/signalk-to-noforeignland',
+        required: false,
+        description: 'Upload tracks and logs to NoForeignLand'
+      },
+      {
+        name: 'signalk-saillogger',
+        required: false,
+        description: 'Automated sailing log entries'
+      },
+      {
+        name: 'naivegpxlogger',
+        required: false,
+        description: 'Simple GPX track logging'
+      },
+      {
+        name: 'signalk-windy',
+        required: false,
+        description: 'Send data to Windy.com weather service'
+      },
+      {
+        name: 'signalk-derived-data',
+        required: false,
+        description: 'Calculates derived values required by signalk-windy'
+      }
+    ],
+    webapps: [],
+    order: 4
   },
   {
     id: 'wilhelmsk',
@@ -275,14 +391,24 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
     icon: 'mobile',
     plugins: [
       {
+        name: 'signalk-wilhelmsk-plugin',
+        required: true,
+        description: 'Special functionality for WilhelmSK app'
+      },
+      {
         name: 'signalk-push-notifications',
         required: true,
         description: 'Sends push notifications to mobile devices'
       },
       {
-        name: '@signalk/course-provider',
+        name: 'signalk-alarm-silencer',
         required: false,
-        description: 'Provides course calculations and destination tracking'
+        description: 'Acknowledge and silence alarms from WilhelmSK'
+      },
+      {
+        name: '@signalk/zones',
+        required: false,
+        description: 'Configure alert zones for values'
       },
       {
         name: 'signalk-anchoralarm-plugin',
@@ -290,13 +416,18 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'Anchor monitoring with mobile alerts'
       },
       {
-        name: 'signalk-logviewer',
+        name: 'signalk-raymarine-autopilot',
         required: false,
-        description: 'View Signal K server logs'
+        description: 'Raymarine autopilot control from WilhelmSK'
+      },
+      {
+        name: 'signalk-fusion-stereo',
+        required: false,
+        description: 'Fusion stereo control from WilhelmSK'
       }
     ],
     webapps: [],
-    order: 8
+    order: 7
   },
   {
     id: 'automation',
@@ -311,9 +442,9 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'Node-RED integration for flow-based automation'
       },
       {
-        name: 'signalk-mqtt-home-assistant',
+        name: 'signalk-mqtt-gw',
         required: false,
-        description: 'Home Assistant MQTT integration'
+        description: 'MQTT gateway for Home Assistant and other systems'
       },
       {
         name: 'signalk-shelly2',
@@ -321,13 +452,13 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'Shelly smart device integration'
       },
       {
-        name: 'signalk-logviewer',
+        name: 'signalk-philips-hue',
         required: false,
-        description: 'View Signal K server logs'
+        description: 'Philips Hue smart lighting control'
       }
     ],
     webapps: [],
-    order: 9
+    order: 8
   }
 ]
 

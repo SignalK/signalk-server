@@ -95,7 +95,17 @@ Plugins typically extend data acquisition, data processing or enable operations 
 
 Webapps provide a user interface to view / interact with data or perform operations enabling full featured solutions such as a Chartplotter.
 
-To install, update or remove plugins and webapps select _Appstore_ from the menu.
+### Plugin Wizard
+
+For new installations, the **Plugin Wizard** provides an easy way to get started by installing curated bundles of plugins and webapps for common use cases such as chart plotting, anchor monitoring, or data logging.
+
+Access the Plugin Wizard via _Appstore -> Plugin Wizard_ or from the Dashboard prompt on fresh installations.
+
+See the [Plugin Wizard Guide](../guides/plugin_wizard/plugin_wizard.md) for detailed information about available bundles and usage.
+
+### App Store
+
+To install, update or remove individual plugins and webapps select _Appstore_ from the menu.
 
 Select:
 

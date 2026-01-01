@@ -26,8 +26,18 @@ const WIZARD_STEPS = {
   COMPLETE: 'complete'
 }
 
+// These plugins come pre-installed with the server (plugin IDs, not npm package names)
+const BUNDLED_PLUGINS = ['resources-provider', 'course-provider']
+
 function Wizard({ wizardStatus, installedPlugins }) {
-  const [step, setStep] = useState(WIZARD_STEPS.WELCOME)
+  // Skip welcome screen if user has installed plugins beyond the bundled ones
+  const userInstalledPlugins = installedPlugins
+    ? installedPlugins.filter((p) => !BUNDLED_PLUGINS.includes(p.id))
+    : []
+  const hasUserPlugins = userInstalledPlugins.length > 0
+  const [step, setStep] = useState(
+    hasUserPlugins ? WIZARD_STEPS.SELECT_BUNDLE : WIZARD_STEPS.WELCOME
+  )
   const [bundles, setBundles] = useState([])
   const [selectedBundleIds, setSelectedBundleIds] = useState([])
   const [installedBundleIds, setInstalledBundleIds] = useState([])
@@ -45,7 +55,6 @@ function Wizard({ wizardStatus, installedPlugins }) {
       const installedPluginNames = installedPlugins.map((p) => p.id)
       const installed = bundles
         .filter((bundle) => {
-          if (bundle.id === 'minimal') return false
           // A bundle is considered installed if all its plugins are installed
           return (
             bundle.plugins.length > 0 &&
@@ -193,7 +202,7 @@ function Wizard({ wizardStatus, installedPlugins }) {
               plugins and webapps for your use case.
             </p>
             <p className="text-muted">
-              Choose from curated bundles or start with a minimal setup.
+              Choose from curated bundles tailored to your needs.
             </p>
             <Button
               color="primary"
@@ -339,20 +348,26 @@ function Wizard({ wizardStatus, installedPlugins }) {
   }
 
   const getStepNumber = () => {
+    // If user has plugins, we skip welcome so adjust numbering
+    const offset = hasUserPlugins ? 1 : 0
     switch (step) {
       case WIZARD_STEPS.WELCOME:
         return 1
       case WIZARD_STEPS.SELECT_BUNDLE:
-        return 2
+        return 2 - offset
       case WIZARD_STEPS.CONFIRM:
-        return 3
+        return 3 - offset
       case WIZARD_STEPS.INSTALLING:
-        return 4
+        return 4 - offset
       case WIZARD_STEPS.COMPLETE:
-        return 5
+        return hasUserPlugins ? 4 : 5
       default:
         return 1
     }
+  }
+
+  const getTotalSteps = () => {
+    return hasUserPlugins ? 4 : 5
   }
 
   return (
@@ -361,11 +376,14 @@ function Wizard({ wizardStatus, installedPlugins }) {
         <CardHeader>
           <strong>Plugin Wizard</strong>
           <div className="float-right text-muted">
-            Step {getStepNumber()} of 5
+            Step {getStepNumber()} of {getTotalSteps()}
           </div>
         </CardHeader>
         <CardBody>
-          <Progress value={(getStepNumber() / 5) * 100} className="mb-4" />
+          <Progress
+            value={(getStepNumber() / getTotalSteps()) * 100}
+            className="mb-4"
+          />
 
           {error && (
             <Alert color="danger" className="mb-4">

@@ -215,11 +215,6 @@ const mapStateToProps = (state) => {
         name: 'Data Browser',
         url: '/databrowser',
         icon: 'icon-folder'
-      },
-      {
-        name: 'Plugin Wizard',
-        url: '/wizard',
-        icon: 'icon-magic-wand'
       }
     ]
   }
@@ -233,7 +228,17 @@ const mapStateToProps = (state) => {
         name: 'Appstore',
         url: '/appstore',
         icon: 'icon-basket',
-        badge: updatesBadge
+        badge: updatesBadge,
+        children: [
+          {
+            name: 'Apps & Plugins',
+            url: '/appstore/apps'
+          },
+          {
+            name: 'Plugin Wizard',
+            url: '/wizard'
+          }
+        ]
       },
       {
         name: 'Server',
