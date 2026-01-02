@@ -17,6 +17,7 @@ import moment from 'moment'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
 import Meta from './Meta'
 import { getValueRenderer, DefaultValueRenderer } from './ValueRenderers'
+import { getDeviceDisplayLabel } from '../../util/deviceUtils'
 
 const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
@@ -338,6 +339,12 @@ class DataBrowser extends Component {
       ...this.state,
       sourceFilterActive: newSourceFilterActive
     })
+  }
+
+  getSourceDisplayName(source) {
+    const { serverStatistics } = this.props
+    const devices = serverStatistics?.devices || []
+    return getDeviceDisplayLabel(source, devices)
   }
 
   render() {
@@ -736,7 +743,8 @@ class DataBrowser extends Component {
                                   }}
                                 />
                                 <CopyToClipboardWithFade text={data.$source}>
-                                  {data.$source} <i className="far fa-copy"></i>
+                                  {this.getSourceDisplayName(data.$source)}{' '}
+                                  <i className="far fa-copy"></i>
                                 </CopyToClipboardWithFade>{' '}
                                 {data.pgn || ''}
                                 {data.sentence || ''}
@@ -896,4 +904,7 @@ class CopyToClipboardWithFade extends Component {
   }
 }
 
-export default connect(({ webSocket }) => ({ webSocket }))(DataBrowser)
+export default connect(({ webSocket, serverStatistics }) => ({
+  webSocket,
+  serverStatistics
+}))(DataBrowser)

@@ -17,7 +17,7 @@
 
 import { isUndefined, values } from 'lodash'
 import { EventEmitter } from 'node:events'
-
+import { getSecurityConfig } from './security'
 const STATS_UPDATE_INTERVAL_SECONDS = 5
 export const CONNECTION_WRITE_EVENT_NAME = 'connectionwrite'
 
@@ -73,6 +73,19 @@ export function startDeltaStatistics(
   return setInterval(() => {
     updateProviderPeriodStats(app)
     const anyApp = app as any
+    const config = getSecurityConfig(anyApp)
+    const showDeviceLabelNames = config?.showDeviceLabelNames !== false
+    let devices: { clientId: string; description?: string }[] = []
+    if (
+      anyApp &&
+      anyApp.securityStrategy &&
+      typeof anyApp.securityStrategy.getDevices === 'function'
+    ) {
+      devices = anyApp.securityStrategy.getDevices(config).map((d: any) => ({
+        clientId: d.clientId,
+        description: showDeviceLabelNames ? d.description : undefined
+      }))
+    }
     app.emit('serverevent', {
       type: 'SERVERSTATISTICS',
       from: 'signalk-server',
@@ -83,7 +96,9 @@ export function startDeltaStatistics(
         numberOfAvailablePaths: anyApp.streambundle.getAvailablePaths().length,
         wsClients: anyApp.interfaces.ws ? anyApp.interfaces.ws.numClients() : 0,
         providerStatistics: app.providerStatistics,
-        uptime: process.uptime()
+        uptime: process.uptime(),
+        devices: devices,
+        showDeviceLabelNames
       }
     })
     app.lastIntervalDeltaCount = app.deltaCount

@@ -69,6 +69,7 @@ class Settings extends Component {
       allowNewUserRegistration: this.state.allowNewUserRegistration,
       allowDeviceAccessRequests: this.state.allowDeviceAccessRequests,
       allowedCorsOrigins: this.state.allowedCorsOrigins,
+      showDeviceLabelNames: this.state.showDeviceLabelNames !== false,
       adminUIOrigin
     }
     fetch(`${window.serverRoutesPrefix}/security/config`, {
@@ -183,6 +184,38 @@ class Settings extends Component {
                             </Label>
                           </div>
                         </FormGroup>
+                      </Col>
+                    </FormGroup>
+                    <FormGroup row>
+                      <Col xs="0" md="3">
+                        <Label>Show Device Names in UI</Label>
+                      </Col>
+                      <Col md="9">
+                        <FormGroup check>
+                          <div>
+                            <Label className="switch switch-text switch-primary">
+                              <Input
+                                type="checkbox"
+                                name="showDeviceLabelNames"
+                                className="switch-input"
+                                onChange={this.handleChange}
+                                checked={
+                                  this.state.showDeviceLabelNames !== false
+                                }
+                              />
+                              <span
+                                className="switch-label"
+                                data-on="Yes"
+                                data-off="No"
+                              ></span>
+                              <span className="switch-handle"></span>
+                            </Label>
+                          </div>
+                        </FormGroup>
+                        <FormText color="muted">
+                          Show device descriptions instead of IDs in Dashboard,
+                          Data Browser, and Source Priorities
+                        </FormText>
                       </Col>
                     </FormGroup>
                     <FormGroup row>

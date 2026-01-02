@@ -15,6 +15,7 @@ import {
 import Creatable from 'react-select/creatable'
 import remove from 'lodash.remove'
 import uniq from 'lodash.uniq'
+import { getDeviceDisplayLabel } from '../../util/deviceUtils'
 
 export const SOURCEPRIOS_PRIO_CHANGED = 'SOURCEPRIOS_PPRIO_CHANGED'
 export const SOURCEPRIOS_PRIO_DELETED = 'SOURCEPRIOS_PRIO_DELETED'
@@ -189,8 +190,11 @@ class PrefsEditor extends Component {
             <tbody>
               {[...this.props.priorities, { sourceRef: '', timeout: '' }].map(
                 ({ sourceRef, timeout }, index) => {
+                  const { getSourceDisplayLabel } = this.props
                   const options = this.state.sourceRefs.map((sourceRef) => ({
-                    label: sourceRef,
+                    label: getSourceDisplayLabel
+                      ? getSourceDisplayLabel(sourceRef)
+                      : sourceRef,
                     value: sourceRef
                   }))
                   return (
@@ -200,7 +204,12 @@ class PrefsEditor extends Component {
                         <Creatable
                           menuPortalTarget={document.body}
                           options={options}
-                          value={{ value: sourceRef, label: sourceRef }}
+                          value={{
+                            value: sourceRef,
+                            label: getSourceDisplayLabel
+                              ? getSourceDisplayLabel(sourceRef)
+                              : sourceRef
+                          }}
                           onChange={(e) => {
                             this.props.dispatch({
                               type: SOURCEPRIOS_PRIO_CHANGED,
@@ -358,6 +367,13 @@ class SourcePriorities extends Component {
         }))
       })
     })
+    this.getSourceDisplayLabel = this.getSourceDisplayLabel.bind(this)
+  }
+
+  getSourceDisplayLabel(sourceRef) {
+    const { serverStatistics } = this.props
+    const devices = serverStatistics?.devices || []
+    return getDeviceDisplayLabel(sourceRef, devices)
   }
 
   render() {
@@ -421,6 +437,7 @@ class SourcePriorities extends Component {
                         dispatch={this.props.dispatch}
                         isSaving={this.props.saveState.isSaving}
                         pathIndex={index}
+                        getSourceDisplayLabel={this.getSourceDisplayLabel}
                       />
                     </td>
                     <td style={{ border: 'none' }}>
@@ -478,9 +495,10 @@ class SourcePriorities extends Component {
   }
 }
 
-const mapStateToProps = ({ sourcePrioritiesData }) => ({
+const mapStateToProps = ({ sourcePrioritiesData, serverStatistics }) => ({
   sourcePriorities: sourcePrioritiesData.sourcePriorities,
-  saveState: sourcePrioritiesData.saveState
+  saveState: sourcePrioritiesData.saveState,
+  serverStatistics
 })
 
 export default connect(mapStateToProps)(SourcePriorities)

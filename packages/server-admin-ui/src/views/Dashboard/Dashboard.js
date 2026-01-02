@@ -10,6 +10,7 @@ import {
   Table
 } from 'reactstrap'
 import '../../fa-pulse.css'
+import { getDeviceDisplayLabel } from '../../util/deviceUtils'
 
 const Dashboard = (props) => {
   const {
@@ -17,13 +18,15 @@ const Dashboard = (props) => {
     numberOfAvailablePaths,
     wsClients,
     providerStatistics,
-    uptime
+    uptime,
+    devices
   } = props.serverStatistics || {
     deltaRate: 0,
     numberOfAvailablePaths: 0,
     wsClients: 0,
     providerStatistics: {},
-    uptime: ''
+    uptime: '',
+    devices: []
   }
   const providerStatus = props.providerStatus || []
   const errorCount = providerStatus.filter((s) => s.type === 'error').length
@@ -66,6 +69,7 @@ const Dashboard = (props) => {
   }
 
   const renderActivity = (providerId, providerStats, linkType) => {
+    const device = getDeviceDisplayLabel(providerId, devices)
     return (
       <li key={providerId} onClick={() => props.history.push(`/dashboard`)}>
         <i
@@ -84,7 +88,7 @@ const Dashboard = (props) => {
         <span className="title">
           {linkType === 'plugin'
             ? pluginNameLink(providerId)
-            : providerIdLink(providerId)}
+            : providerIdLink(providerId, device)}
         </span>
         {providerStats.writeRate > 0 && (
           <span className="value">
@@ -286,11 +290,11 @@ function pluginNameLink(id) {
   return <a href={'#/serverConfiguration/plugins/' + id}>{id}</a>
 }
 
-function providerIdLink(id) {
+function providerIdLink(id, name) {
   if (id === 'defaults') {
     return <a href={'#/serverConfiguration/settings'}>{id}</a>
   } else if (id.startsWith('ws.')) {
-    return <a href={'#/security/devices'}>{id}</a>
+    return <a href={'#/security/devices'}>{name}</a>
   } else {
     return <a href={'#/serverConfiguration/connections/' + id}>{id}</a>
   }

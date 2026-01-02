@@ -104,6 +104,7 @@ export interface SecurityConfig {
   secretKey: string
   users: User[]
   acls?: ACL[]
+  showDeviceLabelNames?: boolean
 }
 
 export interface RequestStatusData {
