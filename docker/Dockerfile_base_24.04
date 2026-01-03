@@ -1,5 +1,7 @@
 FROM ubuntu:24.04
-ARG NODE
+ARG NODE_VERSION
+# Ensure NODE has .x suffix for NodeSource (supports both "22" and "22.x" input)
+ARG NODE=${NODE_VERSION}
 
 RUN userdel -r ubuntu
 RUN groupadd --gid 1000 node \
@@ -12,7 +14,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteract
 # Modification to set time without need to use sudo
 RUN chmod u+s /usr/bin/date
 
-RUN curl -fsSL https://deb.nodesource.com/setup_$NODE | bash - \
+# Install Node.js from NodeSource (ensure .x suffix for version)
+RUN NODESETUP="${NODE}"; \
+    case "${NODESETUP}" in *.*) ;; *) NODESETUP="${NODESETUP}.x";; esac && \
+    curl -fsSL https://deb.nodesource.com/setup_${NODESETUP} | bash - \
   && DEBIAN_FRONTEND=noninteractive apt-get -y install nodejs \
   && npm config rm proxy \
   && npm config rm https-proxy \
