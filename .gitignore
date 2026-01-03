@@ -17,6 +17,7 @@ settings/ssl-cert.pem
 
 *.tgz
 work/
+data/
 
 test/plugin-test-config/.npmrc
 test/plugin-test-config/plugin-config-data/
