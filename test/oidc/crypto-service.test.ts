@@ -1,6 +1,10 @@
 import { expect } from 'chai'
 import { createHash } from 'crypto'
-import { createAuthState, encryptState, decryptState } from '../../src/oidc/state'
+import {
+  createAuthState,
+  encryptState,
+  decryptState
+} from '../../src/oidc/state'
 
 /**
  * Tests for the OIDC crypto service pattern.
@@ -18,10 +22,7 @@ describe('OIDC Crypto Service', () => {
    * It derives a domain-specific secret from the master key.
    */
   function deriveSecret(masterKey: string, domain: string): string {
-    return createHash('sha256')
-      .update(masterKey)
-      .update(domain)
-      .digest('hex')
+    return createHash('sha256').update(masterKey).update(domain).digest('hex')
   }
 
   describe('deriveSecret', () => {
@@ -60,7 +61,10 @@ describe('OIDC Crypto Service', () => {
     const oidcSecret = deriveSecret(masterSecretKey, 'signalk-oidc')
 
     it('should roundtrip state correctly using derived secret', () => {
-      const authState = createAuthState('https://example.com/callback', '/admin')
+      const authState = createAuthState(
+        'https://example.com/callback',
+        '/admin'
+      )
       const encrypted = encryptState(authState, oidcSecret)
       const decrypted = decryptState(encrypted, oidcSecret)
 

@@ -31,9 +31,10 @@ import {
   OIDCError,
   OIDCConfig,
   OIDCUserInfo,
-  OIDCCryptoService
+  OIDCCryptoService,
+  ExternalUserService,
+  ExternalUser
 } from './index'
-import { User, SecurityConfig } from '../security'
 
 const debug = createDebug('signalk-server:oidc-auth')
 const skAuthPrefix = '/signalk/v1/auth'
@@ -43,8 +44,6 @@ const skAuthPrefix = '/signalk/v1/auth'
  * This interface defines the contract between tokensecurity and OIDC authentication.
  */
 export interface OIDCAuthDependencies {
-  /** Get the current security configuration */
-  getConfiguration: () => SecurityConfig
   /** Get parsed OIDC configuration */
   getOIDCConfig: () => OIDCConfig
   /** Set session cookies after successful authentication */
@@ -59,16 +58,17 @@ export interface OIDCAuthDependencies {
   clearSessionCookie: (res: Response) => void
   /** Generate a JWT for a user */
   generateJWT: (userId: string, expiration?: string) => string
-  /** Save security configuration */
-  saveConfig: (
-    config: SecurityConfig,
-    callback: (err: Error | null) => void
-  ) => void
   /**
    * Crypto service for OIDC state encryption.
    * Provides a derived secret - OIDC handles its own encryption.
    */
   cryptoService: OIDCCryptoService
+  /**
+   * User service for external authentication providers.
+   * Abstracts user storage so OIDC doesn't need to know about
+   * the underlying storage mechanism.
+   */
+  userService: ExternalUserService
 }
 
 /**
@@ -100,15 +100,15 @@ function isSafeRelativeUrl(url: unknown): url is string {
 export async function findOrCreateOIDCUser(
   userInfo: OIDCUserInfo,
   oidcConfig: OIDCConfig,
-  deps: Pick<OIDCAuthDependencies, 'getConfiguration' | 'saveConfig'>
-): Promise<User | null> {
-  const configuration = deps.getConfiguration()
+  deps: Pick<OIDCAuthDependencies, 'userService'>
+): Promise<ExternalUser | null> {
   const issuer = oidcConfig.issuer
 
   // Look for existing user by OIDC sub + issuer
-  const user = configuration.users.find(
-    (u) => u.oidc && u.oidc.sub === userInfo.sub && u.oidc.issuer === issuer
-  )
+  const user = await deps.userService.findUserByProvider({
+    provider: 'oidc',
+    criteria: { sub: userInfo.sub, issuer }
+  })
 
   if (user) {
     debug(`OIDC: found existing user ${user.username}`)
@@ -126,17 +126,17 @@ export async function findOrCreateOIDCUser(
     userInfo.preferredUsername || userInfo.email || `oidc-${userInfo.sub}`
 
   // Check for username collision with non-OIDC user
-  const existingUser = configuration.users.find(
-    (u) => u.username === username && !u.oidc
-  )
-  const finalUsername = existingUser
+  const existingUser = await deps.userService.findUserByUsername(username)
+  // Only consider it a collision if the existing user is NOT an OIDC user
+  const isCollision = existingUser && !existingUser.providerData
+  const finalUsername = isCollision
     ? `${username}-${userInfo.sub.substring(0, 8)}`
     : username
 
-  const newUser: User = {
+  const newUser: ExternalUser = {
     username: finalUsername,
     type: oidcConfig.defaultPermission,
-    oidc: {
+    providerData: {
       sub: userInfo.sub,
       issuer
     }
@@ -145,14 +145,13 @@ export async function findOrCreateOIDCUser(
   debug(
     `OIDC: creating new user ${newUser.username} with permission ${newUser.type}`
   )
-  configuration.users.push(newUser)
 
-  // Save configuration (async, but don't block)
-  deps.saveConfig(configuration, (err) => {
-    if (err) {
-      console.error('Failed to save OIDC user:', err)
-    }
-  })
+  try {
+    await deps.userService.createUser(newUser)
+  } catch (err) {
+    console.error('Failed to create OIDC user:', err)
+    throw err
+  }
 
   return newUser
 }

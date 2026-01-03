@@ -77,10 +77,7 @@ module.exports = function (app, config) {
    * without exposing the JWT signing key.
    */
   function deriveSecret(domain) {
-    return createHash('sha256')
-      .update(secretKey)
-      .update(domain)
-      .digest('hex')
+    return createHash('sha256').update(secretKey).update(domain).digest('hex')
   }
 
   /**
@@ -89,6 +86,72 @@ module.exports = function (app, config) {
    */
   const oidcCryptoService = {
     getStateEncryptionSecret: () => deriveSecret('signalk-oidc')
+  }
+
+  /**
+   * User service for external authentication providers (OIDC, etc.).
+   * Abstracts user storage so auth providers don't need to know about
+   * the underlying storage mechanism (currently array, could be SQLite etc).
+   */
+  const externalUserService = {
+    async findUserByProvider(lookup) {
+      // Currently only OIDC is supported
+      if (lookup.provider === 'oidc') {
+        const { sub, issuer } = lookup.criteria
+        const user = options.users.find(
+          (u) => u.oidc?.sub === sub && u.oidc?.issuer === issuer
+        )
+        if (user) {
+          return {
+            username: user.username,
+            type: user.type,
+            providerData: user.oidc
+          }
+        }
+      }
+      return null
+    },
+
+    async findUserByUsername(username) {
+      const user = options.users.find((u) => u.username === username)
+      if (user) {
+        return {
+          username: user.username,
+          type: user.type,
+          providerData: user.oidc
+        }
+      }
+      return null
+    },
+
+    async createUser(externalUser) {
+      // Convert ExternalUser to internal User format
+      const newUser = {
+        username: externalUser.username,
+        type: externalUser.type
+      }
+
+      // Convert providerData to oidc field if present
+      if (externalUser.providerData) {
+        newUser.oidc = {
+          sub: externalUser.providerData.sub,
+          issuer: externalUser.providerData.issuer
+        }
+      }
+
+      options.users.push(newUser)
+
+      // Save configuration
+      return new Promise((resolve, reject) => {
+        saveSecurityConfig(app, options, (err) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve()
+          }
+        })
+      })
+    }
   }
 
   if (process.env.ADMINUSER) {
@@ -412,15 +475,12 @@ module.exports = function (app, config) {
 
     // Register OIDC authentication routes
     registerOIDCRoutes(app, {
-      getConfiguration,
       getOIDCConfig,
       setSessionCookie,
       clearSessionCookie,
       generateJWT,
-      saveConfig: (config, callback) => {
-        saveSecurityConfig(app, config, callback)
-      },
-      cryptoService: oidcCryptoService
+      cryptoService: oidcCryptoService,
+      userService: externalUserService
     })
     ;[
       '/restart',

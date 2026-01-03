@@ -9,9 +9,11 @@ import {
   resetFetchFunction as resetDiscoveryFetch,
   clearDiscoveryCache
 } from '../../src/oidc/discovery'
-import { OIDCConfig, OIDCCryptoService } from '../../src/oidc/types'
-import { createAuthState } from '../../src/oidc/state'
-import { SecurityConfig } from '../../src/security'
+import {
+  OIDCConfig,
+  OIDCCryptoService,
+  ExternalUserService
+} from '../../src/oidc/types'
 
 describe('OIDC Auth Routes', () => {
   // Mock Express app that captures registered routes
@@ -37,18 +39,6 @@ describe('OIDC Auth Routes', () => {
     }
   } as unknown as Application
 
-  // Mock security config
-  const mockSecurityConfig: SecurityConfig = {
-    users: [],
-    devices: [],
-    secretKey: '0'.repeat(64),
-    expiration: '1h',
-    immutableConfig: false,
-    allow_readonly: true,
-    allowNewUserRegistration: false,
-    allowDeviceAccessRequests: false
-  }
-
   // Mock OIDC config
   const mockOIDCConfig: OIDCConfig = {
     enabled: true,
@@ -68,16 +58,22 @@ describe('OIDC Auth Routes', () => {
     getStateEncryptionSecret: () => 'mock-derived-secret-' + '0'.repeat(48)
   }
 
+  // Default mock user service
+  const defaultMockUserService: ExternalUserService = {
+    findUserByProvider: async () => null,
+    findUserByUsername: async () => null,
+    createUser: async () => {}
+  }
+
   const mockDeps: OIDCAuthDependencies = {
-    getConfiguration: () => mockSecurityConfig,
     getOIDCConfig: () => mockOIDCConfig,
     setSessionCookie: () => {},
     clearSessionCookie: () => {
       clearCookieCalled = true
     },
     generateJWT: (userId: string) => `mock-jwt-for-${userId}`,
-    saveConfig: (_config, callback) => callback(null),
-    cryptoService: defaultMockCryptoService
+    cryptoService: defaultMockCryptoService,
+    userService: defaultMockUserService
   }
 
   // Helper to create mock request
@@ -436,7 +432,7 @@ describe('OIDC Auth Routes', () => {
       registerOIDCRoutes(mockApp, depsWithCrypto)
 
       const handler = findRoute('get', '/signalk/v1/auth/oidc/login')
-      expect(handler).to.not.be.undefined
+      expect(handler).to.not.equal(undefined)
 
       const req = createMockRequest()
       const res = {
@@ -457,7 +453,7 @@ describe('OIDC Auth Routes', () => {
       registerOIDCRoutes(mockApp, depsWithCrypto)
 
       const handler = findRoute('get', '/signalk/v1/auth/oidc/callback')
-      expect(handler).to.not.be.undefined
+      expect(handler).to.not.equal(undefined)
 
       const req = createMockRequest({
         query: {

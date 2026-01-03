@@ -171,3 +171,44 @@ export interface OIDCCryptoService {
    */
   getStateEncryptionSecret(): string
 }
+
+/**
+ * Criteria for looking up users by external provider metadata.
+ * Designed to support multiple auth providers, not just OIDC.
+ */
+export interface ProviderUserLookup {
+  /** Provider identifier (e.g., 'oidc', 'ldap', 'saml') */
+  provider: string
+  /** Provider-specific lookup criteria */
+  criteria: Record<string, string> // e.g., { sub: '...', issuer: '...' }
+}
+
+/**
+ * Generic user service interface for external authentication providers.
+ * Named generically to support future auth providers beyond OIDC.
+ *
+ * This interface abstracts user storage so authentication providers
+ * don't need to know about the underlying storage mechanism
+ * (array, SQLite, PostgreSQL, etc.).
+ */
+export interface ExternalUserService {
+  /** Find a user by external provider metadata */
+  findUserByProvider(lookup: ProviderUserLookup): Promise<ExternalUser | null>
+
+  /** Find a user by username (for collision detection) */
+  findUserByUsername(username: string): Promise<ExternalUser | null>
+
+  /** Create a new user */
+  createUser(user: ExternalUser): Promise<void>
+}
+
+/**
+ * User representation for external auth providers.
+ * This is a subset of the full User type that external providers need.
+ */
+export interface ExternalUser {
+  username: string
+  type: string
+  /** Provider-specific identifier (e.g., OIDC sub+issuer) */
+  providerData?: Record<string, unknown>
+}
