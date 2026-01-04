@@ -28,12 +28,49 @@ const TIME_ONLY_FORMAT = 'HH:mm:ss'
 const metaStorageKey = 'admin.v1.dataBrowser.meta'
 const presetStorageKey = 'admin.v1.dataBrowser.preset'
 
-// Unit preferences presets
-const PRESETS = [
+// Default unit preferences presets (fallback if fetch fails)
+const DEFAULT_PRESETS = [
   { value: 'metric', label: 'Metric (SI)' },
   { value: 'imperial-us', label: 'Imperial (US)' },
   { value: 'imperial-uk', label: 'Imperial (UK)' }
 ]
+
+// Fetch all presets (built-in + custom)
+async function fetchPresets() {
+  try {
+    const response = await fetch('/signalk/v1/unitpreferences/presets', {
+      credentials: 'include'
+    })
+    if (response.ok) {
+      const data = await response.json()
+      const presets = []
+      // Add built-in presets
+      if (data.builtIn) {
+        data.builtIn.forEach(p => {
+          presets.push({
+            value: typeof p === 'object' ? p.name : p,
+            label: typeof p === 'object' ? (p.displayName || p.name) : p,
+            isCustom: false
+          })
+        })
+      }
+      // Add custom presets
+      if (data.custom) {
+        data.custom.forEach(p => {
+          presets.push({
+            value: typeof p === 'object' ? p.name : p,
+            label: typeof p === 'object' ? (p.displayName || p.name) : p,
+            isCustom: true
+          })
+        })
+      }
+      return presets.length > 0 ? presets : DEFAULT_PRESETS
+    }
+  } catch (e) {
+    console.error('Failed to fetch presets:', e)
+  }
+  return DEFAULT_PRESETS
+}
 
 // Fetch and set active preset
 async function fetchActivePreset() {
@@ -115,7 +152,8 @@ class DataBrowser extends Component {
       // For forcing re-renders when store updates
       storeVersion: 0,
       path$SourceKeys: [],
-      activePreset: localStorage.getItem(presetStorageKey) || 'metric'
+      activePreset: 'metric', // Will be fetched from server in componentDidMount
+      presets: DEFAULT_PRESETS
     }
 
     this.fetchSources = fetchSources.bind(this)
@@ -133,7 +171,6 @@ class DataBrowser extends Component {
 
   async handlePresetChange(preset) {
     await setActivePreset(preset)
-    localStorage.setItem(presetStorageKey, preset)
     this.setState({ ...this.state, activePreset: preset })
   }
 
@@ -268,7 +305,7 @@ class DataBrowser extends Component {
     }
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     this.fetchSources()
     this.subscribeToDataIfNeeded()
 
@@ -282,6 +319,11 @@ class DataBrowser extends Component {
         this.updatePath$SourceKeys()
       }, 50)
     })
+
+    // Fetch presets (including custom ones)
+    const presets = await fetchPresets()
+    const activePreset = await fetchActivePreset()
+    this.setState({ presets, activePreset })
   }
 
   componentDidUpdate() {
@@ -527,23 +569,26 @@ class DataBrowser extends Component {
                   <span style={{ whiteSpace: 'nowrap' }}>Raw Values</span>
                 </Col>
               </FormGroup>
-              <FormGroup row>
-                <Col xs="12" md="12">
-                  <Label style={{ marginRight: '10px' }}>Unit Preset:</Label>
-                  <ButtonGroup>
-                    {PRESETS.map((preset) => (
-                      <Button
-                        key={preset.value}
-                        color={this.state.activePreset === preset.value ? 'primary' : 'secondary'}
-                        onClick={() => this.handlePresetChange(preset.value)}
-                        size="sm"
-                      >
-                        {preset.label}
-                      </Button>
-                    ))}
-                  </ButtonGroup>
-                </Col>
-              </FormGroup>
+              {this.state.includeMeta && (
+                <FormGroup row>
+                  <Col xs="12" md="12">
+                    <Label style={{ marginRight: '10px' }}>Unit Preset:</Label>
+                    <ButtonGroup>
+                      {this.state.presets.map((preset) => (
+                        <Button
+                          key={preset.value}
+                          color={this.state.activePreset === preset.value ? 'primary' : 'secondary'}
+                          onClick={() => this.handlePresetChange(preset.value)}
+                          size="sm"
+                          outline={preset.isCustom}
+                        >
+                          {preset.label}
+                        </Button>
+                      ))}
+                    </ButtonGroup>
+                  </Col>
+                </FormGroup>
+              )}
               {this.state.context && this.state.context !== 'none' && (
                 <FormGroup row>
                   <Col xs="3" md="2">

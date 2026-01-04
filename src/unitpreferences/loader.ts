@@ -5,6 +5,7 @@ import { CategoryMap, UnitDefinitions, Preset, UnitPreferencesConfig } from './t
 const UNITPREFS_DIR = path.join(__dirname, '../../unitpreferences')
 
 let categories: CategoryMap
+let customCategories: { [category: string]: string } = {}
 let standardDefinitions: UnitDefinitions
 let customDefinitions: UnitDefinitions
 let activePreset: Preset
@@ -28,6 +29,14 @@ export function loadAll(): void {
     customDefinitions = JSON.parse(fs.readFileSync(customPath, 'utf-8'))
   } else {
     customDefinitions = {}
+  }
+
+  // Load custom categories (if exists)
+  const customCatPath = path.join(UNITPREFS_DIR, 'custom-categories.json')
+  if (fs.existsSync(customCatPath)) {
+    customCategories = JSON.parse(fs.readFileSync(customCatPath, 'utf-8'))
+  } else {
+    customCategories = {}
   }
 
   // Load config
@@ -79,14 +88,46 @@ function loadActivePreset(): void {
   )
 }
 
-export function getCategories(): CategoryMap { return categories }
+export function getCategories(): CategoryMap {
+  // Return merged categories (core + custom)
+  const merged = { ...categories }
+  merged.categoryToBaseUnit = {
+    ...categories.categoryToBaseUnit,
+    ...customCategories
+  }
+  return merged
+}
+export function getCustomCategories(): { [category: string]: string } { return customCategories }
 export function getStandardDefinitions(): UnitDefinitions { return standardDefinitions }
 export function getCustomDefinitions(): UnitDefinitions { return customDefinitions }
 export function getActivePreset(): Preset { return activePreset }
 export function getConfig(): UnitPreferencesConfig { return config }
 
 export function reloadPreset(): void {
+  // Re-read config from file to get updated activePreset
+  const configPath = path.join(UNITPREFS_DIR, 'config.json')
+  if (fs.existsSync(configPath)) {
+    config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+  }
   loadActivePreset()
+}
+
+export function reloadCustomDefinitions(): void {
+  const customPath = path.join(UNITPREFS_DIR, 'custom-units-definitions.json')
+  if (fs.existsSync(customPath)) {
+    customDefinitions = JSON.parse(fs.readFileSync(customPath, 'utf-8'))
+  } else {
+    customDefinitions = {}
+  }
+}
+
+export function reloadCustomCategories(): void {
+  const customCatPath = path.join(UNITPREFS_DIR, 'custom-categories.json')
+  if (fs.existsSync(customCatPath)) {
+    customCategories = JSON.parse(fs.readFileSync(customCatPath, 'utf-8'))
+  } else {
+    customCategories = {}
+  }
 }
 
 export function getMergedDefinitions(): UnitDefinitions {
