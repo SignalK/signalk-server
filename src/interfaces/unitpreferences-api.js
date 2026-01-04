@@ -11,7 +11,8 @@ const {
   getMergedDefinitions,
   reloadPreset,
   reloadCustomDefinitions,
-  reloadCustomCategories
+  reloadCustomCategories,
+  getDefaultCategory
 } = require('../unitpreferences')
 
 const UNITPREFS_DIR = path.join(__dirname, '../../unitpreferences')
@@ -251,6 +252,36 @@ module.exports = function (app) {
     } catch (err) {
       debug('Error getting active preset:', err)
       res.status(500).json({ error: 'Failed to get active preset' })
+    }
+  })
+
+  // GET /signalk/v1/unitpreferences/default-categories
+  // Returns the full default-categories.json data
+  router.get('/default-categories', (req, res) => {
+    try {
+      const defaultCatPath = path.join(UNITPREFS_DIR, 'default-categories.json')
+      if (fs.existsSync(defaultCatPath)) {
+        const data = JSON.parse(fs.readFileSync(defaultCatPath, 'utf-8'))
+        res.json(data)
+      } else {
+        res.json({ categories: {} })
+      }
+    } catch (err) {
+      debug('Error getting default categories:', err)
+      res.status(500).json({ error: 'Failed to get default categories' })
+    }
+  })
+
+  // GET /signalk/v1/unitpreferences/default-category/:path
+  // Returns the default category for a specific SignalK path
+  router.get('/default-category/*', (req, res) => {
+    try {
+      const signalkPath = req.params[0]
+      const category = getDefaultCategory(signalkPath)
+      res.json({ path: signalkPath, category: category || null })
+    } catch (err) {
+      debug('Error getting default category:', err)
+      res.status(500).json({ error: 'Failed to get default category' })
     }
   })
 
