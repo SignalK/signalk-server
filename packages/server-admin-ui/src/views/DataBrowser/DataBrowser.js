@@ -150,7 +150,9 @@ class DataBrowser extends Component {
       sourceFilterActive:
         localStorage.getItem(sourceFilterActiveStorageKey) === 'true',
       activePreset: 'metric', // Will be fetched from server in componentDidMount
-      presets: DEFAULT_PRESETS
+      presets: DEFAULT_PRESETS,
+      unitDefinitions: null, // Loaded from server for conversion formulas
+      presetDetails: null // Details of active preset with target units
     }
 
     this.fetchSources = fetchSources.bind(this)
@@ -167,7 +169,58 @@ class DataBrowser extends Component {
 
   async handlePresetChange(preset) {
     await setActivePreset(preset)
+    // Also fetch preset details for conversion
+    try {
+      const res = await fetch(`/signalk/v1/unitpreferences/presets/${preset}`, { credentials: 'include' })
+      if (res.ok) {
+        const presetDetails = await res.json()
+        this.setState({ ...this.state, activePreset: preset, presetDetails })
+        return
+      }
+    } catch (e) {
+      console.error('Failed to fetch preset details:', e)
+    }
     this.setState({ ...this.state, activePreset: preset })
+  }
+
+  // Convert a value from SI unit to display unit based on category and active preset
+  convertValue(value, siUnit, category) {
+    const { unitDefinitions, presetDetails } = this.state
+
+    // Need numeric value + category + definitions + preset
+    if (typeof value !== 'number' || !category || !unitDefinitions || !presetDetails) {
+      return { value, unit: siUnit }
+    }
+
+    // Get target unit for this category from preset
+    const targetConfig = presetDetails.categories?.[category]
+    if (!targetConfig?.targetUnit) {
+      return { value, unit: siUnit }
+    }
+
+    const targetUnit = targetConfig.targetUnit
+
+    // If target is same as SI unit, no conversion needed
+    if (targetUnit === siUnit) {
+      return { value, unit: siUnit }
+    }
+
+    // Get conversion formula from definitions
+    const formula = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.formula
+    const symbol = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.symbol || targetUnit
+
+    if (!formula) {
+      return { value, unit: siUnit }
+    }
+
+    // Evaluate formula
+    try {
+      const converted = Function('value', 'return ' + formula)(value)
+      return { value: converted, unit: symbol }
+    } catch (e) {
+      console.error('Formula evaluation failed:', e)
+      return { value, unit: siUnit }
+    }
   }
 
   handleMessage(msg) {
@@ -294,7 +347,30 @@ class DataBrowser extends Component {
     // Fetch presets (including custom ones)
     const presets = await fetchPresets()
     const activePreset = await fetchActivePreset()
-    this.setState({ presets, activePreset })
+
+    // Fetch unit definitions for conversion formulas
+    let unitDefinitions = null
+    try {
+      const res = await fetch('/signalk/v1/unitpreferences/definitions', { credentials: 'include' })
+      if (res.ok) {
+        unitDefinitions = await res.json()
+      }
+    } catch (e) {
+      console.error('Failed to fetch unit definitions:', e)
+    }
+
+    // Fetch details of active preset
+    let presetDetails = null
+    try {
+      const res = await fetch(`/signalk/v1/unitpreferences/presets/${activePreset}`, { credentials: 'include' })
+      if (res.ok) {
+        presetDetails = await res.json()
+      }
+    } catch (e) {
+      console.error('Failed to fetch preset details:', e)
+    }
+
+    this.setState({ presets, activePreset, unitDefinitions, presetDetails })
   }
 
   componentDidUpdate() {
@@ -671,21 +747,34 @@ class DataBrowser extends Component {
               </FormGroup>
               {this.state.includeMeta && (
                 <FormGroup row>
-                  <Col xs="12" md="12">
-                    <Label style={{ marginRight: '10px' }}>Unit Preset:</Label>
-                    <ButtonGroup>
-                      {this.state.presets.map((preset) => (
-                        <Button
+                  <Col xs="12" md="12" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: '500', marginRight: '5px' }}>Preset:</span>
+                    {this.state.presets.map((preset, index) => {
+                      const isActive = this.state.activePreset === preset.value
+                      const colors = ['#28a745', '#007bff', '#6f42c1', '#fd7e14', '#20c997', '#e83e8c']
+                      const baseColor = colors[index % colors.length]
+                      return (
+                        <span
                           key={preset.value}
-                          color={this.state.activePreset === preset.value ? 'primary' : 'secondary'}
                           onClick={() => this.handlePresetChange(preset.value)}
-                          size="sm"
-                          outline={preset.isCustom}
+                          style={{
+                            display: 'inline-block',
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            fontSize: '0.85rem',
+                            fontWeight: '500',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            backgroundColor: isActive ? baseColor : 'transparent',
+                            color: isActive ? 'white' : baseColor,
+                            border: `2px solid ${baseColor}`,
+                            opacity: isActive ? 1 : 0.7
+                          }}
                         >
                           {preset.label}
-                        </Button>
-                      ))}
-                    </ButtonGroup>
+                        </span>
+                      )
+                    })}
                   </Col>
                 </FormGroup>
               )}
@@ -772,7 +861,19 @@ class DataBrowser extends Component {
                           const data = this.state.data[this.state.context][key]
                           const meta =
                             this.state.meta[this.state.context][data.path]
-                          const units = meta && meta.units ? meta.units : ''
+                          const siUnit = meta && meta.units ? meta.units : ''
+                          const category = meta?.displayUnits?.category
+
+                          // Get converted value if category exists in metadata
+                          let convertedValue = null
+                          let convertedUnit = null
+                          if (category && typeof data.value === 'number') {
+                            const converted = this.convertValue(data.value, siUnit, category)
+                            if (converted.unit !== siUnit) {
+                              convertedValue = converted.value
+                              convertedUnit = converted.unit
+                            }
+                          }
 
                           return (
                             <tr key={key}>
@@ -811,7 +912,9 @@ class DataBrowser extends Component {
                                     return (
                                       <CustomRenderer
                                         value={data.value}
-                                        units={units}
+                                        units={siUnit}
+                                        convertedValue={convertedValue}
+                                        convertedUnit={convertedUnit}
                                         {...meta?.renderer?.options}
                                       />
                                     )
@@ -819,7 +922,9 @@ class DataBrowser extends Component {
                                   return (
                                     <DefaultValueRenderer
                                       value={data.value}
-                                      units={units}
+                                      units={siUnit}
+                                      convertedValue={convertedValue}
+                                      convertedUnit={convertedUnit}
                                     />
                                   )
                                 })()}
@@ -859,12 +964,10 @@ class DataBrowser extends Component {
               {this.state.includeMeta &&
                 this.state.context &&
                 this.state.context !== 'none' && (
-                  <Table responsive bordered striped size="sm">
+                  <Table responsive size="sm" style={{ borderCollapse: 'separate', borderSpacing: '0 10px' }}>
                     <thead>
                       <tr>
-                        <th>Path</th>
-                        <th style={{ width: '120px' }}>Category</th>
-                        <th>Meta</th>
+                        <th colSpan="3">Path Metadata</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -888,25 +991,22 @@ class DataBrowser extends Component {
                         .map((path) => {
                           const meta = this.state.meta[this.state.context][path]
                           const category = meta?.displayUnits?.category || ''
+                          // Find a current value for this path
+                          const dataKeys = Object.keys(this.state.data[this.state.context] || {})
+                          const matchingKey = dataKeys.find(k => this.state.data[this.state.context][k].path === path)
+                          const currentValue = matchingKey ? this.state.data[this.state.context][matchingKey].value : undefined
                           return (
                             <tr key={path}>
-                              <td>{path}</td>
-                              <td>
-                                {category && (
-                                  <span style={{
-                                    background: '#667eea',
-                                    color: 'white',
-                                    padding: '2px 8px',
-                                    borderRadius: '4px',
-                                    fontSize: '12px'
-                                  }}>
-                                    {category}
-                                  </span>
-                                )}
-                              </td>
-                              <td>
+                              <td colSpan="3">
                                 {!path.startsWith('notifications') && (
-                                  <Meta meta={meta || {}} path={path} />
+                                  <Meta
+                                    meta={meta || {}}
+                                    path={path}
+                                    currentValue={currentValue}
+                                    activePreset={this.state.activePreset}
+                                    presetDetails={this.state.presetDetails}
+                                    unitDefinitions={this.state.unitDefinitions}
+                                  />
                                 )}
                               </td>
                             </tr>

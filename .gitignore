@@ -20,6 +20,7 @@ work/
 data/
 unitpreferences/custom-units-definitions.json
 unitpreferences/custom/
+unitpreferences/presets/custom/
 
 test/plugin-test-config/.npmrc
 test/plugin-test-config/plugin-config-data/
