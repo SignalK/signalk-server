@@ -11,7 +11,9 @@ import {
   Col,
   Label,
   FormGroup,
-  Table
+  Table,
+  Button,
+  ButtonGroup
 } from 'reactstrap'
 import moment from 'moment'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
@@ -22,6 +24,43 @@ const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
 
 const metaStorageKey = 'admin.v1.dataBrowser.meta'
+const presetStorageKey = 'admin.v1.dataBrowser.preset'
+
+// Unit preferences presets
+const PRESETS = [
+  { value: 'metric', label: 'Metric (SI)' },
+  { value: 'imperial-us', label: 'Imperial (US)' },
+  { value: 'imperial-uk', label: 'Imperial (UK)' }
+]
+
+// Fetch and set active preset
+async function fetchActivePreset() {
+  try {
+    const response = await fetch('/signalk/v1/unitpreferences/config', {
+      credentials: 'include'
+    })
+    if (response.ok) {
+      const config = await response.json()
+      return config.activePreset || 'metric'
+    }
+  } catch (e) {
+    console.error('Failed to fetch unit preferences:', e)
+  }
+  return 'metric'
+}
+
+async function setActivePreset(preset) {
+  try {
+    await fetch('/signalk/v1/unitpreferences/config', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activePreset: preset })
+    })
+  } catch (e) {
+    console.error('Failed to set unit preferences:', e)
+  }
+}
 const pauseStorageKey = 'admin.v1.dataBrowser.v1.pause'
 const rawStorageKey = 'admin.v1.dataBrowser.v1.raw'
 const contextStorageKey = 'admin.v1.dataBrowser.context'
@@ -72,7 +111,8 @@ class DataBrowser extends Component {
         JSON.parse(localStorage.getItem(selectedSourcesStorageKey) || '[]')
       ),
       sourceFilterActive:
-        localStorage.getItem(sourceFilterActiveStorageKey) === 'true'
+        localStorage.getItem(sourceFilterActiveStorageKey) === 'true',
+      activePreset: localStorage.getItem(presetStorageKey) || 'metric'
     }
 
     this.fetchSources = fetchSources.bind(this)
@@ -84,6 +124,13 @@ class DataBrowser extends Component {
     this.toggleRaw = this.toggleRaw.bind(this)
     this.toggleSourceSelection = this.toggleSourceSelection.bind(this)
     this.toggleSourceFilter = this.toggleSourceFilter.bind(this)
+    this.handlePresetChange = this.handlePresetChange.bind(this)
+  }
+
+  async handlePresetChange(preset) {
+    await setActivePreset(preset)
+    localStorage.setItem(presetStorageKey, preset)
+    this.setState({ ...this.state, activePreset: preset })
   }
 
   handleMessage(msg) {
@@ -581,6 +628,23 @@ class DataBrowser extends Component {
                   <span style={{ whiteSpace: 'nowrap' }}>Raw Values</span>
                 </Col>
               </FormGroup>
+              <FormGroup row>
+                <Col xs="12" md="12">
+                  <Label style={{ marginRight: '10px' }}>Unit Preset:</Label>
+                  <ButtonGroup>
+                    {PRESETS.map((preset) => (
+                      <Button
+                        key={preset.value}
+                        color={this.state.activePreset === preset.value ? 'primary' : 'secondary'}
+                        onClick={() => this.handlePresetChange(preset.value)}
+                        size="sm"
+                      >
+                        {preset.label}
+                      </Button>
+                    ))}
+                  </ButtonGroup>
+                </Col>
+              </FormGroup>
               {this.state.context && this.state.context !== 'none' && (
                 <FormGroup row>
                   <Col xs="3" md="2">
@@ -755,6 +819,7 @@ class DataBrowser extends Component {
                     <thead>
                       <tr>
                         <th>Path</th>
+                        <th style={{ width: '120px' }}>Category</th>
                         <th>Meta</th>
                       </tr>
                     </thead>
@@ -778,9 +843,23 @@ class DataBrowser extends Component {
                         .sort()
                         .map((path) => {
                           const meta = this.state.meta[this.state.context][path]
+                          const category = meta?.displayUnits?.category || ''
                           return (
                             <tr key={path}>
                               <td>{path}</td>
+                              <td>
+                                {category && (
+                                  <span style={{
+                                    background: '#667eea',
+                                    color: 'white',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '12px'
+                                  }}>
+                                    {category}
+                                  </span>
+                                )}
+                              </td>
                               <td>
                                 {!path.startsWith('notifications') && (
                                   <Meta meta={meta || {}} path={path} />
