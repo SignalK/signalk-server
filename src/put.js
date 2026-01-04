@@ -4,6 +4,7 @@ const debug = createDebug('signalk-server:put')
 const { createRequest, updateRequest } = require('./requestResponse')
 const skConfig = require('./config/config')
 const { getMetadata } = require('@signalk/signalk-schema')
+const { validateCategoryAssignment } = require('./unitpreferences')
 
 const pathPrefix = '/signalk'
 const versionPrefix = '/v1'
@@ -91,6 +92,17 @@ module.exports = {
         }
       } else {
         metaPath = parts.slice(0, parts.length - 1).join('.')
+      }
+
+      // Validate displayUnits.category if present
+      if (metaValue.displayUnits?.category) {
+        const schemaMeta = getMetadata('vessels.self.' + metaPath)
+        // Allow override: use PUT's units if provided, otherwise use schema's units
+        const pathSiUnit = metaValue.units || schemaMeta?.units
+        const validationError = validateCategoryAssignment(pathSiUnit, metaValue.displayUnits.category)
+        if (validationError) {
+          return { state: 'COMPLETED', statusCode: 400, message: validationError }
+        }
       }
 
       // set empty zones array explicitly to null

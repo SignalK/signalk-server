@@ -1,0 +1,125 @@
+import * as fs from 'fs'
+import * as path from 'path'
+import { CategoryMap, UnitDefinitions, Preset, UnitPreferencesConfig } from './types'
+
+const UNITPREFS_DIR = path.join(__dirname, '../../unitpreferences')
+
+let categories: CategoryMap
+let standardDefinitions: UnitDefinitions
+let customDefinitions: UnitDefinitions
+let activePreset: Preset
+let config: UnitPreferencesConfig
+let defaultCategories: { [path: string]: string } = {}
+
+export function loadAll(): void {
+  // Load categories
+  categories = JSON.parse(
+    fs.readFileSync(path.join(UNITPREFS_DIR, 'categories.json'), 'utf-8')
+  )
+
+  // Load standard definitions
+  standardDefinitions = JSON.parse(
+    fs.readFileSync(path.join(UNITPREFS_DIR, 'standard-units-definitions.json'), 'utf-8')
+  )
+
+  // Load custom definitions (if exists)
+  const customPath = path.join(UNITPREFS_DIR, 'custom-units-definitions.json')
+  if (fs.existsSync(customPath)) {
+    customDefinitions = JSON.parse(fs.readFileSync(customPath, 'utf-8'))
+  } else {
+    customDefinitions = {}
+  }
+
+  // Load config
+  const configPath = path.join(UNITPREFS_DIR, 'config.json')
+  if (fs.existsSync(configPath)) {
+    config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+  } else {
+    config = { activePreset: 'metric' }
+  }
+
+  // Load default categories
+  const defaultCatPath = path.join(UNITPREFS_DIR, 'default-categories.json')
+  if (fs.existsSync(defaultCatPath)) {
+    const defaultCatData = JSON.parse(fs.readFileSync(defaultCatPath, 'utf-8'))
+    // Build flat lookup: path -> category
+    defaultCategories = {}
+    for (const [categoryName, catDef] of Object.entries(defaultCatData.categories || {})) {
+      const def = catDef as { paths: string[] }
+      for (const p of def.paths || []) {
+        defaultCategories[p] = categoryName
+      }
+    }
+  }
+
+  // Load active preset
+  loadActivePreset()
+}
+
+function loadActivePreset(): void {
+  const presetName = config.activePreset
+
+  // Check custom presets first
+  const customPresetPath = path.join(UNITPREFS_DIR, 'presets/custom', `${presetName}.json`)
+  if (fs.existsSync(customPresetPath)) {
+    activePreset = JSON.parse(fs.readFileSync(customPresetPath, 'utf-8'))
+    return
+  }
+
+  // Fall back to built-in presets
+  const builtInPath = path.join(UNITPREFS_DIR, 'presets', `${presetName}.json`)
+  if (fs.existsSync(builtInPath)) {
+    activePreset = JSON.parse(fs.readFileSync(builtInPath, 'utf-8'))
+    return
+  }
+
+  // Default to metric
+  activePreset = JSON.parse(
+    fs.readFileSync(path.join(UNITPREFS_DIR, 'presets/metric.json'), 'utf-8')
+  )
+}
+
+export function getCategories(): CategoryMap { return categories }
+export function getStandardDefinitions(): UnitDefinitions { return standardDefinitions }
+export function getCustomDefinitions(): UnitDefinitions { return customDefinitions }
+export function getActivePreset(): Preset { return activePreset }
+export function getConfig(): UnitPreferencesConfig { return config }
+
+export function reloadPreset(): void {
+  loadActivePreset()
+}
+
+export function getMergedDefinitions(): UnitDefinitions {
+  // Custom definitions override standard
+  const merged: UnitDefinitions = JSON.parse(JSON.stringify(standardDefinitions))
+  for (const [siUnit, def] of Object.entries(customDefinitions)) {
+    if (!merged[siUnit]) {
+      merged[siUnit] = def
+    } else {
+      merged[siUnit].conversions = {
+        ...merged[siUnit].conversions,
+        ...def.conversions
+      }
+    }
+  }
+  return merged
+}
+
+export function getDefaultCategory(signalkPath: string): string | null {
+  // Direct match first
+  if (defaultCategories[signalkPath]) {
+    return defaultCategories[signalkPath]
+  }
+
+  // Try wildcard matching
+  for (const [pattern, category] of Object.entries(defaultCategories)) {
+    if (pattern.includes('*')) {
+      const regex = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '[^.]+') + '$')
+      if (regex.test(signalkPath)) {
+        return category
+      }
+    }
+  }
+
+  return null
+}

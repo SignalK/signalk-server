@@ -163,9 +163,59 @@ const DisplaySelect = ({ disabled, setValue, value }) => {
   )
 }
 
+const CATEGORIES = [
+  'speed',
+  'temperature',
+  'pressure',
+  'distance',
+  'depth',
+  'angle',
+  'angleDegrees',
+  'angularVelocity',
+  'volume',
+  'voltage',
+  'current',
+  'power',
+  'percentage',
+  'frequency',
+  'time',
+  'charge',
+  'volumeRate',
+  'length',
+  'energy',
+  'mass',
+  'area',
+  'dateTime',
+  'epoch',
+  'unitless',
+  'boolean'
+]
+
+const CategorySelect = ({ disabled, value, setValue }) => {
+  const category = value?.category || ''
+  return (
+    <Input
+      disabled={disabled}
+      type="select"
+      value={category}
+      onChange={(e) => setValue({ ...value, category: e.target.value })}
+    >
+      <option value="">-- No category --</option>
+      {CATEGORIES.map((cat) => (
+        <option key={cat} value={cat}>
+          {cat}
+        </option>
+      ))}
+    </Input>
+  )
+}
+
 const METAFIELDRENDERERS = {
   units: (props) => (
     <MetaFormRow {...props} renderValue={UnitSelect}></MetaFormRow>
+  ),
+  displayUnits: (props) => (
+    <MetaFormRow {...props} renderValue={CategorySelect}></MetaFormRow>
   ),
   description: (props) => (
     <MetaFormRow {...props} renderValue={Text}></MetaFormRow>
@@ -207,6 +257,7 @@ const METAFIELDRENDERERS = {
 }
 const METAFIELDS = [
   'units',
+  'displayUnits',
   'description',
   'displayName',
   'longName',
