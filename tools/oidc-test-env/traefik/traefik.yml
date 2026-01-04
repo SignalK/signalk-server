@@ -1,0 +1,19 @@
+# Traefik static configuration
+api:
+  insecure: true
+
+entryPoints:
+  web:
+    address: ':80'
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ':443'
+
+providers:
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true
