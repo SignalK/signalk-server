@@ -382,21 +382,19 @@ export class ResourcesApi {
   private async getFromAll(resType: string, resId: string, property?: string) {
     debug(`getFromAll(${resType}, ${resId})`)
 
-    const result = {}
+    let result = {}
     if (!this.resProvider[resType]) {
       return result
     }
-    const req: Promise<any>[] = []
-    this.resProvider[resType].forEach((id) => {
-      req.push(id.getResource(resId, property))
-    })
 
-    const resp = await Promise.allSettled(req)
-    resp.forEach((r) => {
-      if (r.status === 'fulfilled') {
-        Object.assign(result, r.value)
+    for (const i of this.resProvider[resType]) {
+      try {
+        result = await i[1].getResource(resId, property)
+        break
+      } catch (err) {
+        debug(err)
       }
-    })
+    }
     return result
   }
 
