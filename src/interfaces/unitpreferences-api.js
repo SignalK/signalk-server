@@ -6,9 +6,12 @@ const debug = createDebug('signalk-server:unitpreferences-api')
 const {
   getConfig,
   getCategories,
+  getCustomCategories,
   getActivePreset,
   getMergedDefinitions,
-  reloadPreset
+  reloadPreset,
+  reloadCustomDefinitions,
+  reloadCustomCategories
 } = require('../unitpreferences')
 
 const UNITPREFS_DIR = path.join(__dirname, '../../unitpreferences')
@@ -62,15 +65,56 @@ module.exports = function (app) {
     }
   })
 
+  // GET /signalk/v1/unitpreferences/custom-definitions
+  router.get('/custom-definitions', (req, res) => {
+    try {
+      const customPath = path.join(UNITPREFS_DIR, 'custom-units-definitions.json')
+      if (fs.existsSync(customPath)) {
+        const data = JSON.parse(fs.readFileSync(customPath, 'utf-8'))
+        res.json(data)
+      } else {
+        res.json({})
+      }
+    } catch (err) {
+      debug('Error getting custom definitions:', err)
+      res.status(500).json({ error: 'Failed to get custom definitions' })
+    }
+  })
+
   // PUT /signalk/v1/unitpreferences/custom-definitions
   router.put('/custom-definitions', (req, res) => {
     try {
       const customPath = path.join(UNITPREFS_DIR, 'custom-units-definitions.json')
       fs.writeFileSync(customPath, JSON.stringify(req.body, null, 2))
+      reloadCustomDefinitions()
       res.json({ success: true })
     } catch (err) {
       debug('Error saving custom definitions:', err)
       res.status(500).json({ error: 'Failed to save custom definitions' })
+    }
+  })
+
+  // GET /signalk/v1/unitpreferences/custom-categories
+  router.get('/custom-categories', (req, res) => {
+    try {
+      const customCats = getCustomCategories()
+      res.json(customCats)
+    } catch (err) {
+      debug('Error getting custom categories:', err)
+      res.status(500).json({ error: 'Failed to get custom categories' })
+    }
+  })
+
+  // PUT /signalk/v1/unitpreferences/custom-categories
+  router.put('/custom-categories', (req, res) => {
+    try {
+      const customPath = path.join(UNITPREFS_DIR, 'custom-categories.json')
+      fs.writeFileSync(customPath, JSON.stringify(req.body, null, 2))
+      reloadCustomCategories()
+      res.json({ success: true })
+    } catch (err) {
+      debug('Error saving custom categories:', err)
+      res.status(500).json({ error: 'Failed to save custom categories' })
     }
   })
 
