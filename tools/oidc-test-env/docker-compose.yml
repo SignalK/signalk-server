@@ -1,0 +1,41 @@
+# OIDC Test Environment for Signal K
+# Run: docker compose up -d
+# Authelia: https://auth.test.localhost
+# No /etc/hosts needed - *.localhost resolves to 127.0.0.1
+# See README.md for setup instructions
+
+services:
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik-test
+    ports:
+      - '80:80'
+      - '443:443'
+      - '8080:8080' # Traefik dashboard
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+    networks:
+      - oidc-test
+    restart: unless-stopped
+
+  authelia:
+    image: authelia/authelia:4.39
+    container_name: authelia-test
+    volumes:
+      - ./authelia:/config:ro
+      - authelia-data:/data
+    environment:
+      TZ: UTC
+    networks:
+      - oidc-test
+    depends_on:
+      - traefik
+    restart: unless-stopped
+
+networks:
+  oidc-test:
+    driver: bridge
+
+volumes:
+  authelia-data:
