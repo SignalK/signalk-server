@@ -40,11 +40,31 @@ class DeltaEditor {
   }
 
   saveSync(filename: string) {
-    fs.writeFileSync(filename, JSON.stringify(this.deltas, null, 2))
+    const tempPath = filename + '.tmp'
+    const data = JSON.stringify(this.deltas, null, 2)
+    try {
+      fs.writeFileSync(tempPath, data)
+      fs.renameSync(tempPath, filename)
+    } catch (err) {
+      try {
+        fs.unlinkSync(tempPath)
+      } catch {}
+      throw err
+    }
   }
 
-  save(filename: string): Promise<any> {
-    return fs.promises.writeFile(filename, JSON.stringify(this.deltas, null, 2))
+  async save(filename: string): Promise<void> {
+    const tempPath = filename + '.tmp'
+    const data = JSON.stringify(this.deltas, null, 2)
+    try {
+      await fs.promises.writeFile(tempPath, data)
+      await fs.promises.rename(tempPath, filename)
+    } catch (err) {
+      try {
+        await fs.promises.unlink(tempPath)
+      } catch {}
+      throw err
+    }
   }
 
   setValue(context: string, path: string, value: any) {
