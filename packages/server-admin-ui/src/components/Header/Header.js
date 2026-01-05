@@ -21,17 +21,29 @@ class Header extends Component {
     this.state = {
       dropdownOpen: false
     }
+
+    // Bind event handlers so they can be removed in componentWillUnmount
+    this.handleSidebarHide = this.handleSidebarHide.bind(this)
+    this.handlePopstate = this.handlePopstate.bind(this)
+  }
+
+  handleSidebarHide() {
+    document.body.classList.toggle('sidebar-hidden', true)
+    document.body.classList.toggle('sidebar-mobile-show', false)
+  }
+
+  handlePopstate() {
+    document.body.classList.toggle('sidebar-mobile-show', false)
   }
 
   componentDidMount() {
-    window.addEventListener('sidebar:hide', () => {
-      document.body.classList.toggle('sidebar-hidden', true)
-      document.body.classList.toggle('sidebar-mobile-show', false)
-    })
+    window.addEventListener('sidebar:hide', this.handleSidebarHide)
+    window.addEventListener('popstate', this.handlePopstate)
+  }
 
-    window.addEventListener('popstate', () => {
-      document.body.classList.toggle('sidebar-mobile-show', false)
-    })
+  componentWillUnmount() {
+    window.removeEventListener('sidebar:hide', this.handleSidebarHide)
+    window.removeEventListener('popstate', this.handlePopstate)
   }
 
   toggleDropdown() {
