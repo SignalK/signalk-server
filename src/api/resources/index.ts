@@ -364,17 +364,15 @@ export class ResourcesApi {
     if (!this.resProvider[resType]) {
       return result
     }
-    const req: Promise<any>[] = []
-    this.resProvider[resType].forEach((v) => {
-      req.push(v.listResources(params))
-    })
 
-    const resp = await Promise.allSettled(req)
-    resp.forEach((r) => {
-      if (r.status === 'fulfilled') {
-        Object.assign(result, r.value)
+    for (const i of this.resProvider[resType]) {
+      try {
+        const r = await i[1].listResources(params)
+        Object.assign(result, r)
+      } catch (err) {
+        debug(err)
       }
-    })
+    }
     return result
   }
 
@@ -413,21 +411,16 @@ export class ResourcesApi {
     if (!this.resProvider[resType]) {
       return result
     }
-    const req: Promise<any>[] = []
-    const idList: string[] = []
-    this.resProvider[resType].forEach((v, k) => {
-      idList.push(k)
-      req.push(v.getResource(resId))
-    })
 
-    const resp = await Promise.allSettled(req)
-    let idx = 0
-    resp.forEach((r) => {
-      if (r.status === 'fulfilled') {
-        result = !result ? idList[idx] : result
+    for (const i of this.resProvider[resType]) {
+      try {
+        await i[1].getResource(resId)
+        result = i[0]
+        break
+      } catch (err) {
+        debug(err)
       }
-      idx++
-    })
+    }
 
     if (!result && fallbackToDefault) {
       result = this.resProvider[resType].keys().next().value
