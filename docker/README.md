@@ -77,6 +77,82 @@ You most probably want to mount `/home/node/.signalk` from the host or as a volu
 
 **Note:** Signal K Server is installed locally (not globally with `npm -g`) in `/home/node/signalk/node_modules/`. This avoids permission issues when installing plugins and provides better isolation.
 
+## Container Runtime Detection
+
+The server automatically detects which container runtime is being used and sets the `CONTAINER_RUNTIME` environment variable accordingly. This enables plugins and addons to adapt their behavior based on the actual runtime environment.
+
+### Supported Runtimes
+
+The following container runtimes are automatically detected:
+
+- **`docker`** - Docker Engine (most common)
+- **`podman`** - Podman (rootless and rootful)
+- **`kubernetes`** - Kubernetes (any container runtime orchestrated by K8s)
+- **`containerd`** - containerd (standalone or via Docker)
+- **`crio`** - CRI-O (common in Kubernetes environments)
+- **`lxc`** - LXC/LXD containers
+
+### Detection Methods
+
+Detection uses multiple methods in priority order:
+
+1. **File markers** (most reliable):
+   - `/.dockerenv` → detects Docker
+   - `/run/.containerenv` → detects Podman
+
+2. **Environment variables**:
+   - `$KUBERNETES_SERVICE_HOST` → detects Kubernetes
+
+3. **cgroup patterns** (fallback):
+   - `/docker`, `/libpod`, `/kubepods`, `/lxc`, `/containerd` in `/proc/1/cgroup`
+
+4. **Runtime sockets** (additional check):
+   - `/var/run/crio` → detects CRI-O
+   - `/var/run/containerd/containerd.sock` → detects containerd
+
+### Usage in Code
+
+The `CONTAINER_RUNTIME` variable is available to all plugins and server code:
+
+```javascript
+// Access the runtime type
+const runtime = process.env.CONTAINER_RUNTIME;
+// Values: 'docker', 'podman', 'kubernetes', 'containerd', 'crio', 'lxc', or undefined
+
+// Check if running in any container
+const isContainer = process.env.IS_IN_DOCKER === 'true';
+
+// Example: Runtime-specific behavior
+if (runtime === 'podman') {
+  // Use rootless-friendly paths
+  console.log('Running in Podman - using user-space configuration');
+} else if (runtime === 'kubernetes') {
+  // Use K8s service discovery
+  console.log('Running in Kubernetes - using cluster DNS');
+}
+```
+
+### Manual Override
+
+You can override the automatic detection:
+
+```bash
+# Docker example
+docker run -e CONTAINER_RUNTIME=custom signalk/signalk-server:latest
+
+# Podman example
+podman run -e CONTAINER_RUNTIME=custom signalk/signalk-server:latest
+
+# Kubernetes example (in deployment YAML)
+env:
+  - name: CONTAINER_RUNTIME
+    value: "custom"
+```
+
+### Backward Compatibility
+
+The `IS_IN_DOCKER` environment variable remains set to `true` in all containerized environments for backward compatibility with existing code and plugins.
+
 ## Release images
 
 Release images `docker/Dockerfile_rel` are size optimized and there are only mandatory files in the images. During the release process updated npm packages in the server repo are built and published to npmjs. Release docker image is then built from the published npm packages like Signal K server is installed normally from npmjs.
