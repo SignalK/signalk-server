@@ -116,19 +116,19 @@ The `CONTAINER_RUNTIME` variable is available to all plugins and server code:
 
 ```javascript
 // Access the runtime type
-const runtime = process.env.CONTAINER_RUNTIME;
+const runtime = process.env.CONTAINER_RUNTIME
 // Values: 'docker', 'podman', 'kubernetes', 'containerd', 'crio', 'lxc', or undefined
 
 // Check if running in any container
-const isContainer = process.env.IS_IN_DOCKER === 'true';
+const isContainer = process.env.IS_IN_DOCKER === 'true'
 
 // Example: Runtime-specific behavior
 if (runtime === 'podman') {
   // Use rootless-friendly paths
-  console.log('Running in Podman - using user-space configuration');
+  console.log('Running in Podman - using user-space configuration')
 } else if (runtime === 'kubernetes') {
   // Use K8s service discovery
-  console.log('Running in Kubernetes - using cluster DNS');
+  console.log('Running in Kubernetes - using cluster DNS')
 }
 ```
 
