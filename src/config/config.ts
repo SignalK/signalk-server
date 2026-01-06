@@ -28,6 +28,7 @@ import { ServerApp, SignalKMessageHub, WithConfig } from '../app'
 import { createDebug } from '../debug'
 import DeltaEditor from '../deltaeditor'
 import { getExternalPort } from '../ports'
+import { atomicWriteFile } from '../atomicWrite'
 const debug = createDebug('signalk-server:config')
 
 let disableWriteSettings = false
@@ -354,21 +355,9 @@ export function sendBaseDeltas(app: ConfigApp) {
 }
 
 export function writeDefaultsFile(app: ConfigApp, defaults: any, cb: any) {
-  const defaultsPath = getDefaultsPath(app)
-  const tempPath = defaultsPath + '.tmp'
-  const data = JSON.stringify(defaults, null, 2)
-  fs.writeFile(tempPath, data, (writeErr) => {
-    if (writeErr) {
-      return cb(writeErr)
-    }
-    fs.rename(tempPath, defaultsPath, (renameErr) => {
-      if (renameErr) {
-        fs.unlink(tempPath, () => cb(renameErr))
-      } else {
-        cb()
-      }
-    })
-  })
+  atomicWriteFile(getDefaultsPath(app), JSON.stringify(defaults, null, 2))
+    .then(() => cb())
+    .catch(cb)
 }
 
 export function writeBaseDeltasFileSync(app: ConfigApp) {
@@ -443,21 +432,9 @@ function readSettingsFile(app: ConfigApp) {
 
 export function writeSettingsFile(app: ConfigApp, settings: any, cb: any) {
   if (!disableWriteSettings) {
-    const settingsPath = getSettingsFilename(app)
-    const tempPath = settingsPath + '.tmp'
-    const data = JSON.stringify(settings, null, 2)
-    fs.writeFile(tempPath, data, (writeErr) => {
-      if (writeErr) {
-        return cb(writeErr)
-      }
-      fs.rename(tempPath, settingsPath, (renameErr) => {
-        if (renameErr) {
-          fs.unlink(tempPath, () => cb(renameErr))
-        } else {
-          cb()
-        }
-      })
-    })
+    atomicWriteFile(getSettingsFilename(app), JSON.stringify(settings, null, 2))
+      .then(() => cb())
+      .catch(cb)
   } else {
     cb()
   }
