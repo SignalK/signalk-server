@@ -141,7 +141,7 @@ const AttitudeRenderer = ({ value, size = '2em' }) => {
 }
 
 const NotificationRenderer = ({ value }) => {
-  const { message, state, method = [] } = value
+  const { message, state, method = [] } = value ? value : {}
 
   const severityColor =
     {
