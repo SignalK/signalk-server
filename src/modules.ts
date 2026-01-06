@@ -182,8 +182,12 @@ export function runNpm(
   }
   let npm
 
-  const opts: { cwd?: string } = {}
+  const opts: { cwd?: string; shell?: boolean } = {}
   let packageString
+
+  if (process.platform === 'win32') {
+    opts['shell'] = true
+  }
 
   if (name) {
     packageString = version ? `${name}@${version}` : name
