@@ -68,7 +68,8 @@ const state = {
       dirty: false,
       timeoutsOk: true
     }
-  }
+  },
+  backpressureWarning: null
 }
 
 let store = createStore(
@@ -271,6 +272,18 @@ let store = createStore(
             timeoutsOk: true
           }
         }
+      }
+    }
+    if (action.type === 'BACKPRESSURE_WARNING') {
+      return {
+        ...state,
+        backpressureWarning: action.data
+      }
+    }
+    if (action.type === 'BACKPRESSURE_WARNING_CLEAR') {
+      return {
+        ...state,
+        backpressureWarning: null
       }
     }
     return {

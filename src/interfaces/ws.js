@@ -31,8 +31,24 @@ const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
 const Primus = require('primus')
 
+// Backpressure thresholds - enter at 512KB, exit at ~0 (near-empty buffer)
+// Draining fully before flush ensures user sees near-real-time data periodically
+// Can override via env vars for testing: BACKPRESSURE_ENTER=1 BACKPRESSURE_EXIT=0
+const BACKPRESSURE_ENTER_THRESHOLD = process.env.BACKPRESSURE_ENTER
+  ? parseInt(process.env.BACKPRESSURE_ENTER, 10)
+  : 512 * 1024
+const BACKPRESSURE_EXIT_THRESHOLD = process.env.BACKPRESSURE_EXIT
+  ? parseInt(process.env.BACKPRESSURE_EXIT, 10)
+  : 1024
+
 module.exports = function (app) {
   'use strict'
+
+  debug(
+    'Backpressure thresholds: enter=%d, exit=%d',
+    BACKPRESSURE_ENTER_THRESHOLD,
+    BACKPRESSURE_EXIT_THRESHOLD
+  )
 
   const api = {}
   let primuses = []
@@ -177,16 +193,67 @@ module.exports = function (app) {
         spark.sendMetaDeltas = spark.query.sendMeta === 'all'
         spark.sentMetaData = {}
 
+        // Initialize backpressure state for graceful degradation on slow connections
+        spark.backpressure = {
+          active: false,
+          accumulator: new Map(),
+          since: null
+        }
+
+        // Listen for buffer drain to flush accumulated values
+        spark.request.socket.on('drain', () => {
+          if (
+            spark.backpressure.active &&
+            spark.backpressure.accumulator.size > 0
+          ) {
+            const bufferSize = spark.request.socket.bufferSize
+            if (bufferSize <= BACKPRESSURE_EXIT_THRESHOLD) {
+              flushAccumulator(app, spark)
+            }
+          }
+        })
+
+        // Periodic check to flush accumulator (fallback if drain events don't fire reliably)
+        const backpressureFlushInterval = setInterval(() => {
+          if (
+            spark.backpressure.active &&
+            spark.backpressure.accumulator.size > 0
+          ) {
+            const bufferSize = spark.request.socket.bufferSize
+            if (bufferSize <= BACKPRESSURE_EXIT_THRESHOLD) {
+              flushAccumulator(app, spark)
+            }
+          }
+        }, 500)
+
         let onChange = (delta) => {
           const filtered = app.securityStrategy.filterReadDelta(
             spark.request.skPrincipal,
             delta
           )
-          if (filtered) {
+          if (!filtered) return
+
+          const bufferSize = spark.request.socket.bufferSize
+
+          if (bufferSize > BACKPRESSURE_ENTER_THRESHOLD) {
+            // Enter/stay in backpressure mode - accumulate latest values only
+            if (!spark.backpressure.active) {
+              spark.backpressure.active = true
+              spark.backpressure.since = Date.now()
+              debug(
+                'Entering backpressure mode for spark %s (buffer: %d)',
+                spark.id,
+                bufferSize
+              )
+            }
+            accumulateLatestValue(spark.backpressure.accumulator, filtered)
+          } else {
+            // Normal mode - send immediately
             sendMetaData(app, spark, filtered)
             spark.write(filtered)
-            assertBufferSize(spark)
           }
+
+          assertBufferSize(spark)
         }
 
         const unsubscribes = []
@@ -254,6 +321,9 @@ module.exports = function (app) {
               spark.request.connection.remoteAddress
             }:${principalId}`
           )
+
+          // Clean up backpressure flush interval
+          clearInterval(backpressureFlushInterval)
 
           unsubscribes.forEach((unsubscribe) => unsubscribe())
 
@@ -629,11 +699,29 @@ function processSubscribe(app, unsubscribes, spark, assertBufferSize, msg) {
           spark.request.skPrincipal,
           message
         )
-        if (filtered) {
+        if (!filtered) return
+
+        const bufferSize = spark.request.socket.bufferSize
+
+        if (bufferSize > BACKPRESSURE_ENTER_THRESHOLD) {
+          // Enter/stay in backpressure mode - accumulate latest values only
+          if (!spark.backpressure.active) {
+            spark.backpressure.active = true
+            spark.backpressure.since = Date.now()
+            debug(
+              'Entering backpressure mode for spark %s (buffer: %d)',
+              spark.id,
+              bufferSize
+            )
+          }
+          accumulateLatestValue(spark.backpressure.accumulator, filtered)
+        } else {
+          // Normal mode - send immediately
           sendMetaData(app, spark, filtered)
           spark.write(filtered)
-          assertBufferSize(spark)
         }
+
+        assertBufferSize(spark)
       },
       spark.request.skPrincipal
     )
@@ -790,6 +878,82 @@ function startServerLog(app, spark) {
   }
 }
 
+/**
+ * Accumulate latest value per context:path:$source during backpressure.
+ * Only keeps the most recent value for each unique path, dropping intermediate updates.
+ */
+function accumulateLatestValue(accumulator, delta) {
+  if (!delta.updates) return
+  for (const update of delta.updates) {
+    if (!update.values) continue
+    for (const pv of update.values) {
+      const key = `${delta.context}:${pv.path}:${update.$source || 'unknown'}`
+      accumulator.set(key, {
+        context: delta.context,
+        path: pv.path,
+        value: pv.value,
+        $source: update.$source,
+        timestamp: update.timestamp
+      })
+    }
+  }
+}
+
+/**
+ * Flush accumulated values as spec-compliant deltas.
+ * Groups values by context and $source:timestamp for proper delta structure.
+ */
+function flushAccumulator(app, spark) {
+  const map = spark.backpressure.accumulator
+  if (map.size === 0) return
+
+  const countBefore = map.size
+  const duration = spark.backpressure.since
+    ? Date.now() - spark.backpressure.since
+    : 0
+
+  // Group by context
+  const byContext = new Map()
+  for (const [, item] of map) {
+    if (!byContext.has(item.context)) {
+      byContext.set(item.context, new Map())
+    }
+    // Group by $source:timestamp within context
+    const bySourceTime = byContext.get(item.context)
+    const stKey = `${item.$source}:${item.timestamp}`
+    if (!bySourceTime.has(stKey)) {
+      bySourceTime.set(stKey, {
+        $source: item.$source,
+        timestamp: item.timestamp,
+        values: []
+      })
+    }
+    bySourceTime.get(stKey).values.push({
+      path: item.path,
+      value: item.value
+    })
+  }
+
+  // Send one delta per context with backpressure indicator
+  for (const [context, bySourceTime] of byContext) {
+    const delta = {
+      context,
+      updates: Array.from(bySourceTime.values()),
+      $backpressure: {
+        accumulated: countBefore,
+        duration
+      }
+    }
+    sendMetaData(app, spark, delta)
+    spark.write(delta)
+  }
+
+  map.clear()
+  spark.backpressure.active = false
+  spark.backpressure.since = null
+  debug('Flushed %d accumulated values for spark %s', countBefore, spark.id)
+}
+
 function getAssertBufferSize(config) {
   const MAXSENDBUFFERSIZE =
     process.env.MAXSENDBUFFERSIZE || config.maxSendBufferSize || 4 * 512 * 1024
@@ -804,7 +968,6 @@ function getAssertBufferSize(config) {
   }
 
   return (spark) => {
-    debug(spark.id + ' ' + spark.request.socket.bufferSize)
     if (spark.request.socket.bufferSize > MAXSENDBUFFERSIZE) {
       if (!spark.bufferSizeExceeded) {
         console.warn(

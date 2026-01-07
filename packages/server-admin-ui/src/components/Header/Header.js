@@ -8,7 +8,8 @@ import {
   DropdownItem,
   DropdownMenu,
   DropdownToggle,
-  Dropdown
+  Dropdown,
+  Alert
 } from 'reactstrap'
 import { connect } from 'react-redux'
 import { logout, restart, login } from '../../actions'
@@ -75,6 +76,26 @@ class Header extends Component {
   render() {
     return (
       <header className="app-header navbar">
+        {this.props.backpressureWarning && (
+          <Alert
+            color="warning"
+            className="backpressure-warning"
+            style={{
+              position: 'absolute',
+              top: '55px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 1050,
+              margin: 0,
+              padding: '8px 16px',
+              fontSize: '14px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+            }}
+          >
+            <i className="fa fa-exclamation-triangle" /> Network congestion
+            detected – some updates were skipped. Check your connection.
+          </Alert>
+        )}
         <NavbarToggler className="d-lg-none" onClick={this.mobileSidebarToggle}>
           <span className="navbar-toggler-icon" />
         </NavbarToggler>
@@ -156,6 +177,10 @@ class Header extends Component {
 }
 
 export default connect(
-  ({ loginStatus, restarting }) => ({ loginStatus, restarting }),
+  ({ loginStatus, restarting, backpressureWarning }) => ({
+    loginStatus,
+    restarting,
+    backpressureWarning
+  }),
   { logout, restart, login }
 )(Header)
