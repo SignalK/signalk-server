@@ -365,14 +365,21 @@ export class ResourcesApi {
       return result
     }
 
-    for (const i of this.resProvider[resType]) {
+    const req: Promise<any>[] = []
+    this.resProvider[resType].forEach((v) => {
       try {
-        const r = await i[1].listResources(params)
-        Object.assign(result, r)
+        req.push(v.listResources(params))
       } catch (err) {
         debug(err)
       }
-    }
+    })
+
+    const resp = await Promise.allSettled(req)
+    resp.forEach((r) => {
+      if (r.status === 'fulfilled') {
+        Object.assign(result, r.value)
+      }
+    })
     return result
   }
 
@@ -380,19 +387,25 @@ export class ResourcesApi {
   private async getFromAll(resType: string, resId: string, property?: string) {
     debug(`getFromAll(${resType}, ${resId})`)
 
-    let result = {}
+    const result = {}
     if (!this.resProvider[resType]) {
       return result
     }
-
-    for (const i of this.resProvider[resType]) {
+    const req: Promise<any>[] = []
+    this.resProvider[resType].forEach((id) => {
       try {
-        result = await i[1].getResource(resId, property)
-        break
+        req.push(id.getResource(resId, property))
       } catch (err) {
         debug(err)
       }
-    }
+    })
+
+    const resp = await Promise.allSettled(req)
+    resp.forEach((r) => {
+      if (r.status === 'fulfilled') {
+        Object.assign(result, r.value)
+      }
+    })
     return result
   }
 
@@ -412,15 +425,25 @@ export class ResourcesApi {
       return result
     }
 
-    for (const i of this.resProvider[resType]) {
+    const req: Promise<any>[] = []
+    const idList: string[] = []
+    this.resProvider[resType].forEach((v, k) => {
       try {
-        await i[1].getResource(resId)
-        result = i[0]
-        break
+        req.push(v.getResource(resId))
+        idList.push(k)
       } catch (err) {
         debug(err)
       }
-    }
+    })
+
+    const resp = await Promise.allSettled(req)
+    let idx = 0
+    resp.forEach((r) => {
+      if (r.status === 'fulfilled') {
+        result = !result ? idList[idx] : result
+      }
+      idx++
+    })
 
     if (!result && fallbackToDefault) {
       result = this.resProvider[resType].keys().next().value
