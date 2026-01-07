@@ -599,4 +599,99 @@ describe('Subscriptions', (_) => {
         )
       })
   })
+
+  it('announceNewPaths sends existing paths once and announces new paths', async function () {
+    await serverP
+    const wsPromiser = new WsPromiser(
+      'ws://localhost:' + port + '/signalk/v1/stream?subscribe=none'
+    )
+
+    const hello = JSON.parse(await wsPromiser.nthMessage(1))
+    const self = hello.self
+
+    // Send initial delta to populate cache
+    await sendDelta(getDelta({ context: self }), deltaUrl)
+
+    // Wait for delta to be cached
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Subscribe with announceNewPaths - should receive cached paths once
+    await wsPromiser.send({
+      context: '*',
+      announceNewPaths: true,
+      subscribe: []
+    })
+
+    // Wait for announcements
+    await new Promise((resolve) => setTimeout(resolve, 200))
+
+    // Get all messages after hello
+    const messages = wsPromiser.parsedMessages().slice(1)
+
+    // Should have received the cached paths
+    assert(messages.length > 0, 'Should receive announced paths')
+
+    // Verify we received the paths from our delta
+    const paths = new Set()
+    messages.forEach((msg) => {
+      if (msg.updates) {
+        msg.updates.forEach((update) => {
+          if (update.values) {
+            update.values.forEach((v) => {
+              if (v.path) paths.add(v.path)
+            })
+          }
+        })
+      }
+    })
+
+    assert(
+      paths.has('navigation.logTrip'),
+      'Should announce navigation.logTrip'
+    )
+    assert(paths.has('navigation.log'), 'Should announce navigation.log')
+
+    // Now send a NEW path that wasn't in the original delta
+    const newPathDelta = {
+      context: self,
+      updates: [
+        {
+          timestamp: '2014-05-03T09:14:12.000Z',
+          source: {
+            label: 'test',
+            src: '1'
+          },
+          values: [
+            {
+              path: 'environment.wind.speedApparent',
+              value: 5.5
+            }
+          ]
+        }
+      ]
+    }
+    await sendDelta(newPathDelta, deltaUrl)
+
+    // Wait for the new path announcement
+    await new Promise((resolve) => setTimeout(resolve, 200))
+
+    const allMessages = wsPromiser.parsedMessages().slice(1)
+    const allPaths = new Set()
+    allMessages.forEach((msg) => {
+      if (msg.updates) {
+        msg.updates.forEach((update) => {
+          if (update.values) {
+            update.values.forEach((v) => {
+              if (v.path) allPaths.add(v.path)
+            })
+          }
+        })
+      }
+    })
+
+    assert(
+      allPaths.has('environment.wind.speedApparent'),
+      'Should announce new path environment.wind.speedApparent'
+    )
+  })
 })
