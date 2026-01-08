@@ -2,6 +2,7 @@
 title: Security
 children:
   - setup/generating_tokens.md
+  - oidc.md
 ---
 
 # Security
@@ -212,3 +213,44 @@ And set `trustProxy` to trust only the nginx server:
 - Only enable `trustProxy` if you are actually running behind a reverse proxy
 - Configure the value to trust only your specific proxy IP address when possible
 - Using `trustProxy: true` trusts all proxies, which could allow IP spoofing if your server is directly accessible
+
+## OpenID Connect (OIDC) Authentication
+
+Signal K Server supports OpenID Connect (OIDC) for Single Sign-On (SSO) with enterprise identity providers such as Keycloak, Authentik, Auth0, and others.
+
+### Quick Configuration
+
+OIDC can be enabled via environment variables:
+
+```bash
+export SIGNALK_OIDC_ENABLED=true
+export SIGNALK_OIDC_ISSUER=https://auth.example.com
+export SIGNALK_OIDC_CLIENT_ID=signalk-server
+export SIGNALK_OIDC_CLIENT_SECRET=your-client-secret
+```
+
+Or through the Admin UI under **Security > OIDC Configuration**.
+
+### Key Features
+
+- **Single Sign-On**: Authenticate once with your identity provider
+- **Group-Based Permissions**: Map identity provider groups to Signal K permissions (admin, readwrite, readonly)
+- **Auto-Provisioning**: Automatically create Signal K users on first OIDC login
+- **PKCE Security**: Protection against authorization code interception attacks
+
+### Permission Mapping
+
+Configure group-to-permission mapping:
+
+```bash
+# Users in these groups get admin access
+export SIGNALK_OIDC_ADMIN_GROUPS=admins,sk-admin
+
+# Users in these groups get read/write access
+export SIGNALK_OIDC_READWRITE_GROUPS=crew,operators
+
+# Default permission for users not in any configured group
+export SIGNALK_OIDC_DEFAULT_PERMISSION=readonly
+```
+
+For complete setup instructions, provider-specific guides, and troubleshooting, see the [OIDC Authentication Guide](oidc.md).

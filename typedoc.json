@@ -71,7 +71,8 @@
     "json",
     "javascript",
     "typescript",
-    "nginx"
+    "nginx",
+    "yaml"
   ],
   "cacheBust": true
 }
