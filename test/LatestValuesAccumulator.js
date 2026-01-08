@@ -269,7 +269,7 @@ describe('LatestValuesAccumulator', function () {
       expect(otherDelta).to.exist
     })
 
-    it('should group values by $source and timestamp within context', function () {
+    it('should group values by $source within context', function () {
       const accumulator = new Map()
       // Two values with same source and timestamp
       accumulator.set('vessels.self:navigation.speedOverGround:gps', {
