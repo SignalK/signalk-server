@@ -1,0 +1,51 @@
+{
+  "name": "@signalk/assemblyscript-plugin-sdk",
+  "version": "0.2.0",
+  "description": "AssemblyScript SDK for developing Signal K WASM plugins",
+  "main": "assembly/index.ts",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./assembly/index.ts",
+      "types": "./index.d.ts"
+    },
+    "./assembly": {
+      "import": "./assembly/index.ts"
+    },
+    "./assembly/*": {
+      "import": "./assembly/*.ts"
+    }
+  },
+  "ascMain": "assembly/index.ts",
+  "keywords": [
+    "signalk",
+    "assemblyscript",
+    "wasm",
+    "plugin",
+    "sdk"
+  ],
+  "author": "Signal K",
+  "license": "Apache-2.0",
+  "scripts": {
+    "asbuild:debug": "asc assembly/index.ts --target debug --disableWarning 235",
+    "asbuild:release": "asc assembly/index.ts --target release --disableWarning 235",
+    "build": "npm run asbuild:release",
+    "test": "npm run asbuild:debug"
+  },
+  "devDependencies": {
+    "assemblyscript": "^0.27.0"
+  },
+  "dependencies": {
+    "as-wasi": "^0.6.0",
+    "as-fetch": "^2.1.4",
+    "assemblyscript-json": "^1.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SignalK/signalk-server.git",
+    "directory": "packages/assemblyscript-plugin-sdk"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

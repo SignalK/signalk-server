@@ -1,0 +1,27 @@
+# Rust build artifacts
+target/
+Cargo.lock
+
+# Editor/IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Development files
+*.rs.bk
+.rustfmt.toml
+rustfmt.toml
+.cargo/
+
+# Keep only the essential files:
+# - package.json
+# - plugin.wasm
+# - README.md
+# - wit/ (for documentation)
+# - src/ (optional, for reference)

@@ -1,0 +1,18 @@
+# Rust build artifacts
+target/
+Cargo.lock
+
+# Editor/IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Built WASM (will be built fresh)
+# Uncomment if you want to commit the pre-built WASM:
+# !plugin.wasm
