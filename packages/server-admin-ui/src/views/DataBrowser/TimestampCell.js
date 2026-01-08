@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from 'react'
 
 /**
  * TimestampCell - Displays timestamp with fade animation on update
- * Note: Removed key={animationKey} which was causing DOM element recreation
- * on every update, leading to memory leaks. CSS class toggle handles animation.
  */
 function TimestampCell({ timestamp, isPaused, className }) {
   const [isUpdated, setIsUpdated] = useState(false)

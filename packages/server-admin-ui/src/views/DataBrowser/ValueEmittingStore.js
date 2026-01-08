@@ -1,14 +1,14 @@
 /**
- * DataBrowserStore - Simple EventEmitter-style store for path data
+ * ValueEmittingStore - Generic Signal K value store with per-path subscriptions
  *
+ * Stores values by context and path$SourceKey, emitting updates to subscribers.
  * Provides O(1) per-path subscriptions instead of Redux's O(n) selectors.
- * Each row component subscribes only to its own path.
  *
  * Note: path$SourceKey is a unique identifier combining path and $source,
  * since the same path can have multiple values from different sources.
  */
 
-class DataBrowserStore {
+class ValueEmittingStore {
   constructor() {
     // Data storage: { context: { path$SourceKey: pathData } }
     this.data = {}
@@ -113,31 +113,10 @@ class DataBrowserStore {
     this.structureListeners.add(callback)
     return () => this.structureListeners.delete(callback)
   }
-
-  /**
-   * Clear all data for a context
-   */
-  clearContext(context) {
-    delete this.data[context]
-    delete this.meta[context]
-    this.version++
-    this.structureListeners.forEach((callback) => callback(this.version))
-  }
-
-  /**
-   * Clear all data
-   */
-  clear() {
-    this.data = {}
-    this.meta = {}
-    this.listeners.clear()
-    this.version++
-    this.structureListeners.forEach((callback) => callback(this.version))
-  }
 }
 
 // Singleton instance
-const store = new DataBrowserStore()
+const store = new ValueEmittingStore()
 
 export default store
-export { DataBrowserStore }
+export { ValueEmittingStore }

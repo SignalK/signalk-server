@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import DataRow from './DataRow'
-import subscriptionManager from './SubscriptionManager'
 import granularSubscriptionManager from './GranularSubscriptionManager'
 import './VirtualTable.css'
 
@@ -93,14 +92,14 @@ function VirtualizedDataTable({
   // Cleanup subscriptions on unmount
   useEffect(() => {
     return () => {
-      subscriptionManager.unsubscribeAll()
+      granularSubscriptionManager.unsubscribeAll()
     }
   }, [])
 
   // Handle pause/unpause
   useEffect(() => {
     if (isPaused) {
-      subscriptionManager.unsubscribeAll()
+      granularSubscriptionManager.unsubscribeAll()
     }
   }, [isPaused])
 
@@ -115,33 +114,21 @@ function VirtualizedDataTable({
   // In RAW mode, render ALL items (no virtualization) to avoid flicker from variable heights
   // Note: Must be called before any early returns to maintain hook order
   const visibleItems = useMemo(() => {
-    const items = []
     if (raw) {
       // RAW mode: render all items
-      for (let i = 0; i < path$SourceKeys.length; i++) {
-        if (path$SourceKeys[i]) {
-          items.push({
-            index: i,
-            path$SourceKey: path$SourceKeys[i]
-          })
-        }
-      }
-    } else {
-      // Normal mode: only render visible range
-      for (
-        let i = visibleRange.start;
-        i <= visibleRange.end && i < path$SourceKeys.length;
-        i++
-      ) {
-        if (path$SourceKeys[i]) {
-          items.push({
-            index: i,
-            path$SourceKey: path$SourceKeys[i]
-          })
-        }
-      }
+      return path$SourceKeys.map((path$SourceKey, index) => ({
+        index,
+        path$SourceKey
+      }))
     }
-    return items
+    // Normal mode: only render visible range
+    const end = Math.min(visibleRange.end + 1, path$SourceKeys.length)
+    return path$SourceKeys
+      .slice(visibleRange.start, end)
+      .map((path$SourceKey, i) => ({
+        index: visibleRange.start + i,
+        path$SourceKey
+      }))
   }, [raw, visibleRange.start, visibleRange.end, path$SourceKeys])
 
   // Report visible paths to granular subscription manager

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import store from './DataBrowserStore'
+import store from './ValueEmittingStore'
 
 // Throttle UI updates to max 5 per second per path
 // Data still flows in real-time over WebSocket, only UI re-renders are throttled

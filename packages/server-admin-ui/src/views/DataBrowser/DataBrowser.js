@@ -15,9 +15,8 @@ import {
 } from 'reactstrap'
 import moment from 'moment'
 import Meta from './Meta'
-import store from './DataBrowserStore'
+import store from './ValueEmittingStore'
 import VirtualizedDataTable from './VirtualizedDataTable'
-import subscriptionManager from './SubscriptionManager'
 import granularSubscriptionManager from './GranularSubscriptionManager'
 import { getPath$SourceKey } from './pathUtils'
 
@@ -250,7 +249,7 @@ class DataBrowser extends Component {
     if (this.updatePath$SourceKeysTimeout) {
       clearTimeout(this.updatePath$SourceKeysTimeout)
     }
-    subscriptionManager.unsubscribeAll()
+    granularSubscriptionManager.unsubscribeAll()
   }
 
   handleContextChange(selectedOption) {
@@ -331,7 +330,7 @@ class DataBrowser extends Component {
     localStorage.setItem(pauseStorageKey, this.state.pause)
     if (this.state.pause) {
       this.unsubscribeToData()
-      subscriptionManager.unsubscribeAll()
+      granularSubscriptionManager.unsubscribeAll()
     } else {
       this.fetchSources()
       this.subscribeToDataIfNeeded()
