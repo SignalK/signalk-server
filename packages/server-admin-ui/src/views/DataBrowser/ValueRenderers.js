@@ -171,7 +171,7 @@ const NotificationRenderer = ({ value }) => {
           <span style={circleStyle}></span>
         )}
         <span className="d-flex" style={{ marginLeft: '.5em' }}>
-          {state ? state.toUpperCase() : 'undefined' + ': ' + message}
+          {(state ? state.toUpperCase() : 'undefined') + ': ' + message}
         </span>
       </div>
       <div className="d-flex" style={{ gap: '.5em' }}>
