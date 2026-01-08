@@ -167,6 +167,23 @@ export function openServerEventsConnection(dispatch, isReconnect) {
 
   ws.onmessage = function (event) {
     const serverEvent = JSON.parse(event.data)
+
+    // Check for backpressure indicator on any delta
+    if (serverEvent.$backpressure) {
+      dispatch({
+        type: 'BACKPRESSURE_WARNING',
+        data: {
+          accumulated: serverEvent.$backpressure.accumulated,
+          duration: serverEvent.$backpressure.duration,
+          timestamp: Date.now()
+        }
+      })
+      // Auto-clear after 10 seconds
+      setTimeout(() => {
+        dispatch({ type: 'BACKPRESSURE_WARNING_CLEAR' })
+      }, 10000)
+    }
+
     if (serverEvent.type) {
       dispatch(serverEvent)
     } else if (serverEvent.name) {
