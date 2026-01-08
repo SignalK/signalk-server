@@ -1,3 +1,5 @@
+@use 'sass:math';
+
 // scss-lint:disable NestingDepth, SelectorDepth
 .sidebar {
   display: flex;
@@ -128,7 +130,7 @@
     i {
       display: inline-block;
       width: 20px;
-      margin: 0 ($sidebar-nav-link-padding-x / 2) 0 0;
+      margin: 0 math.div($sidebar-nav-link-padding-x, 2) 0 0;
       font-size: 14px;
       color: $sidebar-nav-link-icon-color;
       text-align: center;
@@ -227,7 +229,8 @@
 
   .nav-label {
     display: block;
-    padding: ($sidebar-nav-link-padding-y / 8) $sidebar-nav-link-padding-x;
+    padding: math.div($sidebar-nav-link-padding-y, 8)
+      $sidebar-nav-link-padding-x;
     color: $sidebar-nav-title-color;
 
     &:hover {
@@ -237,7 +240,7 @@
 
     i {
       width: 20px;
-      margin: -3px ($sidebar-nav-link-padding-x / 2) 0 0;
+      margin: -3px math.div($sidebar-nav-link-padding-x, 2) 0 0;
       font-size: 10px;
       color: $sidebar-nav-link-icon-color;
       text-align: center;
@@ -275,7 +278,7 @@
       background-image: $sidebar-minimizer-indicator;
       background-repeat: no-repeat;
       background-position: center;
-      background-size: $sidebar-minimizer-height / 4;
+      background-size: math.div($sidebar-minimizer-height, 4);
       transition: 0.3s;
     }
 
@@ -317,7 +320,7 @@
             i {
               display: block;
               width: 100%;
-              margin: $spacer / 4 0;
+              margin: math.div($spacer, 4) 0;
               font-size: 24px;
             }
 
