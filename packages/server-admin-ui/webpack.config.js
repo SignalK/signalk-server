@@ -40,7 +40,21 @@ module.exports = {
           // Translates CSS into CommonJS
           'css-loader',
           // Compiles Sass to CSS
-          'sass-loader'
+          {
+            loader: 'sass-loader',
+            options: {
+              sassOptions: {
+                // Silence deprecation warnings from Bootstrap 4 (deprecated library)
+                silenceDeprecations: [
+                  'import',
+                  'global-builtin',
+                  'color-functions',
+                  'legacy-js-api'
+                ],
+                quietDeps: true
+              }
+            }
+          }
         ]
       },
       {
