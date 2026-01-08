@@ -18,20 +18,16 @@ RUN npm config rm proxy \
 
 FROM base AS tarballs_installed
 WORKDIR /home/node/signalk
-COPY *.tgz .
-USER root
+COPY --chown=node:node *.tgz .
 
-RUN npm i -g *.tgz
-# move server-admin-ui that gets installed as sibling of signalk-server
-RUN mv /usr/lib/node_modules/@signalk/* /usr/lib/node_modules/signalk-server/node_modules/@signalk/
+# Install all tarballs locally (not globally) to avoid permission issues
+# npm will resolve dependencies between the local tarballs
+RUN npm install ./*.tgz
 
 FROM base
 
-USER root
-# add signalk-server on path like in production build
-RUN ln -s /usr/lib/node_modules/signalk-server/bin/signalk-server /usr/bin/signalk-server
-# all -g installed modules
-COPY --from=tarballs_installed /usr/lib/node_modules /usr/lib/node_modules
+# Copy locally installed modules from tarballs_installed stage
+COPY --from=tarballs_installed --chown=node:node /home/node/signalk /home/node/signalk
 
 USER node
 COPY --chown=node docker/startup.sh startup.sh
