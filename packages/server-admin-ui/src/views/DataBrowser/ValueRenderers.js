@@ -2,12 +2,10 @@ import React from 'react'
 import { Suspense } from 'react'
 import { toLazyDynamicComponent } from '../Webapps/dynamicutilities'
 import ReactHtmlParser from 'react-html-parser'
-import {
-  faEye,
-  faEyeSlash,
-  faBell,
-  faBellSlash
-} from '@fortawesome/free-solid-svg-icons'
+import { faEye } from '@fortawesome/free-solid-svg-icons/faEye'
+import { faEyeSlash } from '@fortawesome/free-solid-svg-icons/faEyeSlash'
+import { faBell } from '@fortawesome/free-solid-svg-icons/faBell'
+import { faBellSlash } from '@fortawesome/free-solid-svg-icons/faBellSlash'
 
 import '../../blinking-circle.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
