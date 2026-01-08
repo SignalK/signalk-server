@@ -26,11 +26,31 @@ module.exports = {
         }
       },
       {
-        test: /\.(woff(2)?|ttf|eot|svg)(\?v=\d+\.\d+\.\d+)?$/,
-        loader: 'file-loader',
-        options: {
-          name: './fonts/[name].[hash].[ext]'
+        // Load font files (woff, woff2, ttf, eot)
+        test: /\.(woff(2)?|ttf|eot)(\?v=\d+\.\d+\.\d+)?$/,
+        type: 'asset/resource',
+        generator: {
+          filename: './fonts/[name].[hash][ext]'
         }
+      },
+      {
+        // Skip SVG font files from node_modules (only needed for IE9)
+        // This reduces bundle size by ~2MB
+        test: /\.svg(\?.*)?$/,
+        include: /node_modules/,
+        use: {
+          loader: 'file-loader',
+          options: {
+            emitFile: false,
+            name: '[name].[ext]'
+          }
+        }
+      },
+      {
+        // Handle project SVG images (not from node_modules)
+        test: /\.svg$/,
+        exclude: /node_modules/,
+        type: 'asset/resource'
       },
       {
         test: /\.(scss)$/,
