@@ -1,0 +1,47 @@
+{
+  "name": "@signalk/example-anchor-watch-dotnet",
+  "version": "0.1.0",
+  "description": "Anchor Watch WASM plugin built with C#/.NET 10 - monitors vessel position relative to anchor",
+  "keywords": [
+    "signalk-wasm-plugin"
+  ],
+  "wasmManifest": "jco-output/dotnet.js",
+  "wasmFormat": "component-model",
+  "wasmCapabilities": {
+    "network": false,
+    "storage": "vfs-only",
+    "dataRead": true,
+    "dataWrite": true,
+    "serialPorts": false,
+    "putHandlers": true
+  },
+  "signalk": {
+    "appIcon": "./resources/app-icon.svg",
+    "displayName": "Anchor Watch (.NET)"
+  },
+  "author": "Signal K Team",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SignalK/signalk-server.git",
+    "directory": "examples/wasm-plugins/example-anchor-watch-dotnet"
+  },
+  "files": [
+    "jco-output/**/*",
+    "wit/**/*",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "dotnet build -c Release",
+    "build:debug": "dotnet build",
+    "clean": "dotnet clean && rm -rf obj bin jco-output",
+    "transpile": "npx @bytecodealliance/jco transpile bin/Debug/net10.0/wasi-wasm/native/AnchorWatch.wasm -o jco-output --name dotnet --map \"signalk:plugin/signalk-api=./signalk-api.js\" --tla-compat && node scripts/patch-jco-output.js",
+    "prepublishOnly": "npm run build && npm run transpile"
+  },
+  "dependencies": {
+    "@bytecodealliance/preview2-shim": "^0.17.0"
+  },
+  "devDependencies": {
+    "@bytecodealliance/jco": "^1.10.0"
+  }
+}
