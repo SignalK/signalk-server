@@ -213,19 +213,6 @@ module.exports = function (app) {
           }
         })
 
-        // Periodic check to flush accumulator (fallback if drain events don't fire reliably)
-        const backpressureFlushInterval = setInterval(() => {
-          if (
-            spark.backpressure.active &&
-            spark.backpressure.accumulator.size > 0
-          ) {
-            const bufferSize = spark.request.socket.bufferSize
-            if (bufferSize <= BACKPRESSURE_EXIT_THRESHOLD) {
-              flushAccumulator(app, spark)
-            }
-          }
-        }, 500)
-
         let onChange = (delta) => {
           const filtered = app.securityStrategy.filterReadDelta(
             spark.request.skPrincipal,
@@ -321,9 +308,6 @@ module.exports = function (app) {
               spark.request.connection.remoteAddress
             }:${principalId}`
           )
-
-          // Clean up backpressure flush interval
-          clearInterval(backpressureFlushInterval)
 
           unsubscribes.forEach((unsubscribe) => unsubscribe())
 
