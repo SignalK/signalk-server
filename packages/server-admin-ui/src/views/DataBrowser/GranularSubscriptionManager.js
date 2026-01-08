@@ -1,3 +1,5 @@
+import { getPathFromKey } from './pathUtils'
+
 /**
  * GranularSubscriptionManager - Manages visible-only WebSocket subscriptions
  *
@@ -190,7 +192,7 @@ class GranularSubscriptionManager {
         return
       }
 
-      // Extract unique paths (remove source suffix from pathKeys)
+      // Extract unique paths (remove source suffix from path$SourceKeys)
       const uniquePaths = this._extractUniquePaths(newPaths)
 
       if (uniquePaths.length === 0) {
@@ -223,14 +225,13 @@ class GranularSubscriptionManager {
   }
 
   /**
-   * Extract unique paths from pathKeys
-   * pathKey format: "navigation.position$sourceId" -> extract "navigation.position"
+   * Extract unique paths from path$SourceKeys
+   * path$SourceKey format: "navigation.position$sourceId" -> extract "navigation.position"
    */
-  _extractUniquePaths(pathKeys) {
+  _extractUniquePaths(path$SourceKeys) {
     const paths = new Set()
-    for (const pk of pathKeys) {
-      const dollarIdx = pk.indexOf('$')
-      const path = dollarIdx !== -1 ? pk.substring(0, dollarIdx) : pk
+    for (const pk of path$SourceKeys) {
+      const path = getPathFromKey(pk)
       if (path) {
         paths.add(path)
       }

@@ -19,6 +19,7 @@ import store from './DataBrowserStore'
 import VirtualizedDataTable from './VirtualizedDataTable'
 import subscriptionManager from './SubscriptionManager'
 import granularSubscriptionManager from './GranularSubscriptionManager'
+import { getPath$SourceKey } from './pathUtils'
 
 const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
@@ -75,7 +76,7 @@ class DataBrowser extends Component {
         localStorage.getItem(sourceFilterActiveStorageKey) === 'true',
       // For forcing re-renders when store updates
       storeVersion: 0,
-      pathKeys: []
+      path$SourceKeys: []
     }
 
     this.fetchSources = fetchSources.bind(this)
@@ -87,7 +88,7 @@ class DataBrowser extends Component {
     this.toggleRaw = this.toggleRaw.bind(this)
     this.toggleSourceSelection = this.toggleSourceSelection.bind(this)
     this.toggleSourceFilter = this.toggleSourceFilter.bind(this)
-    this.updatePathKeys = this.updatePathKeys.bind(this)
+    this.updatePath$SourceKeys = this.updatePath$SourceKeys.bind(this)
   }
 
   handleMessage(msg) {
@@ -130,7 +131,7 @@ class DataBrowser extends Component {
                 if (wasNew) isNew = true
               })
             } else {
-              const pathKey = vp.path + '$' + update['$source']
+              const path$SourceKey = getPath$SourceKey(vp.path, update.$source)
               const pathData = {
                 path: vp.path,
                 $source: update.$source,
@@ -139,8 +140,8 @@ class DataBrowser extends Component {
                 sentence,
                 timestamp: formattedTimestamp
               }
-              const wasNew = !store.getPathData(key, pathKey)
-              store.updatePath(key, pathKey, pathData)
+              const wasNew = !store.getPathData(key, path$SourceKey)
+              store.updatePath(key, path$SourceKey, pathData)
               if (wasNew) isNew = true
             }
           })
@@ -154,7 +155,7 @@ class DataBrowser extends Component {
 
       // Update path keys if new paths were added or if this is the selected context
       if (isNew || (this.state.context && this.state.context === key)) {
-        this.updatePathKeys()
+        this.updatePath$SourceKeys()
         if (!this.state.hasData) {
           this.setState({ hasData: true })
         }
@@ -162,8 +163,8 @@ class DataBrowser extends Component {
     }
   }
 
-  updatePathKeys() {
-    const allKeys = store.getPathKeys(this.state.context)
+  updatePath$SourceKeys() {
+    const allKeys = store.getPath$SourceKeys(this.state.context)
 
     const filtered = allKeys.filter((key) => {
       // Search filter
@@ -190,7 +191,7 @@ class DataBrowser extends Component {
     filtered.sort()
 
     this.setState({
-      pathKeys: filtered,
+      path$SourceKeys: filtered,
       storeVersion: store.version
     })
   }
@@ -228,11 +229,11 @@ class DataBrowser extends Component {
     // Subscribe to store structure changes (debounced to avoid React render conflicts)
     this.unsubscribeStore = store.subscribeToStructure(() => {
       // Use setTimeout to defer state update and avoid "setState during render" error
-      if (this.updatePathKeysTimeout) {
-        clearTimeout(this.updatePathKeysTimeout)
+      if (this.updatePath$SourceKeysTimeout) {
+        clearTimeout(this.updatePath$SourceKeysTimeout)
       }
-      this.updatePathKeysTimeout = setTimeout(() => {
-        this.updatePathKeys()
+      this.updatePath$SourceKeysTimeout = setTimeout(() => {
+        this.updatePath$SourceKeys()
       }, 50)
     })
   }
@@ -246,8 +247,8 @@ class DataBrowser extends Component {
     if (this.unsubscribeStore) {
       this.unsubscribeStore()
     }
-    if (this.updatePathKeysTimeout) {
-      clearTimeout(this.updatePathKeysTimeout)
+    if (this.updatePath$SourceKeysTimeout) {
+      clearTimeout(this.updatePath$SourceKeysTimeout)
     }
     subscriptionManager.unsubscribeAll()
   }
@@ -270,7 +271,7 @@ class DataBrowser extends Component {
         sourceFilterActive: false
       },
       () => {
-        this.updatePathKeys()
+        this.updatePath$SourceKeys()
       }
     )
     localStorage.setItem(contextStorageKey, value)
@@ -309,7 +310,7 @@ class DataBrowser extends Component {
 
   handleSearch(event) {
     this.setState({ ...this.state, search: event.target.value }, () => {
-      this.updatePathKeys()
+      this.updatePath$SourceKeys()
     })
     localStorage.setItem(searchStorageKey, event.target.value)
   }
@@ -369,7 +370,7 @@ class DataBrowser extends Component {
         sourceFilterActive: newSourceFilterActive
       },
       () => {
-        this.updatePathKeys()
+        this.updatePath$SourceKeys()
       }
     )
   }
@@ -384,7 +385,7 @@ class DataBrowser extends Component {
         sourceFilterActive: newSourceFilterActive
       },
       () => {
-        this.updatePathKeys()
+        this.updatePath$SourceKeys()
       }
     )
   }
@@ -497,7 +498,7 @@ class DataBrowser extends Component {
                 this.state.context &&
                 this.state.context !== 'none' && (
                   <VirtualizedDataTable
-                    pathKeys={this.state.pathKeys}
+                    path$SourceKeys={this.state.path$SourceKeys}
                     context={this.state.context}
                     raw={this.state.raw}
                     isPaused={this.state.pause}
@@ -559,7 +560,7 @@ class DataBrowser extends Component {
   }
 
   getUniquePathsForMeta() {
-    const allKeys = store.getPathKeys(this.state.context)
+    const allKeys = store.getPath$SourceKeys(this.state.context)
 
     // Filter by search
     const filtered = allKeys.filter((key) => {

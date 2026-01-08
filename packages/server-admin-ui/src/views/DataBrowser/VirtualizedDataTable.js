@@ -9,7 +9,7 @@ import './VirtualTable.css'
  * Simple implementation compatible with React 16
  */
 function VirtualizedDataTable({
-  pathKeys,
+  path$SourceKeys,
   context,
   raw,
   isPaused,
@@ -42,13 +42,16 @@ function VirtualizedDataTable({
       Math.floor(startOffset / rowHeight) - overscan
     )
     const visibleCount = Math.ceil(viewportHeight / rowHeight) + overscan * 2
-    const endIndex = Math.min(pathKeys.length - 1, startIndex + visibleCount)
+    const endIndex = Math.min(
+      path$SourceKeys.length - 1,
+      startIndex + visibleCount
+    )
 
     setVisibleRange((prev) => {
       // Only update if range actually changed to avoid excessive re-renders
       // Use smaller threshold for smoother scrolling, especially at boundaries
       const atStart = startIndex === 0
-      const atEnd = endIndex >= pathKeys.length - 1
+      const atEnd = endIndex >= path$SourceKeys.length - 1
       const significantChange =
         Math.abs(prev.start - startIndex) > 2 ||
         Math.abs(prev.end - endIndex) > 2
@@ -58,7 +61,7 @@ function VirtualizedDataTable({
       }
       return prev
     })
-  }, [pathKeys.length, rowHeight, overscan])
+  }, [path$SourceKeys.length, rowHeight, overscan])
 
   // Set up scroll listener (only when not in RAW mode)
   // RAW mode disables virtualization due to highly variable row heights
@@ -106,7 +109,7 @@ function VirtualizedDataTable({
   const spacerBeforeHeight = raw ? 0 : visibleRange.start * rowHeight
   const spacerAfterHeight = raw
     ? 0
-    : Math.max(0, (pathKeys.length - visibleRange.end - 1) * rowHeight)
+    : Math.max(0, (path$SourceKeys.length - visibleRange.end - 1) * rowHeight)
 
   // Build visible items - memoized to prevent unnecessary re-renders
   // In RAW mode, render ALL items (no virtualization) to avoid flicker from variable heights
@@ -115,11 +118,11 @@ function VirtualizedDataTable({
     const items = []
     if (raw) {
       // RAW mode: render all items
-      for (let i = 0; i < pathKeys.length; i++) {
-        if (pathKeys[i]) {
+      for (let i = 0; i < path$SourceKeys.length; i++) {
+        if (path$SourceKeys[i]) {
           items.push({
             index: i,
-            pathKey: pathKeys[i]
+            path$SourceKey: path$SourceKeys[i]
           })
         }
       }
@@ -127,19 +130,19 @@ function VirtualizedDataTable({
       // Normal mode: only render visible range
       for (
         let i = visibleRange.start;
-        i <= visibleRange.end && i < pathKeys.length;
+        i <= visibleRange.end && i < path$SourceKeys.length;
         i++
       ) {
-        if (pathKeys[i]) {
+        if (path$SourceKeys[i]) {
           items.push({
             index: i,
-            pathKey: pathKeys[i]
+            path$SourceKey: path$SourceKeys[i]
           })
         }
       }
     }
     return items
-  }, [raw, visibleRange.start, visibleRange.end, pathKeys])
+  }, [raw, visibleRange.start, visibleRange.end, path$SourceKeys])
 
   // Report visible paths to granular subscription manager
   // Must be after visibleItems useMemo since it depends on it
@@ -147,11 +150,22 @@ function VirtualizedDataTable({
     if (isPaused) return
     if (visibleItems.length === 0) return
 
-    const visiblePathKeys = visibleItems.map((item) => item.pathKey)
-    granularSubscriptionManager.requestPaths(visiblePathKeys, pathKeys)
-  }, [visibleRange.start, visibleRange.end, pathKeys, isPaused, visibleItems])
+    const visiblePath$SourceKeys = visibleItems.map(
+      (item) => item.path$SourceKey
+    )
+    granularSubscriptionManager.requestPaths(
+      visiblePath$SourceKeys,
+      path$SourceKeys
+    )
+  }, [
+    visibleRange.start,
+    visibleRange.end,
+    path$SourceKeys,
+    isPaused,
+    visibleItems
+  ])
 
-  if (pathKeys.length === 0) {
+  if (path$SourceKeys.length === 0) {
     return (
       <div className="virtual-table">
         <div className="virtual-table-info">
@@ -209,8 +223,8 @@ function VirtualizedDataTable({
         {/* Visible rows - rendered in normal flow for variable heights */}
         {visibleItems.map((item) => (
           <DataRow
-            key={item.pathKey}
-            pathKey={item.pathKey}
+            key={item.path$SourceKey}
+            path$SourceKey={item.path$SourceKey}
             context={context}
             index={item.index}
             raw={raw}
@@ -227,8 +241,8 @@ function VirtualizedDataTable({
       {/* Info footer */}
       <div className="virtual-table-info">
         {raw
-          ? `Showing all ${pathKeys.length} paths (RAW mode)`
-          : `Showing ${visibleItems.length} of ${pathKeys.length} paths (rows ${visibleRange.start + 1}-${Math.min(visibleRange.end + 1, pathKeys.length)})`}
+          ? `Showing all ${path$SourceKeys.length} paths (RAW mode)`
+          : `Showing ${visibleItems.length} of ${path$SourceKeys.length} paths (rows ${visibleRange.start + 1}-${Math.min(visibleRange.end + 1, path$SourceKeys.length)})`}
       </div>
     </div>
   )

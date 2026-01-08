@@ -3,15 +3,18 @@
  *
  * Provides O(1) per-path subscriptions instead of Redux's O(n) selectors.
  * Each row component subscribes only to its own path.
+ *
+ * Note: path$SourceKey is a unique identifier combining path and $source,
+ * since the same path can have multiple values from different sources.
  */
 
 class DataBrowserStore {
   constructor() {
-    // Data storage: { context: { pathKey: pathData } }
+    // Data storage: { context: { path$SourceKey: pathData } }
     this.data = {}
     // Meta storage: { context: { path: metaData } }
     this.meta = {}
-    // Per-path listeners: Map<"context:pathKey", Set<callback>>
+    // Per-path listeners: Map<"context:path$SourceKey", Set<callback>>
     this.listeners = new Map()
     // Listeners for structural changes (new paths added)
     this.structureListeners = new Set()
@@ -22,16 +25,16 @@ class DataBrowserStore {
   /**
    * Update a single path's data and notify only its subscribers
    */
-  updatePath(context, pathKey, pathData) {
+  updatePath(context, path$SourceKey, pathData) {
     if (!this.data[context]) {
       this.data[context] = {}
     }
 
-    const isNew = !this.data[context][pathKey]
-    this.data[context][pathKey] = pathData
+    const isNew = !this.data[context][path$SourceKey]
+    this.data[context][path$SourceKey] = pathData
 
     // Notify path-specific listeners
-    const key = `${context}:${pathKey}`
+    const key = `${context}:${path$SourceKey}`
     const listeners = this.listeners.get(key)
     if (listeners) {
       listeners.forEach((callback) => callback(pathData))
@@ -57,8 +60,8 @@ class DataBrowserStore {
   /**
    * Get data for a specific path
    */
-  getPathData(context, pathKey) {
-    return this.data[context]?.[pathKey]
+  getPathData(context, path$SourceKey) {
+    return this.data[context]?.[path$SourceKey]
   }
 
   /**
@@ -71,7 +74,7 @@ class DataBrowserStore {
   /**
    * Get all path keys for a context
    */
-  getPathKeys(context) {
+  getPath$SourceKeys(context) {
     return Object.keys(this.data[context] || {})
   }
 
@@ -85,8 +88,8 @@ class DataBrowserStore {
   /**
    * Subscribe to a specific path - returns unsubscribe function
    */
-  subscribe(context, pathKey, callback) {
-    const key = `${context}:${pathKey}`
+  subscribe(context, path$SourceKey, callback) {
+    const key = `${context}:${path$SourceKey}`
     if (!this.listeners.has(key)) {
       this.listeners.set(key, new Set())
     }

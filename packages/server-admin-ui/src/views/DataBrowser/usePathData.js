@@ -10,18 +10,20 @@ const THROTTLE_MS = 200
  * Only re-renders when THIS path's data changes
  * Throttled to prevent CPU spikes from high-frequency updates
  */
-export function usePathData(context, pathKey) {
-  const [data, setData] = useState(() => store.getPathData(context, pathKey))
+export function usePathData(context, path$SourceKey) {
+  const [data, setData] = useState(() =>
+    store.getPathData(context, path$SourceKey)
+  )
   const lastUpdateRef = useRef(0)
   const pendingDataRef = useRef(null)
   const timeoutRef = useRef(null)
 
   useEffect(() => {
     // Get initial data
-    setData(store.getPathData(context, pathKey))
+    setData(store.getPathData(context, path$SourceKey))
 
     // Subscribe to updates for this specific path
-    const unsubscribe = store.subscribe(context, pathKey, (newData) => {
+    const unsubscribe = store.subscribe(context, path$SourceKey, (newData) => {
       const now = Date.now()
       const elapsed = now - lastUpdateRef.current
 
@@ -51,7 +53,7 @@ export function usePathData(context, pathKey) {
         clearTimeout(timeoutRef.current)
       }
     }
-  }, [context, pathKey])
+  }, [context, path$SourceKey])
 
   return data
 }

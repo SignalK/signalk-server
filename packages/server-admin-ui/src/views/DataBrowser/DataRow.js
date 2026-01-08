@@ -9,7 +9,7 @@ import { getValueRenderer, DefaultValueRenderer } from './ValueRenderers'
  * Only re-renders when THIS path's data changes
  */
 function DataRow({
-  pathKey,
+  path$SourceKey,
   context,
   index,
   raw,
@@ -17,7 +17,7 @@ function DataRow({
   onToggleSource,
   selectedSources
 }) {
-  const data = usePathData(context, pathKey)
+  const data = usePathData(context, path$SourceKey)
   const meta = useMetaData(context, data?.path)
 
   if (!data) {
