@@ -27,6 +27,10 @@ const { putPath, deletePath } = require('../put')
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
+import {
+  accumulateLatestValue,
+  buildFlushDeltas
+} from '../LatestValuesAccumulator'
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
 const Primus = require('primus')
@@ -863,29 +867,8 @@ function startServerLog(app, spark) {
 }
 
 /**
- * Accumulate latest value per context:path:$source during backpressure.
- * Only keeps the most recent value for each unique path, dropping intermediate updates.
- */
-function accumulateLatestValue(accumulator, delta) {
-  if (!delta.updates) return
-  for (const update of delta.updates) {
-    if (!update.values) continue
-    for (const pv of update.values) {
-      const key = `${delta.context}:${pv.path}:${update.$source || 'unknown'}`
-      accumulator.set(key, {
-        context: delta.context,
-        path: pv.path,
-        value: pv.value,
-        $source: update.$source,
-        timestamp: update.timestamp
-      })
-    }
-  }
-}
-
-/**
  * Flush accumulated values as spec-compliant deltas.
- * Groups values by context and $source:timestamp for proper delta structure.
+ * Uses buildFlushDeltas from LatestValuesAccumulator to build the deltas.
  */
 function flushAccumulator(app, spark) {
   const map = spark.backpressure.accumulator
@@ -896,38 +879,8 @@ function flushAccumulator(app, spark) {
     ? Date.now() - spark.backpressure.since
     : 0
 
-  // Group by context
-  const byContext = new Map()
-  for (const [, item] of map) {
-    if (!byContext.has(item.context)) {
-      byContext.set(item.context, new Map())
-    }
-    // Group by $source:timestamp within context
-    const bySourceTime = byContext.get(item.context)
-    const stKey = `${item.$source}:${item.timestamp}`
-    if (!bySourceTime.has(stKey)) {
-      bySourceTime.set(stKey, {
-        $source: item.$source,
-        timestamp: item.timestamp,
-        values: []
-      })
-    }
-    bySourceTime.get(stKey).values.push({
-      path: item.path,
-      value: item.value
-    })
-  }
-
-  // Send one delta per context with backpressure indicator
-  for (const [context, bySourceTime] of byContext) {
-    const delta = {
-      context,
-      updates: Array.from(bySourceTime.values()),
-      $backpressure: {
-        accumulated: countBefore,
-        duration
-      }
-    }
+  const deltas = buildFlushDeltas(map, duration)
+  for (const delta of deltas) {
     sendMetaData(app, spark, delta)
     spark.write(delta)
   }
