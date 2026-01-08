@@ -49,3 +49,4 @@ This is normal and safe. Your navigation data remains accurate - you just might 
 - Check if other devices are using a lot of bandwidth
 - If on a boat, verify the network connection to your navigation computer
 - Consider using a wired Ethernet connection for critical displays
+- For remote access (4G, VPN, public internet): enable WebSocket compression in Admin UI → Server → Settings to reduce bandwidth usage
