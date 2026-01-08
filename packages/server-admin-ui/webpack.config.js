@@ -26,7 +26,6 @@ module.exports = {
         }
       },
       {
-        // Load font files (woff, woff2, ttf, eot)
         test: /\.(woff(2)?|ttf|eot)(\?v=\d+\.\d+\.\d+)?$/,
         type: 'asset/resource',
         generator: {
@@ -34,8 +33,7 @@ module.exports = {
         }
       },
       {
-        // Skip SVG font files from node_modules (only needed for IE9)
-        // This reduces bundle size by ~2MB
+        // SVG fonts from node_modules are only needed for IE9
         test: /\.svg(\?.*)?$/,
         include: /node_modules/,
         use: {
@@ -47,7 +45,6 @@ module.exports = {
         }
       },
       {
-        // Handle project SVG images (not from node_modules)
         test: /\.svg$/,
         exclude: /node_modules/,
         type: 'asset/resource'
@@ -64,7 +61,7 @@ module.exports = {
             loader: 'sass-loader',
             options: {
               sassOptions: {
-                // Silence deprecation warnings from Bootstrap 4 (deprecated library)
+                // Bootstrap 4 uses deprecated Sass APIs
                 silenceDeprecations: [
                   'import',
                   'global-builtin',
@@ -122,8 +119,6 @@ module.exports = {
   ],
   devtool: 'source-map',
   performance: {
-    // Disable size warnings for this admin UI application
-    // Large assets (fonts, bundled JS) are expected and acceptable
     hints: false
   }
 }

@@ -1,4 +1,3 @@
-
 const authFetch = (url, options) => {
   return fetch(url, {
     ...options,
