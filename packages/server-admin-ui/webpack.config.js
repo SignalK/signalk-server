@@ -100,5 +100,10 @@ module.exports = {
       }
     })
   ],
-  devtool: 'source-map'
+  devtool: 'source-map',
+  performance: {
+    // Disable size warnings for this admin UI application
+    // Large assets (fonts, bundled JS) are expected and acceptable
+    hints: false
+  }
 }
