@@ -1,0 +1,123 @@
+{
+  "version": "1.0.0",
+  "date": "2025-10-03",
+  "name": "Imperial (US)",
+  "description": "US customary units (feet, Fahrenheit, knots, etc.)",
+  "categories": {
+    "distance": {
+      "baseUnit": "m",
+      "targetUnit": "naut-mile",
+      "displayFormat": "0.0"
+    },
+    "speed": {
+      "baseUnit": "m/s",
+      "targetUnit": "kn",
+      "displayFormat": "0.0"
+    },
+    "temperature": {
+      "baseUnit": "K",
+      "targetUnit": "F",
+      "displayFormat": "0.0"
+    },
+    "pressure": {
+      "baseUnit": "Pa",
+      "targetUnit": "psi",
+      "displayFormat": "0.0"
+    },
+    "depth": {
+      "baseUnit": "m",
+      "targetUnit": "foot",
+      "displayFormat": "0.0"
+    },
+    "volume": {
+      "baseUnit": "m3",
+      "targetUnit": "gallon",
+      "displayFormat": "0.0"
+    },
+    "angle": {
+      "baseUnit": "rad",
+      "targetUnit": "degree",
+      "displayFormat": "0.0"
+    },
+    "length": {
+      "baseUnit": "m",
+      "targetUnit": "foot",
+      "displayFormat": "0.0"
+    },
+    "angularVelocity": {
+      "baseUnit": "rad/s",
+      "targetUnit": "deg/s",
+      "displayFormat": "0.0"
+    },
+    "voltage": {
+      "baseUnit": "V",
+      "targetUnit": "V",
+      "displayFormat": "0.00"
+    },
+    "current": {
+      "baseUnit": "A",
+      "targetUnit": "A",
+      "displayFormat": "0.00"
+    },
+    "power": {
+      "baseUnit": "W",
+      "targetUnit": "W",
+      "displayFormat": "0.00"
+    },
+    "percentage": {
+      "baseUnit": "ratio",
+      "targetUnit": "percent",
+      "displayFormat": "0"
+    },
+    "frequency": {
+      "baseUnit": "Hz",
+      "targetUnit": "rpm",
+      "displayFormat": "0.0"
+    },
+    "time": {
+      "baseUnit": "s",
+      "targetUnit": "second",
+      "displayFormat": "0.0"
+    },
+    "dateTime": {
+      "baseUnit": "RFC 3339 (UTC)",
+      "targetUnit": "time-am/pm-local",
+      "displayFormat": "time-am/pm"
+    },
+    "charge": {
+      "baseUnit": "C",
+      "targetUnit": "Ah",
+      "displayFormat": "0.0"
+    },
+    "volumeRate": {
+      "baseUnit": "m3/s",
+      "targetUnit": "gal/h",
+      "displayFormat": "0.0"
+    },
+    "energy": {
+      "baseUnit": "J",
+      "targetUnit": "btu",
+      "displayFormat": "0.00"
+    },
+    "mass": {
+      "baseUnit": "kg",
+      "targetUnit": "pound",
+      "displayFormat": "0.0"
+    },
+    "area": {
+      "baseUnit": "m2",
+      "targetUnit": "sqft",
+      "displayFormat": "0.0"
+    },
+    "angleDegrees": {
+      "baseUnit": "deg",
+      "targetUnit": "deg",
+      "displayFormat": "0.0"
+    },
+    "boolean": {
+      "baseUnit": "bool",
+      "targetUnit": "bool",
+      "displayFormat": "boolean"
+    }
+  }
+}
