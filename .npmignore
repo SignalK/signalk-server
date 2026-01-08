@@ -44,6 +44,8 @@ compilation-stats.json
 .babelrc
 public/*.hot-update.js
 public/*.hot-update.json
+**/stats.json
+**/*.js.map
 
 plugin-config-data/
 
@@ -77,3 +79,20 @@ fly_io
 
 /docs/*
 !/docs/dist
+
+
+# .net builds
+jco-output/
+obj/
+bin/
+Debug/
+Release/
+*.ps1
+nul
+
+# wasmtime build artifacts
+*.wasm
+
+# debug artefacts
+*.sln
+

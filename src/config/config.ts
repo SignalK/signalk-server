@@ -76,6 +76,7 @@ export interface Config {
     keepMostRecentLogsOnly?: boolean
     logCountToKeep?: number
     enablePluginLogging?: boolean
+    enableWasmLogging?: boolean
     loggingDirectory?: string
     sourcePriorities?: any
     trustProxy?: boolean | string | number

@@ -2,6 +2,7 @@
 title: Plugins
 children:
   - ../webapps.md
+  - wasm/README.md
   - deltas.md
   - configuration.md
   - backpressure.md
@@ -19,6 +20,17 @@ Signal K Node server plugins are components that extend functionality of the ser
 They are installed via the AppStore and configured via the Admin UI.
 
 Signal K server exposes an interface for plugins to use in order to interact with the full data model, emit delta messages and process requests.
+
+## Plugin Types
+
+Signal K supports two types of plugins:
+
+- **JavaScript Plugins** - Traditional JavaScript/TypeScript plugins (documented below)
+- **[WASM Plugins](./wasm/README.md)** - Plugins written in Rust, AssemblyScript, Go, or other WASM-compatible languages
+
+[WASM](https://en.wikipedia.org/wiki/WebAssembly) is short for WebAssembly. WASM is a runtime for executing portable code in near native speeds and in isolation. WASM plugins offer sandbox isolation, memory safety, and the ability to use languages other than JavaScript. See the [WASM Plugins documentation](./wasm/README.md) for details.
+
+## Node.js Plugin Capabilities
 
 Plugins can:
 

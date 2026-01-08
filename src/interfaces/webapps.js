@@ -26,16 +26,25 @@ import { uniqBy } from 'lodash'
 module.exports = function (app) {
   return {
     start: function () {
-      app.webapps = mountWebModules(app, 'signalk-webapp').map(
+      // Preserve any existing webapps (e.g., from WASM plugins loaded earlier)
+      const existingWebapps = app.webapps || []
+      const nodeWebapps = mountWebModules(app, 'signalk-webapp').map(
         (moduleData) => moduleData.metadata
       )
+      // Merge Node.js webapps with existing WASM webapps, avoiding duplicates
+      app.webapps = uniqBy([...nodeWebapps, ...existingWebapps], 'name')
       app.addons = mountWebModules(app, 'signalk-node-server-addon').map(
         (moduleData) => moduleData.metadata
       )
-      app.embeddablewebapps = mountWebModules(
+      const existingEmbeddableWebapps = app.embeddablewebapps || []
+      const nodeEmbeddableWebapps = mountWebModules(
         app,
         'signalk-embeddable-webapp'
       ).map((moduleData) => moduleData.metadata)
+      app.embeddablewebapps = uniqBy(
+        [...nodeEmbeddableWebapps, ...existingEmbeddableWebapps],
+        'name'
+      )
       app.pluginconfigurators = mountWebModules(
         app,
         'signalk-plugin-configurator'

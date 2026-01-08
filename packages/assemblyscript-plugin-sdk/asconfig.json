@@ -1,0 +1,25 @@
+{
+  "targets": {
+    "release": {
+      "outFile": "build/plugin.wasm",
+      "sourceMap": false,
+      "optimize": true,
+      "shrinkLevel": 2,
+      "converge": true,
+      "noAssert": true,
+      "runtime": "stub",
+      "use": "abort="
+    },
+    "debug": {
+      "outFile": "build/plugin.debug.wasm",
+      "sourceMap": true,
+      "debug": true,
+      "runtime": "stub"
+    }
+  },
+  "options": {
+    "bindings": "esm",
+    "exportRuntime": false,
+    "transform": ["as-fetch/transform"]
+  }
+}
