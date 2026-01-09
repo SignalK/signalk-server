@@ -17,26 +17,27 @@
 import { Request, Response, Application } from 'express'
 import { createDebug } from '../debug'
 import {
-  isOIDCEnabled,
-  createAuthState,
-  validateState,
-  encryptState,
-  decryptState,
-  getDiscoveryDocument,
-  buildAuthorizationUrl,
-  exchangeAuthorizationCode,
-  validateIdToken,
-  fetchUserinfo,
-  mapGroupsToPermission,
-  STATE_COOKIE_NAME,
-  STATE_MAX_AGE_MS,
   OIDCError,
   OIDCConfig,
   OIDCUserInfo,
   OIDCCryptoService,
   ExternalUserService,
-  ExternalUser
-} from './index'
+  ExternalUser,
+  STATE_COOKIE_NAME,
+  STATE_MAX_AGE_MS
+} from './types'
+import { isOIDCEnabled } from './config'
+import {
+  createAuthState,
+  validateState,
+  encryptState,
+  decryptState
+} from './state'
+import { getDiscoveryDocument } from './discovery'
+import { buildAuthorizationUrl } from './authorization'
+import { exchangeAuthorizationCode, fetchUserinfo } from './token-exchange'
+import { validateIdToken } from './id-token-validation'
+import { mapGroupsToPermission } from './permission-mapping'
 
 const debug = createDebug('signalk-server:oidc-auth')
 const skAuthPrefix = '/signalk/v1/auth'
@@ -54,6 +55,46 @@ function arraysEqualIgnoringOrder(
   const sorted1 = [...arr1].sort()
   const sorted2 = [...arr2].sort()
   return sorted1.every((val, idx) => val === sorted2[idx])
+}
+
+/**
+ * Validate and merge userinfo claims into ID token claims.
+ *
+ * Security considerations:
+ * - Validates that userinfo sub matches ID token sub (OIDC Core spec requirement)
+ * - Only merges safe claims (email, name, preferred_username, groups)
+ * - Does NOT allow userinfo to overwrite security-critical claims (sub, iss, aud, nonce)
+ *
+ * @param idTokenClaims The validated claims from the ID token
+ * @param userinfoClaims The claims from the userinfo endpoint
+ * @param groupsAttribute The attribute name for groups (default: 'groups')
+ * @throws OIDCError if userinfo sub doesn't match ID token sub
+ */
+export function validateAndMergeUserinfoClaims(
+  idTokenClaims: Record<string, unknown>,
+  userinfoClaims: Record<string, unknown>,
+  groupsAttribute: string = 'groups'
+): void {
+  // Validate that userinfo sub matches ID token sub (OIDC Core spec requirement)
+  if (userinfoClaims.sub && userinfoClaims.sub !== idTokenClaims.sub) {
+    throw new OIDCError(
+      'Userinfo sub does not match ID token sub',
+      'INVALID_TOKEN'
+    )
+  }
+
+  // Only merge specific safe claims - don't allow userinfo to overwrite
+  // security-critical claims like sub, iss, aud, nonce, etc.
+  const safeClaims = ['email', 'name', 'preferred_username', 'groups']
+  if (groupsAttribute !== 'groups') {
+    safeClaims.push(groupsAttribute)
+  }
+
+  for (const claim of safeClaims) {
+    if (userinfoClaims[claim] !== undefined) {
+      idTokenClaims[claim] = userinfoClaims[claim]
+    }
+  }
 }
 
 /**
@@ -352,10 +393,17 @@ export function registerOIDCRoutes(
 
         // Fetch additional claims from userinfo endpoint
         // ID token typically only contains minimal claims; userinfo has groups, email, etc.
-        const userinfoClaims = await fetchUserinfo(tokens.accessToken, metadata)
+        const userinfoClaims = await fetchUserinfo(
+          tokens.accessToken,
+          metadata,
+          oidcConfig.issuer
+        )
         if (userinfoClaims) {
-          // Merge userinfo claims into ID token claims (userinfo takes precedence)
-          Object.assign(claims, userinfoClaims)
+          validateAndMergeUserinfoClaims(
+            claims,
+            userinfoClaims,
+            oidcConfig.groupsAttribute
+          )
         }
 
         // Clear state cookie after successful validation
