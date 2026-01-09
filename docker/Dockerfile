@@ -22,8 +22,9 @@ COPY *.tgz .
 USER root
 
 RUN npm i -g *.tgz
-# move server-admin-ui that gets installed as sibling of signalk-server
-RUN mv /usr/lib/node_modules/@signalk/* /usr/lib/node_modules/signalk-server/node_modules/@signalk/
+# move workspace dependencies that get installed under root also under signalk-server of signalk-server
+# use cp & rm to avoid 'directory not empty' with some deps already present
+RUN cp -rf /usr/lib/node_modules/@signalk/* /usr/lib/node_modules/signalk-server/node_modules/@signalk/ && rm -rf /usr/lib/node_modules/@signalk
 
 FROM base
 
