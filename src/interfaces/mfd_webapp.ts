@@ -67,7 +67,7 @@ const send = (
       debug(`${fromAddress}=>${toAddress} @${port} ${msg}`)
     })
   })
-  socket.bind(PUBLISH_PORT, fromAddress)
+  socket.bind(0, fromAddress)
 }
 
 const getPublishToNavico = (protocol: string, port: number) => async () => {
