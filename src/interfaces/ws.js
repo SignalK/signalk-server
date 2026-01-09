@@ -256,6 +256,15 @@ module.exports = function (app) {
           })
         } else {
           spark.on('data', function (msg) {
+            // Handle Buffer from ws 8.x (returns Buffer by default instead of string)
+            if (Buffer.isBuffer(msg)) {
+              try {
+                msg = JSON.parse(msg.toString())
+              } catch (e) {
+                debug('Failed to parse message buffer: ' + e.message)
+                return
+              }
+            }
             debug('<' + JSON.stringify(msg))
 
             try {
