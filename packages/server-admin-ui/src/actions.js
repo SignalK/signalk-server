@@ -1,5 +1,3 @@
-import { isUndefined } from 'lodash'
-
 const authFetch = (url, options) => {
   return fetch(url, {
     ...options,
@@ -113,7 +111,7 @@ export function restart() {
 export const buildFetchAction =
   (endpoint, type, prefix) => async (dispatch) => {
     const response = await authFetch(
-      `${isUndefined(prefix) ? window.serverRoutesPrefix : prefix}${endpoint}`
+      `${prefix === undefined ? window.serverRoutesPrefix : prefix}${endpoint}`
     )
 
     if (response.status === 200) {

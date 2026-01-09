@@ -26,11 +26,28 @@ module.exports = {
         }
       },
       {
-        test: /\.(woff(2)?|ttf|eot|svg)(\?v=\d+\.\d+\.\d+)?$/,
-        loader: 'file-loader',
-        options: {
-          name: './fonts/[name].[hash].[ext]'
+        test: /\.(woff(2)?|ttf|eot)(\?v=\d+\.\d+\.\d+)?$/,
+        type: 'asset/resource',
+        generator: {
+          filename: './fonts/[name].[hash][ext]'
         }
+      },
+      {
+        // SVG fonts from node_modules are only needed for IE9
+        test: /\.svg(\?.*)?$/,
+        include: /node_modules/,
+        use: {
+          loader: 'file-loader',
+          options: {
+            emitFile: false,
+            name: '[name].[ext]'
+          }
+        }
+      },
+      {
+        test: /\.svg$/,
+        exclude: /node_modules/,
+        type: 'asset/resource'
       },
       {
         test: /\.(scss)$/,
@@ -40,7 +57,21 @@ module.exports = {
           // Translates CSS into CommonJS
           'css-loader',
           // Compiles Sass to CSS
-          'sass-loader'
+          {
+            loader: 'sass-loader',
+            options: {
+              sassOptions: {
+                // Bootstrap 4 uses deprecated Sass APIs
+                silenceDeprecations: [
+                  'import',
+                  'global-builtin',
+                  'color-functions',
+                  'legacy-js-api'
+                ],
+                quietDeps: true
+              }
+            }
+          }
         ]
       },
       {
@@ -86,5 +117,8 @@ module.exports = {
       }
     })
   ],
-  devtool: 'source-map'
+  devtool: 'source-map',
+  performance: {
+    hints: false
+  }
 }
