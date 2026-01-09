@@ -4,6 +4,7 @@ children:
   - ../webapps.md
   - deltas.md
   - configuration.md
+  - backpressure.md
   - autopilot_provider_plugins.md
   - course_calculations.md
   - resource_provider_plugins.md
