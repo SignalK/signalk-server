@@ -9,6 +9,7 @@ coverage
 
 # production
 public
+.__mf__temp
 
 # misc
 .DS_Store
