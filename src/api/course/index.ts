@@ -37,7 +37,7 @@ import { isValidCoordinate } from 'geolib'
 import { Responses } from '../'
 import { Store } from '../../serverstate/store'
 
-import { buildSchemaSync } from 'api-schema-builder'
+import { buildSchemaSync } from '../validation/openapi-validator'
 import courseOpenApi from './openApi.json'
 import { ResourcesApi } from '../resources'
 import { ConfigApp, writeSettingsFile } from '../../config/config'

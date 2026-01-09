@@ -1,5 +1,5 @@
 import { SignalKResourceType } from '@signalk/server-api'
-import { buildSchemaSync } from 'api-schema-builder'
+import { buildSchemaSync } from '../validation/openapi-validator'
 import { RESOURCES_API_PATH } from '.'
 import { createDebug } from '../../debug'
 import resourcesOpenApi from './openApi.json'
