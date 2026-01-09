@@ -132,14 +132,33 @@ export async function exchangeAuthorizationCode(
  *
  * @param accessToken The access token from the token response
  * @param metadata Discovery document metadata containing userinfo_endpoint
+ * @param issuer The configured OIDC issuer URL (for hostname validation)
  * @returns Additional claims from the userinfo endpoint, or undefined if unavailable
  */
 export async function fetchUserinfo(
   accessToken: string,
-  metadata: OIDCProviderMetadata
+  metadata: OIDCProviderMetadata,
+  issuer: string
 ): Promise<Record<string, unknown> | undefined> {
   // Not all providers have a userinfo endpoint
   if (!metadata.userinfo_endpoint) {
+    return undefined
+  }
+
+  // Security: validate userinfo endpoint hostname matches issuer hostname
+  // This prevents a malicious discovery document from redirecting userinfo
+  // requests to an attacker-controlled server
+  try {
+    const issuerHost = new URL(issuer).hostname
+    const userinfoHost = new URL(metadata.userinfo_endpoint).hostname
+    if (issuerHost !== userinfoHost) {
+      console.warn(
+        `OIDC: Userinfo endpoint hostname (${userinfoHost}) does not match issuer hostname (${issuerHost})`
+      )
+      return undefined
+    }
+  } catch (err) {
+    console.warn(`OIDC: Failed to validate userinfo endpoint URL: ${err}`)
     return undefined
   }
 

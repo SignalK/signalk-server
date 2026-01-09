@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import {
   exchangeAuthorizationCode,
+  fetchUserinfo,
   setFetchFunction as setTokenFetch,
   resetFetchFunction as resetTokenFetch
 } from '../../src/oidc/token-exchange'
@@ -216,6 +217,196 @@ describe('Token Exchange', () => {
         expect(err).to.be.instanceOf(OIDCError)
         expect((err as OIDCError).code).to.equal('TOKEN_EXCHANGE_FAILED')
       }
+    })
+  })
+
+  describe('fetchUserinfo', () => {
+    const issuer = 'https://auth.example.com'
+
+    afterEach(() => {
+      resetTokenFetch()
+    })
+
+    it('should return undefined when no userinfo_endpoint in metadata', async () => {
+      const metadataWithoutUserinfo: OIDCProviderMetadata = {
+        ...metadata
+        // no userinfo_endpoint
+      }
+
+      const result = await fetchUserinfo(
+        'access-token',
+        metadataWithoutUserinfo,
+        issuer
+      )
+
+      expect(result).to.equal(undefined)
+    })
+
+    it('should fetch and return userinfo claims', async () => {
+      const userinfoClaims = {
+        sub: 'user-123',
+        email: 'user@example.com',
+        name: 'Test User',
+        groups: ['admin', 'users']
+      }
+
+      const mockFetch = async (): Promise<Response> => {
+        return new Response(JSON.stringify(userinfoClaims), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      setTokenFetch(mockFetch)
+
+      const metadataWithUserinfo: OIDCProviderMetadata = {
+        ...metadata,
+        userinfo_endpoint: 'https://auth.example.com/userinfo'
+      }
+
+      const result = await fetchUserinfo(
+        'access-token',
+        metadataWithUserinfo,
+        issuer
+      )
+
+      expect(result).to.deep.equal(userinfoClaims)
+    })
+
+    it('should reject userinfo endpoint with mismatched hostname (security)', async () => {
+      // This tests protection against malicious discovery documents
+      // that redirect userinfo to an attacker-controlled server
+      const metadataWithMaliciousUserinfo: OIDCProviderMetadata = {
+        ...metadata,
+        userinfo_endpoint: 'https://evil.com/steal-token'
+      }
+
+      const result = await fetchUserinfo(
+        'access-token',
+        metadataWithMaliciousUserinfo,
+        issuer
+      )
+
+      // Should return undefined instead of making request to evil.com
+      expect(result).to.equal(undefined)
+    })
+
+    it('should accept userinfo endpoint with matching hostname', async () => {
+      const userinfoClaims = { sub: 'user-123', email: 'user@example.com' }
+
+      const mockFetch = async (): Promise<Response> => {
+        return new Response(JSON.stringify(userinfoClaims), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      setTokenFetch(mockFetch)
+
+      const metadataWithMatchingHost: OIDCProviderMetadata = {
+        ...metadata,
+        // Different path but same hostname as issuer
+        userinfo_endpoint: 'https://auth.example.com/api/v1/userinfo'
+      }
+
+      const result = await fetchUserinfo(
+        'access-token',
+        metadataWithMatchingHost,
+        issuer
+      )
+
+      expect(result).to.deep.equal(userinfoClaims)
+    })
+
+    it('should return undefined on HTTP error', async () => {
+      const mockFetch = async (): Promise<Response> => {
+        return new Response('Unauthorized', {
+          status: 401,
+          headers: { 'Content-Type': 'text/plain' }
+        })
+      }
+      setTokenFetch(mockFetch)
+
+      const metadataWithUserinfo: OIDCProviderMetadata = {
+        ...metadata,
+        userinfo_endpoint: 'https://auth.example.com/userinfo'
+      }
+
+      const result = await fetchUserinfo(
+        'invalid-token',
+        metadataWithUserinfo,
+        issuer
+      )
+
+      expect(result).to.equal(undefined)
+    })
+
+    it('should return undefined on network error', async () => {
+      const mockFetch = async (): Promise<Response> => {
+        throw new Error('Network error')
+      }
+      setTokenFetch(mockFetch)
+
+      const metadataWithUserinfo: OIDCProviderMetadata = {
+        ...metadata,
+        userinfo_endpoint: 'https://auth.example.com/userinfo'
+      }
+
+      const result = await fetchUserinfo(
+        'access-token',
+        metadataWithUserinfo,
+        issuer
+      )
+
+      expect(result).to.equal(undefined)
+    })
+
+    it('should return undefined on invalid JSON response', async () => {
+      const mockFetch = async (): Promise<Response> => {
+        return new Response('not valid json', {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      setTokenFetch(mockFetch)
+
+      const metadataWithUserinfo: OIDCProviderMetadata = {
+        ...metadata,
+        userinfo_endpoint: 'https://auth.example.com/userinfo'
+      }
+
+      const result = await fetchUserinfo(
+        'access-token',
+        metadataWithUserinfo,
+        issuer
+      )
+
+      expect(result).to.equal(undefined)
+    })
+
+    it('should send correct Authorization header', async () => {
+      let capturedHeaders: HeadersInit | undefined
+
+      const mockFetch = async (
+        _url: string | URL | Request,
+        init?: RequestInit
+      ): Promise<Response> => {
+        capturedHeaders = init?.headers
+        return new Response(JSON.stringify({ sub: 'user-123' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      setTokenFetch(mockFetch)
+
+      const metadataWithUserinfo: OIDCProviderMetadata = {
+        ...metadata,
+        userinfo_endpoint: 'https://auth.example.com/userinfo'
+      }
+
+      await fetchUserinfo('my-access-token', metadataWithUserinfo, issuer)
+
+      expect(capturedHeaders).to.deep.include({
+        Authorization: 'Bearer my-access-token'
+      })
     })
   })
 })

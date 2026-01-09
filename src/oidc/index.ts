@@ -35,6 +35,7 @@ export * from './user-info'
 export {
   registerOIDCRoutes,
   findOrCreateOIDCUser,
+  validateAndMergeUserinfoClaims,
   type OIDCAuthDependencies
 } from './oidc-auth'
 export {
