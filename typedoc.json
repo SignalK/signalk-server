@@ -79,7 +79,8 @@
     "sh",
     "toml",
     "wit",
-    "xml"
+    "xml",
+    "yaml"
   ],
   "cacheBust": true
 }

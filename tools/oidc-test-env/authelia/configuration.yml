@@ -1,0 +1,128 @@
+# Authelia Configuration for Signal K OIDC Testing
+# WARNING: This configuration uses static test secrets and is NOT secure for production!
+#
+# Uses .localhost domains which resolve to 127.0.0.1 automatically (no /etc/hosts needed)
+
+theme: auto
+
+server:
+  address: tcp://0.0.0.0:9091/
+
+log:
+  level: debug
+
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+    password:
+      algorithm: argon2id
+      argon2:
+        variant: argon2id
+        iterations: 3
+        memory: 65536
+        parallelism: 4
+        key_length: 32
+        salt_length: 16
+
+session:
+  # Static test secret - DO NOT use in production
+  secret: 'test_session_secret_for_signalk_oidc_testing_only'
+  cookies:
+    - domain: 'test.localhost'
+      authelia_url: 'https://auth.test.localhost'
+      default_redirection_url: 'https://signalk.test.localhost:3000'
+      same_site: 'lax'
+
+storage:
+  # Static test key - DO NOT use in production
+  encryption_key: 'test_encryption_key_for_signalk_oidc_32ch'
+  local:
+    path: /data/db.sqlite3
+
+identity_validation:
+  reset_password:
+    jwt_secret: 'test_reset_password_jwt_secret_for_testing'
+
+notifier:
+  filesystem:
+    filename: /data/notification.txt
+
+access_control:
+  default_policy: one_factor
+
+identity_providers:
+  oidc:
+    # Static test secret - DO NOT use in production
+    hmac_secret: 'test_oidc_hmac_secret_for_signalk_testing'
+    jwks:
+      - key: |
+          -----BEGIN PRIVATE KEY-----
+          MIIJQgIBADANBgkqhkiG9w0BAQEFAASCCSwwggkoAgEAAoICAQCisRDXN3gqgeXz
+          dITqEj83kyQSOyXa+cvuaC0E/Bu5GhrqS1du2uSmFdH8NGpsykoMjxagdw+EB1aB
+          VMemnn+eXLfpM36UDAlyIC8VdjKyp2Ygi8qtvX+zfvMh5GbmEjuIRVybPdzbRa+r
+          QJtn52DgfjoZND58S7hYfX46l5lzO5W1OFmIk5ZN5qrSTK+z/6ZseCVHG/M+het2
+          d0lkRy13KMveNBELL+DYBtEeHpeCkMf4t0wD/TLRxVUM+o/c+Xno+JDuc6TGQG2w
+          HTAxepoTRe12htdP/LFW9bFDqVRyEiFl5blk/uVfD5vQZd07OV3ZiHk6HfbFbXr/
+          BYa/KuZ+HEjoAlspoEBmq5UgrfGp8RbcX0NRHdOe7Z7erQSzGJS7OdMRIsM/c/S5
+          t2VztqFoPNS6EcIkerNATX7tXrBfsvVsp5r+7IF97/O+RjMm8/jlnudDthvAWKjE
+          MmVg3ouQqHoTNrI8FCyJ2jhm2TgTdCgGRSS6dja53CBRI3L7KjxyZaB7PbrQqfn6
+          EeAH/UkrrpAXze3Xx7SndHJHozPVE9HEs/pIPkHfXOmg0eJKAu4souCoeYJTgpDR
+          SkzdDv+/Tj4FOue3ZZ0EEPJEsU98yoMV52dOtTx2/ngyNzzhuM/rZ08/UjQEjrF9
+          hDEM6yRzZVSmoUa2nBcDhjTDdHcUIwIDAQABAoICAAweo7IHXFN8/3aOS2ktOHoO
+          jeUxHyX7w4uRmtT1u6ejlbYMLHRs0xQPqRJ1jH4T6HCcvONHAKgQbIsll9qbkRyT
+          gfyEjQfrXk1wWgGVH2a8CLl2SyrROfD9t+ViS0tqt/ZJWyznbrYDsCKnpUwYFQP0
+          SKYLBHf5o2nYLhigUC/2PuCpVNDTVHhI2EM4BO4kUS9gbep+XwsH1UgrJROsJ8C/
+          kHG6WuYEnZE073bOcZv/kXNqTZE4ggTVg1CnCSOS5C2M+C2t/hbqGCHCsuM6Dmik
+          JhyqeTdottn9uJm2mhIGCWiQCf/Hlf+/EmzzwbIr7l1fs3mMX49Kk3CUZqWEGnfT
+          08Y+BLM8+VUNZebmNisMlDT6T94+JlbBJyH9X6pMgrmWTqzN2f1KKw6M0vmmAwAa
+          t4WH37tWSBHOqqVZbD5U+OGJMwDHh2lYix7CZF08jm5BT/23vwPs6HEUi9gLJhCy
+          /AgXrotO4C5YB73VHDEzsOoNSGWPTLH/wbDVegSH0wkYZhS1qVRxs6scqOkDEn70
+          YXiTARGzqB6C39j+TTuEWu/SfZgUb1qzPm9vrA+ZGikV0x0/23dS0906Es+cBkSY
+          zJSMQcOb/Q6k5c5vPSBG/gt3eUrC/G83kk4rS/Yd6gptfcpy2WUUdtT17ehZAU4G
+          M+UEr95UPN1PgjiAA0gVAoIBAQDSPRRvB5TTLpYKTxejCuWT50zwfcv55zTRtYfI
+          tKgN0DLDxx5nZxrqtpNkt9vmJdQreSvJL3JFzXCDJlgToUqtRTy78LtNh2IGudS4
+          vzHdiq3PlO2QB3RLKHUDwc5jdMOxMyQ6P3fy95PQy96PcQ6KCq7/O6t4C7eugsuE
+          eKVlJAbehDE+Q548dwESlMw+eDEQe3J4xVeKtsm4K7+O4TENtDuAroEg/cVNOLph
+          bov2oI5HaSWshDGlMmSRvU4VA5RJDh7oMs1RX0LdHVv69fA35O0e7lQHtF5p8XT7
+          jotxJCV8HW4HMPQ/owKo3kU66hlWWRllSnX0oQBdF/voylAlAoIBAQDGGpMiVJuX
+          UbuVGiYEH/yqwn/tnybXqz3schEd9Sd6roo1EKceP0CAlxY0iPNb775he0iuNvUd
+          KqwxD7SVwesWqo8EbiFVyL9SFP2MIrXPgtyBqP5k0usPNB7sqUqt4EjBXqpYZVxP
+          qCImgPsT6neE2Kwcza/G1/p0hlK5LWO8Hd5q/Kokw0jQ8PvdLur11qY8xcau3kRw
+          4KIXE0zPeLow3JXA+Rd4dsYbRa+TvdQh5uMcLNjpFAYBha3A1bvwpi8/Horx4p5/
+          R7Fr8wHYGQauPAui96tIyJcOC4Lm2cIjV50CKKK9fwINvmWh/eX1BjzlJuMRPRsh
+          fHxR7FrIGdynAoIBAQCnxZxn2in2uQd9JI7dSpXYiM2KYSkEvXAWJgI8tYYit9G7
+          EEyAAfSl95r51gtCx09gfermOtm7QG2YC2JgD+ezDDyiUkJ2ZSJh8awC3njhrYh0
+          zgkiVgCE9b0jiWa1UXnVD9XKMdn753xrNDXgTD1pBYuPHMQCIX+sYK4egdSjOLPO
+          oLlXUciVwfX2KQ4wj+O/nnPEUt9AUAv7z9WnJKfroreVQizD8h+gNzPtCrXg01GX
+          RR6OZFPl26gL8YC9HkUYY49ghyH33MhUAdjkFZ1kTWi4tUITf+mUK97J3IAEgu7y
+          891ZGcTgf6pgrjebAzPDB4lPnrMwy8apg7lAlSqNAoIBAC/+5ELfCMtCjBX1vdwl
+          +8tLUD873edGn7wXbro5WRVKEEYHANY9MN12vXSA8aUGkrN/cP50ZjJo0ksYqQHX
+          d6OIMxo5rG3iMygp2bwH9NCPvejUDr5Ss4x9bjicU3GI81eWHeNIu3K5I3z8ptgO
+          aGKRNDHOS5X7Yby1hnlC2/UJr4dwK7C4d33XxM2zvk1Ncf0rVZWsWByY7+xzSprB
+          fyqzZrzYHK2c6SZWXdGHnkuQatm6q9rcdRANWSltHxmQycWbGsK7yva/Yebrezjl
+          505zUcZsBt2da6uFcnOHspdpdKq/OZ57lP3LcUgsAXi5yCsknsLgcSBNzrjycJQm
+          X+UCggEAQeH1p370IFqW8YkHxeoqW1WdCxiyx9iUf355f8+czjUCqwBXXGH6SM7R
+          F1X3BYvBd8MZuJYk8ESIXAQ4grTvOeecEqmNR/QD5ZBrKR7ZafQ3oEvh4xNci8Oy
+          D4xzFRVKgXOHCVZuVAPNyUKkdlav+C6kMByu7mGCl2Dsg8w/Rf9ukeHuoTc9lIv6
+          /7C+80psLWp67tiMc0wd7tHJGBant6GMfTX/V8pBeLBUD+UK8QvlNQuqRi/2x11O
+          7ULtuG9KYxOtnswba0HszNTyO/aPHkuByy01kll+RklMyl4zpiWsHTzGDZsJqvZX
+          LtrX86EbIlyMH62sRXNTRLmAXm32AQ==
+          -----END PRIVATE KEY-----
+    clients:
+      - client_id: signalk
+        client_name: 'Signal K Server'
+        # Plaintext secret: signalk-test-secret
+        client_secret: '$pbkdf2-sha512$310000$zBSvouZt05kvL.lp2T1g9w$QmDuzPZ89s/.hE/pRu8r85VWWpAx2jLFqOWwKq.8GDq4Jq4DbvcB4JBpGQ2wk3F.of3RNYsdCyacsX2LSJdSFw'
+        public: false
+        authorization_policy: one_factor
+        redirect_uris:
+          - 'https://signalk.test.localhost:3000/signalk/v1/auth/oidc/callback'
+          - 'http://localhost:3000/signalk/v1/auth/oidc/callback'
+        scopes:
+          - openid
+          - profile
+          - email
+          - groups
+        userinfo_signed_response_alg: none
+        consent_mode: implicit
+        token_endpoint_auth_method: client_secret_post
