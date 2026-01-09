@@ -111,6 +111,37 @@ The final argument is a function that will be called every time an update is rec
 
 In the `stop()` method each subcription in the `unsubscribes` array is _unsubscribed_ and the resources released.
 
+### Path Discovery with `announceNewPaths`
+
+When using granular subscriptions (subscribing to specific paths rather than `*`), you may want to discover what paths are available without receiving continuous updates for all of them. The `announceNewPaths` option solves this:
+
+```javascript
+let localSubscription = {
+  context: '*',
+  announceNewPaths: true, // Announce all matching paths once
+  subscribe: [
+    {
+      path: 'navigation.position', // Only get continuous updates for this path
+      period: 1000
+    }
+  ]
+}
+```
+
+When `announceNewPaths: true` is set:
+
+1. **On subscribe**: The server sends cached values for ALL existing paths matching the context filter (once each)
+2. **On new path**: When a new path appears later (e.g., a new sensor comes online), the server announces it once
+3. **Continuous updates**: Only the explicitly subscribed paths receive continuous updates
+
+This is useful for:
+
+- **Data browsers** that need to show all available paths but only update visible ones
+- **Discovery tools** that want to know what data is available
+- **Dashboards** that let users select which data to display
+
+The announced deltas are regular delta messages - there's no special flag. Your client should track which paths it has seen and can then subscribe to specific ones as needed.
+
 ## Sending Deltas
 
 A SignalK plugin can not only read deltas, but can also send them. This is done using the `handleMessage()` API method and supplying:
