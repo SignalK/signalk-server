@@ -14,5 +14,8 @@ Cargo.lock
 Thumbs.db
 
 # Built WASM (will be built fresh)
-# Uncomment if you want to commit the pre-built WASM:
-# !plugin.wasm
+*.wasm
+
+# npm
+node_modules/
+package-lock.json
