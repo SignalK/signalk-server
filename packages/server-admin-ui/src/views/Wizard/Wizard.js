@@ -52,14 +52,22 @@ function Wizard({ wizardStatus, installedPlugins }) {
   // Detect installed bundles when bundles or installedPlugins change
   useEffect(() => {
     if (bundles.length > 0 && installedPlugins) {
-      const installedPluginNames = installedPlugins.map((p) => p.id)
+      // Use packageName (npm package name) for comparison, not id (plugin id)
+      const installedPackageNames = installedPlugins.map((p) => p.packageName)
       const installed = bundles
         .filter((bundle) => {
-          // A bundle is considered installed if all its plugins are installed
-          return (
-            bundle.plugins.length > 0 &&
-            bundle.plugins.every((p) => installedPluginNames.includes(p.name))
-          )
+          const requiredPlugins = bundle.plugins.filter((p) => p.required)
+          if (requiredPlugins.length > 0) {
+            // Bundle has required plugins: all must be installed
+            return requiredPlugins.every((p) =>
+              installedPackageNames.includes(p.name)
+            )
+          } else {
+            // Bundle has only optional plugins: any one installed counts
+            return bundle.plugins.some((p) =>
+              installedPackageNames.includes(p.name)
+            )
+          }
         })
         .map((b) => b.id)
       setInstalledBundleIds(installed)
@@ -122,7 +130,6 @@ function Wizard({ wizardStatus, installedPlugins }) {
   const getMergedPackages = () => {
     const selectedBundles = getSelectedBundles()
     const plugins = new Map()
-    const webapps = new Map()
 
     selectedBundles.forEach((bundle) => {
       bundle.plugins.forEach((p) => {
@@ -132,18 +139,10 @@ function Wizard({ wizardStatus, installedPlugins }) {
           plugins.get(p.name).bundles.push(bundle.name)
         }
       })
-      bundle.webapps.forEach((w) => {
-        if (!webapps.has(w.name)) {
-          webapps.set(w.name, { ...w, bundles: [bundle.name] })
-        } else {
-          webapps.get(w.name).bundles.push(bundle.name)
-        }
-      })
     })
 
     return {
-      plugins: Array.from(plugins.values()),
-      webapps: Array.from(webapps.values())
+      plugins: Array.from(plugins.values())
     }
   }
 
@@ -199,7 +198,7 @@ function Wizard({ wizardStatus, installedPlugins }) {
             <h2>Welcome to the Plugin Wizard</h2>
             <p className="lead text-muted mt-3">
               This wizard will help you get started by installing the right
-              plugins and webapps for your use case.
+              plugins for your use case.
             </p>
             <p className="text-muted">
               Choose from curated bundles tailored to your needs.
@@ -229,8 +228,8 @@ function Wizard({ wizardStatus, installedPlugins }) {
 
       case WIZARD_STEPS.CONFIRM: {
         const selectedBundles = getSelectedBundles()
-        const { plugins, webapps } = getMergedPackages()
-        const totalPackages = plugins.length + webapps.length
+        const { plugins } = getMergedPackages()
+        const totalPackages = plugins.length
 
         return (
           <div className="wizard-confirm">
@@ -244,70 +243,41 @@ function Wizard({ wizardStatus, installedPlugins }) {
             <Card className="mb-4">
               <CardHeader>
                 <strong>{totalPackages} packages to install</strong>
-                <span className="text-muted ml-2">
-                  ({plugins.length} plugins, {webapps.length} webapps)
-                </span>
               </CardHeader>
               <CardBody>
                 {plugins.length > 0 && (
-                  <>
-                    <h6>Plugins:</h6>
-                    <ListGroup className="mb-3">
-                      {plugins.map((p) => (
-                        <ListGroupItem
-                          key={p.name}
-                          className="d-flex justify-content-between align-items-center py-2"
-                        >
-                          <div>
-                            <code>{p.name}</code>
-                            {p.description && (
-                              <span className="text-muted ml-2">
-                                - {p.description}
-                              </span>
-                            )}
-                          </div>
-                          {p.bundles.length > 1 && (
-                            <Badge color="secondary" pill>
-                              {p.bundles.length} bundles
+                  <ListGroup>
+                    {plugins.map((p) => (
+                      <ListGroupItem
+                        key={p.name}
+                        className="d-flex justify-content-between align-items-center py-2"
+                      >
+                        <div>
+                          <code>{p.name}</code>
+                          {p.setAsLandingPage && (
+                            <Badge color="success" className="ml-2">
+                              Landing Page
                             </Badge>
                           )}
-                        </ListGroupItem>
-                      ))}
-                    </ListGroup>
-                  </>
+                          {p.description && (
+                            <span className="text-muted ml-2">
+                              - {p.description}
+                            </span>
+                          )}
+                        </div>
+                        {p.bundles.length > 1 && (
+                          <Badge color="secondary" pill>
+                            {p.bundles.length} bundles
+                          </Badge>
+                        )}
+                      </ListGroupItem>
+                    ))}
+                  </ListGroup>
                 )}
 
-                {webapps.length > 0 && (
-                  <>
-                    <h6>Webapps:</h6>
-                    <ListGroup>
-                      {webapps.map((w) => (
-                        <ListGroupItem
-                          key={w.name}
-                          className="d-flex justify-content-between align-items-center py-2"
-                        >
-                          <div>
-                            <code>{w.name}</code>
-                            {w.setAsLandingPage && (
-                              <Badge color="success" className="ml-2">
-                                Landing Page
-                              </Badge>
-                            )}
-                            {w.description && (
-                              <span className="text-muted ml-2">
-                                - {w.description}
-                              </span>
-                            )}
-                          </div>
-                        </ListGroupItem>
-                      ))}
-                    </ListGroup>
-                  </>
-                )}
-
-                {plugins.length === 0 && webapps.length === 0 && (
+                {plugins.length === 0 && (
                   <p className="text-muted mb-0">
-                    No additional plugins or webapps to install.
+                    No additional plugins to install.
                   </p>
                 )}
               </CardBody>

@@ -87,7 +87,7 @@ export default function WizardComplete({ bundles, status, onRestart }) {
         <ol className="mb-0 pl-3">
           <li className="mb-2">
             <strong>Restart the server</strong> to activate the newly installed
-            plugins and webapps.
+            plugins.
           </li>
           <li>
             After restart, go to <strong>Server → Plugin Config</strong> to

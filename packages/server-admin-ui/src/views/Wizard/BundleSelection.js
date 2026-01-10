@@ -12,17 +12,14 @@ import {
 import {
   faMap,
   faTachometerAlt,
-  faDatabase,
-  faAnchor,
-  faPlug,
   faSpinner,
   faCheck,
   faRotateRight,
-  faMobileAlt,
-  faCogs,
   faCog,
-  faShip,
-  faQuestionCircle
+  faQuestionCircle,
+  faTowerBroadcast,
+  faMobileAlt,
+  faNetworkWired
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
@@ -30,12 +27,9 @@ const BUNDLE_ICONS = {
   admin: faCog,
   plotter: faMap,
   dashboard: faTachometerAlt,
-  datalogger: faDatabase,
-  anchor: faAnchor,
-  nmea: faPlug,
-  ais: faShip,
-  wilhelmsk: faMobileAlt,
-  automation: faCogs
+  nmea: faNetworkWired,
+  bluetooth: faTowerBroadcast,
+  wilhelmsk: faMobileAlt
 }
 
 function BundleCard({ bundle, selected, installed, onToggle }) {
@@ -77,7 +71,7 @@ function BundleCard({ bundle, selected, installed, onToggle }) {
           {bundle.description}
         </CardText>
         <div className="text-center text-muted small mb-3">
-          {bundle.plugins.length + bundle.webapps.length} packages
+          {bundle.plugins.length} packages
         </div>
         {isInstalled ? (
           <Button

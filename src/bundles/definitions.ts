@@ -18,7 +18,7 @@ import { BundleDefinition } from './types'
 
 /**
  * Predefined bundles for common Signal K use cases.
- * These are curated sets of plugins and webapps that work well together.
+ * These are curated sets of plugins that work well together.
  */
 export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
   {
@@ -37,20 +37,8 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         name: '@signalk/set-system-time',
         required: true,
         description: 'Sets system time from GPS data'
-      },
-      {
-        name: 'signalk-rpi-monitor',
-        required: false,
-        description:
-          'Raspberry Pi CPU, memory, storage and temperature monitoring'
-      },
-      {
-        name: 'signalk-starlink',
-        required: false,
-        description: 'Starlink Dishy statistics and auto-stow while in transit'
       }
     ],
-    webapps: [],
     order: 1
   },
   {
@@ -61,14 +49,20 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
     icon: 'map',
     plugins: [
       {
-        name: '@signalk/charts-plugin',
+        name: '@signalk/freeboard-sk',
         required: true,
-        description: 'Serves chart tiles to chart plotting apps'
+        setAsLandingPage: true,
+        description: 'Full-featured chart plotter and navigation display'
       },
       {
         name: 'signalk-charts-provider-simple',
         required: false,
         description: 'Simple chart provider for local chart files'
+      },
+      {
+        name: '@signalk/charts-plugin',
+        required: false,
+        description: 'Mapbox tiles chart provider'
       },
       {
         name: 'signalk-pmtiles-plugin',
@@ -91,11 +85,6 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'Autopilot control interface'
       },
       {
-        name: '@signalk/vesselpositions',
-        required: false,
-        description: 'Displays nearby vessels from AIS data on the chart'
-      },
-      {
         name: '@signalk/tracks-plugin',
         required: false,
         description: 'Records vessel track history'
@@ -116,26 +105,9 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         description: 'Displays country flags for vessels'
       },
       {
-        name: 'signalk-activecaptain-resources',
-        required: false,
-        description: 'ActiveCaptain POI data integration'
-      },
-      {
         name: 'signalk-buddylist-plugin',
         required: false,
         description: 'Track and display buddy vessels'
-      },
-      {
-        name: 'signalk-to-influxdb2',
-        required: false,
-        description: 'History API for playback and data logging'
-      }
-    ],
-    webapps: [
-      {
-        name: '@signalk/freeboard-sk',
-        setAsLandingPage: true,
-        description: 'Full-featured chart plotter and navigation display'
       }
     ],
     order: 2
@@ -144,136 +116,17 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
     id: 'dashboard',
     name: 'Dashboard & Instruments',
     description:
-      'Instrument panels, gauges, and real-time data visualization. Great for helm displays and monitoring.',
+      'KIP instrument panel with gauges and real-time data visualization. Great for helm displays and monitoring.',
     icon: 'dashboard',
     plugins: [
       {
-        name: 'signalk-derived-data',
-        required: false,
-        description: 'Calculates derived values like true wind, VMG, etc.'
-      },
-      {
-        name: '@signalk/zones',
-        required: false,
-        description: 'Configures alert zones for values'
-      },
-      {
-        name: 'signalk-speed-wind-averaging',
-        required: false,
-        description: 'Provides smoothed speed and wind readings'
-      },
-      {
-        name: 'bt-sensors-plugin-sk',
-        required: false,
-        description:
-          'Bluetooth sensor integration for Victron, Renogy, Xiaomi and others'
-      }
-    ],
-    webapps: [
-      {
-        name: '@signalk/instrumentpanel',
-        setAsLandingPage: true,
-        description: 'Customizable instrument panel with gauges and displays'
-      },
-      {
         name: '@mxtommy/kip',
-        description: 'Modern, customizable instrument display'
-      },
-      {
-        name: '@signalk/sailgauge',
-        description: 'Sailing-focused wind and performance gauges'
-      }
-    ],
-    order: 5
-  },
-  {
-    id: 'datalogger',
-    name: 'Data Logger',
-    description:
-      'Record and analyze historical data. Useful for performance analysis, maintenance tracking, and voyage logs.',
-    icon: 'storage',
-    plugins: [
-      {
-        name: 'signalk-to-influxdb2',
         required: true,
-        description: 'Logs Signal K data to InfluxDB for analysis'
-      },
-      {
-        name: 'signalk-engine-hours',
-        required: false,
-        description: 'Track engine running hours'
-      },
-      {
-        name: 'signalk-to-mongodb',
-        required: false,
-        description: 'Store Signal K data in MongoDB'
-      },
-      {
-        name: 'signalk-postgsail',
-        required: false,
-        description: 'Automatic voyage logging to PostgSail cloud'
-      },
-      {
-        name: 'signalk-to-batch-format',
-        required: false,
-        description: 'Compressed batch JSON files for cloud storage'
-      },
-      {
-        name: 'signalk-path-mapper',
-        required: false,
-        description: 'Remap data paths for logging compatibility'
-      }
-    ],
-    webapps: [],
-    order: 9
-  },
-  {
-    id: 'anchor',
-    name: 'Anchor Watch',
-    description:
-      'Anchor alarm and monitoring features. Get alerts when your vessel moves outside a defined area.',
-    icon: 'anchor',
-    plugins: [
-      {
-        name: 'signalk-anchoralarm-plugin',
-        required: true,
-        description: 'Monitors anchor position and triggers alarms'
-      },
-      {
-        name: 'signalk-push-notifications',
-        required: false,
-        description: 'Sends push notifications to mobile devices'
-      },
-      {
-        name: 'signalk-alarm-silencer',
-        required: false,
-        description: 'Provides UI to acknowledge and silence alarms'
-      },
-      {
-        name: 'hoekens-anchor-alarm',
-        required: false,
-        description:
-          'Web app anchor alarm with scope calculator and engine override'
-      },
-      {
-        name: 'signalk-tides',
-        required: false,
-        description: 'Provides tide data for scope calculations'
-      },
-      {
-        name: '@meri-imperiumi/signalk-autostate',
-        required: false,
-        description: 'Auto-detect anchored vs moored state'
-      }
-    ],
-    webapps: [
-      {
-        name: '@signalk/freeboard-sk',
         setAsLandingPage: true,
-        description: 'View anchor position on chart'
+        description: 'Modern, customizable instrument display'
       }
     ],
-    order: 6
+    order: 3
   },
   {
     id: 'nmea',
@@ -296,92 +149,25 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         name: 'signalk-to-nmea2000',
         required: false,
         description: 'Outputs Signal K data to NMEA 2000 network'
-      },
-      {
-        name: '@canboat/visual-analyzer',
-        required: false,
-        description: 'NMEA 2000 data visualization and analysis tool'
-      },
-      {
-        name: 'signalk-n2k-switching',
-        required: false,
-        description: 'Control NMEA 2000 switching devices'
-      },
-      {
-        name: 'signalk-maretron-proprietary',
-        required: false,
-        description: 'Support for Maretron proprietary PGNs'
       }
     ],
-    webapps: [],
-    order: 3
+    order: 4
   },
   {
-    id: 'ais',
-    name: 'AIS & Vessel Tracking',
+    id: 'bluetooth',
+    name: 'Bluetooth Sensors',
     description:
-      'AIS data processing, vessel tracking, collision avoidance, and reporting to services like MarineTraffic.',
-    icon: 'ship',
+      'Bluetooth sensor integration for Victron, Renogy, Xiaomi and other BLE devices.',
+    icon: 'bluetooth',
     plugins: [
       {
-        name: '@signalk/vesselpositions',
+        name: 'bt-sensors-plugin-sk',
         required: true,
-        description: 'Displays nearby vessels from AIS data'
-      },
-      {
-        name: 'ais-forwarder',
-        required: false,
-        description: 'Forward AIS data to MarineTraffic, AISHub and others'
-      },
-      {
-        name: '@signalk/aisreporter',
-        required: false,
         description:
-          'Report vessel position to MarineTraffic without AIS hardware'
-      },
-      {
-        name: 'signalk-n2kais-to-nmea0183',
-        required: false,
-        description: 'Convert NMEA 2000 AIS to NMEA 0183 format'
-      },
-      {
-        name: 'signalk-vessels-to-ais',
-        required: false,
-        description: 'Convert vessel data to NMEA 0183 AIS format'
-      },
-      {
-        name: 'signalk-ais-target-prioritizer',
-        required: false,
-        description: 'CPA/TCPA collision risk warnings and alarms'
-      },
-      {
-        name: '@noforeignland/signalk-to-noforeignland',
-        required: false,
-        description: 'Upload tracks and logs to NoForeignLand'
-      },
-      {
-        name: 'signalk-saillogger',
-        required: false,
-        description: 'Automated sailing log entries'
-      },
-      {
-        name: 'naivegpxlogger',
-        required: false,
-        description: 'Simple GPX track logging'
-      },
-      {
-        name: 'signalk-windy',
-        required: false,
-        description: 'Send data to Windy.com weather service'
-      },
-      {
-        name: 'signalk-derived-data',
-        required: false,
-        description: 'Calculates derived values required by signalk-windy'
+          'Bluetooth sensor integration for Victron, Renogy, Xiaomi and others'
       }
     ],
-    webapps: [],
-    order: 4
+    order: 5
   },
   {
     id: 'wilhelmsk',
@@ -399,66 +185,9 @@ export const BUNDLE_DEFINITIONS: BundleDefinition[] = [
         name: 'signalk-push-notifications',
         required: true,
         description: 'Sends push notifications to mobile devices'
-      },
-      {
-        name: 'signalk-alarm-silencer',
-        required: false,
-        description: 'Acknowledge and silence alarms from WilhelmSK'
-      },
-      {
-        name: '@signalk/zones',
-        required: false,
-        description: 'Configure alert zones for values'
-      },
-      {
-        name: 'signalk-anchoralarm-plugin',
-        required: false,
-        description: 'Anchor monitoring with mobile alerts'
-      },
-      {
-        name: 'signalk-raymarine-autopilot',
-        required: false,
-        description: 'Raymarine autopilot control from WilhelmSK'
-      },
-      {
-        name: 'signalk-fusion-stereo',
-        required: false,
-        description: 'Fusion stereo control from WilhelmSK'
       }
     ],
-    webapps: [],
-    order: 7
-  },
-  {
-    id: 'automation',
-    name: 'Home Automation',
-    description:
-      'Node-RED, MQTT, and smart home integration for vessel automation.',
-    icon: 'workflow',
-    plugins: [
-      {
-        name: '@signalk/signalk-node-red',
-        required: true,
-        description: 'Node-RED integration for flow-based automation'
-      },
-      {
-        name: 'signalk-mqtt-gw',
-        required: false,
-        description: 'MQTT gateway for Home Assistant and other systems'
-      },
-      {
-        name: 'signalk-shelly2',
-        required: false,
-        description: 'Shelly smart device integration'
-      },
-      {
-        name: 'signalk-philips-hue',
-        required: false,
-        description: 'Philips Hue smart lighting control'
-      }
-    ],
-    webapps: [],
-    order: 8
+    order: 6
   }
 ]
 

@@ -209,26 +209,19 @@ function startMultiBundleInstallation(
   bundles: BundleDefinition[],
   request: BundleInstallRequest
 ) {
-  // Merge plugins and webapps from all bundles, avoiding duplicates
+  // Merge plugins from all bundles, avoiding duplicates
   const pluginsMap = new Map<string, { name: string }>()
-  const webappsMap = new Map<string, { name: string }>()
 
   bundles.forEach((bundle) => {
     const pluginsToInstall = request.plugins
       ? bundle.plugins.filter((p) => request.plugins!.includes(p.name))
       : bundle.plugins
 
-    const webappsToInstall = request.webapps
-      ? bundle.webapps.filter((w) => request.webapps!.includes(w.name))
-      : bundle.webapps
-
     pluginsToInstall.forEach((p) => pluginsMap.set(p.name, { name: p.name }))
-    webappsToInstall.forEach((w) => webappsMap.set(w.name, { name: w.name }))
   })
 
   const plugins = Array.from(pluginsMap.values())
-  const webapps = Array.from(webappsMap.values())
-  const totalItems = plugins.length + webapps.length
+  const totalItems = plugins.length
 
   // Initialize status
   installStatus = {
@@ -243,7 +236,6 @@ function startMultiBundleInstallation(
   // Queue all items
   installQueue.length = 0
   plugins.forEach((p) => installQueue.push({ name: p.name }))
-  webapps.forEach((w) => installQueue.push({ name: w.name }))
 
   debug(
     `Starting multi-bundle installation: ${bundles.map((b) => b.name).join(', ')} with ${totalItems} items`
@@ -334,12 +326,10 @@ function emitStatusUpdate(app: BundleManagerApp) {
 }
 
 /**
- * Check if a bundle is already installed (basic heuristic)
- * This checks if any of the required plugins from a bundle are installed
+ * Returns the installed bundle ID (placeholder for future use).
+ * Bundle installation detection is handled client-side using the plugins list.
  */
 function getInstalledBundleId(_app: BundleManagerApp): string | undefined {
-  // TODO: Implement by checking installed plugins against bundle definitions
-  // For now, return undefined
   return undefined
 }
 

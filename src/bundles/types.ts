@@ -15,7 +15,7 @@
  */
 
 /**
- * Configuration for a plugin included in a bundle
+ * Configuration for a plugin or webapp included in a bundle
  */
 export interface BundlePlugin {
   /** npm package name */
@@ -26,22 +26,12 @@ export interface BundlePlugin {
   defaultConfig?: Record<string, unknown>
   /** Human-readable description of why this plugin is included */
   description?: string
-}
-
-/**
- * Configuration for a webapp included in a bundle
- */
-export interface BundleWebapp {
-  /** npm package name */
-  name: string
   /** If true, set this webapp as the default landing page */
   setAsLandingPage?: boolean
-  /** Human-readable description */
-  description?: string
 }
 
 /**
- * A bundle definition representing a curated set of plugins and webapps
+ * A bundle definition representing a curated set of plugins
  * for a specific use case
  */
 export interface BundleDefinition {
@@ -55,8 +45,6 @@ export interface BundleDefinition {
   icon?: string
   /** Plugins included in this bundle */
   plugins: BundlePlugin[]
-  /** Webapps included in this bundle */
-  webapps: BundleWebapp[]
   /** Order for display in the wizard (lower = first) */
   order?: number
 }
@@ -84,6 +72,4 @@ export interface BundleInstallRequest {
   bundleIds?: string[]
   /** Override: specific plugins to install (expert mode) */
   plugins?: string[]
-  /** Override: specific webapps to install (expert mode) */
-  webapps?: string[]
 }
