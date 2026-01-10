@@ -55,6 +55,7 @@ import {
 } from '../deltastats'
 import { EventsActorId } from '../events'
 import { importOrRequire, modulesWithKeyword, NpmPackageData } from '../modules'
+import { QuickJSPluginManager } from '../quickjs-plugin-loader'
 
 const put = require('../put')
 const _putPath = put.putPath
@@ -94,9 +95,15 @@ function backwardsCompat(url: string) {
 
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
+  let quickJSPluginManager: QuickJSPluginManager | null = null
+  
   return {
     async start() {
       ensureExists(path.join(theApp.config.configPath, 'plugin-config-data'))
+      
+      // Initialize QuickJS plugin manager
+      quickJSPluginManager = new QuickJSPluginManager(theApp)
+      theApp.quickJSPluginManager = quickJSPluginManager
 
       theApp.getPluginsList = async (enabled?: boolean) => {
         return await getPluginsList(enabled)
@@ -309,6 +316,58 @@ module.exports = (theApp: any) => {
         )
       })
     )
+    
+    // Also load QuickJS plugins if any exist
+    await loadQuickJSPlugins(app)
+  }
+  
+  async function loadQuickJSPlugins(app: any) {
+    if (!quickJSPluginManager) {
+      return
+    }
+    
+    // Look for QuickJS plugins in the plugin directory
+    const pluginsDir = path.join(app.config.configPath, '../node_modules')
+    if (!fs.existsSync(pluginsDir)) {
+      return
+    }
+    
+    // Find plugins with 'signalk-quickjs-plugin' keyword
+    const quickjsModules = modulesWithKeyword(app.config, 'signalk-quickjs-plugin')
+    
+    for (const moduleData of quickjsModules) {
+      try {
+        // Derive plugin ID from package name (e.g., @signalk/my-plugin -> _signalk_my-plugin)
+        const pluginId = moduleData.metadata.name.replace(/@/g, '_').replace(/\//g, '_')
+        const pluginPath = path.join(moduleData.location, moduleData.module, 'plugin.js')
+        
+        if (fs.existsSync(pluginPath)) {
+          debug(`Found QuickJS plugin: ${pluginId} at ${pluginPath}`)
+          
+          await quickJSPluginManager.loadPlugin(pluginId, pluginPath)
+          
+          // Check if plugin should be enabled
+          const options = getPluginOptions(pluginId)
+          if (options && options.enabled) {
+            await quickJSPluginManager.startPlugin(pluginId, options.configuration || {})
+          }
+          
+          // Register the plugin in the app's plugin list
+          app.plugins.push({
+            id: pluginId,
+            name: moduleData.metadata.name,
+            packageName: moduleData.metadata.name,
+            version: moduleData.metadata.version,
+            description: moduleData.metadata.description,
+            type: 'quickjs',
+            enabled: options?.enabled || false,
+            state: options?.enabled ? 'started' : 'stopped'
+          })
+        }
+      } catch (error) {
+        console.error(`Error loading QuickJS plugin ${moduleData.metadata.name}:`, error)
+      }
+    }
   }
 
   function handleMessageWrapper(app: any, id: string) {

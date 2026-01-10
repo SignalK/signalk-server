@@ -1,0 +1,11 @@
+{
+  "name": "@signalk/quickjs-hello-world",
+  "version": "1.0.0",
+  "description": "Example Signal K plugin running in QuickJS WASM sandbox",
+  "keywords": [
+    "signalk-quickjs-plugin"
+  ],
+  "main": "plugin.js",
+  "author": "Signal K Team",
+  "license": "Apache-2.0"
+}
