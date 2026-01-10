@@ -8,6 +8,7 @@
 
 import Debug from 'debug'
 import { initializeWasm, shutdownAllWasmPlugins } from '../wasm'
+import { getExternalPort } from '../ports'
 
 const debug = Debug('signalk:interfaces:wasm')
 
@@ -17,7 +18,7 @@ module.exports = (app: any) => {
   api.mdns = {
     name: '_signalk-wasm',
     type: 'tcp',
-    port: app.config.port
+    port: getExternalPort(app)
   }
 
   api.start = () => {
