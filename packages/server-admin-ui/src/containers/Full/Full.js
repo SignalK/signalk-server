@@ -26,6 +26,7 @@ import Settings from '../../views/ServerConfig/Settings'
 import BackupRestore from '../../views/ServerConfig/BackupRestore'
 import ServerLog from '../../views/ServerConfig/ServerLog'
 import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
+import Wizard from '../../views/Wizard/Wizard'
 
 import { fetchAllData, openServerEventsConnection } from '../../actions'
 
@@ -121,6 +122,11 @@ class Full extends Component {
                 />
                 <Route path="/login" component={Login} />
                 <Route path="/register" component={Register} />
+                <Route
+                  path="/wizard"
+                  name="Plugin Wizard"
+                  component={loginOrOriginal(Wizard)}
+                />
                 <Redirect from="/" to="/dashboard" />
               </Switch>
             </Container>

@@ -1,0 +1,46 @@
+.wizard {
+  .bundle-card {
+    transition:
+      transform 0.2s,
+      box-shadow 0.2s;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+  }
+
+  .wizard-welcome {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .wizard-confirm {
+    ul {
+      padding-left: 1.5rem;
+
+      li {
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      font-weight: normal;
+    }
+  }
+
+  .install-progress {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .wizard-complete {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .gap-3 {
+    gap: 1rem;
+  }
+}
