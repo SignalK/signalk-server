@@ -52,4 +52,4 @@ else
     service bluetooth restart
 fi
 
-/home/node/signalk/node_modules/.bin/signalk-server --securityenabled
+/home/node/signalk/node_modules/signalk-server/bin/signalk-server --securityenabled'
