@@ -656,6 +656,8 @@ module.exports = function (
         isUndefined(app.config.settings.keepMostRecentLogsOnly) ||
         app.config.settings.keepMostRecentLogsOnly,
       logCountToKeep: app.config.settings.logCountToKeep || 24,
+      eventEmitterMaxListeners:
+        app.config.settings.eventEmitterMaxListeners || 10,
       runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true',
       courseApi: {
         apiOnly: app.config.settings.courseApi?.apiOnly || false
@@ -811,6 +813,12 @@ module.exports = function (
 
     if (!isUndefined(settings.logCountToKeep)) {
       app.config.settings.logCountToKeep = Number(settings.logCountToKeep)
+    }
+
+    if (!isUndefined(settings.eventEmitterMaxListeners)) {
+      app.config.settings.eventEmitterMaxListeners = Number(
+        settings.eventEmitterMaxListeners
+      )
     }
 
     forIn(settings.courseApi, (enabled, name) => {

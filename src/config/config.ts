@@ -83,6 +83,7 @@ export interface Config {
     courseApi?: {
       apiOnly?: boolean
     }
+    eventEmitterMaxListeners?: number
   }
   defaults: object
 }
