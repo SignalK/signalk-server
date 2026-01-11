@@ -260,6 +260,27 @@ class ServerSettings extends Component {
                 </FormGroup>
                 <FormGroup row>
                   <Col md="2">
+                    <Label htmlFor="eventEmitterMaxListeners">
+                      Event Emitter Max Listeners
+                    </Label>
+                  </Col>
+                  <Col xs="12" md={fieldColWidthMd}>
+                    <Input
+                      type="text"
+                      name="eventEmitterMaxListeners"
+                      onChange={this.handleChange}
+                      value={this.state.eventEmitterMaxListeners}
+                    />
+                    <FormText color="muted">
+                      Maximum number of delta event listeners. Increase if you
+                      see MaxListenersExceededWarning when connecting multiple
+                      clients. Default: 10. Can be overridden by
+                      EVENT_EMITTER_MAX_LISTENERS environment variable.
+                    </FormText>
+                  </Col>
+                </FormGroup>
+                <FormGroup row>
+                  <Col md="2">
                     <Label htmlFor="loggingDirectory">
                       Data Logging Directory
                     </Label>
