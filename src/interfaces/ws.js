@@ -77,7 +77,9 @@ function getWsDeviceDescription(app, identifier) {
       wsDeviceDescriptionCache.set(identifier, null)
       return undefined
     }
-    const device = devices.find((candidate) => candidate.clientId === identifier)
+    const device = devices.find(
+      (candidate) => candidate.clientId === identifier
+    )
     const description =
       device && device.description ? device.description : undefined
     wsDeviceDescriptionCache.set(identifier, description || null)

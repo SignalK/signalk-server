@@ -114,7 +114,10 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
                       <Creatable
                         menuPortalTarget={document.body}
                         options={options}
-                        value={{ value: sourceRef, label: resolveSourceLabel(sourceRef) }}
+                        value={{
+                          value: sourceRef,
+                          label: resolveSourceLabel(sourceRef)
+                        }}
                         onChange={(e) => {
                           changePriority(
                             pathIndex,

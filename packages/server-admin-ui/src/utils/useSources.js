@@ -23,9 +23,8 @@ export function useSources(pollInterval = 30000) {
     }
 
     doFetch()
-    const interval = pollInterval > 0
-      ? setInterval(doFetch, pollInterval)
-      : null
+    const interval =
+      pollInterval > 0 ? setInterval(doFetch, pollInterval) : null
 
     return () => {
       canceled = true

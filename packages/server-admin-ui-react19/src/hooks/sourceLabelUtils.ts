@@ -9,7 +9,11 @@ function getWsSourceMetadata(
   sourceRef: string,
   sources: Record<string, unknown>
 ): SourceMetadata | null {
-  if (!sourceRef?.startsWith('ws.') || !sources || typeof sources !== 'object') {
+  if (
+    !sourceRef?.startsWith('ws.') ||
+    !sources ||
+    typeof sources !== 'object'
+  ) {
     return null
   }
 
