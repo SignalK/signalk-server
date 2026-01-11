@@ -359,12 +359,13 @@ WsPromiser.prototype.nextMsg = function () {
 }
 
 WsPromiser.prototype.onMessage = function (message) {
+  const msgStr = Buffer.isBuffer(message) ? message.toString() : message
   const theCallees = this.callees
   this.callees = []
   if (theCallees.length > 0) {
-    theCallees.forEach((callee) => callee(message))
+    theCallees.forEach((callee) => callee(msgStr))
   } else {
-    this.messages.push(message)
+    this.messages.push(msgStr)
   }
 }
 

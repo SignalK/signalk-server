@@ -76,12 +76,13 @@ WsPromiser.prototype.parsedMessages = function () {
 }
 
 WsPromiser.prototype.onMessage = function (message) {
-  this.messages.push(message)
+  const msgStr = Buffer.isBuffer(message) ? message.toString() : message
+  this.messages.push(msgStr)
   const theCallees = this.callees
   this.callees = []
-  theCallees.forEach((callee) => callee(message))
+  theCallees.forEach((callee) => callee(msgStr))
 
-  this.nthMessagePromiser(++this.messageCount).resolve(message)
+  this.nthMessagePromiser(++this.messageCount).resolve(msgStr)
 }
 
 WsPromiser.prototype.send = function (message) {
