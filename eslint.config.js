@@ -7,7 +7,20 @@ const react = require('eslint-plugin-react')
 const chai = require('eslint-plugin-chai-friendly')
 
 module.exports = defineConfig([
-  globalIgnores(['**/public', '**/dist', '**/.__mf__temp']),
+  globalIgnores([
+    '**/public',
+    '**/dist',
+    '**/.__mf__temp',
+    // WASM plugin examples - AssemblyScript has different semantics
+    'examples/wasm-plugins/**/assembly/**',
+    // AssemblyScript SDK - decorators and types not compatible with ESLint
+    'packages/assemblyscript-plugin-sdk/assembly/**',
+    // Auto-generated WASM bindings (created by AssemblyScript compiler)
+    'examples/wasm-plugins/**/build/**',
+    'examples/wasm-plugins/**/plugin.js',
+    'examples/wasm-plugins/**/plugin.d.ts',
+    'packages/assemblyscript-plugin-sdk/build/**'
+  ]),
 
   // TypeScript options
   {

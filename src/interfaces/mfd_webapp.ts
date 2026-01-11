@@ -61,13 +61,17 @@ const send = (
   port: number
 ) => {
   const socket = dgram.createSocket('udp4')
+  socket.on('error', (err) => {
+    debug(`Socket error: ${err}`)
+    socket.close()
+  })
   socket.once('listening', () => {
     socket.send(msg, port, toAddress, () => {
       socket.close()
       debug(`${fromAddress}=>${toAddress} @${port} ${msg}`)
     })
   })
-  socket.bind(PUBLISH_PORT, fromAddress)
+  socket.bind(0, fromAddress)
 }
 
 const getPublishToNavico = (protocol: string, port: number) => async () => {

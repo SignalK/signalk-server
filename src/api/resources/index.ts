@@ -364,9 +364,14 @@ export class ResourcesApi {
     if (!this.resProvider[resType]) {
       return result
     }
+
     const req: Promise<any>[] = []
     this.resProvider[resType].forEach((v) => {
-      req.push(v.listResources(params))
+      try {
+        req.push(v.listResources(params))
+      } catch (err) {
+        debug(err)
+      }
     })
 
     const resp = await Promise.allSettled(req)
@@ -388,7 +393,11 @@ export class ResourcesApi {
     }
     const req: Promise<any>[] = []
     this.resProvider[resType].forEach((id) => {
-      req.push(id.getResource(resId, property))
+      try {
+        req.push(id.getResource(resId, property))
+      } catch (err) {
+        debug(err)
+      }
     })
 
     const resp = await Promise.allSettled(req)
@@ -415,11 +424,16 @@ export class ResourcesApi {
     if (!this.resProvider[resType]) {
       return result
     }
+
     const req: Promise<any>[] = []
     const idList: string[] = []
     this.resProvider[resType].forEach((v, k) => {
-      idList.push(k)
-      req.push(v.getResource(resId))
+      try {
+        req.push(v.getResource(resId))
+        idList.push(k)
+      } catch (err) {
+        debug(err)
+      }
     })
 
     const resp = await Promise.allSettled(req)

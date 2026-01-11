@@ -1,0 +1,12 @@
+# Build artifacts
+build/
+plugin.js
+plugin.d.ts
+*.wasm
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# OS files
+.DS_Store

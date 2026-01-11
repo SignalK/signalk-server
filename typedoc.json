@@ -48,6 +48,7 @@
   "excludeInternal": true,
   "sortEntryPoints": true,
   "exclude": [
+    "packages/assemblyscript-plugin-sdk",
     "packages/resources-provider-plugin",
     "packages/server-admin-ui",
     "packages/server-admin-ui-dependencies",
@@ -66,12 +67,19 @@
   "darkHighlightTheme": "github-dark-dimmed",
   "highlightLanguages": [
     "bash",
-    "shell",
-    "sh",
+    "csharp",
+    "go",
     "json",
     "javascript",
     "typescript",
-    "nginx"
+    "nginx",
+    "powershell",
+    "rust",
+    "shell",
+    "sh",
+    "toml",
+    "wit",
+    "xml"
   ],
   "cacheBust": true
 }

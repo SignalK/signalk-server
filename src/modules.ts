@@ -36,11 +36,32 @@ interface NpmDistTags {
   [prerelease: string]: string
 }
 
+export interface WasmCapabilities {
+  network?: boolean
+  storage?: 'vfs-only' | 'none'
+  dataRead?: boolean
+  dataWrite?: boolean
+  serialPorts?: boolean
+  putHandlers?: boolean
+  httpEndpoints?: boolean
+  resourceProvider?: boolean
+  weatherProvider?: boolean
+  radarProvider?: boolean
+  rawSockets?: boolean
+}
+
 export interface NpmPackageData {
   name: string
   version: string
   date: string
   keywords: string[]
+  description?: string
+  // WASM plugin fields
+  wasmManifest?: string // Path to WASM binary (e.g., "build/plugin.wasm")
+  wasmCapabilities?: WasmCapabilities
+  signalk?: {
+    displayName?: string
+  }
 }
 
 interface NpmSearchResponse {
@@ -182,8 +203,12 @@ export function runNpm(
   }
   let npm
 
-  const opts: { cwd?: string } = {}
+  const opts: { cwd?: string; shell?: boolean } = {}
   let packageString
+
+  if (process.platform === 'win32') {
+    opts['shell'] = true
+  }
 
   if (name) {
     packageString = version ? `${name}@${version}` : name

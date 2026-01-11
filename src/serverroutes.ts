@@ -134,6 +134,8 @@ interface App
   logging: {
     rememberDebug: (r: boolean) => void
     enableDebug: (r: string) => boolean
+    addDebug: (name: string) => void
+    removeDebug: (name: string) => void
   }
   activateSourcePriorities: () => void
   streambundle: StreamBundle
@@ -141,6 +143,21 @@ interface App
 
 interface ModuleInfo {
   name: string
+}
+
+// Helper function to update WASM debug logging
+function updateWasmDebugLogging(enabled: boolean, app: App) {
+  const wasmDebugPattern = 'signalk:wasm:*'
+
+  if (enabled) {
+    // Add WASM debug using the logging module's API
+    debug('Enabling WASM debug logging')
+    app.logging.addDebug(wasmDebugPattern)
+  } else {
+    // Remove WASM debug using the logging module's API
+    debug('Disabling WASM debug logging')
+    app.logging.removeDebug(wasmDebugPattern)
+  }
 }
 
 module.exports = function (
@@ -174,6 +191,12 @@ module.exports = function (
 
   let securityWasEnabled = false
   const restoreSessions = new Map<string, string>()
+
+  // Initialize WASM logging on startup based on config
+  if (app.config.settings.enableWasmLogging !== false) {
+    // Default to enabled if not explicitly disabled
+    updateWasmDebugLogging(true, app)
+  }
 
   const logopath = path.resolve(app.config.configPath, 'logo.svg')
   if (fs.existsSync(logopath)) {
@@ -632,7 +655,10 @@ module.exports = function (
         enablePluginLogging:
           isUndefined(app.config.settings.enablePluginLogging) ||
           app.config.settings.enablePluginLogging,
-        trustProxy: app.config.settings.trustProxy || false
+        trustProxy: app.config.settings.trustProxy || false,
+        enableWasmLogging:
+          isUndefined(app.config.settings.enableWasmLogging) ||
+          app.config.settings.enableWasmLogging
       },
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
@@ -762,6 +788,12 @@ module.exports = function (
 
     if (!isUndefined(settings.options.trustProxy)) {
       app.config.settings.trustProxy = settings.options.trustProxy
+    }
+
+    if (!isUndefined(settings.options.enableWasmLogging)) {
+      app.config.settings.enableWasmLogging = settings.options.enableWasmLogging
+      // Update WASM debug logging dynamically
+      updateWasmDebugLogging(settings.options.enableWasmLogging ?? true, app)
     }
 
     if (!isUndefined(settings.port)) {
