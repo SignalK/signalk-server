@@ -18,11 +18,11 @@ ARG TAG
 # Install locally (not globally) to avoid permission issues
 # Copy @signalk packages to nested location where admin-ui expects them
 RUN npm install signalk-server@$TAG \
-  && mkdir -p node_modules/signalk-server/node_modules \
-  && cp -r node_modules/@signalk node_modules/signalk-server/node_modules/
+  && mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
+  && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \
+  && rm -rf node_modules/@signalk/;
 
-COPY --chown=node docker/startup.sh startup.sh
-RUN chmod +x startup.sh
+COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 
 EXPOSE 3000
 ENV IS_IN_DOCKER=true
