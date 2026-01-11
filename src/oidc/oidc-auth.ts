@@ -85,10 +85,7 @@ export function validateAndMergeUserinfoClaims(
 
   // Only merge specific safe claims - don't allow userinfo to overwrite
   // security-critical claims like sub, iss, aud, nonce, etc.
-  const safeClaims = ['email', 'name', 'preferred_username', 'groups']
-  if (groupsAttribute !== 'groups') {
-    safeClaims.push(groupsAttribute)
-  }
+  const safeClaims = ['email', 'name', 'preferred_username', groupsAttribute]
 
   for (const claim of safeClaims) {
     if (userinfoClaims[claim] !== undefined) {
