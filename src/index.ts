@@ -544,58 +544,71 @@ class Server {
     return this
   }
 
-  async stop(cb?: () => void) {
-    if (!this.app.started) {
-      return this
-    }
-
-    try {
-      _.each(this.app.interfaces, (intf: any) => {
-        if (
-          intf !== null &&
-          typeof intf === 'object' &&
-          typeof intf.stop === 'function'
-        ) {
-          intf.stop()
+  stop(cb?: () => void) {
+    return new Promise((resolve, reject) => {
+      if (!this.app.started) {
+        resolve(this)
+      } else {
+        // Stop all interfaces (some may be async)
+        const stopInterfaces = async () => {
+          const stopPromises = Object.values(this.app.interfaces).map(
+            (intf: any) => {
+              if (
+                intf !== null &&
+                typeof intf === 'object' &&
+                typeof intf.stop === 'function'
+              ) {
+                const result = intf.stop()
+                // Handle both sync and async stops
+                return result instanceof Promise ? result : Promise.resolve()
+              }
+              return Promise.resolve()
+            }
+          )
+          await Promise.all(stopPromises)
         }
-      })
 
-      this.app.intervals.forEach((interval) => {
-        clearInterval(interval)
-      })
-
-      this.app.providers.forEach((providerHolder) => {
-        providerHolder.pipeElements[0].end()
-      })
-
-      debug('Closing server...')
-
-      const that = this
-      return new Promise((resolve, reject) => {
-        this.app.server.close(() => {
-          debug('Server closed')
-          if (that.app.redirectServer) {
+        stopInterfaces()
+          .catch((err) => debug('Error stopping interfaces:', err))
+          .then(() => {
             try {
-              that.app.redirectServer.close(() => {
-                debug('Redirect server closed')
-                delete that.app.redirectServer
-                that.app.started = false
-                cb && cb()
-                resolve(that)
+              this.app.intervals.forEach((interval) => {
+                clearInterval(interval)
+              })
+
+              this.app.providers.forEach((providerHolder) => {
+                providerHolder.pipeElements[0].end()
+              })
+
+              debug('Closing server...')
+
+              const that = this
+              this.app.server.close(() => {
+                debug('Server closed')
+                if (that.app.redirectServer) {
+                  try {
+                    that.app.redirectServer.close(() => {
+                      debug('Redirect server closed')
+                      delete that.app.redirectServer
+                      that.app.started = false
+                      cb && cb()
+                      resolve(that)
+                    })
+                  } catch (err) {
+                    reject(err)
+                  }
+                } else {
+                  that.app.started = false
+                  cb && cb()
+                  resolve(that)
+                }
               })
             } catch (err) {
               reject(err)
             }
-          } else {
-            that.app.started = false
-            cb && cb()
-            resolve(that)
-          }
-        })
-      })
-    } catch (err) {
-      throw err
-    }
+          })
+      }
+    })
   }
 }
 
