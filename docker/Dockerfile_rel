@@ -25,6 +25,5 @@ RUN npm install signalk-server@$TAG \
 COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 
 EXPOSE 3000
-ENV IS_IN_DOCKER=true
 WORKDIR /home/node/.signalk
 ENTRYPOINT ["/home/node/signalk/startup.sh"]
