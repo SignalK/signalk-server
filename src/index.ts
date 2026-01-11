@@ -134,6 +134,13 @@ class Server {
 
     app.signalk = new FullSignalK(app.selfId, app.selfType)
 
+    const maxListeners = process.env.EVENT_EMITTER_MAX_LISTENERS
+      ? parseInt(process.env.EVENT_EMITTER_MAX_LISTENERS, 10)
+      : 50
+    if (maxListeners > 0) {
+      app.signalk.setMaxListeners(maxListeners)
+    }
+
     app.propertyValues = new PropertyValues()
 
     const deltachainV1 = new DeltaChain(app.signalk.addDelta.bind(app.signalk))
