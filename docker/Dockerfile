@@ -21,17 +21,22 @@ WORKDIR /home/node/signalk
 COPY --chown=node:node *.tgz .
 
 # Install all tarballs locally (not globally) to avoid permission issues
-# npm will resolve dependencies between the local tarballs
-RUN npm install ./*.tgz
+# signalk-server nested, all other tarballs hoisted
+RUN npm install $(ls signalk-server-[0-9]*.tgz) --install-strategy=nested \
+  && other_tarballs=$(ls *.tgz 2>/dev/null | grep -v '^signalk-server-[0-9]' || true) \
+  && if [ -n "$other_tarballs" ]; then npm install $other_tarballs; fi \
+  && if [ -d node_modules/@signalk ]; then \
+       mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
+       && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \
+       && rm -rf node_modules/@signalk/; \
+     fi
 
 FROM base
 
 # Copy locally installed modules from tarballs_installed stage
 COPY --from=tarballs_installed --chown=node:node /home/node/signalk /home/node/signalk
 
-USER node
-COPY --chown=node docker/startup.sh startup.sh
-RUN chmod +x startup.sh
+COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 
 EXPOSE 3000
 ENV IS_IN_DOCKER=true
