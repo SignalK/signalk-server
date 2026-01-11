@@ -1,38 +1,33 @@
 FROM ubuntu:24.04
-ARG NODE_VERSION
-# Ensure NODE has .x suffix for NodeSource (supports both "22" and "22.x" input)
-ARG NODE=${NODE_VERSION}
+ARG NODE
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN userdel -r ubuntu
-RUN groupadd --gid 1000 node \
+RUN userdel -r ubuntu \
+  && groupadd --gid 1000 node \
   && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends git python3 python3-venv python3-pip build-essential \
-  avahi-daemon avahi-discover avahi-utils libnss-mdns mdns-scan libavahi-compat-libdnssd-dev sysstat procps nano curl libcap2-bin sudo dbus bluez \
-  && groupadd -r docker -g 991 && groupadd -r i2c -g 990 && groupadd -r spi -g 989 && usermod -a -G dialout,i2c,spi,netdev,docker node
+COPY avahi/avahi-dbus.conf bluez/bluezuser.conf /etc/dbus-1/system.d/
 
-# Modification to set time without need to use sudo
-RUN chmod u+s /usr/bin/date
+RUN apt-get update \
+  && apt-get -y install --no-install-recommends git \
+  python3 python3-venv python3-pip build-essential avahi-daemon libnss-mdns \
+  sysstat procps nano curl libcap2-bin sudo dbus bluez \
+  && groupadd -r docker -g 991 \
+  && groupadd -r i2c -g 990 \
+  && groupadd -r spi -g 989 \
+  && usermod -a -G dialout,i2c,spi,netdev,docker node \
+  && chmod u+s /usr/bin/date \
+  && mkdir -p /var/run/dbus/ /var/run/avahi-daemon/ \
+  && chmod -R 777 /var/run/dbus/ /var/run/avahi-daemon/ \
+  && chown -R avahi:avahi /var/run/avahi-daemon/
 
-# Install Node.js from NodeSource (ensure .x suffix for version)
-RUN NODESETUP="${NODE}"; \
-    case "${NODESETUP}" in *.*) ;; *) NODESETUP="${NODESETUP}.x";; esac && \
-    curl -fsSL https://deb.nodesource.com/setup_${NODESETUP} | bash - \
-  && DEBIAN_FRONTEND=noninteractive apt-get -y install nodejs \
+RUN curl -fsSL https://deb.nodesource.com/setup_$NODE | bash - \
+  && apt-get -y install --no-install-recommends nodejs \
   && npm config rm proxy \
   && npm config rm https-proxy \
   && npm config set fetch-retries 5 \
   && npm config set fetch-retry-mintimeout 60000 \
   && npm config set fetch-retry-maxtimeout 120000 \
   && npm cache clean -f \
-  && npm install npm@latest -g
-
-COPY docker/avahi/avahi-dbus.conf /etc/dbus-1/system.d/avahi-dbus.conf
-COPY docker/bluez/bluezuser.conf /etc/dbus-1/system.d/bluezuser.conf
-RUN mkdir -p /var/run/dbus/ \
-  && chmod -R 777 /var/run/dbus/ \
-  && mkdir -p /var/run/avahi-daemon/ \
-  && chmod -R 777 /var/run/avahi-daemon/ \
-  && chown -R avahi:avahi /var/run/avahi-daemon/
-
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+  && npm install npm@latest -g \
+  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
