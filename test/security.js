@@ -332,7 +332,7 @@ describe('Security', () => {
       const ws = new WebSocket(`ws://0.0.0.0:${port}/signalk/v1/stream`)
       let msgCount = 0
       ws.on('message', (msg) => {
-        const msgStr = Buffer.isBuffer(msg) ? msg.toString() : msg
+        const msgStr = msg.toString()
         msgCount++
         const parsed = JSON.parse(msgStr)
         if (!parsed.self) {
@@ -760,7 +760,7 @@ describe('WS Access Request IP reporting', () => {
         }
       )
       ws.on('message', (msg) => {
-        const msgStr = Buffer.isBuffer(msg) ? msg.toString() : msg
+        const msgStr = msg.toString()
         const data = JSON.parse(msgStr)
         if (data.requestId) {
           resolve(data)
@@ -801,7 +801,7 @@ describe('WS Access Request IP reporting', () => {
         }
       )
       ws.on('message', (msg) => {
-        const msgStr = Buffer.isBuffer(msg) ? msg.toString() : msg
+        const msgStr = msg.toString()
         const data = JSON.parse(msgStr)
         if (data.requestId) {
           resolve(data)

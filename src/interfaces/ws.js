@@ -256,13 +256,11 @@ module.exports = function (app) {
           })
         } else {
           spark.on('data', function (msg) {
-            if (Buffer.isBuffer(msg)) {
-              try {
-                msg = JSON.parse(msg.toString())
-              } catch (e) {
-                debug('Failed to parse message buffer: ' + e.message)
-                return
-              }
+            try {
+              msg = JSON.parse(msg.toString())
+            } catch (e) {
+              debug('Failed to parse message: ' + e.message)
+              return
             }
             debug('<' + JSON.stringify(msg))
 

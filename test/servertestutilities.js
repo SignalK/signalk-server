@@ -76,7 +76,7 @@ WsPromiser.prototype.parsedMessages = function () {
 }
 
 WsPromiser.prototype.onMessage = function (message) {
-  const msgStr = Buffer.isBuffer(message) ? message.toString() : message
+  const msgStr = message.toString()
   this.messages.push(msgStr)
   const theCallees = this.callees
   this.callees = []

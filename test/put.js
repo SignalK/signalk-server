@@ -359,7 +359,7 @@ WsPromiser.prototype.nextMsg = function () {
 }
 
 WsPromiser.prototype.onMessage = function (message) {
-  const msgStr = Buffer.isBuffer(message) ? message.toString() : message
+  const msgStr = message.toString()
   const theCallees = this.callees
   this.callees = []
   if (theCallees.length > 0) {
