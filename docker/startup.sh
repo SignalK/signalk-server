@@ -37,8 +37,8 @@ if [ -z "$CONTAINER_RUNTIME" ]; then
     fi
 fi
 
-# IS_IN_DOCKER is already set in Dockerfile for backward compatibility
-# No need to set it here - it's always true in containers
+# Set IS_IN_DOCKER for Admin UI (disables "Update Server" button in container)
+export IS_IN_DOCKER=true
 
 # Check if host D-Bus socket is mounted (rootless container scenario)
 # If mounted, we use the host's D-Bus/Avahi instead of starting our own

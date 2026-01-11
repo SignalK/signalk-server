@@ -39,7 +39,6 @@ COPY --from=tarballs_installed --chown=node:node /home/node/signalk /home/node/s
 COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 
 EXPOSE 3000
-ENV IS_IN_DOCKER=true
 ENV SKIP_ADMINUI_VERSION_CHECK=true
 WORKDIR /home/node/.signalk
 ENTRYPOINT ["/home/node/signalk/startup.sh"]
