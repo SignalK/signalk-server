@@ -220,7 +220,7 @@ export function runNpm(
 
   const npmArgs = isTheServerModule(name, config)
     ? [command, '-g']
-    : ['--save', command]
+    : ['--save', '--ignore-scripts', command]
 
   if (packageString) {
     npmArgs.push(packageString)

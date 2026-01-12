@@ -66,6 +66,12 @@ _Example: package.json_
 }
 ```
 
+### Important: Avoid install-time scripts
+
+The Signal K AppStore installs plugins using `npm install --ignore-scripts` for security reasons. This means any `preinstall`, `install`, or `postinstall` scripts in your plugin's `package.json` will not run when users install your plugin through the AppStore.
+
+Ensure your npm package is ready to use without requiring install-time scripts. If you need build steps, use `prepublishOnly` instead - this runs before publishing to npm, so your package already contains everything it needs.
+
 #### Publishing your Plugin
 
 Once you have developed and tested your Plugin / WebApp you can publish it to make it visible in the AppStore.
