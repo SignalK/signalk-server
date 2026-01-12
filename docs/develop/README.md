@@ -5,6 +5,7 @@ children:
   - ../breaking_changes.md
   - plugins/README.md
   - rest-api/README.md
+  - ai/README.md
 ---
 
 # Developing with Signal K
