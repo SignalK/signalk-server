@@ -69,6 +69,7 @@
     "bash",
     "csharp",
     "go",
+    "ini",
     "json",
     "javascript",
     "typescript",
