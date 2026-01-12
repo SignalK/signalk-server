@@ -1,0 +1,23 @@
+# Authelia Users Database for Signal K OIDC Testing
+# WARNING: This is for testing only - DO NOT use in production!
+#
+# Users:
+#   - admin / test  (member of 'admins' group)
+#   - user / test   (no special groups)
+
+users:
+  admin:
+    displayname: 'Test Admin'
+    # Password: test
+    # Generated with: authelia crypto hash generate argon2 --password test
+    password: '$argon2id$v=19$m=65536,t=3,p=4$LcT0Bw2GcEbf97Zpa9e9Bg$+1q4MNwRV4bRuXuxla6qCKqKWtJp38u2xT5Txj/p50o'
+    email: admin@test.local
+    groups:
+      - admins
+
+  user:
+    displayname: 'Test User'
+    # Password: test
+    password: '$argon2id$v=19$m=65536,t=3,p=4$LcT0Bw2GcEbf97Zpa9e9Bg$+1q4MNwRV4bRuXuxla6qCKqKWtJp38u2xT5Txj/p50o'
+    email: user@test.local
+    groups: []

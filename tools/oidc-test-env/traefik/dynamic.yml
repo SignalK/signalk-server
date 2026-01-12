@@ -1,0 +1,25 @@
+# Traefik dynamic configuration
+http:
+  routers:
+    authelia:
+      rule: 'Host(`auth.test.localhost`)'
+      entryPoints:
+        - websecure
+      service: authelia
+      tls: {}
+
+  services:
+    authelia:
+      loadBalancer:
+        servers:
+          - url: 'http://authelia:9091'
+
+tls:
+  stores:
+    default:
+      defaultGeneratedCert:
+        resolver: default
+        domain:
+          main: 'test.localhost'
+          sans:
+            - '*.test.localhost'

@@ -1,0 +1,46 @@
+/*
+ * Copyright 2025 Matti Airas
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+export * from './types'
+export * from './config'
+export * from './pkce'
+export * from './state'
+export {
+  fetchDiscoveryDocument,
+  getDiscoveryDocument,
+  clearDiscoveryCache
+} from './discovery'
+export * from './authorization'
+export { exchangeAuthorizationCode, fetchUserinfo } from './token-exchange'
+export {
+  validateIdToken,
+  fetchJwks,
+  clearJwksCache,
+  type ValidatedIdTokenClaims
+} from './id-token-validation'
+export * from './user-info'
+export {
+  registerOIDCRoutes,
+  findOrCreateOIDCUser,
+  validateAndMergeUserinfoClaims,
+  type OIDCAuthDependencies
+} from './oidc-auth'
+export {
+  registerOIDCAdminRoutes,
+  type OIDCAdminDependencies,
+  type SecurityConfigForOIDC
+} from './oidc-admin'
+export * from './permission-mapping'
