@@ -1245,7 +1245,6 @@ module.exports = function (
 
             const zipFileDir = fs.mkdtempSync(`${tmpDir}${path.sep}`)
             const zipFile = path.join(zipFileDir, 'backup.zip')
-            const unzipStream = unzipper.Extract({ path: restoreFilePath })
 
             file
               .pipe(fs.createWriteStream(zipFile))
@@ -1256,17 +1255,50 @@ module.exports = function (
               })
               .on('close', () => {
                 const zipStream = fs.createReadStream(zipFile)
+                const extractPromises: Promise<void>[] = []
+                const resolvedBase = path.resolve(restoreFilePath)
 
                 zipStream
-                  .pipe(unzipStream)
+                  .pipe(unzipper.Parse())
+                  .on('entry', (entry: unzipper.Entry) => {
+                    const targetPath = path.join(restoreFilePath, entry.path)
+                    const resolvedTarget = path.resolve(targetPath)
+
+                    if (!resolvedTarget.startsWith(resolvedBase + path.sep)) {
+                      console.error(`Zip slip attempt blocked: ${entry.path}`)
+                      entry.autodrain()
+                      return
+                    }
+
+                    if (entry.type === 'Directory') {
+                      fs.mkdirSync(resolvedTarget, { recursive: true })
+                      entry.autodrain()
+                    } else {
+                      fs.mkdirSync(path.dirname(resolvedTarget), {
+                        recursive: true
+                      })
+                      const writePromise = new Promise<void>(
+                        (resolve, reject) => {
+                          entry
+                            .pipe(fs.createWriteStream(resolvedTarget))
+                            .on('close', resolve)
+                            .on('error', reject)
+                        }
+                      )
+                      extractPromises.push(writePromise)
+                    }
+                  })
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   .on('error', (err: any) => {
                     console.error(err)
                     res.status(500).send(err.message)
                   })
                   .on('close', () => {
-                    fs.unlinkSync(zipFile)
-                    listSafeRestoreFiles(restoreFilePath)
+                    Promise.all(extractPromises)
+                      .then(() => {
+                        fs.unlinkSync(zipFile)
+                        return listSafeRestoreFiles(restoreFilePath)
+                      })
                       .then((files) => {
                         res.type('text/plain').send(files)
                       })
