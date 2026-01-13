@@ -26,6 +26,7 @@ import {
   Label,
   Row
 } from 'reactstrap'
+import { evaluate } from 'mathjs'
 
 const UnitSelect = ({ disabled, value, setValue }) => (
   <Input
@@ -238,7 +239,7 @@ const convertValue = (value, siUnit, category, presetDetails, unitDefinitions) =
   const symbol = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.symbol || targetUnit
   if (!formula) return null
   try {
-    const converted = Function('value', 'return ' + formula)(value)
+    const converted = evaluate(formula, { value })
     return { value: converted, unit: symbol }
   } catch {
     return null
