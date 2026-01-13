@@ -70,8 +70,8 @@ type HttpRateLimitOverrides = {
 }
 
 const DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
-const DEFAULT_HTTP_RATE_LIMIT_API_MAX = 100
-const DEFAULT_HTTP_RATE_LIMIT_LOGIN_STATUS_MAX = 10
+const DEFAULT_HTTP_RATE_LIMIT_API_MAX = 1000
+const DEFAULT_HTTP_RATE_LIMIT_LOGIN_STATUS_MAX = 1000
 
 function getHttpRateLimitOverridesFromEnv(): HttpRateLimitOverrides {
   const raw = process.env.HTTP_RATE_LIMITS

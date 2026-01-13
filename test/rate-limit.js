@@ -22,7 +22,7 @@ describe('Rate Limiting', () => {
 
   it('should limit login attempts', async function () {
     const requests = []
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 100; i++) {
       requests.push(
         fetch(`${url}/signalk/v1/auth/login`, {
           method: 'POST',
@@ -51,7 +51,7 @@ describe('Rate Limiting', () => {
 
   it('should limit access requests', async function () {
     const requests = []
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 1000; i++) {
       requests.push(
         fetch(`${url}/signalk/v1/access/requests`, {
           method: 'POST',
@@ -70,8 +70,8 @@ describe('Rate Limiting', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        clientId: 'device-101',
-        description: 'Device 101'
+        clientId: 'device-1001',
+        description: 'Device 1001'
       })
     })
 
@@ -80,7 +80,7 @@ describe('Rate Limiting', () => {
 
   it('should limit request status checks', async function () {
     const requests = []
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 1000; i++) {
       requests.push(fetch(`${url}/signalk/v1/requests/123`))
     }
 
@@ -92,7 +92,7 @@ describe('Rate Limiting', () => {
 
   it('should limit login status checks', async function () {
     const requests = []
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 1000; i++) {
       requests.push(fetch(`${url}/loginStatus`))
     }
 
@@ -183,10 +183,10 @@ describe('Rate Limiting with trustProxy enabled', () => {
     })
     res2.status.should.be.oneOf([200, 401, 403])
 
-    // Now make 11 requests with the SAME X-Forwarded-For IP
-    // First 10 should succeed, but the 11th should be rate limited
+    // Now make 1001 requests with the SAME X-Forwarded-For IP
+    // First 1000 should succeed, but some will be rate limited after reaching the limit
     const requests = []
-    for (let i = 0; i < 11; i++) {
+    for (let i = 0; i < 1001; i++) {
       requests.push(
         fetch(`${url}/loginStatus`, {
           headers: {
@@ -198,12 +198,14 @@ describe('Rate Limiting with trustProxy enabled', () => {
 
     const results = await Promise.all(requests)
 
-    // First 10 requests should succeed
-    for (let i = 0; i < 10; i++) {
-      results[i].status.should.be.oneOf([200, 401, 403])
-    }
+    // Count how many succeeded vs rate-limited
+    const succeeded = results.filter((r) =>
+      [200, 401, 403].includes(r.status)
+    ).length
+    const rateLimited = results.filter((r) => r.status === 429).length
 
-    // The 11th request (index 10) should be rate limited
-    results[10].status.should.equal(429)
+    // Exactly 1000 should succeed, at least 1 should be rate limited
+    succeeded.should.equal(1000)
+    rateLimited.should.be.at.least(1)
   })
 })
