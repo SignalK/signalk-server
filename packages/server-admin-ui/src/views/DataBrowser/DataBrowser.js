@@ -16,6 +16,7 @@ import {
   ButtonGroup
 } from 'reactstrap'
 import moment from 'moment'
+import { evaluate } from 'mathjs'
 import Meta from './Meta'
 import store from './ValueEmittingStore'
 import VirtualizedDataTable from './VirtualizedDataTable'
@@ -217,9 +218,9 @@ class DataBrowser extends Component {
       return { value, unit: siUnit }
     }
 
-    // Evaluate formula
+    // Evaluate formula using math.js
     try {
-      const converted = Function('value', 'return ' + formula)(value)
+      const converted = evaluate(formula, { value })
       return { value: converted, unit: symbol }
     } catch (e) {
       console.error('Formula evaluation failed:', e)
