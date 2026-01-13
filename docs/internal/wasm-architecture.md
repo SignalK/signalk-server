@@ -85,14 +85,12 @@ initializeLifecycleFunctions(startWasmPlugin)
 
 ## Dependencies
 
-- `@wasmer/wasi` - WASM runtime with WASI support
-- `@bytecodealliance/jco` - WIT bindings generator
+- `node:wasi` - Node.js built-in WASI support (Node 20+)
 - `@assemblyscript/loader` - AssemblyScript runtime support
 - `as-fetch` - HTTP fetch for AssemblyScript (via Asyncify)
 
 ## Known Limitations
 
-- C#/.NET not supported (V8/jco incompatibility with componentize-dotnet)
 - Serial ports not yet implemented
 - Autopilot API not yet integrated
 

@@ -19,13 +19,9 @@ import { getNodeFetch } from '../utils/fetch-wrapper'
 
 const debug = Debug('signalk:wasm:loader:standard')
 
-// Try to use native Node.js WASI first, fall back to @wasmer/wasi
-let WASI: any
-try {
-  WASI = require('node:wasi').WASI
-} catch {
-  WASI = require('@wasmer/wasi').WASI
-}
+// Use Node.js built-in WASI (Node 20+ required)
+
+const { WASI } = require('node:wasi')
 
 /**
  * Load a standard WASI P1 plugin (AssemblyScript or Rust library)

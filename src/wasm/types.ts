@@ -25,7 +25,7 @@ export interface WasmCapabilities {
 /**
  * WASM binary format types
  */
-export type WasmFormat = 'wasi-p1' | 'component-model' | 'unknown'
+export type WasmFormat = 'wasi-p1' | 'unknown'
 
 /**
  * WASM plugin instance representing a loaded plugin
@@ -35,15 +35,13 @@ export interface WasmPluginInstance {
   wasmPath: string
   vfsRoot: string
   capabilities: WasmCapabilities
-  format: WasmFormat // Binary format: wasi-p1 or component-model
-  wasi: any // WASI type varies between Node.js and @wasmer/wasi
+  format: WasmFormat // Binary format: wasi-p1
+  wasi: any // Node.js WASI instance
   module: WebAssembly.Module
   instance: WebAssembly.Instance
   exports: WasmPluginExports
   // AssemblyScript loader instance (if AssemblyScript plugin)
   asLoader?: any
-  // Component Model transpiled module (if Component Model plugin)
-  componentModule?: any
   // Asyncify support: function to set the resume callback for async operations
   setAsyncifyResume?: (fn: (() => any) | null) => void
 }
