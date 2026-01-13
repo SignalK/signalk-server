@@ -15,7 +15,7 @@ import { expect } from 'chai'
 import fs from 'fs'
 import path from 'path'
 import { freeport } from './ts-servertestutilities'
-import { startServerP } from './servertestutilities'
+import { startServerP, serverTestConfigDirectory } from './servertestutilities'
 
 interface PluginInfo {
   id: string
@@ -40,8 +40,8 @@ interface ServerInstance {
   }
 }
 
-const wasmTestConfigDirectory = () =>
-  path.join(__dirname, 'wasm-plugin-test-config')
+// Use the same config directory as startServerP to ensure plugins are discovered
+const testConfigDirectory = serverTestConfigDirectory
 
 const examplePluginDir = path.join(
   __dirname,
@@ -83,12 +83,10 @@ describe('WASM Plugins', function () {
         return
       }
 
-      // Set up the test environment
-      process.env.SIGNALK_NODE_CONFIG_DIR = wasmTestConfigDirectory()
-
       // Create symlink to the example plugin in test config node_modules
+      // Note: startServerP sets SIGNALK_NODE_CONFIG_DIR to serverTestConfigDirectory()
       const pluginDest = path.join(
-        wasmTestConfigDirectory(),
+        testConfigDirectory(),
         'node_modules',
         '@signalk',
         'example-hello-assemblyscript'
@@ -96,7 +94,7 @@ describe('WASM Plugins', function () {
 
       // Create @signalk directory if needed
       const signalkDir = path.join(
-        wasmTestConfigDirectory(),
+        testConfigDirectory(),
         'node_modules',
         '@signalk'
       )
@@ -119,7 +117,7 @@ describe('WASM Plugins', function () {
       }
       // Clean up symlink
       const pluginDest = path.join(
-        wasmTestConfigDirectory(),
+        testConfigDirectory(),
         'node_modules',
         '@signalk',
         'example-hello-assemblyscript'
