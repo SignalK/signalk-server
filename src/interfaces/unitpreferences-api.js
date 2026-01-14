@@ -1,8 +1,50 @@
 const express = require('express')
 const fs = require('fs')
 const path = require('path')
+const { compile } = require('mathjs')
 const { createDebug } = require('../debug')
 const debug = createDebug('signalk-server:unitpreferences-api')
+
+/**
+ * Validate a formula string by attempting to compile it with mathjs
+ * @param {string} formula - The formula to validate
+ * @returns {string|null} - Error message if invalid, null if valid
+ */
+function validateFormula(formula) {
+  try {
+    compile(formula)
+    return null
+  } catch (e) {
+    return e.message
+  }
+}
+
+/**
+ * Validate all formulas in a unit definitions object
+ * @param {object} definitions - The unit definitions to validate
+ * @returns {string|null} - Error message if any formula is invalid, null if all valid
+ */
+function validateDefinitions(definitions) {
+  for (const [siUnit, def] of Object.entries(definitions)) {
+    if (def.conversions) {
+      for (const [targetUnit, conversion] of Object.entries(def.conversions)) {
+        if (conversion.formula) {
+          const error = validateFormula(conversion.formula)
+          if (error) {
+            return `Invalid formula for ${siUnit} -> ${targetUnit}: ${error}`
+          }
+        }
+        if (conversion.inverseFormula) {
+          const error = validateFormula(conversion.inverseFormula)
+          if (error) {
+            return `Invalid inverseFormula for ${siUnit} -> ${targetUnit}: ${error}`
+          }
+        }
+      }
+    }
+  }
+  return null
+}
 const {
   getConfig,
   getCategories,
@@ -85,6 +127,13 @@ module.exports = function (app) {
   // PUT /signalk/v1/unitpreferences/custom-definitions
   router.put('/custom-definitions', (req, res) => {
     try {
+      // Validate all formulas before saving
+      const validationError = validateDefinitions(req.body)
+      if (validationError) {
+        res.status(400).json({ error: validationError })
+        return
+      }
+
       const customPath = path.join(UNITPREFS_DIR, 'custom-units-definitions.json')
       fs.writeFileSync(customPath, JSON.stringify(req.body, null, 2))
       reloadCustomDefinitions()
