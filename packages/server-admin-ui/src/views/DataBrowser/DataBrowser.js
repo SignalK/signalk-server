@@ -16,12 +16,27 @@ import {
   ButtonGroup
 } from 'reactstrap'
 import moment from 'moment'
-import { evaluate } from 'mathjs'
+import { compile } from 'mathjs'
 import Meta from './Meta'
 import store from './ValueEmittingStore'
 import VirtualizedDataTable from './VirtualizedDataTable'
 import granularSubscriptionManager from './GranularSubscriptionManager'
 import { getPath$SourceKey } from './pathUtils'
+
+// Cache for compiled mathjs expressions
+const compiledFormulaCache = new Map()
+
+/**
+ * Get a compiled expression from cache, or compile and cache it
+ * @param {string} formula - The formula string to compile
+ * @returns {object} - Compiled mathjs expression
+ */
+function getCompiledFormula(formula) {
+  if (!compiledFormulaCache.has(formula)) {
+    compiledFormulaCache.set(formula, compile(formula))
+  }
+  return compiledFormulaCache.get(formula)
+}
 
 const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
@@ -218,9 +233,10 @@ class DataBrowser extends Component {
       return { value, unit: siUnit }
     }
 
-    // Evaluate formula using math.js
+    // Evaluate formula using cached compiled expression
     try {
-      const converted = evaluate(formula, { value })
+      const compiled = getCompiledFormula(formula)
+      const converted = compiled.evaluate({ value })
       return { value: converted, unit: symbol }
     } catch (e) {
       console.error('Formula evaluation failed:', e)

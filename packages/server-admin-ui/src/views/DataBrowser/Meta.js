@@ -26,7 +26,22 @@ import {
   Label,
   Row
 } from 'reactstrap'
-import { evaluate } from 'mathjs'
+import { compile } from 'mathjs'
+
+// Cache for compiled mathjs expressions
+const compiledFormulaCache = new Map()
+
+/**
+ * Get a compiled expression from cache, or compile and cache it
+ * @param {string} formula - The formula string to compile
+ * @returns {object} - Compiled mathjs expression
+ */
+function getCompiledFormula(formula) {
+  if (!compiledFormulaCache.has(formula)) {
+    compiledFormulaCache.set(formula, compile(formula))
+  }
+  return compiledFormulaCache.get(formula)
+}
 
 const UnitSelect = ({ disabled, value, setValue }) => (
   <Input
@@ -239,7 +254,8 @@ const convertValue = (value, siUnit, category, presetDetails, unitDefinitions) =
   const symbol = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.symbol || targetUnit
   if (!formula) return null
   try {
-    const converted = evaluate(formula, { value })
+    const compiled = getCompiledFormula(formula)
+    const converted = compiled.evaluate({ value })
     return { value: converted, unit: symbol }
   } catch {
     return null

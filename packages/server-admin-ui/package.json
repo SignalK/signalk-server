@@ -34,6 +34,7 @@
     "font-awesome": "^4.7.0",
     "jsonlint-mod": "^1.7.6",
     "lodash.remove": "^4.7.0",
+    "mathjs": "^12.4.0",
     "lodash.set": "^4.3.2",
     "lodash.uniq": "^4.5.0",
     "moment": "^2.29.1",
