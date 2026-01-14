@@ -18,28 +18,27 @@ RUN npm config rm proxy \
 
 FROM base AS tarballs_installed
 WORKDIR /home/node/signalk
-COPY *.tgz .
-USER root
+COPY --chown=node:node *.tgz .
 
-RUN npm i -g *.tgz
-# move workspace dependencies that get installed under root also under signalk-server of signalk-server
-# use cp & rm to avoid 'directory not empty' with some deps already present
-RUN cp -rf /usr/lib/node_modules/@signalk/* /usr/lib/node_modules/signalk-server/node_modules/@signalk/ && rm -rf /usr/lib/node_modules/@signalk
+# Install all tarballs locally (not globally) to avoid permission issues
+# signalk-server nested, all other tarballs hoisted
+RUN npm install $(ls signalk-server-[0-9]*.tgz) --install-strategy=nested \
+  && other_tarballs=$(ls *.tgz 2>/dev/null | grep -v '^signalk-server-[0-9]' || true) \
+  && if [ -n "$other_tarballs" ]; then npm install $other_tarballs; fi \
+  && if [ -d node_modules/@signalk ]; then \
+       mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
+       && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \
+       && rm -rf node_modules/@signalk/; \
+     fi
 
 FROM base
 
-USER root
-# add signalk-server on path like in production build
-RUN ln -s /usr/lib/node_modules/signalk-server/bin/signalk-server /usr/bin/signalk-server
-# all -g installed modules
-COPY --from=tarballs_installed /usr/lib/node_modules /usr/lib/node_modules
+# Copy locally installed modules from tarballs_installed stage
+COPY --from=tarballs_installed --chown=node:node /home/node/signalk /home/node/signalk
 
-USER node
-COPY --chown=node docker/startup.sh startup.sh
-RUN chmod +x startup.sh
+COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 
 EXPOSE 3000
-ENV IS_IN_DOCKER=true
 ENV SKIP_ADMINUI_VERSION_CHECK=true
 WORKDIR /home/node/.signalk
 ENTRYPOINT ["/home/node/signalk/startup.sh"]
