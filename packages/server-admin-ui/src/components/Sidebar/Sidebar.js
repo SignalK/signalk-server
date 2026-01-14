@@ -310,12 +310,8 @@ const mapStateToProps = (state) => {
 
   result.items.push({
     name: 'Documentation',
-    url: `${window.location.protocol}//${window.location.host}/documentation`,
-    icon: 'icon-book-open',
-    props: {
-      target: '_blank',
-      rel: 'noopener noreferrer'
-    }
+    url: '/documentation',
+    icon: 'icon-book-open'
   })
 
   result.items.push({
