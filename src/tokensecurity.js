@@ -1088,7 +1088,7 @@ module.exports = function (app, config) {
     }
 
     const acl = configuration.acls.find((theAcl) => {
-      const pattern = theAcl.context.replace('.', '\\.').replace('*', '.*')
+      const pattern = theAcl.context.replace(/\./g, '\\.').replace(/\*/g, '.*')
       const matcher = new RegExp('^' + pattern + '$')
       return matcher.test(context)
     })
@@ -1099,13 +1099,13 @@ module.exports = function (app, config) {
 
         if (p.paths) {
           perms = p.paths.find((aPath) => {
-            const pattern = aPath.replace('.', '\\.').replace('*', '.*')
+            const pattern = aPath.replace(/\./g, '\\.').replace(/\*/g, '.*')
             const matcher = new RegExp('^' + pattern + '$')
             return matcher.test(thePath)
           })
         } else if (p.sources) {
           perms = p.sources.find((s) => {
-            const pattern = s.replace('.', '\\.').replace('*', '.*')
+            const pattern = s.replace(/\./g, '\\.').replace(/\*/g, '.*')
             const matcher = new RegExp('^' + pattern + '$')
             return matcher.test(source)
           })
