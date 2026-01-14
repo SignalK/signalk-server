@@ -404,7 +404,7 @@ module.exports = function (app, config) {
         : []
 
     let loginWindowMs = 10 * 60 * 1000
-    let loginMax = 10
+    let loginMax = 100
     for (const part of parsedParts) {
       const eqIndex = part.indexOf('=')
       if (eqIndex === -1) {
