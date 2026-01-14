@@ -3,6 +3,7 @@ public
 
 **/*.mbtiles
 **/*.pmtiles
+**/.__mf__temp
 # AssemblyScript files use decorators that prettier doesn't understand
 examples/wasm-plugins/*/assembly
 packages/assemblyscript-plugin-sdk/assembly
