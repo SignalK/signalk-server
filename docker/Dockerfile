@@ -21,10 +21,12 @@ WORKDIR /home/node/signalk
 COPY --chown=node:node *.tgz .
 
 # Install all tarballs locally (not globally) to avoid permission issues
-# signalk-server nested, all other tarballs hoisted
-RUN npm install $(ls signalk-server-[0-9]*.tgz) --install-strategy=nested \
-  && other_tarballs=$(ls *.tgz 2>/dev/null | grep -v '^signalk-server-[0-9]' || true) \
-  && if [ -n "$other_tarballs" ]; then npm install $other_tarballs; fi \
+# Install workspace packages first so they're available when installing signalk-server
+RUN npm init -y \
+  && workspace_tarballs=$(ls *.tgz 2>/dev/null | grep -v '^signalk-server-[0-9]' || true) \
+  && if [ -n "$workspace_tarballs" ]; then npm install $workspace_tarballs; fi \
+  && server_tarball=$(ls signalk-server-[0-9]*.tgz) \
+  && npm install "$server_tarball" --install-strategy=nested \
   && if [ -d node_modules/@signalk ]; then \
        mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
        && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \
