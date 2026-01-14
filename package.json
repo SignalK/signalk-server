@@ -121,7 +121,7 @@
     "semver": "^7.5.4",
     "split": "^1.0.0",
     "stat-mode": "^1.0.0",
-    "swagger-ui-express": "^4.5.0",
+    "swagger-ui-express": "^5.0.1",
     "unzipper": "^0.10.10",
     "uuid": "^8.1.0",
     "ws": "^8.17.0",
