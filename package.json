@@ -132,7 +132,7 @@
     "@mxtommy/kip": "^4.0.0",
     "@signalk/freeboard-sk": "^2.0.0-beta.3",
     "@signalk/instrumentpanel": "0.x",
-    "@signalk/set-system-time": "^1.2.0",
+    "@signalk/set-system-time": "^1.5.0",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
     "@signalk/udp-nmea-plugin": "^2.0.0",
     "@signalk/vesselpositions": "^1.0.0",
