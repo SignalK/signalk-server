@@ -10,6 +10,7 @@ module.exports = defineConfig([
   globalIgnores([
     '**/public',
     '**/dist',
+    '**/.__mf__temp',
     // WASM plugin examples - AssemblyScript has different semantics
     'examples/wasm-plugins/**/assembly/**',
     // AssemblyScript SDK - decorators and types not compatible with ESLint
