@@ -26,8 +26,6 @@ export { detectWasmFormat } from './utils/format-detection'
 
 // Import loaders
 import { loadStandardPlugin } from './loaders/standard-loader'
-import { loadJcoPlugin } from './loaders/jco-loader'
-import { loadComponentModelPlugin } from './loaders/component-loader'
 
 // Import bindings
 import {
@@ -95,49 +93,29 @@ export class WasmRuntime {
         fs.mkdirSync(vfsRoot, { recursive: true })
       }
 
-      let pluginInstance: WasmPluginInstance
+      // Load WASM binary
+      debug(`Reading WASM file: ${wasmPath}`)
+      const wasmBuffer = fs.readFileSync(wasmPath)
+      debug(`WASM file size: ${wasmBuffer.length} bytes`)
 
-      // Check if wasmPath points to a pre-transpiled jco JavaScript module
-      if (wasmPath.endsWith('.js')) {
-        debug(`Detected pre-transpiled jco module: ${wasmPath}`)
-        pluginInstance = await loadJcoPlugin(
-          pluginId,
-          wasmPath,
-          vfsRoot,
-          capabilities,
-          app
+      const wasmFormat = detectWasmFormat(wasmBuffer)
+      debug(`Detected WASM format: ${wasmFormat}`)
+
+      if (wasmFormat !== 'wasi-p1') {
+        throw new Error(
+          `Unsupported WASM format: ${wasmFormat}. Only WASI P1 plugins (AssemblyScript/Rust) are supported.`
         )
-      } else {
-        // Load WASM binary and detect format
-        debug(`Reading WASM file: ${wasmPath}`)
-        const wasmBuffer = fs.readFileSync(wasmPath)
-        debug(`WASM file size: ${wasmBuffer.length} bytes`)
-
-        const wasmFormat = detectWasmFormat(wasmBuffer)
-        debug(`Detected WASM format: ${wasmFormat}`)
-
-        if (wasmFormat === 'component-model') {
-          debug(`Component Model detected - using jco transpilation`)
-          pluginInstance = await loadComponentModelPlugin(
-            pluginId,
-            wasmPath,
-            wasmBuffer,
-            vfsRoot,
-            capabilities,
-            app
-          )
-        } else {
-          // Standard WASI P1 plugin (AssemblyScript or Rust)
-          pluginInstance = await loadStandardPlugin(
-            pluginId,
-            wasmPath,
-            wasmBuffer,
-            vfsRoot,
-            capabilities,
-            app
-          )
-        }
       }
+
+      // Load standard WASI P1 plugin (AssemblyScript or Rust)
+      const pluginInstance = await loadStandardPlugin(
+        pluginId,
+        wasmPath,
+        wasmBuffer,
+        vfsRoot,
+        capabilities,
+        app
+      )
 
       // Store the instance
       this.instances.set(pluginId, pluginInstance)

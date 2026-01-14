@@ -4,7 +4,6 @@ children:
   - assemblyscript.md
   - rust.md
   - go.md
-  - dotnet.md
   - http_endpoints.md
   - deltas.md
   - capabilities.md
@@ -44,7 +43,6 @@ Signal K Server supports multiple languages for WASM plugin development:
 - **AssemblyScript** - TypeScript-like syntax, easiest for JS/TS developers, smallest binaries (3-10 KB)
 - **Rust** - Best performance and tooling, medium binaries (50-200 KB)
 - **Go/TinyGo** - Go via TinyGo compiler, medium binaries (50-150 KB)
-- **C#/.NET** - **NOT WORKING** - .NET 10 with componentize-dotnet produces WASI Component Model (P2/P3) format. Currently incompatible with Node.js/jco runtime. See [Creating C#/.NET Plugins](./dotnet.md) for details.
 
 ## Why WASM Plugins?
 
@@ -143,13 +141,3 @@ Signal K Server supports multiple languages for WASM plugin development:
 - Slower than Rust
 
 **[Jump to Go/TinyGo Guide](./go.md)**
-
-### C#/.NET - NOT CURRENTLY WORKING
-
-> **Status: Non-functional** - See [jco issue #1173](https://github.com/bytecodealliance/jco/issues/1173) for details and updates.
-
-componentize-dotnet produces WASI Component Model format which is currently incompatible with the Node.js/jco runtime used by Signal K.
-
-**Recommendation:** Use AssemblyScript or Rust instead.
-
-**[Jump to C#/.NET Guide](./dotnet.md)** (reference only)
