@@ -1,3 +1,34 @@
+// Bootstrap 5 compatibility: hover mixins were removed in BS5
+// Adding them back for backwards compatibility with CoreUI styles
+@mixin hover-focus {
+  &:hover,
+  &:focus {
+    @content;
+  }
+}
+
+@mixin hover {
+  &:hover {
+    @content;
+  }
+}
+
+@mixin plain-hover-focus {
+  &,
+  &:hover,
+  &:focus {
+    @content;
+  }
+}
+
+@mixin hover-focus-active {
+  &:hover,
+  &:focus,
+  &:active {
+    @content;
+  }
+}
+
 @mixin button-social-size(
   $padding-y,
   $padding-x,

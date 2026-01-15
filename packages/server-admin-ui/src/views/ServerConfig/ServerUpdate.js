@@ -1,7 +1,17 @@
 import React, { Component } from 'react'
 import { Button, Card, CardHeader, CardBody } from 'reactstrap'
 import { connect } from 'react-redux'
-import { withRouter } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+
+// Wrapper to provide router hooks to class component
+const withRouter = (Component) => {
+  const Wrapped = (props) => {
+    const navigate = useNavigate()
+    return <Component {...props} navigate={navigate} />
+  }
+  Wrapped.displayName = `withRouter(${Component.displayName || Component.name || 'Component'})`
+  return Wrapped
+}
 
 class ServerUpdate extends Component {
   constructor(props) {
@@ -28,7 +38,7 @@ class ServerUpdate extends Component {
   handleUpdate() {
     console.log('handleUpdate')
     if (confirm(`Are you sure you want to update the server?'`)) {
-      this.props.history.push('/appstore/updates')
+      this.props.navigate('/appstore/updates')
       fetch(
         `${window.serverRoutesPrefix}/appstore/install/signalk-server/${this.props.appStore.serverUpdate}`,
         {

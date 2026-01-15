@@ -1,19 +1,27 @@
 import React, { Component, Suspense } from 'react'
 import { connect } from 'react-redux'
+import { useParams } from 'react-router-dom'
 import { toLazyDynamicComponent, APP_PANEL } from './dynamicutilities'
 import Login from '../../views/security/Login'
 import ReconnectingWebSocket from 'reconnecting-websocket'
 
 const wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws'
 
+// Wrapper to provide router hooks to class component
+const withRouter = (Component) => {
+  const Wrapped = (props) => {
+    const params = useParams()
+    return <Component {...props} params={params} />
+  }
+  Wrapped.displayName = `withRouter(${Component.displayName || Component.name || 'Component'})`
+  return Wrapped
+}
+
 class Embedded extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      component: toLazyDynamicComponent(
-        this.props.match.params.moduleId,
-        APP_PANEL
-      )
+      component: toLazyDynamicComponent(this.props.params.moduleId, APP_PANEL)
     }
     this.websockets = []
 
@@ -23,7 +31,7 @@ class Embedded extends Component {
       },
       getApplicationUserData: (appDataVersion, path = '') =>
         fetch(
-          `/signalk/v1/applicationData/user/${this.props.match.params.moduleId}/${appDataVersion}${path}`,
+          `/signalk/v1/applicationData/user/${this.props.params.moduleId}/${appDataVersion}${path}`,
           { credentials: 'include' }
         )
           .then((r) => {
@@ -35,7 +43,7 @@ class Embedded extends Component {
           .then((r) => r.json()),
       setApplicationUserData: (appDataVersion, data = {}, path = '') =>
         fetch(
-          `/signalk/v1/applicationData/user/${this.props.match.params.moduleId}/${appDataVersion}${path}`,
+          `/signalk/v1/applicationData/user/${this.props.params.moduleId}/${appDataVersion}${path}`,
           {
             method: 'POST',
             headers: {
@@ -104,4 +112,4 @@ class Embedded extends Component {
 
 const mapStateToProps = ({ loginStatus }) => ({ loginStatus })
 
-export default connect(mapStateToProps)(Embedded)
+export default connect(mapStateToProps)(withRouter(Embedded))

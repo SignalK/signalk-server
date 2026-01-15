@@ -31,6 +31,7 @@ class Users extends Component {
   constructor(props) {
     super(props)
     this.state = {}
+    this.selectedUserRef = React.createRef()
 
     this.handleAddUser = this.handleAddUser.bind(this)
     this.fetchSecurityUsers = fetchSecurityUsers.bind(this)
@@ -77,7 +78,7 @@ class Users extends Component {
         selectedIndex: this.state.users.length - 1
       },
       () => {
-        this.refs['selectedUser'].scrollIntoView()
+        this.selectedUserRef.current?.scrollIntoView()
       }
     )
   }
@@ -161,7 +162,7 @@ class Users extends Component {
         selectedIndex: index
       },
       () => {
-        this.refs['selectedUser'].scrollIntoView()
+        this.selectedUserRef.current?.scrollIntoView()
       }
     )
   }
@@ -201,7 +202,7 @@ class Users extends Component {
                           <td>
                             {user.userId}
                             {user.email && (
-                              <small className="text-muted ml-2">
+                              <small className="text-muted ms-2">
                                 ({user.email})
                               </small>
                             )}
@@ -230,13 +231,13 @@ class Users extends Component {
             </Card>
 
             {this.state.selectedUser && (
-              <div ref="selectedUser">
+              <div ref={this.selectedUserRef}>
                 <Card>
                   <CardHeader>
                     <i className="fa fa-align-justify" />
                     User
                     {this.state.selectedUser.isOIDC && (
-                      <Badge color="info" className="ml-2">
+                      <Badge color="info" className="ms-2">
                         SSO User
                       </Badge>
                     )}
@@ -348,7 +349,7 @@ class Users extends Component {
                           <i className="fa fa-ban" /> Cancel
                         </Button>
                       </Col>
-                      <Col xs="4" md="10" className="text-right">
+                      <Col xs="4" md="10" className="text-end">
                         <Button
                           size="sm"
                           color="danger"

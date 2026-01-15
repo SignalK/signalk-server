@@ -31,6 +31,7 @@ class Devices extends Component {
     this.state = {
       devices: []
     }
+    this.selectedDeviceRef = React.createRef()
 
     this.fetchSecurityDevices = fetchSecurityDevices.bind(this)
     this.handleCancel = this.handleCancel.bind(this)
@@ -115,7 +116,7 @@ class Devices extends Component {
         selectedIndex: index
       },
       () => {
-        this.refs['selectedDevice'].scrollIntoView()
+        this.selectedDeviceRef.current?.scrollIntoView()
       }
     )
   }
@@ -165,7 +166,7 @@ class Devices extends Component {
             </Card>
 
             {this.state.selectedDevice && (
-              <div ref="selectedDevice">
+              <div ref={this.selectedDeviceRef}>
                 <Card>
                   <CardHeader>
                     <i className="fa fa-align-justify" />
@@ -242,7 +243,7 @@ class Devices extends Component {
                           <i className="fa fa-ban" /> Cancel
                         </Button>
                       </Col>
-                      <Col xs="4" md="10" className="text-right">
+                      <Col xs="4" md="10" className="text-end">
                         <Button
                           size="sm"
                           color="danger"
@@ -263,7 +264,7 @@ class Devices extends Component {
   }
 }
 
-const mapStateToProps = ({ securityDevices }) => ({ securityDevices })
+const mapStateToProps = ({ loginStatus }) => ({ loginStatus })
 
 export default connect(mapStateToProps)(Devices)
 

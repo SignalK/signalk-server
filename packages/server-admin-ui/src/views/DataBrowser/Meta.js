@@ -399,8 +399,22 @@ const UnknownMetaFormRow = ({ metaKey, value }) => {
       <Col xs="3" md="2" className={'col-form-label'}>
         {metaKey}
       </Col>
-      <Col xs="12" md="4">
-        <pre>{JSON.stringify(value, null, 2)}</pre>
+      <Col xs="12" md="9">
+        <pre
+          className="text-primary"
+          style={{
+            border: '1px solid #c8ced3',
+            borderRadius: '0.25rem',
+            padding: '0.375rem 0.75rem',
+            backgroundColor: '#f0f3f5',
+            margin: 0,
+            whiteSpace: 'pre-wrap',
+            wordWrap: 'break-word',
+            overflowX: 'auto'
+          }}
+        >
+          {JSON.stringify(value, null, 2)}
+        </pre>
       </Col>
     </FormGroup>
   )

@@ -7,7 +7,7 @@ export function AppListItem(app) {
   return (
     <ListGroupItem className="p-3">
       <div className="d-md-flex align-items-center flex-grow-1">
-        <div className="flex-grow-1 mr-3">
+        <div className="flex-grow-1 me-3">
           <h5 className="text-dark mb-0">{app.name}</h5>
           <div className="text-muted">
             <span className="font-weight-bolder">

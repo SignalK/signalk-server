@@ -356,7 +356,7 @@ class ServerSettings extends Component {
               >
                 <i className="fa fa-dot-circle-o" /> Save
               </Button>{' '}
-              <Badge color="danger" className="float-right">
+              <Badge color="danger" className="float-end">
                 Restart Required
               </Badge>
             </CardFooter>

@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { Switch, Route, Redirect, withRouter } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Container } from 'reactstrap'
 import { connect } from 'react-redux'
 
@@ -30,7 +30,13 @@ import ServerUpdate from '../../views/ServerConfig/ServerUpdate'
 
 import { fetchAllData, openServerEventsConnection } from '../../actions'
 
-class Full extends Component {
+// Wrapper to inject location into Full component
+const FullWithLocation = (props) => {
+  const location = useLocation()
+  return <FullInner {...props} location={location} />
+}
+
+class FullInner extends Component {
   componentDidMount() {
     const { dispatch } = this.props
     fetchAllData(dispatch)
@@ -49,86 +55,116 @@ class Full extends Component {
           <Sidebar {...this.props} />
           <main className="main">
             <Container fluid style={suppressPadding}>
-              <Switch>
+              <Routes>
                 <Route
                   path="/dashboard"
-                  name="Dashboard"
-                  component={loginOrOriginal(Dashboard, true)}
+                  element={
+                    <ProtectedRouteConnected
+                      component={Dashboard}
+                      supportsReadOnly
+                    />
+                  }
                 />
                 <Route
                   path="/webapps"
-                  name="Webapps"
-                  component={loginOrOriginal(Webapps, true)}
+                  element={
+                    <ProtectedRouteConnected
+                      component={Webapps}
+                      supportsReadOnly
+                    />
+                  }
                 />
                 <Route
                   path="/e/:moduleId"
-                  name="Embedded Webapps"
-                  component={loginOrOriginal(Embedded, true)}
+                  element={
+                    <ProtectedRouteConnected
+                      component={Embedded}
+                      supportsReadOnly
+                    />
+                  }
                 />
                 <Route
                   path="/databrowser"
-                  name="DataBrowser"
-                  component={loginOrOriginal(DataBrowser, true)}
+                  element={
+                    <ProtectedRouteConnected
+                      component={DataBrowser}
+                      supportsReadOnly
+                    />
+                  }
                 />
                 <Route
                   path="/serverConfiguration/datafiddler"
-                  name="DataFiddler"
-                  component={loginOrOriginal(Playground, true)}
+                  element={
+                    <ProtectedRouteConnected
+                      component={Playground}
+                      supportsReadOnly
+                    />
+                  }
                 />
                 <Route
-                  path="/appstore"
-                  name="Appstore"
-                  component={loginOrOriginal(Apps)}
+                  path="/appstore/*"
+                  element={<ProtectedRouteConnected component={Apps} />}
                 />
                 <Route
                   path="/serverConfiguration/plugins/:pluginid"
-                  component={loginOrOriginal(Configuration)}
+                  element={
+                    <ProtectedRouteConnected component={Configuration} />
+                  }
                 />
                 <Route
                   path="/serverConfiguration/settings"
-                  component={loginOrOriginal(Settings)}
+                  element={<ProtectedRouteConnected component={Settings} />}
                 />
                 <Route
                   path="/serverConfiguration/backuprestore"
-                  component={loginOrOriginal(BackupRestore)}
+                  element={
+                    <ProtectedRouteConnected component={BackupRestore} />
+                  }
                 />
                 <Route
                   path="/serverConfiguration/connections/:providerId"
-                  component={loginOrOriginal(ProvidersConfiguration)}
+                  element={
+                    <ProtectedRouteConnected
+                      component={ProvidersConfiguration}
+                    />
+                  }
                 />
                 <Route
                   path="/serverConfiguration/log"
-                  component={loginOrOriginal(ServerLog)}
+                  element={<ProtectedRouteConnected component={ServerLog} />}
                 />
                 <Route
                   path="/serverConfiguration/update"
-                  component={loginOrOriginal(ServerUpdate)}
+                  element={<ProtectedRouteConnected component={ServerUpdate} />}
                 />
                 <Route
                   path="/security/settings"
-                  component={loginOrOriginal(SecuritySettings)}
+                  element={
+                    <ProtectedRouteConnected component={SecuritySettings} />
+                  }
                 />
                 <Route
                   path="/security/users"
-                  component={loginOrOriginal(Users)}
+                  element={<ProtectedRouteConnected component={Users} />}
                 />
                 <Route
                   path="/security/devices"
-                  component={loginOrOriginal(Devices)}
+                  element={<ProtectedRouteConnected component={Devices} />}
                 />
                 <Route
                   path="/security/access/requests"
-                  component={loginOrOriginal(AccessRequests)}
+                  element={
+                    <ProtectedRouteConnected component={AccessRequests} />
+                  }
                 />
+                <Route path="/documentation" element={<EmbeddedDocs />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
                 <Route
-                  path="/documentation"
-                  name="Documentation"
-                  component={EmbeddedDocs}
+                  path="/"
+                  element={<Navigate to="/dashboard" replace />}
                 />
-                <Route path="/login" component={Login} />
-                <Route path="/register" component={Register} />
-                <Redirect from="/" to="/dashboard" />
-              </Switch>
+              </Routes>
             </Container>
           </main>
           <Aside />
@@ -139,31 +175,61 @@ class Full extends Component {
   }
 }
 
-export default connect()(Full)
+const Full = connect()(FullWithLocation)
+export default Full
 
-const loginOrOriginal = (BaseComponent, componentSupportsReadOnly) => {
-  class Restricted extends Component {
-    constructor(props) {
-      super(props)
-      this.state = { hasError: false }
-    }
-
-    static getDerivedStateFromError() {
-      return { hasError: true }
-    }
-
-    render() {
-      if (loginRequired(this.props.loginStatus, componentSupportsReadOnly)) {
-        return <Login />
-      } else if (this.state.hasError) {
-        return <span>Something went wrong.</span>
-      } else {
-        return <BaseComponent {...this.props} />
-      }
-    }
+// Error boundary wrapper component
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
   }
-  return connect(({ loginStatus }) => ({ loginStatus }))(withRouter(Restricted))
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <span>
+          Something went wrong.
+          {this.state.error && (
+            <pre style={{ fontSize: '0.8rem', color: 'red', marginTop: '1rem' }}>
+              {this.state.error.toString()}
+            </pre>
+          )}
+        </span>
+      )
+    }
+    return this.props.children
+  }
 }
+
+// Protected route component using connect() HOC (react-redux v5 compatible)
+const ProtectedRoute = ({
+  component: ComponentToRender,
+  supportsReadOnly = false,
+  loginStatus
+}) => {
+  if (loginRequired(loginStatus, supportsReadOnly)) {
+    return <Login />
+  }
+
+  return (
+    <ErrorBoundary>
+      <ComponentToRender />
+    </ErrorBoundary>
+  )
+}
+
+const ProtectedRouteConnected = connect(({ loginStatus }) => ({ loginStatus }))(
+  ProtectedRoute
+)
 
 function loginRequired(loginStatus, componentSupportsReadOnly) {
   // component works with read only access and

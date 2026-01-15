@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import ReactHtmlParser from 'react-html-parser'
+import parse from 'html-react-parser'
 import { connect } from 'react-redux'
 import {
   Card,
@@ -262,7 +262,7 @@ class PureLogRow extends React.PureComponent {
   render() {
     return (
       <span>
-        {ReactHtmlParser(this.props.log)}
+        {parse(this.props.log)}
         <br />
       </span>
     )

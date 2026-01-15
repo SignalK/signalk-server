@@ -1,7 +1,7 @@
 import React from 'react'
 import { Suspense } from 'react'
 import { toLazyDynamicComponent } from '../Webapps/dynamicutilities'
-import ReactHtmlParser from 'react-html-parser'
+import parse from 'html-react-parser'
 import {
   faEye,
   faEyeSlash,
@@ -17,7 +17,7 @@ function radiansToDegrees(radians) {
 }
 const SimpleHTMLRenderer = ({ value, html }) => {
   const h = html.replaceAll('{{value}}', value)
-  return <div>{ReactHtmlParser(h)}</div>
+  return <div>{parse(h)}</div>
 }
 
 const DirectionRenderer = ({ value, size = '1em' }) => {
