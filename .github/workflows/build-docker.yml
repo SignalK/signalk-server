@@ -15,9 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Node setup
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22.x'
       - name: Build npm files locally and upload artifacts
@@ -31,7 +31,7 @@ jobs:
           rm signalk-typedoc-signalk-theme*.tgz # This is only needed as a dev dependency
           npm pack
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           retention-days: 1
           name: packed-modules
@@ -60,7 +60,7 @@ jobs:
     runs-on: ${{ matrix.vm }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to ghcr.io
@@ -70,7 +70,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: packed-modules
       - name: Build and push
@@ -98,7 +98,7 @@ jobs:
             suffix: -24.x
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Docker meta
@@ -106,25 +106,27 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            signalk/signalk-server
             ghcr.io/signalk/signalk-server
           tags: |
             type=ref,event=branch
             type=sha
           flavor: |
             suffix=${{ matrix.suffix }}
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Save docker tags to artifact
+        run: echo "${{ steps.docker_meta.outputs.tags }}" > docker_tags_${{ matrix.os }}_${{ matrix.node }}.txt
+      - name: Upload tags
+        uses: actions/upload-artifact@v6
         with:
-          username: signalkci
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          retention-days: 1
+          name: docker_tags_${{ matrix.os }}_${{ matrix.node }}
+          path: docker_tags_${{ matrix.os }}_${{ matrix.node }}.txt
       - name: Login to ghcr.io
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
-      - name: Create and push multi-arch manifest to GHCR and Docker Hub
+      - name: Create and push multi-arch manifest to GHCR
         uses: int128/docker-manifest-create-action@v2
         with:
           tags: |
@@ -132,6 +134,42 @@ jobs:
           sources: |
             ghcr.io/signalk/signalk-server:amd-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
             ghcr.io/signalk/signalk-server:arm-${{ matrix.os }}-${{ matrix.node }}-${{ github.run_id }}
+
+  copy-to-dockerhub:
+    needs: create-and-push-manifest
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [24.04]
+        node: [22.x, 24.x]
+    steps:
+      - name: Install skopeo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
+      - name: Download Docker tag artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: docker_tags_${{ matrix.os }}_${{ matrix.node }}
+      - name: Normalize and filter GHCR tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed 's/,/\n/g' docker_tags_${{ matrix.os }}_${{ matrix.node }}.txt \
+            | grep '^ghcr\.io/' \
+            > tags.txt
+      - name: Copy images from GHCR to Docker Hub
+        run: |
+          set -euo pipefail
+          while IFS= read -r ghcr_image; do
+            [ -z "$ghcr_image" ] && continue
+            hub_image="${ghcr_image/ghcr.io\/signalk/docker.io\/signalkci}"
+            skopeo copy --all \
+              --src-creds "${{ github.actor }}:${{ secrets.GHCR_PAT }}" \
+              --dest-creds "signalkci:${{ secrets.DOCKERHUB_TOKEN }}" \
+              "docker://${ghcr_image}" \
+              "docker://${hub_image}"
+          done < tags.txt
 
   housekeeping:
     needs: create-and-push-manifest
@@ -144,5 +182,6 @@ jobs:
         with:
           packages: signalk-server
           delete-untagged: true
-          delete-tags: amd-24.04-24.x-${{ github.run_id }},amd-24.04-22.x-${{ github.run_id }},arm-24.04-24.x-${{ github.run_id }},arm-24.04-22.x-${{ github.run_id }}
+          delete-tags: |
+            *-${{ github.run_id }}
           token: ${{ secrets.GHCR_PAT }}
