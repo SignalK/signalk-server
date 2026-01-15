@@ -24,6 +24,19 @@ const semver = require('semver')
 
 const prefix = '/signalk/v1/applicationData'
 
+const DANGEROUS_PATH_SEGMENTS = ['__proto__', 'constructor', 'prototype']
+
+function isPrototypePollutionPath(pathString) {
+  const segments = pathString.split(/[./]/)
+  return segments.some((seg) => DANGEROUS_PATH_SEGMENTS.includes(seg))
+}
+
+function hasPrototypePollutionPatch(patches) {
+  return patches.some(
+    (patch) => patch.path && isPrototypePollutionPath(patch.path)
+  )
+}
+
 const applicationDataUrls = [
   `${prefix}/global/:appid/:version/*`,
   `${prefix}/global/:appid/:version`
@@ -154,8 +167,17 @@ module.exports = function (app) {
     let applicationData = readApplicationData(req, appid, version, isUser)
 
     if (req.params[0] && req.params[0].length !== 0) {
-      _.set(applicationData, req.params[0].replace(/\//g, '.'), req.body)
+      const dataPath = req.params[0].replace(/\//g, '.')
+      if (isPrototypePollutionPath(dataPath)) {
+        res.status(400).send('invalid path')
+        return
+      }
+      _.set(applicationData, dataPath, req.body)
     } else if (_.isArray(req.body)) {
+      if (hasPrototypePollutionPatch(req.body)) {
+        res.status(400).send('invalid patch path')
+        return
+      }
       jsonpatch.apply(applicationData, req.body)
     } else {
       applicationData = req.body

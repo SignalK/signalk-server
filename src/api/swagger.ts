@@ -11,6 +11,7 @@ import { discoveryApiRecord } from './discovery/openApi'
 import { weatherApiRecord } from './weather/openApi'
 import { appsApiRecord } from './apps/openApi'
 import { historyApiRecord } from './history/openApi'
+import { radarApiRecord } from './radar/openApi'
 import { PluginId, PluginManager } from '../interfaces/plugins'
 import { Brand } from '@signalk/server-api'
 
@@ -35,7 +36,8 @@ const apiDocs = [
   resourcesApiRecord,
   weatherApiRecord,
   securityApiRecord,
-  historyApiRecord
+  historyApiRecord,
+  radarApiRecord
 ].reduce<ApiRecords>((acc, apiRecord: OpenApiRecord) => {
   acc[apiRecord.name] = apiRecord
   return acc

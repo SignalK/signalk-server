@@ -22,13 +22,78 @@ import EnableSecurity from './EnableSecurity'
 class Login extends Component {
   constructor(props) {
     super(props)
+    // Check for OIDC error message in URL (from failed callback)
+    // Note: App uses HashRouter, so params are in hash fragment, not query string
+    const urlParams = Login.getHashParams()
+    const oidcErrorMessage = urlParams.has('oidcError')
+      ? urlParams.get('message') || 'SSO login failed'
+      : null
     this.state = {
       loggingIn: false,
-      loginErrorMessage: null
+      loginErrorMessage: oidcErrorMessage
     }
     this.handleInputChange = this.handleInputChange.bind(this)
     this.handleInputKeyUp = this.handleInputKeyUp.bind(this)
     this.handleClick = this.handleClick.bind(this)
+  }
+
+  // Parse URL parameters from hash fragment (for HashRouter)
+  // e.g., "#/login?oidcError=true" → URLSearchParams with oidcError=true
+  static getHashParams() {
+    const hash = window.location.hash
+    const queryIndex = hash.indexOf('?')
+    if (queryIndex === -1) {
+      return new URLSearchParams()
+    }
+    return new URLSearchParams(hash.substring(queryIndex + 1))
+  }
+
+  shouldSkipAutoLogin() {
+    // Check URL params to prevent redirect loops and provide escape hatch
+    const urlParams = Login.getHashParams()
+    // Skip if OIDC callback returned an error
+    if (urlParams.has('oidcError')) {
+      return true
+    }
+    // Skip if user explicitly requested no auto-login (escape hatch)
+    if (urlParams.get('noAutoLogin') === 'true') {
+      return true
+    }
+    return false
+  }
+
+  tryAutoLogin() {
+    const { loginStatus } = this.props
+    if (
+      loginStatus.status === 'notLoggedIn' &&
+      loginStatus.oidcEnabled &&
+      loginStatus.oidcAutoLogin &&
+      !loginStatus.noUsers &&
+      !this.shouldSkipAutoLogin()
+    ) {
+      window.location.href = loginStatus.oidcLoginUrl
+    }
+  }
+
+  componentDidMount() {
+    // Auto-redirect to OIDC login if enabled and user is not logged in
+    // This handles the case when Login is rendered fresh with loginStatus already populated
+    this.tryAutoLogin()
+  }
+
+  componentDidUpdate(prevProps) {
+    // Auto-redirect to OIDC login if enabled
+    const { loginStatus } = this.props
+    if (
+      loginStatus.status === 'notLoggedIn' &&
+      loginStatus.oidcEnabled &&
+      loginStatus.oidcAutoLogin &&
+      !loginStatus.noUsers &&
+      prevProps.loginStatus.status !== loginStatus.status &&
+      !this.shouldSkipAutoLogin()
+    ) {
+      window.location.href = loginStatus.oidcLoginUrl
+    }
   }
 
   handleClick() {
@@ -165,6 +230,33 @@ class Login extends Component {
                               )}
                           </Col>
                         </Row>
+                        {this.props.loginStatus.oidcEnabled && (
+                          <>
+                            <Row className="mt-4 mb-3">
+                              <Col className="text-center">
+                                <span className="text-muted">
+                                  &#8212; or &#8212;
+                                </span>
+                              </Col>
+                            </Row>
+                            <Row>
+                              <Col className="text-center">
+                                <Button
+                                  onClick={() => {
+                                    window.location.href =
+                                      this.props.loginStatus.oidcLoginUrl
+                                  }}
+                                  color="secondary"
+                                  className="px-4"
+                                >
+                                  <i className="fa fa-sign-in" />{' '}
+                                  {this.props.loginStatus.oidcProviderName ||
+                                    'SSO Login'}
+                                </Button>
+                              </Col>
+                            </Row>
+                          </>
+                        )}
                       </CardBody>
                     </Card>
                   </CardGroup>

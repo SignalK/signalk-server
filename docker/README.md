@@ -49,7 +49,7 @@ Node.js version 24.x dropped support for the `linux/arm/v7` (ARMv7) architecture
 You can start a local server on port 3000 with demo data with
 
 ```
-docker run --init -it --rm --name signalk-server --publish 3000:3000 --entrypoint /home/node/signalk/bin/signalk-server cr.signalk.io/signalk/signalk-server --sample-nmea0183-data
+docker run --init -it --rm --name signalk-server --publish 3000:3000 --entrypoint /home/node/signalk/node_modules/.bin/signalk-server cr.signalk.io/signalk/signalk-server --sample-nmea0183-data
 ```
 
 For real use you need to persist /home/node/.signalk where the server's configuration is stored, with for example
@@ -66,7 +66,22 @@ See `docker/docker-compose.yml` for reference / example if you want to use docke
 
 # Image details and used tags
 
-Signal K Server docker images are based on Ubuntu 20.04 LTS. During build process, Node 16.x is installed including tools required to install or compile plugins. Signalk support mDNS from docker, uses avahi for e.g. mDNS discovery. All required avahi tools and settings are available for user `node`, also from command line.
+Signal K Server docker images are based on Ubuntu 24.04 LTS. During build process, Node.js is installed including tools required to install or compile plugins. Signal K supports mDNS from docker, uses avahi for e.g. mDNS discovery. All required avahi tools and settings are available for user `node`, also from command line.
+
+## Directory structure
+
+- server files: `/home/node/signalk/` (local npm install)
+- settings files and plugins: `/home/node/.signalk/`
+
+You most probably want to mount `/home/node/.signalk` from the host or as a volume to persist your settings.
+
+**Note:** Signal K Server is installed locally (not globally with `npm -g`) in `/home/node/signalk/node_modules/`. This avoids permission issues when installing plugins and provides better isolation.
+
+## Container Runtime Detection
+
+The server automatically detects which container runtime is being used (Docker, Podman, Kubernetes, etc.) and sets the `CONTAINER_RUNTIME` environment variable. Plugins can use this to adapt their behavior.
+
+Supported runtimes: `docker`, `podman`, `kubernetes`, `containerd`, `crio`, `lxc`
 
 ## Release images
 
@@ -81,13 +96,6 @@ Development images are tagged `<branch>` (mainly `master`) and `sha`:
 ```
 docker run --init --name signalk-server -p 3000:3000 -v $(pwd):/home/node/.signalk cr.signalk.io/signalk/signalk-server:master
 ```
-
-## Directory structure
-
-- server files: `/home/node/signalk`
-- settings files and plugins: `/home/node/.signalk`
-
-You most probably want to mount `/home/node/.signalk` from the host or as a volume to persist your settings.
 
 ## Building from source
 

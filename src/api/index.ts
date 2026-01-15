@@ -6,8 +6,10 @@ import { FeaturesApi } from './discovery'
 import { ResourcesApi } from './resources'
 import { WeatherApi } from './weather'
 import { AutopilotApi } from './autopilot'
+import { RadarApi } from './radar'
 import { HistoryApiHttpRegistry } from './history'
 import { SignalKApiId, WithFeatures } from '@signalk/server-api'
+import { binaryStreamManager, initializeBinaryStreams } from './streams'
 
 export interface ApiResponse {
   state: 'FAILED' | 'COMPLETED' | 'PENDING'
@@ -54,6 +56,13 @@ export const startApis = (
     WithFeatures
 ) => {
   const apiList: Array<SignalKApiId> = []
+
+  // Initialize binary stream manager for WASM plugin streaming
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).binaryStreamManager = binaryStreamManager
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initializeBinaryStreams(app as any)
+
   const resourcesApi = new ResourcesApi(app)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(app as any).resourcesApi = resourcesApi
@@ -74,6 +83,11 @@ export const startApis = (
   ;(app as any).autopilotApi = autopilotApi
   apiList.push('autopilot')
 
+  const radarApi = new RadarApi(app)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(app as any).radarApi = radarApi
+  apiList.push('radar')
+
   const featuresApi = new FeaturesApi(app)
 
   const historyApiHttpRegistry = new HistoryApiHttpRegistry(app)
@@ -87,6 +101,7 @@ export const startApis = (
     weatherApi.start(),
     featuresApi.start(),
     autopilotApi.start(),
+    radarApi.start(),
     historyApiHttpRegistry.start()
   ])
   return apiList

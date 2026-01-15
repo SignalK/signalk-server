@@ -8,6 +8,7 @@ import {
   Delta,
   WithResourcesApi
 } from '.'
+import { RadarProviderRegistry, WithRadarApi } from './radarapi'
 import { CourseApi } from './course'
 import { HistoryApiRegistry, WithHistoryApi } from './history'
 import { StreamBundle } from './streambundle'
@@ -35,6 +36,8 @@ export interface ServerAPI
     WithResourcesApi,
     AutopilotProviderRegistry,
     WeatherProviderRegistry,
+    RadarProviderRegistry,
+    WithRadarApi,
     WithHistoryApi,
     HistoryApiRegistry,
     WithFeatures,

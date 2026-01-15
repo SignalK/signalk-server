@@ -14,6 +14,14 @@ You can learn how from this _free_ series [How to Contribute to an Open Source P
 
 ---
 
+### Additional Guidelines
+
+The [AGENTS.md](AGENTS.md) file contains detailed coding guidelines primarily intended for AI coding assistants. The content is equally relevant for human contributors - it covers code quality principles, commit conventions, and PR guidelines that help maintain consistency across the project.
+
+Don't worry if some of the instructions seem overly specific or prescriptive - they're written to give AI tools explicit guardrails. As a human, use your judgment; the spirit of the guidelines matters more than following every detail to the letter.
+
+---
+
 ### Running the development server
 
 1. Clone the repository:

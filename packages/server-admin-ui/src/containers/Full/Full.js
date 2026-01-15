@@ -10,6 +10,7 @@ import Footer from '../../components/Footer/Footer'
 
 import Dashboard from '../../views/Dashboard/Dashboard'
 import Embedded from '../../views/Webapps/Embedded'
+import EmbeddedDocs from '../../views/Webapps/EmbeddedDocs'
 import Webapps from '../../views/Webapps/Webapps'
 import DataBrowser from '../../views/DataBrowser/DataBrowser'
 import Playground from '../../views/Playground'
@@ -118,6 +119,11 @@ class Full extends Component {
                 <Route
                   path="/security/access/requests"
                   component={loginOrOriginal(AccessRequests)}
+                />
+                <Route
+                  path="/documentation"
+                  name="Documentation"
+                  component={EmbeddedDocs}
                 />
                 <Route path="/login" component={Login} />
                 <Route path="/register" component={Register} />

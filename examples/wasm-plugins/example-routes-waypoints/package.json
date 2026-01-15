@@ -1,0 +1,38 @@
+{
+  "name": "@signalk/example-routes-waypoints",
+  "version": "0.1.0",
+  "description": "Example WASM plugin demonstrating Routes and Waypoints Resource Providers",
+  "keywords": [
+    "signalk-wasm-plugin",
+    "signalk",
+    "wasm",
+    "routes",
+    "waypoints",
+    "navigation",
+    "resource-provider"
+  ],
+  "wasmManifest": "build/plugin.wasm",
+  "wasmCapabilities": {
+    "storage": "vfs-only",
+    "dataRead": true,
+    "dataWrite": true,
+    "resourceProvider": true
+  },
+  "author": "Signal K Team",
+  "license": "Apache-2.0",
+  "scripts": {
+    "asbuild:debug": "asc assembly/index.ts --target debug --outFile build/plugin.debug.wasm",
+    "asbuild:release": "asc assembly/index.ts --target release --outFile build/plugin.wasm",
+    "asbuild": "npm run asbuild:release",
+    "build": "npm run asbuild",
+    "clean": "rimraf build/"
+  },
+  "devDependencies": {
+    "assemblyscript": "^0.27.0",
+    "rimraf": "^6.0.1"
+  },
+  "dependencies": {
+    "assemblyscript-json": "^1.1.0",
+    "@signalk/assemblyscript-plugin-sdk": "^0.2.0"
+  }
+}

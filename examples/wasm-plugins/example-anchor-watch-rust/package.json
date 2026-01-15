@@ -1,0 +1,39 @@
+{
+  "name": "@signalk/example-anchor-watch-rust",
+  "version": "0.2.0",
+  "description": "Anchor Watch WASM plugin for Signal K - Rust implementation with PUT handlers",
+  "main": "plugin.wasm",
+  "scripts": {
+    "build": "cargo build --release --target wasm32-wasip1",
+    "build:component": "cargo component build --release",
+    "postbuild": "cp target/wasm32-wasip1/release/anchor_watch_rust.wasm plugin.wasm",
+    "clean": "cargo clean && rm -f plugin.wasm",
+    "check": "cargo check --target wasm32-wasip1"
+  },
+  "keywords": [
+    "signalk-wasm-plugin",
+    "signalk-category-safety",
+    "wasm",
+    "rust",
+    "anchor-watch"
+  ],
+  "author": "Signal K",
+  "license": "Apache-2.0",
+  "signalk-plugin-enabled-by-default": false,
+  "wasmManifest": "plugin.wasm",
+  "wasmCapabilities": {
+    "network": false,
+    "storage": "vfs-only",
+    "dataRead": true,
+    "dataWrite": true,
+    "putHandlers": true,
+    "httpEndpoints": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SignalK/signalk-server"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

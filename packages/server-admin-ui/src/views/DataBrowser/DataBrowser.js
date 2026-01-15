@@ -35,6 +35,11 @@ function getCompiledFormula(formula) {
   return compiledFormulaCache.get(formula)
 }
 import { getValueRenderer, DefaultValueRenderer } from './ValueRenderers'
+import Meta from './Meta'
+import store from './ValueEmittingStore'
+import VirtualizedDataTable from './VirtualizedDataTable'
+import granularSubscriptionManager from './GranularSubscriptionManager'
+import { getPath$SourceKey } from './pathUtils'
 
 const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
@@ -156,8 +161,6 @@ class DataBrowser extends Component {
       pause: localStorage.getItem(pauseStorageKey) === 'true',
       includeMeta: localStorage.getItem(metaStorageKey) === 'true',
       raw: localStorage.getItem(rawStorageKey) === 'true',
-      data: {},
-      meta: {},
       context: localStorage.getItem(contextStorageKey) || 'self',
       search: localStorage.getItem(searchStorageKey) || '',
       selectedSources: new Set(
@@ -169,6 +172,9 @@ class DataBrowser extends Component {
       presets: DEFAULT_PRESETS,
       unitDefinitions: null, // Loaded from server for conversion formulas
       presetDetails: null // Details of active preset with target units
+      // For forcing re-renders when store updates
+      storeVersion: 0,
+      path$SourceKeys: []
     }
 
     this.fetchSources = fetchSources.bind(this)
@@ -238,6 +244,7 @@ class DataBrowser extends Component {
       console.error('Formula evaluation failed:', e)
       return { value, unit: siUnit }
     }
+    this.updatePath$SourceKeys = this.updatePath$SourceKeys.bind(this)
   }
 
   handleMessage(msg) {
@@ -250,18 +257,6 @@ class DataBrowser extends Component {
         msg.context === this.state.webSocket.skSelf ? 'self' : msg.context
 
       let isNew = false
-      if (!this.state.data[key]) {
-        this.state.data[key] = {}
-        isNew = true
-      }
-
-      if (!this.state.meta[key]) {
-        this.state.meta[key] = {}
-        isNew = true
-      }
-
-      let context = this.state.data[key]
-      let contextMeta = this.state.meta[key]
 
       msg.updates.forEach((update) => {
         if (update.values) {
@@ -279,7 +274,7 @@ class DataBrowser extends Component {
 
             if (vp.path === '') {
               Object.keys(vp.value).forEach((k) => {
-                context[k] = {
+                const pathData = {
                   path: k,
                   value: vp.value[k],
                   $source: update.$source,
@@ -287,9 +282,13 @@ class DataBrowser extends Component {
                   sentence,
                   timestamp: formattedTimestamp
                 }
+                const wasNew = !store.getPathData(key, k)
+                store.updatePath(key, k, pathData)
+                if (wasNew) isNew = true
               })
             } else {
-              context[vp.path + '$' + update['$source']] = {
+              const path$SourceKey = getPath$SourceKey(vp.path, update.$source)
+              const pathData = {
                 path: vp.path,
                 $source: update.$source,
                 value: vp.value,
@@ -297,25 +296,60 @@ class DataBrowser extends Component {
                 sentence,
                 timestamp: formattedTimestamp
               }
+              const wasNew = !store.getPathData(key, path$SourceKey)
+              store.updatePath(key, path$SourceKey, pathData)
+              if (wasNew) isNew = true
             }
           })
         }
         if (update.meta) {
           update.meta.forEach((vp) => {
-            contextMeta[vp.path] = { ...contextMeta[vp.path], ...vp.value }
+            store.updateMeta(key, vp.path, vp.value)
           })
         }
       })
 
+      // Update path keys if new paths were added or if this is the selected context
       if (isNew || (this.state.context && this.state.context === key)) {
-        this.setState({
-          ...this.state,
-          hasData: true,
-          data: this.state.data,
-          meta: this.state.meta
-        })
+        this.updatePath$SourceKeys()
+        if (!this.state.hasData) {
+          this.setState({ hasData: true })
+        }
       }
     }
+  }
+
+  updatePath$SourceKeys() {
+    const allKeys = store.getPath$SourceKeys(this.state.context)
+
+    const filtered = allKeys.filter((key) => {
+      // Search filter
+      if (this.state.search && this.state.search.length > 0) {
+        if (key.toLowerCase().indexOf(this.state.search.toLowerCase()) === -1) {
+          return false
+        }
+      }
+
+      // Source filter
+      if (
+        this.state.sourceFilterActive &&
+        this.state.selectedSources.size > 0
+      ) {
+        const data = store.getPathData(this.state.context, key)
+        if (data && !this.state.selectedSources.has(data.$source)) {
+          return false
+        }
+      }
+
+      return true
+    })
+
+    filtered.sort()
+
+    this.setState({
+      path$SourceKeys: filtered,
+      storeVersion: store.version
+    })
   }
 
   subscribeToDataIfNeeded() {
@@ -325,17 +359,11 @@ class DataBrowser extends Component {
       (this.props.webSocket !== this.state.webSocket ||
         this.state.didSubscribe === false)
     ) {
-      const sub = {
-        context: '*',
-        subscribe: [
-          {
-            path: '*',
-            period: 2000
-          }
-        ]
-      }
+      // Initialize granular subscription manager
+      granularSubscriptionManager.setWebSocket(this.props.webSocket)
+      granularSubscriptionManager.setMessageHandler(this.handleMessage)
+      granularSubscriptionManager.startDiscovery()
 
-      this.props.webSocket.send(JSON.stringify(sub))
       this.state.webSocket = this.props.webSocket
       this.state.didSubscribe = true
       this.state.webSocket.messageHandler = this.handleMessage
@@ -343,17 +371,9 @@ class DataBrowser extends Component {
   }
 
   unsubscribeToData() {
+    granularSubscriptionManager.unsubscribeAll()
+    this.state.didSubscribe = false
     if (this.props.webSocket) {
-      const sub = {
-        context: '*',
-        unsubscribe: [
-          {
-            path: '*'
-          }
-        ]
-      }
-      this.props.webSocket.send(JSON.stringify(sub))
-      this.state.didSubscribe = false
       this.props.webSocket.messageHandler = null
     }
   }
@@ -388,6 +408,17 @@ class DataBrowser extends Component {
     }
 
     this.setState({ presets, activePreset, unitDefinitions, presetDetails })
+
+    // Subscribe to store structure changes (debounced to avoid React render conflicts)
+    this.unsubscribeStore = store.subscribeToStructure(() => {
+      // Use setTimeout to defer state update and avoid "setState during render" error
+      if (this.updatePath$SourceKeysTimeout) {
+        clearTimeout(this.updatePath$SourceKeysTimeout)
+      }
+      this.updatePath$SourceKeysTimeout = setTimeout(() => {
+        this.updatePath$SourceKeys()
+      }, 50)
+    })
   }
 
   componentDidUpdate() {
@@ -396,6 +427,13 @@ class DataBrowser extends Component {
 
   componentWillUnmount() {
     this.unsubscribeToData()
+    if (this.unsubscribeStore) {
+      this.unsubscribeStore()
+    }
+    if (this.updatePath$SourceKeysTimeout) {
+      clearTimeout(this.updatePath$SourceKeysTimeout)
+    }
+    granularSubscriptionManager.unsubscribeAll()
   }
 
   handleContextChange(selectedOption) {
@@ -404,23 +442,32 @@ class DataBrowser extends Component {
     localStorage.setItem(selectedSourcesStorageKey, JSON.stringify([]))
     localStorage.setItem(sourceFilterActiveStorageKey, false)
 
-    this.setState({
-      ...this.state,
-      context: value,
-      selectedSources: new Set(),
-      sourceFilterActive: false
-    })
+    // Restart discovery for new context
+    granularSubscriptionManager.cancelPending()
+    granularSubscriptionManager.startDiscovery()
+
+    this.setState(
+      {
+        ...this.state,
+        context: value,
+        selectedSources: new Set(),
+        sourceFilterActive: false
+      },
+      () => {
+        this.updatePath$SourceKeys()
+      }
+    )
     localStorage.setItem(contextStorageKey, value)
   }
 
   getContextLabel(contextKey) {
-    const contextData = this.state.data[contextKey]
-    const contextName = contextData?.name?.value
+    const contextData = store.getPathData(contextKey, 'name')
+    const contextName = contextData?.value
     return `${contextName || ''} ${contextKey}`
   }
 
   getContextOptions() {
-    const contexts = Object.keys(this.state.data || {}).sort()
+    const contexts = store.getContexts().sort()
 
     const options = []
 
@@ -445,7 +492,9 @@ class DataBrowser extends Component {
   }
 
   handleSearch(event) {
-    this.setState({ ...this.state, search: event.target.value })
+    this.setState({ ...this.state, search: event.target.value }, () => {
+      this.updatePath$SourceKeys()
+    })
     localStorage.setItem(searchStorageKey, event.target.value)
   }
 
@@ -458,12 +507,6 @@ class DataBrowser extends Component {
     this.setState({ ...this.state, raw: event.target.checked })
     localStorage.setItem(rawStorageKey, event.target.checked)
   }
-  resetAllTimestampAnimations() {
-    const cells = document.querySelectorAll('.timestamp-updated')
-    cells.forEach((cell) => {
-      cell.classList.remove('timestamp-updated')
-    })
-  }
 
   handlePause(event) {
     this.state.pause = event.target.checked
@@ -471,7 +514,7 @@ class DataBrowser extends Component {
     localStorage.setItem(pauseStorageKey, this.state.pause)
     if (this.state.pause) {
       this.unsubscribeToData()
-      this.resetAllTimestampAnimations()
+      granularSubscriptionManager.unsubscribeAll()
     } else {
       this.fetchSources()
       this.subscribeToDataIfNeeded()
@@ -488,7 +531,6 @@ class DataBrowser extends Component {
       newSelectedSources.add(source)
     }
 
-    // Auto-activate filtering when first source is selected, deactivate when none selected
     const shouldActivateFilter = wasEmpty && newSelectedSources.size === 1
     const shouldDeactivateFilter = newSelectedSources.size === 0
 
@@ -504,21 +546,31 @@ class DataBrowser extends Component {
     )
     localStorage.setItem(sourceFilterActiveStorageKey, newSourceFilterActive)
 
-    this.setState({
-      ...this.state,
-      selectedSources: newSelectedSources,
-      sourceFilterActive: newSourceFilterActive
-    })
+    this.setState(
+      {
+        ...this.state,
+        selectedSources: newSelectedSources,
+        sourceFilterActive: newSourceFilterActive
+      },
+      () => {
+        this.updatePath$SourceKeys()
+      }
+    )
   }
 
   toggleSourceFilter(event) {
     const newSourceFilterActive = event.target.checked
     localStorage.setItem(sourceFilterActiveStorageKey, newSourceFilterActive)
 
-    this.setState({
-      ...this.state,
-      sourceFilterActive: newSourceFilterActive
-    })
+    this.setState(
+      {
+        ...this.state,
+        sourceFilterActive: newSourceFilterActive
+      },
+      () => {
+        this.updatePath$SourceKeys()
+      }
+    )
   }
 
   render() {
@@ -527,160 +579,6 @@ class DataBrowser extends Component {
 
     return (
       <div className="animated fadeIn">
-        <style>
-          {`
-            .timestamp-updated {
-              position: relative;
-            }
-
-            .timestamp-updated::before {
-              content: '';
-              position: absolute;
-              left: 0;
-              top: 0;
-              bottom: 0;
-              width: 3px;
-              background-color: #28a745;
-              animation: highlightFade 15s ease-out;
-            }
-
-            @keyframes highlightFade {
-              0% {
-                opacity: 1;
-              }
-              100% {
-                opacity: 0;
-              }
-            }
-
-            .responsive-table {
-              font-size: 0.875rem;
-            }
-
-            .responsive-table td {
-              padding: 0.5rem 0.25rem;
-              vertical-align: top;
-              word-wrap: break-word;
-              word-break: break-word;
-            }
-
-            .responsive-table th {
-              padding: 0.5rem 0.25rem;
-              font-size: 0.8rem;
-              font-weight: 600;
-            }
-
-            .responsive-table .path-cell {
-              min-width: 150px;
-              max-width: 200px;
-            }
-
-            .responsive-table .value-cell {
-              min-width: 120px;
-              max-width: 300px;
-            }
-
-            .responsive-table .timestamp-cell {
-              min-width: 80px;
-              max-width: 100px;
-              white-space: nowrap;
-            }
-
-            .responsive-table .source-cell {
-              min-width: 120px;
-              max-width: 170px;
-            }
-
-            .responsive-table pre {
-              margin: 0;
-              padding: 0;
-              font-size: 0.8rem;
-              white-space: pre-wrap;
-              word-wrap: break-word;
-              word-break: break-word;
-            }
-
-            @media (max-width: 1200px) {
-              .responsive-table {
-                font-size: 0.8rem;
-              }
-
-              .responsive-table td {
-                padding: 0.4rem 0.2rem;
-              }
-
-              .responsive-table th {
-                padding: 0.4rem 0.2rem;
-                font-size: 0.75rem;
-              }
-            }
-
-            @media (max-width: 992px) {
-              .responsive-table .path-cell {
-                max-width: 150px;
-              }
-
-              .responsive-table .value-cell {
-                max-width: 200px;
-              }
-
-              .responsive-table .source-cell {
-                max-width: 140px;
-              }
-            }
-
-            @media (max-width: 768px) {
-              .responsive-table {
-                font-size: 0.75rem;
-              }
-
-              .responsive-table td {
-                padding: 0.3rem 0.15rem;
-              }
-
-              .responsive-table th {
-                padding: 0.3rem 0.15rem;
-                font-size: 0.7rem;
-              }
-
-              .responsive-table .path-cell {
-                max-width: 120px;
-              }
-
-              .responsive-table .value-cell {
-                max-width: 150px;
-              }
-
-              .responsive-table .source-cell {
-                max-width: 120px;
-              }
-
-              .responsive-table pre {
-                font-size: 0.7rem;
-              }
-            }
-
-            @media (max-width: 576px) {
-              .responsive-table {
-                font-size: 0.7rem;
-              }
-
-              .responsive-table td {
-                padding: 0.25rem 0.1rem;
-              }
-
-              .responsive-table th {
-                padding: 0.25rem 0.1rem;
-                font-size: 0.65rem;
-              }
-
-              .responsive-table .timestamp-cell {
-                min-width: 70px;
-                max-width: 80px;
-              }
-            }
-          `}
-        </style>
         <Card>
           <CardBody>
             <Form
@@ -811,6 +709,7 @@ class DataBrowser extends Component {
                 </FormGroup>
               )}
 
+              {/* Data Values View - Virtualized */}
               {!this.state.includeMeta &&
                 this.state.context &&
                 this.state.context !== 'none' && (
@@ -976,8 +875,19 @@ class DataBrowser extends Component {
                         })}
                     </tbody>
                   </Table>
+                  <VirtualizedDataTable
+                    path$SourceKeys={this.state.path$SourceKeys}
+                    context={this.state.context}
+                    raw={this.state.raw}
+                    isPaused={this.state.pause}
+                    onToggleSource={this.toggleSourceSelection}
+                    selectedSources={this.state.selectedSources}
+                    onToggleSourceFilter={this.toggleSourceFilter}
+                    sourceFilterActive={this.state.sourceFilterActive}
+                  />
                 )}
 
+              {/* Meta View - Keep original table for now */}
               {this.state.includeMeta &&
                 this.state.context &&
                 this.state.context !== 'none' && (
@@ -988,18 +898,17 @@ class DataBrowser extends Component {
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.keys(this.state.data[this.state.context] || {})
-                        .filter((key) => {
-                          return (
-                            !this.state.search ||
-                            this.state.search.length === 0 ||
-                            key
-                              .toLowerCase()
-                              .indexOf(this.state.search.toLowerCase()) !== -1
-                          )
-                        })
-                        .map(
-                          (key) => this.state.data[this.state.context][key].path
+                      {this.getUniquePathsForMeta().map((path) => {
+                        const meta = store.getMeta(this.state.context, path)
+                        return (
+                          <tr key={path}>
+                            <td>{path}</td>
+                            <td>
+                              {!path.startsWith('notifications') && (
+                                <Meta meta={meta || {}} path={path} />
+                              )}
+                            </td>
+                          </tr>
                         )
                         .filter((path, index, array) => {
                           return array.indexOf(path) === index
@@ -1029,6 +938,7 @@ class DataBrowser extends Component {
                             </tr>
                           )
                         })}
+                      })}
                     </tbody>
                   </Table>
                 )}
@@ -1053,86 +963,26 @@ class DataBrowser extends Component {
       </div>
     )
   }
-}
 
-class TimestampCell extends Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      isUpdated: false,
-      animationKey: 0
-    }
-    this.timeoutId = null
-  }
+  getUniquePathsForMeta() {
+    const allKeys = store.getPath$SourceKeys(this.state.context)
 
-  componentDidUpdate(prevProps) {
-    if (prevProps.timestamp !== this.props.timestamp) {
-      if (this.timeoutId) {
-        clearTimeout(this.timeoutId)
+    // Filter by search
+    const filtered = allKeys.filter((key) => {
+      if (!this.state.search || this.state.search.length === 0) {
+        return true
       }
+      return key.toLowerCase().indexOf(this.state.search.toLowerCase()) !== -1
+    })
 
-      this.setState((state) => ({
-        isUpdated: true,
-        animationKey: state.animationKey + 1
-      }))
+    // Extract unique paths (remove source suffix)
+    const paths = filtered.map((key) => {
+      const data = store.getPathData(this.state.context, key)
+      return data?.path || key
+    })
 
-      this.timeoutId = setTimeout(() => {
-        if (!this.props.isPaused) {
-          this.setState({ isUpdated: false })
-        }
-      }, 15000)
-    }
-  }
-
-  componentDidMount() {
-    if (this.props.isPaused) {
-      this.setState({ isUpdated: false })
-    }
-  }
-
-  componentWillUnmount() {
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId)
-    }
-  }
-
-  render() {
-    return (
-      <td
-        className={`${this.props.className || ''} ${
-          this.state.isUpdated && !this.props.isPaused
-            ? 'timestamp-updated'
-            : ''
-        }`}
-        key={this.state.animationKey}
-      >
-        {this.props.timestamp}
-      </td>
-    )
-  }
-}
-
-class CopyToClipboardWithFade extends Component {
-  constructor() {
-    super()
-    this.state = {
-      opacity: 1
-    }
-  }
-
-  render() {
-    const { opacity } = this.state
-    const onCopy = function () {
-      this.setState({ opacity: 0.5 })
-      setTimeout(() => {
-        this.setState({ opacity: 1 })
-      }, 500)
-    }.bind(this)
-    return (
-      <CopyToClipboard text={this.props.text} onCopy={onCopy}>
-        <span style={{ opacity }}> {this.props.children}</span>
-      </CopyToClipboard>
-    )
+    // Dedupe and sort
+    return [...new Set(paths)].sort()
   }
 }
 

@@ -84,6 +84,16 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Publish assemblyscript-plugin-sdk
+        run: |
+          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/assemblyscript-plugin-sdk/package.json)
+          if ! npm view @signalk/assemblyscript-plugin-sdk@$LOCAL_VERSION version &>/dev/null; then
+            cd packages/assemblyscript-plugin-sdk
+            npm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Set tag variable
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT

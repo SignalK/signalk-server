@@ -36,6 +36,14 @@ export interface SubscribeMessage {
    * An array of paths to subscribe to, with optional criteria
    */
   subscribe: SubscriptionOptions[]
+
+  /**
+   * When true, the server will send cached values for ALL paths matching the context
+   * filter once (for discovery), plus announce any new paths that appear later.
+   * This allows clients using granular subscriptions to discover available paths
+   * without subscribing to everything continuously.
+   */
+  announceNewPaths?: boolean
 }
 
 /** @inline

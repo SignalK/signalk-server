@@ -1,0 +1,7 @@
+{
+  "name": "signalk-server-config",
+  "version": "0.0.1",
+  "description": "Test config for WASM plugin tests",
+  "repository": {},
+  "license": "Apache-2.0"
+}

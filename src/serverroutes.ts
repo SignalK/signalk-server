@@ -70,8 +70,8 @@ type HttpRateLimitOverrides = {
 }
 
 const DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
-const DEFAULT_HTTP_RATE_LIMIT_API_MAX = 100
-const DEFAULT_HTTP_RATE_LIMIT_LOGIN_STATUS_MAX = 10
+const DEFAULT_HTTP_RATE_LIMIT_API_MAX = 1000
+const DEFAULT_HTTP_RATE_LIMIT_LOGIN_STATUS_MAX = 1000
 
 function getHttpRateLimitOverridesFromEnv(): HttpRateLimitOverrides {
   const raw = process.env.HTTP_RATE_LIMITS
@@ -134,6 +134,8 @@ interface App
   logging: {
     rememberDebug: (r: boolean) => void
     enableDebug: (r: string) => boolean
+    addDebug: (name: string) => void
+    removeDebug: (name: string) => void
   }
   activateSourcePriorities: () => void
   streambundle: StreamBundle
@@ -178,8 +180,13 @@ module.exports = function (
   const logopath = path.resolve(app.config.configPath, 'logo.svg')
   if (fs.existsSync(logopath)) {
     debug(`Found custom logo at ${logopath}, adding route for it`)
+    // Intercept both Webpack (fonts/) and Vite (assets/) paths for the main logo
     app.use(
       '/admin/fonts/signal-k-logo-image-text.*',
+      (req: Request, res: Response) => res.sendFile(logopath)
+    )
+    app.use(
+      '/admin/assets/signal-k-logo-image-text*.svg',
       (req: Request, res: Response) => res.sendFile(logopath)
     )
 
@@ -191,8 +198,13 @@ module.exports = function (
     const minimizedLogo = fs.existsSync(minimizedLogoPath)
       ? minimizedLogoPath
       : logopath
+    // Intercept both Webpack (fonts/) and Vite (assets/) paths for the minimized logo
     app.use(
       '/admin/fonts/signal-k-logo-image.*',
+      (req: Request, res: Response) => res.sendFile(minimizedLogo)
+    )
+    app.use(
+      '/admin/assets/signal-k-logo-image*.svg',
       (req: Request, res: Response) => res.sendFile(minimizedLogo)
     )
   }
@@ -1243,7 +1255,6 @@ module.exports = function (
 
             const zipFileDir = fs.mkdtempSync(`${tmpDir}${path.sep}`)
             const zipFile = path.join(zipFileDir, 'backup.zip')
-            const unzipStream = unzipper.Extract({ path: restoreFilePath })
 
             file
               .pipe(fs.createWriteStream(zipFile))
@@ -1254,17 +1265,50 @@ module.exports = function (
               })
               .on('close', () => {
                 const zipStream = fs.createReadStream(zipFile)
+                const extractPromises: Promise<void>[] = []
+                const resolvedBase = path.resolve(restoreFilePath)
 
                 zipStream
-                  .pipe(unzipStream)
+                  .pipe(unzipper.Parse())
+                  .on('entry', (entry: unzipper.Entry) => {
+                    const targetPath = path.join(restoreFilePath, entry.path)
+                    const resolvedTarget = path.resolve(targetPath)
+
+                    if (!resolvedTarget.startsWith(resolvedBase + path.sep)) {
+                      console.error(`Zip slip attempt blocked: ${entry.path}`)
+                      entry.autodrain()
+                      return
+                    }
+
+                    if (entry.type === 'Directory') {
+                      fs.mkdirSync(resolvedTarget, { recursive: true })
+                      entry.autodrain()
+                    } else {
+                      fs.mkdirSync(path.dirname(resolvedTarget), {
+                        recursive: true
+                      })
+                      const writePromise = new Promise<void>(
+                        (resolve, reject) => {
+                          entry
+                            .pipe(fs.createWriteStream(resolvedTarget))
+                            .on('close', resolve)
+                            .on('error', reject)
+                        }
+                      )
+                      extractPromises.push(writePromise)
+                    }
+                  })
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   .on('error', (err: any) => {
                     console.error(err)
                     res.status(500).send(err.message)
                   })
                   .on('close', () => {
-                    fs.unlinkSync(zipFile)
-                    listSafeRestoreFiles(restoreFilePath)
+                    Promise.all(extractPromises)
+                      .then(() => {
+                        fs.unlinkSync(zipFile)
+                        return listSafeRestoreFiles(restoreFilePath)
+                      })
                       .then((files) => {
                         res.type('text/plain').send(files)
                       })

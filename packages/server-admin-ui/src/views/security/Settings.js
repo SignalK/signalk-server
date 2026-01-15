@@ -14,6 +14,7 @@ import {
   FormText
 } from 'reactstrap'
 import EnableSecurity from './EnableSecurity'
+import OIDCSettings from './OIDCSettings'
 
 export function fetchSecurityConfig() {
   fetch(`${window.serverRoutesPrefix}/security/config`, {
@@ -251,6 +252,7 @@ class Settings extends Component {
                   </Button>
                 </CardFooter>
               </Card>
+              <OIDCSettings />
             </div>
           )}
       </div>

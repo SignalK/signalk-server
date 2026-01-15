@@ -1,0 +1,98 @@
+// Signal K Server Plugin API - WASM Interface Types (WIT)
+// This defines the contract between WASM plugins and the Signal K server
+
+package signalk:plugin-api@1.0.0;
+
+// World definition - entry point for WASM plugins
+world plugin {
+  // Plugin exports these functions
+  export plugin-interface;
+
+  // Plugin can use these server APIs
+  import delta-handler;
+  import plugin-config;
+  import plugin-status;
+  import full-model;
+}
+
+// Plugin lifecycle and metadata interface
+interface plugin-interface {
+  // Plugin metadata
+  id: func() -> string;
+  name: func() -> string;
+  schema: func() -> string; // JSON schema as string
+
+  // Lifecycle hooks
+  start: func(config: string) -> result<_, string>;
+  stop: func() -> result<_, string>;
+}
+
+// Delta message handling
+interface delta-handler {
+  // Delta data types
+  record source-ref {
+    label: string,
+    type: option<string>,
+  }
+
+  record path-value {
+    path: string,
+    value: string, // JSON-encoded value
+  }
+
+  record update {
+    source: source-ref,
+    timestamp: string, // ISO 8601 timestamp
+    values: list<path-value>,
+  }
+
+  record delta {
+    context: string,
+    updates: list<update>,
+  }
+
+  // Plugin → Server: emit delta message
+  handle-message: func(plugin-id: string, delta: delta);
+
+  // Server → Plugin: register callback for incoming deltas
+  // Note: Callback registration will be done during plugin initialization
+  on-delta: func(delta: delta);
+}
+
+// Plugin configuration and storage
+interface plugin-config {
+  // Read saved plugin configuration (JSON string)
+  read-plugin-options: func() -> string;
+
+  // Save plugin configuration (persisted to disk)
+  save-plugin-options: func(config: string) -> result<_, string>;
+
+  // Get plugin data directory path (VFS root)
+  get-data-dir-path: func() -> string;
+}
+
+// Plugin status and logging
+interface plugin-status {
+  // Set plugin status message (shown in Admin UI)
+  set-plugin-status: func(message: string);
+
+  // Set plugin error message (shown in Admin UI)
+  set-plugin-error: func(message: string);
+
+  // Debug logging (respects plugin debug settings)
+  debug: func(message: string);
+
+  // Error logging
+  error: func(message: string);
+}
+
+// Signal K full model access
+interface full-model {
+  // Read data from vessel.self path
+  // Returns JSON-encoded value or none if path doesn't exist
+  get-self-path: func(path: string) -> option<string>;
+
+  // Read data from any context path
+  // Returns JSON-encoded value or none if path doesn't exist
+  get-path: func(path: string) -> option<string>;
+}

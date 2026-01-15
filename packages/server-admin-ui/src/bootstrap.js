@@ -68,7 +68,8 @@ const state = {
       dirty: false,
       timeoutsOk: true
     }
-  }
+  },
+  backpressureWarning: null
 }
 
 let store = createStore(
@@ -273,6 +274,18 @@ let store = createStore(
         }
       }
     }
+    if (action.type === 'BACKPRESSURE_WARNING') {
+      return {
+        ...state,
+        backpressureWarning: action.data
+      }
+    }
+    if (action.type === 'BACKPRESSURE_WARNING_CLEAR') {
+      return {
+        ...state,
+        backpressureWarning: null
+      }
+    }
     return {
       ...state,
       sourcePrioritiesData: reduceSourcePriorities(
@@ -296,9 +309,6 @@ function nameCollator(left, right) {
 }
 
 window.serverRoutesPrefix = '/skServer'
-
-// eslint-disable-next-line no-undef
-__webpack_init_sharing__('default')
 
 ReactDOM.render(
   <HashRouter>

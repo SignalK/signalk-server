@@ -1,0 +1,31 @@
+{
+  "name": "@signalk/example-hello-assemblyscript",
+  "version": "0.1.0",
+  "description": "Hello World WASM plugin written in AssemblyScript",
+  "keywords": [
+    "signalk-wasm-plugin"
+  ],
+  "wasmManifest": "plugin.wasm",
+  "wasmCapabilities": {
+    "network": false,
+    "storage": "vfs-only",
+    "dataRead": true,
+    "dataWrite": true,
+    "serialPorts": false
+  },
+  "author": "Signal K Team",
+  "license": "Apache-2.0",
+  "scripts": {
+    "asbuild:debug": "asc assembly/index.ts --target debug --outFile build/plugin.debug.wasm",
+    "asbuild:release": "asc assembly/index.ts --target release --outFile plugin.wasm --optimize --shrinkLevel 2",
+    "asbuild": "npm run asbuild:release",
+    "build": "npm run asbuild",
+    "test": "npm run asbuild:debug"
+  },
+  "devDependencies": {
+    "assemblyscript": "^0.27.0"
+  },
+  "dependencies": {
+    "@signalk/assemblyscript-plugin-sdk": "^0.2.0"
+  }
+}

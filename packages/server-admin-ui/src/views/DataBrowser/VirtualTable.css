@@ -1,0 +1,187 @@
+/* Virtual Table - CSS Grid layout for virtualization */
+
+.virtual-table {
+  width: 100%;
+  border: 1px solid #c8ced3;
+  border-radius: 0.25rem;
+  background-color: #fff;
+}
+
+.virtual-table-header {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 1.5fr) minmax(120px, 2fr) minmax(80px, 0.8fr)
+    minmax(120px, 1.2fr);
+  background-color: #f0f3f5;
+  border-bottom: 2px solid #c8ced3;
+  position: sticky;
+  top: 55px; /* Fixed header height */
+  z-index: 10;
+}
+
+.virtual-table-header-cell {
+  padding: 0.5rem 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-right: 1px solid #c8ced3;
+}
+
+.virtual-table-header-cell:last-child {
+  border-right: none;
+}
+
+.virtual-table-body {
+  position: relative;
+}
+
+.virtual-table-row {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 1.5fr) minmax(120px, 2fr) minmax(80px, 0.8fr)
+    minmax(120px, 1.2fr);
+  border-bottom: 1px solid #c8ced3;
+  font-size: 0.875rem;
+}
+
+.virtual-table-row:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.virtual-table-row.striped {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.virtual-table-row.striped:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.virtual-table-cell {
+  padding: 0.5rem 0.25rem;
+  vertical-align: top;
+  word-wrap: break-word;
+  word-break: break-word;
+  border-right: 1px solid #c8ced3;
+  overflow: hidden;
+}
+
+.virtual-table-cell:last-child {
+  border-right: none;
+}
+
+.virtual-table-cell.path-cell {
+  min-width: 150px;
+}
+
+.virtual-table-cell.value-cell {
+  min-width: 120px;
+}
+
+.virtual-table-cell.timestamp-cell {
+  min-width: 80px;
+  white-space: nowrap;
+}
+
+.virtual-table-cell.source-cell {
+  min-width: 120px;
+}
+
+/* Timestamp animation */
+.virtual-table-cell.timestamp-updated {
+  position: relative;
+}
+
+.virtual-table-cell.timestamp-updated::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #28a745;
+  animation: highlightFade 15s ease-out;
+}
+
+@keyframes highlightFade {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Pre formatting for JSON values */
+.virtual-table-cell pre {
+  margin: 0;
+  padding: 0;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 1200px) {
+  .virtual-table-row,
+  .virtual-table-header {
+    font-size: 0.8rem;
+  }
+
+  .virtual-table-cell,
+  .virtual-table-header-cell {
+    padding: 0.4rem 0.2rem;
+  }
+}
+
+@media (max-width: 992px) {
+  .virtual-table-header,
+  .virtual-table-row {
+    grid-template-columns:
+      minmax(120px, 1.5fr) minmax(100px, 2fr) minmax(70px, 0.8fr)
+      minmax(100px, 1.2fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .virtual-table-row,
+  .virtual-table-header {
+    font-size: 0.75rem;
+  }
+
+  .virtual-table-cell,
+  .virtual-table-header-cell {
+    padding: 0.3rem 0.15rem;
+  }
+
+  .virtual-table-header,
+  .virtual-table-row {
+    grid-template-columns:
+      minmax(100px, 1.5fr) minmax(80px, 2fr) minmax(60px, 0.8fr)
+      minmax(90px, 1.2fr);
+  }
+
+  .virtual-table-cell pre {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .virtual-table-row,
+  .virtual-table-header {
+    font-size: 0.7rem;
+  }
+
+  .virtual-table-cell,
+  .virtual-table-header-cell {
+    padding: 0.25rem 0.1rem;
+  }
+}
+
+/* Row count indicator */
+.virtual-table-info {
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  color: #6c757d;
+  background-color: #f8f9fa;
+  border-top: 1px solid #c8ced3;
+}
