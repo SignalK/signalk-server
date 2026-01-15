@@ -219,7 +219,7 @@ class OIDCSettings extends Component {
       return (
         <Badge
           color="warning"
-          className="ml-2"
+          className="ms-2"
           title="Set via environment variable"
         >
           ENV
@@ -238,9 +238,9 @@ class OIDCSettings extends Component {
       <Card>
         <CardHeader onClick={this.toggle} style={{ cursor: 'pointer' }}>
           <i className="fa fa-openid" /> OIDC / SSO Authentication
-          <span className="float-right">
+          <span className="float-end">
             {this.state.enabled && (
-              <Badge color="success" className="mr-2">
+              <Badge color="success" className="me-2">
                 Enabled
               </Badge>
             )}

@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   Button,
   Card,
@@ -15,6 +16,17 @@ import {
 import BasicProvider from './BasicProvider'
 import SourcePriorities from './SourcePriorities'
 import set from 'lodash.set'
+
+// Wrapper to provide router hooks to class component
+const withRouter = (Component) => {
+  const Wrapped = (props) => {
+    const params = useParams()
+    const navigate = useNavigate()
+    return <Component {...props} params={params} navigate={navigate} />
+  }
+  Wrapped.displayName = `withRouter(${Component.displayName || Component.name || 'Component'})`
+  return Wrapped
+}
 
 function fetchProviders() {
   fetch(`${window.serverRoutesPrefix}/providers`, {
@@ -58,8 +70,9 @@ class ProvidersConfiguration extends Component {
     this.state = {
       activeTab: '1',
       providers: [],
-      selectedProviderId: this.props.match.params.providerId
+      selectedProviderId: this.props.params.providerId
     }
+    this.selectedProviderRef = React.createRef()
 
     this.fetchProviders = fetchProviders.bind(this)
     this.runDiscovery = runDiscovery.bind(this)
@@ -114,7 +127,7 @@ class ProvidersConfiguration extends Component {
         selectedIndex: this.state.providers.length - 1
       },
       () => {
-        this.refs['selectedProvider'].scrollIntoView()
+        this.selectedProviderRef.current?.scrollIntoView()
       }
     )
   }
@@ -157,7 +170,7 @@ class ProvidersConfiguration extends Component {
               selectedIndex: -1
             },
             () => {
-              this.props.history.push('/serverConfiguration/connections/-')
+              this.props.navigate('/serverConfiguration/connections/-')
             }
           )
         }
@@ -205,7 +218,7 @@ class ProvidersConfiguration extends Component {
         selectedIndex: index
       },
       () => {
-        this.refs['selectedProvider'].scrollIntoView()
+        this.selectedProviderRef.current?.scrollIntoView()
       }
     )
   }
@@ -321,7 +334,10 @@ class ProvidersConfiguration extends Component {
         </Card>
 
         {this.state.selectedProvider && (
-          <div ref="selectedProvider" style={{ scrollMarginTop: '54px' }}>
+          <div
+            ref={this.selectedProviderRef}
+            style={{ scrollMarginTop: '54px' }}
+          >
             <Card>
               <CardBody>
                 {this.state.selectedProvider.editable ? (
@@ -362,7 +378,7 @@ class ProvidersConfiguration extends Component {
                         <i className="fa fa-ban" /> Cancel
                       </Button>
                     </Col>
-                    <Col xs="4" md="10" className="text-right">
+                    <Col xs="4" md="10" className="text-end">
                       <Button
                         size="sm"
                         color="danger"
@@ -374,7 +390,7 @@ class ProvidersConfiguration extends Component {
                   </Row>
                 ) : (
                   <Row>
-                    <Col xs="4" md="12" className="text-right">
+                    <Col xs="4" md="12" className="text-end">
                       <Button
                         size="sm"
                         color="danger"
@@ -410,4 +426,4 @@ const ProviderType = (props) => (
 )
 const mapStateToProps = ({ discoveredProviders }) => ({ discoveredProviders })
 
-export default connect(mapStateToProps)(ProvidersConfiguration)
+export default connect(mapStateToProps)(withRouter(ProvidersConfiguration))

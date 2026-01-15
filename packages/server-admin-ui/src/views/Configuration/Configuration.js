@@ -1,4 +1,5 @@
 import React, { Component } from 'react'
+import { useParams } from 'react-router-dom'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
 import {
   Card,
@@ -14,11 +15,21 @@ import {
 } from 'reactstrap'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
 
+// Wrapper to provide router hooks to class component
+const withRouter = (Component) => {
+  const Wrapped = (props) => {
+    const params = useParams()
+    return <Component {...props} params={params} />
+  }
+  Wrapped.displayName = `withRouter(${Component.displayName || Component.name || 'Component'})`
+  return Wrapped
+}
+
 const searchStorageKey = 'admin.v1.plugins.search'
 const openPluginStorageKey = 'admin.v1.plugins.openPlugin'
 const statusFilterStorageKey = 'admin.v1.plugins.statusFilter'
 
-export default class PluginConfigurationList extends Component {
+class PluginConfigurationList extends Component {
   constructor(props) {
     super(props)
     this.state = {
@@ -188,7 +199,7 @@ export default class PluginConfigurationList extends Component {
         const wasmEnabled = settings?.interfaces?.wasm !== false
 
         // Set initial selected plugin from URL or localStorage
-        const currentPluginId = this.props.match.params.pluginid
+        const currentPluginId = this.props.params.pluginid
         const lastOpenPluginId = localStorage.getItem(openPluginStorageKey)
         let selectedPlugin = null
 
@@ -320,15 +331,15 @@ export default class PluginConfigurationList extends Component {
                     const wasmDisabledForPlugin =
                       isWasmPlugin && !this.state.wasmEnabled
 
-                    // Determine badge class and text
-                    let badgeClass = 'badge-secondary'
+                    // Determine badge class and text (Bootstrap 5 uses text-bg-* classes)
+                    let badgeClass = 'text-bg-secondary'
                     let badgeText = 'Disabled'
 
                     if (wasmDisabledForPlugin) {
-                      badgeClass = 'badge-danger'
+                      badgeClass = 'text-bg-danger'
                       badgeText = 'WASM disabled'
                     } else if (plugin.data.enabled && !configurationRequired) {
-                      badgeClass = 'badge-success'
+                      badgeClass = 'text-bg-success'
                       badgeText = 'Enabled'
                     }
 
@@ -423,6 +434,8 @@ export default class PluginConfigurationList extends Component {
   }
 }
 
+export default withRouter(PluginConfigurationList)
+
 const isConfigurator = (pluginData) =>
   pluginData.keywords.includes('signalk-plugin-configurator')
 
@@ -516,7 +529,7 @@ class PluginConfigCard extends Component {
                     />
                     <span className="switch-handle" />
                   </Label>
-                  <span className="ml-1">Enabled</span>
+                  <span className="ms-1">Enabled</span>
                 </Col>
                 <Col lg={4} className={'mt-2 mt-lg-0'}>
                   <Label
@@ -542,7 +555,7 @@ class PluginConfigCard extends Component {
                     />
                     <span className="switch-handle" />
                   </Label>
-                  <span className="ml-1">Data logging</span>
+                  <span className="ms-1">Data logging</span>
                 </Col>
                 <Col lg={4} className={'mt-2 mt-lg-0'}>
                   <Label
@@ -568,7 +581,7 @@ class PluginConfigCard extends Component {
                     />
                     <span className="switch-handle" />
                   </Label>
-                  <span className="ml-1">Enable debug log</span>
+                  <span className="ms-1">Enable debug log</span>
                 </Col>
               </Row>
             )}

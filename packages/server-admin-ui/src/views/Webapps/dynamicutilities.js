@@ -102,13 +102,35 @@ const initializeContainer = async (container, moduleName) => {
   }
 }
 
+// Helper to create an error component module
+const createErrorModule = (message) => ({
+  default: () =>
+    React.createElement(
+      'div',
+      { style: { padding: '2rem', textAlign: 'center' } },
+      React.createElement(
+        'h4',
+        { style: { color: '#d9534f' } },
+        'Error loading component'
+      ),
+      message &&
+        React.createElement(
+          'p',
+          { style: { color: '#666', fontSize: '0.9rem', marginTop: '1rem' } },
+          message
+        )
+    )
+})
+
 export const toLazyDynamicComponent = (moduleName, component) =>
   React.lazy(() =>
     (async () => {
       const container = window[toSafeModuleId(moduleName)]
       if (container === undefined) {
         console.error(`Could not load module ${moduleName}`)
-        return import('./loadingerror')
+        return createErrorModule(
+          `Module "${moduleName}" is not available. Make sure the webapp is installed.`
+        )
       }
 
       try {
@@ -121,7 +143,9 @@ export const toLazyDynamicComponent = (moduleName, component) =>
           console.error(
             `Module ${moduleName} does not export component ${component}`
           )
-          return import('./loadingerror')
+          return createErrorModule(
+            `Module "${moduleName}" does not export the required component.`
+          )
         }
 
         // Factory returns the actual module
@@ -129,7 +153,22 @@ export const toLazyDynamicComponent = (moduleName, component) =>
         return Module
       } catch (ex) {
         console.error(`Error loading ${component} from ${moduleName}:`, ex)
-        return import('./loadingerror')
+
+        // Check for React version incompatibility
+        const errorMessage = ex.message || ex.toString()
+        if (
+          errorMessage.includes('hasOwnProperty') ||
+          errorMessage.includes('Cannot read properties of undefined')
+        ) {
+          return createErrorModule(
+            `This webapp may be incompatible with React 19. ` +
+              `It may need to be updated by its developer. (${moduleName})`
+          )
+        }
+
+        return createErrorModule(
+          `Failed to load webapp: ${errorMessage}`
+        )
       }
     })()
   )

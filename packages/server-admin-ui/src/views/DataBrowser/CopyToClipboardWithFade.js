@@ -1,5 +1,34 @@
 import React, { useState, useCallback } from 'react'
-import { CopyToClipboard } from 'react-copy-to-clipboard'
+
+/**
+ * Copy text to clipboard with fallback for non-HTTPS contexts
+ */
+function copyToClipboard(text) {
+  // Try modern Clipboard API first (requires HTTPS or localhost)
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text)
+  }
+
+  // Fallback for HTTP: use deprecated execCommand
+  const textArea = document.createElement('textarea')
+  textArea.value = text
+  textArea.style.position = 'fixed'
+  textArea.style.left = '-9999px'
+  textArea.style.top = '-9999px'
+  document.body.appendChild(textArea)
+  textArea.focus()
+  textArea.select()
+
+  return new Promise((resolve, reject) => {
+    const success = document.execCommand('copy')
+    document.body.removeChild(textArea)
+    if (success) {
+      resolve()
+    } else {
+      reject(new Error('execCommand copy failed'))
+    }
+  })
+}
 
 /**
  * CopyToClipboardWithFade - Wrapper that provides visual feedback on copy
@@ -7,17 +36,19 @@ import { CopyToClipboard } from 'react-copy-to-clipboard'
 function CopyToClipboardWithFade({ text, children }) {
   const [opacity, setOpacity] = useState(1)
 
-  const handleCopy = useCallback(() => {
-    setOpacity(0.5)
-    setTimeout(() => {
-      setOpacity(1)
-    }, 500)
-  }, [])
+  const handleClick = useCallback(() => {
+    copyToClipboard(text).then(() => {
+      setOpacity(0.5)
+      setTimeout(() => {
+        setOpacity(1)
+      }, 500)
+    })
+  }, [text])
 
   return (
-    <CopyToClipboard text={text} onCopy={handleCopy}>
-      <span style={{ opacity, cursor: 'pointer' }}>{children}</span>
-    </CopyToClipboard>
+    <span style={{ opacity, cursor: 'pointer' }} onClick={handleClick}>
+      {children}
+    </span>
   )
 }
 

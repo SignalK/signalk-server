@@ -101,12 +101,12 @@ class Header extends Component {
         </NavbarToggler>
         <NavbarBrand href="#" />
         <NavbarToggler
-          className="d-md-down-none mr-auto"
+          className="d-md-down-none me-auto"
           onClick={this.sidebarToggle}
         >
           <span className="navbar-toggler-icon" />
         </NavbarToggler>
-        <Nav className="ml-auto" navbar>
+        <Nav className="ms-auto" navbar>
           <NavItem className="d-md-down-none px-3">
             {this.props.loginStatus.status === 'loggedIn' &&
               this.props.loginStatus.userLevel === 'admin' && (
@@ -144,7 +144,7 @@ class Header extends Component {
               <DropdownToggle nav>
                 <i className="icon-menu" />
               </DropdownToggle>
-              <DropdownMenu right>
+              <DropdownMenu end>
                 {this.props.loginStatus.status === 'loggedIn' &&
                   this.props.loginStatus.userLevel === 'admin' && (
                     <DropdownItem onClick={this.props.restart}>

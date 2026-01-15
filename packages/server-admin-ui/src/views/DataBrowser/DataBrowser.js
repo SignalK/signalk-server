@@ -416,6 +416,9 @@ class DataBrowser extends Component {
                     isSearchable={true}
                     isClearable={true}
                     noOptionsMessage={() => 'No contexts available'}
+                    styles={{
+                      menu: (base) => ({ ...base, zIndex: 100 })
+                    }}
                   />
                 </Col>
                 <Col xs="6" md="2">
