@@ -33,7 +33,7 @@ class Footer extends Component {
           </span>
         )}
         {this.props.loginStatus.status === 'loggedIn' && (
-          <span className="ml-auto">
+          <span className="ms-auto">
             Logged in as {this.props.loginStatus.username}
           </span>
         )}

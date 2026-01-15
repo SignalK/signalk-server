@@ -49,7 +49,7 @@ class Webapp extends Component {
         icon,
         'bg-primary',
         padding.icon,
-        'font-2xl mr-3 float-left'
+        'font-2xl me-3 float-start'
       )
       const style = {
         backgroundSize: 'cover',

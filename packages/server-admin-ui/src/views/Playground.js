@@ -284,7 +284,7 @@ class Playground extends Component {
                       <Button
                         size="sm"
                         color="primary"
-                        className="float-left"
+                        className="float-start"
                         disabled={!this.state.inputIsJson}
                         onClick={this.beautify}
                       >
@@ -297,7 +297,7 @@ class Playground extends Component {
                         size="sm"
                         color="primary"
                         onClick={this.handleExecute}
-                        className="float-right"
+                        className="float-end"
                       >
                         <i
                           className={
@@ -311,7 +311,7 @@ class Playground extends Component {
                     </Col>
                   </Row>
                   <Row style={{ paddingBottom: '0.25rem' }}>
-                    <Col className="text-right">
+                    <Col className="text-end">
                       <Button
                         size="sm"
                         color="primary"
@@ -337,7 +337,7 @@ class Playground extends Component {
                   </Row>
                   <Row>
                     <Col>
-                      <span className="float-right">
+                      <span className="float-end">
                         {this.state.error && (
                           <p className="text-danger">{this.state.error}</p>
                         )}

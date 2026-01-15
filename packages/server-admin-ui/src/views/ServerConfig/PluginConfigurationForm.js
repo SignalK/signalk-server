@@ -1,10 +1,7 @@
 import React from 'react'
-import { withTheme } from '@rjsf/core'
-import { Theme as Bootstrap4Theme } from '@rjsf/bootstrap-4'
+import Form from '@rjsf/core'
 import validator from '@rjsf/validator-ajv8'
 import { getTemplate, getUiOptions } from '@rjsf/utils'
-
-const Form = withTheme(Bootstrap4Theme)
 
 const GRID_COLUMNS = {
   CONTENT: 'col-9',
@@ -222,7 +219,7 @@ const ArrayFieldTemplate = (props) => {
       {canAdd && (
         <div className={CSS_CLASSES.ARRAY_ITEM_ADD}>
           <p
-            className={`${GRID_COLUMNS.ADD_BUTTON_CONTAINER} text-right array-item-add`}
+            className={`${GRID_COLUMNS.ADD_BUTTON_CONTAINER} text-end array-item-add`}
           >
             <AddButton
               className="btn-add col-12"

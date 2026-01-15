@@ -132,12 +132,12 @@ function ActionCellRenderer(props) {
           {app.installed ? (
             app.newVersion ? (
               <Button
-                className="text-left"
+                className="text-start"
                 color="success"
                 onClick={handleInstallClick}
               >
                 <FontAwesomeIcon
-                  className="icon__update mr-2"
+                  className="icon__update me-2"
                   icon={faCloudArrowDown}
                 />
                 Update
@@ -146,28 +146,28 @@ function ActionCellRenderer(props) {
               <NavLink
                 to={`/serverConfiguration/plugins/${app.id}`}
                 role="button"
-                className="btn btn-light text-left"
+                className="btn btn-light text-start"
               >
-                <FontAwesomeIcon className="mr-2" icon={faGear} />
+                <FontAwesomeIcon className="me-2" icon={faGear} />
                 Configure
               </NavLink>
             ) : (
               <a
                 href={urlToWebapp(app)}
                 role="button"
-                className="btn btn-light text-left"
+                className="btn btn-light text-start"
               >
-                <FontAwesomeIcon className="mr-2" icon={faLink} />
+                <FontAwesomeIcon className="me-2" icon={faLink} />
                 Open
               </a>
             )
           ) : (
             <Button
-              className="text-left"
+              className="text-start"
               color="light"
               onClick={handleInstallClick}
             >
-              <FontAwesomeIcon className="mr-2" icon={faCloudArrowDown} />
+              <FontAwesomeIcon className="me-2" icon={faCloudArrowDown} />
               Install
             </Button>
           )}
@@ -177,13 +177,13 @@ function ActionCellRenderer(props) {
             color={app.newVersion ? 'success' : 'light'}
             className="flex-grow-0"
           />
-          <DropdownMenu right>
+          <DropdownMenu end>
             {app.installed && app.newVersion && (
               <NavLink
                 to={`/serverConfiguration/plugins/${app.id}`}
                 className="dropdown-item"
               >
-                <FontAwesomeIcon className="mr-2" icon={faGear} /> Configure
+                <FontAwesomeIcon className="me-2" icon={faGear} /> Configure
               </NavLink>
             )}
             {app.npmUrl && (
@@ -195,20 +195,20 @@ function ActionCellRenderer(props) {
               >
                 <FontAwesomeIcon
                   icon={faArrowUpRightFromSquare}
-                  className="mr-2"
+                  className="me-2"
                 />
                 View on NPM
               </a>
             )}
 
-            <DropdownItem onClick={handleVersionsClick} className="text-left">
-              <FontAwesomeIcon className="mr-2" icon={faCloudArrowDown} />
+            <DropdownItem onClick={handleVersionsClick} className="text-start">
+              <FontAwesomeIcon className="me-2" icon={faCloudArrowDown} />
               Versions
             </DropdownItem>
 
             {app.installed && (
               <DropdownItem onClick={handleRemoveClick} className="text-danger">
-                <FontAwesomeIcon className="mr-2" icon={faTrashCan} />
+                <FontAwesomeIcon className="me-2" icon={faTrashCan} />
                 Remove
               </DropdownItem>
             )}
@@ -254,7 +254,7 @@ function ActionCellRenderer(props) {
                     <span>
                       <strong>{version}</strong>
                       {props.data.installedVersion === version && (
-                        <span className="badge badge-success ml-2">
+                        <span className="badge text-bg-success ms-2">
                           Installed
                         </span>
                       )}
@@ -266,7 +266,7 @@ function ActionCellRenderer(props) {
                         onClick={() => handleInstallVersionClick(version)}
                       >
                         <FontAwesomeIcon
-                          className="icon__update mr-2"
+                          className="icon__update me-2"
                           icon={faCloudArrowDown}
                         />
                         Install

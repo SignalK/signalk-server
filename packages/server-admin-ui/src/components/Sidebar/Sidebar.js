@@ -96,8 +96,9 @@ class Sidebar extends Component {
           ) : (
             <NavLink
               to={url}
-              className={classes.link}
-              activeClassName="active"
+              className={({ isActive }) =>
+                isActive ? `${classes.link} active` : classes.link
+              }
               {...(item.props || {})}
             >
               <i className={classes.icon} />
