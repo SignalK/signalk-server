@@ -151,19 +151,27 @@ _Example response:_
 
 ## Embedded Components and Admin UI / Server interfaces
 
-Embedded components are implemented using [Webpack Federated Modules](https://webpack.js.org/concepts/module-federation/) and [React Code Splitting](https://reactjs.org/docs/code-splitting.html).
+Embedded components are implemented using [Module Federation](https://module-federation.io/) and [React Code Splitting](https://react.dev/reference/react/lazy).
 
 _Note: There is no keyword for a module that provides only embedded components, use `signalk-webapp` instead._
 
-You need to configured Webpack to create the necessary code for federation using _ModuleFederationPlugin_ and expose the component with fixed names:
+You need to configure your build tool (Webpack or Vite) to create the necessary code for federation and expose the component with fixed names:
 
 - embeddable webapp: `./AppPanel`
 - plugin configuration form: `./PluginConfigurationPanel`
 - embedded component: `./AddonPanel`
 
-The ModuleFederationPlugin library name must match the package name and be a "safe" name for a webpack module like in `library: { type: 'var', name: packageJson.name.replace(/[-@/]/g, '_') },`
+The ModuleFederationPlugin library name must match the package name and be a "safe" name for a module like in `library: { type: 'var', name: packageJson.name.replace(/[-@/]/g, '_') },`
 
-The exposed modules need to `export default` a React component - both class based components and stateless functional components can be used. The server dependencies like `reactstrap` can and should be used. Add `@signalk/server-admin-ui-dependencies` as a dependency to the webapp, it defines the depedencies used by the server admin UI.
+The exposed modules need to `export default` a React component. Functional components with hooks are recommended. The server dependencies like `reactstrap` can and should be used. Add `@signalk/server-admin-ui-dependencies` as a dependency to the webapp, it defines the dependencies used by the server admin UI.
+
+### React Version Compatibility
+
+The Admin UI uses **React 19** with shared dependencies via Module Federation. Your embedded webapp should:
+
+1. **Share React as a singleton** - Configure Module Federation to use the host's React instance with `requiredVersion: false`. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/vite.config.js) for the current configuration.
+
+2. **Use functional components** - The Admin UI is built with functional components and React hooks. While class components still work, functional components are recommended for consistency.
 
 See the vesselpositions embedded webapp/component and Calibration plugin for examples of each. It is probably easier to start with either one and modify them to suit your needs. Don't forget to change the module id and name in package.json!
 
@@ -180,13 +188,13 @@ Embedded webapp properties:
 - getting and setting application data
 - opening an automatically reconnecting WebSocket connection to the server
 - getting Signal K data via `get`
-- [Embedded](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/src/views/Webapps/Embedded.js)
+- [Embedded](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/src/views/Webapps/Embedded.tsx)
 
 PluginConfigurationForm properties:
 
 - `configuration` : the configuration data of the plugin
 - `save`: function to save the configuration data
-- [EmbeddedPluginConfigurationForm](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/src/views/Configuration/EmbeddedPluginConfigurationForm.js)
+- [EmbeddedPluginConfigurationForm](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/src/views/Configuration/EmbeddedPluginConfigurationForm.tsx)
 
 **_Note: The documentation regarding embedded WebApps and Components provided at this time is rudimentary and should be considered under development as the concept is evolving._**
 

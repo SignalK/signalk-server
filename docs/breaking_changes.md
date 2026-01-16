@@ -4,11 +4,52 @@ title: Breaking Changes
 
 # Breaking Changes & Deprecations
 
-The introduction of new REST APIs in version 2 and the move to an operations based model has resulted in some version 1 paths being flagged for deprecation.
+This document lists breaking changes and deprecations in Signal K Server.
 
-It is recommended that applications and plugins referencing these deprecated paths update their operation to reference the version 2 paths.
+---
 
-## Changes
+## Admin UI: React 19 Migration
+
+The Admin UI has been upgraded from React 16 to **React 19**. This is a significant update that may affect embedded webapps and plugin configuration panels.
+
+### What Changed
+
+| Component    | Before     | After      |
+| ------------ | ---------- | ---------- |
+| React        | 16.14.0    | 19.x       |
+| React DOM    | 16.14.0    | 19.x       |
+| React Router | 4.x        | 6.x        |
+| Build Tool   | Webpack    | Vite       |
+| Language     | JavaScript | TypeScript |
+
+### Impact on Embedded Webapps
+
+**If your webapp uses Module Federation to share React with the Admin UI:**
+
+1. **Singleton sharing is now required** - Your webapp must configure React and ReactDOM as singletons with `requiredVersion: false`. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/vite.config.js) for the current configuration.
+
+2. **React 19 compatibility** - If your webapp bundles its own React, it should be compatible with components rendered by the host. Most React 16/17/18 code works unchanged in React 19, but some deprecated APIs have been removed.
+
+3. **String refs removed** - React 19 no longer supports string refs (`ref="myRef"`). Use `useRef()` instead.
+
+4. **`defaultProps` on function components** - Deprecated. Use JavaScript default parameters instead.
+
+### Impact on Plugin Configuration Panels
+
+Plugin configuration panels using `./PluginConfigurationPanel` export continue to work. The props interface remains the same:
+
+- `configuration` - the plugin's configuration data
+- `save` - function to save configuration
+
+### No Impact
+
+- **Standalone webapps** - Webapps that don't use Module Federation sharing are not affected
+- **Server APIs** - All Signal K HTTP and WebSocket APIs remain unchanged
+- **Plugin JavaScript APIs** - Server-side plugin APIs are not affected
+
+---
+
+## REST API Changes
 
 The following changes have been implemented with the introduction of **Resources API** and apply to applications using the `./signalk/v2/resources` endpoint.
 
