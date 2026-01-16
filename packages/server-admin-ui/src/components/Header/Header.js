@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Nav,
   NavItem,
@@ -11,176 +11,149 @@ import {
   Dropdown,
   Alert
 } from 'reactstrap'
-import { connect } from 'react-redux'
-import { logout, restart, login } from '../../actions'
+import { useSelector, useDispatch } from 'react-redux'
+import { logout, restart } from '../../actions'
 
-class Header extends Component {
-  constructor(props) {
-    super(props)
+const Header = () => {
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dispatch = useDispatch()
 
-    this.toggleDropdown = this.toggleDropdown.bind(this)
-    this.state = {
-      dropdownOpen: false
-    }
+  const loginStatus = useSelector((state) => state.loginStatus)
+  const restarting = useSelector((state) => state.restarting)
+  const backpressureWarning = useSelector((state) => state.backpressureWarning)
 
-    // Bind event handlers so they can be removed in componentWillUnmount
-    this.handleSidebarHide = this.handleSidebarHide.bind(this)
-    this.handlePopstate = this.handlePopstate.bind(this)
-  }
-
-  handleSidebarHide() {
+  const handleSidebarHide = useCallback(() => {
     document.body.classList.toggle('sidebar-hidden', true)
     document.body.classList.toggle('sidebar-mobile-show', false)
-  }
+  }, [])
 
-  handlePopstate() {
+  const handlePopstate = useCallback(() => {
     document.body.classList.toggle('sidebar-mobile-show', false)
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('sidebar:hide', handleSidebarHide)
+    window.addEventListener('popstate', handlePopstate)
+    return () => {
+      window.removeEventListener('sidebar:hide', handleSidebarHide)
+      window.removeEventListener('popstate', handlePopstate)
+    }
+  }, [handleSidebarHide, handlePopstate])
+
+  const toggleDropdown = () => {
+    setDropdownOpen(!dropdownOpen)
   }
 
-  componentDidMount() {
-    window.addEventListener('sidebar:hide', this.handleSidebarHide)
-    window.addEventListener('popstate', this.handlePopstate)
-  }
-
-  componentWillUnmount() {
-    window.removeEventListener('sidebar:hide', this.handleSidebarHide)
-    window.removeEventListener('popstate', this.handlePopstate)
-  }
-
-  toggleDropdown() {
-    this.setState({
-      dropdownOpen: !this.state.dropdownOpen
-    })
-  }
-
-  sidebarToggle(e) {
+  const sidebarToggle = (e) => {
     e.preventDefault()
     document.body.classList.toggle('sidebar-hidden')
   }
 
-  sidebarMinimize(e) {
-    e.preventDefault()
-    document.body.classList.toggle('sidebar-minimized')
-  }
-
-  mobileSidebarToggle(e) {
+  const mobileSidebarToggle = (e) => {
     e.preventDefault()
     document.body.classList.toggle('sidebar-mobile-show')
   }
 
-  asideToggle(e) {
-    e.preventDefault()
-    document.body.classList.toggle('aside-menu-hidden')
+  const handleLogout = () => {
+    dispatch(logout())
   }
 
-  render() {
-    return (
-      <header className="app-header navbar">
-        {this.props.backpressureWarning && (
-          <Alert
-            color="warning"
-            className="backpressure-warning"
-            style={{
-              position: 'absolute',
-              top: '55px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 1050,
-              margin: 0,
-              padding: '8px 16px',
-              fontSize: '14px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-            }}
-          >
-            <i className="fa fa-exclamation-triangle" /> Network congestion
-            detected – some updates were skipped. Check your connection.
-          </Alert>
-        )}
-        <NavbarToggler className="d-lg-none" onClick={this.mobileSidebarToggle}>
-          <span className="navbar-toggler-icon" />
-        </NavbarToggler>
-        <NavbarBrand href="#" />
-        <NavbarToggler
-          className="d-md-down-none me-auto"
-          onClick={this.sidebarToggle}
+  const handleRestart = () => {
+    dispatch(restart())
+  }
+
+  return (
+    <header className="app-header navbar">
+      {backpressureWarning && (
+        <Alert
+          color="warning"
+          className="backpressure-warning"
+          style={{
+            position: 'absolute',
+            top: '55px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1050,
+            margin: 0,
+            padding: '8px 16px',
+            fontSize: '14px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+          }}
         >
-          <span className="navbar-toggler-icon" />
-        </NavbarToggler>
-        <Nav className="ms-auto" navbar>
+          <i className="fa fa-exclamation-triangle" /> Network congestion
+          detected – some updates were skipped. Check your connection.
+        </Alert>
+      )}
+      <NavbarToggler className="d-lg-none" onClick={mobileSidebarToggle}>
+        <span className="navbar-toggler-icon" />
+      </NavbarToggler>
+      <NavbarBrand href="#" />
+      <NavbarToggler className="d-md-down-none me-auto" onClick={sidebarToggle}>
+        <span className="navbar-toggler-icon" />
+      </NavbarToggler>
+      <Nav className="ms-auto" navbar>
+        <NavItem className="d-md-down-none px-3">
+          {loginStatus.status === 'loggedIn' &&
+            loginStatus.userLevel === 'admin' && (
+              <NavLink href="#/" onClick={handleRestart}>
+                {restarting ? (
+                  <i className="fa fa-circle-o-notch text-danger fa-spin" />
+                ) : (
+                  <i className="fa fa-circle-o-notch" />
+                )}{' '}
+                Restart
+              </NavLink>
+            )}
+        </NavItem>
+        {loginStatus.status === 'loggedIn' && (
           <NavItem className="d-md-down-none px-3">
-            {this.props.loginStatus.status === 'loggedIn' &&
-              this.props.loginStatus.userLevel === 'admin' && (
-                <NavLink href="#/" onClick={this.props.restart}>
-                  {this.props.restarting ? (
-                    <i className="fa fa-circle-o-notch text-danger fa-spin" />
-                  ) : (
-                    <i className="fa fa-circle-o-notch" />
-                  )}{' '}
-                  Restart
-                </NavLink>
-              )}
+            <NavLink href="#/" onClick={handleLogout}>
+              <i className="fa fa-lock" /> Logout
+            </NavLink>
           </NavItem>
-          {this.props.loginStatus.status === 'loggedIn' && (
+        )}
+        {loginStatus.status !== 'loggedIn' &&
+          loginStatus.authenticationRequired && (
             <NavItem className="d-md-down-none px-3">
-              <NavLink href="#/" onClick={this.props.logout}>
-                <i className="fa fa-lock" /> Logout
+              <NavLink href="#/login">
+                <i className="fa fa-lock" /> Login
               </NavLink>
             </NavItem>
           )}
-          {this.props.loginStatus.status !== 'loggedIn' &&
-            this.props.loginStatus.authenticationRequired && (
-              <NavItem className="d-md-down-none px-3">
-                <NavLink href="#/login">
-                  <i className="fa fa-lock" /> Login
-                </NavLink>
-              </NavItem>
-            )}
-          <div className="d-lg-none">
-            <Dropdown
-              nav
-              isOpen={this.state.dropdownOpen}
-              toggle={this.toggleDropdown}
-            >
-              <DropdownToggle nav>
-                <i className="icon-menu" />
-              </DropdownToggle>
-              <DropdownMenu end>
-                {this.props.loginStatus.status === 'loggedIn' &&
-                  this.props.loginStatus.userLevel === 'admin' && (
-                    <DropdownItem onClick={this.props.restart}>
-                      {this.props.restarting ? (
-                        <i className="fa fa-circle-o-notch text-danger fa-spin" />
-                      ) : (
-                        <i className="fa fa-circle-o-notch" />
-                      )}{' '}
-                      Restart
-                    </DropdownItem>
-                  )}
-                {this.props.loginStatus.status === 'loggedIn' && (
-                  <DropdownItem onClick={this.props.logout}>
-                    <i className="fa fa-lock" /> Logout
+        <div className="d-lg-none">
+          <Dropdown nav isOpen={dropdownOpen} toggle={toggleDropdown}>
+            <DropdownToggle nav>
+              <i className="icon-menu" />
+            </DropdownToggle>
+            <DropdownMenu end>
+              {loginStatus.status === 'loggedIn' &&
+                loginStatus.userLevel === 'admin' && (
+                  <DropdownItem onClick={handleRestart}>
+                    {restarting ? (
+                      <i className="fa fa-circle-o-notch text-danger fa-spin" />
+                    ) : (
+                      <i className="fa fa-circle-o-notch" />
+                    )}{' '}
+                    Restart
                   </DropdownItem>
                 )}
-                {this.props.loginStatus.status !== 'loggedIn' &&
-                  this.props.loginStatus.authenticationRequired && (
-                    <DropdownItem href="#/login">
-                      <i className="fa fa-lock" /> Login
-                    </DropdownItem>
-                  )}
-              </DropdownMenu>
-            </Dropdown>
-          </div>
-        </Nav>
-      </header>
-    )
-  }
+              {loginStatus.status === 'loggedIn' && (
+                <DropdownItem onClick={handleLogout}>
+                  <i className="fa fa-lock" /> Logout
+                </DropdownItem>
+              )}
+              {loginStatus.status !== 'loggedIn' &&
+                loginStatus.authenticationRequired && (
+                  <DropdownItem href="#/login">
+                    <i className="fa fa-lock" /> Login
+                  </DropdownItem>
+                )}
+            </DropdownMenu>
+          </Dropdown>
+        </div>
+      </Nav>
+    </header>
+  )
 }
 
-export default connect(
-  ({ loginStatus, restarting, backpressureWarning }) => ({
-    loginStatus,
-    restarting,
-    backpressureWarning
-  }),
-  { logout, restart, login }
-)(Header)
+export default Header

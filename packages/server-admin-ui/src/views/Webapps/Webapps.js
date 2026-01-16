@@ -1,73 +1,54 @@
-import React, { Component, Suspense } from 'react'
-import { connect } from 'react-redux'
+import React, { useState, useEffect, Suspense } from 'react'
+import { useSelector } from 'react-redux'
 import { Card, CardBody, CardHeader, Col } from 'reactstrap'
 import { ADDON_PANEL, toLazyDynamicComponent } from './dynamicutilities'
 
 import Webapp from './Webapp'
 
-class Webapps extends Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      addonComponents: []
-    }
-  }
+const Webapps = () => {
+  const webapps = useSelector((state) => state.webapps)
+  const addons = useSelector((state) => state.addons)
+  const [addonComponents, setAddonComponents] = useState([])
 
-  setAddonComponents() {
-    this.setState({
-      addonComponents: this.props.addons.map((md) =>
-        toLazyDynamicComponent(md.name, ADDON_PANEL)
-      )
-    })
-  }
-
-  componentDidMount() {
-    this.setAddonComponents()
-  }
-
-  componentDidUpdate(prevProps) {
-    if (this.props.addons !== prevProps.addons) {
-      this.setAddonComponents()
-    }
-  }
-
-  render() {
-    return (
-      <div className="animated fadeIn">
-        <Card>
-          <CardHeader>Webapps</CardHeader>
-          <CardBody>
-            <div className="row">
-              {this.props.webapps
-                .filter(
-                  (webAppInfo) => webAppInfo.name !== '@signalk/server-admin-ui'
-                )
-                .map((webAppInfo) => {
-                  return (
-                    <Col xs="12" md="12" lg="6" xl="4" key={webAppInfo.name}>
-                      <Webapp key={webAppInfo.name} webAppInfo={webAppInfo} />
-                    </Col>
-                  )
-                })}
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader>Addons</CardHeader>
-          <CardBody>
-            {this.state.addonComponents.map((c, i) => (
-              <Suspense key={i} fallback="Loading...">
-                {React.createElement(c, { ...this.props })}
-              </Suspense>
-            ))}
-          </CardBody>
-        </Card>
-      </div>
+  useEffect(() => {
+    setAddonComponents(
+      addons.map((md) => toLazyDynamicComponent(md.name, ADDON_PANEL))
     )
-  }
+  }, [addons])
+
+  return (
+    <div className="animated fadeIn">
+      <Card>
+        <CardHeader>Webapps</CardHeader>
+        <CardBody>
+          <div className="row">
+            {webapps
+              .filter(
+                (webAppInfo) => webAppInfo.name !== '@signalk/server-admin-ui'
+              )
+              .map((webAppInfo) => {
+                return (
+                  <Col xs="12" md="12" lg="6" xl="4" key={webAppInfo.name}>
+                    <Webapp key={webAppInfo.name} webAppInfo={webAppInfo} />
+                  </Col>
+                )
+              })}
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>Addons</CardHeader>
+        <CardBody>
+          {addonComponents.map((c, i) => (
+            <Suspense key={i} fallback="Loading...">
+              {React.createElement(c, { webapps, addons })}
+            </Suspense>
+          ))}
+        </CardBody>
+      </Card>
+    </div>
+  )
 }
 
-const mapStateToProps = ({ webapps, addons }) => ({ webapps, addons })
-
-export default connect(mapStateToProps)(Webapps)
+export default Webapps

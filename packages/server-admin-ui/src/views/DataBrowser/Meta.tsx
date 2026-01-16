@@ -7,222 +7,73 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState } from 'react'
-import { connect } from 'react-redux'
+import { useSelector } from 'react-redux'
 import { Col, Form, FormGroup, FormText, Input, Label, Row } from 'reactstrap'
 
-const UnitSelect = ({ disabled, value, setValue }) => (
-  <Input
-    disabled={disabled}
-    type="select"
-    value={value}
-    onChange={(e) => setValue(e.target.value)}
-  >
-    {Object.entries(UNITS).map(([unit, description]) => (
-      <option key={unit} value={unit}>
-        {unit}:{description}
-      </option>
-    ))}
-  </Input>
-)
-
-const Text = ({ disabled, setValue, value }) => (
-  <Input
-    disabled={disabled}
-    type="text"
-    onChange={(e) => setValue(e.target.value)}
-    value={value}
-  />
-)
-const NumberValue = ({ disabled, setValue, value }) => (
-  <Input
-    disabled={disabled}
-    type="number"
-    onChange={(e) => {
-      try {
-        setValue(Number(e.target.value))
-      } catch (_) {
-        setValue('')
-      }
-    }}
-    value={value}
-  />
-)
-
-const MethodSelect = ({ setValue, value }) => {
-  if (!Array.isArray(value)) {
-    setValue([])
-    return null
-  }
-  return (
-    <>
-      {['sound', 'visual'].map((method) => (
-        <Label key={method} className="switch switch-text switch-primary">
-          <Input
-            type="checkbox"
-            className="switch-input"
-            onChange={() => {
-              if (value.indexOf(method) < 0) {
-                value.push(method)
-                setValue(value)
-              } else {
-                value.splice(value.indexOf(method, 1))
-                setValue(value)
-              }
-            }}
-            checked={value.indexOf(method) >= 0}
-          />
-          <span className="switch-label" data-on="Yes" data-off="No" />
-          <span className="switch-handle" />
-          {method}
-        </Label>
-      ))}
-    </>
-  )
+interface LoginStatus {
+  authenticationRequired: boolean
+  status: string
+  userLevel: string
 }
 
-const DISPLAYTYPES = ['linear', 'logarithmic', 'squareroot', 'power']
-
-const DisplaySelect = ({ disabled, setValue, value }) => {
-  const { lower, upper, type, power } = value
-  return (
-    <>
-      <Input
-        disabled={disabled}
-        type="select"
-        value={type}
-        onChange={(e) =>
-          setValue({
-            ...value,
-            type: e.target.value
-          })
-        }
-      >
-        {DISPLAYTYPES.map((type) => (
-          <option key={type} value={type}>
-            {type}
-          </option>
-        ))}
-      </Input>
-
-      <Input
-        disabled={disabled}
-        type="number"
-        onChange={(e) => {
-          try {
-            setValue({
-              ...value,
-              lower: Number(e.target.value)
-            })
-          } catch (_) {
-            setValue({
-              ...value,
-              lower: null
-            })
-          }
-        }}
-        value={lower}
-      />
-
-      <Input
-        disabled={disabled}
-        type="number"
-        onChange={(e) => {
-          try {
-            setValue({
-              ...value,
-              upper: Number(e.target.value)
-            })
-          } catch (_) {
-            setValue({
-              ...value,
-              upper: null
-            })
-          }
-        }}
-        value={upper}
-      />
-      <Input
-        disabled={disabled || type !== 'power'}
-        type="number"
-        onChange={(e) => {
-          try {
-            setValue({
-              ...value,
-              power: Number(e.target.value)
-            })
-          } catch (_) {
-            setValue({
-              ...value,
-              upper: null
-            })
-          }
-        }}
-        value={power}
-      />
-    </>
-  )
+interface RootState {
+  loginStatus: LoginStatus
 }
 
-const METAFIELDRENDERERS = {
-  units: (props) => (
-    <MetaFormRow {...props} renderValue={UnitSelect}></MetaFormRow>
-  ),
-  description: (props) => (
-    <MetaFormRow {...props} renderValue={Text}></MetaFormRow>
-  ),
-  displayName: (props) => (
-    <MetaFormRow {...props} renderValue={Text}></MetaFormRow>
-  ),
-  longName: (props) => (
-    <MetaFormRow {...props} renderValue={Text}></MetaFormRow>
-  ),
-  shortName: (props) => (
-    <MetaFormRow {...props} renderValue={Text}></MetaFormRow>
-  ),
-  timeout: (props) => (
-    <MetaFormRow {...props} renderValue={NumberValue}></MetaFormRow>
-  ),
-  displayScale: (props) => (
-    <MetaFormRow {...props} renderValue={DisplaySelect}></MetaFormRow>
-  ),
-  zones: () => <></>, // not used
-  normalMethod: (props) => (
-    <MetaFormRow {...props} renderValue={MethodSelect}></MetaFormRow>
-  ),
-  nominalMethod: (props) => (
-    <MetaFormRow {...props} renderValue={MethodSelect}></MetaFormRow>
-  ),
-  alertMethod: (props) => (
-    <MetaFormRow {...props} renderValue={MethodSelect}></MetaFormRow>
-  ),
-  warnMethod: (props) => (
-    <MetaFormRow {...props} renderValue={MethodSelect}></MetaFormRow>
-  ),
-  alarmMethod: (props) => (
-    <MetaFormRow {...props} renderValue={MethodSelect}></MetaFormRow>
-  ),
-  emergencyMethod: (props) => (
-    <MetaFormRow {...props} renderValue={MethodSelect}></MetaFormRow>
-  )
+interface DisplayScaleValue {
+  lower?: number
+  upper?: number
+  type?: string
+  power?: number
 }
-const METAFIELDS = [
-  'units',
-  'description',
-  'displayName',
-  'longName',
-  'shortName',
-  'timeout',
-  'displayScale',
-  'zones',
-  'normalMethod',
-  'nominalMethod',
-  'alertMethod',
-  'warnMethod',
-  'alarmMethod',
-  'emergencyMethod'
-]
 
-const UNITS = {
+interface MetaData {
+  units?: string
+  description?: string
+  displayName?: string
+  longName?: string
+  shortName?: string
+  timeout?: number
+  displayScale?: DisplayScaleValue
+  zones?: Zone[]
+  normalMethod?: string[]
+  nominalMethod?: string[]
+  alertMethod?: string[]
+  warnMethod?: string[]
+  alarmMethod?: string[]
+  emergencyMethod?: string[]
+  [key: string]: unknown
+}
+
+interface Zone {
+  lower: number
+  upper: number
+  state: string
+  message: string
+}
+
+interface MetaProps {
+  meta: MetaData
+  path: string
+}
+
+interface MetaFormRowProps {
+  _key: string
+  value: unknown
+  disabled: boolean
+  setValue: (value: unknown) => void
+  setKey: (key: string) => void
+  deleteKey: () => void
+  renderValue: React.FC<ValueRenderProps>
+}
+
+interface ValueRenderProps {
+  disabled: boolean
+  value: unknown
+  setValue: (value: unknown) => void
+}
+
+const UNITS: Record<string, string> = {
   A: 'Ampere',
   C: 'Coulomb',
   Hz: 'Hertz',
@@ -246,7 +97,222 @@ const UNITS = {
   bool: 'Boolean'
 }
 
-const saveMeta = (path, meta) => {
+const METAFIELDS = [
+  'units',
+  'description',
+  'displayName',
+  'longName',
+  'shortName',
+  'timeout',
+  'displayScale',
+  'zones',
+  'normalMethod',
+  'nominalMethod',
+  'alertMethod',
+  'warnMethod',
+  'alarmMethod',
+  'emergencyMethod'
+]
+
+const DISPLAYTYPES = ['linear', 'logarithmic', 'squareroot', 'power']
+
+const STATES = ['nominal', 'alert', 'warn', 'alarm', 'emergency']
+
+const UnitSelect: React.FC<ValueRenderProps> = ({
+  disabled,
+  value,
+  setValue
+}) => (
+  <Input
+    disabled={disabled}
+    type="select"
+    value={value as string}
+    onChange={(e) => setValue(e.target.value)}
+  >
+    {Object.entries(UNITS).map(([unit, description]) => (
+      <option key={unit} value={unit}>
+        {unit}:{description}
+      </option>
+    ))}
+  </Input>
+)
+
+const Text: React.FC<ValueRenderProps> = ({ disabled, setValue, value }) => (
+  <Input
+    disabled={disabled}
+    type="text"
+    onChange={(e) => setValue(e.target.value)}
+    value={value as string}
+  />
+)
+
+const NumberValue: React.FC<ValueRenderProps> = ({
+  disabled,
+  setValue,
+  value
+}) => (
+  <Input
+    disabled={disabled}
+    type="number"
+    onChange={(e) => {
+      try {
+        setValue(Number(e.target.value))
+      } catch {
+        setValue('')
+      }
+    }}
+    value={value as number}
+  />
+)
+
+const MethodSelect: React.FC<ValueRenderProps> = ({ setValue, value }) => {
+  if (!Array.isArray(value)) {
+    setValue([])
+    return null
+  }
+  return (
+    <>
+      {['sound', 'visual'].map((method) => (
+        <Label key={method} className="switch switch-text switch-primary">
+          <Input
+            type="checkbox"
+            className="switch-input"
+            onChange={() => {
+              const arr = value as string[]
+              if (arr.indexOf(method) < 0) {
+                arr.push(method)
+                setValue([...arr])
+              } else {
+                const newArr = arr.filter((m) => m !== method)
+                setValue(newArr)
+              }
+            }}
+            checked={(value as string[]).indexOf(method) >= 0}
+          />
+          <span className="switch-label" data-on="Yes" data-off="No" />
+          <span className="switch-handle" />
+          {method}
+        </Label>
+      ))}
+    </>
+  )
+}
+
+const DisplaySelect: React.FC<ValueRenderProps> = ({
+  disabled,
+  setValue,
+  value
+}) => {
+  const displayValue = value as DisplayScaleValue
+  const { lower, upper, type, power } = displayValue
+  return (
+    <>
+      <Input
+        disabled={disabled}
+        type="select"
+        value={type}
+        onChange={(e) =>
+          setValue({
+            ...displayValue,
+            type: e.target.value
+          })
+        }
+      >
+        {DISPLAYTYPES.map((t) => (
+          <option key={t} value={t}>
+            {t}
+          </option>
+        ))}
+      </Input>
+
+      <Input
+        disabled={disabled}
+        type="number"
+        onChange={(e) => {
+          try {
+            setValue({
+              ...displayValue,
+              lower: Number(e.target.value)
+            })
+          } catch {
+            setValue({
+              ...displayValue,
+              lower: undefined
+            })
+          }
+        }}
+        value={lower}
+      />
+
+      <Input
+        disabled={disabled}
+        type="number"
+        onChange={(e) => {
+          try {
+            setValue({
+              ...displayValue,
+              upper: Number(e.target.value)
+            })
+          } catch {
+            setValue({
+              ...displayValue,
+              upper: undefined
+            })
+          }
+        }}
+        value={upper}
+      />
+      <Input
+        disabled={disabled || type !== 'power'}
+        type="number"
+        onChange={(e) => {
+          try {
+            setValue({
+              ...displayValue,
+              power: Number(e.target.value)
+            })
+          } catch {
+            setValue({
+              ...displayValue,
+              power: undefined
+            })
+          }
+        }}
+        value={power}
+      />
+    </>
+  )
+}
+
+const METAFIELDRENDERERS: Record<
+  string,
+  (props: MetaFormRowProps) => JSX.Element
+> = {
+  units: (props) => <MetaFormRow {...props} renderValue={UnitSelect} />,
+  description: (props) => <MetaFormRow {...props} renderValue={Text} />,
+  displayName: (props) => <MetaFormRow {...props} renderValue={Text} />,
+  longName: (props) => <MetaFormRow {...props} renderValue={Text} />,
+  shortName: (props) => <MetaFormRow {...props} renderValue={Text} />,
+  timeout: (props) => <MetaFormRow {...props} renderValue={NumberValue} />,
+  displayScale: (props) => (
+    <MetaFormRow {...props} renderValue={DisplaySelect} />
+  ),
+  zones: () => <></>,
+  normalMethod: (props) => (
+    <MetaFormRow {...props} renderValue={MethodSelect} />
+  ),
+  nominalMethod: (props) => (
+    <MetaFormRow {...props} renderValue={MethodSelect} />
+  ),
+  alertMethod: (props) => <MetaFormRow {...props} renderValue={MethodSelect} />,
+  warnMethod: (props) => <MetaFormRow {...props} renderValue={MethodSelect} />,
+  alarmMethod: (props) => <MetaFormRow {...props} renderValue={MethodSelect} />,
+  emergencyMethod: (props) => (
+    <MetaFormRow {...props} renderValue={MethodSelect} />
+  )
+}
+
+const saveMeta = (path: string, meta: MetaData) => {
   fetch(`/signalk/v1/api/vessels/self/${path.replaceAll('.', '/')}/meta`, {
     method: 'PUT',
     credentials: 'include',
@@ -255,36 +321,35 @@ const saveMeta = (path, meta) => {
   })
 }
 
-function Meta({ meta, path, loginStatus }) {
+const Meta: React.FC<MetaProps> = ({ meta, path }) => {
+  const loginStatus = useSelector((state: RootState) => state.loginStatus)
   const [isEditing, setIsEditing] = useState(false)
-  const [localMeta, setLocalMeta] = useState(meta)
+  const [localMeta, setLocalMeta] = useState<MetaData>(meta)
 
-  // Check if user can edit metadata
   const canEditMetadata =
     !loginStatus.authenticationRequired ||
     (loginStatus.status === 'loggedIn' && loginStatus.userLevel === 'admin')
 
-  let metaValues = METAFIELDS.reduce((acc, key) => {
-    if (localMeta[key] !== undefined) {
-      acc.push({ key, value: localMeta[key] })
-    }
-    return acc
-  }, [])
+  const metaValues: Array<{ key: string; value: unknown }> = METAFIELDS.reduce(
+    (acc: Array<{ key: string; value: unknown }>, key) => {
+      if (localMeta[key] !== undefined) {
+        acc.push({ key, value: localMeta[key] })
+      }
+      return acc
+    },
+    []
+  )
+
   Object.keys(localMeta).reduce((acc, key) => {
     if (METAFIELDS.indexOf(key) < 0) {
       acc.push({ key, value: localMeta[key] })
     }
     return acc
   }, metaValues)
-  const extraValues = clone(localMeta)
-  for (const prop in extraValues) {
-    if (METAFIELDS.indexOf(prop) < 0) {
-      delete extraValues[prop]
-    }
-  }
 
   const zonesMetaValue = metaValues.find(({ key }) => key === 'zones')
-  const zones = zonesMetaValue ? zonesMetaValue.value : []
+  const zones = zonesMetaValue ? (zonesMetaValue.value as Zone[]) : []
+
   return (
     <>
       {!isEditing && canEditMetadata && (
@@ -313,12 +378,12 @@ function Meta({ meta, path, loginStatus }) {
           .map(({ key, value }) => {
             const renderer = METAFIELDRENDERERS[key]
             if (renderer) {
-              const props = {
+              const props: MetaFormRowProps = {
                 _key: key,
                 value,
                 disabled: !isEditing,
                 setValue: (metaFieldValue) =>
-                  setLocalMeta({ ...localMeta, ...{ [key]: metaFieldValue } }),
+                  setLocalMeta({ ...localMeta, [key]: metaFieldValue }),
                 setKey: (metaFieldKey) => {
                   const copy = { ...localMeta }
                   copy[metaFieldKey] = localMeta[key]
@@ -329,10 +394,13 @@ function Meta({ meta, path, loginStatus }) {
                   const copy = { ...localMeta }
                   delete copy[key]
                   setLocalMeta(copy)
-                }
+                },
+                renderValue: () => <></>
               }
 
-              return renderer(props)
+              return (
+                <React.Fragment key={key}>{renderer(props)}</React.Fragment>
+              )
             } else {
               return (
                 <UnknownMetaFormRow key={key} metaKey={key} value={value} />
@@ -347,24 +415,27 @@ function Meta({ meta, path, loginStatus }) {
               const firstNewMetaFieldKey = METAFIELDS.find(
                 (metaFieldName) => localMeta[metaFieldName] === undefined
               )
-              copy[firstNewMetaFieldKey] = ''
-              setLocalMeta(copy)
+              if (firstNewMetaFieldKey) {
+                copy[firstNewMetaFieldKey] = ''
+                setLocalMeta(copy)
+              }
             }}
           />
         )}
         <Zones
           zones={zones !== undefined && zones !== null ? zones : []}
           isEditing={isEditing}
-          setZones={(zones) => setLocalMeta({ ...localMeta, zones })}
-        ></Zones>
+          setZones={(newZones) =>
+            setLocalMeta({ ...localMeta, zones: newZones })
+          }
+        />
       </Form>
     </>
   )
 }
 
-const MetaFormRow = (props) => {
-  const { _key, renderValue, disabled, setKey, deleteKey } = props
-  const V = renderValue
+const MetaFormRow: React.FC<MetaFormRowProps> = (props) => {
+  const { _key, renderValue: V, disabled, setKey, deleteKey } = props
   return (
     <FormGroup row>
       <Col xs="3" md="2" className={'col-form-label'}>
@@ -384,7 +455,7 @@ const MetaFormRow = (props) => {
         </Input>
       </Col>
       <Col xs="12" md="4">
-        <V {...props}></V>
+        <V {...props} />
       </Col>
       <Col>
         {!disabled && <FontAwesomeIcon icon={faTrashCan} onClick={deleteKey} />}
@@ -393,7 +464,15 @@ const MetaFormRow = (props) => {
   )
 }
 
-const UnknownMetaFormRow = ({ metaKey, value }) => {
+interface UnknownMetaFormRowProps {
+  metaKey: string
+  value: unknown
+}
+
+const UnknownMetaFormRow: React.FC<UnknownMetaFormRowProps> = ({
+  metaKey,
+  value
+}) => {
   return (
     <FormGroup row>
       <Col xs="3" md="2" className={'col-form-label'}>
@@ -420,8 +499,21 @@ const UnknownMetaFormRow = ({ metaKey, value }) => {
   )
 }
 
-const STATES = ['nominal', 'alert', 'warn', 'alarm', 'emergency']
-const Zone = ({ zone, isEditing, showHint, setZone, deleteZone }) => {
+interface ZoneProps {
+  zone: Zone
+  isEditing: boolean
+  showHint: boolean
+  setZone: (zone: Zone) => void
+  deleteZone: () => void
+}
+
+const ZoneRow: React.FC<ZoneProps> = ({
+  zone,
+  isEditing,
+  showHint,
+  setZone,
+  deleteZone
+}) => {
   const { state, lower, upper, message } = zone
   return (
     <FormGroup row>
@@ -453,9 +545,9 @@ const Zone = ({ zone, isEditing, showHint, setZone, deleteZone }) => {
           name="options.type"
           onChange={(e) => setZone({ ...zone, state: e.target.value })}
         >
-          {STATES.map((state, i) => (
-            <option key={i} value={state}>
-              {state}
+          {STATES.map((s, i) => (
+            <option key={i} value={s}>
+              {s}
             </option>
           ))}
         </Input>
@@ -481,7 +573,14 @@ const Zone = ({ zone, isEditing, showHint, setZone, deleteZone }) => {
     </FormGroup>
   )
 }
-const Zones = ({ zones, isEditing, setZones }) => (
+
+interface ZonesProps {
+  zones: Zone[]
+  isEditing: boolean
+  setZones: (zones: Zone[]) => void
+}
+
+const Zones: React.FC<ZonesProps> = ({ zones, isEditing, setZones }) => (
   <Row>
     <Col md="2">Zones</Col>
     <Col md="10">
@@ -498,20 +597,21 @@ const Zones = ({ zones, isEditing, setZones }) => (
           !isEditing &&
           'No zones defined'}
         {zones.map((zone, i) => (
-          <Zone
+          <ZoneRow
             key={i}
             zone={zone}
             isEditing={isEditing}
             showHint={i === 0}
-            setZone={(zone) => {
-              zones[i] = zone
-              setZones([...zones])
+            setZone={(newZone) => {
+              const newZones = [...zones]
+              newZones[i] = newZone
+              setZones(newZones)
             }}
             deleteZone={() => {
-              zones.splice(i, 1)
-              setZones(zones)
+              const newZones = zones.filter((_, index) => index !== i)
+              setZones(newZones)
             }}
-          ></Zone>
+          />
         ))}
       </Form>
       {isEditing && (
@@ -534,6 +634,4 @@ const Zones = ({ zones, isEditing, setZones }) => (
   </Row>
 )
 
-const clone = (o) => JSON.parse(JSON.stringify(o))
-
-export default connect(({ loginStatus }) => ({ loginStatus }))(Meta)
+export default Meta

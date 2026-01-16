@@ -166,9 +166,7 @@ export const toLazyDynamicComponent = (moduleName, component) =>
           )
         }
 
-        return createErrorModule(
-          `Failed to load webapp: ${errorMessage}`
-        )
+        return createErrorModule(`Failed to load webapp: ${errorMessage}`)
       }
     })()
   )

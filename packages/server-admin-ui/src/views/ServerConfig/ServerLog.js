@@ -1,6 +1,6 @@
-import React, { Component } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import parse from 'html-react-parser'
-import { connect } from 'react-redux'
+import { useSelector } from 'react-redux'
 import {
   Card,
   CardBody,
@@ -14,87 +14,60 @@ import {
 } from 'reactstrap'
 import LogFiles from './Logging'
 import Creatable from 'react-select/creatable'
-import remove from 'lodash.remove'
 
-class ServerLogs extends Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      hasData: true,
-      webSocket: null,
-      didSubScribe: false,
-      pause: false,
-      debugKeys: []
-    }
+const ServerLogs = () => {
+  const log = useSelector((state) => state.log)
+  const webSocket = useSelector((state) => state.webSocket)
 
-    this.handleDebug = this.handleDebug.bind(this)
-    this.handlePause = this.handlePause.bind(this)
-    this.fetchDebugKeys = this.fetchDebugKeys.bind(this)
-  }
+  const [pause, setPause] = useState(false)
+  const [debugKeys, setDebugKeys] = useState([])
+  const didSubscribeRef = useRef(false)
+  const webSocketRef = useRef(null)
 
-  subscribeToLogsIfNeeded() {
+  const subscribeToLogsIfNeeded = useCallback(() => {
     if (
-      !this.state.pause &&
-      this.props.webSocket &&
-      (this.props.webSocket !== this.state.webSocket ||
-        this.state.didSubScribe === false)
+      !pause &&
+      webSocket &&
+      (webSocket !== webSocketRef.current || !didSubscribeRef.current)
     ) {
       const sub = { context: 'vessels.self', subscribe: [{ path: 'log' }] }
-      this.props.webSocket.send(JSON.stringify(sub))
-      this.state.webSocket = this.props.webSocket
-      this.state.didSubScribe = true
+      webSocket.send(JSON.stringify(sub))
+      webSocketRef.current = webSocket
+      didSubscribeRef.current = true
     }
-  }
+  }, [pause, webSocket])
 
-  unsubscribeToLogs() {
-    if (this.props.webSocket) {
+  const unsubscribeToLogs = useCallback(() => {
+    if (webSocket) {
       const sub = { context: 'vessels.self', unsubscribe: [{ path: 'log' }] }
-      this.props.webSocket.send(JSON.stringify(sub))
-      this.state.didSubScribe = false
+      webSocket.send(JSON.stringify(sub))
+      didSubscribeRef.current = false
     }
-  }
+  }, [webSocket])
 
-  fetchDebugKeys() {
+  const fetchDebugKeys = useCallback(() => {
     fetch(`${window.serverRoutesPrefix}/debugKeys`, {
       credentials: 'include'
     })
       .then((response) => response.json())
-      .then((debugKeys) => {
-        this.setState({ debugKeys: debugKeys.sort() })
+      .then((keys) => {
+        setDebugKeys(keys.sort())
       })
-  }
+  }, [])
 
-  componentDidMount() {
-    this.subscribeToLogsIfNeeded()
-    this.fetchDebugKeys()
-  }
-
-  componentDidUpdate() {
-    this.subscribeToLogsIfNeeded()
-  }
-
-  componentWillUnmount() {
-    this.unsubscribeToLogs()
-  }
-
-  handleDebug(event) {
-    this.doHandleDebug(event.target.value)
-  }
-
-  handleDebugCheckbox(value, enabled) {
-    const keysToSend =
-      this.props.log.debugEnabled.length > 0
-        ? this.props.log.debugEnabled.split(',')
-        : []
-    if (enabled) {
-      keysToSend.push(value)
-    } else {
-      remove(keysToSend, (v) => v === value)
+  useEffect(() => {
+    subscribeToLogsIfNeeded()
+    fetchDebugKeys()
+    return () => {
+      unsubscribeToLogs()
     }
-    this.doHandleDebug(keysToSend.toString())
-  }
+  }, [])
 
-  doHandleDebug(value) {
+  useEffect(() => {
+    subscribeToLogsIfNeeded()
+  }, [subscribeToLogsIfNeeded])
+
+  const doHandleDebug = (value) => {
     fetch(`${window.serverRoutesPrefix}/debug`, {
       method: 'POST',
       headers: {
@@ -105,7 +78,7 @@ class ServerLogs extends Component {
     }).then((response) => response.text())
   }
 
-  handleRememberDebug(event) {
+  const handleRememberDebug = (event) => {
     fetch(`${window.serverRoutesPrefix}/rememberDebug`, {
       method: 'POST',
       headers: {
@@ -116,117 +89,104 @@ class ServerLogs extends Component {
     }).then((response) => response.text())
   }
 
-  handlePause(event) {
-    this.state.pause = event.target.checked
-    this.setState(this.state)
-    if (this.state.pause) {
-      this.unsubscribeToLogs()
+  const handlePause = (event) => {
+    const newPause = event.target.checked
+    setPause(newPause)
+    if (newPause) {
+      unsubscribeToLogs()
     } else {
-      this.subscribeToLogsIfNeeded()
+      subscribeToLogsIfNeeded()
     }
   }
 
-  render() {
-    return (
-      this.state.hasData && (
-        <div className="animated fadeIn">
-          <Card>
-            <CardHeader>
-              <i className="fa fa-align-justify" />
-              <strong>Server Log</strong>
-            </CardHeader>
+  return (
+    <div className="animated fadeIn">
+      <Card>
+        <CardHeader>
+          <i className="fa fa-align-justify" />
+          <strong>Server Log</strong>
+        </CardHeader>
 
-            <CardBody>
-              <Form
-                action=""
-                method="post"
-                encType="multipart/form-data"
-                className="form-horizontal"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                }}
-              >
-                <FormGroup row>
-                  <Col>
-                    <Creatable
-                      isMulti
-                      options={this.state.debugKeys.map((key) => ({
-                        label: key,
-                        value: key
-                      }))}
-                      value={
-                        this.props.log.debugEnabled
-                          ? this.props.log.debugEnabled
-                              .split(',')
-                              .map((value) => ({ label: value, value }))
-                          : null
-                      }
-                      onChange={(v) => {
-                        const value =
-                          v !== null
-                            ? v.map(({ value }) => value).join(',')
-                            : ''
-                        this.doHandleDebug(value)
-                      }}
-                    />
-                    <FormText color="muted" style={{ marginBottom: '15px' }}>
-                      Select the appropriate debug keys to activate debug
-                      logging for various components on the server.
-                    </FormText>
-                  </Col>
-                </FormGroup>
-                <FormGroup row>
-                  <Col xs="6" md="6">
-                    Persist debug settings over server restarts{' '}
-                    <Label className="switch switch-text switch-primary">
-                      <Input
-                        type="checkbox"
-                        id="Enabled"
-                        name="debug"
-                        className="switch-input"
-                        onChange={this.handleRememberDebug}
-                        checked={this.props.log.rememberDebug}
-                      />
-                      <span
-                        className="switch-label"
-                        data-on="Yes"
-                        data-off="No"
-                      />
-                      <span className="switch-handle" />
-                    </Label>
-                  </Col>
-                  <Col xs="6" md="6">
-                    Pause the log window{' '}
-                    <Label className="switch switch-text switch-primary">
-                      <Input
-                        type="checkbox"
-                        id="Pause"
-                        name="pause"
-                        className="switch-input"
-                        onChange={this.handlePause}
-                        checked={this.state.pause}
-                      />
-                      <span
-                        className="switch-label"
-                        data-on="Yes"
-                        data-off="No"
-                      />
-                      <span className="switch-handle" />
-                    </Label>
-                  </Col>
-                </FormGroup>
-                <LogList value={this.props.log} />
-              </Form>
-            </CardBody>
-          </Card>
-          <LogFiles />
-        </div>
-      )
-    )
-  }
+        <CardBody>
+          <Form
+            action=""
+            method="post"
+            encType="multipart/form-data"
+            className="form-horizontal"
+            onSubmit={(e) => {
+              e.preventDefault()
+            }}
+          >
+            <FormGroup row>
+              <Col>
+                <Creatable
+                  isMulti
+                  options={debugKeys.map((key) => ({
+                    label: key,
+                    value: key
+                  }))}
+                  value={
+                    log.debugEnabled
+                      ? log.debugEnabled
+                          .split(',')
+                          .map((value) => ({ label: value, value }))
+                      : null
+                  }
+                  onChange={(v) => {
+                    const value =
+                      v !== null ? v.map(({ value }) => value).join(',') : ''
+                    doHandleDebug(value)
+                  }}
+                />
+                <FormText color="muted" style={{ marginBottom: '15px' }}>
+                  Select the appropriate debug keys to activate debug logging
+                  for various components on the server.
+                </FormText>
+              </Col>
+            </FormGroup>
+            <FormGroup row>
+              <Col xs="6" md="6">
+                Persist debug settings over server restarts{' '}
+                <Label className="switch switch-text switch-primary">
+                  <Input
+                    type="checkbox"
+                    id="Enabled"
+                    name="debug"
+                    className="switch-input"
+                    onChange={handleRememberDebug}
+                    checked={log.rememberDebug}
+                  />
+                  <span className="switch-label" data-on="Yes" data-off="No" />
+                  <span className="switch-handle" />
+                </Label>
+              </Col>
+              <Col xs="6" md="6">
+                Pause the log window{' '}
+                <Label className="switch switch-text switch-primary">
+                  <Input
+                    type="checkbox"
+                    id="Pause"
+                    name="pause"
+                    className="switch-input"
+                    onChange={handlePause}
+                    checked={pause}
+                  />
+                  <span className="switch-label" data-on="Yes" data-off="No" />
+                  <span className="switch-handle" />
+                </Label>
+              </Col>
+            </FormGroup>
+            <LogList value={log} />
+          </Form>
+        </CardBody>
+      </Card>
+      <LogFiles />
+    </div>
+  )
 }
 
-class LogList extends Component {
+// Keep LogList as class component since it uses componentDidMount for scrolling
+class LogList extends React.Component {
   componentDidMount() {
     this.end.scrollIntoView()
   }
@@ -269,4 +229,4 @@ class PureLogRow extends React.PureComponent {
   }
 }
 
-export default connect(({ log, webSocket }) => ({ log, webSocket }))(ServerLogs)
+export default ServerLogs
