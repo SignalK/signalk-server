@@ -1,5 +1,6 @@
 import React from 'react'
-import { connect } from 'react-redux'
+import { useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import {
   Card,
   CardBody,
@@ -11,21 +12,25 @@ import {
 } from 'reactstrap'
 import '../../fa-pulse.css'
 
-const Dashboard = (props) => {
+const Dashboard = () => {
+  const serverStatistics = useSelector((state) => state.serverStatistics)
+  const websocketStatus = useSelector((state) => state.websocketStatus)
+  const providerStatus = useSelector((state) => state.providerStatus) || []
+  const navigate = useNavigate()
+
   const {
     deltaRate,
     numberOfAvailablePaths,
     wsClients,
     providerStatistics,
     uptime
-  } = props.serverStatistics || {
+  } = serverStatistics || {
     deltaRate: 0,
     numberOfAvailablePaths: 0,
     wsClients: 0,
     providerStatistics: {},
     uptime: ''
   }
-  const providerStatus = props.providerStatus || []
   const errorCount = providerStatus.filter((s) => s.type === 'error').length
   const uptimeD = Math.floor(uptime / (60 * 60 * 24))
   const uptimeH = Math.floor((uptime % (60 * 60 * 24)) / (60 * 60))
@@ -67,7 +72,7 @@ const Dashboard = (props) => {
 
   const renderActivity = (providerId, providerStats, linkType) => {
     return (
-      <li key={providerId} onClick={() => props.history.push(`/dashboard`)}>
+      <li key={providerId} onClick={() => navigate(`/dashboard`)}>
         <i
           className={inputPulseIconClass(providerStats)}
           style={{
@@ -126,7 +131,7 @@ const Dashboard = (props) => {
       <tr
         key={status.id}
         onClick={() => {
-          props.history.push(
+          navigate(
             '/serverConfiguration/' +
               (status.statusType === 'plugin' ? 'plugins/' : 'connections/') +
               status.id
@@ -153,7 +158,7 @@ const Dashboard = (props) => {
 
   return (
     <div className="animated fadeIn">
-      {props.websocketStatus === 'open' && (
+      {websocketStatus === 'open' && (
         <div>
           <Card>
             <CardHeader>Stats</CardHeader>
@@ -273,7 +278,7 @@ const Dashboard = (props) => {
         </div>
       )}
 
-      {props.websocketStatus === 'closed' && (
+      {websocketStatus === 'closed' && (
         <Card className="border-warning">
           <CardHeader>Not connected to the server</CardHeader>
         </Card>
@@ -296,10 +301,4 @@ function providerIdLink(id) {
   }
 }
 
-export default connect(
-  ({ serverStatistics, websocketStatus, providerStatus }) => ({
-    serverStatistics,
-    websocketStatus,
-    providerStatus
-  })
-)(Dashboard)
+export default Dashboard

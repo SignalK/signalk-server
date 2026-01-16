@@ -1,6 +1,5 @@
 import React from 'react'
 
-// eslint-disable-next-line react/display-name
 const LoadingError = ({ message }) => (
   <div style={{ padding: '2rem', textAlign: 'center' }}>
     <h4 style={{ color: '#d9534f' }}>Error loading component</h4>

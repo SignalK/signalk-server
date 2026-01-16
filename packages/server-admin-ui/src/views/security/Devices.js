@@ -1,5 +1,5 @@
-import React, { Component } from 'react'
-import { connect } from 'react-redux'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useSelector } from 'react-redux'
 import {
   Button,
   Card,
@@ -15,58 +15,59 @@ import {
 } from 'reactstrap'
 import EnableSecurity from './EnableSecurity'
 
-export function fetchSecurityDevices() {
-  fetch(`${window.serverRoutesPrefix}/security/devices`, {
-    credentials: 'include'
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      this.setState({ devices: data })
-    })
+function convertPermissions(type) {
+  if (type === 'readonly') {
+    return 'Read Only'
+  } else if (type === 'readwrite') {
+    return 'Read/Write'
+  } else if (type === 'admin') {
+    return 'Admin'
+  }
 }
 
-class Devices extends Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-      devices: []
+const Devices = () => {
+  const loginStatus = useSelector((state) => state.loginStatus)
+  const [devices, setDevices] = useState([])
+  const [selectedDevice, setSelectedDevice] = useState(null)
+  const selectedDeviceRef = useRef(null)
+
+  const fetchSecurityDevices = useCallback(() => {
+    fetch(`${window.serverRoutesPrefix}/security/devices`, {
+      credentials: 'include'
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        setDevices(data)
+      })
+  }, [])
+
+  useEffect(() => {
+    if (loginStatus.authenticationRequired) {
+      fetchSecurityDevices()
     }
-    this.selectedDeviceRef = React.createRef()
+  }, [loginStatus.authenticationRequired, fetchSecurityDevices])
 
-    this.fetchSecurityDevices = fetchSecurityDevices.bind(this)
-    this.handleCancel = this.handleCancel.bind(this)
-    this.handleApply = this.handleApply.bind(this)
-    this.handleDeviceChange = this.handleDeviceChange.bind(this)
-    this.deleteDevice = this.deleteDevice.bind(this)
-  }
-
-  componentDidMount() {
-    if (this.props.loginStatus.authenticationRequired) {
-      this.fetchSecurityDevices()
-    }
-  }
-
-  handleDeviceChange(event) {
+  const handleDeviceChange = (event) => {
     const value =
       event.target.type === 'checkbox'
         ? event.target.checked
         : event.target.value
-    this.state.selectedDevice[event.target.name] = value
-    this.setState({
-      selectedDevice: this.state.selectedDevice
-    })
+    setSelectedDevice((prev) => ({
+      ...prev,
+      [event.target.name]: value
+    }))
   }
 
-  handleApply(event) {
+  const handleApply = (event) => {
     event.preventDefault()
 
-    var payload = {
-      permissions: this.state.selectedDevice.permissions || 'readonly',
-      description: this.state.selectedDevice.description
+    const payload = {
+      permissions: selectedDevice.permissions || 'readonly',
+      description: selectedDevice.description
     }
 
     fetch(
-      `${window.serverRoutesPrefix}/security/devices/${this.state.selectedDevice.clientId}`,
+      `${window.serverRoutesPrefix}/security/devices/${selectedDevice.clientId}`,
       {
         method: 'PUT',
         headers: {
@@ -78,18 +79,15 @@ class Devices extends Component {
     )
       .then((response) => response.text())
       .then((response) => {
-        this.setState({
-          selectedDevice: null,
-          selectedIndex: -1
-        })
+        setSelectedDevice(null)
         alert(response)
-        this.fetchSecurityDevices()
+        fetchSecurityDevices()
       })
   }
 
-  deleteDevice() {
+  const deleteDevice = () => {
     fetch(
-      `${window.serverRoutesPrefix}/security/devices/${this.state.selectedDevice.clientId}`,
+      `${window.serverRoutesPrefix}/security/devices/${selectedDevice.clientId}`,
       {
         method: 'DELETE',
         headers: {
@@ -100,180 +98,147 @@ class Devices extends Component {
     )
       .then((response) => response.text())
       .then((response) => {
-        this.setState({
-          selectedDevice: null,
-          selectedIndex: -1
-        })
+        setSelectedDevice(null)
         alert(response)
-        this.fetchSecurityDevices()
+        fetchSecurityDevices()
       })
   }
 
-  deviceClicked(device, index) {
-    this.setState(
-      {
-        selectedDevice: JSON.parse(JSON.stringify(device)),
-        selectedIndex: index
-      },
-      () => {
-        this.selectedDeviceRef.current?.scrollIntoView()
-      }
-    )
+  const deviceClicked = (device) => {
+    setSelectedDevice(JSON.parse(JSON.stringify(device)))
+    setTimeout(() => {
+      selectedDeviceRef.current?.scrollIntoView()
+    }, 0)
   }
 
-  handleCancel() {
-    this.setState({ selectedDevice: null })
+  const handleCancel = () => {
+    setSelectedDevice(null)
   }
-  render() {
-    return (
-      <div className="animated fadeIn">
-        {this.props.loginStatus.authenticationRequired === false && (
-          <EnableSecurity />
-        )}
-        {this.props.loginStatus.authenticationRequired && (
-          <div>
-            <Card>
-              <CardHeader>
-                <i className="fa fa-align-justify" />
-                Devices
-              </CardHeader>
-              <CardBody>
-                <Table hover responsive bordered striped size="sm">
-                  <thead>
-                    <tr>
-                      <th>Client ID</th>
-                      <th>Description</th>
-                      <th>Type</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(this.state.devices || []).map((device, index) => {
-                      return (
-                        <tr
-                          key={device.clientId}
-                          onClick={this.deviceClicked.bind(this, device, index)}
-                        >
-                          <td>{device.clientId}</td>
-                          <td>{device.description}</td>
-                          <td>{convertPermissions(device.permissions)}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </Table>
-              </CardBody>
-              <CardFooter></CardFooter>
-            </Card>
 
-            {this.state.selectedDevice && (
-              <div ref={this.selectedDeviceRef}>
-                <Card>
-                  <CardHeader>
-                    <i className="fa fa-align-justify" />
-                    Device
-                  </CardHeader>
-                  <CardBody>
-                    <FormGroup row>
-                      <Col md="2">
-                        <Label htmlFor="clientId">Client ID</Label>
-                      </Col>
-                      <Col xs="12" md="9">
-                        <Label>{this.state.selectedDevice.clientId}</Label>
-                      </Col>
-                    </FormGroup>
-                    <FormGroup row>
-                      <Col md="2">
-                        <Label htmlFor="description">Description</Label>
-                      </Col>
-                      <Col xs="12" md="9">
+  return (
+    <div className="animated fadeIn">
+      {loginStatus.authenticationRequired === false && <EnableSecurity />}
+      {loginStatus.authenticationRequired && (
+        <div>
+          <Card>
+            <CardHeader>
+              <i className="fa fa-align-justify" />
+              Devices
+            </CardHeader>
+            <CardBody>
+              <Table hover responsive bordered striped size="sm">
+                <thead>
+                  <tr>
+                    <th>Client ID</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(devices || []).map((device) => {
+                    return (
+                      <tr
+                        key={device.clientId}
+                        onClick={() => deviceClicked(device)}
+                      >
+                        <td>{device.clientId}</td>
+                        <td>{device.description}</td>
+                        <td>{convertPermissions(device.permissions)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </Table>
+            </CardBody>
+            <CardFooter></CardFooter>
+          </Card>
+
+          {selectedDevice && (
+            <div ref={selectedDeviceRef}>
+              <Card>
+                <CardHeader>
+                  <i className="fa fa-align-justify" />
+                  Device
+                </CardHeader>
+                <CardBody>
+                  <FormGroup row>
+                    <Col md="2">
+                      <Label htmlFor="clientId">Client ID</Label>
+                    </Col>
+                    <Col xs="12" md="9">
+                      <Label>{selectedDevice.clientId}</Label>
+                    </Col>
+                  </FormGroup>
+                  <FormGroup row>
+                    <Col md="2">
+                      <Label htmlFor="description">Description</Label>
+                    </Col>
+                    <Col xs="12" md="9">
+                      <Input
+                        size="60"
+                        style={{ width: 'auto' }}
+                        type="text"
+                        name="description"
+                        onChange={handleDeviceChange}
+                        value={selectedDevice.description || ''}
+                      />
+                    </Col>
+                  </FormGroup>
+                  <FormGroup row>
+                    <Col md="2">
+                      <Label htmlFor="select">Permissions</Label>
+                    </Col>
+                    <Col xs="12" md="2">
+                      {!selectedDevice.requestedPermissions && (
                         <Input
-                          size="60"
-                          style={{ width: 'auto' }}
-                          type="text"
-                          name="description"
-                          onChange={this.handleDeviceChange}
-                          value={this.state.selectedDevice.description}
-                        />
-                      </Col>
-                    </FormGroup>
-                    <FormGroup row>
-                      <Col md="2">
-                        <Label htmlFor="select">Permissions</Label>
-                      </Col>
-                      <Col xs="12" md="2">
-                        {!this.state.selectedDevice.requestedPermissions && (
-                          <Input
-                            type="select"
-                            name="permissions"
-                            value={this.state.selectedDevice.permissions}
-                            onChange={this.handleDeviceChange}
-                          >
-                            <option value="readonly">Read Only</option>
-                            <option value="readwrite">Read/Write</option>
-                            <option value="admin">Admin</option>
-                          </Input>
-                        )}
-                        {this.state.selectedDevice.requestedPermissions && (
-                          <Label>
-                            {convertPermissions(
-                              this.state.selectedDevice.permissions
-                            )}
-                          </Label>
-                        )}
-                      </Col>
-                    </FormGroup>
-                  </CardBody>
-                  <CardFooter>
-                    <Row>
-                      <Col xs="4" md="1">
-                        <Button
-                          size="sm"
-                          color="primary"
-                          onClick={this.handleApply}
+                          type="select"
+                          name="permissions"
+                          value={selectedDevice.permissions || 'readonly'}
+                          onChange={handleDeviceChange}
                         >
-                          <i className="fa fa-dot-circle-o" /> Apply
-                        </Button>
-                      </Col>
-                      <Col xs="4" md="1">
-                        <Button
-                          size="sm"
-                          color="secondary"
-                          onClick={this.handleCancel}
-                        >
-                          <i className="fa fa-ban" /> Cancel
-                        </Button>
-                      </Col>
-                      <Col xs="4" md="10" className="text-end">
-                        <Button
-                          size="sm"
-                          color="danger"
-                          onClick={this.deleteDevice}
-                        >
-                          <i className="fa fa-ban" /> Delete
-                        </Button>
-                      </Col>
-                    </Row>
-                  </CardFooter>
-                </Card>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    )
-  }
+                          <option value="readonly">Read Only</option>
+                          <option value="readwrite">Read/Write</option>
+                          <option value="admin">Admin</option>
+                        </Input>
+                      )}
+                      {selectedDevice.requestedPermissions && (
+                        <Label>
+                          {convertPermissions(selectedDevice.permissions)}
+                        </Label>
+                      )}
+                    </Col>
+                  </FormGroup>
+                </CardBody>
+                <CardFooter>
+                  <Row>
+                    <Col xs="4" md="1">
+                      <Button size="sm" color="primary" onClick={handleApply}>
+                        <i className="fa fa-dot-circle-o" /> Apply
+                      </Button>
+                    </Col>
+                    <Col xs="4" md="1">
+                      <Button
+                        size="sm"
+                        color="secondary"
+                        onClick={handleCancel}
+                      >
+                        <i className="fa fa-ban" /> Cancel
+                      </Button>
+                    </Col>
+                    <Col xs="4" md="10" className="text-end">
+                      <Button size="sm" color="danger" onClick={deleteDevice}>
+                        <i className="fa fa-ban" /> Delete
+                      </Button>
+                    </Col>
+                  </Row>
+                </CardFooter>
+              </Card>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
-const mapStateToProps = ({ loginStatus }) => ({ loginStatus })
-
-export default connect(mapStateToProps)(Devices)
-
-function convertPermissions(type) {
-  if (type === 'readonly') {
-    return 'Read Only'
-  } else if (type === 'readwrite') {
-    return 'Read/Write'
-  } else if (type === 'admin') {
-    return 'Admin'
-  }
-}
+export default Devices
