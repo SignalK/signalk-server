@@ -1,3 +1,4 @@
+import { Position } from '.'
 import { Brand } from './brand'
 
 /** @hidden */
@@ -67,6 +68,7 @@ export type Update = {
   timestamp?: Timestamp
   source?: Source
   $source?: SourceRef
+  notificationId?: string
 } & ({ values: PathValue[] } | { meta: Meta[] }) // require either values or meta or both
 
 /** @category Server API */
@@ -86,12 +88,23 @@ export interface PathValue {
   value: Value
 }
 
+export interface AlarmStatus {
+  silenced: boolean
+  acknowledged: boolean
+  canSilence: boolean
+  canAcknowledge: boolean
+  canClear: boolean
+}
+
 // Notification payload
 /** @category Server API */
 export interface Notification {
   state: ALARM_STATE
   method: ALARM_METHOD[]
   message: string
+  status?: AlarmStatus
+  position?: Position
+  createdAt?: Timestamp
 }
 
 // MetaMessage
