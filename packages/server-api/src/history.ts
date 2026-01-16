@@ -76,7 +76,7 @@ export type TimeRangeQueryParams =
     }
   | {
       // from - to
-      duration: never
+      duration?: never
       from: string
       to: string
     }
@@ -184,7 +184,7 @@ export type TimeRangeParams =
     }
   | {
       // from - to
-      duration: never
+      duration?: never
       from: Temporal.Instant
       to: Temporal.Instant
     }
