@@ -17,23 +17,8 @@ import {
 } from 'reactstrap'
 import moment from 'moment'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
-import { compile } from 'mathjs'
+import { getCompiledFormula } from '../../utils/unitConversion'
 import Meta from './Meta'
-
-// Cache for compiled mathjs expressions
-const compiledFormulaCache = new Map()
-
-/**
- * Get a compiled expression from cache, or compile and cache it
- * @param {string} formula - The formula string to compile
- * @returns {object} - Compiled mathjs expression
- */
-function getCompiledFormula(formula) {
-  if (!compiledFormulaCache.has(formula)) {
-    compiledFormulaCache.set(formula, compile(formula))
-  }
-  return compiledFormulaCache.get(formula)
-}
 import { getValueRenderer, DefaultValueRenderer } from './ValueRenderers'
 
 const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
