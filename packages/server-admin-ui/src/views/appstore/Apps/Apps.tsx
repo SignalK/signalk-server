@@ -1,6 +1,6 @@
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useDeferredValue } from 'react'
 import { useSelector } from 'react-redux'
 import {
   Button,
@@ -80,6 +80,9 @@ const Apps: React.FC = () => {
   const [category, setSelectedCategory] = useState('All')
   const [search, setSearch] = useState('')
 
+  const deferredSearch = useDeferredValue(search)
+  const isSearchStale = search !== deferredSearch
+
   const deriveAppList = useCallback((): AppInfo[] => {
     const allApps: Record<string, AppInfo> = appStore.available.reduce(
       (acc, app) => {
@@ -116,10 +119,10 @@ const Apps: React.FC = () => {
         ? () => true
         : (app: AppInfo) => app.categories?.includes(category)
     const textSearchFilter =
-      search === ''
+      deferredSearch === ''
         ? () => true
         : (app: AppInfo) => {
-            const lower = search.toLowerCase()
+            const lower = deferredSearch.toLowerCase()
             return (
               app.name.toLowerCase().indexOf(lower) >= 0 ||
               (app.description &&
@@ -131,7 +134,7 @@ const Apps: React.FC = () => {
       .filter(selectedViewFilter)
       .filter(selectedCategoryFilter)
       .filter(textSearchFilter)
-  }, [appStore, view, category, search, deriveAppList])
+  }, [appStore, view, category, deferredSearch, deriveAppList])
 
   const handleUpdateAll = useCallback(() => {
     if (confirm(`Are you sure you want to install all updates?`)) {
@@ -252,7 +255,13 @@ const Apps: React.FC = () => {
             ))}
           </section>
           <section className="appstore__grid">
-            <div style={{ height: '100%' }}>
+            <div
+              style={{
+                height: '100%',
+                opacity: isSearchStale ? 0.7 : 1,
+                transition: 'opacity 0.2s'
+              }}
+            >
               <AppsList apps={rowData} />
             </div>
           </section>
