@@ -5,7 +5,6 @@ import { Subject } from 'rxjs'
 import * as uuid from 'uuid'
 import { ServerApp, SignalKMessageHub, WithConfig } from '../../app'
 import {
-  ALARM_METHOD,
   Context,
   Delta,
   hasValues,
