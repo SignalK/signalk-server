@@ -11,6 +11,11 @@ import {
   Dropdown,
   Alert
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCircleNotch } from '@fortawesome/free-solid-svg-icons/faCircleNotch'
+import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
+import { faBars } from '@fortawesome/free-solid-svg-icons/faBars'
+import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
 import { useAppSelector, useAppDispatch } from '../../store'
 import { logout, restart } from '../../actions'
 
@@ -51,11 +56,6 @@ export default function Header() {
     document.body.classList.toggle('sidebar-hidden')
   }
 
-  const mobileSidebarToggle = (e: MouseEvent) => {
-    e.preventDefault()
-    document.body.classList.toggle('sidebar-mobile-show')
-  }
-
   const handleLogout = () => {
     dispatch(logout())
   }
@@ -82,72 +82,71 @@ export default function Header() {
             boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
           }}
         >
-          <i className="fa fa-exclamation-triangle" /> Network congestion
+          <FontAwesomeIcon icon={faTriangleExclamation} /> Network congestion
           detected – some updates were skipped. Check your connection.
         </Alert>
       )}
-      <NavbarToggler className="d-lg-none" onClick={mobileSidebarToggle}>
-        <span className="navbar-toggler-icon" />
-      </NavbarToggler>
       <NavbarBrand href="#" />
-      <NavbarToggler className="d-md-down-none me-auto" onClick={sidebarToggle}>
+      <NavbarToggler className="me-auto" onClick={sidebarToggle}>
         <span className="navbar-toggler-icon" />
       </NavbarToggler>
       <Nav className="ms-auto" navbar>
-        <NavItem className="d-md-down-none px-3">
-          {loginStatus.status === 'loggedIn' &&
-            loginStatus.userLevel === 'admin' && (
+        {/* Desktop: show items directly */}
+        {loginStatus.status === 'loggedIn' &&
+          loginStatus.userLevel === 'admin' && (
+            <NavItem className="d-none d-sm-block px-3">
               <NavLink href="#/" onClick={handleRestart}>
-                {restarting ? (
-                  <i className="fa fa-circle-o-notch text-danger fa-spin" />
-                ) : (
-                  <i className="fa fa-circle-o-notch" />
-                )}{' '}
+                <FontAwesomeIcon
+                  icon={faCircleNotch}
+                  spin={restarting}
+                  className={restarting ? 'text-danger' : ''}
+                />{' '}
                 Restart
               </NavLink>
-            )}
-        </NavItem>
+            </NavItem>
+          )}
         {loginStatus.status === 'loggedIn' && (
-          <NavItem className="d-md-down-none px-3">
+          <NavItem className="d-none d-sm-block px-3">
             <NavLink href="#/" onClick={handleLogout}>
-              <i className="fa fa-lock" /> Logout
+              <FontAwesomeIcon icon={faLock} /> Logout
             </NavLink>
           </NavItem>
         )}
         {loginStatus.status !== 'loggedIn' &&
           loginStatus.authenticationRequired && (
-            <NavItem className="d-md-down-none px-3">
+            <NavItem className="d-none d-sm-block px-3">
               <NavLink href="#/login">
-                <i className="fa fa-lock" /> Login
+                <FontAwesomeIcon icon={faLock} /> Login
               </NavLink>
             </NavItem>
           )}
-        <div className="d-lg-none">
+        {/* Mobile: show dropdown menu */}
+        <div className="d-sm-none">
           <Dropdown nav isOpen={dropdownOpen} toggle={toggleDropdown}>
             <DropdownToggle nav>
-              <i className="icon-menu" />
+              <FontAwesomeIcon icon={faBars} />
             </DropdownToggle>
             <DropdownMenu end>
               {loginStatus.status === 'loggedIn' &&
                 loginStatus.userLevel === 'admin' && (
                   <DropdownItem onClick={handleRestart}>
-                    {restarting ? (
-                      <i className="fa fa-circle-o-notch text-danger fa-spin" />
-                    ) : (
-                      <i className="fa fa-circle-o-notch" />
-                    )}{' '}
+                    <FontAwesomeIcon
+                      icon={faCircleNotch}
+                      spin={restarting}
+                      className={restarting ? 'text-danger' : ''}
+                    />{' '}
                     Restart
                   </DropdownItem>
                 )}
               {loginStatus.status === 'loggedIn' && (
                 <DropdownItem onClick={handleLogout}>
-                  <i className="fa fa-lock" /> Logout
+                  <FontAwesomeIcon icon={faLock} /> Logout
                 </DropdownItem>
               )}
               {loginStatus.status !== 'loggedIn' &&
                 loginStatus.authenticationRequired && (
                   <DropdownItem href="#/login">
-                    <i className="fa fa-lock" /> Login
+                    <FontAwesomeIcon icon={faLock} /> Login
                   </DropdownItem>
                 )}
             </DropdownMenu>

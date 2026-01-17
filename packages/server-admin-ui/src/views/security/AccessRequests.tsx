@@ -21,6 +21,11 @@ import {
   Row,
   Badge
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
+import { faBan } from '@fortawesome/free-solid-svg-icons/faBan'
+import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck'
+import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
 import EnableSecurity from './EnableSecurity'
 
 interface AccessRequestData {
@@ -111,7 +116,7 @@ export default function AccessRequests() {
   )
 
   const requestClicked = (request: AccessRequestData) => {
-    setSelectedRequest(JSON.parse(JSON.stringify(request)))
+    setSelectedRequest(structuredClone(request))
     setTimeout(() => {
       selectedRequestRef.current?.scrollIntoView()
     }, 0)
@@ -134,7 +139,7 @@ export default function AccessRequests() {
         <div>
           <Card>
             <CardHeader>
-              <i className="fa fa-align-justify"></i>Access Requests
+              <FontAwesomeIcon icon={faAlignJustify} /> Access Requests
             </CardHeader>
             <CardBody>
               <Table hover responsive bordered striped size="sm">
@@ -177,7 +182,7 @@ export default function AccessRequests() {
             <div ref={selectedRequestRef}>
               <Card>
                 <CardHeader>
-                  <i className="fa fa-align-justify"></i>Request
+                  <FontAwesomeIcon icon={faAlignJustify} /> Request
                 </CardHeader>
                 <CardBody>
                   <FormGroup row>
@@ -198,12 +203,14 @@ export default function AccessRequests() {
                   </FormGroup>
                   <FormGroup row>
                     <Col md="4" lg="2">
-                      <Label htmlFor="text-input">Authentication Timeout</Label>
+                      <Label htmlFor="expiration">Authentication Timeout</Label>
                     </Col>
                     <Col xs="12" md="8" lg="3">
                       <Input
                         type="text"
+                        id="expiration"
                         name="expiration"
+                        autoComplete="off"
                         onChange={handleRequestChange}
                         value={selectedRequest.expiration || ''}
                       />
@@ -214,12 +221,13 @@ export default function AccessRequests() {
                   </FormGroup>
                   <FormGroup row>
                     <Col md="4" lg="2">
-                      <Label htmlFor="select">Permissions</Label>
+                      <Label htmlFor="permissions">Permissions</Label>
                     </Col>
                     <Col xs="12" md="8" lg="3">
                       {!selectedRequest.requestedPermissions && (
                         <Input
                           type="select"
+                          id="permissions"
                           name="permissions"
                           value={selectedRequest.permissions || 'readonly'}
                           onChange={handleRequestChange}
@@ -280,15 +288,18 @@ export default function AccessRequests() {
                           )
                         }
                       >
-                        <i
-                          className={
+                        <FontAwesomeIcon
+                          icon={
                             processing.approving.has(
                               selectedRequest.accessIdentifier
                             )
-                              ? 'fa fa-spinner fa-spin'
-                              : 'fa fa-check'
+                              ? faSpinner
+                              : faCheck
                           }
-                        ></i>{' '}
+                          spin={processing.approving.has(
+                            selectedRequest.accessIdentifier
+                          )}
+                        />{' '}
                         Approve
                       </Button>
                     </Col>
@@ -317,15 +328,18 @@ export default function AccessRequests() {
                           )
                         }
                       >
-                        <i
-                          className={
+                        <FontAwesomeIcon
+                          icon={
                             processing.denying.has(
                               selectedRequest.accessIdentifier
                             )
-                              ? 'fa fa-spinner fa-spin'
-                              : 'fa fa-ban'
+                              ? faSpinner
+                              : faBan
                           }
-                        ></i>{' '}
+                          spin={processing.denying.has(
+                            selectedRequest.accessIdentifier
+                          )}
+                        />{' '}
                         Deny
                       </Button>
                     </Col>

@@ -12,6 +12,10 @@ import {
   InputGroup,
   InputGroupText
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
+import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
+import { faUser } from '@fortawesome/free-solid-svg-icons/faUser'
 import { useAppSelector, useAppDispatch } from '../../store'
 import { enableSecurity, fetchLoginStatus } from '../../actions'
 import Login from './Login'
@@ -81,7 +85,7 @@ export default function EnableSecurity() {
                         <p className="text-muted">Create an admin account</p>
                         <InputGroup className="mb-3">
                           <InputGroupText>
-                            <i className="icon-user" />
+                            <FontAwesomeIcon icon={faUser} />
                           </InputGroupText>
                           <Input
                             type="text"
@@ -93,7 +97,7 @@ export default function EnableSecurity() {
                         </InputGroup>
                         <InputGroup className="mb-4">
                           <InputGroupText>
-                            <i className="icon-lock" />
+                            <FontAwesomeIcon icon={faLock} />
                           </InputGroupText>
                           <Input
                             type="password"
@@ -111,12 +115,9 @@ export default function EnableSecurity() {
                               className="px-4"
                               disabled={isEnabling}
                             >
-                              <i
-                                className={
-                                  isEnabling
-                                    ? 'fa fa-spinner fa-spin'
-                                    : 'fa fa-lock'
-                                }
+                              <FontAwesomeIcon
+                                icon={isEnabling ? faSpinner : faLock}
+                                spin={isEnabling}
                               />{' '}
                               Enable
                             </Button>

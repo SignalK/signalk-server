@@ -20,6 +20,8 @@ import {
   FormGroup,
   FormText
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 import LogFiles from './Logging'
 import Creatable from 'react-select/creatable'
 
@@ -131,8 +133,7 @@ export default function ServerLogs() {
     <div className="animated fadeIn">
       <Card>
         <CardHeader>
-          <i className="fa fa-align-justify" />
-          <strong>Server Log</strong>
+          <FontAwesomeIcon icon={faAlignJustify} /> <strong>Server Log</strong>
         </CardHeader>
 
         <CardBody>

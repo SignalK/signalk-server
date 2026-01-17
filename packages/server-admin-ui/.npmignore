@@ -38,10 +38,10 @@ jspm_packages
 
 src
 public_src
-webpack.config.js
 scss
+vite.config.js
+tsconfig.json
 compilation-stats.json
-.babelrc
 public/*.hot-update.js
 public/*.hot-update.json
 public/stats.json

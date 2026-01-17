@@ -4,9 +4,9 @@
 
     .message__container {
       padding: 10px;
-      color: #9d8641;
-      border: 1px solid #9d8641;
-      background-color: #fff2cd;
+      color: var(--bs-warning-text-emphasis, #9d8641);
+      border: 1px solid var(--bs-warning-border-subtle, #9d8641);
+      background-color: var(--bs-warning-bg-subtle, #fff2cd);
       p {
         span {
           margin-right: 5px;
@@ -25,7 +25,7 @@
     align-items: center;
     flex-wrap: wrap;
 
-    @media (max-width: 1080px) {
+    @media (max-width: 768px) {
       flex-direction: column;
 
       .title__container {
@@ -51,21 +51,23 @@
 
       .card-title {
         margin: 0 10px 0 0;
+        font-size: 1.25rem;
+        font-weight: 500;
       }
 
       .button-wrapper {
-        .badge__update {
-          color: white;
+        button {
+          margin: 0 2px;
+        }
+
+        span.badge__update {
+          color: #fff !important;
           font-size: 10px;
           border-radius: 3px;
-          background-color: #00cd79;
+          background-color: #00cd79 !important;
           margin-left: 5px;
           padding: 3px;
           vertical-align: middle;
-        }
-
-        button {
-          margin: 0 2px;
         }
       }
     }
@@ -85,14 +87,16 @@
 
         &__icon {
           position: absolute;
-          margin-left: 5px;
-          padding: 10px;
+          left: 0.75rem;
+          top: 50%;
+          transform: translateY(-50%);
           color: grey;
         }
         &__input {
-          padding: 10px;
+          padding: 0.375rem 0.75rem;
+          padding-left: 2.5rem;
           width: 100%;
-          text-indent: 30px;
+          height: calc(1.5em + 0.75rem + 2px);
         }
       }
     }

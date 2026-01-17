@@ -23,7 +23,7 @@ $pink: #e83e8c !default;
 $red: #f86c6b;
 $orange: #f8cb00;
 $yellow: #ffcc00 !default;
-$green: #4dbd74;
+$green: #00cd79;
 $teal: #20c997 !default;
 $cyan: #63c2de;
 
@@ -106,6 +106,12 @@ $table-bg-hover: $gray-100;
 
 // Forms
 
+$input-bg: $white;
+$input-focus-bg: $white;
 $input-group-addon-bg: $gray-100;
 $input-border-color: $gray-200;
 $input-group-addon-border-color: $gray-200;
+
+// List groups
+
+$list-group-bg: $white;

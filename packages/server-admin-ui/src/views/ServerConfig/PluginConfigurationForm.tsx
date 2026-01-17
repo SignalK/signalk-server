@@ -9,6 +9,12 @@ import {
   RegistryWidgetsType
 } from '@rjsf/utils'
 import { ReactNode } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faPlus } from '@fortawesome/free-solid-svg-icons/faPlus'
+import { faArrowUp } from '@fortawesome/free-solid-svg-icons/faArrowUp'
+import { faArrowDown } from '@fortawesome/free-solid-svg-icons/faArrowDown'
+import { faTimes } from '@fortawesome/free-solid-svg-icons/faTimes'
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 
 const GRID_COLUMNS = {
   CONTENT: 'col-9',
@@ -340,7 +346,7 @@ const customTemplates = {
         props.onClick,
         props.disabled,
         undefined,
-        <i className="fas fa-plus" />,
+        <FontAwesomeIcon icon={faPlus} />,
         0
       ),
     MoveUpButton: (props: ButtonProps) =>
@@ -349,7 +355,7 @@ const customTemplates = {
         props.onClick,
         props.disabled,
         undefined,
-        <i className="fas fa-arrow-up" />,
+        <FontAwesomeIcon icon={faArrowUp} />,
         -1
       ),
     MoveDownButton: (props: ButtonProps) =>
@@ -358,7 +364,7 @@ const customTemplates = {
         props.onClick,
         props.disabled,
         undefined,
-        <i className="fas fa-arrow-down" />,
+        <FontAwesomeIcon icon={faArrowDown} />,
         -1
       ),
     RemoveButton: (props: ButtonProps) =>
@@ -367,7 +373,7 @@ const customTemplates = {
         props.onClick,
         props.disabled,
         undefined,
-        <i className="fas fa-times" />,
+        <FontAwesomeIcon icon={faTimes} />,
         -1
       ),
     SubmitButton: (props: { uiSchema?: UiSchema }) => {
@@ -447,7 +453,7 @@ export default function PluginConfigurationForm({
       }}
     >
       <button type="submit" className="btn btn-primary">
-        <i className="fa fa-save" style={{ marginRight: '8px' }}></i>
+        <FontAwesomeIcon icon={faFloppyDisk} style={{ marginRight: '8px' }} />
         Save Configuration
       </button>
     </Form>

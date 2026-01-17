@@ -1,5 +1,15 @@
 // Here you can add other styles
 
+// Navbar toggler - remove border to match CoreUI v1 styling
+.app-header .navbar-toggler {
+  border: none;
+  outline: none;
+
+  &:focus {
+    box-shadow: none;
+  }
+}
+
 // RJSF Form Styling
 
 // Mixin for button state variants to reduce duplication
@@ -38,23 +48,13 @@ form.rjsf {
     margin-bottom: 0px;
   }
 
-  input {
-    width: auto;
-  }
-
-  // Ensure form controls have visible borders and white background
-  input.form-control,
-  select.form-control,
-  textarea.form-control {
-    background-color: #fff;
-    border: 1px solid #c2cfd6;
-    border-radius: 0.25rem;
-    padding: 0.375rem 0.75rem;
-
-    &:focus {
-      border-color: #8ad4ee;
-      box-shadow: 0 0 0 0.2rem rgba(32, 168, 216, 0.25);
-    }
+  input[type='text'],
+  input[type='number'],
+  input[type='email'],
+  input[type='url'],
+  input[type='password'],
+  textarea {
+    width: 100%;
   }
 
   // Add spacing between form fields (Bootstrap 5 compatibility)
@@ -152,4 +152,112 @@ form.rjsf {
 .text-pretty {
   text-wrap: balance; /* Fallback for older browsers */
   text-wrap: pretty; /* Future spec */
+}
+
+// Bootstrap 5 compatibility: Remove default link underlines to match Bootstrap 4 styling
+// Affects Dashboard activity lists and status tables
+.horizontal-bars a,
+.table a {
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Navbar FontAwesome icon styling to match original FA4 appearance
+.app-header.navbar {
+  .nav-link {
+    // Ensure FA6 SVG icons align properly with text
+    svg {
+      vertical-align: -0.125em;
+      margin-right: 0.35rem;
+    }
+  }
+
+  // Dropdown toggle icon sizing
+  .dropdown-toggle svg {
+    font-size: 1.25rem;
+    margin-right: 0;
+  }
+}
+
+// Dashboard callout values - use body color instead of primary for readability
+.callout-primary {
+  .h4,
+  .h5 {
+    color: inherit;
+  }
+}
+
+// Sidebar FontAwesome SVG icon styling
+.sidebar {
+  .nav-link {
+    svg.nav-icon {
+      display: inline-block;
+      width: 20px;
+      margin: 0 0.5rem 0 0;
+      font-size: 14px;
+      color: #536c79;
+      text-align: center;
+    }
+
+    &.active svg.nav-icon {
+      color: #003399;
+    }
+
+    &:hover svg.nav-icon {
+      color: #fff;
+    }
+  }
+
+  .nav-dropdown-toggle svg.nav-icon {
+    display: inline-block;
+    width: 20px;
+    margin: 0 0.5rem 0 0;
+    font-size: 14px;
+    color: #536c79;
+    text-align: center;
+  }
+
+  // Indent dropdown child items that don't have icons
+  .nav-dropdown-items .nav-link {
+    padding-left: calc(1rem + 20px + 0.5rem);
+  }
+}
+
+// Ensure btn-success has white text (Bootstrap 5 may calculate dark text for some greens)
+.btn-success,
+.btn-success:hover,
+.btn-success:focus,
+.btn-success:active {
+  --bs-btn-color: #fff;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-active-color: #fff;
+  color: #fff !important;
+}
+
+// Source Priorities: nested table in Priorities column should have white background
+.table-striped .table {
+  --bs-table-bg: #fff;
+  background-color: #fff;
+}
+
+// Ensure btn-danger has white text
+.btn-danger,
+.btn-danger:hover,
+.btn-danger:focus,
+.btn-danger:active {
+  --bs-btn-color: #fff;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-active-color: #fff;
+  color: #fff !important;
+}
+
+// Ensure badges have white text
+.badge.text-bg-success,
+.badge.text-bg-danger,
+.badge.bg-success,
+.badge.bg-danger {
+  color: #fff !important;
 }

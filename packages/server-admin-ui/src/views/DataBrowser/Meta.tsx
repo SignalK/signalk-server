@@ -1,10 +1,8 @@
-import {
-  faPencil,
-  faPlusSquare,
-  faSave,
-  faSquarePlus,
-  faTrashCan
-} from '@fortawesome/free-solid-svg-icons'
+import { faPencil } from '@fortawesome/free-solid-svg-icons/faPencil'
+import { faPlusSquare } from '@fortawesome/free-solid-svg-icons/faPlusSquare'
+import { faSave } from '@fortawesome/free-solid-svg-icons/faSave'
+import { faSquarePlus } from '@fortawesome/free-solid-svg-icons/faSquarePlus'
+import { faTrashCan } from '@fortawesome/free-solid-svg-icons/faTrashCan'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState } from 'react'
 import { useSelector } from 'react-redux'
@@ -71,6 +69,7 @@ interface ValueRenderProps {
   disabled: boolean
   value: unknown
   setValue: (value: unknown) => void
+  inputId?: string
 }
 
 const UNITS: Record<string, string> = {
@@ -121,9 +120,11 @@ const STATES = ['nominal', 'alert', 'warn', 'alarm', 'emergency']
 const UnitSelect: React.FC<ValueRenderProps> = ({
   disabled,
   value,
-  setValue
+  setValue,
+  inputId
 }) => (
   <Input
+    id={inputId}
     disabled={disabled}
     type="select"
     value={value as string}
@@ -137,8 +138,14 @@ const UnitSelect: React.FC<ValueRenderProps> = ({
   </Input>
 )
 
-const Text: React.FC<ValueRenderProps> = ({ disabled, setValue, value }) => (
+const Text: React.FC<ValueRenderProps> = ({
+  disabled,
+  setValue,
+  value,
+  inputId
+}) => (
   <Input
+    id={inputId}
     disabled={disabled}
     type="text"
     onChange={(e) => setValue(e.target.value)}
@@ -149,9 +156,11 @@ const Text: React.FC<ValueRenderProps> = ({ disabled, setValue, value }) => (
 const NumberValue: React.FC<ValueRenderProps> = ({
   disabled,
   setValue,
-  value
+  value,
+  inputId
 }) => (
   <Input
+    id={inputId}
     disabled={disabled}
     type="number"
     onChange={(e) => {
@@ -173,9 +182,14 @@ const MethodSelect: React.FC<ValueRenderProps> = ({ setValue, value }) => {
   return (
     <>
       {['sound', 'visual'].map((method) => (
-        <Label key={method} className="switch switch-text switch-primary">
+        <Label
+          key={method}
+          className="switch switch-text switch-primary"
+          htmlFor={`meta-alertMethod-${method}`}
+        >
           <Input
             type="checkbox"
+            id={`meta-alertMethod-${method}`}
             className="switch-input"
             onChange={() => {
               const arr = value as string[]
@@ -201,13 +215,19 @@ const MethodSelect: React.FC<ValueRenderProps> = ({ setValue, value }) => {
 const DisplaySelect: React.FC<ValueRenderProps> = ({
   disabled,
   setValue,
-  value
+  value,
+  inputId
 }) => {
   const displayValue = value as DisplayScaleValue
   const { lower, upper, type, power } = displayValue
+  const baseId = inputId || 'display-scale'
   return (
     <>
+      <Label htmlFor={`${baseId}-type`} className="visually-hidden">
+        Display type
+      </Label>
       <Input
+        id={`${baseId}-type`}
         disabled={disabled}
         type="select"
         value={type}
@@ -225,7 +245,11 @@ const DisplaySelect: React.FC<ValueRenderProps> = ({
         ))}
       </Input>
 
+      <Label htmlFor={`${baseId}-lower`} className="visually-hidden">
+        Lower bound
+      </Label>
       <Input
+        id={`${baseId}-lower`}
         disabled={disabled}
         type="number"
         onChange={(e) => {
@@ -244,7 +268,11 @@ const DisplaySelect: React.FC<ValueRenderProps> = ({
         value={lower}
       />
 
+      <Label htmlFor={`${baseId}-upper`} className="visually-hidden">
+        Upper bound
+      </Label>
       <Input
+        id={`${baseId}-upper`}
         disabled={disabled}
         type="number"
         onChange={(e) => {
@@ -262,7 +290,11 @@ const DisplaySelect: React.FC<ValueRenderProps> = ({
         }}
         value={upper}
       />
+      <Label htmlFor={`${baseId}-power`} className="visually-hidden">
+        Power
+      </Label>
       <Input
+        id={`${baseId}-power`}
         disabled={disabled || type !== 'power'}
         type="number"
         onChange={(e) => {
@@ -436,10 +468,16 @@ const Meta: React.FC<MetaProps> = ({ meta, path }) => {
 
 const MetaFormRow: React.FC<MetaFormRowProps> = (props) => {
   const { _key, renderValue: V, disabled, setKey, deleteKey } = props
+  const fieldSelectId = `meta-field-${_key}`
+  const valueInputId = `meta-value-${_key}`
   return (
     <FormGroup row>
       <Col xs="3" md="2" className={'col-form-label'}>
+        <Label htmlFor={fieldSelectId} className="visually-hidden">
+          Field name
+        </Label>
         <Input
+          id={fieldSelectId}
           disabled={disabled}
           type="select"
           value={_key}
@@ -455,7 +493,10 @@ const MetaFormRow: React.FC<MetaFormRowProps> = (props) => {
         </Input>
       </Col>
       <Col xs="12" md="4">
-        <V {...props} />
+        <Label htmlFor={valueInputId} className="visually-hidden">
+          {_key} value
+        </Label>
+        <V {...props} inputId={valueInputId} />
       </Col>
       <Col>
         {!disabled && <FontAwesomeIcon icon={faTrashCan} onClick={deleteKey} />}
@@ -515,11 +556,19 @@ const ZoneRow: React.FC<ZoneProps> = ({
   deleteZone
 }) => {
   const { state, lower, upper, message } = zone
+  // Generate unique id based on zone values for accessibility
+  const zoneId = `zone-${lower}-${upper}-${state}`.replace(/\s+/g, '-')
   return (
     <FormGroup row>
       <Col xs="2" md="2">
-        {showHint && <FormText color="muted">Lower</FormText>}
+        <Label
+          htmlFor={`${zoneId}-lower`}
+          className={showHint ? 'text-muted small' : 'visually-hidden'}
+        >
+          Lower
+        </Label>
         <Input
+          id={`${zoneId}-lower`}
           disabled={!isEditing}
           type="number"
           onChange={(e) => setZone({ ...zone, lower: Number(e.target.value) })}
@@ -527,22 +576,32 @@ const ZoneRow: React.FC<ZoneProps> = ({
         />
       </Col>
       <Col xs="2" md="2">
-        {showHint && <FormText color="muted">Upper</FormText>}
+        <Label
+          htmlFor={`${zoneId}-upper`}
+          className={showHint ? 'text-muted small' : 'visually-hidden'}
+        >
+          Upper
+        </Label>
         <Input
+          id={`${zoneId}-upper`}
           disabled={!isEditing}
           type="number"
-          name="search"
           onChange={(e) => setZone({ ...zone, upper: Number(e.target.value) })}
           value={upper}
         />
       </Col>
       <Col xs="12" md="2">
-        {showHint && <FormText color="muted">State</FormText>}
+        <Label
+          htmlFor={`${zoneId}-state`}
+          className={showHint ? 'text-muted small' : 'visually-hidden'}
+        >
+          State
+        </Label>
         <Input
+          id={`${zoneId}-state`}
           disabled={!isEditing}
           type="select"
           value={state}
-          name="options.type"
           onChange={(e) => setZone({ ...zone, state: e.target.value })}
         >
           {STATES.map((s, i) => (
@@ -553,11 +612,16 @@ const ZoneRow: React.FC<ZoneProps> = ({
         </Input>
       </Col>
       <Col xs="3" md="3">
-        {showHint && <FormText color="muted">Message</FormText>}
+        <Label
+          htmlFor={`${zoneId}-message`}
+          className={showHint ? 'text-muted small' : 'visually-hidden'}
+        >
+          Message
+        </Label>
         <Input
+          id={`${zoneId}-message`}
           disabled={!isEditing}
           type="text"
-          name="search"
           onChange={(e) => setZone({ ...zone, message: e.target.value })}
           value={message}
         />
@@ -565,7 +629,9 @@ const ZoneRow: React.FC<ZoneProps> = ({
       <Col xs="2" md="2">
         {isEditing && (
           <>
-            {showHint && <FormText color="muted">Remove</FormText>}
+            {showHint && (
+              <span className="text-muted small d-block">Remove</span>
+            )}
             <FontAwesomeIcon icon={faTrashCan} onClick={deleteZone} />
           </>
         )}

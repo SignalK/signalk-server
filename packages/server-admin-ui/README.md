@@ -11,7 +11,7 @@ This is its own package so when its installed the javascript asset files come co
 - **Vite** for fast builds with Module Federation support
 - **Redux** for state management (with `useSelector`/`useDispatch` hooks)
 - **React Router v6** for routing
-- **Reactstrap** (Bootstrap 4) for UI components
+- **Reactstrap 9** with Bootstrap 5 for UI components
 
 ## Development
 

@@ -1,3 +1,6 @@
+@use 'sass:math';
+@use 'sass:color';
+
 // scss-lint:disable NestingDepth, SelectorDepth
 .sidebar {
   display: flex;
@@ -61,14 +64,14 @@
     }
 
     &::-webkit-scrollbar-track {
-      background-color: lighten($sidebar-bg, 5%);
-      border-right: 1px solid darken($sidebar-bg, 5%);
-      border-left: 1px solid darken($sidebar-bg, 5%);
+      background-color: color.adjust($sidebar-bg, $lightness: 5%);
+      border-right: 1px solid color.adjust($sidebar-bg, $lightness: -5%);
+      border-left: 1px solid color.adjust($sidebar-bg, $lightness: -5%);
     }
 
     &::-webkit-scrollbar-thumb {
       height: 50px;
-      background-color: darken($sidebar-bg, 10%);
+      background-color: color.adjust($sidebar-bg, $lightness: -10%);
       background-clip: content-box;
       border-color: transparent;
       border-style: solid;
@@ -128,7 +131,7 @@
     i {
       display: inline-block;
       width: 20px;
-      margin: 0 ($sidebar-nav-link-padding-x / 2) 0 0;
+      margin: 0 math.div($sidebar-nav-link-padding-x, 2) 0 0;
       font-size: 14px;
       color: $sidebar-nav-link-icon-color;
       text-align: center;
@@ -170,7 +173,7 @@
           color: rgba(255, 255, 255, 0.7);
         }
         &:hover {
-          background: darken($value, 5%) !important;
+          background: color.adjust($value, $lightness: -5%) !important;
           i {
             color: #fff;
           }
@@ -227,7 +230,8 @@
 
   .nav-label {
     display: block;
-    padding: ($sidebar-nav-link-padding-y / 8) $sidebar-nav-link-padding-x;
+    padding: math.div($sidebar-nav-link-padding-y, 8)
+      $sidebar-nav-link-padding-x;
     color: $sidebar-nav-title-color;
 
     &:hover {
@@ -237,7 +241,7 @@
 
     i {
       width: 20px;
-      margin: -3px ($sidebar-nav-link-padding-x / 2) 0 0;
+      margin: -3px math.div($sidebar-nav-link-padding-x, 2) 0 0;
       font-size: 10px;
       color: $sidebar-nav-link-icon-color;
       text-align: center;
@@ -245,9 +249,9 @@
     }
   }
 
-  @if (lightness($sidebar-bg) < 40) {
+  @if (color.channel($sidebar-bg, 'lightness', $space: hsl) < 40%) {
     .progress {
-      background-color: lighten($sidebar-bg, 15%) !important;
+      background-color: color.adjust($sidebar-bg, $lightness: 15%) !important;
     }
   }
 
@@ -275,7 +279,7 @@
       background-image: $sidebar-minimizer-indicator;
       background-repeat: no-repeat;
       background-position: center;
-      background-size: $sidebar-minimizer-height / 4;
+      background-size: math.div($sidebar-minimizer-height, 4);
       transition: 0.3s;
     }
 
@@ -317,7 +321,7 @@
             i {
               display: block;
               width: 100%;
-              margin: $spacer / 4 0;
+              margin: math.div($spacer, 4) 0;
               font-size: 24px;
             }
 
