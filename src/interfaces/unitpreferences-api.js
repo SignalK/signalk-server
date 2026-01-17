@@ -111,7 +111,10 @@ module.exports = function (app) {
   // GET /signalk/v1/unitpreferences/custom-definitions
   router.get('/custom-definitions', (req, res) => {
     try {
-      const customPath = path.join(UNITPREFS_DIR, 'custom-units-definitions.json')
+      const customPath = path.join(
+        UNITPREFS_DIR,
+        'custom-units-definitions.json'
+      )
       if (fs.existsSync(customPath)) {
         const data = JSON.parse(fs.readFileSync(customPath, 'utf-8'))
         res.json(data)
@@ -134,7 +137,10 @@ module.exports = function (app) {
         return
       }
 
-      const customPath = path.join(UNITPREFS_DIR, 'custom-units-definitions.json')
+      const customPath = path.join(
+        UNITPREFS_DIR,
+        'custom-units-definitions.json'
+      )
       fs.writeFileSync(customPath, JSON.stringify(req.body, null, 2))
       reloadCustomDefinitions()
       res.json({ success: true })
@@ -220,7 +226,11 @@ module.exports = function (app) {
       const presetName = req.params.name
 
       // Check custom first
-      const customPath = path.join(UNITPREFS_DIR, 'presets/custom', `${presetName}.json`)
+      const customPath = path.join(
+        UNITPREFS_DIR,
+        'presets/custom',
+        `${presetName}.json`
+      )
       if (fs.existsSync(customPath)) {
         const preset = JSON.parse(fs.readFileSync(customPath, 'utf-8'))
         res.json(preset)
@@ -228,7 +238,11 @@ module.exports = function (app) {
       }
 
       // Fall back to built-in
-      const builtInPath = path.join(UNITPREFS_DIR, 'presets', `${presetName}.json`)
+      const builtInPath = path.join(
+        UNITPREFS_DIR,
+        'presets',
+        `${presetName}.json`
+      )
       if (fs.existsSync(builtInPath)) {
         const preset = JSON.parse(fs.readFileSync(builtInPath, 'utf-8'))
         res.json(preset)
@@ -278,7 +292,11 @@ module.exports = function (app) {
   router.delete('/presets/custom/:name', (req, res) => {
     try {
       const presetName = req.params.name
-      const presetPath = path.join(UNITPREFS_DIR, 'presets/custom', `${presetName}.json`)
+      const presetPath = path.join(
+        UNITPREFS_DIR,
+        'presets/custom',
+        `${presetName}.json`
+      )
 
       if (!fs.existsSync(presetPath)) {
         res.status(404).json({ error: 'Preset not found' })

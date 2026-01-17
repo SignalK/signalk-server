@@ -196,16 +196,11 @@
     },
     "volumeRate": {
       "siUnit": "m3/s",
-      "paths": [
-        "propulsion.*.fuel.rate",
-        "propulsion.*.exhaustTemperature"
-      ]
+      "paths": ["propulsion.*.fuel.rate", "propulsion.*.exhaustTemperature"]
     },
     "mass": {
       "siUnit": "kg",
-      "paths": [
-        "design.displacement"
-      ]
+      "paths": ["design.displacement"]
     },
     "percentage": {
       "siUnit": "ratio",

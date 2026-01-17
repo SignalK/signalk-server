@@ -22,7 +22,9 @@ unitpreferences/
 ## File Descriptions
 
 ### config.json
+
 Stores the currently active preset name.
+
 ```json
 {
   "activePreset": "metric"
@@ -30,7 +32,9 @@ Stores the currently active preset name.
 ```
 
 ### categories.json
+
 Maps category names to their base SI units. Used to validate that a path's units match the category.
+
 ```json
 {
   "temperature": "K",
@@ -41,7 +45,9 @@ Maps category names to their base SI units. Used to validate that a path's units
 ```
 
 ### default-categories.json
+
 Maps SignalK path patterns to default categories. Used for auto-suggesting categories for paths.
+
 ```json
 {
   "environment.*.temperature": "temperature",
@@ -51,7 +57,9 @@ Maps SignalK path patterns to default categories. Used for auto-suggesting categ
 ```
 
 ### standard-units-definitions.json
+
 Defines all unit conversions. Each SI unit has conversion formulas to display units.
+
 ```json
 {
   "K": {
@@ -73,10 +81,13 @@ Defines all unit conversions. Each SI unit has conversion formulas to display un
 ```
 
 ### custom-units-definitions.json
+
 User-defined unit conversions that extend or override standard definitions. Created when users add custom conversions via the API.
 
-### Preset Files (presets/*.json)
+### Preset Files (presets/\*.json)
+
 Each preset defines target units for all categories:
+
 ```json
 {
   "name": "metric",
@@ -93,17 +104,17 @@ Each preset defines target units for all categories:
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/signalk/v1/unitpreferences/config` | GET | Get active preset config |
-| `/signalk/v1/unitpreferences/config` | PUT | Set active preset |
-| `/signalk/v1/unitpreferences/categories` | GET | Get category → SI unit mapping |
-| `/signalk/v1/unitpreferences/definitions` | GET | Get merged unit definitions |
-| `/signalk/v1/unitpreferences/custom-definitions` | PUT | Save custom unit definitions |
-| `/signalk/v1/unitpreferences/presets` | GET | List all presets (built-in + custom) |
-| `/signalk/v1/unitpreferences/presets/:name` | GET | Get preset details |
-| `/signalk/v1/unitpreferences/presets/custom/:name` | PUT | Create/update custom preset |
-| `/signalk/v1/unitpreferences/presets/custom/:name` | DELETE | Delete custom preset |
+| Endpoint                                           | Method | Description                          |
+| -------------------------------------------------- | ------ | ------------------------------------ |
+| `/signalk/v1/unitpreferences/config`               | GET    | Get active preset config             |
+| `/signalk/v1/unitpreferences/config`               | PUT    | Set active preset                    |
+| `/signalk/v1/unitpreferences/categories`           | GET    | Get category → SI unit mapping       |
+| `/signalk/v1/unitpreferences/definitions`          | GET    | Get merged unit definitions          |
+| `/signalk/v1/unitpreferences/custom-definitions`   | PUT    | Save custom unit definitions         |
+| `/signalk/v1/unitpreferences/presets`              | GET    | List all presets (built-in + custom) |
+| `/signalk/v1/unitpreferences/presets/:name`        | GET    | Get preset details                   |
+| `/signalk/v1/unitpreferences/presets/custom/:name` | PUT    | Create/update custom preset          |
+| `/signalk/v1/unitpreferences/presets/custom/:name` | DELETE | Delete custom preset                 |
 
 ## How It Works
 

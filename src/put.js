@@ -99,9 +99,16 @@ module.exports = {
         const schemaMeta = getMetadata('vessels.self.' + metaPath)
         // Allow override: use PUT's units if provided, otherwise use schema's units
         const pathSiUnit = metaValue.units || schemaMeta?.units
-        const validationError = validateCategoryAssignment(pathSiUnit, metaValue.displayUnits.category)
+        const validationError = validateCategoryAssignment(
+          pathSiUnit,
+          metaValue.displayUnits.category
+        )
         if (validationError) {
-          return { state: 'COMPLETED', statusCode: 400, message: validationError }
+          return {
+            state: 'COMPLETED',
+            statusCode: 400,
+            message: validationError
+          }
         }
       }
 

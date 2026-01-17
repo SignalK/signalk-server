@@ -1,6 +1,11 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import { CategoryMap, UnitDefinitions, Preset, UnitPreferencesConfig } from './types'
+import {
+  CategoryMap,
+  UnitDefinitions,
+  Preset,
+  UnitPreferencesConfig
+} from './types'
 
 const UNITPREFS_DIR = path.join(__dirname, '../../unitpreferences')
 
@@ -20,7 +25,10 @@ export function loadAll(): void {
 
   // Load standard definitions
   standardDefinitions = JSON.parse(
-    fs.readFileSync(path.join(UNITPREFS_DIR, 'standard-units-definitions.json'), 'utf-8')
+    fs.readFileSync(
+      path.join(UNITPREFS_DIR, 'standard-units-definitions.json'),
+      'utf-8'
+    )
   )
 
   // Load custom definitions (if exists)
@@ -53,7 +61,9 @@ export function loadAll(): void {
     const defaultCatData = JSON.parse(fs.readFileSync(defaultCatPath, 'utf-8'))
     // Build flat lookup: path -> category
     defaultCategories = {}
-    for (const [categoryName, catDef] of Object.entries(defaultCatData.categories || {})) {
+    for (const [categoryName, catDef] of Object.entries(
+      defaultCatData.categories || {}
+    )) {
       const def = catDef as { paths: string[] }
       for (const p of def.paths || []) {
         defaultCategories[p] = categoryName
@@ -69,7 +79,11 @@ function loadActivePreset(): void {
   const presetName = config.activePreset
 
   // Check custom presets first
-  const customPresetPath = path.join(UNITPREFS_DIR, 'presets/custom', `${presetName}.json`)
+  const customPresetPath = path.join(
+    UNITPREFS_DIR,
+    'presets/custom',
+    `${presetName}.json`
+  )
   if (fs.existsSync(customPresetPath)) {
     activePreset = JSON.parse(fs.readFileSync(customPresetPath, 'utf-8'))
     return
@@ -97,11 +111,21 @@ export function getCategories(): CategoryMap {
   }
   return merged
 }
-export function getCustomCategories(): { [category: string]: string } { return customCategories }
-export function getStandardDefinitions(): UnitDefinitions { return standardDefinitions }
-export function getCustomDefinitions(): UnitDefinitions { return customDefinitions }
-export function getActivePreset(): Preset { return activePreset }
-export function getConfig(): UnitPreferencesConfig { return config }
+export function getCustomCategories(): { [category: string]: string } {
+  return customCategories
+}
+export function getStandardDefinitions(): UnitDefinitions {
+  return standardDefinitions
+}
+export function getCustomDefinitions(): UnitDefinitions {
+  return customDefinitions
+}
+export function getActivePreset(): Preset {
+  return activePreset
+}
+export function getConfig(): UnitPreferencesConfig {
+  return config
+}
 
 export function reloadPreset(): void {
   // Re-read config from file to get updated activePreset
@@ -132,7 +156,9 @@ export function reloadCustomCategories(): void {
 
 export function getMergedDefinitions(): UnitDefinitions {
   // Custom definitions override standard
-  const merged: UnitDefinitions = JSON.parse(JSON.stringify(standardDefinitions))
+  const merged: UnitDefinitions = JSON.parse(
+    JSON.stringify(standardDefinitions)
+  )
   for (const [siUnit, def] of Object.entries(customDefinitions)) {
     if (!merged[siUnit]) {
       merged[siUnit] = def
@@ -155,7 +181,9 @@ export function getDefaultCategory(signalkPath: string): string | null {
   // Try wildcard matching
   for (const [pattern, category] of Object.entries(defaultCategories)) {
     if (pattern.includes('*')) {
-      const regex = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '[^.]+') + '$')
+      const regex = new RegExp(
+        '^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '[^.]+') + '$'
+      )
       if (regex.test(signalkPath)) {
         return category
       }
