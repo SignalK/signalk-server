@@ -14,8 +14,8 @@ export function usePathData(
   context: string,
   path$SourceKey: string
 ): PathData | null {
-  const [data, setData] = useState<PathData | null>(() =>
-    store.getPathData(context, path$SourceKey)
+  const [data, setData] = useState<PathData | null>(
+    () => store.getPathData(context, path$SourceKey) ?? null
   )
   const lastUpdateRef = useRef<number>(0)
   const pendingDataRef = useRef<PathData | null>(null)
@@ -23,7 +23,7 @@ export function usePathData(
 
   useEffect(() => {
     // Get initial data
-    setData(store.getPathData(context, path$SourceKey))
+    setData(store.getPathData(context, path$SourceKey) ?? null)
 
     // Subscribe to updates for this specific path
     const unsubscribe = store.subscribe(
@@ -73,12 +73,12 @@ export function useMetaData(
   path: string | undefined
 ): MetaData | null {
   const [meta, setMeta] = useState<MetaData | null>(() =>
-    path ? store.getMeta(context, path) : null
+    path ? (store.getMeta(context, path) ?? null) : null
   )
 
   useEffect(() => {
     if (path) {
-      setMeta(store.getMeta(context, path))
+      setMeta(store.getMeta(context, path) ?? null)
     }
   }, [context, path])
 

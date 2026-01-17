@@ -15,7 +15,7 @@ interface VirtualizedDataTableProps {
   isPaused: boolean
   onToggleSource: (source: string) => void
   selectedSources: Set<string>
-  onToggleSourceFilter: () => void
+  onToggleSourceFilter: (event: React.ChangeEvent<HTMLInputElement>) => void
   sourceFilterActive: boolean
 }
 

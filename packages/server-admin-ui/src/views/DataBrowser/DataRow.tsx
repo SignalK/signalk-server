@@ -53,13 +53,17 @@ function DataRow({
 
   const units = meta && meta.units ? meta.units : ''
 
+  const path = data.path ?? ''
+  const source = data.$source ?? ''
+  const timestamp = data.timestamp ?? ''
+
   return (
     <div className={`virtual-table-row ${index % 2 ? 'striped' : ''}`}>
       {/* Path Cell */}
       <div className="virtual-table-cell path-cell">
-        <CopyToClipboardWithFade text={data.path}>
+        <CopyToClipboardWithFade text={path}>
           <span>
-            {data.path} <FontAwesomeIcon icon={faCopy} />
+            {path} <FontAwesomeIcon icon={faCopy} />
           </span>
         </CopyToClipboardWithFade>
       </div>
@@ -70,22 +74,22 @@ function DataRow({
       </div>
 
       {/* Timestamp Cell */}
-      <TimestampCell timestamp={data.timestamp} isPaused={isPaused} />
+      <TimestampCell timestamp={timestamp} isPaused={isPaused} />
 
       {/* Source Cell */}
       <div className="virtual-table-cell source-cell">
         <input
           type="checkbox"
-          onChange={() => onToggleSource(data.$source)}
-          checked={selectedSources.has(data.$source)}
-          aria-label={`Select source ${data.$source}`}
+          onChange={() => onToggleSource(source)}
+          checked={selectedSources.has(source)}
+          aria-label={`Select source ${source}`}
           style={{
             marginRight: '5px',
             verticalAlign: 'middle'
           }}
         />
-        <CopyToClipboardWithFade text={data.$source}>
-          {data.$source} <FontAwesomeIcon icon={faCopy} />
+        <CopyToClipboardWithFade text={source}>
+          {source} <FontAwesomeIcon icon={faCopy} />
         </CopyToClipboardWithFade>{' '}
         {data.pgn || ''}
         {data.sentence || ''}
@@ -111,13 +115,13 @@ function ValueRenderer({ data, meta, units, raw }: ValueRendererProps) {
     )
   }
 
-  const CustomRenderer = getValueRenderer(data.path, meta)
+  const CustomRenderer = getValueRenderer(data.path ?? '', meta)
   if (CustomRenderer) {
     return (
       <CustomRenderer
         value={data.value}
         units={units}
-        {...(meta?.renderer?.options || {})}
+        {...(meta?.renderer?.options ?? {})}
       />
     )
   }

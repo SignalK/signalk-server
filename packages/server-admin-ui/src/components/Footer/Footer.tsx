@@ -34,7 +34,7 @@ export default function Footer() {
       {loginStatus.status === 'loggedIn' && (
         <span className="ms-auto">Logged in as {loginStatus.username}</span>
       )}
-      &nbsp;- {name || mmsi || uuid}
+      &nbsp;- {name ?? mmsi ?? uuid ?? ''}
     </footer>
   )
 }

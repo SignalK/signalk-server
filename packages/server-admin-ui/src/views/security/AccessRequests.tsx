@@ -46,7 +46,7 @@ interface ProcessingState {
 export default function AccessRequests() {
   const accessRequests = useAppSelector(
     (state) => state.accessRequests
-  ) as AccessRequestData[]
+  ) as unknown as AccessRequestData[]
   const loginStatus = useAppSelector((state) => state.loginStatus)
 
   const [selectedRequest, setSelectedRequest] =

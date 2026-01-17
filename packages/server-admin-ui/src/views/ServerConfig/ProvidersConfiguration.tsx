@@ -27,11 +27,12 @@ interface Provider {
   enabled: boolean
   logging: boolean
   editable: boolean
-  options?: Record<string, unknown>
+  options: Record<string, unknown>
   json?: string
   isNew?: boolean
   wasDiscovered?: boolean
   originalId?: string
+  [key: string]: unknown
 }
 
 interface RootState {
@@ -91,15 +92,20 @@ const ProvidersConfiguration: React.FC = () => {
   }, [fetchProviders, runDiscovery])
 
   const handleProviderChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>, type?: string) => {
+    (
+      event:
+        | React.ChangeEvent<HTMLInputElement>
+        | { target: { name: string; value: unknown; type?: string } },
+      valueType?: string
+    ) => {
       if (!selectedProvider) return
 
-      let value: string | boolean | number =
+      let value: unknown =
         event.target.type === 'checkbox'
-          ? event.target.checked
+          ? (event.target as HTMLInputElement).checked
           : event.target.value
 
-      if (type === 'number') {
+      if (valueType === 'number') {
         value = Number(value)
       }
 
