@@ -193,7 +193,7 @@ export default function ActionCellRenderer({
             color={app.newVersion ? 'success' : 'light'}
             className="flex-grow-0"
           />
-          <DropdownMenu end>
+          <DropdownMenu end container="body">
             {app.installed && app.newVersion && (
               <NavLink
                 to={`/serverConfiguration/plugins/${app.id}`}
