@@ -41,6 +41,12 @@ export interface LoginStatus {
   authenticationRequired?: boolean
   readOnlyAccess?: boolean
   username?: string
+  securityWasEnabled?: boolean
+  noUsers?: boolean
+  allowNewUserRegistration?: boolean
+  oidcEnabled?: boolean
+  oidcLoginUrl?: string
+  oidcProviderName?: string
   [key: string]: unknown
 }
 
@@ -79,6 +85,7 @@ export interface RestoreStatus {
 export interface VesselInfo {
   name?: string
   mmsi?: string
+  uuid?: string
   [key: string]: unknown
 }
 
@@ -110,7 +117,19 @@ export interface BackpressureWarning {
   timestamp: number
 }
 
+export interface ProviderStatistics {
+  deltaRate?: number
+  writeRate?: number
+  deltaCount?: number
+  writeCount?: number
+}
+
 export interface ServerStatistics {
+  deltaRate?: number
+  numberOfAvailablePaths?: number
+  wsClients?: number
+  providerStatistics?: Record<string, ProviderStatistics>
+  uptime?: number
   [key: string]: unknown
 }
 

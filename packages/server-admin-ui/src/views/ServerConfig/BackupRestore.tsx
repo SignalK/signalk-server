@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
+import { useSelector } from 'react-redux'
+import { useAppDispatch } from '../../store'
 import {
   Button,
   Card,
@@ -37,7 +38,7 @@ interface RootState {
 }
 
 const BackupRestore: React.FC = () => {
-  const dispatch = useDispatch()
+  const dispatch = useAppDispatch()
   const restoreStatus = useSelector((state: RootState) => state.restoreStatus)
   const restarting = useSelector((state: RootState) => state.restarting)
 

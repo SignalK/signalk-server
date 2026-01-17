@@ -13,14 +13,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSignIn } from '@fortawesome/free-solid-svg-icons/faSignIn'
 import { faSignOut } from '@fortawesome/free-solid-svg-icons/faSignOut'
 import { useAppSelector } from '../../store'
+import type { ProviderStatistics } from '../../store/types'
 import '../../fa-pulse.css'
-
-interface ProviderStats {
-  deltaRate?: number
-  writeRate?: number
-  deltaCount?: number
-  writeCount?: number
-}
 
 interface ProviderStatusItem {
   id: string
@@ -39,13 +33,12 @@ export default function Dashboard() {
     []
   const navigate = useNavigate()
 
-  const {
-    deltaRate = 0,
-    numberOfAvailablePaths = 0,
-    wsClients = 0,
-    providerStatistics = {} as Record<string, ProviderStats>,
-    uptime = 0
-  } = (serverStatistics as Record<string, unknown>) || {}
+  const deltaRate = serverStatistics?.deltaRate ?? 0
+  const numberOfAvailablePaths = serverStatistics?.numberOfAvailablePaths ?? 0
+  const wsClients = serverStatistics?.wsClients ?? 0
+  const providerStatistics: Record<string, ProviderStatistics> =
+    serverStatistics?.providerStatistics ?? {}
+  const uptime = serverStatistics?.uptime ?? 0
 
   const errorCount = providerStatus.filter((s) => s.type === 'error').length
   const uptimeNum = typeof uptime === 'number' ? uptime : 0
@@ -69,13 +62,13 @@ export default function Dashboard() {
     }
   }
 
-  const getInputPulseClass = (providerStats: ProviderStats): string => {
+  const getInputPulseClass = (providerStats: ProviderStatistics): string => {
     if ((providerStats.deltaRate || 0) > 50) return 'text-primary fa-pulse-fast'
     if ((providerStats.deltaRate || 0) > 0) return 'text-primary fa-pulse'
     return ''
   }
 
-  const getOutputPulseClass = (providerStats: ProviderStats): string => {
+  const getOutputPulseClass = (providerStats: ProviderStatistics): string => {
     if ((providerStats.writeRate || 0) > 50) return 'text-primary fa-pulse-fast'
     if ((providerStats.writeRate || 0) > 0) return 'text-primary fa-pulse'
     return ''
@@ -83,7 +76,7 @@ export default function Dashboard() {
 
   const renderActivity = (
     providerId: string,
-    providerStats: ProviderStats,
+    providerStats: ProviderStatistics,
     linkType: string
   ): ReactNode => {
     const iconStyle = {

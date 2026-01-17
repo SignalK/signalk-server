@@ -15,7 +15,8 @@ import {
 } from 'reactstrap'
 import dayjs from 'dayjs'
 import Meta from './Meta'
-import store from './ValueEmittingStore'
+import store, { PathData } from './ValueEmittingStore'
+import type { MetaData } from './ValueEmittingStore'
 import VirtualizedDataTable from './VirtualizedDataTable'
 import granularSubscriptionManager from './GranularSubscriptionManager'
 import { getPath$SourceKey } from './pathUtils'
@@ -63,15 +64,6 @@ interface DeltaMessage {
 interface SelectOption {
   label: string
   value: string
-}
-
-interface PathData {
-  path: string
-  value: unknown
-  $source?: string
-  pgn?: string
-  sentence?: string
-  timestamp: string
 }
 
 interface SourceDevice {
@@ -178,18 +170,21 @@ const DataBrowser: React.FC = () => {
   }, [updatePath$SourceKeys])
 
   const handleMessage = useCallback(
-    (msg: DeltaMessage) => {
+    (msg: unknown) => {
       if (pause) {
         return
       }
 
-      if (msg.context && msg.updates) {
+      const deltaMsg = msg as DeltaMessage
+      if (deltaMsg.context && deltaMsg.updates) {
         const key =
-          msg.context === webSocketRef.current?.skSelf ? 'self' : msg.context
+          deltaMsg.context === webSocketRef.current?.skSelf
+            ? 'self'
+            : deltaMsg.context
 
         let isNew = false
 
-        msg.updates.forEach((update) => {
+        deltaMsg.updates.forEach((update) => {
           if (update.values) {
             const pgn =
               update.source && update.source.pgn && `(${update.source.pgn})`
@@ -239,7 +234,7 @@ const DataBrowser: React.FC = () => {
           }
           if (update.meta) {
             update.meta.forEach((vp) => {
-              store.updateMeta(key, vp.path, vp.value)
+              store.updateMeta(key, vp.path, vp.value as Partial<MetaData>)
             })
           }
         })
@@ -426,7 +421,8 @@ const DataBrowser: React.FC = () => {
         newSelectedSources.add(source)
       }
 
-      const shouldActivateFilter = wasEmpty && newSelectedSources.size === 1
+      const newSize = newSelectedSources.size
+      const shouldActivateFilter = wasEmpty && newSize === 1
       const shouldDeactivateFilter = newSelectedSources.size === 0
 
       localStorage.setItem(

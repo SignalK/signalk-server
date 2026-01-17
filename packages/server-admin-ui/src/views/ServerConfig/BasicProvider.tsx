@@ -629,12 +629,13 @@ function StdOutInput({
     displayValue = displayValue.join(',')
   }
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleChange: OnChangeHandler = (e) => {
+    const target = e.target as { type?: string; name: string; value: unknown }
     onChange({
       target: {
-        type: e.target.type,
-        name: e.target.name,
-        value: e.target.value.split(',')
+        type: target.type,
+        name: target.name,
+        value: String(target.value).split(',')
       }
     })
   }
@@ -662,12 +663,13 @@ function IgnoredSentences({
     displayValue = displayValue.join(',')
   }
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleChange: OnChangeHandler = (e) => {
+    const target = e.target as { type?: string; name: string; value: unknown }
     onChange({
       target: {
-        type: e.target.type,
-        name: e.target.name,
-        value: e.target.value.split(',')
+        type: target.type,
+        name: target.name,
+        value: String(target.value).split(',')
       }
     })
   }

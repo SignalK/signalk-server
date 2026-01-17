@@ -104,8 +104,14 @@ listenerMiddleware.startListening({
 })
 
 // Middleware to handle legacy action types and map them to new actions
+// Legacy action type with optional data property
+interface LegacyAction extends AnyAction {
+  data?: unknown
+}
+
 const legacyActionMiddleware: Middleware =
-  (_store) => (next) => (action: AnyAction) => {
+  (_store) => (next) => (action: unknown) => {
+    const legacyAction = action as LegacyAction
     // Map legacy action types to new action creators
     const actionTypeMap: Record<string, string> = {
       RECEIVE_PLUGIN_LIST: 'app/receivePluginList',
@@ -146,13 +152,17 @@ const legacyActionMiddleware: Middleware =
     }
 
     // If we have a mapping for this action type, transform it
-    const newType = actionTypeMap[action.type]
+    const newType = actionTypeMap[legacyAction.type]
     if (newType) {
-      return next({ ...action, type: newType, payload: action.data })
+      return next({
+        ...legacyAction,
+        type: newType,
+        payload: legacyAction.data
+      })
     }
 
     // Handle SERVER_UP which checks action.data instead of action.type
-    if (action.data === 'SERVER_UP') {
+    if (legacyAction.data === 'SERVER_UP') {
       return next({ type: 'app/serverUp' })
     }
 

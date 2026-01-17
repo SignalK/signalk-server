@@ -1,4 +1,6 @@
 import { memo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCopy } from '@fortawesome/free-regular-svg-icons'
 import { usePathData, useMetaData } from './usePathData'
 import TimestampCell from './TimestampCell'
 import CopyToClipboardWithFade from './CopyToClipboardWithFade'
@@ -59,13 +61,17 @@ function DataRow({
 
   const units = meta && meta.units ? meta.units : ''
 
+  const path = data.path ?? ''
+  const source = data.$source ?? ''
+  const timestamp = data.timestamp ?? ''
+
   return (
     <div className={`virtual-table-row ${index % 2 ? 'striped' : ''}`}>
       {/* Path Cell */}
       <div className="virtual-table-cell path-cell" data-label="Path">
-        <CopyToClipboardWithFade text={data.path}>
+        <CopyToClipboardWithFade text={path}>
           <span>
-            {data.path} <i className="far fa-copy"></i>
+            {path} <FontAwesomeIcon icon={faCopy} />
           </span>
         </CopyToClipboardWithFade>
       </div>
@@ -76,25 +82,25 @@ function DataRow({
       </div>
 
       {/* Timestamp Cell */}
-      <TimestampCell timestamp={data.timestamp} isPaused={isPaused} />
+      <TimestampCell timestamp={timestamp} isPaused={isPaused} />
 
       {/* Source Cell */}
       <div className="virtual-table-cell source-cell" data-label="Source">
         <input
           type="checkbox"
-          onChange={() => onToggleSource(data.$source)}
-          checked={selectedSources.has(data.$source)}
-          aria-label={`Select source ${data.$source}`}
+          onChange={() => onToggleSource(source)}
+          checked={selectedSources.has(source)}
+          aria-label={`Select source ${source}`}
           style={{
             marginRight: '5px',
             verticalAlign: 'middle'
           }}
         />
-        <CopyToClipboardWithFade text={data.$source}>
-          {data.$source} <i className="far fa-copy"></i>
-        </CopyToClipboardWithFade>
-        {data.pgn && <span>&nbsp;{data.pgn}</span>}
-        {data.sentence && <span>&nbsp;{data.sentence}</span>}
+        <CopyToClipboardWithFade text={source}>
+          {source} <FontAwesomeIcon icon={faCopy} />
+        </CopyToClipboardWithFade>{' '}
+        {data.pgn || ''}
+        {data.sentence || ''}
       </div>
     </div>
   )
@@ -117,13 +123,13 @@ function ValueRenderer({ data, meta, units, raw }: ValueRendererProps) {
     )
   }
 
-  const CustomRenderer = getValueRenderer(data.path, meta)
+  const CustomRenderer = getValueRenderer(data.path ?? '', meta)
   if (CustomRenderer) {
     return (
       <CustomRenderer
         value={data.value}
         units={units}
-        {...(meta?.renderer?.options || {})}
+        {...(meta?.renderer?.options ?? {})}
       />
     )
   }

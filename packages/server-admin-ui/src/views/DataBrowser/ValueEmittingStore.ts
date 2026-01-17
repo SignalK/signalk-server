@@ -9,15 +9,25 @@
  */
 
 export interface PathData {
+  path?: string
   value: unknown
   timestamp?: string
   $source?: string
+  pgn?: string
+  sentence?: string
   [key: string]: unknown
+}
+
+export interface RendererConfig {
+  module?: string
+  name?: string
+  options?: Record<string, unknown>
 }
 
 export interface MetaData {
   units?: string
   description?: string
+  renderer?: RendererConfig
   [key: string]: unknown
 }
 

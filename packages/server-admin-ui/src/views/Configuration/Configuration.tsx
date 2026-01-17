@@ -39,7 +39,7 @@ interface PluginData {
   enabled?: boolean
   enableLogging?: boolean
   enableDebug?: boolean
-  configuration?: unknown
+  configuration?: Record<string, unknown>
   [key: string]: unknown
 }
 
@@ -50,8 +50,11 @@ interface Plugin {
   description?: string
   type?: string
   keywords?: string[]
-  schema?: PluginSchema
+  schema: PluginSchema
+  uiSchema?: Record<string, unknown>
+  statusMessage?: string
   data: PluginData
+  [key: string]: unknown
 }
 
 const searchStorageKey = 'admin.v1.plugins.search'

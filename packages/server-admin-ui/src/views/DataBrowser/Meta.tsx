@@ -4,7 +4,7 @@ import { faSave } from '@fortawesome/free-solid-svg-icons/faSave'
 import { faSquarePlus } from '@fortawesome/free-solid-svg-icons/faSquarePlus'
 import { faTrashCan } from '@fortawesome/free-solid-svg-icons/faTrashCan'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import React, { useState } from 'react'
+import React, { useState, type JSX } from 'react'
 import { useSelector } from 'react-redux'
 import { Col, Form, FormGroup, FormText, Input, Label, Row } from 'reactstrap'
 

@@ -28,9 +28,10 @@ interface AppInfo {
   installedVersion?: string
   installed?: boolean
   installing?: boolean
-  newVersion?: string | null
+  newVersion?: string
   updated?: string
   categories: string[]
+  [key: string]: unknown
 }
 
 interface AppStore {
@@ -96,7 +97,7 @@ const Apps: React.FC = () => {
       allApps[app.name] = {
         ...app,
         installed: true,
-        newVersion: updateAvailable(app, appStore) ? app.version : null
+        newVersion: updateAvailable(app, appStore) ? app.version : undefined
       }
     })
 
