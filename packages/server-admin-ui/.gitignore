@@ -18,3 +18,4 @@ Thumbs.db
 .idea
 npm-debug.log
 compilation-stats.json
+bundle-stats.html
