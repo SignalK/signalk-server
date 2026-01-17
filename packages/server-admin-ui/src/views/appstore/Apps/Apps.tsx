@@ -103,7 +103,7 @@ const Apps: React.FC = () => {
 
     appStore.installing.forEach((app) => {
       if (allApps[app.name]) {
-        allApps[app.name] = { ...allApps[app.name], installing: true }
+        allApps[app.name] = { ...allApps[app.name], ...app, installing: true }
       }
     })
 

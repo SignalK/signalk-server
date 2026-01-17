@@ -34,6 +34,9 @@ export interface InstallingApp {
   name: string
   isWaiting?: boolean
   isInstalling?: boolean
+  isRemoving?: boolean
+  isRemove?: boolean
+  installFailed?: boolean
 }
 
 export interface LoginStatus {
