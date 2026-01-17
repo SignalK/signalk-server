@@ -24,8 +24,19 @@ export function getCompiledFormula(formula) {
  * @param {object} unitDefinitions - The unit definitions with formulas
  * @returns {object|null} - { value, unit } or null if no conversion
  */
-export function convertValue(value, siUnit, category, presetDetails, unitDefinitions) {
-  if (typeof value !== 'number' || !category || !presetDetails || !unitDefinitions) {
+export function convertValue(
+  value,
+  siUnit,
+  category,
+  presetDetails,
+  unitDefinitions
+) {
+  if (
+    typeof value !== 'number' ||
+    !category ||
+    !presetDetails ||
+    !unitDefinitions
+  ) {
     return null
   }
   const targetConfig = presetDetails.categories?.[category]
@@ -33,7 +44,8 @@ export function convertValue(value, siUnit, category, presetDetails, unitDefinit
   const targetUnit = targetConfig.targetUnit
   if (targetUnit === siUnit) return null
   const formula = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.formula
-  const symbol = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.symbol || targetUnit
+  const symbol =
+    unitDefinitions[siUnit]?.conversions?.[targetUnit]?.symbol || targetUnit
   if (!formula) return null
   try {
     const compiled = getCompiledFormula(formula)

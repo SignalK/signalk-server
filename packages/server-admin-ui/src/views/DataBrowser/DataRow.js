@@ -15,7 +15,10 @@ function DataRow({
   raw,
   isPaused,
   onToggleSource,
-  selectedSources
+  selectedSources,
+  convertValue,
+  unitDefinitions,
+  presetDetails
 }) {
   const data = usePathData(context, path$SourceKey)
   const meta = useMetaData(context, data?.path)
@@ -32,6 +35,24 @@ function DataRow({
   }
 
   const units = meta && meta.units ? meta.units : ''
+  const category = meta?.displayUnits?.category
+
+  // Calculate converted value if conversion is available
+  let convertedValue = null
+  let convertedUnit = null
+  if (
+    convertValue &&
+    category &&
+    typeof data.value === 'number' &&
+    unitDefinitions &&
+    presetDetails
+  ) {
+    const converted = convertValue(data.value, units, category)
+    if (converted && converted.unit !== units) {
+      convertedValue = converted.value
+      convertedUnit = converted.unit
+    }
+  }
 
   return (
     <div className={`virtual-table-row ${index % 2 ? 'striped' : ''}`}>
@@ -46,7 +67,14 @@ function DataRow({
 
       {/* Value Cell */}
       <div className="virtual-table-cell value-cell">
-        <ValueRenderer data={data} meta={meta} units={units} raw={raw} />
+        <ValueRenderer
+          data={data}
+          meta={meta}
+          units={units}
+          raw={raw}
+          convertedValue={convertedValue}
+          convertedUnit={convertedUnit}
+        />
       </div>
 
       {/* Timestamp Cell */}
@@ -77,7 +105,14 @@ function DataRow({
 /**
  * ValueRenderer - Renders the value with appropriate renderer
  */
-function ValueRenderer({ data, meta, units, raw }) {
+function ValueRenderer({
+  data,
+  meta,
+  units,
+  raw,
+  convertedValue,
+  convertedUnit
+}) {
   if (raw) {
     return (
       <div>
@@ -97,12 +132,21 @@ function ValueRenderer({ data, meta, units, raw }) {
       <CustomRenderer
         value={data.value}
         units={units}
+        convertedValue={convertedValue}
+        convertedUnit={convertedUnit}
         {...(meta?.renderer?.options || {})}
       />
     )
   }
 
-  return <DefaultValueRenderer value={data.value} units={units} />
+  return (
+    <DefaultValueRenderer
+      value={data.value}
+      units={units}
+      convertedValue={convertedValue}
+      convertedUnit={convertedUnit}
+    />
+  )
 }
 
 export default React.memo(DataRow)
