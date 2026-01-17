@@ -62,7 +62,10 @@ class WebappErrorBoundary extends Component<
               The webapp <strong>{this.props.webappName}</strong> encountered an
               error.
               {isReactIncompatibility && (
-                <> This webapp may need to be updated for React 19 compatibility.</>
+                <>
+                  {' '}
+                  This webapp may need to be updated for React 19 compatibility.
+                </>
               )}
             </p>
             <button
