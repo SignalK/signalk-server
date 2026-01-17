@@ -1,8 +1,58 @@
-import { useState, Suspense, createElement, ComponentType } from 'react'
+import {
+  useState,
+  Suspense,
+  createElement,
+  ComponentType,
+  Component,
+  ReactNode
+} from 'react'
 import {
   PLUGIN_CONFIG_PANEL,
   toLazyDynamicComponent
 } from '../Webapps/dynamicutilities'
+
+interface PluginErrorBoundaryProps {
+  children: ReactNode
+  pluginName: string
+}
+
+interface PluginErrorBoundaryState {
+  hasError: boolean
+  error: Error | null
+}
+
+class PluginErrorBoundary extends Component<
+  PluginErrorBoundaryProps,
+  PluginErrorBoundaryState
+> {
+  state: PluginErrorBoundaryState = { hasError: false, error: null }
+
+  static getDerivedStateFromError(error: Error): PluginErrorBoundaryState {
+    return { hasError: true, error }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="alert alert-warning">
+          <h5>Plugin Configuration Unavailable</h5>
+          <p>
+            The configuration panel for <strong>{this.props.pluginName}</strong>{' '}
+            could not be loaded. This plugin may need to be updated for React 19
+            compatibility.
+          </p>
+          <details>
+            <summary>Technical details</summary>
+            <pre style={{ fontSize: '0.8rem' }}>
+              {this.state.error?.message}
+            </pre>
+          </details>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 interface PluginData {
   packageName: string
@@ -44,13 +94,13 @@ export default function EmbeddedPluginConfigurationForm({
   }
 
   return (
-    <div>
+    <PluginErrorBoundary pluginName={plugin.packageName}>
       <Suspense fallback="Loading...">
         {createElement(Component, {
           configuration,
           save: handleSave
         })}
       </Suspense>
-    </div>
+    </PluginErrorBoundary>
   )
 }

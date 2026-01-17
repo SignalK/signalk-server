@@ -7,8 +7,8 @@
  * @param source - The $source identifier (e.g., "n2k-01.115")
  * @returns A unique key in format "path$source"
  */
-export function getPath$SourceKey(path: string, source: string): string {
-  return `${path}$${source}`
+export function getPath$SourceKey(path: string, source?: string): string {
+  return `${path}$${source ?? ''}`
 }
 
 /**

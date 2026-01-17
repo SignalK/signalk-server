@@ -3,6 +3,22 @@ import DataRow from './DataRow'
 import granularSubscriptionManager from './GranularSubscriptionManager'
 import './VirtualTable.css'
 
+interface VisibleItem {
+  index: number
+  path$SourceKey: string
+}
+
+interface VirtualizedDataTableProps {
+  path$SourceKeys: string[]
+  context: string
+  raw: boolean
+  isPaused: boolean
+  onToggleSource: (source: string) => void
+  selectedSources: Set<string>
+  onToggleSourceFilter: (event: React.ChangeEvent<HTMLInputElement>) => void
+  sourceFilterActive: boolean
+}
+
 /**
  * VirtualizedDataTable - Window-scroll virtualized table
  * Simple implementation compatible with React 16
@@ -16,8 +32,8 @@ function VirtualizedDataTable({
   selectedSources,
   onToggleSourceFilter,
   sourceFilterActive
-}) {
-  const containerRef = useRef(null)
+}: VirtualizedDataTableProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 50 })
   const [isNarrowScreen, setIsNarrowScreen] = useState(
     typeof window !== 'undefined' && window.innerWidth <= 768
@@ -137,7 +153,7 @@ function VirtualizedDataTable({
   // Build visible items - memoized to prevent unnecessary re-renders
   // Render all items when virtualization is disabled (variable row heights)
   // Note: Must be called before any early returns to maintain hook order
-  const visibleItems = useMemo(() => {
+  const visibleItems: VisibleItem[] = useMemo(() => {
     if (disableVirtualization) {
       return path$SourceKeys.map((path$SourceKey, index) => ({
         index,

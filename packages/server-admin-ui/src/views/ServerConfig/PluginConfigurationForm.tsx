@@ -286,11 +286,13 @@ const ArrayFieldTemplate = (props: ArrayFieldTemplateProps) => {
   } = props
 
   const uiOptions = getUiOptions(uiSchema)
-  const ResolvedArrayFieldItemTemplate = getTemplate(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ResolvedArrayFieldItemTemplate = getTemplate<
     'ArrayFieldItemTemplate',
-    registry,
-    uiOptions
-  )
+    any,
+    RJSFSchema,
+    any
+  >('ArrayFieldItemTemplate', registry as any, uiOptions)
   const {
     ButtonTemplates: { AddButton }
   } = registry.templates
@@ -311,8 +313,9 @@ const ArrayFieldTemplate = (props: ArrayFieldTemplateProps) => {
         </div>
       )}
       <div className={CSS_CLASSES.ARRAY_ITEM_LIST}>
-        {items?.map(({ key, ...itemProps }) => (
-          <ResolvedArrayFieldItemTemplate key={key} {...itemProps} />
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        {items?.map(({ key, ...restProps }: any) => (
+          <ResolvedArrayFieldItemTemplate key={key} {...restProps} />
         ))}
       </div>
       {canAdd && (
@@ -334,7 +337,8 @@ const ArrayFieldTemplate = (props: ArrayFieldTemplateProps) => {
   )
 }
 
-const customTemplates = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const customTemplates: any = {
   FieldTemplate,
   ObjectFieldTemplate,
   ArrayFieldTemplate,
@@ -423,23 +427,26 @@ export default function PluginConfigurationForm({
 }: PluginConfigurationFormProps) {
   const { enabled, enableLogging, enableDebug } = plugin.data
 
+  // Build the schema object with proper types
+  const formSchema: RJSFSchema = {
+    type: 'object',
+    ...(plugin.statusMessage && {
+      description: `Status: ${plugin.statusMessage}`
+    }),
+    properties: {
+      configuration: {
+        type: 'object',
+        title: ' ',
+        description: plugin.schema.description,
+        properties: plugin.schema.properties as RJSFSchema['properties']
+      }
+    }
+  }
+
   return (
     <Form
       validator={validator}
-      schema={{
-        type: 'object',
-        ...(plugin.statusMessage && {
-          description: `Status: ${plugin.statusMessage}`
-        }),
-        properties: {
-          configuration: {
-            type: 'object',
-            title: ' ',
-            description: plugin.schema.description,
-            properties: plugin.schema.properties
-          }
-        }
-      }}
+      schema={formSchema}
       uiSchema={plugin.uiSchema ? { configuration: plugin.uiSchema } : {}}
       formData={plugin.data || {}}
       templates={customTemplates}

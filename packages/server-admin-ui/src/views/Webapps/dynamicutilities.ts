@@ -210,7 +210,9 @@ export const toLazyDynamicComponent = (
         const errorMessage = ex instanceof Error ? ex.message : String(ex)
         if (
           errorMessage.includes('hasOwnProperty') ||
-          errorMessage.includes('Cannot read properties of undefined')
+          errorMessage.includes('Cannot read properties of undefined') ||
+          (errorMessage.includes('Cannot access') &&
+            errorMessage.includes('before initialization'))
         ) {
           return createErrorModule(
             `This webapp may be incompatible with React 19. ` +

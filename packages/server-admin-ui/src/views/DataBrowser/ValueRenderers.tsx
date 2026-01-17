@@ -606,7 +606,7 @@ export const getValueRenderer = (
     // Battery, Sensor, Engine, GPS etc. that encapsulate their paths and their renderer
     // as well as other useful data/behavior.
   }
-  if (meta && meta.renderer && meta.renderer.module) {
+  if (meta && meta.renderer && meta.renderer.module && meta.renderer.name) {
     const cacheKey = `${meta.renderer.module}.${meta.renderer.name}`
     if (Renderers[cacheKey]) {
       return Renderers[cacheKey]
@@ -614,7 +614,7 @@ export const getValueRenderer = (
       const Renderer = toLazyDynamicComponent(
         meta.renderer.module,
         meta.renderer.name
-      )
+      ) as ComponentType<RendererProps>
 
       const comp: RendererComponent = function component(props: RendererProps) {
         return (
@@ -630,7 +630,7 @@ export const getValueRenderer = (
     }
   }
 
-  if (meta && meta.renderer) {
+  if (meta && meta.renderer && meta.renderer.name) {
     return Renderers[meta.renderer.name] || null
   }
   if (meta && meta.units === 'ratio') {
