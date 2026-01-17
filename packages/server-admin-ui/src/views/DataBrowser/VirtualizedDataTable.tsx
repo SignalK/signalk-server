@@ -64,8 +64,11 @@ function VirtualizedDataTable({
       const significantChange =
         Math.abs(prev.start - startIndex) > 2 ||
         Math.abs(prev.end - endIndex) > 2
+      // Also update if end was previously at the boundary but list grew
+      const listGrew =
+        prev.end < endIndex && prev.end === prev.start + visibleCount - 1
 
-      if (atStart || atEnd || significantChange) {
+      if (atStart || atEnd || significantChange || listGrew) {
         return { start: startIndex, end: endIndex }
       }
       return prev
@@ -100,6 +103,13 @@ function VirtualizedDataTable({
       window.removeEventListener('resize', handleScroll)
     }
   }, [updateVisibleRange, disableVirtualization])
+
+  // Update visible range when path$SourceKeys changes (new data arrives)
+  useEffect(() => {
+    if (!raw) {
+      updateVisibleRange()
+    }
+  }, [path$SourceKeys, updateVisibleRange, raw])
 
   // Cleanup subscriptions on unmount
   useEffect(() => {

@@ -12,6 +12,9 @@ import {
   FormGroup,
   FormText
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 
 interface VesselData {
   name?: string
@@ -80,7 +83,7 @@ const VesselConfiguration: React.FC = () => {
     <div className="animated fadeIn">
       <Card>
         <CardHeader>
-          <i className="fa fa-align-justify" />
+          <FontAwesomeIcon icon={faAlignJustify} />{' '}
           <strong>Vessel Base Data</strong>
         </CardHeader>
         <CardBody>
@@ -97,7 +100,9 @@ const VesselConfiguration: React.FC = () => {
               <Col xs="12" md="4">
                 <Input
                   type="text"
+                  id="name"
                   name="name"
+                  autoComplete="off"
                   onChange={handleChange}
                   value={vesselData.name || ''}
                 />
@@ -111,7 +116,9 @@ const VesselConfiguration: React.FC = () => {
               <Col xs="12" md="4">
                 <Input
                   type="text"
+                  id="mmsi"
                   name="mmsi"
+                  autoComplete="off"
                   onChange={handleChange}
                   value={vesselData.mmsi || ''}
                 />
@@ -127,7 +134,9 @@ const VesselConfiguration: React.FC = () => {
               <Col xs="12" md="4">
                 <Input
                   type="text"
+                  id="callsignVhf"
                   name="callsignVhf"
+                  autoComplete="off"
                   onChange={handleChange}
                   value={vesselData.callsignVhf || ''}
                 />
@@ -143,7 +152,9 @@ const VesselConfiguration: React.FC = () => {
               <Col xs="12" md="4">
                 <Input
                   type="text"
+                  id="uuid"
                   name="uuid"
+                  autoComplete="off"
                   onChange={handleChange}
                   value={vesselData.uuid || ''}
                 />
@@ -157,6 +168,7 @@ const VesselConfiguration: React.FC = () => {
               <Col xs="12" md="4">
                 <Input
                   type="select"
+                  id="aisShipType"
                   name="aisShipType"
                   value={vesselData.aisShipType || ''}
                   onChange={handleChange}
@@ -233,7 +245,9 @@ const VesselConfiguration: React.FC = () => {
               <Col xs="12" md="4">
                 <Input
                   type="text"
+                  id="draft"
                   name="draft"
+                  autoComplete="off"
                   onChange={handleChange}
                   value={vesselData.draft || ''}
                 />
@@ -249,7 +263,9 @@ const VesselConfiguration: React.FC = () => {
               <Col xs="12" md="4">
                 <Input
                   type="text"
+                  id="length"
                   name="length"
+                  autoComplete="off"
                   onChange={handleChange}
                   value={vesselData.length || ''}
                 />
@@ -265,7 +281,9 @@ const VesselConfiguration: React.FC = () => {
               <Col xs="12" md="4">
                 <Input
                   type="text"
+                  id="beam"
                   name="beam"
+                  autoComplete="off"
                   onChange={handleChange}
                   value={vesselData.beam || ''}
                 />
@@ -281,7 +299,9 @@ const VesselConfiguration: React.FC = () => {
               <Col xs="12" md="4">
                 <Input
                   type="text"
+                  id="height"
                   name="height"
+                  autoComplete="off"
                   onChange={handleChange}
                   value={vesselData.height || ''}
                 />
@@ -297,7 +317,9 @@ const VesselConfiguration: React.FC = () => {
               <Col xs="12" md="4">
                 <Input
                   type="text"
+                  id="gpsFromBow"
                   name="gpsFromBow"
+                  autoComplete="off"
                   onChange={handleChange}
                   value={vesselData.gpsFromBow || ''}
                 />
@@ -313,7 +335,9 @@ const VesselConfiguration: React.FC = () => {
               <Col xs="12" md="4">
                 <Input
                   type="text"
+                  id="gpsFromCenter"
                   name="gpsFromCenter"
+                  autoComplete="off"
                   onChange={handleChange}
                   value={vesselData.gpsFromCenter || ''}
                 />
@@ -327,7 +351,7 @@ const VesselConfiguration: React.FC = () => {
         </CardBody>
         <CardFooter>
           <Button size="sm" color="primary" onClick={handleSaveVessel}>
-            <i className="fa fa-dot-circle-o" /> Save
+            <FontAwesomeIcon icon={faFloppyDisk} /> Save
           </Button>
         </CardFooter>
       </Card>

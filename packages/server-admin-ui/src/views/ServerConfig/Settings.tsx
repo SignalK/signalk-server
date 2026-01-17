@@ -13,6 +13,9 @@ import {
   FormGroup,
   FormText
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 
 import VesselConfiguration from './VesselConfiguration'
 import Logging from './Logging'
@@ -147,7 +150,7 @@ const ServerSettings: React.FC = () => {
     <div className="animated fadeIn">
       <Card>
         <CardHeader>
-          <i className="fa fa-align-justify" />
+          <FontAwesomeIcon icon={faAlignJustify} />{' '}
           <strong>Server Settings</strong>
         </CardHeader>
         <CardBody>
@@ -167,7 +170,9 @@ const ServerSettings: React.FC = () => {
                     size={5}
                     style={{ width: 'auto' }}
                     type="text"
+                    id="port"
                     name="port"
+                    autoComplete="off"
                     onChange={handleChange}
                     value={settings.port || ''}
                   />
@@ -198,7 +203,9 @@ const ServerSettings: React.FC = () => {
                     size={5}
                     style={{ width: 'auto' }}
                     type="text"
+                    id="sslport"
                     name="sslport"
+                    autoComplete="off"
                     onChange={handleChange}
                     value={settings.sslport || ''}
                   />
@@ -211,61 +218,27 @@ const ServerSettings: React.FC = () => {
             )}
             <FormGroup row>
               <Col md="2">
-                <Label>Options</Label>
+                <span className="col-form-label">Options</span>
               </Col>
-              <Col md={fieldColWidthMd}>
-                <FormGroup check>
-                  {settings.options &&
-                    Object.keys(settings.options).map((name) => {
-                      return (
-                        <div key={name}>
-                          <Label
-                            style={{ marginRight: '15px' }}
-                            className="switch switch-text switch-primary"
-                          >
-                            <Input
-                              type="checkbox"
-                              id={name}
-                              name={name}
-                              className="switch-input"
-                              onChange={handleOptionChange}
-                              checked={settings.options?.[name] || false}
-                            />
-                            <span
-                              className="switch-label"
-                              data-on="On"
-                              data-off="Off"
-                            />
-                            <span className="switch-handle" />
-                          </Label>
-                          <span style={{ lineHeight: '23px' }}>{name}</span>
-                        </div>
-                      )
-                    })}
-                </FormGroup>
-              </Col>
-            </FormGroup>
-
-            <FormGroup row>
-              <Col md="2">
-                <Label>Interfaces</Label>
-              </Col>
-              <Col md={fieldColWidthMd}>
-                <FormGroup check>
-                  {Object.keys(SettableInterfaces).map((name) => {
+              <Col xs="12" md={fieldColWidthMd}>
+                {settings.options &&
+                  Object.keys(settings.options).map((name) => {
                     return (
-                      <div key={name}>
+                      <div
+                        key={name}
+                        className="d-flex align-items-center mb-2"
+                      >
                         <Label
-                          style={{ marginRight: '15px' }}
+                          style={{ marginRight: '15px', marginBottom: 0 }}
                           className="switch switch-text switch-primary"
                         >
                           <Input
                             type="checkbox"
-                            id={name}
+                            id={`option-${name}`}
                             name={name}
                             className="switch-input"
-                            onChange={handleInterfaceChange}
-                            checked={settings.interfaces?.[name] || false}
+                            onChange={handleOptionChange}
+                            checked={settings.options?.[name] || false}
                           />
                           <span
                             className="switch-label"
@@ -274,13 +247,44 @@ const ServerSettings: React.FC = () => {
                           />
                           <span className="switch-handle" />
                         </Label>
-                        <span style={{ lineHeight: '24px' }}>
-                          {SettableInterfaces[name]}
-                        </span>
+                        <span>{name}</span>
                       </div>
                     )
                   })}
-                </FormGroup>
+              </Col>
+            </FormGroup>
+
+            <FormGroup row>
+              <Col md="2">
+                <span className="col-form-label">Interfaces</span>
+              </Col>
+              <Col xs="12" md={fieldColWidthMd}>
+                {Object.keys(SettableInterfaces).map((name) => {
+                  return (
+                    <div key={name} className="d-flex align-items-center mb-2">
+                      <Label
+                        style={{ marginRight: '15px', marginBottom: 0 }}
+                        className="switch switch-text switch-primary"
+                      >
+                        <Input
+                          type="checkbox"
+                          id={`interface-${name}`}
+                          name={name}
+                          className="switch-input"
+                          onChange={handleInterfaceChange}
+                          checked={settings.interfaces?.[name] || false}
+                        />
+                        <span
+                          className="switch-label"
+                          data-on="On"
+                          data-off="Off"
+                        />
+                        <span className="switch-handle" />
+                      </Label>
+                      <span>{SettableInterfaces[name]}</span>
+                    </div>
+                  )
+                })}
               </Col>
             </FormGroup>
             <FormGroup row>
@@ -292,7 +296,9 @@ const ServerSettings: React.FC = () => {
               <Col xs="12" md={fieldColWidthMd}>
                 <Input
                   type="text"
+                  id="pruneContextsMinutes"
                   name="pruneContextsMinutes"
+                  autoComplete="off"
                   onChange={handleChange}
                   value={settings.pruneContextsMinutes || ''}
                 />
@@ -309,7 +315,9 @@ const ServerSettings: React.FC = () => {
               <Col xs="12" md={fieldColWidthMd}>
                 <Input
                   type="text"
+                  id="loggingDirectory"
                   name="loggingDirectory"
+                  autoComplete="off"
                   onChange={handleChange}
                   value={settings.loggingDirectory || ''}
                 />
@@ -321,11 +329,16 @@ const ServerSettings: React.FC = () => {
             </FormGroup>
             <FormGroup row>
               <Col md="2">
-                <Label>Keep only most recent data log files</Label>
+                <Label htmlFor="keepMostRecentLogsOnly">
+                  Keep only most recent data log files
+                </Label>
               </Col>
-              <Col>
-                <FormGroup check>
-                  <Label className="switch switch-text switch-primary">
+              <Col xs="12" md={fieldColWidthMd}>
+                <div className="d-flex align-items-center">
+                  <Label
+                    style={{ marginRight: '15px', marginBottom: 0 }}
+                    className="switch switch-text switch-primary"
+                  >
                     <Input
                       type="checkbox"
                       name="keepMostRecentLogsOnly"
@@ -341,29 +354,40 @@ const ServerSettings: React.FC = () => {
                     />
                     <span className="switch-handle" />
                   </Label>
-                </FormGroup>
-              </Col>
-              <Col>
-                <Input
-                  type="text"
-                  name="logCountToKeep"
-                  onChange={handleChange}
-                  value={settings.logCountToKeep || ''}
-                />
-                <FormText color="muted">How many hourly files to keep</FormText>
+                  <div>
+                    <Label htmlFor="logCountToKeep" className="visually-hidden">
+                      Number of log files to keep
+                    </Label>
+                    <Input
+                      type="text"
+                      id="logCountToKeep"
+                      name="logCountToKeep"
+                      autoComplete="off"
+                      onChange={handleChange}
+                      value={settings.logCountToKeep || ''}
+                      style={{ width: '80px' }}
+                    />
+                    <FormText color="muted">
+                      How many hourly files to keep
+                    </FormText>
+                  </div>
+                </div>
               </Col>
             </FormGroup>
             <FormGroup row>
               <Col md="2">
-                <Label>
+                <Label htmlFor="apiOnly">
                   API Only Mode
                   <br />
                   <i>(Course API)</i>
                 </Label>
               </Col>
-              <Col>
-                <FormGroup check>
-                  <Label className="switch switch-text switch-primary">
+              <Col xs="12" md={fieldColWidthMd}>
+                <div className="d-flex align-items-center mb-2">
+                  <Label
+                    style={{ marginRight: '15px', marginBottom: 0 }}
+                    className="switch switch-text switch-primary"
+                  >
                     <Input
                       type="checkbox"
                       name="apiOnly"
@@ -379,18 +403,18 @@ const ServerSettings: React.FC = () => {
                     />
                     <span className="switch-handle" />
                   </Label>
-                  <FormText color="muted">
-                    Accept course operations only via HTTP requests. Destination
-                    data from NMEA sources is not used.
-                  </FormText>
-                </FormGroup>
+                </div>
+                <FormText color="muted">
+                  Accept course operations only via HTTP requests. Destination
+                  data from NMEA sources is not used.
+                </FormText>
               </Col>
             </FormGroup>
           </Form>
         </CardBody>
         <CardFooter>
           <Button size="sm" color="primary" onClick={handleSaveSettings}>
-            <i className="fa fa-dot-circle-o" /> Save
+            <FontAwesomeIcon icon={faFloppyDisk} /> Save
           </Button>{' '}
           <Badge color="danger" className="float-end">
             Restart Required

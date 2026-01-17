@@ -13,7 +13,7 @@ import {
   FormGroup,
   Table
 } from 'reactstrap'
-import moment from 'moment'
+import dayjs from 'dayjs'
 import Meta from './Meta'
 import store from './ValueEmittingStore'
 import VirtualizedDataTable from './VirtualizedDataTable'
@@ -122,28 +122,28 @@ const DataBrowser: React.FC = () => {
   const webSocketRef = useRef<WebSocketWithSK | null>(null)
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const unsubscribeStoreRef = useRef<(() => void) | null>(null)
+  const updatePath$SourceKeysRef = useRef<() => void>(() => {})
 
-  const fetchSources = useCallback(() => {
-    fetch(`/signalk/v1/api/sources`, {
+  const fetchSources = useCallback(async () => {
+    const response = await fetch(`/signalk/v1/api/sources`, {
       credentials: 'include'
     })
-      .then((response) => response.json())
-      .then((sourcesData: Sources) => {
-        Object.values(sourcesData).forEach((source) => {
-          if (source.type === 'NMEA2000') {
-            Object.keys(source).forEach((key) => {
-              const device = source[key] as SourceDevice
-              if (device && device.n2k && device.n2k.modelId) {
-                sourcesData[
-                  `${device.n2k.manufacturerCode || ''} ${device.n2k.modelId} (${key})`
-                ] = device
-                delete sourcesData[key]
-              }
-            })
+    const sourcesData: Sources = await response.json()
+
+    Object.values(sourcesData).forEach((source) => {
+      if (source.type === 'NMEA2000') {
+        Object.keys(source).forEach((key) => {
+          const device = source[key] as SourceDevice
+          if (device && device.n2k && device.n2k.modelId) {
+            sourcesData[
+              `${device.n2k.manufacturerCode || ''} ${device.n2k.modelId} (${key})`
+            ] = device
+            delete sourcesData[key]
           }
         })
-        setSources(sourcesData)
-      })
+      }
+    })
+    setSources(sourcesData)
   }, [])
 
   const updatePath$SourceKeys = useCallback(() => {
@@ -172,6 +172,11 @@ const DataBrowser: React.FC = () => {
     setPath$SourceKeys(filtered)
   }, [context, search, sourceFilterActive, selectedSources])
 
+  // Keep ref updated with latest function
+  useEffect(() => {
+    updatePath$SourceKeysRef.current = updatePath$SourceKeys
+  }, [updatePath$SourceKeys])
+
   const handleMessage = useCallback(
     (msg: DeltaMessage) => {
       if (pause) {
@@ -194,8 +199,8 @@ const DataBrowser: React.FC = () => {
               `(${update.source.sentence})`
 
             update.values.forEach((vp) => {
-              const timestamp = moment(update.timestamp)
-              const formattedTimestamp = timestamp.isSame(moment(), 'day')
+              const timestamp = dayjs(update.timestamp)
+              const formattedTimestamp = timestamp.isSame(dayjs(), 'day')
                 ? timestamp.format(TIME_ONLY_FORMAT)
                 : timestamp.format(TIMESTAMP_FORMAT)
 
@@ -241,14 +246,14 @@ const DataBrowser: React.FC = () => {
 
         // Update path keys if new paths were added or if this is the selected context
         if (isNew || (context && context === key)) {
-          updatePath$SourceKeys()
+          updatePath$SourceKeysRef.current()
           if (!hasData) {
             setHasData(true)
           }
         }
       }
     },
-    [pause, context, hasData, updatePath$SourceKeys]
+    [pause, context, hasData]
   )
 
   const subscribeToDataIfNeeded = useCallback(() => {
@@ -287,7 +292,7 @@ const DataBrowser: React.FC = () => {
         clearTimeout(updateTimeoutRef.current)
       }
       updateTimeoutRef.current = setTimeout(() => {
-        updatePath$SourceKeys()
+        updatePath$SourceKeysRef.current()
       }, 50)
     })
 
@@ -322,12 +327,8 @@ const DataBrowser: React.FC = () => {
       setSourceFilterActive(false)
 
       localStorage.setItem(contextStorageKey, value)
-
-      setTimeout(() => {
-        updatePath$SourceKeys()
-      }, 0)
     },
-    [updatePath$SourceKeys]
+    []
   )
 
   const getContextLabel = useCallback((contextKey: string) => {
@@ -367,12 +368,20 @@ const DataBrowser: React.FC = () => {
       const value = event.target.value
       setSearch(value)
       localStorage.setItem(searchStorageKey, value)
-      setTimeout(() => {
-        updatePath$SourceKeys()
-      }, 0)
     },
-    [updatePath$SourceKeys]
+    []
   )
+
+  // Update filtered paths when filters change
+  useEffect(() => {
+    updatePath$SourceKeys()
+  }, [
+    context,
+    search,
+    sourceFilterActive,
+    selectedSources,
+    updatePath$SourceKeys
+  ])
 
   const toggleMeta = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -406,9 +415,9 @@ const DataBrowser: React.FC = () => {
     [fetchSources, subscribeToDataIfNeeded, unsubscribeToData]
   )
 
-  const toggleSourceSelection = useCallback(
-    (source: string) => {
-      const newSelectedSources = new Set(selectedSources)
+  const toggleSourceSelection = useCallback((source: string) => {
+    setSelectedSources((prev) => {
+      const newSelectedSources = new Set(prev)
       const wasEmpty = newSelectedSources.size === 0
 
       if (newSelectedSources.has(source)) {
@@ -420,30 +429,22 @@ const DataBrowser: React.FC = () => {
       const shouldActivateFilter = wasEmpty && newSelectedSources.size === 1
       const shouldDeactivateFilter = newSelectedSources.size === 0
 
-      const newSourceFilterActive = shouldActivateFilter
-        ? true
-        : shouldDeactivateFilter
-          ? false
-          : sourceFilterActive
-
       localStorage.setItem(
         selectedSourcesStorageKey,
         JSON.stringify([...newSelectedSources])
       )
-      localStorage.setItem(
-        sourceFilterActiveStorageKey,
-        String(newSourceFilterActive)
-      )
 
-      setSelectedSources(newSelectedSources)
-      setSourceFilterActive(newSourceFilterActive)
+      if (shouldActivateFilter) {
+        setSourceFilterActive(true)
+        localStorage.setItem(sourceFilterActiveStorageKey, 'true')
+      } else if (shouldDeactivateFilter) {
+        setSourceFilterActive(false)
+        localStorage.setItem(sourceFilterActiveStorageKey, 'false')
+      }
 
-      setTimeout(() => {
-        updatePath$SourceKeys()
-      }, 0)
-    },
-    [selectedSources, sourceFilterActive, updatePath$SourceKeys]
-  )
+      return newSelectedSources
+    })
+  }, [])
 
   const toggleSourceFilter = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -454,12 +455,8 @@ const DataBrowser: React.FC = () => {
       )
 
       setSourceFilterActive(newSourceFilterActive)
-
-      setTimeout(() => {
-        updatePath$SourceKeys()
-      }, 0)
     },
-    [updatePath$SourceKeys]
+    []
   )
 
   const getUniquePathsForMeta = useCallback(() => {
@@ -518,7 +515,7 @@ const DataBrowser: React.FC = () => {
                 <Label className="switch switch-text switch-primary">
                   <Input
                     type="checkbox"
-                    id="Meta"
+                    id="databrowser-meta"
                     name="meta"
                     className="switch-input"
                     onChange={toggleMeta}
@@ -527,13 +524,18 @@ const DataBrowser: React.FC = () => {
                   <span className="switch-label" data-on="Yes" data-off="No" />
                   <span className="switch-handle" />
                 </Label>{' '}
-                <span style={{ whiteSpace: 'nowrap' }}>Meta data</span>
+                <Label
+                  htmlFor="databrowser-meta"
+                  style={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
+                >
+                  Meta data
+                </Label>
               </Col>
               <Col xs="6" md="2">
                 <Label className="switch switch-text switch-primary">
                   <Input
                     type="checkbox"
-                    id="Pause"
+                    id="databrowser-pause"
                     name="pause"
                     className="switch-input"
                     onChange={handlePause}
@@ -542,13 +544,18 @@ const DataBrowser: React.FC = () => {
                   <span className="switch-label" data-on="Yes" data-off="No" />
                   <span className="switch-handle" />
                 </Label>{' '}
-                Pause
+                <Label
+                  htmlFor="databrowser-pause"
+                  style={{ cursor: 'pointer' }}
+                >
+                  Pause
+                </Label>
               </Col>
               <Col xs="6" md="2">
                 <Label className="switch switch-text switch-primary">
                   <Input
                     type="checkbox"
-                    id="Raw"
+                    id="databrowser-raw"
                     name="raw"
                     className="switch-input"
                     onChange={toggleRaw}
@@ -557,18 +564,25 @@ const DataBrowser: React.FC = () => {
                   <span className="switch-label" data-on="Yes" data-off="No" />
                   <span className="switch-handle" />
                 </Label>{' '}
-                <span style={{ whiteSpace: 'nowrap' }}>Raw Values</span>
+                <Label
+                  htmlFor="databrowser-raw"
+                  style={{ whiteSpace: 'nowrap', cursor: 'pointer' }}
+                >
+                  Raw Values
+                </Label>
               </Col>
             </FormGroup>
             {context && context !== 'none' && (
               <FormGroup row>
                 <Col xs="3" md="2">
-                  <Label htmlFor="select">Search</Label>
+                  <Label htmlFor="databrowser-search">Search</Label>
                 </Col>
                 <Col xs="12" md="12">
                   <Input
                     type="text"
+                    id="databrowser-search"
                     name="search"
+                    autoComplete="off"
                     onChange={handleSearch}
                     value={search}
                   />

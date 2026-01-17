@@ -10,7 +10,7 @@ As of Signalk V 2.17.0, you'll notice that the path appears in the Data Browser 
 
 <img width="751" height="236" alt="Screenshot 2025-12-15 at 1 56 08 PM" src="https://github.com/user-attachments/assets/2514d3f7-9b6a-4f50-a6cf-d5e8868199a4" />
 
-This is a Custom Renderer. The code for it is embedded in the DataBrowser package. See: [ValueRenderer.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/src/views/DataBrowser/ValueRenderers.js).
+This is a Custom Renderer. The code for it is embedded in the DataBrowser package. See: [ValueRenderers.tsx](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/src/views/DataBrowser/ValueRenderers.tsx).
 
 As of Signalk V 2.19.0, there are additional embedded Custom Renderers for Notifications, Attitude, Direction, Meters and Large Arrays.
 
@@ -30,29 +30,35 @@ const BoldRenderer = ({ value }) => {
 }
 ```
 
-There are more interesting examples in the ValueRenderer.js file.
+There are more interesting examples in the ValueRenderers.tsx file.
 
 ## Making Your Renderer Available at Runtime
 
 - Create a plugin
 - Add your Component in a separate file (usually under [plugin dir]/src/component)
-- Add webpack includes and scripts to your package.json
+- Add build tool includes and scripts to your package.json (Webpack or Vite)
 - Add keyword "signalk-node-server-addon" to your package.json
-- Create a webpack.config.js (see any Plugin with their own configuration component) file that exports the renderer:
+- Configure Module Federation to export the renderer. Example using Webpack:
 
+```javascript
+plugins: [
+  new ModuleFederationPlugin({
+    name: "Sample renderer",
+    library: { type: "var", name: packageJson.name.replace(/[-@/]/g, "_") },
+    filename: "remoteEntry.js",
+    exposes: {
+      "./SampleRenderer": "./src/components/SampleRenderer",
+    },
+    shared: {
+      react: { singleton: true, requiredVersion: false },
+      "react-dom": { singleton: true, requiredVersion: false }
+    },
+  }),
+  ...
+]
 ```
- plugins: [
-    new ModuleFederationPlugin({
-      name: "Sample renderer",
-      library: { type: "var", name: packageJson.name.replace(/[-@/]/g, "_") },
-      filename: "remoteEntry.js",
-      exposes: {
-        "SampleRenderer": "./src/components/SampleRenderer",
-      },
-      shared: [{ react: { singleton: false, strictVersion: true } }],
-    }),
-...
-```
+
+**Important:** Configure React as a singleton with `requiredVersion: false` to share the host's React 19 instance. See [vite.config.js](https://github.com/SignalK/signalk-server/blob/master/packages/server-admin-ui/vite.config.js) for the Admin UI's configuration.
 
 - Build your plugin (`npm run build`)
 

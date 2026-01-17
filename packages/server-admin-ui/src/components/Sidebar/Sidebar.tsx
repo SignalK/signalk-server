@@ -1,8 +1,30 @@
 import React, { useMemo, useCallback, MouseEvent, ReactNode } from 'react'
 import { NavLink, Location } from 'react-router-dom'
 import { Badge, Nav, NavItem, NavLink as RsNavLink } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faGauge } from '@fortawesome/free-solid-svg-icons/faGauge'
+import { faTableCells } from '@fortawesome/free-solid-svg-icons/faTableCells'
+import { faFolder } from '@fortawesome/free-solid-svg-icons/faFolder'
+import { faBasketShopping } from '@fortawesome/free-solid-svg-icons/faBasketShopping'
+import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
+import { faShield } from '@fortawesome/free-solid-svg-icons/faShield'
+import { faBookOpen } from '@fortawesome/free-solid-svg-icons/faBookOpen'
+import { faBolt } from '@fortawesome/free-solid-svg-icons/faBolt'
+import { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { useAppSelector } from '../../store'
 import classNames from 'classnames'
+
+// Map icon names to FA6 icons
+const iconMap: Record<string, IconDefinition> = {
+  'icon-speedometer': faGauge,
+  'icon-grid': faTableCells,
+  'icon-folder': faFolder,
+  'icon-basket': faBasketShopping,
+  'icon-settings': faGear,
+  'icon-shield': faShield,
+  'icon-book-open': faBookOpen,
+  'icon-energy': faBolt
+}
 import SidebarFooter from './../SidebarFooter/SidebarFooter'
 import SidebarForm from './../SidebarForm/SidebarForm'
 import SidebarHeader from './../SidebarHeader/SidebarHeader'
@@ -218,7 +240,6 @@ export default function Sidebar({ location }: SidebarProps) {
     [location.pathname]
   )
 
-  // badge addon to NavItem
   const badge = (badgeData?: BadgeData | null): ReactNode => {
     if (badgeData) {
       const classes = classNames(badgeData.class)
@@ -231,7 +252,6 @@ export default function Sidebar({ location }: SidebarProps) {
     return null
   }
 
-  // simple wrapper for nav-title item
   const wrapper = (item: NavItemData): ReactNode => {
     return item.wrapper && item.wrapper.element
       ? React.createElement(
@@ -242,7 +262,6 @@ export default function Sidebar({ location }: SidebarProps) {
       : item.name
   }
 
-  // nav list section title
   const title = (titleItem: NavItemData, key: number): ReactNode => {
     const classes = classNames('nav-title', titleItem.class)
     return (
@@ -252,13 +271,20 @@ export default function Sidebar({ location }: SidebarProps) {
     )
   }
 
-  // nav list divider
   const divider = (dividerItem: NavItemData, key: number): ReactNode => {
     const classes = classNames('divider', dividerItem.class)
     return <li key={key} className={classes} />
   }
 
-  // nav link
+  const renderIcon = (iconClass?: string): ReactNode => {
+    if (!iconClass) return null
+    const icon = iconMap[iconClass]
+    if (icon) {
+      return <FontAwesomeIcon icon={icon} className="nav-icon" />
+    }
+    return <i className={iconClass} />
+  }
+
   const navLink = (
     item: NavItemData,
     key: number,
@@ -277,7 +303,7 @@ export default function Sidebar({ location }: SidebarProps) {
             className={classes.link}
             {...(item.props || {})}
           >
-            <i className={classes.icon} />
+            {renderIcon(item.icon)}
             {item.name}
             {badge(item.badge)}
           </RsNavLink>
@@ -289,7 +315,7 @@ export default function Sidebar({ location }: SidebarProps) {
             }
             {...(item.props || {})}
           >
-            <i className={classes.icon} />
+            {renderIcon(item.icon)}
             {item.name}
             {badge(item.badge)}
           </NavLink>
@@ -298,7 +324,6 @@ export default function Sidebar({ location }: SidebarProps) {
     )
   }
 
-  // nav item with nav link
   const navItem = (item: NavItemData, key: number): ReactNode => {
     const classes = {
       item: classNames(item.class),
@@ -311,7 +336,6 @@ export default function Sidebar({ location }: SidebarProps) {
     return navLink(item, key, classes)
   }
 
-  // nav dropdown
   const navDropdown = (item: NavItemData, key: number): ReactNode => {
     return (
       <li key={key} className={activeRoute(item.url || '')}>
@@ -320,7 +344,7 @@ export default function Sidebar({ location }: SidebarProps) {
           href="#"
           onClick={handleClick}
         >
-          <i className={item.icon} />
+          {renderIcon(item.icon)}
           {item.name}
           {badge(item.badge)}
         </a>
@@ -329,7 +353,6 @@ export default function Sidebar({ location }: SidebarProps) {
     )
   }
 
-  // nav type
   const navType = (item: NavItemData, idx: number): ReactNode =>
     item.title
       ? title(item, idx)
@@ -339,12 +362,10 @@ export default function Sidebar({ location }: SidebarProps) {
           ? navDropdown(item, idx)
           : navItem(item, idx)
 
-  // nav list
   const navList = (navItems: NavItemData[]): ReactNode[] => {
     return navItems.map((item, index) => navType(item, index))
   }
 
-  // sidebar-nav root
   return (
     <div className="sidebar">
       <SidebarHeader />

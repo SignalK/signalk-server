@@ -17,6 +17,13 @@ import {
   Badge,
   Row
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faChevronUp } from '@fortawesome/free-solid-svg-icons/faChevronUp'
+import { faChevronDown } from '@fortawesome/free-solid-svg-icons/faChevronDown'
+import { faPlug } from '@fortawesome/free-solid-svg-icons/faPlug'
+import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
+import { faOpenid } from '@fortawesome/free-brands-svg-icons/faOpenid'
 
 interface LoginStatus {
   authenticationRequired: boolean
@@ -271,14 +278,14 @@ const OIDCSettings: React.FC = () => {
   return (
     <Card>
       <CardHeader onClick={toggle} style={{ cursor: 'pointer' }}>
-        <i className="fa fa-openid" /> OIDC / SSO Authentication
+        <FontAwesomeIcon icon={faOpenid} /> OIDC / SSO Authentication
         <span className="float-end">
           {enabled && (
             <Badge color="success" className="me-2">
               Enabled
             </Badge>
           )}
-          <i className={`fa fa-chevron-${isOpen ? 'up' : 'down'}`} />
+          <FontAwesomeIcon icon={isOpen ? faChevronUp : faChevronDown} />
         </span>
       </CardHeader>
       <Collapse isOpen={isOpen}>
@@ -291,30 +298,32 @@ const OIDCSettings: React.FC = () => {
           >
             <FormGroup row>
               <Col xs="0" md="3">
-                <Label>Enable OIDC</Label>
+                <span className="col-form-label">Enable OIDC</span>
                 {renderEnvBadge('enabled')}
               </Col>
               <Col md="9">
-                <FormGroup check>
-                  <div>
-                    <Label className="switch switch-text switch-primary">
-                      <Input
-                        type="checkbox"
-                        name="enabled"
-                        className="switch-input"
-                        onChange={(e) => setEnabled(e.target.checked)}
-                        checked={enabled}
-                        disabled={isFieldDisabled('enabled')}
-                      />
-                      <span
-                        className="switch-label"
-                        data-on="Yes"
-                        data-off="No"
-                      />
-                      <span className="switch-handle" />
-                    </Label>
-                  </div>
-                </FormGroup>
+                <div className="d-flex align-items-center">
+                  <Label
+                    style={{ marginRight: '15px', marginBottom: 0 }}
+                    className="switch switch-text switch-primary"
+                  >
+                    <Input
+                      type="checkbox"
+                      id="oidc-enabled"
+                      name="enabled"
+                      className="switch-input"
+                      onChange={(e) => setEnabled(e.target.checked)}
+                      checked={enabled}
+                      disabled={isFieldDisabled('enabled')}
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
+                    />
+                    <span className="switch-handle" />
+                  </Label>
+                </div>
                 <FormText color="muted">
                   Enable OpenID Connect authentication
                 </FormText>
@@ -331,7 +340,9 @@ const OIDCSettings: React.FC = () => {
                   <Col md="8">
                     <Input
                       type="text"
+                      id="issuer"
                       name="issuer"
+                      autoComplete="off"
                       placeholder="https://auth.example.com"
                       onChange={(e) => setIssuer(e.target.value)}
                       value={issuer}
@@ -344,8 +355,9 @@ const OIDCSettings: React.FC = () => {
                       onClick={handleTestConnection}
                       disabled={isTesting || !issuer}
                     >
-                      <i
-                        className={`fa fa-${isTesting ? 'spinner fa-spin' : 'plug'}`}
+                      <FontAwesomeIcon
+                        icon={isTesting ? faSpinner : faPlug}
+                        spin={isTesting}
                       />{' '}
                       Test Connection
                     </Button>
@@ -374,7 +386,9 @@ const OIDCSettings: React.FC = () => {
               <Col xs="12" md="9">
                 <Input
                   type="text"
+                  id="clientId"
                   name="clientId"
+                  autoComplete="off"
                   placeholder="signalk-server"
                   onChange={(e) => setClientId(e.target.value)}
                   value={clientId}
@@ -394,7 +408,9 @@ const OIDCSettings: React.FC = () => {
               <Col xs="12" md="9">
                 <Input
                   type="password"
+                  id="clientSecret"
                   name="clientSecret"
+                  autoComplete="new-password"
                   placeholder={
                     clientSecretSet ? '••••••••••••••••' : 'Enter client secret'
                   }
@@ -423,7 +439,9 @@ const OIDCSettings: React.FC = () => {
               <Col xs="12" md="9">
                 <Input
                   type="text"
+                  id="providerName"
                   name="providerName"
+                  autoComplete="off"
                   placeholder="SSO Login"
                   onChange={(e) => setProviderName(e.target.value)}
                   value={providerName}
@@ -446,6 +464,7 @@ const OIDCSettings: React.FC = () => {
               <Col xs="12" md="4">
                 <Input
                   type="select"
+                  id="defaultPermission"
                   name="defaultPermission"
                   value={defaultPermission}
                   onChange={(e) => setDefaultPermission(e.target.value)}
@@ -469,7 +488,9 @@ const OIDCSettings: React.FC = () => {
               <Col xs="12" md="9">
                 <Input
                   type="text"
+                  id="adminGroups"
                   name="adminGroups"
+                  autoComplete="off"
                   placeholder="admins, sk-admin"
                   onChange={(e) => setAdminGroups(e.target.value)}
                   value={adminGroups}
@@ -489,7 +510,9 @@ const OIDCSettings: React.FC = () => {
               <Col xs="12" md="9">
                 <Input
                   type="text"
+                  id="readwriteGroups"
                   name="readwriteGroups"
+                  autoComplete="off"
                   placeholder="users, operators"
                   onChange={(e) => setReadwriteGroups(e.target.value)}
                   value={readwriteGroups}
@@ -510,7 +533,9 @@ const OIDCSettings: React.FC = () => {
               <Col xs="12" md="9">
                 <Input
                   type="text"
+                  id="groupsAttribute"
                   name="groupsAttribute"
+                  autoComplete="off"
                   placeholder="groups"
                   onChange={(e) => setGroupsAttribute(e.target.value)}
                   value={groupsAttribute}
@@ -528,30 +553,32 @@ const OIDCSettings: React.FC = () => {
 
             <FormGroup row>
               <Col xs="0" md="3">
-                <Label>Auto-Create Users</Label>
+                <span className="col-form-label">Auto-Create Users</span>
                 {renderEnvBadge('autoCreateUsers')}
               </Col>
               <Col md="9">
-                <FormGroup check>
-                  <div>
-                    <Label className="switch switch-text switch-primary">
-                      <Input
-                        type="checkbox"
-                        name="autoCreateUsers"
-                        className="switch-input"
-                        onChange={(e) => setAutoCreateUsers(e.target.checked)}
-                        checked={autoCreateUsers}
-                        disabled={isFieldDisabled('autoCreateUsers')}
-                      />
-                      <span
-                        className="switch-label"
-                        data-on="Yes"
-                        data-off="No"
-                      />
-                      <span className="switch-handle" />
-                    </Label>
-                  </div>
-                </FormGroup>
+                <div className="d-flex align-items-center">
+                  <Label
+                    style={{ marginRight: '15px', marginBottom: 0 }}
+                    className="switch switch-text switch-primary"
+                  >
+                    <Input
+                      type="checkbox"
+                      id="oidc-autoCreateUsers"
+                      name="autoCreateUsers"
+                      className="switch-input"
+                      onChange={(e) => setAutoCreateUsers(e.target.checked)}
+                      checked={autoCreateUsers}
+                      disabled={isFieldDisabled('autoCreateUsers')}
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
+                    />
+                    <span className="switch-handle" />
+                  </Label>
+                </div>
                 <FormText color="muted">
                   Automatically create local user on first OIDC login
                 </FormText>
@@ -560,30 +587,32 @@ const OIDCSettings: React.FC = () => {
 
             <FormGroup row>
               <Col xs="0" md="3">
-                <Label>Auto-Login</Label>
+                <span className="col-form-label">Auto-Login</span>
                 {renderEnvBadge('autoLogin')}
               </Col>
               <Col md="9">
-                <FormGroup check>
-                  <div>
-                    <Label className="switch switch-text switch-primary">
-                      <Input
-                        type="checkbox"
-                        name="autoLogin"
-                        className="switch-input"
-                        onChange={(e) => setAutoLogin(e.target.checked)}
-                        checked={autoLogin}
-                        disabled={isFieldDisabled('autoLogin')}
-                      />
-                      <span
-                        className="switch-label"
-                        data-on="Yes"
-                        data-off="No"
-                      />
-                      <span className="switch-handle" />
-                    </Label>
-                  </div>
-                </FormGroup>
+                <div className="d-flex align-items-center">
+                  <Label
+                    style={{ marginRight: '15px', marginBottom: 0 }}
+                    className="switch switch-text switch-primary"
+                  >
+                    <Input
+                      type="checkbox"
+                      id="oidc-autoLogin"
+                      name="autoLogin"
+                      className="switch-input"
+                      onChange={(e) => setAutoLogin(e.target.checked)}
+                      checked={autoLogin}
+                      disabled={isFieldDisabled('autoLogin')}
+                    />
+                    <span
+                      className="switch-label"
+                      data-on="Yes"
+                      data-off="No"
+                    />
+                    <span className="switch-handle" />
+                  </Label>
+                </div>
                 <FormText color="muted">
                   Automatically redirect to OIDC login when not authenticated
                 </FormText>
@@ -601,7 +630,9 @@ const OIDCSettings: React.FC = () => {
               <Col xs="12" md="9">
                 <Input
                   type="text"
+                  id="scope"
                   name="scope"
+                  autoComplete="off"
                   placeholder="openid email profile"
                   onChange={(e) => setScope(e.target.value)}
                   value={scope}
@@ -629,8 +660,9 @@ const OIDCSettings: React.FC = () => {
             onClick={handleSaveConfig}
             disabled={isSaving}
           >
-            <i
-              className={`fa fa-${isSaving ? 'spinner fa-spin' : 'dot-circle-o'}`}
+            <FontAwesomeIcon
+              icon={isSaving ? faSpinner : faFloppyDisk}
+              spin={isSaving}
             />{' '}
             Save
           </Button>

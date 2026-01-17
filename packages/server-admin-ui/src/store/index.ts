@@ -13,6 +13,7 @@ import appReducer, {
 } from './appSlice'
 import sourcePrioritiesReducer from './sourcePrioritiesSlice'
 import type { RootState, SourcePrioritiesData } from './types'
+import { openServerEventsConnection } from '../actions'
 
 // Re-export types
 export type { RootState } from './types'
@@ -55,10 +56,8 @@ const listenerMiddleware = createListenerMiddleware()
 // Handle WebSocket close - start reconnection timer
 listenerMiddleware.startListening({
   actionCreator: websocketClose,
-  effect: async (_action, listenerApi) => {
+  effect: (_action, listenerApi) => {
     if (!wsReconnectTimer) {
-      // Dynamic import to avoid circular dependency
-      const { openServerEventsConnection } = await import('../actions')
       wsReconnectTimer = setInterval(() => {
         console.log(`retry...`)
         openServerEventsConnection(listenerApi.dispatch, true)
@@ -81,7 +80,7 @@ listenerMiddleware.startListening({
 // Handle login success - reconnect WebSocket
 listenerMiddleware.startListening({
   actionCreator: loginSuccess,
-  effect: async (_action, listenerApi) => {
+  effect: (_action, listenerApi) => {
     const state = listenerApi.getState() as AppState
     if (state.webSocket) {
       // Since we're closing manually, don't let the reconnect timer start
@@ -89,7 +88,6 @@ listenerMiddleware.startListening({
         null as unknown as typeof state.webSocket.onclose
       state.webSocket.close()
     }
-    const { openServerEventsConnection } = await import('../actions')
     openServerEventsConnection(listenerApi.dispatch)
   }
 })

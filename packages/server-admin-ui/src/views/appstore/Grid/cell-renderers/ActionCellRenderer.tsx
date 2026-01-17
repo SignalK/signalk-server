@@ -14,13 +14,11 @@ import {
 } from 'reactstrap'
 import { NavLink } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faTrashCan,
-  faCloudArrowDown,
-  faGear,
-  faArrowUpRightFromSquare,
-  faLink
-} from '@fortawesome/free-solid-svg-icons'
+import { faTrashCan } from '@fortawesome/free-solid-svg-icons/faTrashCan'
+import { faCloudArrowDown } from '@fortawesome/free-solid-svg-icons/faCloudArrowDown'
+import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
+import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons/faArrowUpRightFromSquare'
+import { faLink } from '@fortawesome/free-solid-svg-icons/faLink'
 import { urlToWebapp } from '../../../Webapps/Webapp'
 import semver from 'semver'
 

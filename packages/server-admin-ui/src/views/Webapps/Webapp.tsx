@@ -1,5 +1,7 @@
 import { ReactNode } from 'react'
 import { Card, CardBody } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faTableCells } from '@fortawesome/free-solid-svg-icons/faTableCells'
 import classNames from 'classnames'
 import { toSafeModuleId } from './dynamicutilities'
 
@@ -31,8 +33,7 @@ export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {
 
   const card = {
     style: 'clearfix',
-    color: 'primary',
-    icon: `fa ${webAppInfo?.signalk?.displayName ? '' : 'icon-grid'}`
+    color: 'primary'
   }
 
   const lead = { style: 'h5 mb-0', color: card.color, classes: '' }
@@ -44,29 +45,38 @@ export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {
   )
   const header = webAppInfo?.signalk?.displayName || webAppInfo.name
   const url = urlToWebapp(webAppInfo)
+  const hasDisplayName = !!webAppInfo?.signalk?.displayName
 
-  const blockIcon = function (icon: string, appIcon: string | null = null) {
+  const blockIcon = function (appIcon: string | null = null) {
     const classes = classNames(
-      icon,
       'bg-primary',
       padding.icon,
       'font-2xl me-3 float-start'
     )
     const style: React.CSSProperties = {
       backgroundSize: 'cover',
-      backgroundImage: appIcon ? `url(/${webAppInfo.name}/${appIcon})` : 'unset'
+      backgroundImage: appIcon
+        ? `url(/${webAppInfo.name}/${appIcon})`
+        : 'unset',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
     }
     if (appIcon) {
       style.width = style.height = '72px'
     }
-    return <i className={classes} style={style} />
+    return (
+      <span className={classes} style={style}>
+        {!appIcon && !hasDisplayName && <FontAwesomeIcon icon={faTableCells} />}
+      </span>
+    )
   }
 
   return (
     <a href={url}>
       <Card>
         <CardBody className={card.style} {...attributes}>
-          {blockIcon(card.icon, webAppInfo?.signalk?.appIcon || null)}
+          {blockIcon(webAppInfo?.signalk?.appIcon || null)}
           <div className={lead.classes}>{header}</div>
           <div className="text-muted font-xs">{webAppInfo.description}</div>
         </CardBody>

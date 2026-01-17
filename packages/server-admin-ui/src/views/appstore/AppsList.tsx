@@ -23,23 +23,19 @@ export function AppListItem(app: AppListItemProps) {
         <div className="flex-grow-1 me-3">
           <h5 className="text-dark mb-0">{app.name}</h5>
           <div className="text-muted">
-            <span className="font-weight-bolder">
+            <span className="fw-bold">
               v{app.installedVersion || app.version}{' '}
             </span>
             {app.newVersion && (
               <>
                 <span className="text-secondary"> → </span>
-                <span className="font-weight-bolder text-success font-italic">
+                <span className="fw-bold text-success fst-italic">
                   v{app.newVersion}
                 </span>{' '}
               </>
             )}
             released by
-            <span className="text-nowrap font-weight-bolder">
-              {' '}
-              {app.author}
-            </span>{' '}
-            on
+            <span className="text-nowrap fw-bold"> {app.author}</span> on
             <span className="text-nowrap">
               {' '}
               {app.updated?.substring(0, 10)}

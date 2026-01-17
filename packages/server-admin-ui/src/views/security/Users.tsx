@@ -19,9 +19,14 @@ import {
   Label,
   FormGroup,
   FormText,
-  Table,
-  Row
+  Table
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
+import { faBan } from '@fortawesome/free-solid-svg-icons/faBan'
+import { faCircleInfo } from '@fortawesome/free-solid-svg-icons/faCircleInfo'
+import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import EnableSecurity from './EnableSecurity'
 
 type UserType = 'readonly' | 'readwrite' | 'admin'
@@ -53,14 +58,15 @@ export default function Users() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const selectedUserRef = useRef<HTMLDivElement>(null)
 
-  const fetchSecurityUsers = useCallback(() => {
-    fetch(`${window.serverRoutesPrefix}/security/users`, {
-      credentials: 'include'
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setUsers(data)
-      })
+  const fetchSecurityUsers = useCallback(async () => {
+    const response = await fetch(
+      `${window.serverRoutesPrefix}/security/users`,
+      {
+        credentials: 'include'
+      }
+    )
+    const data = await response.json()
+    setUsers(data)
   }, [])
 
   useEffect(() => {
@@ -91,7 +97,7 @@ export default function Users() {
     }, 0)
   }
 
-  const handleApply = (event: FormEvent) => {
+  const handleApply = async (event: FormEvent) => {
     event.preventDefault()
 
     if (!selectedUser) return
@@ -115,7 +121,7 @@ export default function Users() {
       type: selectedUser.type || 'readonly'
     }
 
-    fetch(
+    const response = await fetch(
       `${window.serverRoutesPrefix}/security/users/${selectedUser.userId}`,
       {
         method: isNew ? 'POST' : 'PUT',
@@ -126,18 +132,16 @@ export default function Users() {
         credentials: 'include'
       }
     )
-      .then((response) => response.text())
-      .then((response) => {
-        setSelectedUser(null)
-        alert(response)
-        fetchSecurityUsers()
-      })
+    const text = await response.text()
+    setSelectedUser(null)
+    alert(text)
+    fetchSecurityUsers()
   }
 
-  const deleteUser = () => {
+  const deleteUser = async () => {
     if (!selectedUser) return
 
-    fetch(
+    const response = await fetch(
       `${window.serverRoutesPrefix}/security/users/${selectedUser.userId}`,
       {
         method: 'DELETE',
@@ -147,16 +151,14 @@ export default function Users() {
         credentials: 'include'
       }
     )
-      .then((response) => response.text())
-      .then((response) => {
-        setSelectedUser(null)
-        alert(response)
-        fetchSecurityUsers()
-      })
+    const text = await response.text()
+    setSelectedUser(null)
+    alert(text)
+    fetchSecurityUsers()
   }
 
   const userClicked = (user: User) => {
-    setSelectedUser(JSON.parse(JSON.stringify(user)))
+    setSelectedUser(structuredClone(user))
     setTimeout(() => {
       selectedUserRef.current?.scrollIntoView()
     }, 0)
@@ -173,8 +175,7 @@ export default function Users() {
         <div>
           <Card>
             <CardHeader>
-              <i className="fa fa-align-justify" />
-              Users
+              <FontAwesomeIcon icon={faAlignJustify} /> Users
             </CardHeader>
             <CardBody>
               <Table hover responsive bordered striped size="sm">
@@ -215,7 +216,7 @@ export default function Users() {
             </CardBody>
             <CardFooter>
               <Button size="sm" color="primary" onClick={handleAddUser}>
-                <i className="fa fa-plus-circle" /> Add
+                <FontAwesomeIcon icon={faCirclePlus} /> Add
               </Button>
             </CardFooter>
           </Card>
@@ -224,8 +225,7 @@ export default function Users() {
             <div ref={selectedUserRef}>
               <Card>
                 <CardHeader>
-                  <i className="fa fa-align-justify" />
-                  User
+                  <FontAwesomeIcon icon={faAlignJustify} /> User
                   {selectedUser.isOIDC && (
                     <Badge color="info" className="ms-2">
                       SSO User
@@ -235,13 +235,15 @@ export default function Users() {
                 <CardBody>
                   <FormGroup row>
                     <Col md="2">
-                      <Label htmlFor="userid">User ID</Label>
+                      <Label htmlFor="userId">User ID</Label>
                     </Col>
                     <Col xs="12" md="9">
                       {selectedUser.isNew && (
                         <Input
                           type="text"
+                          id="userId"
                           name="userId"
+                          autoComplete="off"
                           value={selectedUser.userId || ''}
                           onChange={handleUserChange}
                         />
@@ -265,7 +267,7 @@ export default function Users() {
                     <FormGroup row>
                       <Col md="12">
                         <FormText color="muted">
-                          <i className="fa fa-info-circle" /> This user
+                          <FontAwesomeIcon icon={faCircleInfo} /> This user
                           authenticates via Single Sign-On. Password cannot be
                           set for SSO users.
                         </FormText>
@@ -280,7 +282,9 @@ export default function Users() {
                         <Col xs="12" md="9">
                           <Input
                             type="password"
+                            id="password"
                             name="password"
+                            autoComplete="new-password"
                             value={selectedUser.password || ''}
                             onChange={handleUserChange}
                           />
@@ -288,12 +292,16 @@ export default function Users() {
                       </FormGroup>
                       <FormGroup row>
                         <Col md="2">
-                          <Label htmlFor="text-input">Confirm Password</Label>
+                          <Label htmlFor="confirmPassword">
+                            Confirm Password
+                          </Label>
                         </Col>
                         <Col xs="12" md="9">
                           <Input
                             type="password"
+                            id="confirmPassword"
                             name="confirmPassword"
+                            autoComplete="new-password"
                             value={selectedUser.confirmPassword || ''}
                             onChange={handleUserChange}
                           />
@@ -303,11 +311,12 @@ export default function Users() {
                   )}
                   <FormGroup row>
                     <Col md="2">
-                      <Label htmlFor="select">Permissions</Label>
+                      <Label htmlFor="permissions">Permissions</Label>
                     </Col>
                     <Col xs="12" md="2">
                       <Input
                         type="select"
+                        id="permissions"
                         name="type"
                         value={selectedUser.type || 'readonly'}
                         onChange={handleUserChange}
@@ -320,27 +329,22 @@ export default function Users() {
                   </FormGroup>
                 </CardBody>
                 <CardFooter>
-                  <Row>
-                    <Col xs="4" md="1">
-                      <Button size="sm" color="primary" onClick={handleApply}>
-                        <i className="fa fa-dot-circle-o" /> Apply
-                      </Button>
-                    </Col>
-                    <Col xs="4" md="1">
-                      <Button
-                        size="sm"
-                        color="secondary"
-                        onClick={handleCancel}
-                      >
-                        <i className="fa fa-ban" /> Cancel
-                      </Button>
-                    </Col>
-                    <Col xs="4" md="10" className="text-end">
-                      <Button size="sm" color="danger" onClick={deleteUser}>
-                        <i className="fa fa-ban" /> Delete
-                      </Button>
-                    </Col>
-                  </Row>
+                  <div className="d-flex flex-wrap gap-2">
+                    <Button size="sm" color="primary" onClick={handleApply}>
+                      <FontAwesomeIcon icon={faFloppyDisk} /> Apply
+                    </Button>
+                    <Button size="sm" color="secondary" onClick={handleCancel}>
+                      <FontAwesomeIcon icon={faBan} /> Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      color="danger"
+                      className="ms-auto"
+                      onClick={deleteUser}
+                    >
+                      <FontAwesomeIcon icon={faBan} /> Delete
+                    </Button>
+                  </div>
                 </CardFooter>
               </Card>
             </div>

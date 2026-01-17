@@ -9,6 +9,9 @@ import {
   Col,
   Table
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faSignIn } from '@fortawesome/free-solid-svg-icons/faSignIn'
+import { faSignOut } from '@fortawesome/free-solid-svg-icons/faSignOut'
 import { useAppSelector } from '../../store'
 import '../../fa-pulse.css'
 
@@ -66,26 +69,16 @@ export default function Dashboard() {
     }
   }
 
-  const inputPulseIconClass = (providerStats: ProviderStats): string => {
-    return (
-      'icon-login' +
-      ((providerStats.deltaRate || 0) > 50
-        ? ' text-primary fa-pulse-fast'
-        : (providerStats.deltaRate || 0) > 0
-          ? ' text-primary fa-pulse'
-          : '')
-    )
+  const getInputPulseClass = (providerStats: ProviderStats): string => {
+    if ((providerStats.deltaRate || 0) > 50) return 'text-primary fa-pulse-fast'
+    if ((providerStats.deltaRate || 0) > 0) return 'text-primary fa-pulse'
+    return ''
   }
 
-  const outputPulseIconClass = (providerStats: ProviderStats): string => {
-    return (
-      'icon-logout' +
-      ((providerStats.writeRate || 0) > 50
-        ? ' text-primary fa-pulse-fast'
-        : (providerStats.writeRate || 0) > 0
-          ? ' text-primary fa-pulse'
-          : '')
-    )
+  const getOutputPulseClass = (providerStats: ProviderStats): string => {
+    if ((providerStats.writeRate || 0) > 50) return 'text-primary fa-pulse-fast'
+    if ((providerStats.writeRate || 0) > 0) return 'text-primary fa-pulse'
+    return ''
   }
 
   const renderActivity = (
@@ -93,18 +86,26 @@ export default function Dashboard() {
     providerStats: ProviderStats,
     linkType: string
   ): ReactNode => {
+    const iconStyle = {
+      fontSize: '18px',
+      marginLeft: '5px',
+      marginRight: '8px'
+    }
     return (
       <li key={providerId} onClick={() => navigate(`/dashboard`)}>
-        <i
-          className={inputPulseIconClass(providerStats)}
+        <FontAwesomeIcon
+          icon={faSignIn}
+          className={getInputPulseClass(providerStats)}
           style={{
+            ...iconStyle,
             color: providerStats.deltaCount ? '#039' : 'lightblue'
           }}
         />
-        <i
-          className={outputPulseIconClass(providerStats)}
+        <FontAwesomeIcon
+          icon={faSignOut}
+          className={getOutputPulseClass(providerStats)}
           style={{
-            transform: 'scaleX(-1)',
+            ...iconStyle,
             color: providerStats.writeCount ? '#039' : 'lightblue'
           }}
         />
@@ -114,23 +115,23 @@ export default function Dashboard() {
             : providerIdLink(providerId)}
         </span>
         {(providerStats.writeRate || 0) > 0 && (
-          <span className="value">
+          <span className="value" style={{ fontWeight: 'normal' }}>
             {' '}
-            {providerStats.writeRate}{' '}
+            <strong>{providerStats.writeRate}</strong>{' '}
             <span className="text-muted small">{'msg/s'}</span>{' '}
           </span>
         )}
         {(providerStats.deltaRate || 0) > 0 &&
           (providerStats.writeRate || 0) > 0 && (
-            <span className="value">
+            <span className="value" style={{ fontWeight: 'normal' }}>
               <span className="text-muted small">{','}</span>
               &#160;
             </span>
           )}
         {(providerStats.deltaRate || 0) > 0 && (
-          <span className="value">
+          <span className="value" style={{ fontWeight: 'normal' }}>
             {' '}
-            {providerStats.deltaRate}{' '}
+            <strong>{providerStats.deltaRate}</strong>{' '}
             <span className="text-muted small">
               (
               {(((providerStats.deltaRate || 0) / deltaRateNum) * 100).toFixed(

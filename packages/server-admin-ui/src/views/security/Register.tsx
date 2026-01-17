@@ -12,6 +12,9 @@ import {
   InputGroup,
   InputGroupText
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
+import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
 
 interface FormFields {
   email: string
@@ -132,7 +135,7 @@ export default function Register() {
                     </InputGroup>
                     <InputGroup className="mb-3">
                       <InputGroupText>
-                        <i className="icon-lock" />
+                        <FontAwesomeIcon icon={faLock} />
                       </InputGroupText>
                       <Input
                         name="password"
@@ -144,7 +147,7 @@ export default function Register() {
                     </InputGroup>
                     <InputGroup className="mb-0">
                       <InputGroupText>
-                        <i className="icon-lock" />
+                        <FontAwesomeIcon icon={faLock} />
                       </InputGroupText>
                       <Input
                         name="confirmPassword"
@@ -173,7 +176,8 @@ export default function Register() {
                       >
                         {isSubmitting ? (
                           <>
-                            <i className="fa fa-spinner fa-spin" /> Creating...
+                            <FontAwesomeIcon icon={faSpinner} spin />{' '}
+                            Creating...
                           </>
                         ) : (
                           'Create Account'

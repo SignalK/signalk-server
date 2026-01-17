@@ -9,7 +9,6 @@ Signal K Server provides the following ways to add web-based user interfaces to 
 1. **Standalone WebApps** are web applications that when launched, the server Admin UI disappears and the webapp controls the whole page (browser window / tab).
 
 2. **Embedded WebApps** are web applications that when launched, are **embedded in the server Admin UI**, leaving the toolbar and menu available to the user.
-   ![vesselpositions](../img/vesselpositions.png 'Vesselpositions Embedded Webapp')
 
 3. **Embedded Plugin Configuration Forms** are forms provided by a plugin that the server embeds within the _Plugin Config_ screen to replace the generic form rendered using the plugin _configuration schema_. This allows a richer set of controls to be provided for the user to configure the plugin compared to the more generice server generated form provides.
    ![calibration](../img/calibration.png 'Calibration plugin configuration form')
@@ -173,7 +172,7 @@ The Admin UI uses **React 19** with shared dependencies via Module Federation. Y
 
 2. **Use functional components** - The Admin UI is built with functional components and React hooks. While class components still work, functional components are recommended for consistency.
 
-See the vesselpositions embedded webapp/component and Calibration plugin for examples of each. It is probably easier to start with either one and modify them to suit your needs. Don't forget to change the module id and name in package.json!
+See the Calibration plugin for an example. It is probably easier to start with an existing plugin and modify it to suit your needs. Don't forget to change the module id and name in package.json!
 
 ## WebApp / Component and Admin UI / Server interfaces
 

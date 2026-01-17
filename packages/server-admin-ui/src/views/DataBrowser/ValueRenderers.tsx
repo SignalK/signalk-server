@@ -1,12 +1,10 @@
 import { Suspense, ComponentType } from 'react'
 import { toLazyDynamicComponent } from '../Webapps/dynamicutilities'
 import parse from 'html-react-parser'
-import {
-  faEye,
-  faEyeSlash,
-  faBell,
-  faBellSlash
-} from '@fortawesome/free-solid-svg-icons'
+import { faEye } from '@fortawesome/free-solid-svg-icons/faEye'
+import { faEyeSlash } from '@fortawesome/free-solid-svg-icons/faEyeSlash'
+import { faBell } from '@fortawesome/free-solid-svg-icons/faBell'
+import { faBellSlash } from '@fortawesome/free-solid-svg-icons/faBellSlash'
 
 import '../../blinking-circle.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -362,14 +360,22 @@ const SatellitesInViewRenderer = ({ value }: SatellitesInViewRendererProps) => {
   return (
     <div className="text-primary">
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-        <svg width={size} height={size} style={{ border: '1px solid #ccc' }}>
+        <svg
+          width={size}
+          height={size}
+          style={{
+            border: '2px solid #666',
+            borderRadius: '4px',
+            backgroundColor: '#f8f9fa'
+          }}
+        >
           {/* Elevation circles (30° intervals) */}
           <circle
             cx={center}
             cy={center}
             r={maxRadius}
             fill="none"
-            stroke="#e0e0e0"
+            stroke="#999"
             strokeWidth="1"
           />
           <circle
@@ -377,7 +383,7 @@ const SatellitesInViewRenderer = ({ value }: SatellitesInViewRendererProps) => {
             cy={center}
             r={(maxRadius * 2) / 3}
             fill="none"
-            stroke="#e0e0e0"
+            stroke="#aaa"
             strokeWidth="1"
           />
           <circle
@@ -385,7 +391,7 @@ const SatellitesInViewRenderer = ({ value }: SatellitesInViewRendererProps) => {
             cy={center}
             r={(maxRadius * 1) / 3}
             fill="none"
-            stroke="#e0e0e0"
+            stroke="#aaa"
             strokeWidth="1"
           />
 
@@ -395,7 +401,7 @@ const SatellitesInViewRenderer = ({ value }: SatellitesInViewRendererProps) => {
             y1={20}
             x2={center}
             y2={size - 20}
-            stroke="#e0e0e0"
+            stroke="#999"
             strokeWidth="1"
           />
           <line
@@ -403,12 +409,19 @@ const SatellitesInViewRenderer = ({ value }: SatellitesInViewRendererProps) => {
             y1={center}
             x2={size - 20}
             y2={center}
-            stroke="#e0e0e0"
+            stroke="#999"
             strokeWidth="1"
           />
 
           {/* Direction labels */}
-          <text x={center} y={15} textAnchor="middle" fontSize="12" fill="#666">
+          <text
+            x={center}
+            y={15}
+            textAnchor="middle"
+            fontSize="12"
+            fill="#333"
+            fontWeight="bold"
+          >
             N
           </text>
           <text
@@ -416,7 +429,8 @@ const SatellitesInViewRenderer = ({ value }: SatellitesInViewRendererProps) => {
             y={size - 5}
             textAnchor="middle"
             fontSize="12"
-            fill="#666"
+            fill="#333"
+            fontWeight="bold"
           >
             S
           </text>
@@ -425,7 +439,8 @@ const SatellitesInViewRenderer = ({ value }: SatellitesInViewRendererProps) => {
             y={center + 4}
             textAnchor="middle"
             fontSize="12"
-            fill="#666"
+            fill="#333"
+            fontWeight="bold"
           >
             W
           </text>
@@ -434,7 +449,8 @@ const SatellitesInViewRenderer = ({ value }: SatellitesInViewRendererProps) => {
             y={center + 4}
             textAnchor="middle"
             fontSize="12"
-            fill="#666"
+            fill="#333"
+            fontWeight="bold"
           >
             E
           </text>
@@ -444,7 +460,7 @@ const SatellitesInViewRenderer = ({ value }: SatellitesInViewRendererProps) => {
             x={center + maxRadius + 5}
             y={center + 4}
             fontSize="10"
-            fill="#999"
+            fill="#666"
           >
             0°
           </text>
@@ -452,7 +468,7 @@ const SatellitesInViewRenderer = ({ value }: SatellitesInViewRendererProps) => {
             x={center + (maxRadius * 2) / 3 + 5}
             y={center + 4}
             fontSize="10"
-            fill="#999"
+            fill="#666"
           >
             30°
           </text>
@@ -460,11 +476,11 @@ const SatellitesInViewRenderer = ({ value }: SatellitesInViewRendererProps) => {
             x={center + (maxRadius * 1) / 3 + 5}
             y={center + 4}
             fontSize="10"
-            fill="#999"
+            fill="#666"
           >
             60°
           </text>
-          <text x={center + 5} y={center + 4} fontSize="10" fill="#999">
+          <text x={center + 5} y={center + 4} fontSize="10" fill="#666">
             90°
           </text>
 

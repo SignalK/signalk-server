@@ -1,10 +1,11 @@
 /* Virtual Table - CSS Grid layout for virtualization */
+/* Uses Bootstrap 5 CSS custom properties for consistency */
 
 .virtual-table {
   width: 100%;
-  border: 1px solid #c8ced3;
+  border: 1px solid var(--bs-border-color, #c2cfd6);
   border-radius: 0.25rem;
-  background-color: #fff;
+  background-color: var(--bs-body-bg, #fff);
 }
 
 .virtual-table-header {
@@ -12,8 +13,8 @@
   grid-template-columns:
     minmax(150px, 1.5fr) minmax(120px, 2fr) minmax(80px, 0.8fr)
     minmax(120px, 1.2fr);
-  background-color: #f0f3f5;
-  border-bottom: 2px solid #c8ced3;
+  background-color: var(--bs-tertiary-bg, #f0f3f5);
+  border-bottom: 2px solid var(--bs-border-color, #c2cfd6);
   position: sticky;
   top: 55px; /* Fixed header height */
   z-index: 1; /* Low z-index to allow dropdowns to appear above */
@@ -23,7 +24,7 @@
   padding: 0.5rem 0.25rem;
   font-size: 0.8rem;
   font-weight: 600;
-  border-right: 1px solid #c8ced3;
+  border-right: 1px solid var(--bs-border-color, #c2cfd6);
 }
 
 .virtual-table-header-cell:last-child {
@@ -39,20 +40,20 @@
   grid-template-columns:
     minmax(150px, 1.5fr) minmax(120px, 2fr) minmax(80px, 0.8fr)
     minmax(120px, 1.2fr);
-  border-bottom: 1px solid #c8ced3;
+  border-bottom: 1px solid var(--bs-border-color, #c2cfd6);
   font-size: 0.875rem;
 }
 
 .virtual-table-row:hover {
-  background-color: rgba(0, 0, 0, 0.03);
+  background-color: var(--bs-tertiary-bg, #f0f3f5);
 }
 
 .virtual-table-row.striped {
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--bs-tertiary-bg, #f0f3f5);
 }
 
 .virtual-table-row.striped:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--bs-secondary-bg, #e2e6ea);
 }
 
 .virtual-table-cell {
@@ -60,7 +61,7 @@
   vertical-align: top;
   word-wrap: break-word;
   word-break: break-word;
-  border-right: 1px solid #c8ced3;
+  border-right: 1px solid var(--bs-border-color, #c2cfd6);
   overflow: hidden;
 }
 
@@ -97,7 +98,7 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background-color: #28a745;
+  background-color: var(--bs-success, #00cd79);
   animation: highlightFade 15s ease-out;
 }
 
@@ -250,7 +251,7 @@
 .virtual-table-info {
   padding: 0.5rem;
   font-size: 0.8rem;
-  color: #6c757d;
-  background-color: #f8f9fa;
-  border-top: 1px solid #c8ced3;
+  color: var(--bs-secondary-color, #6c757d);
+  background-color: var(--bs-tertiary-bg, #f0f3f5);
+  border-top: 1px solid var(--bs-border-color, #c2cfd6);
 }

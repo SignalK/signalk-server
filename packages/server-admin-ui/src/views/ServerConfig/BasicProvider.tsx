@@ -169,12 +169,13 @@ export default function BasicProvider({
       </FormGroup>
       <FormGroup row>
         <Col xs="3" md="3">
-          <Label>Enabled</Label>
+          <Label htmlFor="provider-enabled">Enabled</Label>
         </Col>
         <Col xs="2" md="3">
           <Label className="switch switch-text switch-primary">
             <Input
               type="checkbox"
+              id="provider-enabled"
               name="enabled"
               className="switch-input"
               onChange={(event) => onChange(event)}
@@ -366,12 +367,13 @@ function LoggingInput({ value, onChange }: LoggingInputProps) {
   return (
     <FormGroup row>
       <Col xs="3" md="3">
-        <Label>Data Logging</Label>
+        <Label htmlFor="provider-logging">Data Logging</Label>
       </Col>
       <Col xs="2" md="3">
         <Label className="switch switch-text switch-primary">
           <Input
             type="checkbox"
+            id="provider-logging"
             name="logging"
             className="switch-input"
             onChange={(event) => onChange(event)}
@@ -397,12 +399,13 @@ function ValidateChecksumInput({
   return (
     <FormGroup row>
       <Col xs="3" md="3">
-        <Label>Validate Checksum</Label>
+        <Label htmlFor="provider-validateChecksum">Validate Checksum</Label>
       </Col>
       <Col xs="2" md="3">
         <Label className="switch switch-text switch-primary">
           <Input
             type="checkbox"
+            id="provider-validateChecksum"
             name="options.validateChecksum"
             className="switch-input"
             onChange={(event) => {
@@ -425,12 +428,13 @@ function OverrideTimestamps({ value, onChange }: OverrideTimestampsProps) {
   return (
     <FormGroup row>
       <Col xs="3" md="3">
-        <Label>Override timestamps</Label>
+        <Label htmlFor="provider-overrideTimestamp">Override timestamps</Label>
       </Col>
       <Col xs="2" md="3">
         <Label className="switch switch-text switch-primary">
           <Input
             type="checkbox"
+            id="provider-overrideTimestamp"
             name="options.overrideTimestamp"
             className="switch-input"
             onChange={onChange}
@@ -454,12 +458,13 @@ function RemoveNullsInput({
   return (
     <FormGroup row>
       <Col xs="3" md="3">
-        <Label>Remove NULL characters</Label>
+        <Label htmlFor="provider-removeNulls">Remove NULL characters</Label>
       </Col>
       <Col xs="2" md="3">
         <Label className="switch switch-text switch-primary">
           <Input
             type="checkbox"
+            id="provider-removeNulls"
             name="options.removeNulls"
             className="switch-input"
             onChange={(event) => onChange(event)}
@@ -483,12 +488,13 @@ function AppendChecksum({
   return (
     <FormGroup row>
       <Col xs="3" md="3">
-        <Label>Append Checksum</Label>
+        <Label htmlFor="provider-appendChecksum">Append Checksum</Label>
       </Col>
       <Col xs="2" md="1">
         <Label className="switch switch-text switch-primary">
           <Input
             type="checkbox"
+            id="provider-appendChecksum"
             name="options.appendChecksum"
             className="switch-input"
             onChange={(event) => onChange(event)}
@@ -759,12 +765,15 @@ function Suppress0183Checkbox({
   return (
     <FormGroup row>
       <Col xs="3" md="3">
-        <Label>Suppress nmea0183 event</Label>
+        <Label htmlFor="provider-suppress0183event">
+          Suppress nmea0183 event
+        </Label>
       </Col>
       <Col xs="1" md="1">
         <Label className="switch switch-text switch-primary">
           <Input
             type="checkbox"
+            id="provider-suppress0183event"
             name="options.suppress0183event"
             className="switch-input"
             onChange={(event) => onChange(event)}
@@ -793,12 +802,13 @@ function UseCanNameInput({
   return (
     <FormGroup row>
       <Col xs="3" md="3">
-        <Label>Use Can NAME in source data</Label>
+        <Label htmlFor="provider-useCanName">Use Can NAME in source data</Label>
       </Col>
       <Col xs="2" md="3">
         <Label className="switch switch-text switch-primary">
           <Input
             type="checkbox"
+            id="provider-useCanName"
             name="options.useCanName"
             className="switch-input"
             onChange={(event) => onChange(event)}
@@ -822,12 +832,15 @@ function CamelCaseCompatInput({
   return (
     <FormGroup row>
       <Col xs="3" md="3">
-        <Label>CamcelCase Compat (for legacy N2K plugins)</Label>
+        <Label htmlFor="provider-useCamelCompat">
+          CamcelCase Compat (for legacy N2K plugins)
+        </Label>
       </Col>
       <Col xs="2" md="3">
         <Label className="switch switch-text switch-primary">
           <Input
             type="checkbox"
+            id="provider-useCamelCompat"
             name="options.useCamelCompat"
             className="switch-input"
             onChange={(event) => onChange(event)}
@@ -853,12 +866,15 @@ function CollectNetworkStatsInput({
   return (
     <FormGroup row>
       <Col xs="3" md="3">
-        <Label>Collect Network Statistics</Label>
+        <Label htmlFor="provider-sendNetworkStats">
+          Collect Network Statistics
+        </Label>
       </Col>
       <Col xs="2" md="3">
         <Label className="switch switch-text switch-primary">
           <Input
             type="checkbox"
+            id="provider-sendNetworkStats"
             name="options.sendNetworkStats"
             className="switch-input"
             onChange={(event) => onChange(event)}
@@ -1104,14 +1120,16 @@ function SignalK({ value, onChange }: TypeComponentProps) {
             {value.options.type === 'wss' && (
               <FormGroup row>
                 <Col xs="0" md="3">
-                  <Label>Allow self signed certificates</Label>
+                  <Label htmlFor="provider-selfsignedcert">
+                    Allow self signed certificates
+                  </Label>
                 </Col>
                 <Col xs="12" md="8">
                   <div>
                     <Label className="switch switch-text switch-primary">
                       <Input
                         type="checkbox"
-                        id="options.selfsignedcert"
+                        id="provider-selfsignedcert"
                         name="options.selfsignedcert"
                         className="switch-input"
                         onChange={onChange}

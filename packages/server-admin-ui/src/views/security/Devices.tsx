@@ -17,9 +17,12 @@ import {
   Col,
   Label,
   FormGroup,
-  Table,
-  Row
+  Table
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
+import { faBan } from '@fortawesome/free-solid-svg-icons/faBan'
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import EnableSecurity from './EnableSecurity'
 
 type PermissionType = 'readonly' | 'readwrite' | 'admin'
@@ -48,14 +51,15 @@ export default function Devices() {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
   const selectedDeviceRef = useRef<HTMLDivElement>(null)
 
-  const fetchSecurityDevices = useCallback(() => {
-    fetch(`${window.serverRoutesPrefix}/security/devices`, {
-      credentials: 'include'
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setDevices(data)
-      })
+  const fetchSecurityDevices = useCallback(async () => {
+    const response = await fetch(
+      `${window.serverRoutesPrefix}/security/devices`,
+      {
+        credentials: 'include'
+      }
+    )
+    const data = await response.json()
+    setDevices(data)
   }, [])
 
   useEffect(() => {
@@ -74,7 +78,7 @@ export default function Devices() {
     )
   }
 
-  const handleApply = (event: FormEvent) => {
+  const handleApply = async (event: FormEvent) => {
     event.preventDefault()
 
     if (!selectedDevice) return
@@ -84,7 +88,7 @@ export default function Devices() {
       description: selectedDevice.description
     }
 
-    fetch(
+    const response = await fetch(
       `${window.serverRoutesPrefix}/security/devices/${selectedDevice.clientId}`,
       {
         method: 'PUT',
@@ -95,18 +99,16 @@ export default function Devices() {
         credentials: 'include'
       }
     )
-      .then((response) => response.text())
-      .then((response) => {
-        setSelectedDevice(null)
-        alert(response)
-        fetchSecurityDevices()
-      })
+    const text = await response.text()
+    setSelectedDevice(null)
+    alert(text)
+    fetchSecurityDevices()
   }
 
-  const deleteDevice = () => {
+  const deleteDevice = async () => {
     if (!selectedDevice) return
 
-    fetch(
+    const response = await fetch(
       `${window.serverRoutesPrefix}/security/devices/${selectedDevice.clientId}`,
       {
         method: 'DELETE',
@@ -116,16 +118,14 @@ export default function Devices() {
         credentials: 'include'
       }
     )
-      .then((response) => response.text())
-      .then((response) => {
-        setSelectedDevice(null)
-        alert(response)
-        fetchSecurityDevices()
-      })
+    const text = await response.text()
+    setSelectedDevice(null)
+    alert(text)
+    fetchSecurityDevices()
   }
 
   const deviceClicked = (device: Device) => {
-    setSelectedDevice(JSON.parse(JSON.stringify(device)))
+    setSelectedDevice(structuredClone(device))
     setTimeout(() => {
       selectedDeviceRef.current?.scrollIntoView()
     }, 0)
@@ -142,8 +142,7 @@ export default function Devices() {
         <div>
           <Card>
             <CardHeader>
-              <i className="fa fa-align-justify" />
-              Devices
+              <FontAwesomeIcon icon={faAlignJustify} /> Devices
             </CardHeader>
             <CardBody>
               <Table hover responsive bordered striped size="sm">
@@ -177,16 +176,17 @@ export default function Devices() {
             <div ref={selectedDeviceRef}>
               <Card>
                 <CardHeader>
-                  <i className="fa fa-align-justify" />
-                  Device
+                  <FontAwesomeIcon icon={faAlignJustify} /> Device
                 </CardHeader>
                 <CardBody>
                   <FormGroup row>
                     <Col md="2">
-                      <Label htmlFor="clientId">Client ID</Label>
+                      <Label>Client ID</Label>
                     </Col>
                     <Col xs="12" md="9">
-                      <Label>{selectedDevice.clientId}</Label>
+                      <span className="form-control-plaintext">
+                        {selectedDevice.clientId}
+                      </span>
                     </Col>
                   </FormGroup>
                   <FormGroup row>
@@ -198,7 +198,9 @@ export default function Devices() {
                         size={60}
                         style={{ width: 'auto' }}
                         type="text"
+                        id="description"
                         name="description"
+                        autoComplete="off"
                         onChange={handleDeviceChange}
                         value={selectedDevice.description || ''}
                       />
@@ -206,12 +208,13 @@ export default function Devices() {
                   </FormGroup>
                   <FormGroup row>
                     <Col md="2">
-                      <Label htmlFor="select">Permissions</Label>
+                      <Label htmlFor="permissions">Permissions</Label>
                     </Col>
                     <Col xs="12" md="2">
                       {!selectedDevice.requestedPermissions && (
                         <Input
                           type="select"
+                          id="permissions"
                           name="permissions"
                           value={selectedDevice.permissions || 'readonly'}
                           onChange={handleDeviceChange}
@@ -222,35 +225,30 @@ export default function Devices() {
                         </Input>
                       )}
                       {selectedDevice.requestedPermissions && (
-                        <Label>
+                        <span className="form-control-plaintext">
                           {convertPermissions(selectedDevice.permissions)}
-                        </Label>
+                        </span>
                       )}
                     </Col>
                   </FormGroup>
                 </CardBody>
                 <CardFooter>
-                  <Row>
-                    <Col xs="4" md="1">
-                      <Button size="sm" color="primary" onClick={handleApply}>
-                        <i className="fa fa-dot-circle-o" /> Apply
-                      </Button>
-                    </Col>
-                    <Col xs="4" md="1">
-                      <Button
-                        size="sm"
-                        color="secondary"
-                        onClick={handleCancel}
-                      >
-                        <i className="fa fa-ban" /> Cancel
-                      </Button>
-                    </Col>
-                    <Col xs="4" md="10" className="text-end">
-                      <Button size="sm" color="danger" onClick={deleteDevice}>
-                        <i className="fa fa-ban" /> Delete
-                      </Button>
-                    </Col>
-                  </Row>
+                  <div className="d-flex flex-wrap gap-2">
+                    <Button size="sm" color="primary" onClick={handleApply}>
+                      <FontAwesomeIcon icon={faFloppyDisk} /> Apply
+                    </Button>
+                    <Button size="sm" color="secondary" onClick={handleCancel}>
+                      <FontAwesomeIcon icon={faBan} /> Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      color="danger"
+                      className="ms-auto"
+                      onClick={deleteDevice}
+                    >
+                      <FontAwesomeIcon icon={faBan} /> Delete
+                    </Button>
+                  </div>
                 </CardFooter>
               </Card>
             </div>

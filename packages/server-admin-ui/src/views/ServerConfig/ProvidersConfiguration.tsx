@@ -12,6 +12,10 @@ import {
   Table,
   Row
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faBan } from '@fortawesome/free-solid-svg-icons/faBan'
+import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
+import { faCircleDot } from '@fortawesome/free-regular-svg-icons/faCircleDot'
 
 import BasicProvider from './BasicProvider'
 import SourcePriorities from './SourcePriorities'
@@ -49,34 +53,29 @@ const ProvidersConfiguration: React.FC = () => {
 
   const selectedProviderRef = useRef<HTMLDivElement>(null)
 
-  const fetchProviders = useCallback(() => {
-    fetch(`${window.serverRoutesPrefix}/providers`, {
+  const fetchProviders = useCallback(async () => {
+    const response = await fetch(`${window.serverRoutesPrefix}/providers`, {
       credentials: 'include'
     })
-      .then((response) => response.json())
-      .then((data: Provider[]) => {
-        let foundProvider: Provider | undefined
-        let foundIndex: number | undefined
+    const data: Provider[] = await response.json()
 
-        if (params.providerId) {
-          foundProvider = data.find(
-            (provider) => provider.id === params.providerId
-          )
-          foundIndex = data.findIndex(
-            (provider) => provider.id === params.providerId
-          )
-        }
+    let foundProvider: Provider | undefined
+    let foundIndex: number | undefined
 
-        if (foundProvider) {
-          foundProvider.originalId = foundProvider.id
-        }
+    if (params.providerId) {
+      foundProvider = data.find((provider) => provider.id === params.providerId)
+      foundIndex = data.findIndex(
+        (provider) => provider.id === params.providerId
+      )
+    }
 
-        setProviders(data)
-        setSelectedProvider(
-          foundProvider ? JSON.parse(JSON.stringify(foundProvider)) : null
-        )
-        setSelectedIndex(foundIndex ?? -1)
-      })
+    if (foundProvider) {
+      foundProvider.originalId = foundProvider.id
+    }
+
+    setProviders(data)
+    setSelectedProvider(foundProvider ? structuredClone(foundProvider) : null)
+    setSelectedIndex(foundIndex ?? -1)
   }, [params.providerId])
 
   const runDiscovery = useCallback(() => {
@@ -126,7 +125,7 @@ const ProvidersConfiguration: React.FC = () => {
       editable: true
     }
 
-    setSelectedProvider(JSON.parse(JSON.stringify(newProvider)))
+    setSelectedProvider(structuredClone(newProvider))
     setSelectedIndex(providers.length - 1)
 
     setTimeout(() => {
@@ -134,7 +133,7 @@ const ProvidersConfiguration: React.FC = () => {
     }, 0)
   }, [providers.length])
 
-  const handleApply = useCallback(() => {
+  const handleApply = useCallback(async () => {
     if (!selectedProvider) return
 
     const isNew = selectedProvider.isNew
@@ -144,78 +143,81 @@ const ProvidersConfiguration: React.FC = () => {
 
     const id = selectedProvider.originalId
 
-    fetch(`${window.serverRoutesPrefix}/providers/${id && !isNew ? id : ''}`, {
-      method: isNew ? 'POST' : 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(providerToSave),
-      credentials: 'include'
-    })
-      .then((response) => {
-        if (response.ok) {
-          const provider = JSON.parse(JSON.stringify(selectedProvider))
-          delete provider.isNew
-          delete provider.wasDiscovered
+    const response = await fetch(
+      `${window.serverRoutesPrefix}/providers/${id && !isNew ? id : ''}`,
+      {
+        method: isNew ? 'POST' : 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(providerToSave),
+        credentials: 'include'
+      }
+    )
 
-          setProviders((prev) => {
-            const newProviders = [...prev]
-            if (isNew) {
-              newProviders.push(provider)
-            } else if (selectedIndex >= 0) {
-              newProviders[selectedIndex] = provider
-            }
-            return newProviders
-          })
+    if (response.ok) {
+      const provider = structuredClone(selectedProvider)
+      delete provider.isNew
+      delete provider.wasDiscovered
 
-          if (wasDiscovered && discoveredProviders) {
-            // Note: discoveredProviders state is managed by Redux
-            // The parent component should handle this
-          }
-
-          setSelectedProvider(null)
-          setSelectedIndex(-1)
-          navigate('/serverConfiguration/connections/-')
+      setProviders((prev) => {
+        const newProviders = [...prev]
+        if (isNew) {
+          newProviders.push(provider)
+        } else if (selectedIndex >= 0) {
+          newProviders[selectedIndex] = provider
         }
-        return response.text()
+        return newProviders
       })
-      .then((text) => {
-        alert(text)
-      })
+
+      if (wasDiscovered && discoveredProviders) {
+        // Note: discoveredProviders state is managed by Redux
+        // The parent component should handle this
+      }
+
+      setSelectedProvider(null)
+      setSelectedIndex(-1)
+      navigate('/serverConfiguration/connections/-')
+    }
+
+    const text = await response.text()
+    alert(text)
   }, [selectedProvider, selectedIndex, discoveredProviders, navigate])
 
   const handleCancel = useCallback(() => {
     setSelectedProvider(null)
   }, [])
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback(async () => {
     if (!selectedProvider) return
 
-    fetch(`${window.serverRoutesPrefix}/providers/${selectedProvider.id}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include'
+    const response = await fetch(
+      `${window.serverRoutesPrefix}/providers/${selectedProvider.id}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      }
+    )
+    const text = await response.text()
+
+    setProviders((prev) => {
+      const newProviders = [...prev]
+      if (selectedIndex >= 0) {
+        newProviders.splice(selectedIndex, 1)
+      }
+      return newProviders
     })
-      .then((response) => response.text())
-      .then((response) => {
-        setProviders((prev) => {
-          const newProviders = [...prev]
-          if (selectedIndex >= 0) {
-            newProviders.splice(selectedIndex, 1)
-          }
-          return newProviders
-        })
-        setSelectedProvider(null)
-        setSelectedIndex(-1)
-        alert(response)
-      })
+    setSelectedProvider(null)
+    setSelectedIndex(-1)
+    alert(text)
   }, [selectedProvider, selectedIndex])
 
   const providerClicked = useCallback((provider: Provider, index: number) => {
     setSelectedProvider({
-      ...JSON.parse(JSON.stringify(provider)),
+      ...structuredClone(provider),
       originalId: provider.id
     })
     setSelectedIndex(index)
@@ -314,7 +316,7 @@ const ProvidersConfiguration: React.FC = () => {
         </CardBody>
         <CardFooter>
           <Button size="sm" color="primary" onClick={handleAddProvider}>
-            <i className="fa fa-plus-circle" /> Add
+            <FontAwesomeIcon icon={faCirclePlus} /> Add
           </Button>
         </CardFooter>
       </Card>
@@ -342,31 +344,28 @@ const ProvidersConfiguration: React.FC = () => {
             </CardBody>
             <CardFooter>
               {selectedProvider.editable ? (
-                <Row>
-                  <Col xs="4" md="1">
-                    <Button size="sm" color="primary" onClick={handleApply}>
-                      <i className="fa fa-dot-circle-o" /> Apply
-                    </Button>
-                  </Col>
-                  <Col xs="4" md="1">
-                    <Button size="sm" color="secondary" onClick={handleCancel}>
-                      <i className="fa fa-ban" /> Cancel
-                    </Button>
-                  </Col>
-                  <Col xs="4" md="10" className="text-end">
-                    <Button size="sm" color="danger" onClick={handleDelete}>
-                      <i className="fa fa-ban" /> Delete
-                    </Button>
-                  </Col>
-                </Row>
+                <div className="d-flex flex-wrap gap-2">
+                  <Button size="sm" color="primary" onClick={handleApply}>
+                    <FontAwesomeIcon icon={faCircleDot} /> Apply
+                  </Button>
+                  <Button size="sm" color="secondary" onClick={handleCancel}>
+                    <FontAwesomeIcon icon={faBan} /> Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    color="danger"
+                    className="ms-auto"
+                    onClick={handleDelete}
+                  >
+                    <FontAwesomeIcon icon={faBan} /> Delete
+                  </Button>
+                </div>
               ) : (
-                <Row>
-                  <Col xs="4" md="12" className="text-end">
-                    <Button size="sm" color="danger" onClick={handleDelete}>
-                      <i className="fa fa-ban" /> Delete
-                    </Button>
-                  </Col>
-                </Row>
+                <div className="text-end">
+                  <Button size="sm" color="danger" onClick={handleDelete}>
+                    <FontAwesomeIcon icon={faBan} /> Delete
+                  </Button>
+                </div>
               )}
             </CardFooter>
           </Card>

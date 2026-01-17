@@ -10,6 +10,8 @@ import {
   ListGroup,
   ListGroupItem
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
 
 const Logging: React.FC = () => {
   const [hasData, setHasData] = useState(false)
@@ -89,7 +91,7 @@ const Logging: React.FC = () => {
         <Col sm="12" xl="12">
           <Card>
             <CardHeader>
-              <i className="fa fa-align-justify" />
+              <FontAwesomeIcon icon={faAlignJustify} />{' '}
               <strong>Data Logfiles</strong>
             </CardHeader>
             <CardBody>

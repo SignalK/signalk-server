@@ -13,6 +13,9 @@ import {
   FormGroup,
   FormText
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import EnableSecurity from './EnableSecurity'
 import OIDCSettings from './OIDCSettings'
 
@@ -93,8 +96,7 @@ export default function Settings() {
         <div>
           <Card>
             <CardHeader>
-              <i className="fa fa-align-justify" />
-              Settings
+              <FontAwesomeIcon icon={faAlignJustify} /> Settings
             </CardHeader>
             <CardBody>
               <Form
@@ -105,90 +107,104 @@ export default function Settings() {
               >
                 <FormGroup row>
                   <Col xs="0" md="3">
-                    <Label>Allow Readonly Access</Label>
+                    <span className="col-form-label">
+                      Allow Readonly Access
+                    </span>
                   </Col>
                   <Col md="9">
-                    <FormGroup check>
-                      <div>
-                        <Label className="switch switch-text switch-primary">
-                          <Input
-                            type="checkbox"
-                            name="allow_readonly"
-                            className="switch-input"
-                            onChange={handleChange}
-                            checked={config.allow_readonly}
-                          />
-                          <span
-                            className="switch-label"
-                            data-on="Yes"
-                            data-off="No"
-                          />
-                          <span className="switch-handle" />
-                        </Label>
-                      </div>
-                    </FormGroup>
+                    <div className="d-flex align-items-center">
+                      <Label
+                        style={{ marginRight: '15px', marginBottom: 0 }}
+                        className="switch switch-text switch-primary"
+                      >
+                        <Input
+                          type="checkbox"
+                          id="security-allow_readonly"
+                          name="allow_readonly"
+                          className="switch-input"
+                          onChange={handleChange}
+                          checked={config.allow_readonly}
+                        />
+                        <span
+                          className="switch-label"
+                          data-on="Yes"
+                          data-off="No"
+                        />
+                        <span className="switch-handle" />
+                      </Label>
+                    </div>
                   </Col>
                 </FormGroup>
                 <FormGroup row>
                   <Col xs="0" md="3">
-                    <Label>Allow New User Registration</Label>
+                    <span className="col-form-label">
+                      Allow New User Registration
+                    </span>
                   </Col>
                   <Col md="9">
-                    <FormGroup check>
-                      <div>
-                        <Label className="switch switch-text switch-primary">
-                          <Input
-                            type="checkbox"
-                            name="allowNewUserRegistration"
-                            className="switch-input"
-                            onChange={handleChange}
-                            checked={config.allowNewUserRegistration}
-                          />
-                          <span
-                            className="switch-label"
-                            data-on="Yes"
-                            data-off="No"
-                          ></span>
-                          <span className="switch-handle"></span>
-                        </Label>
-                      </div>
-                    </FormGroup>
+                    <div className="d-flex align-items-center">
+                      <Label
+                        style={{ marginRight: '15px', marginBottom: 0 }}
+                        className="switch switch-text switch-primary"
+                      >
+                        <Input
+                          type="checkbox"
+                          id="security-allowNewUserRegistration"
+                          name="allowNewUserRegistration"
+                          className="switch-input"
+                          onChange={handleChange}
+                          checked={config.allowNewUserRegistration}
+                        />
+                        <span
+                          className="switch-label"
+                          data-on="Yes"
+                          data-off="No"
+                        />
+                        <span className="switch-handle" />
+                      </Label>
+                    </div>
                   </Col>
                 </FormGroup>
                 <FormGroup row>
                   <Col xs="0" md="3">
-                    <Label>Allow New Device Registration</Label>
+                    <span className="col-form-label">
+                      Allow New Device Registration
+                    </span>
                   </Col>
                   <Col md="9">
-                    <FormGroup check>
-                      <div>
-                        <Label className="switch switch-text switch-primary">
-                          <Input
-                            type="checkbox"
-                            name="allowDeviceAccessRequests"
-                            className="switch-input"
-                            onChange={handleChange}
-                            checked={config.allowDeviceAccessRequests}
-                          />
-                          <span
-                            className="switch-label"
-                            data-on="Yes"
-                            data-off="No"
-                          ></span>
-                          <span className="switch-handle"></span>
-                        </Label>
-                      </div>
-                    </FormGroup>
+                    <div className="d-flex align-items-center">
+                      <Label
+                        style={{ marginRight: '15px', marginBottom: 0 }}
+                        className="switch switch-text switch-primary"
+                      >
+                        <Input
+                          type="checkbox"
+                          id="security-allowDeviceAccessRequests"
+                          name="allowDeviceAccessRequests"
+                          className="switch-input"
+                          onChange={handleChange}
+                          checked={config.allowDeviceAccessRequests}
+                        />
+                        <span
+                          className="switch-label"
+                          data-on="Yes"
+                          data-off="No"
+                        />
+                        <span className="switch-handle" />
+                      </Label>
+                    </div>
                   </Col>
                 </FormGroup>
                 <FormGroup row>
                   <Col md="3">
-                    <Label htmlFor="text-input">Remember Me timeout</Label>
+                    <Label htmlFor="expiration">Remember Me timeout</Label>
                   </Col>
                   <Col xs="12" md="3">
                     <Input
                       type="text"
+                      id="expiration"
                       name="expiration"
+                      autoComplete="off"
                       onChange={handleChange}
                       value={config.expiration || ''}
                     />
@@ -203,7 +219,7 @@ export default function Settings() {
                 </FormGroup>
                 <FormGroup row>
                   <Col md="12">
-                    <Label>
+                    <FormText color="muted">
                       With no configuration all CORS origins are accepted, but
                       client requests with credentials:include do not work. Add
                       a single * origin to allow all origins with credentials.
@@ -212,17 +228,21 @@ export default function Settings() {
                       added to the allowed origins so that requests from the UI
                       work. Changes to the Allowed CORS origins requires a
                       server restart.
-                    </Label>
+                    </FormText>
                   </Col>
-                </FormGroup>{' '}
+                </FormGroup>
                 <FormGroup row>
                   <Col md="3">
-                    <Label htmlFor="text-input">Allowed CORS origins</Label>
+                    <Label htmlFor="allowedCorsOrigins">
+                      Allowed CORS origins
+                    </Label>
                   </Col>
                   <Col xs="12" md="9">
                     <Input
                       type="text"
+                      id="allowedCorsOrigins"
                       name="allowedCorsOrigins"
+                      autoComplete="off"
                       onChange={handleChange}
                       value={config.allowedCorsOrigins || ''}
                     />
@@ -237,7 +257,7 @@ export default function Settings() {
             </CardBody>
             <CardFooter>
               <Button size="sm" color="primary" onClick={handleSaveConfig}>
-                <i className="fa fa-dot-circle-o" /> Save
+                <FontAwesomeIcon icon={faFloppyDisk} /> Save
               </Button>
             </CardFooter>
           </Card>

@@ -287,10 +287,6 @@ const DEFAULT_MODULE_CAT_KEYWORDS: {
   'tuktuk-chart-plotter': ['signalk-category-chart-plotters'],
   'signalk-lcars': ['signalk-category-web-instruments'],
   kgauge: ['signalk-category-web-instruments'],
-  '@signalk/vesselpositions': [
-    'signalk-category-ais',
-    'signalk-category-web-instruments'
-  ],
   'signalk-sbd-msg': ['signalk-category-hardware']
 }
 

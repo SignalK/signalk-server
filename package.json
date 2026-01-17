@@ -135,7 +135,6 @@
     "@signalk/set-system-time": "^1.5.0",
     "@signalk/signalk-to-nmea0183": "^1.0.0",
     "@signalk/udp-nmea-plugin": "^2.0.0",
-    "@signalk/vesselpositions": "^1.0.0",
     "serialport": "^11.0.0",
     "signalk-n2kais-to-nmea0183": "^2.0.0",
     "signalk-to-nmea2000": "^2.16.0"

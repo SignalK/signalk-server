@@ -154,16 +154,16 @@ const createErrorModule = (message?: string): { default: React.FC } => ({
   default: () =>
     React.createElement(
       'div',
-      { style: { padding: '2rem', textAlign: 'center' } },
+      { className: 'p-4 text-center' },
       React.createElement(
         'h4',
-        { style: { color: '#d9534f' } },
+        { className: 'text-danger' },
         'Error loading component'
       ),
       message &&
         React.createElement(
           'p',
-          { style: { color: '#666', fontSize: '0.9rem', marginTop: '1rem' } },
+          { className: 'text-secondary small mt-3' },
           message
         )
     )

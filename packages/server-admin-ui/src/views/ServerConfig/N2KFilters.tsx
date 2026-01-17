@@ -8,6 +8,9 @@ import {
   CardHeader,
   Label
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
+import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
 
 interface N2KFilter {
   source: string
@@ -125,7 +128,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
                           className="text-danger"
                           onClick={(e) => deleteFilter(index, e)}
                         >
-                          <i className="fas fa-trash" />
+                          <FontAwesomeIcon icon={faTrash} />
                         </Button>
                       </td>
                     </tr>
@@ -135,7 +138,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
             </Table>
           )}
           <Button size="sm" color="primary" onClick={handleAddFilter}>
-            <i className="fa fa-plus-circle" /> Add
+            <FontAwesomeIcon icon={faCirclePlus} /> Add
           </Button>
         </CardBody>
       </Card>

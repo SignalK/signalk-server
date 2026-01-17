@@ -23,7 +23,6 @@ import type {
 const convert = new Convert()
 let logEntryCount = 0
 
-// Initialize log entries
 const initialLogEntries: LogEntry[] = []
 for (let i = 0; i < 100; i++) {
   initialLogEntries[i] = {
@@ -160,9 +159,7 @@ const appSlice = createSlice({
       state.webSocketTimer = action.payload
     },
 
-    loginSuccess(_state) {
-      // WebSocket handling is done in the thunk
-    },
+    loginSuccess(_state) {},
 
     serverRestart(state) {
       state.restarting = true
@@ -172,9 +169,7 @@ const appSlice = createSlice({
       state.restarting = false
     },
 
-    logoutRequested(_state) {
-      // WebSocket close is handled in the thunk
-    },
+    logoutRequested(_state) {},
 
     accessRequest(state, action: PayloadAction<AccessRequest[]>) {
       state.accessRequests = action.payload
@@ -202,7 +197,6 @@ const appSlice = createSlice({
         '</span> ' +
         convert.toHtml(escape(action.payload.row))
 
-      // Create new entries array (immutable)
       const newEntries = [...state.log.entries, { i: logEntryCount++, d: html }]
       if (newEntries.length > 100) {
         newEntries.shift()
