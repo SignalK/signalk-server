@@ -736,7 +736,7 @@ class DataBrowser extends Component {
                           const meta = store.getMeta(this.state.context, path)
                           const category = meta?.displayUnits?.category || ''
                           // Find a current value for this path
-                          const dataKeys = Object.keys(this.state.data[this.state.context] || {})
+                          const dataKeys = Object.keys(this.state.data?.[this.state.context] || {})
                           const matchingKey = dataKeys.find(k => this.state.data[this.state.context][k].path === path)
                           const currentValue = matchingKey ? this.state.data[this.state.context][matchingKey].value : undefined
                           return (
