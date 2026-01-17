@@ -95,7 +95,6 @@ export async function login(
 }
 
 export function enableSecurity(
-  dispatch: Dispatch<Action>,
   userId: string,
   password: string,
   callback: (error: string | null) => void

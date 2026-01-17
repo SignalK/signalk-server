@@ -37,7 +37,7 @@ export default function EnableSecurity() {
   >(
     async (_prevState) => {
       return new Promise<EnableSecurityState>((resolve) => {
-        enableSecurity(dispatch, username, password, (error: string | null) => {
+        enableSecurity(username, password, (error: string | null) => {
           fetchLoginStatus(dispatch)
           resolve({ error })
         })

@@ -6,7 +6,7 @@ import { faTrashCan } from '@fortawesome/free-solid-svg-icons/faTrashCan'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState, type JSX } from 'react'
 import { useSelector } from 'react-redux'
-import { Col, Form, FormGroup, FormText, Input, Label, Row } from 'reactstrap'
+import { Col, Form, FormGroup, Input, Label, Row } from 'reactstrap'
 
 interface LoginStatus {
   authenticationRequired: boolean

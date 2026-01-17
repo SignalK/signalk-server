@@ -466,7 +466,6 @@ export default function PluginConfigurationList() {
         <PluginConfigCard
           plugin={selectedPlugin}
           isConfigurator={isConfigurator(selectedPlugin)}
-          onClose={() => selectPlugin(null)}
           saveData={(data: PluginData) => {
             // Only auto-enable on first-ever configuration save
             // Check if plugin was never configured before (no enabled state set)
@@ -488,14 +487,12 @@ export default function PluginConfigurationList() {
 interface PluginConfigCardProps {
   plugin: Plugin
   isConfigurator: boolean
-  onClose: () => void
   saveData: (data: PluginData) => Promise<boolean>
 }
 
 function PluginConfigCard({
   plugin,
   isConfigurator,
-  onClose,
   saveData
 }: PluginConfigCardProps) {
   const [showSaveSuccess, setShowSaveSuccess] = useState(false)
