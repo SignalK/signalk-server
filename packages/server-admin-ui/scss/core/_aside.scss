@@ -1,3 +1,5 @@
+@use 'sass:color';
+
 .aside-menu {
   z-index: $zindex-sticky - 1;
   width: $aside-menu-width;
@@ -41,16 +43,16 @@
     // &::-webkit-scrollbar-button {    }
 
     &::-webkit-scrollbar-track {
-      background-color: lighten($aside-menu-bg, 5%);
-      border-right: 1px solid darken($aside-menu-bg, 5%);
-      border-left: 1px solid darken($aside-menu-bg, 5%);
+      background-color: color.adjust($aside-menu-bg, $lightness: 5%);
+      border-right: 1px solid color.adjust($aside-menu-bg, $lightness: -5%);
+      border-left: 1px solid color.adjust($aside-menu-bg, $lightness: -5%);
     }
 
     // &::-webkit-scrollbar-track-piece {    }
 
     &::-webkit-scrollbar-thumb {
       height: 50px;
-      background-color: darken($aside-menu-bg, 10%);
+      background-color: color.adjust($aside-menu-bg, $lightness: -10%);
       background-clip: content-box;
       border-color: transparent;
       border-style: solid;

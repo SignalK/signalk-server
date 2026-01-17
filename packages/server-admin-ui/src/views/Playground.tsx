@@ -18,8 +18,11 @@ import {
   NavItem,
   NavLink
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCircleDot } from '@fortawesome/free-regular-svg-icons/faCircleDot'
+import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
 import classnames from 'classnames'
-import moment from 'moment'
+import dayjs from 'dayjs'
 import jsonlint from 'jsonlint-mod'
 
 const timestampFormat = 'MM/DD HH:mm:ss'
@@ -176,7 +179,7 @@ const Playground: React.FC = () => {
                             path: k,
                             value: (vp.value as Record<string, unknown>)[k],
                             context,
-                            timestamp: moment(update.timestamp).format(
+                            timestamp: dayjs(update.timestamp).format(
                               timestampFormat
                             )
                           })
@@ -186,7 +189,7 @@ const Playground: React.FC = () => {
                           path: vp.path,
                           value: vp.value,
                           context,
-                          timestamp: moment(update.timestamp).format(
+                          timestamp: dayjs(update.timestamp).format(
                             timestampFormat
                           )
                         })
@@ -327,7 +330,7 @@ const Playground: React.FC = () => {
                     disabled={!inputIsJson}
                     onClick={beautify}
                   >
-                    <i className="fa fa-dot-circle-o" /> Beautify JSON
+                    <FontAwesomeIcon icon={faCircleDot} /> Beautify JSON
                   </Button>
                 </Col>
 
@@ -338,10 +341,9 @@ const Playground: React.FC = () => {
                     onClick={handleExecute}
                     className="float-end"
                   >
-                    <i
-                      className={
-                        sending ? 'fa fa-spinner fa-spin' : 'fa fa-dot-circle-o'
-                      }
+                    <FontAwesomeIcon
+                      icon={sending ? faSpinner : faCircleDot}
+                      spin={sending}
                     />{' '}
                     Send To Server
                   </Button>
@@ -357,12 +359,9 @@ const Playground: React.FC = () => {
                     }
                     onClick={handleSendN2K}
                   >
-                    <i
-                      className={
-                        sendingN2K
-                          ? 'fa fa-spinner fa-spin'
-                          : 'fa fa-dot-circle-o'
-                      }
+                    <FontAwesomeIcon
+                      icon={sendingN2K ? faSpinner : faCircleDot}
+                      spin={sendingN2K}
                     />{' '}
                     Send as PGN to server&apos;s NMEA2000 connection
                   </Button>

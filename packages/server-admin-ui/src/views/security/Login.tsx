@@ -21,6 +21,11 @@ import {
   Label
 } from 'reactstrap'
 import { Link } from 'react-router-dom'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
+import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
+import { faRightToBracket } from '@fortawesome/free-solid-svg-icons/faRightToBracket'
+import { faUser } from '@fortawesome/free-solid-svg-icons/faUser'
 import { useAppSelector, useAppDispatch } from '../../store'
 import { login } from '../../actions'
 import Dashboard from '../Dashboard/Dashboard'
@@ -160,7 +165,7 @@ export default function Login() {
                       <p className="text-muted">Sign In to your account</p>
                       <InputGroup className="mb-3">
                         <InputGroupText>
-                          <i className="icon-user" />
+                          <FontAwesomeIcon icon={faUser} />
                         </InputGroupText>
                         <Input
                           type="text"
@@ -173,7 +178,7 @@ export default function Login() {
                       </InputGroup>
                       <InputGroup className="mb-4">
                         <InputGroupText>
-                          <i className="icon-lock" />
+                          <FontAwesomeIcon icon={faLock} />
                         </InputGroupText>
                         <Input
                           type="password"
@@ -214,12 +219,9 @@ export default function Login() {
                             className="px-4"
                             disabled={isLoggingIn}
                           >
-                            <i
-                              className={
-                                isLoggingIn
-                                  ? 'fa fa-spinner fa-spin'
-                                  : 'fa fa-lock'
-                              }
+                            <FontAwesomeIcon
+                              icon={isLoggingIn ? faSpinner : faLock}
+                              spin={isLoggingIn}
                             />{' '}
                             Login
                           </Button>
@@ -260,7 +262,7 @@ export default function Login() {
                               color="secondary"
                               className="px-4"
                             >
-                              <i className="fa fa-sign-in" />{' '}
+                              <FontAwesomeIcon icon={faRightToBracket} />{' '}
                               {(loginStatus.oidcProviderName as string) ||
                                 'SSO Login'}
                             </Button>

@@ -14,6 +14,9 @@ import {
   FormText,
   Progress
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCircleNotch } from '@fortawesome/free-solid-svg-icons/faCircleNotch'
+import { faCircleDot } from '@fortawesome/free-regular-svg-icons/faCircleDot'
 
 import { restart } from '../../actions'
 
@@ -181,12 +184,13 @@ const BackupRestore: React.FC = () => {
               <br />
               <FormGroup row>
                 <Col xs="3" md="2">
-                  <Label>Include Plugins</Label>
+                  <Label htmlFor="backup-includePlugins">Include Plugins</Label>
                 </Col>
                 <Col xs="2" md={fieldColWidthMd}>
                   <Label className="switch switch-text switch-primary">
                     <Input
                       type="checkbox"
+                      id="backup-includePlugins"
                       name="enabled"
                       className="switch-input"
                       onChange={includePluginsChange}
@@ -209,7 +213,7 @@ const BackupRestore: React.FC = () => {
           </CardBody>
           <CardFooter>
             <Button size="sm" color="primary" onClick={backup}>
-              <i className="fa fa-dot-circle-o" /> Backup
+              <FontAwesomeIcon icon={faCircleDot} /> Backup
             </Button>{' '}
           </CardFooter>
         </Card>
@@ -303,11 +307,7 @@ const BackupRestore: React.FC = () => {
                 <FormGroup row>
                   <Col xs="12" md={fieldColWidthMd}>
                     <Button size="sm" color="danger" onClick={handleRestart}>
-                      {restarting ? (
-                        <i className="fa fa-circle-o-notch fa-spin" />
-                      ) : (
-                        <i className="fa fa-circle-o-notch" />
-                      )}{' '}
+                      <FontAwesomeIcon icon={faCircleNotch} spin={restarting} />{' '}
                       Restart
                     </Button>
                   </Col>
@@ -325,17 +325,17 @@ const BackupRestore: React.FC = () => {
                 onClick={validate}
                 disabled={restoreFile === null}
               >
-                <i className="fa fa-dot-circle-o" /> Restore
+                <FontAwesomeIcon icon={faCircleDot} /> Restore
               </Button>{' '}
             </div>
           )}
           {restoreState === RESTORE_CONFIRM && (
             <div>
               <Button size="sm" color="primary" onClick={cancelRestore}>
-                <i className="fa fa-dot-circle-o" /> Cancel
+                <FontAwesomeIcon icon={faCircleDot} /> Cancel
               </Button>{' '}
               <Button size="sm" color="danger" onClick={restore}>
-                <i className="fa fa-dot-circle-o" /> Confirm
+                <FontAwesomeIcon icon={faCircleDot} /> Confirm
               </Button>
             </div>
           )}

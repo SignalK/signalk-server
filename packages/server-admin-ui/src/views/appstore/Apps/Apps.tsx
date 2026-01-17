@@ -1,4 +1,4 @@
-import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons/faMagnifyingGlass'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState, useCallback, useMemo, useDeferredValue } from 'react'
 import { useSelector } from 'react-redux'
@@ -86,7 +86,7 @@ const Apps: React.FC = () => {
   const deriveAppList = useCallback((): AppInfo[] => {
     const allApps: Record<string, AppInfo> = appStore.available.reduce(
       (acc, app) => {
-        acc[app.name] = app
+        acc[app.name] = { ...app }
         return acc
       },
       {} as Record<string, AppInfo>
@@ -102,7 +102,7 @@ const Apps: React.FC = () => {
 
     appStore.installing.forEach((app) => {
       if (allApps[app.name]) {
-        allApps[app.name].installing = true
+        allApps[app.name] = { ...allApps[app.name], installing: true }
       }
     })
 
@@ -223,6 +223,9 @@ const Apps: React.FC = () => {
             ) : undefined}
 
             <div className="search">
+              <label htmlFor="search-text-box" className="visually-hidden">
+                Search apps and plugins
+              </label>
               <FontAwesomeIcon
                 className="search__icon"
                 icon={faMagnifyingGlass}
@@ -231,6 +234,7 @@ const Apps: React.FC = () => {
                 id="search-text-box"
                 className="search__input"
                 placeholder="Search ..."
+                autoComplete="off"
                 onInput={(e) => {
                   setSearch((e.target as HTMLInputElement).value)
                 }}

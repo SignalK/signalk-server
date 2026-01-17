@@ -12,6 +12,11 @@ import {
   Input,
   Table
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowUp } from '@fortawesome/free-solid-svg-icons/faArrowUp'
+import { faArrowDown } from '@fortawesome/free-solid-svg-icons/faArrowDown'
+import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import Creatable from 'react-select/creatable'
 import remove from 'lodash.remove'
 import uniq from 'lodash.uniq'
@@ -322,7 +327,7 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
                             })
                           }
                         >
-                          <i className="fas fa-arrow-up" />
+                          <FontAwesomeIcon icon={faArrowUp} />
                         </button>
                       )}
                       {index < priorities.length - 1 && (
@@ -339,14 +344,15 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
                             })
                           }
                         >
-                          <i className="fas fa-arrow-down" />
+                          <FontAwesomeIcon icon={faArrowDown} />
                         </button>
                       )}
                     </td>
                     <td>
                       {index < priorities.length && (
-                        <i
-                          className="fas fa-trash"
+                        <FontAwesomeIcon
+                          icon={faTrash}
+                          style={{ cursor: 'pointer' }}
                           onClick={() =>
                             !isSaving &&
                             dispatch({
@@ -476,7 +482,12 @@ const SourcePriorities: React.FC = () => {
           <p>
             You can debug the settings by saving them and activating debug key{' '}
             <b>signalk-server:sourcepriorities</b> in{' '}
-            <a href="./#/serverConfiguration/log">Server Log</a>
+            <a
+              href="./#/serverConfiguration/log"
+              className="text-decoration-none"
+            >
+              Server Log
+            </a>
           </p>
         </Alert>
         <Table responsive bordered striped size="sm">
@@ -515,8 +526,9 @@ const SourcePriorities: React.FC = () => {
                   </td>
                   <td style={{ border: 'none' }}>
                     {index < sourcePriorities.length && (
-                      <i
-                        className="fas fa-trash"
+                      <FontAwesomeIcon
+                        icon={faTrash}
+                        style={{ cursor: 'pointer' }}
                         onClick={() =>
                           dispatch({
                             type: SOURCEPRIOS_PATH_DELETED,
@@ -543,7 +555,7 @@ const SourcePriorities: React.FC = () => {
           }
           onClick={handleSave}
         >
-          <i className="fa fa-save" /> Save
+          <FontAwesomeIcon icon={faFloppyDisk} /> Save
         </Button>
         {saveState.saveFailed && 'Saving priorities settings failed!'}
         {!saveState.timeoutsOk && (

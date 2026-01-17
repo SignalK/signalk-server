@@ -1,4 +1,6 @@
 import { memo } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCopy } from '@fortawesome/free-regular-svg-icons/faCopy'
 import { usePathData, useMetaData } from './usePathData'
 import TimestampCell from './TimestampCell'
 import CopyToClipboardWithFade from './CopyToClipboardWithFade'
@@ -57,7 +59,7 @@ function DataRow({
       <div className="virtual-table-cell path-cell">
         <CopyToClipboardWithFade text={data.path}>
           <span>
-            {data.path} <i className="far fa-copy"></i>
+            {data.path} <FontAwesomeIcon icon={faCopy} />
           </span>
         </CopyToClipboardWithFade>
       </div>
@@ -83,7 +85,7 @@ function DataRow({
           }}
         />
         <CopyToClipboardWithFade text={data.$source}>
-          {data.$source} <i className="far fa-copy"></i>
+          {data.$source} <FontAwesomeIcon icon={faCopy} />
         </CopyToClipboardWithFade>{' '}
         {data.pgn || ''}
         {data.sentence || ''}

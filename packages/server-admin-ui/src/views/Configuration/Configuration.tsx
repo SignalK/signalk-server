@@ -23,6 +23,11 @@ import {
   FormGroup,
   Table
 } from 'reactstrap'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faAlignJustify } from '@fortawesome/free-solid-svg-icons/faAlignJustify'
+import { faCheck } from '@fortawesome/free-solid-svg-icons/faCheck'
+import { faGear } from '@fortawesome/free-solid-svg-icons/faGear'
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import EmbeddedPluginConfigurationForm from './EmbeddedPluginConfigurationForm'
 
 interface PluginSchema {
@@ -211,109 +216,105 @@ export default function PluginConfigurationList() {
   )
 
   const saveData = useCallback(
-    (id: string, data: PluginData): Promise<boolean> => {
-      return fetch(`${window.serverRoutesPrefix}/plugins/${id}/config`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: new Headers({ 'Content-Type': 'application/json' }),
-        credentials: 'same-origin'
-      }).then((response) => {
-        if (response.status !== 200) {
-          console.error(response)
-          alert('Saving plugin settings failed')
-          throw new Error('Save failed')
-        } else {
-          setPlugins((prevPlugins) => {
-            const newPlugins = [...prevPlugins]
-            const pluginIndex = newPlugins.findIndex(
-              (plugin) => plugin.id === id
-            )
-            if (pluginIndex !== -1) {
-              newPlugins[pluginIndex] = { ...newPlugins[pluginIndex], data }
-            }
-            return newPlugins
-          })
-
-          // Update selected plugin if it's the one being saved
-          setSelectedPlugin((prev) =>
-            prev && prev.id === id ? { ...prev, data } : prev
-          )
-
-          return true // Success
+    async (id: string, data: PluginData): Promise<boolean> => {
+      const response = await fetch(
+        `${window.serverRoutesPrefix}/plugins/${id}/config`,
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+          credentials: 'same-origin'
         }
+      )
+
+      if (response.status !== 200) {
+        console.error(response)
+        alert('Saving plugin settings failed')
+        throw new Error('Save failed')
+      }
+
+      setPlugins((prevPlugins) => {
+        const newPlugins = [...prevPlugins]
+        const pluginIndex = newPlugins.findIndex((plugin) => plugin.id === id)
+        if (pluginIndex !== -1) {
+          newPlugins[pluginIndex] = { ...newPlugins[pluginIndex], data }
+        }
+        return newPlugins
       })
+
+      // Update selected plugin if it's the one being saved
+      setSelectedPlugin((prev) =>
+        prev && prev.id === id ? { ...prev, data } : prev
+      )
+
+      return true // Success
     },
     []
   )
 
   // Initial data fetch
   useEffect(() => {
-    // Fetch both plugins and settings in parallel
-    Promise.all([
-      fetch(`${window.serverRoutesPrefix}/plugins`, {
-        credentials: 'same-origin'
-      }).then((response) => {
-        if (response.status === 200) {
-          return response.json()
-        } else {
-          throw new Error('/plugins request failed:' + response.status)
+    const fetchData = async () => {
+      try {
+        // Fetch both plugins and settings in parallel
+        const [pluginsResponse, settingsResponse] = await Promise.all([
+          fetch(`${window.serverRoutesPrefix}/plugins`, {
+            credentials: 'same-origin'
+          }),
+          fetch(`${window.serverRoutesPrefix}/settings`, {
+            credentials: 'same-origin'
+          })
+        ])
+
+        if (pluginsResponse.status !== 200) {
+          throw new Error('/plugins request failed:' + pluginsResponse.status)
         }
-      }),
-      fetch(`${window.serverRoutesPrefix}/settings`, {
-        credentials: 'same-origin'
-      })
-        .then((response) => {
-          if (response.status === 200) {
-            return response.json()
-          } else {
-            // Settings fetch failed, assume WASM is enabled
-            return { interfaces: { wasm: true } }
-          }
-        })
-        .catch(() => {
-          // Settings fetch failed, assume WASM is enabled
-          return { interfaces: { wasm: true } }
-        })
-    ])
-      .then(
-        ([fetchedPlugins, settings]: [
-          Plugin[],
-          { interfaces?: { wasm?: boolean } }
-        ]) => {
-          // Check if WASM interface is enabled (default true if not specified)
-          const wasmInterfaceEnabled = settings?.interfaces?.wasm !== false
 
-          // Set initial selected plugin from URL or localStorage
-          const currentPluginId = params.pluginid
-          const lastOpenPluginId = localStorage.getItem(openPluginStorageKey)
-          let initialSelectedPlugin: Plugin | null = null
+        const fetchedPlugins: Plugin[] = await pluginsResponse.json()
 
-          if (currentPluginId && currentPluginId !== '-') {
-            initialSelectedPlugin =
-              fetchedPlugins.find((plugin) => plugin.id === currentPluginId) ||
-              null
-          } else if (lastOpenPluginId) {
-            initialSelectedPlugin =
-              fetchedPlugins.find((plugin) => plugin.id === lastOpenPluginId) ||
-              null
-          }
-
-          setPlugins(fetchedPlugins)
-          setSelectedPlugin(initialSelectedPlugin)
-          setWasmEnabled(wasmInterfaceEnabled)
-
-          // Scroll to the initially selected plugin if one exists (from URL/bookmark)
-          if (initialSelectedPlugin) {
-            requestAnimationFrame(() => {
-              scrollToSelectedPlugin(initialSelectedPlugin!.id)
-            })
-          }
+        // Settings fetch - use defaults if failed
+        let settings: { interfaces?: { wasm?: boolean } } = {
+          interfaces: { wasm: true }
         }
-      )
-      .catch((error) => {
+        if (settingsResponse.status === 200) {
+          settings = await settingsResponse.json()
+        }
+
+        // Check if WASM interface is enabled (default true if not specified)
+        const wasmInterfaceEnabled = settings?.interfaces?.wasm !== false
+
+        // Set initial selected plugin from URL or localStorage
+        const currentPluginId = params.pluginid
+        const lastOpenPluginId = localStorage.getItem(openPluginStorageKey)
+        let initialSelectedPlugin: Plugin | null = null
+
+        if (currentPluginId && currentPluginId !== '-') {
+          initialSelectedPlugin =
+            fetchedPlugins.find((plugin) => plugin.id === currentPluginId) ||
+            null
+        } else if (lastOpenPluginId) {
+          initialSelectedPlugin =
+            fetchedPlugins.find((plugin) => plugin.id === lastOpenPluginId) ||
+            null
+        }
+
+        setPlugins(fetchedPlugins)
+        setSelectedPlugin(initialSelectedPlugin)
+        setWasmEnabled(wasmInterfaceEnabled)
+
+        // Scroll to the initially selected plugin if one exists (from URL/bookmark)
+        if (initialSelectedPlugin) {
+          requestAnimationFrame(() => {
+            scrollToSelectedPlugin(initialSelectedPlugin!.id)
+          })
+        }
+      } catch (error) {
         console.error(error)
         alert('Could not fetch plugins list')
-      })
+      }
+    }
+
+    fetchData()
   }, [params.pluginid, scrollToSelectedPlugin])
 
   const pluginList = getFilteredPlugins()
@@ -323,7 +324,7 @@ export default function PluginConfigurationList() {
     <div>
       <Card>
         <CardHeader>
-          <i className="fa fa-align-justify" />
+          <FontAwesomeIcon icon={faAlignJustify} />{' '}
           <strong>Plugin Configuration</strong>
         </CardHeader>
         <CardBody>
@@ -436,11 +437,12 @@ export default function PluginConfigurationList() {
                           <div className={`badge ${badgeClass}`}>
                             {badgeText}
                           </div>
-                          <i
-                            className="fa fa-cog text-muted"
+                          <FontAwesomeIcon
+                            icon={faGear}
+                            className="text-muted"
                             style={{ fontSize: '16px' }}
                             title="Click to configure"
-                          ></i>
+                          />
                         </div>
                       </td>
                       <td>
@@ -548,7 +550,7 @@ function PluginConfigCard({
             role="alert"
             style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}
           >
-            <i className="fa fa-check"></i> Configuration saved successfully!
+            <FontAwesomeIcon icon={faCheck} /> Configuration saved successfully!
           </div>
         </div>
       )}
@@ -557,7 +559,10 @@ function PluginConfigCard({
           <Row className="mb-2">
             <Col className={'align-self-center'}>
               <h5 className="mb-0">
-                <i className="fa fa-cog" style={{ marginRight: '10px' }} />
+                <FontAwesomeIcon
+                  icon={faGear}
+                  style={{ marginRight: '10px' }}
+                />
                 Configure: {plugin.name}
               </h5>
               <small className="text-muted">{plugin.packageName}</small>
@@ -662,7 +667,10 @@ function PluginConfigCard({
                   }}
                   style={{ minWidth: '140px' }}
                 >
-                  <i className="fa fa-save" style={{ marginRight: '8px' }}></i>
+                  <FontAwesomeIcon
+                    icon={faFloppyDisk}
+                    style={{ marginRight: '8px' }}
+                  />
                   Save Configuration
                 </button>
               </div>
