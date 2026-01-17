@@ -40,5 +40,20 @@
   "interfaces": {},
   "security": {
     "strategy": "./tokensecurity"
+  },
+  "resourcesApi": {
+    "defaultProviders": {
+      "routes": "resources-provider",
+      "waypoints": "resources-provider",
+      "regions": "resources-provider",
+      "notes": "resources-provider",
+      "charts": "resources-provider",
+      "tracks": "resources-provider",
+      "infolayers": "resources-provider",
+      "groups": "resources-provider"
+    }
+  },
+  "courseApi": {
+    "apiOnly": false
   }
 }
