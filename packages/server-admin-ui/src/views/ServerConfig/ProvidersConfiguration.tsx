@@ -8,9 +8,7 @@ import {
   CardBody,
   CardFooter,
   Input,
-  Col,
-  Table,
-  Row
+  Table
 } from 'reactstrap'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBan } from '@fortawesome/free-solid-svg-icons/faBan'

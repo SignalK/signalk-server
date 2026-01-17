@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useCallback } from 'react'
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, CardHeader, CardBody } from 'reactstrap'
@@ -24,21 +24,6 @@ interface RootState {
 const ServerUpdate: React.FC = () => {
   const navigate = useNavigate()
   const appStore = useSelector((state: RootState) => state.appStore)
-  const [changelog, setChangelog] = useState<string | null>(null)
-
-  const fetchChangelog = useCallback(() => {
-    fetch(
-      `https://raw.githubusercontent.com/SignalK/signalk-server-node/master/CHANGELOG.md`
-    )
-      .then((response) => response.text())
-      .then((data) => {
-        setChangelog(data)
-      })
-  }, [])
-
-  useEffect(() => {
-    fetchChangelog()
-  }, [fetchChangelog])
 
   const handleUpdate = useCallback(() => {
     console.log('handleUpdate')
