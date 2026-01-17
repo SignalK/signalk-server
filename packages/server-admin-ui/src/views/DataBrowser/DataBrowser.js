@@ -47,20 +47,20 @@ async function fetchPresets() {
       const presets = []
       // Add built-in presets
       if (data.builtIn) {
-        data.builtIn.forEach(p => {
+        data.builtIn.forEach((p) => {
           presets.push({
             value: typeof p === 'object' ? p.name : p,
-            label: typeof p === 'object' ? (p.displayName || p.name) : p,
+            label: typeof p === 'object' ? p.displayName || p.name : p,
             isCustom: false
           })
         })
       }
       // Add custom presets
       if (data.custom) {
-        data.custom.forEach(p => {
+        data.custom.forEach((p) => {
           presets.push({
             value: typeof p === 'object' ? p.name : p,
-            label: typeof p === 'object' ? (p.displayName || p.name) : p,
+            label: typeof p === 'object' ? p.displayName || p.name : p,
             isCustom: true
           })
         })
@@ -170,13 +170,16 @@ class DataBrowser extends Component {
     this.toggleSourceFilter = this.toggleSourceFilter.bind(this)
     this.updatePath$SourceKeys = this.updatePath$SourceKeys.bind(this)
     this.handlePresetChange = this.handlePresetChange.bind(this)
+    this.convertValue = this.convertValue.bind(this)
   }
 
   async handlePresetChange(preset) {
     await setActivePreset(preset)
     // Also fetch preset details for conversion
     try {
-      const res = await fetch(`/signalk/v1/unitpreferences/presets/${preset}`, { credentials: 'include' })
+      const res = await fetch(`/signalk/v1/unitpreferences/presets/${preset}`, {
+        credentials: 'include'
+      })
       if (res.ok) {
         const presetDetails = await res.json()
         this.setState({ ...this.state, activePreset: preset, presetDetails })
@@ -193,7 +196,12 @@ class DataBrowser extends Component {
     const { unitDefinitions, presetDetails } = this.state
 
     // Need numeric value + category + definitions + preset
-    if (typeof value !== 'number' || !category || !unitDefinitions || !presetDetails) {
+    if (
+      typeof value !== 'number' ||
+      !category ||
+      !unitDefinitions ||
+      !presetDetails
+    ) {
       return { value, unit: siUnit }
     }
 
@@ -212,7 +220,8 @@ class DataBrowser extends Component {
 
     // Get conversion formula from definitions
     const formula = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.formula
-    const symbol = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.symbol || targetUnit
+    const symbol =
+      unitDefinitions[siUnit]?.conversions?.[targetUnit]?.symbol || targetUnit
 
     if (!formula) {
       return { value, unit: siUnit }
@@ -382,7 +391,9 @@ class DataBrowser extends Component {
     // Fetch unit definitions for conversion formulas
     let unitDefinitions = null
     try {
-      const res = await fetch('/signalk/v1/unitpreferences/definitions', { credentials: 'include' })
+      const res = await fetch('/signalk/v1/unitpreferences/definitions', {
+        credentials: 'include'
+      })
       if (res.ok) {
         unitDefinitions = await res.json()
       }
@@ -393,7 +404,10 @@ class DataBrowser extends Component {
     // Fetch details of active preset
     let presetDetails = null
     try {
-      const res = await fetch(`/signalk/v1/unitpreferences/presets/${activePreset}`, { credentials: 'include' })
+      const res = await fetch(
+        `/signalk/v1/unitpreferences/presets/${activePreset}`,
+        { credentials: 'include' }
+      )
       if (res.ok) {
         presetDetails = await res.json()
       }
@@ -649,11 +663,29 @@ class DataBrowser extends Component {
               </FormGroup>
               {this.state.includeMeta && (
                 <FormGroup row>
-                  <Col xs="12" md="12" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: '500', marginRight: '5px' }}>Preset:</span>
+                  <Col
+                    xs="12"
+                    md="12"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    <span style={{ fontWeight: '500', marginRight: '5px' }}>
+                      Preset:
+                    </span>
                     {this.state.presets.map((preset, index) => {
                       const isActive = this.state.activePreset === preset.value
-                      const colors = ['#28a745', '#007bff', '#6f42c1', '#fd7e14', '#20c997', '#e83e8c']
+                      const colors = [
+                        '#28a745',
+                        '#007bff',
+                        '#6f42c1',
+                        '#fd7e14',
+                        '#20c997',
+                        '#e83e8c'
+                      ]
                       const baseColor = colors[index % colors.length]
                       return (
                         <span
@@ -667,7 +699,9 @@ class DataBrowser extends Component {
                             fontWeight: '500',
                             cursor: 'pointer',
                             transition: 'all 0.2s',
-                            backgroundColor: isActive ? baseColor : 'transparent',
+                            backgroundColor: isActive
+                              ? baseColor
+                              : 'transparent',
                             color: isActive ? 'white' : baseColor,
                             border: `2px solid ${baseColor}`,
                             opacity: isActive ? 1 : 0.7
@@ -720,7 +754,14 @@ class DataBrowser extends Component {
               {this.state.includeMeta &&
                 this.state.context &&
                 this.state.context !== 'none' && (
-                  <Table responsive size="sm" style={{ borderCollapse: 'separate', borderSpacing: '0 10px' }}>
+                  <Table
+                    responsive
+                    size="sm"
+                    style={{
+                      borderCollapse: 'separate',
+                      borderSpacing: '0 10px'
+                    }}
+                  >
                     <thead>
                       <tr>
                         <th colSpan="3">Path Metadata</th>
@@ -736,9 +777,18 @@ class DataBrowser extends Component {
                           const meta = store.getMeta(this.state.context, path)
                           const category = meta?.displayUnits?.category || ''
                           // Find a current value for this path
-                          const dataKeys = Object.keys(this.state.data?.[this.state.context] || {})
-                          const matchingKey = dataKeys.find(k => this.state.data[this.state.context][k].path === path)
-                          const currentValue = matchingKey ? this.state.data[this.state.context][matchingKey].value : undefined
+                          const dataKeys = Object.keys(
+                            this.state.data?.[this.state.context] || {}
+                          )
+                          const matchingKey = dataKeys.find(
+                            (k) =>
+                              this.state.data[this.state.context][k].path ===
+                              path
+                          )
+                          const currentValue = matchingKey
+                            ? this.state.data[this.state.context][matchingKey]
+                                .value
+                            : undefined
                           return (
                             <tr key={path}>
                               <td colSpan="3">

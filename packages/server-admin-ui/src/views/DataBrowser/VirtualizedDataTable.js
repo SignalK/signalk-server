@@ -15,7 +15,11 @@ function VirtualizedDataTable({
   onToggleSource,
   selectedSources,
   onToggleSourceFilter,
-  sourceFilterActive
+  sourceFilterActive,
+  convertValue,
+  activePreset,
+  unitDefinitions,
+  presetDetails
 }) {
   const containerRef = useRef(null)
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 50 })
@@ -236,6 +240,9 @@ function VirtualizedDataTable({
             isPaused={isPaused}
             onToggleSource={onToggleSource}
             selectedSources={selectedSources}
+            convertValue={convertValue}
+            unitDefinitions={unitDefinitions}
+            presetDetails={presetDetails}
           />
         ))}
 

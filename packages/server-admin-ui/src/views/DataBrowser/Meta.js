@@ -183,15 +183,37 @@ const DisplaySelect = ({ disabled, setValue, value }) => {
 
 // Default categories (fallback if fetch fails)
 const DEFAULT_CATEGORIES = [
-  'speed', 'temperature', 'pressure', 'distance', 'depth', 'angle',
-  'angleDegrees', 'angularVelocity', 'volume', 'voltage', 'current',
-  'power', 'percentage', 'frequency', 'time', 'charge', 'volumeRate',
-  'length', 'energy', 'mass', 'area', 'dateTime', 'epoch', 'unitless', 'boolean'
+  'speed',
+  'temperature',
+  'pressure',
+  'distance',
+  'depth',
+  'angle',
+  'angleDegrees',
+  'angularVelocity',
+  'volume',
+  'voltage',
+  'current',
+  'power',
+  'percentage',
+  'frequency',
+  'time',
+  'charge',
+  'volumeRate',
+  'length',
+  'energy',
+  'mass',
+  'area',
+  'dateTime',
+  'epoch',
+  'unitless',
+  'boolean'
 ]
 
 const CategorySelect = ({ disabled, value, setValue, categories }) => {
   const category = value?.category || ''
-  const categoryList = categories && categories.length > 0 ? categories : DEFAULT_CATEGORIES
+  const categoryList =
+    categories && categories.length > 0 ? categories : DEFAULT_CATEGORIES
   return (
     <Input
       disabled={disabled}
@@ -228,10 +250,20 @@ const getCategoryColor = (category) => {
 
 const METAFIELDRENDERERS = {
   units: (props) => (
-    <MetaFormRow {...props} renderValue={UnitSelect} description="SI base unit for this path"></MetaFormRow>
+    <MetaFormRow
+      {...props}
+      renderValue={UnitSelect}
+      description="SI base unit for this path"
+    ></MetaFormRow>
   ),
   displayUnits: (props) => (
-    <MetaFormRow {...props} renderValue={(p) => <CategorySelect {...p} categories={props.categories} />} description="Category for unit conversion"></MetaFormRow>
+    <MetaFormRow
+      {...props}
+      renderValue={(p) => (
+        <CategorySelect {...p} categories={props.categories} />
+      )}
+      description="Category for unit conversion"
+    ></MetaFormRow>
   ),
   description: (props) => (
     <MetaFormRow {...props} renderValue={Text}></MetaFormRow>
@@ -317,10 +349,12 @@ const saveMeta = (path, meta) => {
   // Mark displayUnits as explicit (manually set) so patterns don't overwrite
   const metaToSave = {
     ...meta,
-    displayUnits: meta.displayUnits ? {
-      ...meta.displayUnits,
-      explicit: true  // Flag to prevent pattern override
-    } : undefined
+    displayUnits: meta.displayUnits
+      ? {
+          ...meta.displayUnits,
+          explicit: true // Flag to prevent pattern override
+        }
+      : undefined
   }
 
   fetch(`/signalk/v1/api/vessels/self/${path.replaceAll('.', '/')}/meta`, {
@@ -331,7 +365,15 @@ const saveMeta = (path, meta) => {
   })
 }
 
-function Meta({ meta, path, loginStatus, currentValue, activePreset, presetDetails, unitDefinitions }) {
+function Meta({
+  meta,
+  path,
+  loginStatus,
+  currentValue,
+  activePreset,
+  presetDetails,
+  unitDefinitions
+}) {
   const [isEditing, setIsEditing] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [localMeta, setLocalMeta] = useState(meta)
@@ -340,8 +382,8 @@ function Meta({ meta, path, loginStatus, currentValue, activePreset, presetDetai
   // Fetch categories from server
   useEffect(() => {
     fetch('/signalk/v1/unitpreferences/categories', { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         const cats = Object.keys(data.categoryToBaseUnit || data)
         if (cats.length > 0) setCategories(cats.sort())
       })
@@ -372,10 +414,17 @@ function Meta({ meta, path, loginStatus, currentValue, activePreset, presetDetai
   // Get category and converted value for preview
   const category = localMeta.displayUnits?.category
   const siUnit = localMeta.units || ''
-  const converted = convertValue(currentValue, siUnit, category, presetDetails, unitDefinitions)
+  const converted = convertValue(
+    currentValue,
+    siUnit,
+    category,
+    presetDetails,
+    unitDefinitions
+  )
 
   // Format values for display
-  const formatValue = (v) => typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(2)) : v
+  const formatValue = (v) =>
+    typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(2)) : v
 
   const handleEdit = () => {
     setIsEditing(true)
@@ -405,18 +454,39 @@ function Meta({ meta, path, loginStatus, currentValue, activePreset, presetDetai
         }}
         onClick={() => !isEditing && setIsExpanded(!isExpanded)}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-          <strong style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>{path}</strong>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            flex: 1
+          }}
+        >
+          <strong style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+            {path}
+          </strong>
           {category && (
-            <Badge color={getCategoryColor(category)} style={{ fontSize: '0.75rem' }}>{category}</Badge>
+            <Badge
+              color={getCategoryColor(category)}
+              style={{ fontSize: '0.75rem' }}
+            >
+              {category}
+            </Badge>
           )}
           {/* Show quick value preview when collapsed */}
-          {!isExpanded && currentValue !== undefined && typeof currentValue === 'number' && (
-            <span style={{ color: '#6c757d', fontSize: '0.85rem' }}>
-              {formatValue(currentValue)} {siUnit}
-              {converted && <span style={{ color: '#28a745' }}> → {formatValue(converted.value)} {converted.unit}</span>}
-            </span>
-          )}
+          {!isExpanded &&
+            currentValue !== undefined &&
+            typeof currentValue === 'number' && (
+              <span style={{ color: '#6c757d', fontSize: '0.85rem' }}>
+                {formatValue(currentValue)} {siUnit}
+                {converted && (
+                  <span style={{ color: '#28a745' }}>
+                    {' '}
+                    → {formatValue(converted.value)} {converted.unit}
+                  </span>
+                )}
+              </span>
+            )}
         </div>
         <div onClick={(e) => e.stopPropagation()}>
           {!isEditing && canEditMetadata && (
@@ -436,94 +506,105 @@ function Meta({ meta, path, loginStatus, currentValue, activePreset, presetDetai
           )}
         </div>
       </CardHeader>
-      {isExpanded && <CardBody>
-        {/* Value Preview with Conversion */}
-        {currentValue !== undefined && typeof currentValue === 'number' && (
-          <div style={{
-            padding: '10px 15px',
-            background: '#f8f9fa',
-            borderRadius: '4px',
-            marginBottom: '15px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '15px'
-          }}>
-            <span style={{ color: '#495057' }}>
-              <strong>Value:</strong> {formatValue(currentValue)} {siUnit && <strong>{siUnit}</strong>}
-            </span>
-            {converted && (
-              <span style={{ color: '#28a745', fontWeight: 'bold' }}>
-                → {formatValue(converted.value)} <strong>{converted.unit}</strong>
-              </span>
-            )}
-          </div>
-        )}
-
-        <Form
-          action=""
-          method="post"
-          encType="multipart/form-data"
-          className="form-horizontal"
-          onSubmit={(e) => e.preventDefault()}
-        >
-          {metaValues
-            .filter(({ key }) => key !== 'zones')
-            .map(({ key, value }) => {
-              const renderer = METAFIELDRENDERERS[key]
-              if (renderer) {
-                const props = {
-                  _key: key,
-                  value,
-                  disabled: !isEditing,
-                  categories,
-                  setValue: (metaFieldValue) =>
-                    setLocalMeta({ ...localMeta, ...{ [key]: metaFieldValue } }),
-                  setKey: (metaFieldKey) => {
-                    const copy = { ...localMeta }
-                    copy[metaFieldKey] = localMeta[key]
-                    delete copy[key]
-                    setLocalMeta(copy)
-                  },
-                  deleteKey: () => {
-                    const copy = { ...localMeta }
-                    delete copy[key]
-                    setLocalMeta(copy)
-                  }
-                }
-                return renderer(props)
-              } else {
-                return <UnknownMetaFormRow key={key} metaKey={key} value={value} />
-              }
-            })}
-
-          {isEditing && (
-            <Button
-              color="info"
-              size="sm"
-              outline
-              style={{ marginTop: '10px' }}
-              onClick={() => {
-                const copy = { ...localMeta }
-                const firstNewMetaFieldKey = METAFIELDS.find(
-                  (metaFieldName) => localMeta[metaFieldName] === undefined
-                )
-                if (firstNewMetaFieldKey) {
-                  copy[firstNewMetaFieldKey] = ''
-                  setLocalMeta(copy)
-                }
+      {isExpanded && (
+        <CardBody>
+          {/* Value Preview with Conversion */}
+          {currentValue !== undefined && typeof currentValue === 'number' && (
+            <div
+              style={{
+                padding: '10px 15px',
+                background: '#f8f9fa',
+                borderRadius: '4px',
+                marginBottom: '15px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '15px'
               }}
             >
-              <FontAwesomeIcon icon={faPlusSquare} /> Add Field
-            </Button>
+              <span style={{ color: '#495057' }}>
+                <strong>Value:</strong> {formatValue(currentValue)}{' '}
+                {siUnit && <strong>{siUnit}</strong>}
+              </span>
+              {converted && (
+                <span style={{ color: '#28a745', fontWeight: 'bold' }}>
+                  → {formatValue(converted.value)}{' '}
+                  <strong>{converted.unit}</strong>
+                </span>
+              )}
+            </div>
           )}
 
-          <Zones
-            zones={zones !== undefined && zones !== null ? zones : []}
-            isEditing={isEditing}
-            setZones={(zones) => setLocalMeta({ ...localMeta, zones })}
-          />
-        </Form>
-      </CardBody>}
+          <Form
+            action=""
+            method="post"
+            encType="multipart/form-data"
+            className="form-horizontal"
+            onSubmit={(e) => e.preventDefault()}
+          >
+            {metaValues
+              .filter(({ key }) => key !== 'zones')
+              .map(({ key, value }) => {
+                const renderer = METAFIELDRENDERERS[key]
+                if (renderer) {
+                  const props = {
+                    _key: key,
+                    value,
+                    disabled: !isEditing,
+                    categories,
+                    setValue: (metaFieldValue) =>
+                      setLocalMeta({
+                        ...localMeta,
+                        ...{ [key]: metaFieldValue }
+                      }),
+                    setKey: (metaFieldKey) => {
+                      const copy = { ...localMeta }
+                      copy[metaFieldKey] = localMeta[key]
+                      delete copy[key]
+                      setLocalMeta(copy)
+                    },
+                    deleteKey: () => {
+                      const copy = { ...localMeta }
+                      delete copy[key]
+                      setLocalMeta(copy)
+                    }
+                  }
+                  return renderer(props)
+                } else {
+                  return (
+                    <UnknownMetaFormRow key={key} metaKey={key} value={value} />
+                  )
+                }
+              })}
+
+            {isEditing && (
+              <Button
+                color="info"
+                size="sm"
+                outline
+                style={{ marginTop: '10px' }}
+                onClick={() => {
+                  const copy = { ...localMeta }
+                  const firstNewMetaFieldKey = METAFIELDS.find(
+                    (metaFieldName) => localMeta[metaFieldName] === undefined
+                  )
+                  if (firstNewMetaFieldKey) {
+                    copy[firstNewMetaFieldKey] = ''
+                    setLocalMeta(copy)
+                  }
+                }}
+              >
+                <FontAwesomeIcon icon={faPlusSquare} /> Add Field
+              </Button>
+            )}
+
+            <Zones
+              zones={zones !== undefined && zones !== null ? zones : []}
+              isEditing={isEditing}
+              setZones={(zones) => setLocalMeta({ ...localMeta, zones })}
+            />
+          </Form>
+        </CardBody>
+      )}
     </Card>
   )
 }
@@ -552,7 +633,14 @@ const MetaFormRow = (props) => {
       </Col>
       <Col xs="12" md="6">
         <V {...props}></V>
-        {description && <FormText color="muted" style={{ fontSize: '0.75rem', fontStyle: 'italic' }}>{description}</FormText>}
+        {description && (
+          <FormText
+            color="muted"
+            style={{ fontSize: '0.75rem', fontStyle: 'italic' }}
+          >
+            {description}
+          </FormText>
+        )}
       </Col>
       <Col xs="1" md="1">
         {!disabled && (
@@ -587,39 +675,67 @@ const STATE_COLORS = {
   emergency: '#6f42c1'
 }
 
-const Zone = ({ zone, isEditing, showHint, setZone, deleteZone, moveUp, moveDown, canMoveUp, canMoveDown }) => {
+const Zone = ({
+  zone,
+  isEditing,
+  showHint,
+  setZone,
+  deleteZone,
+  moveUp,
+  moveDown,
+  canMoveUp,
+  canMoveDown
+}) => {
   const { state, lower, upper, message } = zone
   return (
-    <div style={{
-      backgroundColor: 'aliceblue',
-      padding: '10px',
-      marginBottom: '5px',
-      borderRadius: '4px',
-      borderLeft: `4px solid ${STATE_COLORS[state] || '#6c757d'}`
-    }}>
+    <div
+      style={{
+        backgroundColor: 'aliceblue',
+        padding: '10px',
+        marginBottom: '5px',
+        borderRadius: '4px',
+        borderLeft: `4px solid ${STATE_COLORS[state] || '#6c757d'}`
+      }}
+    >
       <Row>
         <Col xs="2" md="2">
-          {showHint && <FormText color="muted" style={{ fontSize: '0.7rem' }}>Lower</FormText>}
+          {showHint && (
+            <FormText color="muted" style={{ fontSize: '0.7rem' }}>
+              Lower
+            </FormText>
+          )}
           <Input
             disabled={!isEditing}
             type="number"
             bsSize="sm"
-            onChange={(e) => setZone({ ...zone, lower: Number(e.target.value) })}
+            onChange={(e) =>
+              setZone({ ...zone, lower: Number(e.target.value) })
+            }
             value={lower}
           />
         </Col>
         <Col xs="2" md="2">
-          {showHint && <FormText color="muted" style={{ fontSize: '0.7rem' }}>Upper</FormText>}
+          {showHint && (
+            <FormText color="muted" style={{ fontSize: '0.7rem' }}>
+              Upper
+            </FormText>
+          )}
           <Input
             disabled={!isEditing}
             type="number"
             bsSize="sm"
-            onChange={(e) => setZone({ ...zone, upper: Number(e.target.value) })}
+            onChange={(e) =>
+              setZone({ ...zone, upper: Number(e.target.value) })
+            }
             value={upper}
           />
         </Col>
         <Col xs="2" md="2">
-          {showHint && <FormText color="muted" style={{ fontSize: '0.7rem' }}>State</FormText>}
+          {showHint && (
+            <FormText color="muted" style={{ fontSize: '0.7rem' }}>
+              State
+            </FormText>
+          )}
           <Input
             disabled={!isEditing}
             type="select"
@@ -628,12 +744,18 @@ const Zone = ({ zone, isEditing, showHint, setZone, deleteZone, moveUp, moveDown
             onChange={(e) => setZone({ ...zone, state: e.target.value })}
           >
             {STATES.map((s, i) => (
-              <option key={i} value={s}>{s}</option>
+              <option key={i} value={s}>
+                {s}
+              </option>
             ))}
           </Input>
         </Col>
         <Col xs="4" md="4">
-          {showHint && <FormText color="muted" style={{ fontSize: '0.7rem' }}>Message</FormText>}
+          {showHint && (
+            <FormText color="muted" style={{ fontSize: '0.7rem' }}>
+              Message
+            </FormText>
+          )}
           <Input
             disabled={!isEditing}
             type="text"
@@ -643,13 +765,27 @@ const Zone = ({ zone, isEditing, showHint, setZone, deleteZone, moveUp, moveDown
           />
         </Col>
         <Col xs="2" md="2">
-          {showHint && <FormText color="muted" style={{ fontSize: '0.7rem' }}>Actions</FormText>}
+          {showHint && (
+            <FormText color="muted" style={{ fontSize: '0.7rem' }}>
+              Actions
+            </FormText>
+          )}
           {isEditing && (
             <ButtonGroup size="sm">
-              <Button color="outline-dark" disabled={!canMoveUp} onClick={moveUp} title="Move Up">
+              <Button
+                color="outline-dark"
+                disabled={!canMoveUp}
+                onClick={moveUp}
+                title="Move Up"
+              >
                 <FontAwesomeIcon icon={faArrowUp} />
               </Button>
-              <Button color="outline-dark" disabled={!canMoveDown} onClick={moveDown} title="Move Down">
+              <Button
+                color="outline-dark"
+                disabled={!canMoveDown}
+                onClick={moveDown}
+                title="Move Down"
+              >
                 <FontAwesomeIcon icon={faArrowDown} />
               </Button>
               <Button color="danger" onClick={deleteZone} title="Remove">
@@ -671,15 +807,25 @@ const Zones = ({ zones, isEditing, setZones }) => {
   }
 
   return (
-    <div style={{ marginTop: '20px', borderTop: '1px solid #dee2e6', paddingTop: '15px' }}>
+    <div
+      style={{
+        marginTop: '20px',
+        borderTop: '1px solid #dee2e6',
+        paddingTop: '15px'
+      }}
+    >
       <Row>
         <Col md="2">
           <strong>Zones</strong>
-          <FormText color="muted" style={{ fontSize: '0.7rem' }}>Alert thresholds</FormText>
+          <FormText color="muted" style={{ fontSize: '0.7rem' }}>
+            Alert thresholds
+          </FormText>
         </Col>
         <Col md="10">
           {(zones === undefined || zones.length === 0) && !isEditing && (
-            <span style={{ color: '#6c757d', fontStyle: 'italic' }}>No zones defined</span>
+            <span style={{ color: '#6c757d', fontStyle: 'italic' }}>
+              No zones defined
+            </span>
           )}
           {zones.map((zone, i) => (
             <Zone
