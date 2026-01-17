@@ -1,8 +1,67 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { usePathData, useMetaData } from './usePathData'
 import TimestampCell from './TimestampCell'
 import CopyToClipboardWithFade from './CopyToClipboardWithFade'
 import { getValueRenderer, DefaultValueRenderer } from './ValueRenderers'
+
+// Cache for default categories to avoid repeated fetches
+let defaultCategoriesCache = null
+let defaultCategoriesFetchPromise = null
+
+/**
+ * Fetch default categories from server (cached)
+ */
+async function fetchDefaultCategories() {
+  if (defaultCategoriesCache) {
+    return defaultCategoriesCache
+  }
+
+  if (defaultCategoriesFetchPromise) {
+    return defaultCategoriesFetchPromise
+  }
+
+  defaultCategoriesFetchPromise = fetch(
+    '/signalk/v1/unitpreferences/default-categories',
+    {
+      credentials: 'include'
+    }
+  )
+    .then((res) => (res.ok ? res.json() : { categories: {} }))
+    .then((data) => {
+      defaultCategoriesCache = data.categories || {}
+      defaultCategoriesFetchPromise = null
+      return defaultCategoriesCache
+    })
+    .catch((err) => {
+      console.error('Failed to fetch default categories:', err)
+      defaultCategoriesFetchPromise = null
+      return {}
+    })
+
+  return defaultCategoriesFetchPromise
+}
+
+/**
+ * Find category for a path by checking wildcard patterns
+ */
+function findCategoryForPath(path, defaultCategories) {
+  if (!path || !defaultCategories) return null
+
+  for (const [category, config] of Object.entries(defaultCategories)) {
+    if (config.paths && Array.isArray(config.paths)) {
+      for (const pattern of config.paths) {
+        // Handle wildcard patterns like "propulsion.*.temperature"
+        const regex = new RegExp(
+          '^' + pattern.replace(/\*/g, '[^.]+').replace(/\./g, '\\.') + '$'
+        )
+        if (regex.test(path)) {
+          return category
+        }
+      }
+    }
+  }
+  return null
+}
 
 /**
  * DataRow - Individual virtualized row with granular subscription
@@ -22,6 +81,12 @@ function DataRow({
 }) {
   const data = usePathData(context, path$SourceKey)
   const meta = useMetaData(context, data?.path)
+  const [defaultCategories, setDefaultCategories] = useState(null)
+
+  // Load default categories on mount
+  useEffect(() => {
+    fetchDefaultCategories().then(setDefaultCategories)
+  }, [])
 
   if (!data) {
     return (
@@ -43,7 +108,11 @@ function DataRow({
   }
 
   const units = meta && meta.units ? meta.units : ''
-  const category = meta?.displayUnits?.category
+  // Get category from metadata, or fall back to default categories
+  let category = meta?.displayUnits?.category
+  if (!category && data?.path && defaultCategories) {
+    category = findCategoryForPath(data.path, defaultCategories)
+  }
 
   // Calculate converted value if conversion is available
   let convertedValue = null

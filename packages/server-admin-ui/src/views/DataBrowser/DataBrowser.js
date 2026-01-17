@@ -11,9 +11,7 @@ import {
   Col,
   Label,
   FormGroup,
-  Table,
-  Button,
-  ButtonGroup
+  Table
 } from 'reactstrap'
 import moment from 'moment'
 import { getCompiledFormula } from '../../utils/unitConversion'
@@ -27,7 +25,6 @@ const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
 
 const metaStorageKey = 'admin.v1.dataBrowser.meta'
-const presetStorageKey = 'admin.v1.dataBrowser.preset'
 
 // Default unit preferences presets (fallback if fetch fails)
 const DEFAULT_PRESETS = [
@@ -775,7 +772,6 @@ class DataBrowser extends Component {
                         .sort()
                         .map((path) => {
                           const meta = store.getMeta(this.state.context, path)
-                          const category = meta?.displayUnits?.category || ''
                           // Find a current value for this path
                           const dataKeys = Object.keys(
                             this.state.data?.[this.state.context] || {}
