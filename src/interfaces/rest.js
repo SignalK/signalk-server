@@ -19,7 +19,10 @@ const debug = createDebug('signalk-server:interfaces:rest')
 const express = require('express')
 const { getMetadata } = require('@signalk/signalk-schema')
 const ports = require('../ports')
-const { resolveDisplayUnits, getDefaultCategory } = require('../unitpreferences')
+const {
+  resolveDisplayUnits,
+  getDefaultCategory
+} = require('../unitpreferences')
 
 // Enhance metadata response with displayUnits from unit preferences
 function enhanceMetadataResponse(metadata, signalkPath, app) {

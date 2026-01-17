@@ -1,8 +1,4 @@
-import {
-  getCategories,
-  getMergedDefinitions,
-  getActivePreset
-} from './loader'
+import { getCategories, getMergedDefinitions, getActivePreset } from './loader'
 import { EnhancedDisplayUnits, DisplayUnitsMetadata } from './types'
 
 /**
@@ -14,7 +10,6 @@ import { EnhancedDisplayUnits, DisplayUnitsMetadata } from './types'
 export function resolveDisplayUnits(
   storedDisplayUnits: DisplayUnitsMetadata | undefined
 ): EnhancedDisplayUnits | null {
-
   if (!storedDisplayUnits?.category) {
     return null
   }
@@ -27,7 +22,7 @@ export function resolveDisplayUnits(
   // Step 1: Get SI unit for this category
   const siUnit = categoriesData.categoryToBaseUnit[category]
   if (!siUnit) {
-    return null  // Unknown category
+    return null // Unknown category
   }
 
   // Step 2: Determine target unit
@@ -38,18 +33,18 @@ export function resolveDisplayUnits(
   } else if (preset.categories[category]?.targetUnit) {
     targetUnit = preset.categories[category].targetUnit
   } else {
-    return null  // No target unit defined
+    return null // No target unit defined
   }
 
   // Step 3: Get formula from definitions
   const unitDef = definitions[siUnit]
   if (!unitDef?.conversions) {
-    return null  // No conversions for this SI unit
+    return null // No conversions for this SI unit
   }
 
   const conversion = unitDef.conversions[targetUnit]
   if (!conversion) {
-    return null  // Target unit not found in conversions
+    return null // Target unit not found in conversions
   }
 
   // Step 4: Build response
@@ -59,7 +54,9 @@ export function resolveDisplayUnits(
     formula: conversion.formula,
     inverseFormula: conversion.inverseFormula,
     symbol: conversion.symbol,
-    displayFormat: storedDisplayUnits.displayFormat || preset.categories[category]?.displayFormat
+    displayFormat:
+      storedDisplayUnits.displayFormat ||
+      preset.categories[category]?.displayFormat
   }
 }
 
@@ -86,5 +83,5 @@ export function validateCategoryAssignment(
     return `Category "${category}" requires SI unit "${categorySiUnit}" but path has "${pathSiUnit}"`
   }
 
-  return null  // Valid
+  return null // Valid
 }
