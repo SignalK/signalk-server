@@ -19,7 +19,6 @@ The Admin UI has been upgraded from React 16 to **React 19**. This is a signific
 | React        | 16.14.0    | 19.x       |
 | React DOM    | 16.14.0    | 19.x       |
 | React Router | 4.x        | 6.x        |
-| Build Tool   | Webpack    | Vite       |
 | Language     | JavaScript | TypeScript |
 
 ### Impact on Embedded Webapps
