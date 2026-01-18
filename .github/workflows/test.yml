@@ -19,7 +19,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm install
+      - uses: SocketDev/action@v1
+        with:
+          mode: firewall-free
+      - run: sfw npm install
       - run: npm run build:all
 
       - name: server-api
