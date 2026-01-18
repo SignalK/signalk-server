@@ -179,7 +179,7 @@ const NotificationRenderer = ({ value }) => {
           icon={method.includes('visual') ? faEye : faEyeSlash}
         />
         <FontAwesomeIcon
-          icon={method.includes('visual') ? faBell : faBellSlash}
+          icon={method.includes('sound') ? faBell : faBellSlash}
         />
       </div>
     </div>
