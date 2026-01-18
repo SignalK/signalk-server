@@ -4,7 +4,9 @@
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   },
   "include": ["./src/**/*"]
 }
