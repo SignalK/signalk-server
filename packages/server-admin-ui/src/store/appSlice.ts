@@ -39,7 +39,8 @@ const initialState: RootState = {
     updates: [],
     installed: [],
     available: [],
-    installing: []
+    installing: [],
+    deprecated: []
   },
   loginStatus: {},
   serverSpecification: {},
@@ -93,6 +94,8 @@ const appSlice = createSlice({
       apps.available.sort(nameCollator)
       apps.installed.sort(nameCollator)
       apps.updates.sort(nameCollator)
+      apps.deprecated = apps.deprecated || []
+      apps.deprecated.sort(nameCollator)
       state.appStore = apps
     },
 
@@ -102,6 +105,8 @@ const appSlice = createSlice({
       apps.available.sort(nameCollator)
       apps.installed.sort(nameCollator)
       apps.updates.sort(nameCollator)
+      apps.deprecated = apps.deprecated || []
+      apps.deprecated.sort(nameCollator)
       state.appStore = apps
     },
 

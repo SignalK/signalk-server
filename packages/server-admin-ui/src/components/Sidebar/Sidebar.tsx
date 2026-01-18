@@ -65,6 +65,7 @@ export default function Sidebar({ location }: SidebarProps) {
 
   const items = useMemo((): NavItemData[] => {
     const appUpdates = appStore.updates.length
+    const appDeprecated = appStore.deprecated?.length || 0
     let updatesBadge: BadgeData | null = null
     let serverUpdateBadge: BadgeData | null = null
     let accessRequestsBadge: BadgeData | null = null
@@ -100,6 +101,29 @@ export default function Sidebar({ location }: SidebarProps) {
       }
     }
 
+    // Combine updates and deprecated badges for Appstore
+    let appstoreBadge: BadgeData | null = null
+    if (appStore.storeAvailable === false) {
+      appstoreBadge = {
+        variant: 'danger',
+        text: 'OFFLINE'
+      }
+    } else if (appUpdates > 0 && appDeprecated > 0) {
+      appstoreBadge = {
+        variant: 'warning',
+        text: `${appUpdates}↑ ${appDeprecated}✗`,
+        color: 'warning'
+      }
+    } else if (appDeprecated > 0) {
+      appstoreBadge = {
+        variant: 'danger',
+        text: `${appDeprecated}`,
+        color: 'danger'
+      }
+    } else if (appUpdates > 0) {
+      appstoreBadge = updatesBadge
+    }
+
     const result: NavItemData[] = [
       {
         name: 'Dashboard',
@@ -127,7 +151,7 @@ export default function Sidebar({ location }: SidebarProps) {
           name: 'Appstore',
           url: '/appstore',
           icon: 'icon-basket',
-          badge: updatesBadge
+          badge: appstoreBadge
         },
         {
           name: 'Server',

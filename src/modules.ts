@@ -418,6 +418,67 @@ export async function importOrRequire(moduleDir: string) {
   }
 }
 
+// Cache for deprecation status (longer TTL since it changes rarely)
+const deprecationCache: Record<
+  string,
+  { time: number; deprecated: string | false }
+> = {}
+const DEPRECATION_CACHE_TTL = 60 * 60 * 1000 // 1 hour
+
+async function checkPackageDeprecation(
+  packageName: string
+): Promise<string | false> {
+  // Check cache first
+  const cached = deprecationCache[packageName]
+  if (cached && Date.now() - cached.time < DEPRECATION_CACHE_TTL) {
+    return cached.deprecated
+  }
+
+  try {
+    const res = await fetch(
+      `https://registry.npmjs.org/${encodeURIComponent(packageName)}`
+    )
+    if (!res.ok) return false
+
+    const data = (await res.json()) as {
+      'dist-tags'?: { latest?: string }
+      versions?: Record<string, { deprecated?: string }>
+    }
+    const latestVersion = data['dist-tags']?.latest
+    const deprecated =
+      (latestVersion && data.versions?.[latestVersion]?.deprecated) || false
+
+    deprecationCache[packageName] = { time: Date.now(), deprecated }
+    return deprecated
+  } catch (err) {
+    npmDebug(`Failed to check deprecation for ${packageName}: ${err}`)
+    return false
+  }
+}
+
+// Batch check for multiple packages (parallel with concurrency limit)
+async function checkDeprecations(
+  packageNames: string[]
+): Promise<Record<string, string | false>> {
+  const CONCURRENCY = 5
+  const results: Record<string, string | false> = {}
+
+  for (let i = 0; i < packageNames.length; i += CONCURRENCY) {
+    const batch = packageNames.slice(i, i + CONCURRENCY)
+    const batchResults = await Promise.all(
+      batch.map(async (name) => ({
+        name,
+        deprecated: await checkPackageDeprecation(name)
+      }))
+    )
+    batchResults.forEach(({ name, deprecated }) => {
+      results[name] = deprecated
+    })
+  }
+
+  return results
+}
+
 module.exports = {
   modulesWithKeyword,
   installModule,
@@ -430,5 +491,7 @@ module.exports = {
   getKeywords,
   restoreModules,
   importOrRequire,
-  runNpm
+  runNpm,
+  checkDeprecations,
+  checkPackageDeprecation
 }

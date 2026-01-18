@@ -5,13 +5,16 @@ import {
   useCallback,
   useOptimistic,
   useTransition,
+  useMemo,
   ChangeEvent,
   MouseEvent,
   FormEvent
 } from 'react'
 import { useParams } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import PluginConfigurationForm from './../ServerConfig/PluginConfigurationForm'
 import {
+  Badge,
   Card,
   CardBody,
   CardHeader,
@@ -57,6 +60,19 @@ interface Plugin {
   [key: string]: unknown
 }
 
+interface DeprecatedApp {
+  name: string
+  deprecatedMessage?: string
+}
+
+interface AppStoreState {
+  deprecated: DeprecatedApp[]
+}
+
+interface RootState {
+  appStore: AppStoreState
+}
+
 const searchStorageKey = 'admin.v1.plugins.search'
 const openPluginStorageKey = 'admin.v1.plugins.openPlugin'
 const statusFilterStorageKey = 'admin.v1.plugins.statusFilter'
@@ -79,6 +95,22 @@ export default function PluginConfigurationList() {
 
   // React 19: useTransition for non-blocking filter updates
   const [isFiltering, startFilterTransition] = useTransition()
+
+  // Get deprecated plugins from Redux store
+  const deprecatedPlugins = useSelector(
+    (state: RootState) => state.appStore?.deprecated || []
+  )
+
+  // Create a map for quick lookup of deprecated plugin messages
+  const deprecatedMap = useMemo(() => {
+    const map = new Map<string, string>()
+    deprecatedPlugins.forEach((app) => {
+      if (app.deprecatedMessage) {
+        map.set(app.name, app.deprecatedMessage)
+      }
+    })
+    return map
+  }, [deprecatedPlugins])
 
   const tableContainerRef = useRef<HTMLDivElement>(null)
 
@@ -412,6 +444,11 @@ export default function PluginConfigurationList() {
                   const isWasmPlugin = plugin.type === 'wasm'
                   const wasmDisabledForPlugin = isWasmPlugin && !wasmEnabled
 
+                  // Check if plugin is deprecated
+                  const deprecatedMessage = deprecatedMap.get(
+                    plugin.packageName
+                  )
+
                   // Determine badge class and text (Bootstrap 5 uses text-bg-* classes)
                   let badgeClass = 'text-bg-secondary'
                   let badgeText = 'Disabled'
@@ -434,6 +471,15 @@ export default function PluginConfigurationList() {
                     >
                       <td>
                         <strong>{plugin.name}</strong>
+                        {deprecatedMessage && (
+                          <Badge
+                            color="danger"
+                            className="ms-2"
+                            title={deprecatedMessage}
+                          >
+                            Deprecated
+                          </Badge>
+                        )}
                       </td>
                       <td>
                         <div className="d-flex align-items-center justify-content-between">

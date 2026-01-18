@@ -16,10 +16,12 @@ export interface AppStoreState {
   installed: AppInfo[]
   available: AppInfo[]
   installing: InstallingApp[]
+  deprecated: AppInfo[]
   storeAvailable?: boolean
   canUpdateServer?: boolean
   serverUpdate?: string
   isInDocker?: boolean
+  categories?: string[]
 }
 
 export interface AppInfo {
@@ -27,6 +29,7 @@ export interface AppInfo {
   version?: string
   description?: string
   author?: string
+  deprecatedMessage?: string
   [key: string]: unknown
 }
 

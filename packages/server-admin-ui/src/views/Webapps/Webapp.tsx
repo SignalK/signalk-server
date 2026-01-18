@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { Card, CardBody } from 'reactstrap'
+import { Badge, Card, CardBody } from 'reactstrap'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTableCells } from '@fortawesome/free-solid-svg-icons/faTableCells'
 import classNames from 'classnames'
@@ -19,6 +19,7 @@ interface WebAppInfo {
 
 interface WebappProps {
   webAppInfo: WebAppInfo
+  deprecatedMessage?: string
   children?: ReactNode
 }
 
@@ -28,7 +29,11 @@ export function urlToWebapp(webAppInfo: WebAppInfo): string {
     : `/${webAppInfo.name}`
 }
 
-export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {
+export default function Webapp({
+  webAppInfo,
+  deprecatedMessage,
+  ...attributes
+}: WebappProps) {
   const padding = { card: 'p-3', icon: 'p-3', lead: 'mt-2' }
 
   const card = {
@@ -77,7 +82,14 @@ export default function Webapp({ webAppInfo, ...attributes }: WebappProps) {
       <Card>
         <CardBody className={card.style} {...attributes}>
           {blockIcon(webAppInfo?.signalk?.appIcon || null)}
-          <div className={lead.classes}>{header}</div>
+          <div className={lead.classes}>
+            {header}
+            {deprecatedMessage && (
+              <Badge color="danger" className="ms-2" title={deprecatedMessage}>
+                Deprecated
+              </Badge>
+            )}
+          </div>
           <div className="text-muted font-xs">{webAppInfo.description}</div>
         </CardBody>
       </Card>
