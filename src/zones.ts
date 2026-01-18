@@ -4,13 +4,13 @@ import { createDebug } from './debug'
 
 const debug = createDebug('signalk-server:zones')
 
-interface ZoneMethods {
-  normalMethod?: ALARM_METHOD
-  nominalMethod?: ALARM_METHOD
-  alertMethod?: ALARM_METHOD
-  warnMethod?: ALARM_METHOD
-  alarmMethod?: ALARM_METHOD
-  emergencyMethod?: ALARM_METHOD
+export interface ZoneMethods {
+  normalMethod?: ALARM_METHOD[] | null
+  nominalMethod?: ALARM_METHOD[] | null
+  alertMethod?: ALARM_METHOD[] | null
+  warnMethod?: ALARM_METHOD[] | null
+  alarmMethod?: ALARM_METHOD[] | null
+  emergencyMethod?: ALARM_METHOD[] | null
 }
 
 export class Zones {
@@ -83,6 +83,20 @@ export class Zones {
   }
 }
 
+export function getMethod(state: string, methods: ZoneMethods): ALARM_METHOD[] {
+  const methodName = `${state}Method` as keyof ZoneMethods
+  const method = methods[methodName]
+  if (Array.isArray(method)) {
+    return method
+  }
+  // Explicitly null means no methods
+  if (method === null) {
+    return []
+  }
+  // Undefined => default to visual
+  return [ALARM_METHOD.visual]
+}
+
 function getNotificationDelta(
   path: Path,
   zoneIndex: number,
@@ -92,18 +106,17 @@ function getNotificationDelta(
   let value = null
   if (zoneIndex >= 0) {
     const { lower, upper, state, message } = zones[zoneIndex]
-    const methodName: keyof ZoneMethods = `${state}Method`
     value = {
       state: state as string,
       message: message || `${lower} < value < ${upper}`,
-      method: methods[methodName] || ['visual']
+      method: getMethod(state, methods)
     }
   } else {
     // Default to "normal" zone
     value = {
       state: 'normal',
       message: 'Value is within normal range',
-      method: []
+      method: getMethod('normal', methods)
     }
   }
   return {
