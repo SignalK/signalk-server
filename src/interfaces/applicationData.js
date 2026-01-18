@@ -207,7 +207,12 @@ module.exports = function (app) {
       const applicationData = JSON.parse(applicationDataString)
       return applicationData
     } catch (e) {
-      console.error('Could not parse applicationData:' + e.message)
+      let filePath = dirForApplicationData(req, appid, isUser)
+      console.error(
+        'Could not parse applicationData for "%s": %s',
+        filePath,
+        e.message
+      )
       return {}
     }
   }

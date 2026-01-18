@@ -274,8 +274,11 @@ export function getSecurityConfig(
       const optionsAsString = readFileSync(pathForSecurityConfig(app), 'utf8')
       return JSON.parse(optionsAsString)
     } catch (e: any) {
-      console.error('Could not parse security config')
-      console.error(e.message)
+      console.error(
+        'Could not parse security config at %s: %s',
+        pathForSecurityConfig(app),
+        e.message
+      )
       return {}
     }
   }
