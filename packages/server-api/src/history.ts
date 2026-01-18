@@ -15,8 +15,11 @@ export type ValueList = {
   method: AggregateMethod
 }[]
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DataRow = [Timestamp, ...any[]]
+/**
+ * A row of historical data: first element is timestamp, followed by aggregated values.
+ * Values can be numbers, null, or other Signal K value types depending on the path.
+ */
+export type DataRow = [Timestamp, ...(number | string | boolean | null)[]]
 
 export interface ValuesResponse {
   context: Context

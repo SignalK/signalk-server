@@ -9,7 +9,7 @@ export interface WithContext {
 type NormalizedBaseDelta = {
   context: Context
   $source: SourceRef
-  source: Source
+  source?: Source
   path: Path
   timestamp: Timestamp
 }
@@ -31,9 +31,35 @@ export type NormalizedDelta = NormalizedValueDelta | NormalizedMetaDelta
 
 /** @category Server API */
 export type SourceRef = Brand<string, 'sourceRef'>
-/** @category Server API */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Source = any
+
+/**
+ * Source of data in delta format, a record of where the data was received from.
+ * Contains at least `label`, but can include additional properties depending on the source type.
+ * @see {@link https://signalk.org/specification/1.7.0/doc/data_model.html#sources | Signal K Sources}
+ * @category Server API
+ */
+export interface Source {
+  /** A label to identify the source bus, e.g., serial-COM1, eth-local */
+  label: string
+  /** A human name to identify the type: NMEA0183, NMEA2000, signalk */
+  type?: string
+  /** NMEA2000 src value or similar value for encapsulating the original source */
+  src?: string
+  /** NMEA2000 CAN name of the source device */
+  canName?: string
+  /** NMEA2000 PGN of the source message */
+  pgn?: number
+  /** NMEA2000 instance value of the source message */
+  instance?: string
+  /** Sentence type of the source NMEA0183 sentence */
+  sentence?: string
+  /** Talker id of the source NMEA0183 sentence */
+  talker?: string
+  /** AIS message type */
+  aisType?: number
+  /** Allow additional properties for extensibility */
+  [key: string]: unknown
+}
 
 /** @category Server API */
 export type Path = Brand<string, 'path'>
