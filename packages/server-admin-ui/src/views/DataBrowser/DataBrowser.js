@@ -416,6 +416,10 @@ class DataBrowser extends Component {
                     isSearchable={true}
                     isClearable={true}
                     noOptionsMessage={() => 'No contexts available'}
+                    menuPortalTarget={document.body}
+                    styles={{
+                      menuPortal: (base) => ({ ...base, zIndex: 9999 })
+                    }}
                   />
                 </Col>
                 <Col xs="6" md="2">
