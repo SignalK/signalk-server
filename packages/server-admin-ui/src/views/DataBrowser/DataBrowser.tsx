@@ -503,10 +503,7 @@ const DataBrowser: React.FC = () => {
                 />
               </Col>
               <Col xs="6" md="2">
-                <Label
-                  className="switch switch-text switch-primary"
-                  htmlFor="databrowser-meta"
-                >
+                <Label className="switch switch-text switch-primary">
                   <Input
                     type="checkbox"
                     id="databrowser-meta"
@@ -526,10 +523,7 @@ const DataBrowser: React.FC = () => {
                 </Label>
               </Col>
               <Col xs="6" md="2">
-                <Label
-                  className="switch switch-text switch-primary"
-                  htmlFor="databrowser-pause"
-                >
+                <Label className="switch switch-text switch-primary">
                   <Input
                     type="checkbox"
                     id="databrowser-pause"
@@ -549,10 +543,7 @@ const DataBrowser: React.FC = () => {
                 </Label>
               </Col>
               <Col xs="6" md="2">
-                <Label
-                  className="switch switch-text switch-primary"
-                  htmlFor="databrowser-raw"
-                >
+                <Label className="switch switch-text switch-primary">
                   <Input
                     type="checkbox"
                     id="databrowser-raw"
