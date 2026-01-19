@@ -85,16 +85,18 @@ function DataRow({
 
       {/* Source Cell */}
       <div className="virtual-table-cell source-cell" data-label="Source">
-        <input
-          type="checkbox"
-          onChange={() => onToggleSource(source)}
-          checked={selectedSources.has(source)}
-          aria-label={`Select source ${source}`}
-          style={{
-            marginRight: '5px',
-            verticalAlign: 'middle'
-          }}
-        />
+        <label style={{ display: 'inline', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            onChange={() => onToggleSource(source)}
+            checked={selectedSources.has(source)}
+            aria-label={`Select source ${source}`}
+            style={{
+              marginRight: '5px',
+              verticalAlign: 'middle'
+            }}
+          />
+        </label>
         <CopyToClipboardWithFade text={source}>
           {source} <FontAwesomeIcon icon={faCopy} />
         </CopyToClipboardWithFade>{' '}
