@@ -6,6 +6,7 @@
   border: 1px solid var(--bs-border-color, #c2cfd6);
   border-radius: 0.25rem;
   background-color: var(--bs-body-bg, #fff);
+  contain: layout style;
 }
 
 .virtual-table-header {
@@ -42,6 +43,16 @@
     minmax(120px, 1.2fr);
   border-bottom: 1px solid var(--bs-border-color, #c2cfd6);
   font-size: 0.875rem;
+  contain: layout paint style;
+}
+
+.virtual-table-row[data-raw-row='true'] {
+  content-visibility: auto;
+  contain-intrinsic-block-size: 80px;
+}
+
+.virtual-table-row[data-raw-row='true']:nth-child(-n + 20) {
+  content-visibility: visible;
 }
 
 .virtual-table-row:hover {
@@ -254,4 +265,40 @@
   color: var(--bs-secondary-color, #6c757d);
   background-color: var(--bs-tertiary-bg, #f0f3f5);
   border-top: 1px solid var(--bs-border-color, #c2cfd6);
+}
+
+.copy-icon {
+  display: inline-block;
+  width: 12px;
+  height: 14px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  position: relative;
+  opacity: 0.5;
+  margin-left: 4px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.copy-icon::before {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 12px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  top: -4px;
+  left: -4px;
+  background: var(--bs-body-bg, #fff);
+}
+
+.path-cell:hover .copy-icon,
+.source-cell:hover .copy-icon,
+.copy-icon:hover {
+  opacity: 1;
+}
+
+/* Meta table specific styles */
+.virtual-table-meta .virtual-table-row {
+  min-height: 60px;
 }

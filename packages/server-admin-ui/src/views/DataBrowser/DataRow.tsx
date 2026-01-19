@@ -1,5 +1,3 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCopy } from '@fortawesome/free-regular-svg-icons'
 import { usePathData, useMetaData } from './usePathData'
 import TimestampCell from './TimestampCell'
 import CopyToClipboardWithFade from './CopyToClipboardWithFade'
@@ -23,10 +21,6 @@ interface ValueRendererProps {
   raw: boolean
 }
 
-/**
- * DataRow - Individual virtualized row with granular subscription
- * Only re-renders when THIS path's data changes
- */
 function DataRow({
   path$SourceKey,
   context,
@@ -41,19 +35,14 @@ function DataRow({
 
   if (!data) {
     return (
-      <div className={`virtual-table-row ${index % 2 ? 'striped' : ''}`}>
-        <div className="virtual-table-cell path-cell" data-label="Path">
-          Loading...
-        </div>
+      <div
+        className={`virtual-table-row ${index % 2 ? 'striped' : ''}`}
+        data-raw-row={raw ? 'true' : undefined}
+      >
+        <div className="virtual-table-cell path-cell" data-label="Path">Loading...</div>
         <div className="virtual-table-cell value-cell" data-label="Value"></div>
-        <div
-          className="virtual-table-cell timestamp-cell"
-          data-label="Time"
-        ></div>
-        <div
-          className="virtual-table-cell source-cell"
-          data-label="Source"
-        ></div>
+        <div className="virtual-table-cell timestamp-cell" data-label="Time"></div>
+        <div className="virtual-table-cell source-cell" data-label="Source"></div>
       </div>
     )
   }
@@ -65,25 +54,24 @@ function DataRow({
   const timestamp = data.timestamp ?? ''
 
   return (
-    <div className={`virtual-table-row ${index % 2 ? 'striped' : ''}`}>
-      {/* Path Cell */}
+    <div
+      className={`virtual-table-row ${index % 2 ? 'striped' : ''}`}
+      data-raw-row={raw ? 'true' : undefined}
+    >
       <div className="virtual-table-cell path-cell" data-label="Path">
         <CopyToClipboardWithFade text={path}>
           <span>
-            {path} <FontAwesomeIcon icon={faCopy} />
+            {path} <span className="copy-icon" aria-hidden="true" />
           </span>
         </CopyToClipboardWithFade>
       </div>
 
-      {/* Value Cell */}
       <div className="virtual-table-cell value-cell" data-label="Value">
         <ValueRenderer data={data} meta={meta} units={units} raw={raw} />
       </div>
 
-      {/* Timestamp Cell */}
       <TimestampCell timestamp={timestamp} isPaused={isPaused} />
 
-      {/* Source Cell */}
       <div className="virtual-table-cell source-cell" data-label="Source">
         <label style={{ display: 'inline', cursor: 'pointer' }}>
           <input
@@ -98,7 +86,7 @@ function DataRow({
           />
         </label>
         <CopyToClipboardWithFade text={source}>
-          {source} <FontAwesomeIcon icon={faCopy} />
+          {source} <span className="copy-icon" aria-hidden="true" />
         </CopyToClipboardWithFade>{' '}
         {data.pgn || ''}
         {data.sentence || ''}
@@ -107,9 +95,6 @@ function DataRow({
   )
 }
 
-/**
- * ValueRenderer - Renders the value with appropriate renderer
- */
 function ValueRenderer({ data, meta, units, raw }: ValueRendererProps) {
   if (raw) {
     return (

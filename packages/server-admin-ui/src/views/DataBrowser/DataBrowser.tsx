@@ -3,7 +3,10 @@ import React, {
   useEffect,
   useCallback,
   useRef,
-  useEffectEvent
+  useEffectEvent,
+  useMemo,
+  useDeferredValue,
+  useTransition
 } from 'react'
 import { useSelector } from 'react-redux'
 import { JSONTree } from 'react-json-tree'
@@ -16,11 +19,10 @@ import {
   Form,
   Col,
   Label,
-  FormGroup,
-  Table
+  FormGroup
 } from 'reactstrap'
 import dayjs from 'dayjs'
-import Meta from './Meta'
+import VirtualizedMetaTable from './VirtualizedMetaTable'
 import store, { PathData } from './ValueEmittingStore'
 import type { MetaData } from './ValueEmittingStore'
 import VirtualizedDataTable from './VirtualizedDataTable'
@@ -29,6 +31,8 @@ import { getPath$SourceKey } from './pathUtils'
 
 const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
+
+const STRUCTURE_DEBOUNCE_MS = 200
 
 const metaStorageKey = 'admin.v1.dataBrowser.meta'
 const pauseStorageKey = 'admin.v1.dataBrowser.v1.pause'
@@ -115,6 +119,12 @@ const DataBrowser: React.FC = () => {
   )
   const [path$SourceKeys, setPath$SourceKeys] = useState<string[]>([])
   const [sources, setSources] = useState<Sources | null>(null)
+  const [sourcesExpanded, setSourcesExpanded] = useState(false)
+
+  const deferredSearch = useDeferredValue(search)
+  const isSearchStale = search !== deferredSearch
+  const [, startTransition] = useTransition()
+  const [contextVersion, setContextVersion] = useState(0)
 
   const didSubscribeRef = useRef(false)
   const webSocketRef = useRef<WebSocketWithSK | null>(null)
@@ -143,19 +153,16 @@ const DataBrowser: React.FC = () => {
     setSources(sourcesData)
   }, [])
 
-  // useEffectEvent: always sees latest state without causing effect re-runs
   const onPathSourceKeysUpdate = useEffectEvent(() => {
     const allKeys = store.getPath$SourceKeys(context)
 
     const filtered = allKeys.filter((key) => {
-      // Search filter
-      if (search && search.length > 0) {
-        if (key.toLowerCase().indexOf(search.toLowerCase()) === -1) {
+      if (deferredSearch && deferredSearch.length > 0) {
+        if (key.toLowerCase().indexOf(deferredSearch.toLowerCase()) === -1) {
           return false
         }
       }
 
-      // Source filter
       if (sourceFilterActive && selectedSources.size > 0) {
         const data = store.getPathData(context, key) as PathData | undefined
         if (data && !selectedSources.has(data.$source || '')) {
@@ -282,14 +289,15 @@ const DataBrowser: React.FC = () => {
     fetchSources()
     subscribeToDataIfNeeded()
 
-    // Subscribe to store structure changes
-    unsubscribeStoreRef.current = store.subscribeToStructure(() => {
+    unsubscribeStoreRef.current = store.subscribeToStructure((version) => {
+      setContextVersion(version)
+
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current)
       }
       updateTimeoutRef.current = setTimeout(() => {
         onPathSourceKeysUpdate()
-      }, 50)
+      }, STRUCTURE_DEBOUNCE_MS)
     })
 
     return () => {
@@ -335,7 +343,8 @@ const DataBrowser: React.FC = () => {
     return `${contextName || ''} ${contextKey}`
   }, [])
 
-  const getContextOptions = useCallback((): SelectOption[] => {
+  const contextOptions = useMemo((): SelectOption[] => {
+    void contextVersion
     const contexts = store.getContexts().sort()
     const options: SelectOption[] = []
 
@@ -352,12 +361,11 @@ const DataBrowser: React.FC = () => {
     })
 
     return options
-  }, [getContextLabel])
+  }, [contextVersion, getContextLabel])
 
-  const getCurrentContextValue = useCallback((): SelectOption | null => {
-    const options = getContextOptions()
-    return options.find((option) => option.value === context) || null
-  }, [context, getContextOptions])
+  const currentContext = useMemo((): SelectOption | null => {
+    return contextOptions.find((option) => option.value === context) || null
+  }, [context, contextOptions])
 
   const handleSearch = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -368,10 +376,9 @@ const DataBrowser: React.FC = () => {
     []
   )
 
-  // Update filtered paths when filters change
   useEffect(() => {
     onPathSourceKeysUpdate()
-  }, [context, search, sourceFilterActive, selectedSources])
+  }, [context, deferredSearch, sourceFilterActive, selectedSources])
 
   const toggleMeta = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -405,37 +412,46 @@ const DataBrowser: React.FC = () => {
     [fetchSources, subscribeToDataIfNeeded, unsubscribeToData]
   )
 
-  const toggleSourceSelection = useCallback((source: string) => {
-    setSelectedSources((prev) => {
-      const newSelectedSources = new Set(prev)
-      const wasEmpty = newSelectedSources.size === 0
+  const toggleSourceSelection = useCallback(
+    (source: string) => {
+      setSelectedSources((prev) => {
+        const newSelectedSources = new Set(prev)
+        const wasEmpty = newSelectedSources.size === 0
 
-      if (newSelectedSources.has(source)) {
-        newSelectedSources.delete(source)
-      } else {
-        newSelectedSources.add(source)
-      }
+        if (newSelectedSources.has(source)) {
+          newSelectedSources.delete(source)
+        } else {
+          newSelectedSources.add(source)
+        }
 
-      const newSize = newSelectedSources.size
-      const shouldActivateFilter = wasEmpty && newSize === 1
-      const shouldDeactivateFilter = newSelectedSources.size === 0
+        const newSize = newSelectedSources.size
+        const shouldActivateFilter = wasEmpty && newSize === 1
+        const shouldDeactivateFilter = newSelectedSources.size === 0
 
-      localStorage.setItem(
-        selectedSourcesStorageKey,
-        JSON.stringify([...newSelectedSources])
-      )
+        startTransition(() => {
+          localStorage.setItem(
+            selectedSourcesStorageKey,
+            JSON.stringify([...newSelectedSources])
+          )
 
-      if (shouldActivateFilter) {
-        setSourceFilterActive(true)
-        localStorage.setItem(sourceFilterActiveStorageKey, 'true')
-      } else if (shouldDeactivateFilter) {
-        setSourceFilterActive(false)
-        localStorage.setItem(sourceFilterActiveStorageKey, 'false')
-      }
+          if (shouldActivateFilter) {
+            localStorage.setItem(sourceFilterActiveStorageKey, 'true')
+          } else if (shouldDeactivateFilter) {
+            localStorage.setItem(sourceFilterActiveStorageKey, 'false')
+          }
+        })
 
-      return newSelectedSources
-    })
-  }, [])
+        if (shouldActivateFilter) {
+          setSourceFilterActive(true)
+        } else if (shouldDeactivateFilter) {
+          setSourceFilterActive(false)
+        }
+
+        return newSelectedSources
+      })
+    },
+    [startTransition]
+  )
 
   const toggleSourceFilter = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -470,9 +486,6 @@ const DataBrowser: React.FC = () => {
     // Dedupe and sort
     return [...new Set(paths)].sort()
   }, [context, search])
-
-  const contextOptions = getContextOptions()
-  const currentContext = getCurrentContextValue()
 
   return (
     <div className="animated fadeIn">
@@ -581,45 +594,31 @@ const DataBrowser: React.FC = () => {
               </FormGroup>
             )}
 
-            {/* Data Values View - Virtualized */}
             {!includeMeta && context && context !== 'none' && (
-              <VirtualizedDataTable
-                path$SourceKeys={path$SourceKeys}
-                context={context}
-                raw={raw}
-                isPaused={pause}
-                onToggleSource={toggleSourceSelection}
-                selectedSources={selectedSources}
-                onToggleSourceFilter={toggleSourceFilter}
-                sourceFilterActive={sourceFilterActive}
-              />
+              <div
+                style={{
+                  opacity: isSearchStale ? 0.7 : 1,
+                  transition: 'opacity 0.15s'
+                }}
+              >
+                <VirtualizedDataTable
+                  path$SourceKeys={path$SourceKeys}
+                  context={context}
+                  raw={raw}
+                  isPaused={pause}
+                  onToggleSource={toggleSourceSelection}
+                  selectedSources={selectedSources}
+                  onToggleSourceFilter={toggleSourceFilter}
+                  sourceFilterActive={sourceFilterActive}
+                />
+              </div>
             )}
 
-            {/* Meta View - Keep original table for now */}
             {includeMeta && context && context !== 'none' && (
-              <Table responsive bordered striped size="sm">
-                <thead>
-                  <tr>
-                    <th>Path</th>
-                    <th>Meta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getUniquePathsForMeta().map((path) => {
-                    const meta = store.getMeta(context, path) || {}
-                    return (
-                      <tr key={path}>
-                        <td>{path}</td>
-                        <td>
-                          {!path.startsWith('notifications') && (
-                            <Meta meta={meta} path={path} />
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </Table>
+              <VirtualizedMetaTable
+                paths={getUniquePathsForMeta()}
+                context={context}
+              />
             )}
           </Form>
         </CardBody>
@@ -627,16 +626,23 @@ const DataBrowser: React.FC = () => {
 
       {sources && (
         <Card>
-          <CardHeader>Sources</CardHeader>
-          <CardBody>
-            <JSONTree
-              data={sources}
-              theme="default"
-              invertTheme={true}
-              sortObjectKeys
-              hideRoot
-            />
-          </CardBody>
+          <CardHeader
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+            onClick={() => setSourcesExpanded((prev) => !prev)}
+          >
+            Sources {sourcesExpanded ? '[-]' : '[+]'}
+          </CardHeader>
+          {sourcesExpanded && (
+            <CardBody>
+              <JSONTree
+                data={sources}
+                theme="default"
+                invertTheme={true}
+                sortObjectKeys
+                hideRoot
+              />
+            </CardBody>
+          )}
         </Card>
       )}
     </div>
