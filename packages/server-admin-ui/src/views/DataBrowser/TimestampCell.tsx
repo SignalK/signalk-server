@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface TimestampCellProps {
   timestamp: string
@@ -57,4 +57,4 @@ function TimestampCell({ timestamp, isPaused, className }: TimestampCellProps) {
   )
 }
 
-export default memo(TimestampCell)
+export default TimestampCell

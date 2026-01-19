@@ -1,4 +1,4 @@
-import { useState, useCallback, memo, ReactNode } from 'react'
+import { useState, useCallback, ReactNode } from 'react'
 
 /**
  * Copy text to clipboard with fallback for non-HTTPS contexts
@@ -60,4 +60,4 @@ function CopyToClipboardWithFade({
   )
 }
 
-export default memo(CopyToClipboardWithFade)
+export default CopyToClipboardWithFade

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
+import { useRef, useEffect, useState, useCallback, useMemo, ChangeEvent } from 'react'
 import DataRow from './DataRow'
 import granularSubscriptionManager from './GranularSubscriptionManager'
 import './VirtualTable.css'
@@ -15,7 +15,7 @@ interface VirtualizedDataTableProps {
   isPaused: boolean
   onToggleSource: (source: string) => void
   selectedSources: Set<string>
-  onToggleSourceFilter: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onToggleSourceFilter: (event: ChangeEvent<HTMLInputElement>) => void
   sourceFilterActive: boolean
 }
 
@@ -279,4 +279,4 @@ function VirtualizedDataTable({
   )
 }
 
-export default React.memo(VirtualizedDataTable)
+export default VirtualizedDataTable

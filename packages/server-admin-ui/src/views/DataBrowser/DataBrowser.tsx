@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useEffectEvent
+} from 'react'
 import { useSelector } from 'react-redux'
 import { JSONTree } from 'react-json-tree'
 import Select from 'react-select'
@@ -114,7 +120,6 @@ const DataBrowser: React.FC = () => {
   const webSocketRef = useRef<WebSocketWithSK | null>(null)
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const unsubscribeStoreRef = useRef<(() => void) | null>(null)
-  const updatePath$SourceKeysRef = useRef<() => void>(() => {})
 
   const fetchSources = useCallback(async () => {
     const response = await fetch(`/signalk/v1/api/sources`, {
@@ -138,7 +143,8 @@ const DataBrowser: React.FC = () => {
     setSources(sourcesData)
   }, [])
 
-  const updatePath$SourceKeys = useCallback(() => {
+  // useEffectEvent: always sees latest state without causing effect re-runs
+  const onPathSourceKeysUpdate = useEffectEvent(() => {
     const allKeys = store.getPath$SourceKeys(context)
 
     const filtered = allKeys.filter((key) => {
@@ -162,12 +168,7 @@ const DataBrowser: React.FC = () => {
 
     filtered.sort()
     setPath$SourceKeys(filtered)
-  }, [context, search, sourceFilterActive, selectedSources])
-
-  // Keep ref updated with latest function
-  useEffect(() => {
-    updatePath$SourceKeysRef.current = updatePath$SourceKeys
-  }, [updatePath$SourceKeys])
+  })
 
   const handleMessage = useCallback(
     (msg: unknown) => {
@@ -241,7 +242,7 @@ const DataBrowser: React.FC = () => {
 
         // Update path keys if new paths were added or if this is the selected context
         if (isNew || (context && context === key)) {
-          updatePath$SourceKeysRef.current()
+          onPathSourceKeysUpdate()
           if (!hasData) {
             setHasData(true)
           }
@@ -287,7 +288,7 @@ const DataBrowser: React.FC = () => {
         clearTimeout(updateTimeoutRef.current)
       }
       updateTimeoutRef.current = setTimeout(() => {
-        updatePath$SourceKeysRef.current()
+        onPathSourceKeysUpdate()
       }, 50)
     })
 
@@ -369,14 +370,8 @@ const DataBrowser: React.FC = () => {
 
   // Update filtered paths when filters change
   useEffect(() => {
-    updatePath$SourceKeys()
-  }, [
-    context,
-    search,
-    sourceFilterActive,
-    selectedSources,
-    updatePath$SourceKeys
-  ])
+    onPathSourceKeysUpdate()
+  }, [context, search, sourceFilterActive, selectedSources])
 
   const toggleMeta = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
