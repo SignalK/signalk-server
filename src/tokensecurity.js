@@ -1462,7 +1462,7 @@ module.exports = function (app, config) {
             request.accessDescription = 'New User Request'
             request.accessIdentifier = accessRequest.userId
             request.accessPassword = bcrypt.hashSync(
-              request.accessPassword,
+              accessRequest.password,
               bcrypt.genSaltSync(passwordSaltRounds)
             )
             alertMessage = `${accessRequest.userId} has requested server access`
