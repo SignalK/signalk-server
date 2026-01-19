@@ -3,7 +3,6 @@ import {
   useEffect,
   useRef,
   useCallback,
-  memo,
   ChangeEvent,
   FormEvent
 } from 'react'
@@ -250,12 +249,12 @@ interface LogRowProps {
   log: string
 }
 
-// memo() replaces PureComponent for shallow comparison optimization
-const LogRow = memo(function LogRow({ log }: LogRowProps) {
+// React Compiler auto-memoizes components
+function LogRow({ log }: LogRowProps) {
   return (
     <span>
       {parse(log)}
       <br />
     </span>
   )
-})
+}

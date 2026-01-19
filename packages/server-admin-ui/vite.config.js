@@ -66,6 +66,7 @@ export default defineConfig({
     stripSvgFonts(),
     react({
       babel: {
+        plugins: [['babel-plugin-react-compiler', {}]],
         presets: [['@babel/preset-react', { runtime: 'automatic' }]]
       }
     }),

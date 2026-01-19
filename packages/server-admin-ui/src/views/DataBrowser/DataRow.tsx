@@ -1,4 +1,3 @@
-import { memo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCopy } from '@fortawesome/free-regular-svg-icons'
 import { usePathData, useMetaData } from './usePathData'
@@ -137,4 +136,4 @@ function ValueRenderer({ data, meta, units, raw }: ValueRendererProps) {
   return <DefaultValueRenderer value={data.value} units={units} />
 }
 
-export default memo(DataRow)
+export default DataRow
