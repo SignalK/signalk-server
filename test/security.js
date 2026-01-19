@@ -589,6 +589,87 @@ describe('Security', () => {
     })
     res.status.should.equal(413)
   })
+
+  it('User registration request and approval works', async function () {
+    const testUserId = 'newuser@test.com'
+    const testPassword = 'testpassword123'
+
+    let result = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        userId: testUserId,
+        password: testPassword
+      })
+    })
+    result.status.should.equal(202)
+    const requestJson = await result.json()
+    requestJson.should.have.property('requestId')
+    requestJson.should.have.property('href')
+    requestJson.state.should.equal('PENDING')
+
+    result = await fetch(`${url}${requestJson.href}`)
+    result.status.should.equal(200)
+    let json = await result.json()
+    json.should.have.property('state')
+    json.state.should.equal('PENDING')
+
+    result = await fetch(
+      `${url}/skServer/security/access/requests/${encodeURIComponent(testUserId)}/approved`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: `JAUTHENTICATION=${adminToken}`
+        },
+        body: JSON.stringify({
+          permissions: 'readonly'
+        })
+      }
+    )
+    result.status.should.equal(200)
+
+    result = await fetch(`${url}${requestJson.href}`)
+    result.status.should.equal(200)
+    json = await result.json()
+    json.should.have.property('state')
+    json.state.should.equal('COMPLETED')
+    json.should.have.property('accessRequest')
+    json.accessRequest.should.have.property('permission')
+    json.accessRequest.permission.should.equal('APPROVED')
+
+    const loginResult = await fetch(`${url}/signalk/v1/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: testUserId,
+        password: testPassword
+      })
+    })
+    loginResult.status.should.equal(200)
+    const loginJson = await loginResult.json()
+    loginJson.should.have.property('token')
+  })
+
+  it('User registration fails for existing user', async function () {
+    const result = await fetch(`${url}/signalk/v1/access/requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        userId: WRITE_USER_NAME,
+        password: 'anypassword'
+      })
+    })
+    result.status.should.equal(400)
+    const json = await result.json()
+    json.message.should.equal('User already exists')
+  })
 })
 
 describe('Access Request Limit', () => {
