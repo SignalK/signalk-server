@@ -1,25 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react'
 
 /**
- * TimestampCell - Displays timestamp with fade animation on update
+ * TimestampCell - Displays timestamp with fade animation on update.
+ * Uses key prop to force DOM recreation on each update, restarting the CSS animation.
  */
 function TimestampCell({ timestamp, isPaused, className }) {
-  const [isUpdated, setIsUpdated] = useState(false)
+  const [animationKey, setAnimationKey] = useState(0)
   const prevTimestamp = useRef(timestamp)
   const timeoutRef = useRef(null)
 
   useEffect(() => {
     if (prevTimestamp.current !== timestamp) {
-      // Clear any existing timeout
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
 
-      setIsUpdated(true)
+      setAnimationKey((k) => k + 1)
 
       timeoutRef.current = setTimeout(() => {
         if (!isPaused) {
-          setIsUpdated(false)
+          setAnimationKey(0)
         }
       }, 15000)
 
@@ -33,18 +33,22 @@ function TimestampCell({ timestamp, isPaused, className }) {
     }
   }, [timestamp, isPaused])
 
-  // Reset animation when paused
   useEffect(() => {
     if (isPaused) {
-      setIsUpdated(false)
+      setAnimationKey(0)
     }
   }, [isPaused])
 
+  const isAnimating = animationKey > 0 && !isPaused
   const cellClass = `virtual-table-cell timestamp-cell ${className || ''} ${
-    isUpdated && !isPaused ? 'timestamp-updated' : ''
+    isAnimating ? 'timestamp-updated' : ''
   }`
 
-  return <div className={cellClass}>{timestamp}</div>
+  return (
+    <div className={cellClass} key={isAnimating ? animationKey : 'static'}>
+      {timestamp}
+    </div>
+  )
 }
 
 export default React.memo(TimestampCell)
