@@ -14,6 +14,7 @@ import {
   Table
 } from 'reactstrap'
 import moment from 'moment'
+import { getCompiledFormula } from '../../utils/unitConversion'
 import Meta from './Meta'
 import store from './ValueEmittingStore'
 import VirtualizedDataTable from './VirtualizedDataTable'
@@ -24,6 +25,79 @@ const TIMESTAMP_FORMAT = 'MM/DD HH:mm:ss'
 const TIME_ONLY_FORMAT = 'HH:mm:ss'
 
 const metaStorageKey = 'admin.v1.dataBrowser.meta'
+
+// Default unit preferences presets (fallback if fetch fails)
+const DEFAULT_PRESETS = [
+  { value: 'metric', label: 'Metric (SI)' },
+  { value: 'imperial-us', label: 'Imperial (US)' },
+  { value: 'imperial-uk', label: 'Imperial (UK)' }
+]
+
+// Fetch all presets (built-in + custom)
+async function fetchPresets() {
+  try {
+    const response = await fetch('/signalk/v1/unitpreferences/presets', {
+      credentials: 'include'
+    })
+    if (response.ok) {
+      const data = await response.json()
+      const presets = []
+      // Add built-in presets
+      if (data.builtIn) {
+        data.builtIn.forEach((p) => {
+          presets.push({
+            value: typeof p === 'object' ? p.name : p,
+            label: typeof p === 'object' ? p.displayName || p.name : p,
+            isCustom: false
+          })
+        })
+      }
+      // Add custom presets
+      if (data.custom) {
+        data.custom.forEach((p) => {
+          presets.push({
+            value: typeof p === 'object' ? p.name : p,
+            label: typeof p === 'object' ? p.displayName || p.name : p,
+            isCustom: true
+          })
+        })
+      }
+      return presets.length > 0 ? presets : DEFAULT_PRESETS
+    }
+  } catch (e) {
+    console.error('Failed to fetch presets:', e)
+  }
+  return DEFAULT_PRESETS
+}
+
+// Fetch and set active preset
+async function fetchActivePreset() {
+  try {
+    const response = await fetch('/signalk/v1/unitpreferences/config', {
+      credentials: 'include'
+    })
+    if (response.ok) {
+      const config = await response.json()
+      return config.activePreset || 'metric'
+    }
+  } catch (e) {
+    console.error('Failed to fetch unit preferences:', e)
+  }
+  return 'metric'
+}
+
+async function setActivePreset(preset) {
+  try {
+    await fetch('/signalk/v1/unitpreferences/config', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activePreset: preset })
+    })
+  } catch (e) {
+    console.error('Failed to set unit preferences:', e)
+  }
+}
 const pauseStorageKey = 'admin.v1.dataBrowser.v1.pause'
 const rawStorageKey = 'admin.v1.dataBrowser.v1.raw'
 const contextStorageKey = 'admin.v1.dataBrowser.context'
@@ -75,7 +149,11 @@ class DataBrowser extends Component {
         localStorage.getItem(sourceFilterActiveStorageKey) === 'true',
       // For forcing re-renders when store updates
       storeVersion: 0,
-      path$SourceKeys: []
+      path$SourceKeys: [],
+      activePreset: 'metric', // Will be fetched from server in componentDidMount
+      presets: DEFAULT_PRESETS,
+      unitDefinitions: null, // Loaded from server for conversion formulas
+      presetDetails: null // Details of active preset with target units
     }
 
     this.fetchSources = fetchSources.bind(this)
@@ -88,6 +166,73 @@ class DataBrowser extends Component {
     this.toggleSourceSelection = this.toggleSourceSelection.bind(this)
     this.toggleSourceFilter = this.toggleSourceFilter.bind(this)
     this.updatePath$SourceKeys = this.updatePath$SourceKeys.bind(this)
+    this.handlePresetChange = this.handlePresetChange.bind(this)
+    this.convertValue = this.convertValue.bind(this)
+  }
+
+  async handlePresetChange(preset) {
+    await setActivePreset(preset)
+    // Also fetch preset details for conversion
+    try {
+      const res = await fetch(`/signalk/v1/unitpreferences/presets/${preset}`, {
+        credentials: 'include'
+      })
+      if (res.ok) {
+        const presetDetails = await res.json()
+        this.setState({ ...this.state, activePreset: preset, presetDetails })
+        return
+      }
+    } catch (e) {
+      console.error('Failed to fetch preset details:', e)
+    }
+    this.setState({ ...this.state, activePreset: preset })
+  }
+
+  // Convert a value from SI unit to display unit based on category and active preset
+  convertValue(value, siUnit, category) {
+    const { unitDefinitions, presetDetails } = this.state
+
+    // Need numeric value + category + definitions + preset
+    if (
+      typeof value !== 'number' ||
+      !category ||
+      !unitDefinitions ||
+      !presetDetails
+    ) {
+      return { value, unit: siUnit }
+    }
+
+    // Get target unit for this category from preset
+    const targetConfig = presetDetails.categories?.[category]
+    if (!targetConfig?.targetUnit) {
+      return { value, unit: siUnit }
+    }
+
+    const targetUnit = targetConfig.targetUnit
+
+    // If target is same as SI unit, no conversion needed
+    if (targetUnit === siUnit) {
+      return { value, unit: siUnit }
+    }
+
+    // Get conversion formula from definitions
+    const formula = unitDefinitions[siUnit]?.conversions?.[targetUnit]?.formula
+    const symbol =
+      unitDefinitions[siUnit]?.conversions?.[targetUnit]?.symbol || targetUnit
+
+    if (!formula) {
+      return { value, unit: siUnit }
+    }
+
+    // Evaluate formula using cached compiled expression
+    try {
+      const compiled = getCompiledFormula(formula)
+      const converted = compiled.evaluate({ value })
+      return { value: converted, unit: symbol }
+    } catch (e) {
+      console.error('Formula evaluation failed:', e)
+      return { value, unit: siUnit }
+    }
   }
 
   handleMessage(msg) {
@@ -221,7 +366,7 @@ class DataBrowser extends Component {
     }
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     this.fetchSources()
     this.subscribeToDataIfNeeded()
 
@@ -235,6 +380,39 @@ class DataBrowser extends Component {
         this.updatePath$SourceKeys()
       }, 50)
     })
+
+    // Fetch presets (including custom ones)
+    const presets = await fetchPresets()
+    const activePreset = await fetchActivePreset()
+
+    // Fetch unit definitions for conversion formulas
+    let unitDefinitions = null
+    try {
+      const res = await fetch('/signalk/v1/unitpreferences/definitions', {
+        credentials: 'include'
+      })
+      if (res.ok) {
+        unitDefinitions = await res.json()
+      }
+    } catch (e) {
+      console.error('Failed to fetch unit definitions:', e)
+    }
+
+    // Fetch details of active preset
+    let presetDetails = null
+    try {
+      const res = await fetch(
+        `/signalk/v1/unitpreferences/presets/${activePreset}`,
+        { credentials: 'include' }
+      )
+      if (res.ok) {
+        presetDetails = await res.json()
+      }
+    } catch (e) {
+      console.error('Failed to fetch preset details:', e)
+    }
+
+    this.setState({ presets, activePreset, unitDefinitions, presetDetails })
   }
 
   componentDidUpdate() {
@@ -480,6 +658,59 @@ class DataBrowser extends Component {
                   <span style={{ whiteSpace: 'nowrap' }}>Raw Values</span>
                 </Col>
               </FormGroup>
+              {this.state.includeMeta && (
+                <FormGroup row>
+                  <Col
+                    xs="12"
+                    md="12"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    <span style={{ fontWeight: '500', marginRight: '5px' }}>
+                      Preset:
+                    </span>
+                    {this.state.presets.map((preset, index) => {
+                      const isActive = this.state.activePreset === preset.value
+                      const colors = [
+                        '#28a745',
+                        '#007bff',
+                        '#6f42c1',
+                        '#fd7e14',
+                        '#20c997',
+                        '#e83e8c'
+                      ]
+                      const baseColor = colors[index % colors.length]
+                      return (
+                        <span
+                          key={preset.value}
+                          onClick={() => this.handlePresetChange(preset.value)}
+                          style={{
+                            display: 'inline-block',
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            fontSize: '0.85rem',
+                            fontWeight: '500',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            backgroundColor: isActive
+                              ? baseColor
+                              : 'transparent',
+                            color: isActive ? 'white' : baseColor,
+                            border: `2px solid ${baseColor}`,
+                            opacity: isActive ? 1 : 0.7
+                          }}
+                        >
+                          {preset.label}
+                        </span>
+                      )
+                    })}
+                  </Col>
+                </FormGroup>
+              )}
               {this.state.context && this.state.context !== 'none' && (
                 <FormGroup row>
                   <Col xs="3" md="2">
@@ -509,6 +740,10 @@ class DataBrowser extends Component {
                     selectedSources={this.state.selectedSources}
                     onToggleSourceFilter={this.toggleSourceFilter}
                     sourceFilterActive={this.state.sourceFilterActive}
+                    convertValue={this.convertValue}
+                    activePreset={this.state.activePreset}
+                    unitDefinitions={this.state.unitDefinitions}
+                    presetDetails={this.state.presetDetails}
                   />
                 )}
 
@@ -516,27 +751,57 @@ class DataBrowser extends Component {
               {this.state.includeMeta &&
                 this.state.context &&
                 this.state.context !== 'none' && (
-                  <Table responsive bordered striped size="sm">
+                  <Table
+                    responsive
+                    size="sm"
+                    style={{
+                      borderCollapse: 'separate',
+                      borderSpacing: '0 10px'
+                    }}
+                  >
                     <thead>
                       <tr>
-                        <th>Path</th>
-                        <th>Meta</th>
+                        <th colSpan="3">Path Metadata</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {this.getUniquePathsForMeta().map((path) => {
-                        const meta = store.getMeta(this.state.context, path)
-                        return (
-                          <tr key={path}>
-                            <td>{path}</td>
-                            <td>
-                              {!path.startsWith('notifications') && (
-                                <Meta meta={meta || {}} path={path} />
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
+                      {this.getUniquePathsForMeta()
+                        .filter((path, index, array) => {
+                          return array.indexOf(path) === index
+                        })
+                        .sort()
+                        .map((path) => {
+                          const meta = store.getMeta(this.state.context, path)
+                          // Find a current value for this path
+                          const dataKeys = Object.keys(
+                            this.state.data?.[this.state.context] || {}
+                          )
+                          const matchingKey = dataKeys.find(
+                            (k) =>
+                              this.state.data[this.state.context][k].path ===
+                              path
+                          )
+                          const currentValue = matchingKey
+                            ? this.state.data[this.state.context][matchingKey]
+                                .value
+                            : undefined
+                          return (
+                            <tr key={path}>
+                              <td colSpan="3">
+                                {!path.startsWith('notifications') && (
+                                  <Meta
+                                    meta={meta || {}}
+                                    path={path}
+                                    currentValue={currentValue}
+                                    activePreset={this.state.activePreset}
+                                    presetDetails={this.state.presetDetails}
+                                    unitDefinitions={this.state.unitDefinitions}
+                                  />
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
                     </tbody>
                   </Table>
                 )}
