@@ -90,23 +90,16 @@ export interface PathValue {
   value: Value
 }
 
-export interface AlarmStatus {
-  silenced: boolean
-  acknowledged: boolean
-  canSilence: boolean
-  canAcknowledge: boolean
-  canClear: boolean
-}
-
 // Notification payload
 /** @category Server API */
 export interface Notification {
   state: ALARM_STATE
   method: ALARM_METHOD[]
   message: string
-  status?: AlarmStatus
+  status?: ALARM_STATUS
   position?: Position
   createdAt?: Timestamp
+  id?: string
 }
 
 // MetaMessage
@@ -147,6 +140,15 @@ export enum ALARM_STATE {
 export enum ALARM_METHOD {
   visual = 'visual',
   sound = 'sound'
+}
+
+/** @category Server API */
+export interface ALARM_STATUS {
+  silenced: boolean
+  acknowledged: boolean
+  canSilence: boolean
+  canAcknowledge: boolean
+  canClear: boolean
 }
 
 /** @category Server API */
