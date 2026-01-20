@@ -18,7 +18,7 @@ import { IRouter, Request, Response } from 'express'
 import { ConfigApp } from '../../config/config'
 import { WithSecurityStrategy } from '../../security'
 import { Responses } from '..'
-import { AlertManager } from './alertManager'
+import { NotificationManager } from './notificationManager'
 
 export interface NotificationApplication
   extends
@@ -37,11 +37,11 @@ export class NotificationApi {
   private app: NotificationApplication
   private updateManager: NotificationUpdateHandler
   private notiKeys: Map<string, string> = new Map()
-  private alertManager: AlertManager
+  private notificationManager: NotificationManager
 
   constructor(private server: NotificationApplication) {
     this.app = server
-    this.alertManager = new AlertManager(server)
+    this.notificationManager = new NotificationManager(server)
     this.updateManager = new NotificationUpdateHandler(server)
     this.updateManager.$notiUpdate.subscribe((d: Delta) =>
       this.handleNotiUpdate(d)
@@ -58,14 +58,14 @@ export class NotificationApi {
   private initNotificationRoutes() {
     this.app.get(`${NOTI_API_PATH}`, async (req: Request, res: Response) => {
       debug(`** ${req.method} ${req.path}`)
-      res.status(200).json(this.alertManager.list)
+      res.status(200).json(this.notificationManager.list)
     })
 
     this.app.get(
       `${NOTI_API_PATH}/:id`,
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
-        const n = this.alertManager.get(req.params.id)
+        const n = this.notificationManager.get(req.params.id)
         if (n) {
           res.status(200).json(n)
         } else {
@@ -80,7 +80,7 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         try {
-          this.alertManager.silence(req.params.id)
+          this.notificationManager.silence(req.params.id)
           res.status(200).json(Responses.ok)
         } catch (err) {
           res.status(400).json({
@@ -98,7 +98,7 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         try {
-          this.alertManager.acknowledge(req.params.id)
+          this.notificationManager.acknowledge(req.params.id)
           res.status(200).json(Responses.ok)
         } catch (err) {
           res.status(400).json({
@@ -116,7 +116,7 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path}`)
         try {
-          this.alertManager.clear(req.params.id)
+          this.notificationManager.clear(req.params.id)
           res.status(200).json(Responses.ok)
         } catch (err) {
           res.status(400).json({
@@ -134,7 +134,7 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path} ${req.body}`)
         try {
-          this.alertManager.raise(req.body)
+          this.notificationManager.raise(req.body)
           res.status(200).json(Responses.ok)
         } catch (err) {
           res.status(400).json({
@@ -152,7 +152,7 @@ export class NotificationApi {
       async (req: Request, res: Response) => {
         debug(`** ${req.method} ${req.path} ${req.body}`)
         try {
-          this.alertManager.mob(req.body)
+          this.notificationManager.mob(req.body)
           res.status(200).json(Responses.ok)
         } catch (err) {
           res.status(400).json({
@@ -191,13 +191,13 @@ export class NotificationApi {
           this.notiKeys.set(key, id)
           u.notificationId = id
         }
-        // manage ALARMS
+        // manage ALARM_STATE
         if (value.state) {
           const id = u.notificationId as string
           if (['normal', 'nominal'].includes(value.state)) {
-            this.alertManager.remove(id)
+            this.notificationManager.remove(id)
           } else {
-            this.alertManager.fromDelta(u, delta.context as Context)
+            this.notificationManager.fromDelta(u, delta.context as Context)
           }
         }
       }

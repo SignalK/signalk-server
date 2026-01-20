@@ -1,7 +1,7 @@
 import {
   ALARM_METHOD,
   ALARM_STATE,
-  AlarmStatus,
+  ALARM_STATUS,
   Context,
   Delta,
   hasValues,
@@ -13,16 +13,16 @@ import {
   Value
 } from '@signalk/server-api'
 
-export interface AlertProperties {
-  status: AlarmStatus
+export interface AlarmProperties {
+  status: ALARM_STATUS
   context: Context
   path: Path
   value: Value
 }
 
-export class Alert {
-  private external = false // true = alert was created from delta
-  readonly status: AlarmStatus = {
+export class Alarm {
+  private external = false // true when alarm was created from delta
+  readonly status: ALARM_STATUS = {
     silenced: false,
     acknowledged: false,
     canSilence: true,
@@ -68,8 +68,6 @@ export class Alert {
 
   /**
    * Align notification alarm method with state and recorded user action
-   * @param value Notification value
-   * @param alert AlertStatus
    */
   private alignAlarmMethod() {
     if (this.status.acknowledged) {
@@ -90,7 +88,7 @@ export class Alert {
     this.update.timestamp = new Date().toISOString() as Timestamp
   }
 
-  /** create / update alert from delta */
+  /** create / update alarm from delta */
   public fromDelta(delta: Delta) {
     this.external = true
     this.status.canClear = false
@@ -123,7 +121,9 @@ export class Alert {
       this.update.values = [
         {
           path: this.path,
-          value: this.value
+          value: !this.value.id
+            ? Object.assign(this.value, { id: this.update.notificationId })
+            : this.value
         }
       ]
     }
@@ -134,7 +134,7 @@ export class Alert {
     return d
   }
 
-  /** Return Alert properties */
+  /** Return Alarm properties */
   get properties() {
     return {
       status: this.status,
@@ -144,7 +144,7 @@ export class Alert {
     }
   }
 
-  /** Sets the path associated with the alert
+  /** Sets the path associated with the alarm
    * @param id If supplied the id will be appended to the notification path
    */
   public setPath(path: Path, id?: string) {
@@ -156,29 +156,29 @@ export class Alert {
     }
   }
 
-  /** Silence Alert */
+  /** Silence Alarm */
   public silence() {
     if (!this.status.canSilence) {
-      throw new Error('Alert cannot be silenced!')
+      throw new Error('Alarm cannot be silenced!')
     }
     if (this.status.silenced || this.status.acknowledged) {
-      throw new Error('Alert already silenced or acknowledged!')
+      throw new Error('Alarm already silenced or acknowledged!')
     }
     if (this.value.state === 'emergency') {
-      throw new Error('Cannot silence Emergency Alert!')
+      throw new Error('Cannot silence Emergency Alarm!')
     }
     this.status.silenced = true
     this.alignAlarmMethod()
     this.timeStamp()
   }
 
-  /** Acknowledge Alert */
+  /** Acknowledge Alarm */
   public acknowledge() {
     if (!this.status.canAcknowledge) {
-      throw new Error('Alert cannot be acknowledged!')
+      throw new Error('Alarm cannot be acknowledged!')
     }
     if (this.status.acknowledged) {
-      throw new Error('Alert already acknowledged!')
+      throw new Error('Alarm already acknowledged!')
     }
     this.status.acknowledged = true
     this.alignAlarmMethod()
@@ -186,11 +186,11 @@ export class Alert {
   }
 
   /**
-   * Clears the Alert by setting state = normal and resetting status.
+   * Clears the Alarm by setting state = normal and resetting status.
    */
   public clear() {
     if (!this.status.canClear) {
-      throw new Error('Alert cannot be cleared!')
+      throw new Error('Alarm cannot be cleared!')
     }
     this.value.state = ALARM_STATE.normal
     this.status.silenced = false
