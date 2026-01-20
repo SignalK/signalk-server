@@ -276,7 +276,7 @@ describe('Zod Schemas', () => {
       const result = validate(UserSchema, { type: 'invalid' })
       assert.equal(result.success, false)
       if (!result.success) {
-        assert.ok(result.error.errors.length > 0)
+        assert.ok(result.error.issues.length > 0)
       }
     })
   })
