@@ -102,7 +102,7 @@ _Note: Clients should consider showing `installation` category controls in a sep
 
 ### Listing All Radars
 
-Retrieve all available radars with their current info:
+Retrieve a list of all available radar IDs:
 
 ```typescript
 HTTP GET "/signalk/v2/api/vessels/self/radars"
@@ -111,33 +111,7 @@ HTTP GET "/signalk/v2/api/vessels/self/radars"
 _Response:_
 
 ```json
-[
-  {
-    "id": "Furuno-6424",
-    "name": "Furuno DRS4D-NXT",
-    "brand": "Furuno",
-    "model": "DRS4D-NXT",
-    "status": "transmit",
-    "spokesPerRevolution": 2048,
-    "maxSpokeLen": 512,
-    "range": 1852,
-    "controls": {
-      "gain": { "mode": "auto", "value": 50 },
-      "sea": { "mode": "auto", "value": 30 },
-      "rain": { "mode": "manual", "value": 0 }
-    }
-  },
-  {
-    "id": "Navico-HALO",
-    "name": "Navico HALO24",
-    "brand": "Navico",
-    "model": "HALO24",
-    "status": "standby",
-    "spokesPerRevolution": 2048,
-    "maxSpokeLen": 512,
-    "range": 3704
-  }
-]
+["Furuno-6424", "Navico-HALO"]
 ```
 
 ### Getting Radar Capabilities
@@ -765,7 +739,7 @@ interface ControlDefinition {
   modes?: string[] // e.g., ["auto", "manual"]
   defaultMode?: string
   readOnly?: boolean // True for info fields
-  default?: boolean | number | string | Record<string, unknown>
+  default?: any
 }
 
 interface RangeSpec {
@@ -797,7 +771,7 @@ interface RadarState {
   id: string
   timestamp: string // ISO 8601
   status: 'off' | 'standby' | 'transmit' | 'warming'
-  controls: Record<string, unknown>
+  controls: Record<string, any>
   disabledControls?: DisabledControl[]
   streamUrl?: string // WebSocket URL for spoke data
 }
@@ -816,13 +790,13 @@ interface ControlConstraint {
   condition: {
     type: 'disabled_when' | 'read_only_when' | 'restricted_when'
     dependsOn: string // Control ID this depends on
-    operator: '==' | '!=' | '>' | '<' | '>=' | '<='
-    value: string | number | boolean
+    operator: string // "==", "!=", "<", ">", etc.
+    value: any // Value to compare against
   }
   effect: {
     disabled?: boolean
     readOnly?: boolean
-    allowedValues?: (string | number | boolean)[]
+    allowedValues?: any[] // Restricted set when condition is met
     reason?: string // Human-readable explanation
   }
 }
@@ -928,15 +902,8 @@ interface RadarProviderMethods {
   getState(radarId: string): Promise<RadarState | null>
 
   // Required - control
-  setControl(
-    radarId: string,
-    controlId: string,
-    value: unknown
-  ): Promise<{ success: boolean; error?: string }>
-  setControls(
-    radarId: string,
-    controls: Record<string, unknown>
-  ): Promise<{ success: boolean; error?: string }>
+  setControl(radarId: string, controlId: string, value: any): Promise<boolean>
+  setControls(radarId: string, controls: Record<string, any>): Promise<boolean>
 
   // Optional - streaming (for integrated providers)
   handleStreamConnection?(radarId: string, ws: WebSocket): void
