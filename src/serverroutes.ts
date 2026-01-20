@@ -53,6 +53,7 @@ import { listAllSerialPorts } from './serialports'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
 import { getAISShipTypeName } from '@signalk/signalk-schema'
+import { schemas } from '@signalk/server-api'
 import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
@@ -344,8 +345,18 @@ module.exports = function (
     `${SERVERROUTESPREFIX}/security/config`,
     (req: Request, res: Response) => {
       if (app.securityStrategy.allowConfigure(req)) {
+        // Validate request body structure
+        const validation = schemas.validate(
+          schemas.SecurityConfigSchema,
+          req.body
+        )
+        if (!validation.success) {
+          res.status(400).json(schemas.formatValidationError(validation.error))
+          return
+        }
+
         try {
-          app.securityStrategy.validateConfiguration(req.body)
+          app.securityStrategy.validateConfiguration(validation.data)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
           res.status(400).send(err.message)
@@ -353,7 +364,8 @@ module.exports = function (
         }
 
         let config = getSecurityConfig(app)
-        const configToSave = handleAdminUICORSOrigin(req.body)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const configToSave = handleAdminUICORSOrigin(validation.data as any)
         config = app.securityStrategy.setConfig(config, configToSave)
         saveSecurityConfig(app, config, (err) => {
           if (err) {
@@ -477,12 +489,20 @@ module.exports = function (
     `${SERVERROUTESPREFIX}/security/users/:id`,
     (req: Request, res: Response) => {
       if (checkAllowConfigure(req, res)) {
+        // Validate request body
+        const validation = schemas.validate(schemas.UserSchema, req.body)
+        if (!validation.success) {
+          res.status(400).json(schemas.formatValidationError(validation.error))
+          return
+        }
+
         const config = getSecurityConfig(app)
-        const user = req.body
-        user.userId = req.params.id
+        // addUser expects userId from params + type/password from body
+        const user = { ...validation.data, userId: req.params.id }
         app.securityStrategy.addUser(
           config,
-          user,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          user as any,
           getConfigSavingCallback('User added', 'Unable to add user', res)
         )
       }
@@ -579,6 +599,14 @@ module.exports = function (
         res.status(413).send('Payload too large')
         return
       }
+
+      // Validate request body
+      const validation = schemas.validate(schemas.AccessRequestSchema, req.body)
+      if (!validation.success) {
+        res.status(400).json(schemas.formatValidationError(validation.error))
+        return
+      }
+
       const config = getSecurityConfig(app)
       const ip = req.ip
       if (!app.securityStrategy.requestAccess) {
@@ -589,7 +617,7 @@ module.exports = function (
         return
       }
       app.securityStrategy
-        .requestAccess(config, { accessRequest: req.body }, ip)
+        .requestAccess(config, { accessRequest: validation.data }, ip)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .then((reply: any) => {
           res.status(reply.state === 'PENDING' ? 202 : reply.statusCode)
@@ -733,7 +761,13 @@ module.exports = function (
   }
 
   app.put(`${SERVERROUTESPREFIX}/settings`, (req: Request, res: Response) => {
-    const settings = req.body
+    // Validate request body
+    const validation = schemas.validate(schemas.ServerSettingsSchema, req.body)
+    if (!validation.success) {
+      res.status(400).json(schemas.formatValidationError(validation.error))
+      return
+    }
+    const settings = validation.data
 
     forIn(settings.interfaces, (enabled, name) => {
       const interfaces =
@@ -741,28 +775,28 @@ module.exports = function (
       interfaces[name] = enabled
     })
 
-    if (!isUndefined(settings.options.mdns)) {
+    if (!isUndefined(settings.options?.mdns)) {
       app.config.settings.mdns = settings.options.mdns
     }
 
-    if (!isUndefined(settings.options.ssl)) {
+    if (!isUndefined(settings.options?.ssl)) {
       app.config.settings.ssl = settings.options.ssl
     }
 
-    if (!isUndefined(settings.options.wsCompression)) {
+    if (!isUndefined(settings.options?.wsCompression)) {
       app.config.settings.wsCompression = settings.options.wsCompression
     }
 
-    if (!isUndefined(settings.options.accessLogging)) {
+    if (!isUndefined(settings.options?.accessLogging)) {
       app.config.settings.accessLogging = settings.options.accessLogging
     }
 
-    if (!isUndefined(settings.options.enablePluginLogging)) {
+    if (!isUndefined(settings.options?.enablePluginLogging)) {
       app.config.settings.enablePluginLogging =
         settings.options.enablePluginLogging
     }
 
-    if (!isUndefined(settings.options.trustProxy)) {
+    if (!isUndefined(settings.options?.trustProxy)) {
       app.config.settings.trustProxy = settings.options.trustProxy
     }
 
@@ -921,11 +955,18 @@ module.exports = function (
   }
 
   app.put(`${SERVERROUTESPREFIX}/vessel`, (req: Request, res: Response) => {
+    // Validate request body
+    const validation = schemas.validate(schemas.VesselSchema, req.body)
+    if (!validation.success) {
+      res.status(400).json(schemas.formatValidationError(validation.error))
+      return
+    }
+
     const de = app.config.baseDeltaEditor
-    const vessel = req.body
+    const vessel = validation.data
 
     de.setSelfValue('name', vessel.name)
-    app.config.vesselName = vessel.name
+    app.config.vesselName = vessel.name ?? ''
     de.setSelfValue('mmsi', vessel.mmsi)
     app.config.vesselMMSI = vessel.mmsi
     if (vessel.uuid && !vessel.mmsi) {
@@ -936,10 +977,10 @@ module.exports = function (
       delete app.config.vesselUUID
     }
 
-    function makeNumber(num: string) {
-      return !isUndefined(num) && (isNumber(num) || num.length)
-        ? Number(num)
-        : undefined
+    function makeNumber(num: string | number | undefined) {
+      if (isUndefined(num)) return undefined
+      if (isNumber(num)) return num
+      return num.length ? Number(num) : undefined
     }
 
     de.setSelfValue(
@@ -960,7 +1001,7 @@ module.exports = function (
       'design.aisShipType',
       !isUndefined(vessel.aisShipType)
         ? {
-            name: getAISShipTypeName(vessel.aisShipType),
+            name: getAISShipTypeName(Number(vessel.aisShipType)),
             id: Number(vessel.aisShipType)
           }
         : undefined

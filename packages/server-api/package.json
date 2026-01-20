@@ -21,7 +21,8 @@
   "author": "teppo.kurki@iki.fi",
   "license": "Apache-2.0",
   "dependencies": {
-    "@js-temporal/polyfill": "^0.5.1"
+    "@js-temporal/polyfill": "^0.5.1",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "ts-auto-guard": "^5.0.1"

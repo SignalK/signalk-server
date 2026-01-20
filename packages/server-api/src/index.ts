@@ -1,4 +1,5 @@
 export * from './plugin'
+export * as schemas from './schemas'
 export * from './serverapi'
 export * from './deltas'
 export * from './coursetypes'
