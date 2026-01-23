@@ -1,57 +1,24 @@
-import { useState, useEffect, useRef } from 'react'
-
 interface TimestampCellProps {
   timestamp: string
   isPaused: boolean
   className?: string
 }
 
+// TimestampCell triggers a CSS animation when the timestamp changes.
+// We use the timestamp string itself as the animation key to trigger re-animation.
+// The CSS animation class is always applied when not paused - the key change
+// triggers the animation restart.
 function TimestampCell({ timestamp, isPaused, className }: TimestampCellProps) {
-  const [animationKey, setAnimationKey] = useState(0)
-  const prevTimestamp = useRef(timestamp)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Use timestamp as animation key - when it changes, React remounts the element
+  // which restarts the CSS animation. When paused, use static key.
+  const animationKey = isPaused ? 'paused' : timestamp
 
-  useEffect(() => {
-    if (prevTimestamp.current !== timestamp) {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-
-      setAnimationKey((k) => k + 1)
-
-      timeoutRef.current = setTimeout(() => {
-        if (!isPaused) {
-          setAnimationKey(0)
-        }
-      }, 15000)
-
-      prevTimestamp.current = timestamp
-    }
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-    }
-  }, [timestamp, isPaused])
-
-  useEffect(() => {
-    if (isPaused) {
-      setAnimationKey(0)
-    }
-  }, [isPaused])
-
-  const isAnimating = animationKey > 0 && !isPaused
   const cellClass = `virtual-table-cell timestamp-cell ${className || ''} ${
-    isAnimating ? 'timestamp-updated' : ''
+    !isPaused ? 'timestamp-updated' : ''
   }`
 
   return (
-    <div
-      className={cellClass}
-      key={isAnimating ? animationKey : 'static'}
-      data-label="Time"
-    >
+    <div className={cellClass} key={animationKey} data-label="Time">
       {timestamp}
     </div>
   )

@@ -59,12 +59,12 @@ const Logging: React.FC = () => {
       {}
     )
 
-    return Object.keys(datesWithHours).map((date, i) => {
+    return Object.keys(datesWithHours).map((date) => {
       return (
-        <ListGroupItem key={i}>
+        <ListGroupItem key={date}>
           {date}
-          {datesWithHours[date].map((hour, j) => (
-            <span key={j}>
+          {datesWithHours[date].map((hour) => (
+            <span key={`${date}-${hour}`}>
               <a
                 href={`${window.serverRoutesPrefix}/logfiles/skserver-raw_${date}T${hour}.log`}
               >

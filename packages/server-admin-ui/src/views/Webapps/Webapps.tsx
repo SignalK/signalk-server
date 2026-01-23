@@ -1,10 +1,4 @@
-import {
-  useState,
-  useEffect,
-  Suspense,
-  createElement,
-  ComponentType
-} from 'react'
+import { useMemo, Suspense, createElement, ComponentType } from 'react'
 import { useAppSelector } from '../../store'
 import { Card, CardBody, CardHeader, Col } from 'reactstrap'
 import { ADDON_PANEL, toLazyDynamicComponent } from './dynamicutilities'
@@ -32,21 +26,20 @@ interface AddonPanelProps {
 export default function Webapps() {
   const webapps = useAppSelector((state) => state.webapps) as WebAppInfo[]
   const addons = useAppSelector((state) => state.addons) as AddonModule[]
-  const [addonComponents, setAddonComponents] = useState<
-    ComponentType<AddonPanelProps>[]
-  >([])
 
-  useEffect(() => {
-    setAddonComponents(
-      addons.map(
-        (md) =>
-          toLazyDynamicComponent(
-            md.name,
-            ADDON_PANEL
-          ) as ComponentType<AddonPanelProps>
-      )
-    )
-  }, [addons])
+  // Create lazy components when addons change - useMemo ensures stable references
+  // Keep addon name with component for stable keys
+  const addonComponents = useMemo(
+    () =>
+      addons.map((md) => ({
+        name: md.name,
+        Component: toLazyDynamicComponent(
+          md.name,
+          ADDON_PANEL
+        ) as ComponentType<AddonPanelProps>
+      })),
+    [addons]
+  )
 
   return (
     <div className="animated fadeIn">
@@ -72,9 +65,9 @@ export default function Webapps() {
       <Card>
         <CardHeader>Addons</CardHeader>
         <CardBody>
-          {addonComponents.map((c, i) => (
-            <Suspense key={i} fallback="Loading...">
-              {createElement(c, { webapps, addons })}
+          {addonComponents.map(({ name, Component }) => (
+            <Suspense key={name} fallback="Loading...">
+              {createElement(Component, { webapps, addons })}
             </Suspense>
           ))}
         </CardBody>

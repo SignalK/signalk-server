@@ -271,8 +271,10 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
           <tbody>
             {[...priorities, { sourceRef: '', timeout: '' }].map(
               ({ sourceRef, timeout }, index) => {
+                // Priority items are ordered and may have empty sourceRef
+                const priorityKey = `${index}-${sourceRef || 'new'}`
                 return (
-                  <tr key={index}>
+                  <tr key={priorityKey}>
                     <td>{index + 1}.</td>
                     <td>
                       <Creatable
@@ -315,6 +317,7 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
                     <td>
                       {index > 0 && index < priorities.length && (
                         <button
+                          type="button"
                           onClick={() =>
                             !isSaving &&
                             dispatch({
@@ -332,6 +335,7 @@ const PrefsEditor: React.FC<PrefsEditorProps> = ({
                       )}
                       {index < priorities.length - 1 && (
                         <button
+                          type="button"
                           onClick={() =>
                             !isSaving &&
                             dispatch({
@@ -500,8 +504,10 @@ const SourcePriorities: React.FC = () => {
           </thead>
           <tbody>
             {priosWithEmpty.map(({ path, priorities }, index) => {
+              // Path items may be empty for new entries
+              const pathKey = `${index}-${path || 'new'}`
               return (
-                <tr key={index}>
+                <tr key={pathKey}>
                   <td>
                     <Creatable
                       menuPortalTarget={document.body}

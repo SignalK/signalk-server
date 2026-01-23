@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { usePathData, useMetaData } from './usePathData'
 import TimestampCell from './TimestampCell'
 import CopyToClipboardWithFade from './CopyToClipboardWithFade'
@@ -95,7 +96,18 @@ function DataRow({
   )
 }
 
+/* eslint-disable react-hooks/static-components */
+// ValueRenderer uses dynamic component selection for plugin extensibility.
+// getValueRenderer returns cached components from a module-level registry.
+// The first access per renderer type creates and caches the component,
+// subsequent accesses return the cached reference. This pattern is intentional
+// for supporting dynamically loaded renderers from plugins.
 function ValueRenderer({ data, meta, units, raw }: ValueRendererProps) {
+  const CustomRenderer = useMemo(() => {
+    if (raw) return null
+    return getValueRenderer(data.path ?? '', meta)
+  }, [raw, data.path, meta])
+
   if (raw) {
     return (
       <div>
@@ -109,7 +121,6 @@ function ValueRenderer({ data, meta, units, raw }: ValueRendererProps) {
     )
   }
 
-  const CustomRenderer = getValueRenderer(data.path ?? '', meta)
   if (CustomRenderer) {
     return (
       <CustomRenderer
@@ -122,5 +133,6 @@ function ValueRenderer({ data, meta, units, raw }: ValueRendererProps) {
 
   return <DefaultValueRenderer value={data.value} units={units} />
 }
+/* eslint-enable react-hooks/static-components */
 
 export default DataRow

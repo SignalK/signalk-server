@@ -69,8 +69,11 @@ export default function Users() {
     setUsers(data)
   }, [])
 
+  // Fetch users when authentication requirements change - standard data fetching pattern.
+  // See: https://react.dev/reference/react/useEffect#fetching-data-with-effects
   useEffect(() => {
     if (loginStatus.authenticationRequired) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching pattern
       fetchSecurityUsers()
     }
   }, [loginStatus.authenticationRequired, fetchSecurityUsers])

@@ -1,7 +1,7 @@
 import {
-  useState,
   useEffect,
   useRef,
+  useMemo,
   Suspense,
   createElement,
   ComponentType,
@@ -69,6 +69,7 @@ class WebappErrorBoundary extends Component<
               )}
             </p>
             <button
+              type="button"
               className="btn btn-outline-secondary btn-sm me-2"
               onClick={this.handleRetry}
             >
@@ -120,24 +121,25 @@ interface EmbeddedComponentProps {
 export default function Embedded() {
   const loginStatus = useAppSelector((state) => state.loginStatus)
   const params = useParams<{ moduleId: string }>()
-  const [component, setComponent] =
-    useState<ComponentType<EmbeddedComponentProps> | null>(null)
   const websocketsRef = useRef<ReconnectingWebSocket[]>([])
 
-  useEffect(() => {
-    if (params.moduleId) {
-      setComponent(
-        toLazyDynamicComponent(
-          params.moduleId,
-          APP_PANEL
-        ) as ComponentType<EmbeddedComponentProps>
-      )
-    }
-  }, [params.moduleId])
+  // Create lazy component when moduleId changes - useMemo ensures stable reference
+  const component = useMemo(
+    () =>
+      params.moduleId
+        ? (toLazyDynamicComponent(
+            params.moduleId,
+            APP_PANEL
+          ) as ComponentType<EmbeddedComponentProps>)
+        : null,
+    [params.moduleId]
+  )
 
   useEffect(() => {
+    // Capture the current websockets array for cleanup
+    const websockets = websocketsRef.current
     return () => {
-      websocketsRef.current.forEach((ws) => {
+      websockets.forEach((ws) => {
         try {
           ws.close()
         } catch (e) {
@@ -147,67 +149,73 @@ export default function Embedded() {
     }
   }, [])
 
-  const adminUI: AdminUI = {
-    hideSideBar: () => {
-      window.dispatchEvent(new Event('sidebar:hide'))
-    },
-    getApplicationUserData: (appDataVersion: string, path = '') =>
-      fetch(
-        `/signalk/v1/applicationData/user/${params.moduleId}/${appDataVersion}${path}`,
-        { credentials: 'include' }
-      )
-        .then((r) => {
+  // Memoize adminUI API to ensure stable reference across renders.
+  // The websocketsRef access in openWebsocket is safe because it only happens
+  // when the callback is invoked (in event handlers), not during render.
+  const adminUI: AdminUI = useMemo(
+    () => ({
+      hideSideBar: () => {
+        window.dispatchEvent(new Event('sidebar:hide'))
+      },
+      getApplicationUserData: (appDataVersion: string, path = '') =>
+        fetch(
+          `/signalk/v1/applicationData/user/${params.moduleId}/${appDataVersion}${path}`,
+          { credentials: 'include' }
+        )
+          .then((r) => {
+            if (r.status !== 200) {
+              throw new Error(String(r.status))
+            }
+            return r
+          })
+          .then((r) => r.json()),
+      setApplicationUserData: (appDataVersion: string, data = {}, path = '') =>
+        fetch(
+          `/signalk/v1/applicationData/user/${params.moduleId}/${appDataVersion}${path}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data),
+            credentials: 'include'
+          }
+        ).then((r) => {
           if (r.status !== 200) {
             throw new Error(String(r.status))
           }
           return r
-        })
-        .then((r) => r.json()),
-    setApplicationUserData: (appDataVersion: string, data = {}, path = '') =>
-      fetch(
-        `/signalk/v1/applicationData/user/${params.moduleId}/${appDataVersion}${path}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(data),
-          credentials: 'include'
-        }
-      ).then((r) => {
-        if (r.status !== 200) {
-          throw new Error(String(r.status))
-        }
-        return r
-      }),
-    openWebsocket: (wsParams: WebSocketParams) => {
-      const knownParams: (keyof WebSocketParams)[] = [
-        'subscribe',
-        'sendCachedValues',
-        'events'
-      ]
-      const queryParam = knownParams
-        .map((p, i) => [i, wsParams[p]] as [number, unknown])
-        .filter((x) => x[1] !== undefined)
-        .map(([i, v]) => `${knownParams[i]}=${v}`)
-        .join('&')
-      const ws = new ReconnectingWebSocket(
-        `${wsProto}://${window.location.host}/signalk/v1/stream?${queryParam}`
-      )
-      websocketsRef.current.push(ws)
-      return ws
-    },
-    get: ({ context, path }) => {
-      const cParts = context.split('.')
-      return fetch(
-        `/signalk/v1/api/${cParts[0]}/${cParts.slice(1).join('.')}/${path}`,
-        {
-          credentials: 'include'
-        }
-      )
-    },
-    Login
-  }
+        }),
+      openWebsocket: (wsParams: WebSocketParams) => {
+        const knownParams: (keyof WebSocketParams)[] = [
+          'subscribe',
+          'sendCachedValues',
+          'events'
+        ]
+        const queryParam = knownParams
+          .map((p, i) => [i, wsParams[p]] as [number, unknown])
+          .filter((x) => x[1] !== undefined)
+          .map(([i, v]) => `${knownParams[i]}=${v}`)
+          .join('&')
+        const ws = new ReconnectingWebSocket(
+          `${wsProto}://${window.location.host}/signalk/v1/stream?${queryParam}`
+        )
+        websocketsRef.current.push(ws)
+        return ws
+      },
+      get: ({ context, path }) => {
+        const cParts = context.split('.')
+        return fetch(
+          `/signalk/v1/api/${cParts[0]}/${cParts.slice(1).join('.')}/${path}`,
+          {
+            credentials: 'include'
+          }
+        )
+      },
+      Login
+    }),
+    [params.moduleId]
+  )
 
   if (!component) {
     return <div>Loading...</div>
@@ -222,6 +230,9 @@ export default function Embedded() {
         webappName={params.moduleId || 'Unknown'}
       >
         <Suspense fallback="Loading...">
+          {/* adminUI callbacks capture refs but only access them when invoked by child components,
+              not during render. This is a false positive from the linter. */}
+          {/* eslint-disable-next-line react-hooks/refs */}
           {createElement(component, {
             loginStatus,
             adminUI

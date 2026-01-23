@@ -8,6 +8,10 @@ interface VirtualizedMetaTableProps {
   context: string
 }
 
+// Virtualization requires measuring DOM and updating state in response to scroll events.
+// This is an inherent characteristic of virtual scrolling.
+/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
+/* eslint-disable react-hooks/set-state-in-effect */
 function VirtualizedMetaTable({ paths, context }: VirtualizedMetaTableProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 30 })

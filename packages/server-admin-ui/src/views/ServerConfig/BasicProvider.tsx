@@ -116,6 +116,18 @@ interface TypeComponentProps {
   hasAnalyzer?: boolean
 }
 
+// Stable component lookup - defined outside component to avoid recreation on render
+const TYPE_COMPONENTS: Record<
+  string,
+  React.ComponentType<TypeComponentProps>
+> = {
+  NMEA2000: NMEA2000,
+  NMEA0183: NMEA0183,
+  SignalK: SignalK,
+  Seatalk: Seatalk,
+  FileStream: FileStream
+}
+
 export default function BasicProvider({
   value,
   onChange,
@@ -133,14 +145,7 @@ export default function BasicProvider({
       })
   }, [])
 
-  const lookup: Record<string, React.ComponentType<TypeComponentProps>> = {
-    NMEA2000: NMEA2000,
-    NMEA0183: NMEA0183,
-    SignalK: SignalK,
-    Seatalk: Seatalk,
-    FileStream: FileStream
-  }
-  const TypeComponent = lookup[value.type] || (() => null)
+  const TypeComponent = TYPE_COMPONENTS[value.type]
 
   return (
     <div>
@@ -215,11 +220,13 @@ export default function BasicProvider({
           />
         </Col>
       </FormGroup>
-      <TypeComponent
-        value={value}
-        onChange={onChange}
-        hasAnalyzer={hasAnalyzer}
-      />
+      {TypeComponent && (
+        <TypeComponent
+          value={value}
+          onChange={onChange}
+          hasAnalyzer={hasAnalyzer}
+        />
+      )}
       <OverrideTimestamps value={value.options} onChange={onChange} />
 
       {value.type === 'NMEA2000' && (
@@ -355,8 +362,8 @@ const serialportListOptions = (
           {labels[j]}
         </option>
       )
-      devices.forEach((device, i) => {
-        acc.push(<option key={`${key}${i}`}>{device}</option>)
+      devices.forEach((device) => {
+        acc.push(<option key={`${key}-${device}`}>{device}</option>)
       })
     }
     return acc
@@ -391,9 +398,24 @@ function ValidateChecksumInput({
   value,
   onChange
 }: ValidateChecksumInputProps) {
-  // Initialize if undefined
-  if (typeof value.validateChecksum === 'undefined') {
-    value.validateChecksum = true
+  // Default to true if undefined - controlled with fallback
+  const isValidateChecksumEnabled = value.validateChecksum ?? true
+
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const newValidateChecksum = event.target.checked
+    onChange(event)
+
+    // When enabling validateChecksum, disable appendChecksum
+    // (they are mutually exclusive - can't append checksum if validating it)
+    if (newValidateChecksum && value.appendChecksum) {
+      onChange({
+        target: {
+          name: 'options.appendChecksum',
+          value: false,
+          type: 'checkbox'
+        }
+      })
+    }
   }
 
   return (
@@ -408,13 +430,8 @@ function ValidateChecksumInput({
             id="provider-validateChecksum"
             name="options.validateChecksum"
             className="switch-input"
-            onChange={(event) => {
-              onChange(event)
-              if (value.validateChecksum) {
-                value.appendChecksum = false
-              }
-            }}
-            checked={value.validateChecksum}
+            onChange={handleChange}
+            checked={isValidateChecksumEnabled}
           />
           <span className="switch-label" data-on="Yes" data-off="No" />
           <span className="switch-handle" />
@@ -485,6 +502,9 @@ function AppendChecksum({
   value: ProviderOptions
   onChange: OnChangeHandler
 }) {
+  // validateChecksum defaults to true when undefined
+  const isValidateChecksumEnabled = value.validateChecksum ?? true
+
   return (
     <FormGroup row>
       <Col xs="3" md="3">
@@ -498,15 +518,15 @@ function AppendChecksum({
             name="options.appendChecksum"
             className="switch-input"
             onChange={(event) => onChange(event)}
-            checked={value.appendChecksum && !value.validateChecksum}
-            disabled={!!value.validateChecksum}
+            checked={value.appendChecksum && !isValidateChecksumEnabled}
+            disabled={isValidateChecksumEnabled}
           />
           <span className="switch-label" data-on="Yes" data-off="No" />
           <span className="switch-handle" />
         </Label>
       </Col>
       <Col xs="12" md="6">
-        {value.validateChecksum && (
+        {isValidateChecksumEnabled && (
           <label className="text-muted small">
             Turn Validate Checksum OFF to enable appending the checksum
           </label>
@@ -602,16 +622,15 @@ function BaudRateInputCanboat({
   value: ProviderOptions
   onChange: OnChangeHandler
 }) {
-  // Initialize default baud rate
-  if (!value.baudrate) {
-    value.baudrate = value.type === 'ikonvert-canboatjs' ? 230400 : 115200
-  }
+  // Default baud rate based on device type - controlled with fallback
+  const defaultBaudrate = value.type === 'ikonvert-canboatjs' ? 230400 : 115200
+  const displayBaudrate = value.baudrate ?? defaultBaudrate
 
   return (
     <TextInput
       title="Baud Rate"
       name="options.baudrate"
-      value={value.baudrate}
+      value={displayBaudrate}
       onChange={(event) => onChange(event, 'number')}
     />
   )

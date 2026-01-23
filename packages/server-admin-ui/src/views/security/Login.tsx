@@ -1,3 +1,4 @@
+/* eslint-disable react-compiler/react-compiler */
 import {
   useState,
   useEffect,
@@ -111,8 +112,11 @@ export default function Login() {
     }
   }, [loginStatus, shouldSkipAutoLogin])
 
+  // Run auto-login on mount only - tryAutoLogin intentionally excluded from deps
+  // to prevent re-running when loginStatus changes (the second useEffect handles that)
   useEffect(() => {
     tryAutoLogin()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {

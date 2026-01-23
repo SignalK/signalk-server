@@ -1,3 +1,5 @@
+/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
+/* eslint-disable react-compiler/react-compiler */
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Button,
@@ -272,11 +274,14 @@ const Playground: React.FC = () => {
     }
   }, [input])
 
+  // Auto-send on mount if there's saved input - standard data fetching pattern.
+  // See: https://react.dev/reference/react/useEffect#fetching-data-with-effects
   useEffect(() => {
     if (input && input.length > 0) {
       send(false)
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const toggle = (tab: string) => {
     setActiveTab(tab)

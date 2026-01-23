@@ -3,7 +3,6 @@ import React, {
   useEffect,
   useCallback,
   useRef,
-  useEffectEvent,
   useMemo,
   useDeferredValue,
   useTransition
@@ -117,7 +116,6 @@ const DataBrowser: React.FC = () => {
   const [sourceFilterActive, setSourceFilterActive] = useState(
     () => localStorage.getItem(sourceFilterActiveStorageKey) === 'true'
   )
-  const [path$SourceKeys, setPath$SourceKeys] = useState<string[]>([])
   const [sources, setSources] = useState<Sources | null>(null)
   const [sourcesExpanded, setSourcesExpanded] = useState(false)
 
@@ -152,30 +150,6 @@ const DataBrowser: React.FC = () => {
     })
     setSources(sourcesData)
   }, [])
-
-  const onPathSourceKeysUpdate = useEffectEvent(() => {
-    const allKeys = store.getPath$SourceKeys(context)
-
-    const filtered = allKeys.filter((key) => {
-      if (deferredSearch && deferredSearch.length > 0) {
-        if (key.toLowerCase().indexOf(deferredSearch.toLowerCase()) === -1) {
-          return false
-        }
-      }
-
-      if (sourceFilterActive && selectedSources.size > 0) {
-        const data = store.getPathData(context, key) as PathData | undefined
-        if (data && !selectedSources.has(data.$source || '')) {
-          return false
-        }
-      }
-
-      return true
-    })
-
-    filtered.sort()
-    setPath$SourceKeys(filtered)
-  })
 
   const handleMessage = useCallback(
     (msg: unknown) => {
@@ -247,12 +221,8 @@ const DataBrowser: React.FC = () => {
           }
         })
 
-        // Update path keys if new paths were added or if this is the selected context
-        if (isNew || (context && context === key)) {
-          onPathSourceKeysUpdate()
-          if (!hasData) {
-            setHasData(true)
-          }
+        if ((isNew || (context && context === key)) && !hasData) {
+          setHasData(true)
         }
       }
     },
@@ -273,6 +243,10 @@ const DataBrowser: React.FC = () => {
 
       webSocketRef.current = webSocket
       didSubscribeRef.current = true
+      // The messageHandler property is an intentional extension of the WebSocket
+      // used by actions.ts to route delta messages to interested components.
+      // This mutation is safe because the webSocket object is designed to be extended.
+      // eslint-disable-next-line react-compiler/react-compiler, react-hooks/immutability
       webSocket.messageHandler = handleMessage
     }
   }, [pause, webSocket, handleMessage])
@@ -289,14 +263,14 @@ const DataBrowser: React.FC = () => {
     fetchSources()
     subscribeToDataIfNeeded()
 
+    // Subscribe to store structure changes - contextVersion triggers useMemo recalculation
     unsubscribeStoreRef.current = store.subscribeToStructure((version) => {
-      setContextVersion(version)
-
+      // Debounce rapid structure changes
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current)
       }
       updateTimeoutRef.current = setTimeout(() => {
-        onPathSourceKeysUpdate()
+        setContextVersion(version)
       }, STRUCTURE_DEBOUNCE_MS)
     })
 
@@ -376,9 +350,39 @@ const DataBrowser: React.FC = () => {
     []
   )
 
-  useEffect(() => {
-    onPathSourceKeysUpdate()
-  }, [context, deferredSearch, sourceFilterActive, selectedSources])
+  // Compute filtered path keys - recalculates when filters or store structure changes
+  // Using useMemo avoids calling setState in effects
+  const filteredPath$SourceKeys = useMemo(() => {
+    // contextVersion dependency ensures recalculation when store structure changes
+    void contextVersion
+    const allKeys = store.getPath$SourceKeys(context)
+
+    const filtered = allKeys.filter((key) => {
+      if (deferredSearch && deferredSearch.length > 0) {
+        if (key.toLowerCase().indexOf(deferredSearch.toLowerCase()) === -1) {
+          return false
+        }
+      }
+
+      if (sourceFilterActive && selectedSources.size > 0) {
+        const data = store.getPathData(context, key) as PathData | undefined
+        if (data && !selectedSources.has(data.$source || '')) {
+          return false
+        }
+      }
+
+      return true
+    })
+
+    filtered.sort()
+    return filtered
+  }, [
+    context,
+    contextVersion,
+    deferredSearch,
+    sourceFilterActive,
+    selectedSources
+  ])
 
   const toggleMeta = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -469,7 +473,6 @@ const DataBrowser: React.FC = () => {
   const getUniquePathsForMeta = useCallback(() => {
     const allKeys = store.getPath$SourceKeys(context)
 
-    // Filter by search
     const filtered = allKeys.filter((key) => {
       if (!search || search.length === 0) {
         return true
@@ -477,13 +480,11 @@ const DataBrowser: React.FC = () => {
       return key.toLowerCase().indexOf(search.toLowerCase()) !== -1
     })
 
-    // Extract unique paths (remove source suffix)
     const paths = filtered.map((key) => {
       const data = store.getPathData(context, key) as PathData | undefined
       return data?.path || key
     })
 
-    // Dedupe and sort
     return [...new Set(paths)].sort()
   }, [context, search])
 
@@ -602,7 +603,7 @@ const DataBrowser: React.FC = () => {
                 }}
               >
                 <VirtualizedDataTable
-                  path$SourceKeys={path$SourceKeys}
+                  path$SourceKeys={filteredPath$SourceKeys}
                   context={context}
                   raw={raw}
                   isPaused={pause}

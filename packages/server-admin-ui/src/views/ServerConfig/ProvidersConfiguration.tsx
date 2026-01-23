@@ -84,7 +84,12 @@ const ProvidersConfiguration: React.FC = () => {
     })
   }, [])
 
+  // Data fetching on mount - this is the standard React pattern for fetching data.
+  // The react-hooks/set-state-in-effect rule flags this, but data fetching in effects
+  // that call setState with fetched data is the recommended approach when not using
+  // a data fetching library like React Query. See: https://react.dev/reference/react/useEffect#fetching-data-with-effects
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching pattern
     fetchProviders()
     runDiscovery()
   }, [fetchProviders, runDiscovery])
