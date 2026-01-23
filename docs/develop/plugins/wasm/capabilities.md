@@ -18,6 +18,7 @@ Declare required capabilities in `package.json`:
 | `network`       | HTTP requests (via as-fetch)             | Supported (AssemblyScript only) |
 | `putHandlers`   | Register PUT handlers for vessel control | Supported                       |
 | `rawSockets`    | UDP socket access for radar, NMEA, etc.  | Supported                       |
+| `serverEvents`  | Receive and emit server events           | Supported                       |
 | `serialPorts`   | Serial port access                       | Planned                         |
 
 ## Network API (AssemblyScript)
@@ -384,6 +385,51 @@ fn load_state() -> String {
 ├── config/    # Plugin-managed config
 └── tmp/       # Temporary files
 ```
+
+## Server Events API
+
+The `serverEvents` capability enables WASM plugins to receive server events and emit custom events.
+
+**Manifest Configuration:**
+
+```json
+{
+  "wasmCapabilities": {
+    "serverEvents": true
+  }
+}
+```
+
+### Subscribable Event Types
+
+| Event Type         | Description                           |
+| ------------------ | ------------------------------------- |
+| `SERVERSTATISTICS` | Delta rate, WebSocket clients, uptime |
+| `VESSEL_INFO`      | Vessel name, MMSI, UUID changes       |
+| `DEBUG_SETTINGS`   | Debug configuration changes           |
+| `SERVERMESSAGE`    | General server messages               |
+| `PROVIDERSTATUS`   | Data provider status                  |
+| `SOURCEPRIORITIES` | Source priority changes               |
+
+Admin events and PropertyValues are excluded for security.
+
+### Custom Events
+
+Plugins emit custom events with the `PLUGIN_` prefix. The `from` field is set to the plugin ID automatically.
+
+### FFI Functions
+
+| Function                                                | Description                             |
+| ------------------------------------------------------- | --------------------------------------- |
+| `sk_subscribe_events(event_types_ptr, len)`             | Subscribe to events (pass `[]` for all) |
+| `sk_emit_event(type_ptr, type_len, data_ptr, data_len)` | Emit custom event                       |
+| `sk_get_allowed_event_types(buf_ptr, max_len)`          | Query allowed event types               |
+
+### Plugin Export
+
+Plugins must export `event_handler(event_ptr, event_len)` to receive events as JSON.
+
+See `examples/wasm-plugins/example-event-handler-rust/` in the repository for a working example.
 
 ## Delta Emission
 

@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * WASM Plugin HTTP Route Handlers
  *
@@ -8,19 +5,17 @@
  * Includes custom endpoint routing, log streaming, and basic REST API endpoints.
  */
 
+import * as fs from 'fs'
 import * as path from 'path'
 import * as express from 'express'
-import { Request, Response } from 'express'
+import type { Request, Response } from 'express'
 import { spawn } from 'child_process'
 import * as readline from 'readline'
 import Debug from 'debug'
 import { WasmPlugin } from './types'
+import { SignalKApp, WasmRawExports } from '../types'
 import { getWasmRuntime } from '../wasm-runtime'
-import {
-  getPluginStoragePaths,
-  readPluginConfig,
-  writePluginConfig
-} from '../wasm-storage'
+import { getPluginStoragePaths, readPluginConfig } from '../wasm-storage'
 import { SERVERROUTESPREFIX } from '../../constants'
 
 const debug = Debug('signalk:wasm:loader')
@@ -58,7 +53,6 @@ export async function handleLogViewerRequest(
 
     const logLines: string[] = []
     let hasError = false
-    let errorOutput = ''
 
     // Stream lines using readline
     const rl = readline.createInterface({
@@ -72,8 +66,8 @@ export async function handleLogViewerRequest(
       }
     })
 
-    p.stderr.on('data', (data) => {
-      errorOutput += data.toString()
+    p.stderr.on('data', () => {
+      // Errors are logged when journalctl exits with non-zero code
     })
 
     p.on('error', (err) => {
@@ -172,8 +166,8 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
     typeof plugin.instance.asLoader.exports.http_endpoints === 'function'
   const hasRustEndpoints =
     plugin.instance.instance &&
-    typeof (plugin.instance.instance.exports as any).http_endpoints ===
-      'function'
+    typeof (plugin.instance.instance.exports as WasmRawExports)
+      .http_endpoints === 'function'
 
   if (!hasAsEndpoints && !hasRustEndpoints) {
     debug(`No custom HTTP endpoints for ${plugin.id}`)
@@ -197,7 +191,7 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
       )
     } else {
       // Rust: http_endpoints(out_ptr, out_max_len) -> written_len
-      const rawExports = plugin.instance.instance.exports as any
+      const rawExports = plugin.instance.instance.exports as WasmRawExports
       if (
         typeof rawExports.allocate === 'function' &&
         typeof rawExports.http_endpoints === 'function'
@@ -373,7 +367,8 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
             debug(
               `Using raw exports for handler ${handler} (Rust buffer-based)`
             )
-            const rawExports = plugin.instance!.instance.exports as any
+            const rawExports = plugin.instance!.instance
+              .exports as WasmRawExports
             const handlerFunc = rawExports[handler]
 
             if (typeof handlerFunc !== 'function') {
@@ -482,23 +477,23 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
  * Set up REST API routes for a WASM plugin
  */
 export function setupWasmPluginRoutes(
-  app: any,
+  app: SignalKApp,
   plugin: WasmPlugin,
   configPath: string,
   updateWasmPluginConfig: (
-    app: any,
+    app: SignalKApp,
     pluginId: string,
-    configuration: any,
+    configuration: unknown,
     configPath: string
   ) => Promise<void>,
-  startWasmPlugin: (app: any, pluginId: string) => Promise<void>,
-  unloadWasmPlugin: (app: any, pluginId: string) => Promise<void>,
+  startWasmPlugin: (app: SignalKApp, pluginId: string) => Promise<void>,
   stopWasmPlugin: (pluginId: string) => Promise<void>
 ): void {
   const router = express.Router()
 
   // GET /plugins/:id - Get plugin info
   router.get('/', (req: Request, res: Response) => {
+    void req // Required by Express signature
     res.json({
       enabled: plugin.enabled,
       enabledByDefault: false,
@@ -557,13 +552,14 @@ export function setupWasmPluginRoutes(
             debug(`Plugin was disabled at startup, loading WASM binary now...`)
 
             // Read package.json to get WASM path
-            const packageJson = require(
-              path.join(
-                plugin.packageLocation,
-                plugin.packageName,
-                'package.json'
-              )
+            const packageJsonPath = path.join(
+              plugin.packageLocation,
+              plugin.packageName,
+              'package.json'
             )
+            const packageJson = JSON.parse(
+              fs.readFileSync(packageJsonPath, 'utf-8')
+            ) as { wasmManifest: string }
             const wasmPath = path.join(
               plugin.packageLocation,
               plugin.packageName,
@@ -632,6 +628,7 @@ export function setupWasmPluginRoutes(
 
   // GET /plugins/:id/config - Get plugin configuration
   router.get('/config', (req: Request, res: Response) => {
+    void req // Required by Express signature
     const storagePaths = getPluginStoragePaths(
       configPath,
       plugin.id,
@@ -648,7 +645,9 @@ export function setupWasmPluginRoutes(
   })
 
   // Register the router for this plugin
-  app.use(backwardsCompat(`/plugins/${plugin.id}`), router)
+  if (app.use) {
+    app.use(backwardsCompat(`/plugins/${plugin.id}`), router)
+  }
 
   // Store router in plugin object for later removal
   plugin.router = router

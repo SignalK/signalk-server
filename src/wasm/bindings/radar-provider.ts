@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * WASM Radar Provider Support
  *
@@ -7,7 +6,13 @@
  */
 
 import Debug from 'debug'
-import { WasmRadarProvider, WasmPluginInstance } from '../types'
+import {
+  WasmRadarProvider,
+  WasmPluginInstance,
+  WasmCapabilities,
+  SignalKApp,
+  WasmRawExports
+} from '../types'
 
 const debug = Debug('signalk:wasm:radar-provider')
 
@@ -28,10 +33,10 @@ export async function callWasmRadarHandler(
 ): Promise<string | null> {
   try {
     const asLoader = pluginInstance.asLoader
-    // Use the wrapped exports which have proper WASI initialization
-    // Fall back to raw instance exports if wrapped exports don't have the handler
-    const _wrappedExports = pluginInstance.exports as any
-    const rawExports = pluginInstance.instance?.exports as any
+    // Use raw instance exports for calling handlers
+    const rawExports = pluginInstance.instance?.exports as
+      | WasmRawExports
+      | undefined
 
     // Debug: list available exports when handler is not found
     if (rawExports) {
@@ -50,6 +55,9 @@ export async function callWasmRadarHandler(
       // Need to handle Asyncify for handlers that call fetchSync
       const requestPtr = asLoader.exports.__newString(requestJson)
 
+      // Get the handler function with proper typing
+      const handlerFn = asLoader.exports[handlerName] as (ptr: number) => number
+
       // Set up Asyncify resume handling
       let resumePromiseResolve: ((result: string | null) => void) | null = null
       const resumePromise = new Promise<string | null>((resolve) => {
@@ -57,12 +65,12 @@ export async function callWasmRadarHandler(
       })
 
       // Store the result pointer from the handler call
-      let handlerResultPtr: any = null
+      let handlerResultPtr: number = 0
 
       if (pluginInstance.setAsyncifyResume) {
         pluginInstance.setAsyncifyResume(() => {
           debug(`Re-calling ${handlerName} to resume from rewind state`)
-          const resumeResultPtr = asLoader.exports[handlerName](requestPtr)
+          const resumeResultPtr = handlerFn(requestPtr)
           const result = asLoader.exports.__getString(resumeResultPtr)
           if (resumePromiseResolve) {
             resumePromiseResolve(result)
@@ -72,7 +80,7 @@ export async function callWasmRadarHandler(
       }
 
       // Call the handler
-      handlerResultPtr = asLoader.exports[handlerName](requestPtr)
+      handlerResultPtr = handlerFn(requestPtr)
 
       // Check if we're in Asyncify unwind state
       if (typeof asLoader.exports.asyncify_get_state === 'function') {
@@ -183,7 +191,10 @@ export function updateRadarProviderInstance(
  * @param pluginId The plugin ID
  * @param app The Signal K app (optional, if provided will also unregister from RadarApi)
  */
-export function cleanupRadarProviders(pluginId: string, app?: any): void {
+export function cleanupRadarProviders(
+  pluginId: string,
+  app?: SignalKApp
+): void {
   if (wasmRadarProviders.has(pluginId)) {
     debug(`Removing radar provider registration: ${pluginId}`)
     wasmRadarProviders.delete(pluginId)
@@ -214,8 +225,8 @@ export function cleanupRadarProviders(pluginId: string, app?: any): void {
  */
 export function createRadarProviderBinding(
   pluginId: string,
-  capabilities: { radarProvider?: boolean },
-  app: any,
+  capabilities: Pick<WasmCapabilities, 'radarProvider'>,
+  app: SignalKApp | undefined,
   readUtf8String: (ptr: number, len: number) => string
 ): (namePtr: number, nameLen: number) => number {
   return (namePtr: number, nameLen: number): number => {
@@ -281,7 +292,7 @@ export function createRadarProviderBinding(
            * Get radar info for a specific radar
            * @param radarId The radar ID
            */
-          getRadarInfo: async (radarId: string): Promise<any | null> => {
+          getRadarInfo: async (radarId: string): Promise<unknown> => {
             const provider = wasmRadarProviders.get(pluginId)
             if (!provider || !provider.pluginInstance) {
               debug(`[${pluginId}] Radar provider instance not ready`)
@@ -490,7 +501,7 @@ export function createRadarProviderBinding(
            */
           setControls: async (
             radarId: string,
-            controls: any
+            controls: Record<string, unknown>
           ): Promise<boolean> => {
             const provider = wasmRadarProviders.get(pluginId)
             if (!provider || !provider.pluginInstance) {
@@ -522,7 +533,7 @@ export function createRadarProviderBinding(
            * Get capability manifest for a radar
            * @param radarId The radar ID
            */
-          getCapabilities: async (radarId: string): Promise<any | null> => {
+          getCapabilities: async (radarId: string): Promise<unknown> => {
             const provider = wasmRadarProviders.get(pluginId)
             if (!provider || !provider.pluginInstance) {
               debug(`[${pluginId}] Radar provider instance not ready`)
@@ -560,7 +571,7 @@ export function createRadarProviderBinding(
            * Get current state
            * @param radarId The radar ID
            */
-          getState: async (radarId: string): Promise<any | null> => {
+          getState: async (radarId: string): Promise<unknown> => {
             const provider = wasmRadarProviders.get(pluginId)
             if (!provider || !provider.pluginInstance) {
               debug(`[${pluginId}] Radar provider instance not ready`)
@@ -600,7 +611,7 @@ export function createRadarProviderBinding(
           getControl: async (
             radarId: string,
             controlId: string
-          ): Promise<any | null> => {
+          ): Promise<unknown> => {
             const provider = wasmRadarProviders.get(pluginId)
             if (!provider || !provider.pluginInstance) {
               debug(`[${pluginId}] Radar provider instance not ready`)
@@ -643,7 +654,7 @@ export function createRadarProviderBinding(
           setControl: async (
             radarId: string,
             controlId: string,
-            value: any
+            value: unknown
           ): Promise<{ success: boolean; error?: string }> => {
             const provider = wasmRadarProviders.get(pluginId)
             if (!provider || !provider.pluginInstance) {
@@ -679,7 +690,7 @@ export function createRadarProviderBinding(
            * Get all tracked ARPA targets
            * @param radarId The radar ID
            */
-          getTargets: async (radarId: string): Promise<any | null> => {
+          getTargets: async (radarId: string): Promise<unknown> => {
             const provider = wasmRadarProviders.get(pluginId)
             if (!provider || !provider.pluginInstance) {
               debug(`[${pluginId}] Radar provider instance not ready`)
@@ -793,7 +804,7 @@ export function createRadarProviderBinding(
            * Get ARPA settings
            * @param radarId The radar ID
            */
-          getArpaSettings: async (radarId: string): Promise<any | null> => {
+          getArpaSettings: async (radarId: string): Promise<unknown> => {
             const provider = wasmRadarProviders.get(pluginId)
             if (!provider || !provider.pluginInstance) {
               debug(`[${pluginId}] Radar provider instance not ready`)
@@ -834,7 +845,7 @@ export function createRadarProviderBinding(
            */
           setArpaSettings: async (
             radarId: string,
-            settings: any
+            settings: Record<string, unknown>
           ): Promise<{ success: boolean; error?: string }> => {
             const provider = wasmRadarProviders.get(pluginId)
             if (!provider || !provider.pluginInstance) {
@@ -893,8 +904,8 @@ export function createRadarProviderBinding(
  */
 export function createRadarEmitSpokesBinding(
   pluginId: string,
-  capabilities: { radarProvider?: boolean },
-  app: any,
+  capabilities: Pick<WasmCapabilities, 'radarProvider'>,
+  app: SignalKApp | undefined,
   readUtf8String: (ptr: number, len: number) => string,
   readBinaryData: (ptr: number, len: number) => Buffer
 ): (

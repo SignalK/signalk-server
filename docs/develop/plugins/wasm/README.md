@@ -68,6 +68,7 @@ Signal K Server supports multiple languages for WASM plugin development:
 - **Resource Providers**: Serve SignalK resources
 - **Weather Providers**: Integrate with Signal K Weather API
 - **Radar Providers**: Integrate with Signal K Radar API
+- **Server Events**: Receive and emit server events for monitoring and inter-plugin communication
 
 ## Choose Your Language
 

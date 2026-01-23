@@ -57,29 +57,32 @@ export function createServerAPIBridge(
        * Use v2 for Course API paths and other v2-specific data.
        */
       handleMessage: (
-        pluginIdParam: string,
+        callerPluginId: string,
         deltaJson: string,
         version: number = 1
       ) => {
         if (!capabilities.dataWrite) {
-          throw new Error(`Plugin ${pluginId} lacks dataWrite capability`)
+          throw new Error(`Plugin ${callerPluginId} lacks dataWrite capability`)
         }
 
         try {
           const delta = JSON.parse(deltaJson)
           const skVersion = version === 2 ? SKVersion.v2 : SKVersion.v1
-          debug(`Plugin ${pluginId} emitting delta (${skVersion}):`, delta)
+          debug(
+            `Plugin ${callerPluginId} emitting delta (${skVersion}):`,
+            delta
+          )
 
           // Forward to server's handleMessage with version
           if (app.handleMessage) {
-            app.handleMessage(pluginId, delta, skVersion)
+            app.handleMessage(callerPluginId, delta, skVersion)
           } else {
             debug('Warning: app.handleMessage not available')
           }
         } catch (error) {
           const errorMsg =
             error instanceof Error ? error.message : String(error)
-          debug(`Error handling delta from ${pluginId}: ${errorMsg}`)
+          debug(`Error handling delta from ${callerPluginId}: ${errorMsg}`)
           throw error
         }
       }

@@ -1,16 +1,33 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * WASM Plugin Type Definitions
  *
  * Shared types and interfaces for WASM plugin system
  */
 
-import { IRouter } from 'express'
+import type { IRouter } from 'express'
 import {
   WasmPluginInstance,
   WasmCapabilities,
   WasmFormat
 } from '../wasm-runtime'
+
+/**
+ * JSON Schema type (subset for plugin configuration)
+ */
+export interface JSONSchema {
+  type?: string
+  title?: string
+  description?: string
+  properties?: Record<string, JSONSchema>
+  required?: string[]
+  default?: unknown
+  [key: string]: unknown
+}
+
+/**
+ * Plugin configuration object
+ */
+export type PluginConfiguration = Record<string, unknown>
 
 /**
  * Plugin metadata extracted from package.json and manifest
@@ -45,8 +62,8 @@ export interface WasmPlugin {
   status: 'stopped' | 'starting' | 'running' | 'error' | 'crashed'
   statusMessage?: string
   errorMessage?: string
-  schema?: any
-  configuration?: any
+  schema?: JSONSchema
+  configuration?: PluginConfiguration
   crashCount: number
   lastCrash?: Date
   restartBackoff: number // milliseconds

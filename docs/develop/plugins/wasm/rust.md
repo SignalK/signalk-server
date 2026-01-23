@@ -302,13 +302,16 @@ npm install -g ./my-rust-wasm-plugin-0.1.0.tgz
 
 Signal K provides these FFI imports in the `env` module:
 
-| Function                  | Parameters                               | Description          |
-| ------------------------- | ---------------------------------------- | -------------------- |
-| `sk_debug`                | `(ptr, len)`                             | Log debug message    |
-| `sk_set_status`           | `(ptr, len)`                             | Set plugin status    |
-| `sk_set_error`            | `(ptr, len)`                             | Set error message    |
-| `sk_handle_message`       | `(ptr, len)`                             | Emit delta message   |
-| `sk_register_put_handler` | `(ctx_ptr, ctx_len, path_ptr, path_len)` | Register PUT handler |
+| Function                     | Parameters                                 | Description             |
+| ---------------------------- | ------------------------------------------ | ----------------------- |
+| `sk_debug`                   | `(ptr, len)`                               | Log debug message       |
+| `sk_set_status`              | `(ptr, len)`                               | Set plugin status       |
+| `sk_set_error`               | `(ptr, len)`                               | Set error message       |
+| `sk_handle_message`          | `(ptr, len)`                               | Emit delta message      |
+| `sk_register_put_handler`    | `(ctx_ptr, ctx_len, path_ptr, path_len)`   | Register PUT handler    |
+| `sk_subscribe_events`        | `(event_types_ptr, event_types_len)`       | Subscribe to events     |
+| `sk_emit_event`              | `(type_ptr, type_len, data_ptr, data_len)` | Emit custom event       |
+| `sk_get_allowed_event_types` | `(buf_ptr, buf_max_len)`                   | Get allowed event types |
 
 > **IMPORTANT: Use Exact Function Names**
 >
@@ -348,7 +351,9 @@ Your plugin MAY export:
 | `poll`           | `() -> status`           | Called every 1 second while plugin is running. Useful for polling hardware, sockets, or external systems. Return 0 for success, non-zero for errors. |
 | `http_endpoints` | `() -> json`             | Return JSON array of HTTP endpoint definitions                                                                                                       |
 | `delta_handler`  | `(delta_ptr, delta_len)` | Receives Signal K deltas as JSON strings. Called for every delta emitted by the server.                                                              |
+| `event_handler`  | `(event_ptr, event_len)` | Receives server events as JSON strings. Requires `serverEvents` capability.                                                                          |
 
 ## Additional Resources
 
-See the example-anchor-watch-rust plugin in `examples/wasm-plugins/example-anchor-watch-rust/` for a complete working plugin with PUT handlers.
+- See `examples/wasm-plugins/example-anchor-watch-rust/` for a complete working plugin with PUT handlers
+- See `examples/wasm-plugins/example-event-handler-rust/` for server event handling example

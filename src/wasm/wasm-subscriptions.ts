@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * WASM Plugin Delta Subscription Management
  *
@@ -9,26 +8,23 @@
  */
 
 import Debug from 'debug'
+import { WasmDelta } from './types'
 
 const debug = Debug('signalk:wasm:subscriptions')
+
+/**
+ * Callback function for delta subscriptions
+ */
+export type DeltaCallback = (delta: WasmDelta) => void
 
 export interface DeltaSubscription {
   pluginId: string
   pattern: string // Path pattern like "navigation.*" or "*"
-  callback: (delta: any) => void
+  callback: DeltaCallback
 }
 
-export interface Delta {
-  context: string
-  updates: Array<{
-    source: any
-    timestamp: string
-    values: Array<{
-      path: string
-      value: any
-    }>
-  }>
-}
+// Re-export WasmDelta as Delta for backwards compatibility
+export type Delta = WasmDelta
 
 export class WasmSubscriptionManager {
   // Active subscriptions by plugin ID
@@ -43,11 +39,7 @@ export class WasmSubscriptionManager {
   /**
    * Register a delta subscription for a plugin
    */
-  register(
-    pluginId: string,
-    pattern: string,
-    callback: (delta: any) => void
-  ): void {
+  register(pluginId: string, pattern: string, callback: DeltaCallback): void {
     if (!this.subscriptions.has(pluginId)) {
       this.subscriptions.set(pluginId, [])
     }
@@ -110,6 +102,7 @@ export class WasmSubscriptionManager {
         let matches = false
 
         for (const update of delta.updates) {
+          if (!update.values) continue
           for (const pathValue of update.values) {
             if (this.matchesPattern(pathValue.path, sub.pattern)) {
               matches = true

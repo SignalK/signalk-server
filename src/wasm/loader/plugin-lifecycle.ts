@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * WASM Plugin Lifecycle Operations
  *
@@ -18,6 +16,7 @@ import { updateResourceProviderInstance } from '../bindings/resource-provider'
 import { updateWeatherProviderInstance } from '../bindings/weather-provider'
 import { updateRadarProviderInstance } from '../bindings/radar-provider'
 import { socketManager } from '../bindings/socket-manager'
+import { getEventManager, resetEventManager, ServerEvent } from '../wasm-events'
 
 const debug = Debug('signalk:wasm:loader')
 
@@ -26,6 +25,9 @@ const pollTimers: Map<string, NodeJS.Timeout> = new Map()
 
 // Track delta subscription unsubscribe functions for plugins
 const deltaUnsubscribers: Map<string, () => void> = new Map()
+
+// Track event subscription state for plugins
+const eventSubscriptionActive: Set<string> = new Set()
 
 // Mutex for serializing network-capable plugin starts
 // as-fetch uses global state that gets corrupted with parallel plugin starts
@@ -173,6 +175,58 @@ async function startWasmPluginInternal(
       }
     }
 
+    // Set up event subscription if plugin exports event_handler
+    if (plugin.instance?.exports?.event_handler) {
+      debug(`Setting up event subscription for ${pluginId}`)
+
+      const eventManager = getEventManager()
+
+      // Create the event callback that calls the WASM export
+      const eventCallback = (event: ServerEvent) => {
+        try {
+          if (
+            plugin.status === 'running' &&
+            plugin.instance?.exports?.event_handler
+          ) {
+            const eventJson = JSON.stringify(event)
+            plugin.instance.exports.event_handler(eventJson)
+          }
+        } catch (eventError) {
+          debug(`[${pluginId}] event_handler error: ${eventError}`)
+        }
+      }
+
+      // Check if plugin has serverEvents capability
+      if (plugin.metadata?.capabilities?.serverEvents) {
+        // Re-register with the actual callback (replaces placeholder from FFI)
+        // Get current subscriptions to preserve event type filtering
+        const existingSubs = eventManager.getSubscriptions(pluginId)
+        if (existingSubs.length > 0) {
+          // Preserve the event types from existing subscription
+          const eventTypes = existingSubs[0].eventTypes
+          eventManager.unregister(pluginId)
+          eventManager.register(pluginId, eventTypes, eventCallback)
+          debug(`Updated event subscription callback for ${pluginId}`)
+        } else {
+          // No existing subscription, register for all allowed events
+          eventManager.register(pluginId, [], eventCallback)
+          debug(
+            `Registered new event subscription for ${pluginId} (all allowed events)`
+          )
+        }
+
+        // Replay any buffered events (from hot-reload)
+        eventManager.replayBuffered(pluginId, eventCallback)
+
+        eventSubscriptionActive.add(pluginId)
+        debug(`Event subscription active for ${pluginId}`)
+      } else {
+        debug(
+          `[${pluginId}] has event_handler but serverEvents capability not granted`
+        )
+      }
+    }
+
     debug(`Successfully started WASM plugin: ${pluginId}`)
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
@@ -216,6 +270,14 @@ export async function stopWasmPlugin(pluginId: string): Promise<void> {
       deltaUnsubscriber()
       deltaUnsubscribers.delete(pluginId)
       debug(`Stopped delta subscription for ${pluginId}`)
+    }
+
+    // Unsubscribe from server events
+    if (eventSubscriptionActive.has(pluginId)) {
+      const eventManager = getEventManager()
+      eventManager.unregister(pluginId)
+      eventSubscriptionActive.delete(pluginId)
+      debug(`Stopped event subscription for ${pluginId}`)
     }
 
     if (plugin.instance) {
@@ -334,13 +396,20 @@ export async function reloadWasmPlugin(
   try {
     const wasRunning = plugin.status === 'running'
 
+    // Start buffering events during reload (if plugin has event subscription)
+    const eventManager = getEventManager()
+    const hadEventSubscription = eventSubscriptionActive.has(pluginId)
+    if (hadEventSubscription) {
+      eventManager.startBuffering(pluginId)
+      debug(`Started event buffering for ${pluginId} during reload`)
+    }
+
     // Stop the plugin
     if (wasRunning) {
       await stopWasmPlugin(pluginId)
     }
 
-    // Save current configuration
-    const savedConfig = plugin.configuration
+    // Configuration is preserved in the plugin object through the reload
 
     // Reload WASM module
     const runtime = getWasmRuntime()
@@ -361,6 +430,12 @@ export async function reloadWasmPlugin(
     // Restart if it was running
     if (wasRunning) {
       await startWasmPlugin(app, pluginId)
+    }
+
+    // Stop event buffering (buffered events are replayed in startWasmPluginInternal)
+    if (hadEventSubscription) {
+      eventManager.stopBuffering(pluginId)
+      debug(`Stopped event buffering for ${pluginId}`)
     }
 
     plugin.statusMessage = 'Reloaded successfully'
@@ -466,6 +541,7 @@ export async function shutdownAllWasmPlugins(): Promise<void> {
   // Reset singletons
   resetWasmRuntime()
   resetSubscriptionManager()
+  resetEventManager()
 
   wasmPlugins.clear()
   debug('All WASM plugins shut down')
