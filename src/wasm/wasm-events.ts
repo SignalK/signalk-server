@@ -85,12 +85,17 @@ export class WasmEventManager {
   }
 
   routeEvent(event: ServerEvent): void {
-    if (this.subscriptions.size === 0) return
+    if (this.subscriptions.size === 0) {
+      debug(`No subscriptions, skipping event ${event.type}`)
+      return
+    }
 
     if (!this.isAllowed(event.type)) {
       debug(`Event type ${event.type} not allowed for WASM plugins`)
       return
     }
+
+    debug(`Routing event ${event.type} to ${this.subscriptions.size} plugin(s)`)
 
     const eventWithTimestamp: ServerEvent = {
       ...event,

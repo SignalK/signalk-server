@@ -1,55 +1,24 @@
 //! Event Handler WASM Plugin for Signal K
 //!
-//! A Rust implementation demonstrating server event handling:
-//! - Subscribing to server events (SERVERSTATISTICS, VESSEL_INFO, etc.)
-//! - Receiving and parsing event data
-//! - Emitting custom PLUGIN_* events
-//! - State tracking across events
-//!
-//! This plugin monitors SERVERSTATISTICS events and emits a custom
-//! PLUGIN_HIGH_DELTA_RATE alert when the delta rate exceeds a threshold.
+//! Monitors server statistics and emits alerts when thresholds are exceeded.
 
 use std::cell::RefCell;
 use serde::{Deserialize, Serialize};
 
-// =============================================================================
-// FFI Imports - Signal K WASM runtime host functions
-// =============================================================================
-
 #[link(wasm_import_module = "env")]
 extern "C" {
-    /// Log debug message
     fn sk_debug(ptr: *const u8, len: usize);
-
-    /// Set plugin status message
     fn sk_set_status(ptr: *const u8, len: usize);
-
-    /// Set plugin error message
     fn sk_set_error(ptr: *const u8, len: usize);
-
-    /// Subscribe to server events
-    /// event_types_ptr: JSON array of event types (e.g., '["SERVERSTATISTICS"]')
-    /// Returns 1 on success, 0 on failure
     fn sk_subscribe_events(event_types_ptr: *const u8, event_types_len: usize) -> i32;
-
-    /// Emit a custom event
-    /// type_ptr: Event type (will be prefixed with PLUGIN_ if not already)
-    /// data_ptr: JSON data for the event
-    /// Returns 1 on success, 0 on failure
     fn sk_emit_event(
         type_ptr: *const u8,
         type_len: usize,
         data_ptr: *const u8,
         data_len: usize,
     ) -> i32;
-
-    /// Get list of allowed event types (for debugging)
     fn sk_get_allowed_event_types(buf_ptr: *mut u8, buf_max_len: usize) -> i32;
 }
-
-// =============================================================================
-// Helper wrappers for FFI functions
-// =============================================================================
 
 fn debug(msg: &str) {
     unsafe { sk_debug(msg.as_ptr(), msg.len()); }
@@ -93,10 +62,6 @@ fn get_allowed_event_types() -> Vec<String> {
     }
 }
 
-// =============================================================================
-// Plugin State
-// =============================================================================
-
 thread_local! {
     static STATE: RefCell<PluginState> = RefCell::new(PluginState::default());
 }
@@ -125,14 +90,9 @@ struct PluginState {
     last_delta_rate: f64,
     high_rate_alert_active: bool,
 
-    // Server info from events
     ws_clients: u32,
     uptime_seconds: f64,
 }
-
-// =============================================================================
-// Memory Allocation for string passing
-// =============================================================================
 
 #[no_mangle]
 pub extern "C" fn allocate(size: usize) -> *mut u8 {
@@ -148,10 +108,6 @@ pub extern "C" fn deallocate(ptr: *mut u8, size: usize) {
         let _ = Vec::from_raw_parts(ptr, 0, size);
     }
 }
-
-// =============================================================================
-// Plugin Exports - Core plugin interface
-// =============================================================================
 
 static PLUGIN_ID: &str = "event-handler-rust";
 static PLUGIN_NAME: &str = "Event Handler (Rust)";
@@ -219,8 +175,6 @@ pub extern "C" fn plugin_start(config_ptr: *const u8, config_len: usize) -> i32 
         parsed_config.delta_rate_threshold
     ));
 
-    // Subscribe to SERVERSTATISTICS events
-    // This event is emitted every 5 seconds with server performance metrics
     if subscribe_events(&["SERVERSTATISTICS", "VESSEL_INFO"]) {
         debug("Subscribed to SERVERSTATISTICS and VESSEL_INFO events");
     } else {
@@ -248,12 +202,6 @@ pub extern "C" fn plugin_stop() -> i32 {
     0
 }
 
-// =============================================================================
-// Event Handler Export
-// =============================================================================
-
-/// Handle incoming server events
-/// This function is called by the host when a subscribed event occurs
 #[no_mangle]
 pub extern "C" fn event_handler(event_ptr: *const u8, event_len: usize) {
     let event_json = unsafe {
@@ -261,7 +209,6 @@ pub extern "C" fn event_handler(event_ptr: *const u8, event_len: usize) {
         String::from_utf8_lossy(slice).to_string()
     };
 
-    // Parse the event
     let event: ServerEvent = match serde_json::from_str(&event_json) {
         Ok(e) => e,
         Err(e) => {
@@ -293,16 +240,14 @@ pub extern "C" fn event_handler(event_ptr: *const u8, event_len: usize) {
     });
 }
 
-// =============================================================================
-// Event Type Structures
-// =============================================================================
-
 #[derive(Debug, Deserialize)]
 struct ServerEvent {
     #[serde(rename = "type")]
     event_type: String,
+    #[allow(dead_code)]
     from: Option<String>,
     data: serde_json::Value,
+    #[allow(dead_code)]
     timestamp: u64,
 }
 
@@ -323,10 +268,6 @@ struct HighDeltaRateAlert {
     uptime_seconds: f64,
     message: String,
 }
-
-// =============================================================================
-// Event Handlers
-// =============================================================================
 
 fn handle_server_statistics(state: &mut PluginState, event: &ServerEvent) {
     let stats: ServerStatistics = match serde_json::from_value(event.data.clone()) {
@@ -401,9 +342,7 @@ fn handle_server_statistics(state: &mut PluginState, event: &ServerEvent) {
         }
     }
 
-    // Update status periodically
     if state.events_received % 12 == 0 {
-        // Every ~60 seconds (12 * 5s)
         set_status(&format!(
             "Delta rate: {:.1}/s, WS clients: {}, Uptime: {:.0}s",
             rate, state.ws_clients, state.uptime_seconds
@@ -415,13 +354,7 @@ fn handle_vessel_info(state: &PluginState, event: &ServerEvent) {
     if state.config.enable_debug {
         debug(&format!("Vessel info changed: {:?}", event.data));
     }
-    // Could emit a custom event when vessel info changes, e.g.:
-    // emit_event("VESSEL_INFO_CHANGED", &event.data);
 }
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
 
 fn write_string(s: &str, ptr: *mut u8, max_len: usize) -> i32 {
     let bytes = s.as_bytes();

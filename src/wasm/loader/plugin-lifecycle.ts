@@ -175,13 +175,11 @@ async function startWasmPluginInternal(
       }
     }
 
-    // Set up event subscription if plugin exports event_handler
     if (plugin.instance?.exports?.event_handler) {
       debug(`Setting up event subscription for ${pluginId}`)
 
       const eventManager = getEventManager()
 
-      // Create the event callback that calls the WASM export
       const eventCallback = (event: ServerEvent) => {
         try {
           if (
@@ -189,33 +187,44 @@ async function startWasmPluginInternal(
             plugin.instance?.exports?.event_handler
           ) {
             const eventJson = JSON.stringify(event)
+            debug(
+              `[${pluginId}] Delivering event ${event.type} to event_handler`
+            )
             plugin.instance.exports.event_handler(eventJson)
+          } else {
+            debug(
+              `[${pluginId}] Skipping event ${event.type}: running=${plugin.status === 'running'}, handler=${!!plugin.instance?.exports?.event_handler}`
+            )
           }
         } catch (eventError) {
           debug(`[${pluginId}] event_handler error: ${eventError}`)
         }
       }
 
-      // Check if plugin has serverEvents capability
       if (plugin.metadata?.capabilities?.serverEvents) {
-        // Re-register with the actual callback (replaces placeholder from FFI)
-        // Get current subscriptions to preserve event type filtering
-        const existingSubs = eventManager.getSubscriptions(pluginId)
+        // FFI registers with packageName, lifecycle uses pluginId - check both
+        let existingSubs = eventManager.getSubscriptions(pluginId)
+        let originalId = pluginId
+
+        if (existingSubs.length === 0 && plugin.packageName) {
+          existingSubs = eventManager.getSubscriptions(plugin.packageName)
+          originalId = plugin.packageName
+        }
+
         if (existingSubs.length > 0) {
-          // Preserve the event types from existing subscription
           const eventTypes = existingSubs[0].eventTypes
-          eventManager.unregister(pluginId)
+          eventManager.unregister(originalId)
           eventManager.register(pluginId, eventTypes, eventCallback)
-          debug(`Updated event subscription callback for ${pluginId}`)
+          debug(
+            `Updated event subscription callback for ${pluginId} (was ${originalId})`
+          )
         } else {
-          // No existing subscription, register for all allowed events
           eventManager.register(pluginId, [], eventCallback)
           debug(
             `Registered new event subscription for ${pluginId} (all allowed events)`
           )
         }
 
-        // Replay any buffered events (from hot-reload)
         eventManager.replayBuffered(pluginId, eventCallback)
 
         eventSubscriptionActive.add(pluginId)
@@ -272,7 +281,6 @@ export async function stopWasmPlugin(pluginId: string): Promise<void> {
       debug(`Stopped delta subscription for ${pluginId}`)
     }
 
-    // Unsubscribe from server events
     if (eventSubscriptionActive.has(pluginId)) {
       const eventManager = getEventManager()
       eventManager.unregister(pluginId)

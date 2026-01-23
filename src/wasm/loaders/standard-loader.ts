@@ -534,6 +534,47 @@ function createPluginExports(
     }
   }
 
+  // Wrap event_handler if it exists (for plugins that subscribe to server events)
+  let eventHandlerFunc: ((eventJson: string) => void) | undefined = undefined
+  if (rawExports.event_handler) {
+    if (isAssemblyScriptPlugin && asLoaderInstance) {
+      eventHandlerFunc = (eventJson: string) => {
+        // Pass event JSON string to the WASM event_handler
+        const ptr = asLoaderInstance.exports.__newString(eventJson)
+        asLoaderInstance.exports.event_handler(ptr)
+      }
+    } else if (isRustLibraryPlugin) {
+      // Rust library plugin: buffer-based string passing
+      eventHandlerFunc = (eventJson: string) => {
+        const encoder = new TextEncoder()
+        const eventBytes = encoder.encode(eventJson)
+        const eventLen = eventBytes.length
+
+        const allocate = rawExports.allocate
+        if (typeof allocate !== 'function') {
+          debug('Rust plugin missing allocate export for event_handler')
+          return
+        }
+
+        const eventPtr = allocate(eventLen)
+        const memory = rawExports.memory as WebAssembly.Memory
+        const memoryView = new Uint8Array(memory.buffer)
+        memoryView.set(eventBytes, eventPtr)
+
+        try {
+          rawExports.event_handler(eventPtr, eventLen)
+        } finally {
+          const deallocate = rawExports.deallocate
+          if (typeof deallocate === 'function') {
+            deallocate(eventPtr, eventLen)
+          }
+        }
+      }
+    } else {
+      eventHandlerFunc = rawExports.event_handler
+    }
+  }
+
   return {
     id: idFunc,
     name: nameFunc,
@@ -543,6 +584,7 @@ function createPluginExports(
     memory: rawExports.memory,
     ...(httpEndpointsFunc && { http_endpoints: httpEndpointsFunc }),
     ...(pollFunc && { poll: pollFunc }),
-    ...(deltaHandlerFunc && { delta_handler: deltaHandlerFunc })
+    ...(deltaHandlerFunc && { delta_handler: deltaHandlerFunc }),
+    ...(eventHandlerFunc && { event_handler: eventHandlerFunc })
   }
 }

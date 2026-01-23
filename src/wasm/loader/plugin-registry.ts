@@ -191,7 +191,8 @@ export async function registerWasmPlugin(
       resourceProvider: packageJson.wasmCapabilities?.resourceProvider || false,
       weatherProvider: packageJson.wasmCapabilities?.weatherProvider || false,
       radarProvider: packageJson.wasmCapabilities?.radarProvider || false,
-      rawSockets: packageJson.wasmCapabilities?.rawSockets || false
+      rawSockets: packageJson.wasmCapabilities?.rawSockets || false,
+      serverEvents: packageJson.wasmCapabilities?.serverEvents || false
     }
 
     // Load WASM module temporarily to extract schema and display name

@@ -8,11 +8,13 @@
 
 import Debug from 'debug'
 import { initializeWasm, shutdownAllWasmPlugins } from '../wasm'
+import { getEventManager, ServerEvent } from '../wasm/wasm-events'
 
 const debug = Debug('signalk:interfaces:wasm')
 
 module.exports = (app: any) => {
   const api: any = {}
+  let serverEventListener: ((event: ServerEvent) => void) | null = null
 
   api.start = () => {
     debug('Starting WASM interface')
@@ -20,6 +22,15 @@ module.exports = (app: any) => {
       const { wasmRuntime, wasmSubscriptionManager } = initializeWasm()
       app.wasmRuntime = wasmRuntime
       app.wasmSubscriptionManager = wasmSubscriptionManager
+
+      // Forward server events to WASM event manager
+      serverEventListener = (event: ServerEvent) => {
+        const eventManager = getEventManager()
+        eventManager.routeEvent(event)
+      }
+      app.on('serverevent', serverEventListener)
+      debug('WASM server event forwarding enabled')
+
       debug('WASM runtime initialized successfully')
       return { enabled: true }
     } catch (error) {
@@ -31,6 +42,12 @@ module.exports = (app: any) => {
   api.stop = () => {
     debug('Stopping WASM interface')
     try {
+      // Remove server event listener
+      if (serverEventListener) {
+        app.removeListener('serverevent', serverEventListener)
+        serverEventListener = null
+        debug('WASM server event forwarding disabled')
+      }
       shutdownAllWasmPlugins()
     } catch (error) {
       debug('WASM shutdown error:', error)
