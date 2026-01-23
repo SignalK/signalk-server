@@ -32,6 +32,11 @@ export interface Request {
   token?: string
 }
 
+export interface AccessRequestData {
+  permission?: string
+  token?: string
+}
+
 export interface Reply {
   state: RequestState
   requestId: string
@@ -42,7 +47,7 @@ export interface Reply {
   user?: string
   put?: unknown
   delete?: unknown
-  accessRequest?: unknown
+  accessRequest?: AccessRequestData
 }
 
 export interface UpdateOptions {
@@ -118,7 +123,7 @@ function createReply(request: Request): Reply {
   } else if (request.type === 'delete') {
     reply.delete = request.data
   } else if (request.type === 'accessRequest') {
-    reply.accessRequest = request.data
+    reply.accessRequest = request.data as AccessRequestData
   }
   debug('createReply %j', reply)
   return reply
