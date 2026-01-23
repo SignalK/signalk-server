@@ -10,6 +10,7 @@ declare module '@signalk/signalk-schema' {
     addDelta: (_: any) => void
     retrieve: () => any
     pruneContexts: (seconds: number) => void
+    self: Record<string, any>
   }
   export function getMetadata(path: string): any
   export function getAISShipTypeName(shipType: number): string
