@@ -23,6 +23,12 @@ interface VirtualizedDataTableProps {
  * VirtualizedDataTable - Window-scroll virtualized table
  * Optimized for React 19 with dynamic row heights for RAW mode
  */
+// Virtualization requires measuring DOM and updating state in response to scroll events.
+// This is an inherent characteristic of virtual scrolling - we must read the container's
+// position from the DOM (via refs) and update which rows are rendered (via state).
+// The eslint rules for setState in effects don't account for DOM measurement patterns.
+/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
+/* eslint-disable react-hooks/set-state-in-effect */
 function VirtualizedDataTable({
   path$SourceKeys,
   context,
@@ -64,13 +70,11 @@ function VirtualizedDataTable({
 
     setVisibleRange((prev) => {
       // Only update if range actually changed to avoid excessive re-renders
-      // Use smaller threshold for smoother scrolling, especially at boundaries
       const atStart = startIndex === 0
       const atEnd = endIndex >= path$SourceKeys.length - 1
       const significantChange =
         Math.abs(prev.start - startIndex) > 2 ||
         Math.abs(prev.end - endIndex) > 2
-      // Also update if end was previously at the boundary but list grew
       const listGrew =
         prev.end < endIndex && prev.end === prev.start + visibleCount - 1
 

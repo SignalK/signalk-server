@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef, useSyncExternalStore, useCallback } from 'react'
 import store, { PathData, MetaData } from './ValueEmittingStore'
 
 // Throttle UI updates to max 5 per second per path
@@ -14,73 +14,91 @@ export function usePathData(
   context: string,
   path$SourceKey: string
 ): PathData | null {
-  const [data, setData] = useState<PathData | null>(
-    () => store.getPathData(context, path$SourceKey) ?? null
-  )
   const lastUpdateRef = useRef<number>(0)
   const pendingDataRef = useRef<PathData | null>(null)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [throttledData, setThrottledData] = useState<PathData | null>(
+    () => store.getPathData(context, path$SourceKey) ?? null
+  )
 
-  useEffect(() => {
-    // Get initial data
-    setData(store.getPathData(context, path$SourceKey) ?? null)
+  // Use useSyncExternalStore for the base subscription
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      const unsubscribe = store.subscribe(
+        context,
+        path$SourceKey,
+        (newData: PathData) => {
+          const now = Date.now()
+          const elapsed = now - lastUpdateRef.current
 
-    // Subscribe to updates for this specific path
-    const unsubscribe = store.subscribe(
-      context,
-      path$SourceKey,
-      (newData: PathData) => {
-        const now = Date.now()
-        const elapsed = now - lastUpdateRef.current
-
-        if (elapsed >= THROTTLE_MS) {
-          // Enough time passed, update immediately
-          lastUpdateRef.current = now
-          setData(newData)
-        } else {
-          // Store pending data, schedule update for later
-          pendingDataRef.current = newData
-          if (!timeoutRef.current) {
-            timeoutRef.current = setTimeout(() => {
-              if (pendingDataRef.current) {
-                lastUpdateRef.current = Date.now()
-                setData(pendingDataRef.current)
-                pendingDataRef.current = null
-              }
-              timeoutRef.current = null
-            }, THROTTLE_MS - elapsed)
+          if (elapsed >= THROTTLE_MS) {
+            // Enough time passed, update immediately
+            lastUpdateRef.current = now
+            setThrottledData(newData)
+            onStoreChange()
+          } else {
+            // Store pending data, schedule update for later
+            pendingDataRef.current = newData
+            if (!timeoutRef.current) {
+              timeoutRef.current = setTimeout(() => {
+                if (pendingDataRef.current) {
+                  lastUpdateRef.current = Date.now()
+                  setThrottledData(pendingDataRef.current)
+                  pendingDataRef.current = null
+                  onStoreChange()
+                }
+                timeoutRef.current = null
+              }, THROTTLE_MS - elapsed)
+            }
           }
         }
-      }
-    )
+      )
 
-    return () => {
-      unsubscribe()
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
+      return () => {
+        unsubscribe()
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+        }
       }
-    }
-  }, [context, path$SourceKey])
+    },
+    [context, path$SourceKey]
+  )
 
-  return data
+  const getSnapshot = useCallback(
+    () => store.getPathData(context, path$SourceKey) ?? null,
+    [context, path$SourceKey]
+  )
+
+  // useSyncExternalStore ensures proper synchronization with external store
+  useSyncExternalStore(subscribe, getSnapshot)
+
+  return throttledData
 }
 
 /**
  * Hook to get metadata for a path
+ * Uses useSyncExternalStore for proper external store synchronization
  */
 export function useMetaData(
   context: string,
   path: string | undefined
 ): MetaData | null {
-  const [meta, setMeta] = useState<MetaData | null>(() =>
-    path ? (store.getMeta(context, path) ?? null) : null
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      if (!path) return () => {}
+      // Meta doesn't have a specific subscription, but we can use the structure subscription
+      // which fires when any meta changes
+      return store.subscribeToStructure(() => {
+        onStoreChange()
+      })
+    },
+    [path]
   )
 
-  useEffect(() => {
-    if (path) {
-      setMeta(store.getMeta(context, path) ?? null)
-    }
-  }, [context, path])
+  const getSnapshot = useCallback(
+    () => (path ? (store.getMeta(context, path) ?? null) : null),
+    [context, path]
+  )
 
-  return meta
+  return useSyncExternalStore(subscribe, getSnapshot)
 }

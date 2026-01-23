@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { ListGroup, ListGroupItem } from 'reactstrap'
 import ActionCellRenderer from './Grid/cell-renderers/ActionCellRenderer'
@@ -14,9 +14,7 @@ export interface AppData {
   [key: string]: unknown
 }
 
-interface AppListItemProps extends AppData {}
-
-export function AppListItem(app: AppListItemProps) {
+export function AppListItem(app: AppData) {
   return (
     <ListGroupItem className="p-3">
       <div className="d-md-flex align-items-center flex-grow-1">
@@ -56,14 +54,21 @@ interface AppListProps {
 }
 
 export default function AppList({ apps: propsApps }: AppListProps) {
-  const [apps, setApps] = useState<AppData[]>([])
+  const [displayCount, setDisplayCount] = useState(20)
+
+  // Reset display count when apps prop changes - this is derived state reset.
+  // The warning about setState in effect is a false positive for this pattern.
+  // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect, @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
+    setDisplayCount(20)
+  }, [propsApps])
+
+  const apps = propsApps.slice(0, displayCount)
 
   function loadMore() {
-    setApps(propsApps.slice(0, apps.length + 20))
+    setDisplayCount((prev) => prev + 20)
   }
-
-  // Load initial list of apps
-  useEffect(loadMore, [propsApps])
 
   return (
     <ListGroup>

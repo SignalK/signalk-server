@@ -77,7 +77,6 @@ export default function PluginConfigurationList() {
   const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null)
   const [wasmEnabled, setWasmEnabled] = useState(true)
 
-  // React 19: useTransition for non-blocking filter updates
   const [isFiltering, startFilterTransition] = useTransition()
 
   const tableContainerRef = useRef<HTMLDivElement>(null)
@@ -126,16 +125,10 @@ export default function PluginConfigurationList() {
   )
 
   const getFilteredPlugins = useCallback((): Plugin[] => {
-    let filtered = plugins
-
-    // Apply status filter
-    filtered = filterPluginsByStatus(filtered, statusFilter)
-
-    // Apply search filter
+    let filtered = filterPluginsByStatus(plugins, statusFilter)
     if (search.length > 0) {
       filtered = searchPlugins(filtered, search)
     }
-
     return filtered
   }, [plugins, statusFilter, search, filterPluginsByStatus, searchPlugins])
 
@@ -182,12 +175,9 @@ export default function PluginConfigurationList() {
     }
   }, [])
 
-  // React 19: useTransition keeps UI responsive during search
   const handleSearch = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value
-    // Immediate update for input field
     setSearch(value)
-    // Deferred update for filtering (non-blocking)
     startFilterTransition(() => {
       localStorage.setItem(searchStorageKey, value)
     })
@@ -255,11 +245,9 @@ export default function PluginConfigurationList() {
     []
   )
 
-  // Initial data fetch
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch both plugins and settings in parallel
         const [pluginsResponse, settingsResponse] = await Promise.all([
           fetch(`${window.serverRoutesPrefix}/plugins`, {
             credentials: 'same-origin'
@@ -275,18 +263,14 @@ export default function PluginConfigurationList() {
 
         const fetchedPlugins: Plugin[] = await pluginsResponse.json()
 
-        // Settings fetch - use defaults if failed
         let settings: { interfaces?: { wasm?: boolean } } = {
           interfaces: { wasm: true }
         }
         if (settingsResponse.status === 200) {
           settings = await settingsResponse.json()
         }
-
-        // Check if WASM interface is enabled (default true if not specified)
         const wasmInterfaceEnabled = settings?.interfaces?.wasm !== false
 
-        // Set initial selected plugin from URL or localStorage
         const currentPluginId = params.pluginid
         const lastOpenPluginId = localStorage.getItem(openPluginStorageKey)
         let initialSelectedPlugin: Plugin | null = null
@@ -408,11 +392,9 @@ export default function PluginConfigurationList() {
                     (plugin.data.configuration === null ||
                       plugin.data.configuration === undefined)
 
-                  // Check if this is a WASM plugin with WASM interface disabled
                   const isWasmPlugin = plugin.type === 'wasm'
                   const wasmDisabledForPlugin = isWasmPlugin && !wasmEnabled
 
-                  // Determine badge class and text (Bootstrap 5 uses text-bg-* classes)
                   let badgeClass = 'text-bg-secondary'
                   let badgeText = 'Disabled'
 
@@ -498,8 +480,6 @@ function PluginConfigCard({
   const [showSaveSuccess, setShowSaveSuccess] = useState(false)
   const configCardRef = useRef<HTMLDivElement>(null)
 
-  // React 19: useOptimistic for instant toggle feedback
-  // Shows the new state immediately while the server request is in flight
   const [optimisticData, setOptimisticData] = useOptimistic(
     plugin.data,
     (_currentData: PluginData, newData: PluginData) => newData

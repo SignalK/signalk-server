@@ -53,10 +53,10 @@ export default function AccessRequests() {
     useState<AccessRequestData | null>(null)
   const selectedRequestRef = useRef<HTMLDivElement>(null)
 
-  const [processing, setProcessing] = useState<ProcessingState>({
+  const [processing, setProcessing] = useState<ProcessingState>(() => ({
     approving: new Set(),
     denying: new Set()
-  })
+  }))
 
   const [optimisticRequests, removeOptimisticRequest] = useOptimistic(
     accessRequests,

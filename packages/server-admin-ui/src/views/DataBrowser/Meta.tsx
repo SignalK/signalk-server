@@ -484,8 +484,8 @@ const MetaFormRow: React.FC<MetaFormRowProps> = (props) => {
           onChange={(e) => setKey(e.target.value)}
         >
           {METAFIELDS.filter((fieldName) => fieldName !== 'zones').map(
-            (fieldName, i) => (
-              <option key={i} value={fieldName}>
+            (fieldName) => (
+              <option key={fieldName} value={fieldName}>
                 {fieldName}
               </option>
             )
@@ -604,8 +604,8 @@ const ZoneRow: React.FC<ZoneProps> = ({
           value={state}
           onChange={(e) => setZone({ ...zone, state: e.target.value })}
         >
-          {STATES.map((s, i) => (
-            <option key={i} value={s}>
+          {STATES.map((s) => (
+            <option key={s} value={s}>
               {s}
             </option>
           ))}
@@ -662,9 +662,10 @@ const Zones: React.FC<ZonesProps> = ({ zones, isEditing, setZones }) => (
         {(zones === undefined || zones.length === 0) &&
           !isEditing &&
           'No zones defined'}
+        {/* Zone items don't have stable unique IDs - index key is intentional for this editable list */}
         {zones.map((zone, i) => (
           <ZoneRow
-            key={i}
+            key={i} // eslint-disable-line @eslint-react/no-array-index-key
             zone={zone}
             isEditing={isEditing}
             showHint={i === 0}

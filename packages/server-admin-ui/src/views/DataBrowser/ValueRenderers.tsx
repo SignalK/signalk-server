@@ -579,6 +579,23 @@ const SatellitesInViewRenderer = ({ value }: SatellitesInViewRendererProps) => {
 
 // Type for dynamic renderers cache
 type RendererComponent = ComponentType<RendererProps>
+
+// Factory function to create a Suspense wrapper component outside of render
+// This ensures the wrapper component is created once and cached
+function createLazySuspenseWrapper(
+  LazyComponent: ComponentType<RendererProps>
+): RendererComponent {
+  // Define the component function outside of render to satisfy react-hooks/static-components
+  const SuspenseWrapper: RendererComponent = (props: RendererProps) => (
+    <div>
+      <Suspense fallback={<DefaultValueRenderer {...props} />}>
+        <LazyComponent {...props} />
+      </Suspense>
+    </div>
+  )
+  return SuspenseWrapper
+}
+
 const Renderers: Record<string, RendererComponent> = {
   Position: PositionRenderer as RendererComponent,
   SatellitesInView: SatellitesInViewRenderer as RendererComponent,
@@ -611,20 +628,15 @@ export const getValueRenderer = (
     if (Renderers[cacheKey]) {
       return Renderers[cacheKey]
     } else {
-      const Renderer = toLazyDynamicComponent(
+      // Create and cache a lazy wrapper component outside of React render cycle
+      // This component is created once when first requested and reused thereafter
+      const LazyRenderer = toLazyDynamicComponent(
         meta.renderer.module,
         meta.renderer.name
       ) as ComponentType<RendererProps>
 
-      const comp: RendererComponent = function component(props: RendererProps) {
-        return (
-          <div>
-            <Suspense fallback={<DefaultValueRenderer {...props} />}>
-              <Renderer {...props} />
-            </Suspense>
-          </div>
-        )
-      }
+      // Use createLazySuspenseWrapper to create a stable component reference
+      const comp = createLazySuspenseWrapper(LazyRenderer)
       Renderers[cacheKey] = comp
       return comp
     }

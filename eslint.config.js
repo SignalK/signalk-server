@@ -4,6 +4,9 @@ const globals = require('globals')
 const tseslint = require('typescript-eslint')
 const prettier = require('eslint-config-prettier/flat')
 const react = require('eslint-plugin-react')
+const reactHooks = require('eslint-plugin-react-hooks')
+const reactCompiler = require('eslint-plugin-react-compiler')
+const eslintReact = require('@eslint-react/eslint-plugin')
 const chai = require('eslint-plugin-chai-friendly')
 
 module.exports = defineConfig([
@@ -58,26 +61,44 @@ module.exports = defineConfig([
     }
   },
 
-  // Server-admin UI specific options
+  // Server-admin UI specific options (React 19)
   {
     settings: {
       react: {
         version: 'detect'
       }
     },
-    files: ['packages/server-admin-ui/src/**/*.js'],
-    extends: [common(), react.configs.flat.recommended],
+    files: ['packages/server-admin-ui/src/**/*.{js,jsx,ts,tsx}'],
+    extends: [
+      common('@typescript-eslint/'),
+      tseslint.configs.recommended,
+      react.configs.flat.recommended,
+      eslintReact.configs['recommended-typescript']
+    ],
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-compiler': reactCompiler
+    },
     languageOptions: {
+      parser: tseslint.parser,
       parserOptions: {
         ecmaFeatures: {
           jsx: true
-        }
+        },
+        project: './packages/server-admin-ui/tsconfig.json'
       },
       globals: {
         ...globals.browser
       }
     },
     rules: {
+      // React hooks rules
+      ...reactHooks.configs.recommended.rules,
+      // React compiler rules
+      'react-compiler/react-compiler': 'warn',
+      // React 17+ with new JSX transform doesn't require React in scope
+      'react/react-in-jsx-scope': 'off',
+      // Disable prop-types (using TypeScript)
       'react/prop-types': 'off',
       'react/no-string-refs': 'off',
       'react/no-direct-mutation-state': 'off'

@@ -286,13 +286,17 @@ const ArrayFieldTemplate = (props: ArrayFieldTemplateProps) => {
   } = props
 
   const uiOptions = getUiOptions(uiSchema)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+  // RJSF library requires 'any' type parameters for generic template resolution.
+  // The library's TypeScript types are designed with 'any' as default generics.
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const ResolvedArrayFieldItemTemplate = getTemplate<
     'ArrayFieldItemTemplate',
     any,
     RJSFSchema,
     any
   >('ArrayFieldItemTemplate', registry as any, uiOptions)
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   const {
     ButtonTemplates: { AddButton }
   } = registry.templates

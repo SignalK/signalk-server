@@ -39,30 +39,43 @@ interface N2KFiltersProps {
 }
 
 export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
-  const filterChanged = (
-    filter: N2KFilter,
-    event: ChangeEvent<HTMLInputElement>
+  const filters = value.options.filters ?? []
+
+  const handleFilterFieldChange = (
+    index: number,
+    field: keyof N2KFilter,
+    newValue: string
   ) => {
-    filter[event.target.name as keyof N2KFilter] = event.target.value
-    onChange(event)
+    const updatedFilters = filters.map((filter, i) =>
+      i === index ? { ...filter, [field]: newValue } : filter
+    )
+    onChange({
+      target: { name: 'options.filters', value: updatedFilters }
+    })
   }
 
-  const deleteFilter = (index: number, event: React.MouseEvent) => {
-    value.options.filters?.splice(index, 1)
-    onChange(event as unknown as ChangeEvent<HTMLInputElement>)
+  const deleteFilter = (index: number) => {
+    const updatedFilters = filters.filter((_, i) => i !== index)
+    onChange({
+      target: { name: 'options.filters', value: updatedFilters }
+    })
   }
 
   const handleEnabledChange = (event: ChangeEvent<HTMLInputElement>) => {
-    value.options.filtersEnabled = event.target.checked
-    onChange(event)
+    onChange({
+      target: {
+        name: 'options.filtersEnabled',
+        value: event.target.checked,
+        type: 'checkbox'
+      }
+    })
   }
 
-  const handleAddFilter = (event: React.MouseEvent) => {
-    if (!value.options.filters) {
-      value.options.filters = []
-    }
-    value.options.filters.push({ source: '', pgn: '' })
-    onChange(event as unknown as ChangeEvent<HTMLInputElement>)
+  const handleAddFilter = () => {
+    const updatedFilters = [...filters, { source: '', pgn: '' }]
+    onChange({
+      target: { name: 'options.filters', value: updatedFilters }
+    })
   }
 
   const sourceName = value.options.useCanName ? 'Can NAME' : 'Address'
@@ -93,7 +106,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
           both.
           <br />
           <br />
-          {value.options.filters && value.options.filters.length > 0 && (
+          {filters.length > 0 && (
             <Table responsive bordered striped size="sm">
               <thead>
                 <tr>
@@ -103,15 +116,23 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
                 </tr>
               </thead>
               <tbody>
-                {value.options.filters.map((filter, index) => {
+                {filters.map((filter, index) => {
+                  // Use composite key - filters don't have stable unique IDs
+                  const filterKey = `${index}-${filter.source}-${filter.pgn}`
                   return (
-                    <tr key={index}>
+                    <tr key={filterKey}>
                       <td>
                         <Input
                           type="text"
                           name="source"
                           value={filter.source}
-                          onChange={(e) => filterChanged(filter, e)}
+                          onChange={(e) =>
+                            handleFilterFieldChange(
+                              index,
+                              'source',
+                              e.target.value
+                            )
+                          }
                         />
                       </td>
                       <td>
@@ -119,14 +140,20 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
                           type="text"
                           name="pgn"
                           value={filter.pgn}
-                          onChange={(e) => filterChanged(filter, e)}
+                          onChange={(e) =>
+                            handleFilterFieldChange(
+                              index,
+                              'pgn',
+                              e.target.value
+                            )
+                          }
                         />
                       </td>
                       <td>
                         <Button
                           color="link"
                           className="text-danger"
-                          onClick={(e) => deleteFilter(index, e)}
+                          onClick={() => deleteFilter(index)}
                         >
                           <FontAwesomeIcon icon={faTrash} />
                         </Button>
@@ -137,7 +164,7 @@ export default function N2KFilters({ value, onChange }: N2KFiltersProps) {
               </tbody>
             </Table>
           )}
-          <Button size="sm" color="primary" onClick={handleAddFilter}>
+          <Button size="sm" color="primary" onClick={() => handleAddFilter()}>
             <FontAwesomeIcon icon={faCirclePlus} /> Add
           </Button>
         </CardBody>

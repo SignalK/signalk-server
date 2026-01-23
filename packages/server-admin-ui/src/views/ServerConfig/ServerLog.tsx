@@ -86,7 +86,7 @@ export default function ServerLogs() {
     return () => {
       unsubscribeToLogs()
     }
-  }, [])
+  }, [subscribeToLogsIfNeeded, fetchDebugKeys, unsubscribeToLogs])
 
   useEffect(() => {
     subscribeToLogsIfNeeded()
