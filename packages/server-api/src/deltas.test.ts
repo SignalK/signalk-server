@@ -1,11 +1,7 @@
 import { Delta, Path } from './deltas'
 
-/**
- * Type-check tests - verify Delta types compile correctly.
- * These are exported to satisfy noUnusedLocals while serving as type examples.
- * @ignore
- */
-export const _typeCheckMetaDelta: Delta = {
+// Type-check tests - verify Delta types compile correctly
+const _typeCheckMetaDelta: Delta = {
   updates: [
     {
       meta: [
@@ -19,9 +15,9 @@ export const _typeCheckMetaDelta: Delta = {
     }
   ]
 }
+void _typeCheckMetaDelta
 
-/** @ignore */
-export const _typeCheckValuesDelta: Delta = {
+const _typeCheckValuesDelta: Delta = {
   updates: [
     {
       values: [
@@ -35,9 +31,9 @@ export const _typeCheckValuesDelta: Delta = {
     }
   ]
 }
+void _typeCheckValuesDelta
 
-/** @ignore */
-export const _typeCheckCombinedDelta: Delta = {
+const _typeCheckCombinedDelta: Delta = {
   updates: [
     {
       meta: [
@@ -61,3 +57,4 @@ export const _typeCheckCombinedDelta: Delta = {
     }
   ]
 }
+void _typeCheckCombinedDelta

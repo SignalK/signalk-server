@@ -99,9 +99,9 @@ export interface ServerAPI
   getMetadata(path: string): Metadata | undefined
 
   /**
-   * Update a value at the specified path relative to vessels.self.
-   * @param aPath - The path to update
-   * @param value - The value to set (type depends on the path being updated)
+   * Call the PUT handler for a path on the vessel's own context.
+   * @param aPath - The path for the PUT request
+   * @param value - The value to send in the PUT request
    * @param updateCb - Callback invoked when the update completes
    * @category Data Model
    */
@@ -112,9 +112,9 @@ export interface ServerAPI
   ): Promise<unknown>
 
   /**
-   * Update a value at the specified absolute path.
-   * @param aPath - The absolute path to update
-   * @param value - The value to set
+   * Call the PUT handler for a path with a specified context.
+   * @param aPath - The path for the PUT request
+   * @param value - The value to send in the PUT request
    * @param updateCb - Callback invoked when the update completes, with error if failed
    * @param source - The source identifier for this update
    * @category Data Model
@@ -162,7 +162,8 @@ export interface ServerAPI
    *
    * @category Status and Debugging
    */
-  debug(msg: unknown, ...args: unknown[]): void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  debug(msg: any, ...args: any[]): void
 
   /**
    * Register a function to intercept all delta messages _before_ they are processed by the server.
@@ -484,7 +485,7 @@ export interface Metadata {
 /**
  * Handler function for PUT/action requests.
  * @param context - The context (e.g., 'vessels.self')
- * @param path - The path being updated
+ * @param path - The path specified in the PUT request
  * @param value - The value being set (type depends on the path)
  * @param callback - Callback for async completion
  * @category Server API
