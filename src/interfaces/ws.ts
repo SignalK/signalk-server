@@ -252,7 +252,7 @@ interface WsApi {
   stop: () => void
 }
 
-export default function (app: WsApp): WsApi {
+function wsInterface(app: WsApp): WsApi {
   debug(
     'Backpressure thresholds: enter=%d, exit=%d',
     BACKPRESSURE_ENTER_THRESHOLD,
@@ -1229,3 +1229,5 @@ function getAssertBufferSize(config: WsAppConfig): (spark: Spark) => void {
     }
   }
 }
+
+module.exports = wsInterface
