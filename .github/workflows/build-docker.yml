@@ -94,8 +94,8 @@ jobs:
         node: [22.x, 24.x]
         include:
           - os: 24.04
-            node: 24.x
-            suffix: -24.x
+            node: 22.x
+            suffix: -22.x
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -144,5 +144,6 @@ jobs:
         with:
           packages: signalk-server
           delete-untagged: true
-          delete-tags: amd-24.04-24.x-${{ github.run_id }},amd-24.04-22.x-${{ github.run_id }},arm-24.04-24.x-${{ github.run_id }},arm-24.04-22.x-${{ github.run_id }}
+          delete-tags: |
+            *-${{ github.run_id }}
           token: ${{ secrets.GHCR_PAT }}

@@ -194,11 +194,10 @@ jobs:
         include:
           - os: 24.04
             node: 22.x
-            tag: latest
+            tag: latest-22.x
           - os: 24.04
             node: 24.x
             tag: latest
-            suffix: -24.x
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -216,8 +215,6 @@ jobs:
             type=semver,pattern=v{{major}},enable=${{ !contains(github.ref, 'beta') }}
             type=semver,pattern=v{{major}}.{{minor}},enable=${{ !contains(github.ref, 'beta') }}
             type=raw,value=${{ matrix.tag }},enable=${{ !contains(github.ref, 'beta') }}
-          flavor: |
-            suffix=${{ matrix.suffix }}
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -249,7 +246,8 @@ jobs:
         with:
           packages: signalk-server
           delete-untagged: true
-          delete-tags: amd-24.04-24.x-${{ github.run_id }},amd-24.04-22.x-${{ github.run_id }},arm-24.04-24.x-${{ github.run_id }},arm-24.04-22.x-${{ github.run_id }}
+          delete-tags: |
+            *-${{ github.run_id }}
           token: ${{ secrets.GHCR_PAT }}
 
   deploy_fly:
