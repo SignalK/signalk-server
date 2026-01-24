@@ -23,10 +23,18 @@ function DataRow({
   if (!data) {
     return (
       <div className={`virtual-table-row ${index % 2 ? 'striped' : ''}`}>
-        <div className="virtual-table-cell path-cell">Loading...</div>
-        <div className="virtual-table-cell value-cell"></div>
-        <div className="virtual-table-cell timestamp-cell"></div>
-        <div className="virtual-table-cell source-cell"></div>
+        <div className="virtual-table-cell path-cell" data-label="Path">
+          Loading...
+        </div>
+        <div className="virtual-table-cell value-cell" data-label="Value"></div>
+        <div
+          className="virtual-table-cell timestamp-cell"
+          data-label="Time"
+        ></div>
+        <div
+          className="virtual-table-cell source-cell"
+          data-label="Source"
+        ></div>
       </div>
     )
   }
@@ -36,7 +44,7 @@ function DataRow({
   return (
     <div className={`virtual-table-row ${index % 2 ? 'striped' : ''}`}>
       {/* Path Cell */}
-      <div className="virtual-table-cell path-cell">
+      <div className="virtual-table-cell path-cell" data-label="Path">
         <CopyToClipboardWithFade text={data.path}>
           <span>
             {data.path} <i className="far fa-copy"></i>
@@ -45,7 +53,7 @@ function DataRow({
       </div>
 
       {/* Value Cell */}
-      <div className="virtual-table-cell value-cell">
+      <div className="virtual-table-cell value-cell" data-label="Value">
         <ValueRenderer data={data} meta={meta} units={units} raw={raw} />
       </div>
 
@@ -53,7 +61,7 @@ function DataRow({
       <TimestampCell timestamp={data.timestamp} isPaused={isPaused} />
 
       {/* Source Cell */}
-      <div className="virtual-table-cell source-cell">
+      <div className="virtual-table-cell source-cell" data-label="Source">
         <input
           type="checkbox"
           onChange={() => onToggleSource(data.$source)}
@@ -66,9 +74,9 @@ function DataRow({
         />
         <CopyToClipboardWithFade text={data.$source}>
           {data.$source} <i className="far fa-copy"></i>
-        </CopyToClipboardWithFade>{' '}
-        {data.pgn || ''}
-        {data.sentence || ''}
+        </CopyToClipboardWithFade>
+        {data.pgn && <span>&nbsp;{data.pgn}</span>}
+        {data.sentence && <span>&nbsp;{data.sentence}</span>}
       </div>
     </div>
   )
