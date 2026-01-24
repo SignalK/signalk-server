@@ -15,6 +15,9 @@ const EmbeddedDocs = ({ location, history }) => {
 
   useEffect(() => {
     document.body.classList.add('sidebar-hidden')
+    return () => {
+      document.body.classList.remove('sidebar-hidden')
+    }
   }, [])
 
   const handleIframeLoad = () => {
