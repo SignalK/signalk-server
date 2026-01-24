@@ -99,7 +99,6 @@ function VirtualizedDataTable({
 
   // Set up scroll listener
   useEffect(() => {
-
     updateVisibleRange()
 
     let ticking = false
