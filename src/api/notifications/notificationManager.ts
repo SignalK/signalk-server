@@ -13,6 +13,7 @@ import { NotificationApplication } from './index'
 import { Alarm, AlarmProperties } from './alarm'
 import * as uuid from 'uuid'
 import * as _ from 'lodash'
+import { DbStore } from './dbstore'
 
 /**
  * Class to manage the lifecycle of alarms
@@ -21,14 +22,56 @@ export class NotificationManager {
   private app: NotificationApplication
   private alarms: Map<string, Alarm> = new Map()
   private readonly deltaVersion = SKVersion.v1
+  private db: DbStore
 
-  constructor(private server: NotificationApplication) {
+  private timer?: NodeJS.Timeout
+
+  constructor(
+    private server: NotificationApplication,
+    private dbs: DbStore
+  ) {
     this.app = server
+    this.db = dbs
+    this.loadFromStore()
   }
 
-  /** List Alarms */
-  get list(): { [key: string]: AlarmProperties } {
-    const l: { [key: string]: AlarmProperties } = {}
+  /** initialise alarms from persisted state */
+  private async loadFromStore() {
+    try {
+      const r = await this.db.listAlarms()
+      if (r) {
+        r.forEach((i: { id: string; value: Alarm }) => {
+          const alarm = new Alarm(i.id)
+          alarm.init(i.value)
+          this.alarms.set(i.id, alarm)
+          // emit notifications for loaded alarms
+          this.alarms.forEach((alarm: Alarm) => {
+            this.emitNotification(alarm)
+          })
+        })
+      }
+      // start cleanup timer
+      this.timer = setInterval(() => this.clean(), 60000)
+    } catch {
+      this.alarms = new Map()
+    }
+  }
+
+  /**
+   * Emit notification for the supplied alarm object
+   * @param alarm Alarm object
+   */
+  private emitNotification(alarm: Alarm) {
+    this.app.handleMessage(
+      'notificationApi',
+      alarm?.delta as Delta,
+      this.deltaVersion
+    )
+  }
+
+  /** Return a list of Alarms keyd by their id */
+  get list(): Record<string, AlarmProperties> {
+    const l: Record<string, AlarmProperties> = {}
     this.alarms.forEach((v: Alarm, k: string) => {
       l[k] = v.properties
     })
@@ -40,8 +83,8 @@ export class NotificationManager {
    * @param id alarm identifier
    * @returns alarm properties
    */
-  get(id: string): AlarmProperties {
-    return this.alarms.get(id)?.properties as AlarmProperties
+  get(id: string): AlarmProperties | undefined {
+    return this.alarms.get(id)?.properties
   }
 
   /**
@@ -84,11 +127,8 @@ export class NotificationManager {
       (alarm.value as any).meta = options.meta
     }*/
     this.alarms.set(id, alarm)
-    this.app.handleMessage(
-      'notificationApi',
-      alarm?.delta as Delta,
-      this.deltaVersion
-    )
+    this.db.setAlarm(id, alarm)
+    this.emitNotification(alarm)
     return id
   }
 
@@ -116,13 +156,10 @@ export class NotificationManager {
     if (!this.alarms.has(id)) {
       throw new Error('Alarm not found!')
     }
-    const alarm = this.alarms.get(id)
+    const alarm = this.alarms.get(id) as Alarm
     alarm?.silence()
-    this.app.handleMessage(
-      'notificationApi',
-      alarm?.delta as Delta,
-      this.deltaVersion
-    )
+    this.db.setAlarm(id, alarm)
+    this.emitNotification(alarm)
   }
 
   /**
@@ -133,13 +170,10 @@ export class NotificationManager {
     if (!this.alarms.has(id)) {
       throw new Error('Alarm not found!')
     }
-    const alarm = this.alarms.get(id)
+    const alarm = this.alarms.get(id) as Alarm
     alarm?.acknowledge()
-    this.app.handleMessage(
-      'notificationApi',
-      alarm?.delta as Delta,
-      this.deltaVersion
-    )
+    this.db.setAlarm(id, alarm)
+    this.emitNotification(alarm)
   }
 
   /**
@@ -150,35 +184,47 @@ export class NotificationManager {
     if (!this.alarms.has(id)) {
       throw new Error('Alarm not found!')
     }
-    const alarm = this.alarms.get(id)
+    const alarm = this.alarms.get(id) as Alarm
     alarm?.clear()
-    this.app.handleMessage(
-      'notificationApi',
-      alarm?.delta as Delta,
-      this.deltaVersion
-    )
-  }
-
-  /**
-   * Remove Alarm with specified identifier - does not emit delta
-   * @param id Alarm identifier
-   */
-  remove(id: string) {
-    this.alarms.delete(id)
+    this.db.setAlarm(id, alarm)
+    this.emitNotification(alarm)
   }
 
   /** Process alarm from notification delta */
-  fromDelta(u: Update, context: Context) {
+  async fromDelta(u: Update, context: Context) {
     if (hasValues(u) && u.values.length) {
       const id = u.notificationId as string
+      let alarm: Alarm
       if (this.alarms.has(id)) {
-        const alarm = this.alarms.get(id) as Alarm
+        alarm = this.alarms.get(id) as Alarm
         alarm.fromDelta({ context: context, updates: [u] })
         this.alarms.set(id, alarm)
       } else {
-        const alarm = new Alarm({ context: context, updates: [u] })
+        alarm = new Alarm({ context: context, updates: [u] })
         this.alarms.set(id, alarm)
       }
+      this.db.setAlarm(id, alarm)
+    }
+  }
+
+  /**
+   * Clean out alarms that have returned to NORMAL state
+   */
+  private clean() {
+    const al: string[] = []
+    const nk: string[] = []
+    this.alarms.forEach((v: Alarm, k: string) => {
+      if (v.value.state === 'normal') {
+        al.push(k)
+        nk.push(v.extKey)
+      }
+    })
+    if (al.length) {
+      al.forEach((id) => {
+        this.alarms.delete(id)
+      })
+      this.db.deleteAlarm(al)
+      this.db.deleteNoti(nk)
     }
   }
 }
