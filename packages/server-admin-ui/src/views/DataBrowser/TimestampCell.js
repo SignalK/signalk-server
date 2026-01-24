@@ -45,7 +45,11 @@ function TimestampCell({ timestamp, isPaused, className }) {
   }`
 
   return (
-    <div className={cellClass} key={isAnimating ? animationKey : 'static'}>
+    <div
+      className={cellClass}
+      key={isAnimating ? animationKey : 'static'}
+      data-label="Time"
+    >
       {timestamp}
     </div>
   )
