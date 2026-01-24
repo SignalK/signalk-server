@@ -19,6 +19,7 @@ import { ConfigApp } from '../../config/config'
 import { WithSecurityStrategy } from '../../security'
 import { Responses } from '..'
 import { NotificationManager } from './notificationManager'
+import { DbStore } from './dbstore'
 
 export interface NotificationApplication
   extends
@@ -38,10 +39,15 @@ export class NotificationApi {
   private updateManager: NotificationUpdateHandler
   private notiKeys: Map<string, string> = new Map()
   private notificationManager: NotificationManager
+  private dbLoaded: Promise<void> | null = null
+  public db: DbStore
 
   constructor(private server: NotificationApplication) {
+    this.db = new DbStore(server)
+    this.dbLoaded = this.loadFromStore()
+
     this.app = server
-    this.notificationManager = new NotificationManager(server)
+    this.notificationManager = new NotificationManager(server, this.db)
     this.updateManager = new NotificationUpdateHandler(server)
     this.updateManager.$notiUpdate.subscribe((d: Delta) =>
       this.handleNotiUpdate(d)
@@ -53,6 +59,28 @@ export class NotificationApi {
       this.initNotificationRoutes()
       resolve()
     })
+  }
+
+  /** initialise identifiers from persisted state */
+  private async loadFromStore() {
+    try {
+      const r = await this.db.listNotis()
+      const n = r?.map((i) => {
+        return [i.id, i.value]
+      })
+      if (n) {
+        this.notiKeys = new Map(n as [string, string][])
+      }
+    } catch {
+      debug('No persisted notification ids found.')
+    }
+  }
+
+  /** ready to process notifications */
+  private async isReady() {
+    if (this.dbLoaded) {
+      await this.dbLoaded
+    }
   }
 
   private initNotificationRoutes() {
@@ -169,7 +197,7 @@ export class NotificationApi {
    * Handle incoming notification deltas and assign a notification identitier
    * @param delta Incoming notification delta
    */
-  private handleNotiUpdate(delta: Delta) {
+  private async handleNotiUpdate(delta: Delta) {
     const buildKey = (
       source: SourceRef,
       context: Context,
@@ -178,27 +206,27 @@ export class NotificationApi {
       return `${source}/${context}/${path}`
     }
 
+    await this.isReady()
     delta.updates?.forEach((u: Update) => {
       if (hasValues(u) && u.values.length) {
         const value = u.values[0].value as Notification
         const path = u.values[0].path
         const src = u['$source'] as SourceRef
         const key = buildKey(src, delta.context as Context, path)
+        let id: string
         if (this.notiKeys.has(key)) {
           u.notificationId = this.notiKeys.get(key)
+          id = u.notificationId as string
         } else {
-          const id = uuid.v4()
+          id = uuid.v4()
           this.notiKeys.set(key, id)
+          this.db.setNoti(key, id)
           u.notificationId = id
         }
+        this.db.setNoti(key, id)
         // manage ALARM_STATE
         if (value.state) {
-          const id = u.notificationId as string
-          if (['normal', 'nominal'].includes(value.state)) {
-            this.notificationManager.remove(id)
-          } else {
-            this.notificationManager.fromDelta(u, delta.context as Context)
-          }
+          this.notificationManager.fromDelta(u, delta.context as Context)
         }
       }
     })

@@ -14,7 +14,6 @@ import {
 } from '@signalk/server-api'
 
 export interface AlarmProperties {
-  status: ALARM_STATUS
   context: Context
   path: Path
   value: Value
@@ -22,14 +21,13 @@ export interface AlarmProperties {
 
 export class Alarm {
   private external = false // true when alarm was created from delta
-  readonly status: ALARM_STATUS = {
+  status: ALARM_STATUS = {
     silenced: false,
     acknowledged: false,
     canSilence: true,
     canAcknowledge: true,
     canClear: false
   }
-
   private context: Context = '' as Context
   private update: Update = {
     values: [],
@@ -54,6 +52,18 @@ export class Alarm {
     } else {
       this.fromDelta(value)
     }
+  }
+
+  /** Initialise Alarm from peristed state */
+  public init(v: Alarm) {
+    this.path = v.path
+    this.value = v.value
+    this.external = v.external
+    this.status = v.status
+    this.context = v.context
+    this.update = v.update
+    this.path = v.path
+    this.value = v.value
   }
 
   /** Extract and populate attrributes from delta */
@@ -135,13 +145,17 @@ export class Alarm {
   }
 
   /** Return Alarm properties */
-  get properties() {
+  get properties(): AlarmProperties {
     return {
-      status: this.status,
       context: this.context,
       path: this.path,
       value: this.value
     }
+  }
+
+  /** Return external key */
+  get extKey(): string {
+    return `${this.update.$source}/${this.context}/${this.path}`
   }
 
   /** Sets the path associated with the alarm
